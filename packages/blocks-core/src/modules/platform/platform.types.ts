@@ -1,136 +1,185 @@
-import type { ConnectionsRegionView, KnowledgeRegionView } from "../../views/views.types"
+export type {
+    AgentConnections,
+    AgentKnowledge,
+    CoreReads,
+    CoreRun,
+    CoreRunCount,
+    CoreRunStep,
+    CoreRunsPage,
+    CoreRunsQuery,
+    CoreRunsRead,
+    InstallationFacts,
+    InstallationSource,
+    InstallationView,
+    InstalledModuleFacts,
+    InstalledModuleView,
+    MemberDirectory,
+    MemberFacts,
+    ParkedRunFilter,
+    ParkedRunRow,
+    ParkedRuns,
+    ParkedRunsView,
+    RightsDirectory,
+    RunStanding,
+} from "@nivo-lite/agent-sdk/platform"
 
-/** What the installed registry holds of one module, as the back end reads it from the module declarations. */
-export interface InstalledModuleFacts {
-    /** The module key. */
+/*
+ * The agent's work desk (`platform.agent-desk`), copied from the back end's `platform-ports/agent-desk.contracts.ts`: the door serves
+ * exactly this interface under the id `platform.agent-desk`, one asker per port.
+ */
+
+/** One installed workflow of the agent, as the version that runs holds it. */
+export interface DeskFlow {
+    /** The workflow key. */
     readonly key: string
-    /** The permissions the module declares. */
-    readonly permissions: ReadonlyArray<string>
-    /** The ids of the reads the module declares. */
-    readonly reads: ReadonlyArray<string>
-    /** The ids of the actions the module declares. */
-    readonly actions: ReadonlyArray<string>
-    /** The ids of the views of the module's seed specs, in spec order. */
-    readonly views: ReadonlyArray<string>
+    /** Its name. */
+    readonly name: string
+    /** Whether it is the agent's main workflow. */
+    readonly isPrimary: boolean
+    /** The graph of the version that runs, JSON text (the blocks draw its step cards from it). */
+    readonly graphJson: string
 }
 
-/** What the back end knows of the installation: the registry it runs, and which of its modules the workspace has enabled. */
-export interface InstallationFacts {
-    /** The hash of the registry the back end runs; the front end compares it with its own build. */
-    readonly registryHash: string
-    /** Every module of the registry, in registry order. */
-    readonly modules: ReadonlyArray<InstalledModuleFacts>
-    /** The keys of the modules the workspace has enabled. */
-    readonly enabled: ReadonlyArray<string>
+/** `platform.agent-flows`: the active workflows of the agent, the primary first. */
+export interface AgentFlowsView {
+    /** The flows. */
+    readonly flows: ReadonlyArray<DeskFlow>
 }
 
-/** The installation as the platform serves it to a screen. */
-export interface InstallationView {
-    /** The hash of the registry the back end runs. */
-    readonly registryHash: string
-    /** Every module of the registry, in registry order. */
-    readonly modules: ReadonlyArray<InstalledModuleView>
-}
+/** What a person may do with a row that waits on them. */
+export type WaitingCommand = "decline" | "approve"
 
-/** One module of the installation. */
-export interface InstalledModuleView extends InstalledModuleFacts {
-    /** Whether the workspace has the module enabled. */
-    readonly enabled: boolean
-}
-
-/** What the platform asks of the back end to describe the installation. */
-export interface InstallationSource {
-    /** The registry and the workspace's enabled modules, as they are now. */
-    readonly current: () => Promise<InstallationFacts>
-}
-
-/** What a module asks of a seat of the workspace: the name it is shown under and whether it may act on what others hold. */
-export interface MemberFacts {
-    /** The name the member is shown under. */
-    readonly displayName: string
-    /** Whether the member is an owner or a manager. */
-    readonly isManager: boolean
-}
-
-/** The seats of the workspace, as far as a module's actions care. */
-export interface MemberDirectory {
-    /** The active member by seat id; null when the workspace has none. */
-    readonly get: (memberId: string) => Promise<MemberFacts | null>
-}
-
-/** What a module asks of the rights of the member who acts. */
-export interface RightsDirectory {
-    /** Whether the member holds the permission of the workspace; an actor that is no member (the agent) holds none. */
-    readonly holds: (memberId: string | null, permission: string) => Promise<boolean>
-}
-
-/** The connections bound to one agent. */
-export interface AgentConnections {
-    /** The connections region of the agent, with the words of the viewer's workspace. */
-    readonly of: (agentId: string) => Promise<ConnectionsRegionView>
-}
-
-/** What one agent knows. */
-export interface AgentKnowledge {
-    /** The knowledge region of the agent, with its open gaps. */
-    readonly of: (agentId: string) => Promise<KnowledgeRegionView>
-}
-
-/** One run the engine parked: it stopped at a step and waits for a person or a build to resume it. */
-export interface ParkedRunRow {
-    /** The run id. */
+/** One run of the agent stopped on a person, as the port answers it. */
+export interface WaitingRow {
+    /** For an approval: the owner's work item the verdict goes through (what `decide` takes); else the stop. */
     readonly id: string
-    /** The module the run works for (the key before the dot of its subject kind). */
-    readonly module: string
-    /** The kind of the record the run is about, for instance `sales.order`. */
-    readonly subjectKind: string
-    /** The id of the record the run is about. */
-    readonly subjectId: string
-    /** The step the run stopped at. */
-    readonly step: string
-    /** The code of the error that parked it. */
-    readonly errorCode: string
-    /** What the error says, in words a person reads. */
-    readonly errorWords: string
-    /** When it was parked, ISO text. */
-    readonly parkedAt: string
+    /** The run. */
+    readonly runId: string
+    /** What the stop is about, as the engine wrote it. */
+    readonly title: string
+    /** Who asked the agent for the work the run does, or null when the run names nobody. */
+    readonly askedBy: string | null
+    /** When the run stopped, ISO. */
+    readonly askedAt: string
+    /** What would change, from the structured facts the stop holds. */
+    readonly line: string
+    /** `approve` and `decline` for an approval; none for any other stop (it is answered on its card in /chat). */
+    readonly commands: ReadonlyArray<WaitingCommand>
 }
 
-/** What `platform.parked-runs` answers. */
-export interface ParkedRunsView {
-    /** How many parked runs match, as text; null when none. */
-    readonly count: string | null
-    /** The newest ones, at most the limit. */
-    readonly rows: ReadonlyArray<ParkedRunRow>
+/** What the port answers for the agent's runs stopped on a person, newest first. */
+export interface WaitingOnPersonFacts {
+    /** How many. */
+    readonly count: number
+    /** The rows. */
+    readonly rows: ReadonlyArray<WaitingRow>
 }
 
-/** Which parked runs a read asks for; every field narrows, none given lists all of the workspace. */
-export interface ParkedRunFilter {
-    /** Only the runs of this module. */
-    readonly module?: string | undefined
-    /** Only the runs about records of this kind. */
-    readonly subjectKind?: string | undefined
-    /** Only the runs about this record. */
-    readonly subjectId?: string | undefined
+/** A person's verdict on an approval waiting on them. */
+export interface ApprovalVerdictAsk {
+    /** The row id (the approval's work item). */
+    readonly id: string
+    /** Approve or decline. */
+    readonly verdict: WaitingCommand
 }
 
-/** What the back end knows of one run a person asks to resume. */
-export interface RunStanding {
-    /** The module the run works for. */
-    readonly module: string
-    /** Whether the run is parked now; false when it runs, waits or ended. */
-    readonly parked: boolean
+/** What a verdict became: decided through the work engine's own door, or refused with the code that door (or the port) gave. */
+export type ApprovalDecideAnswer =
+    | {
+          /** The work engine took the verdict. */
+          readonly kind: "decided"
+          /** The status of the work item after it. */
+          readonly status: string
+      }
+    | {
+          /** Nothing was decided. */
+          readonly kind: "refused"
+          /** `not_waiting_here`, `no_seat`, or the error code of the decide door. */
+          readonly code: string
+      }
+
+/** How a run of the agent ended, or that it still runs. */
+export type RunOutcome = "answered" | "changed" | "stopped" | "failed" | "running"
+
+/** What the desk adds to one row of `platform.agent-runs`. */
+export interface AgentRunFacts {
+    /** The run. */
+    readonly runId: string
+    /** The question or task the run answers, in the words it arrived in; null when the run carries none. */
+    readonly ask: string | null
+    /** Who asked, or null when the run names nobody. */
+    readonly askedBy: string | null
+    /** The records its calls read; null when calls were made and none stated a count. */
+    readonly readCount: number | null
+    /** The records its calls changed; null when calls were made and none stated a count. */
+    readonly changedCount: number | null
+    /** The calls whose adapter stated no count. */
+    readonly uncounted: number
+    /** How it ended. */
+    readonly outcome: RunOutcome
 }
 
-/** The runs the engine parked, and the one door that resumes them: the engine owns retry and resume, a module only asks. */
-export interface ParkedRuns {
-    /** The newest parked runs matching the filter, at most the limit, with how many match in all. */
-    readonly list: (
-        filter: ParkedRunFilter,
-        limit: number,
-    ) => Promise<{ readonly total: number; readonly rows: ReadonlyArray<ParkedRunRow> }>
-    /** The standing of one run; null when the workspace has no such run. */
-    readonly find: (runId: string) => Promise<RunStanding | null>
-    /** Resumes a parked run; false when it was no longer parked by the time the engine looked. */
-    readonly resume: (runId: string) => Promise<boolean>
+/** The day the desk counts: the viewer's instant and the workspace's time zone, as the read's context carries them. */
+export interface DeskDay {
+    /** The IANA time zone of the workspace. */
+    readonly timeZone: string
+    /** Now. */
+    readonly now: Date
+}
+
+/** `platform.agent-today`: what the agent did on the workspace's day. */
+export interface AgentTodayView {
+    /** The day, `YYYY-MM-DD` in the workspace's time zone. */
+    readonly day: string
+    /** The runs that finished done that day. */
+    readonly answered: number
+    /** The records read that day, or null when calls were made and none stated a count. */
+    readonly recordsRead: number | null
+    /** The records changed that day, or null when calls were made and none stated a count. */
+    readonly recordsChanged: number | null
+    /** The calls of the day whose adapter stated no count. */
+    readonly uncounted: number
+}
+
+/** Where an attached account stands for the agent. */
+export type ReachAccountState = "connected" | "attention" | "off"
+
+/** One account the agent is attached to. */
+export interface ReachAccount {
+    /** The connected account. */
+    readonly connectionId: string
+    /** The name the owner gave it. */
+    readonly name: string
+    /** The provider's name in the viewer's language. */
+    readonly providerName: string
+    /** `connected`; `attention` when the connection does not work; `off` when the agent holds no ability on it. */
+    readonly state: ReachAccountState
+}
+
+/** `platform.agent-reach`: the accounts the agent is attached to and the operations it may do on them, by mode. */
+export interface AgentReachView {
+    /** The accounts. */
+    readonly accounts: ReadonlyArray<ReachAccount>
+    /** The operations a running step does by itself. */
+    readonly auto: ReadonlyArray<string>
+    /** The operations a running step asks a person for first. */
+    readonly ask: ReadonlyArray<string>
+    /** The operations the attached accounts offer that no running step holds. */
+    readonly none: ReadonlyArray<string>
+}
+
+/** The `platform.agent-desk` port, scoped to one asker; every read takes the installation whose agent it reads. */
+export interface AgentDesk {
+    /** The active workflows of the agent. */
+    flows(installation: string): Promise<AgentFlowsView>
+    /** The agent's runs stopped on a person. */
+    waiting(installation: string): Promise<WaitingOnPersonFacts>
+    /** A verdict on an approval of the agent waiting on a person, through the work engine's own decide door. */
+    decide(installation: string, ask: ApprovalVerdictAsk): Promise<ApprovalDecideAnswer>
+    /** The desk facts of runs of the agent (a page of `platform.agent-runs`); a run of another agent is left out. */
+    runFacts(installation: string, runIds: ReadonlyArray<string>): Promise<ReadonlyArray<AgentRunFacts>>
+    /** What the agent did on the workspace's day. */
+    today(installation: string, day: DeskDay): Promise<AgentTodayView>
+    /** The accounts the agent is attached to and what it may do on them. */
+    reach(installation: string): Promise<AgentReachView>
 }

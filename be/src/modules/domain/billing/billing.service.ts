@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { PaymentOrderHistoryService, PaymentOrdersService } from "@modules/domain/payment-orders"
-import type { PaymentOrder } from "@modules/domain/payment-orders"
+import { PaymentOrderHistoryService, PaymentOrdersService, type PaymentOrder } from "@modules/domain/payment-orders"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectBillingOptions } from "./billing.decorators"
-import type { BankAccountOptions, BillingOptions } from "./billing.options"
+import type { BillingOptions } from "./billing.options"
 import type {
     BillingWorkspace,
     PayableOrder,
@@ -19,8 +18,7 @@ import type {
 } from "./billing.contracts"
 import { toBillingWorkspace, toPlan, toPlanLookup, toWorkspaceBilling } from "./billing.mapper"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
-import { quoteSelection } from "./pricing.policy"
-import type { PromoHistory } from "./pricing.policy"
+import { quoteSelection, type PromoHistory } from "./pricing.policy"
 import { PlanEntity, PlanUsageTierEntity } from "./persistence/entities"
 import { qrImageUrl } from "./sepay.policy"
 import { WorkspaceAdminReadService, WorkspaceBillingService } from "@modules/domain/workspaces"
@@ -51,11 +49,6 @@ export class BillingService {
         private readonly workspaceReads: WorkspaceAdminReadService,
         private readonly history: PaymentOrderHistoryService,
     ) {}
-
-    /** The configured recipient account, available before a workspace creates a payment order. */
-    bankAccount(): Promise<BankAccountOptions> {
-        return Promise.resolve({ ...this.options.bankAccount })
-    }
 
     /** The plans on sale in display order, each with its usage tiers. */
     async listPlans(): Promise<Array<Plan>> {

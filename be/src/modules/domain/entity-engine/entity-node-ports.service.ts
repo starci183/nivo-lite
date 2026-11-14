@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
-import type { RightScope } from "@nivo-lite/agent-sdk/rights"
+import type { NodeQuery, ReadScope } from "@nivo-lite/agent-sdk/node"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import type { ListPage } from "@nivo-lite/agent-sdk/entity/port"
 import { cursorScopeOf } from "@nivo-lite/agent-sdk/query"
@@ -40,7 +39,7 @@ export class EntityNodePortsService {
         kindOfEntity: (name: string) => string | undefined,
         turn: EntityNodeTurn,
         query: NodeQuery,
-        scope: RightScope,
+        scope: ReadScope,
     ): Promise<EntityNodeRows> {
         const plan = nodeReadPlanOf(entity, kindOfEntity, turn, query, scope)
         if (plan === null) return []

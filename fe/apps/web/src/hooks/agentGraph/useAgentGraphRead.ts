@@ -12,8 +12,7 @@ import {
     useQueryAgentGraphVersionsSwr,
     useQueryApproverDirectorySwr,
 } from "@/hooks/swr"
-import { agentGraphOfWire, parseAgentGraphWire } from "@/modules/agent-graph"
-import type { AgentGraphWire } from "@/modules/agent-graph"
+import { agentGraphOfWire, parseAgentGraphWire, type AgentGraphWire } from "@/modules/agent-graph"
 import type { AgentGraphData, DataSlot } from "@/modules/types"
 import { agentGraphMembersOf, agentGraphRunOf, parsedGraphReadOf } from "./agentGraph.shared"
 import { useAgentGraphWords } from "./useAgentGraphWords"

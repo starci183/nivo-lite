@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { EntityDefinitionError } from "./entity-error"
+import { fileStoredSchemaOf } from "./file-ref"
 import type { AnyEntityDefinition } from "./entity-any.types"
 import type { FieldDef, SystemField } from "./entity.types"
 
@@ -20,6 +21,7 @@ const valueSchemaOf = (entity: AnyEntityDefinition, name: string, field: FieldDe
     const at = `${entity.name}.fields.${name}`
     switch (field.kind) {
         case "uuid":
+        case "contact":
             return z.guid()
         case "text":
             if (field.maxLength === undefined) throw new EntityDefinitionError("ENTITY_TEXT_UNBOUNDED", at)
@@ -44,6 +46,8 @@ const valueSchemaOf = (entity: AnyEntityDefinition, name: string, field: FieldDe
             return z.number().int()
         case "sequence":
             return z.string().max(SEQUENCE_TEXT_MAX)
+        case "file":
+            return fileStoredSchemaOf(field)
     }
 }
 

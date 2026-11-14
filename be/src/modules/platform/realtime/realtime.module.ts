@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule, Provider } from "@nestjs/common"
+import { Module, type DynamicModule, type Provider } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import Redis from "ioredis"
 import { Client } from "pg"
@@ -23,8 +22,7 @@ import {
 } from "./realtime.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./realtime.module-definition"
 import type { PostgresRealtimeOptions, RedisRealtimeOptions } from "./realtime.options"
-import { TIMER } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
+import { TIMER, type Timer } from "@modules/platform/retry"
 import { RedisRealtimeHubService } from "./redis-realtime-hub.service"
 
 /** The retention of a hub that keeps no replay table (memory, Redis): a scheduled tick is acknowledged and finds nothing to sweep. */

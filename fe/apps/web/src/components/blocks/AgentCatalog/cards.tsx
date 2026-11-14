@@ -1,4 +1,6 @@
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { AlertDialog, Badge, Cluster, Stack, SurfaceCard, Text, type DropdownMenuEntry } from "@starci/grammar/common"
+import { AgentRemoveImpact } from "@/components/composites/AgentRemoveImpact"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import type { AgentCatalogBaseProps, AgentRowView } from "./types"
 
@@ -116,6 +118,9 @@ export const AgentCard = (props: AgentCardProps) => {
     )
 }
 
+/** The sentences while they are read: three lines, so the dialog keeps the height of its plain confirmation. */
+const IMPACT_PLACEHOLDER: ReadonlyArray<string> = [" ", " ", " "]
+
 /** What the removal confirmation needs. */
 export interface RemoveConfirmProps {
     readonly props: AgentCatalogBaseProps["props"]
@@ -133,9 +138,17 @@ export const RemoveConfirm = (props: RemoveConfirmProps) =>
             confirmLabel={props.props.removeConfirm}
             cancelLabel={props.props.removeCancel}
             isConfirmPending={props.props.isBusy}
+            isConfirmDisabled={!("items" in props.props.removeImpact)}
             onConfirm={() => props.on.confirmRemove(props.props.removing?.key ?? "")}
         >
-            {props.props.removeBody}
+            <SlotView
+                slot={props.props.removeImpact}
+                placeholder={IMPACT_PLACEHOLDER}
+                labels={props.props.removeImpactLabels}
+                errorLayout="band"
+                onRetry={props.on.retryImpact}
+                render={(lines) => <AgentRemoveImpact lines={lines} />}
+            />
         </AlertDialog>
     )
 

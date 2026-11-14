@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the agent-work capability. */
 export enum AgentWorkErrorCode {
@@ -25,6 +24,16 @@ export enum AgentWorkErrorCode {
     SourceUnknown = "AGENT_WORK_SOURCE_UNKNOWN",
     /** A source key is not a key, or a source is recorded twice with other traits. */
     SourceInvalid = "AGENT_WORK_SOURCE_INVALID",
+    /** A verdict's input is missing or has the wrong shape; the field rides in the params. */
+    ApprovalPayloadInvalid = "AGENT_WORK_APPROVAL_PAYLOAD_INVALID",
+    /** No permission request of a thread run has that id in this workspace. */
+    ApprovalNotFound = "AGENT_WORK_APPROVAL_NOT_FOUND",
+    /** The permission request no longer waits for a verdict (decided, withdrawn, or its run moved on). */
+    ApprovalNotWaiting = "AGENT_WORK_APPROVAL_NOT_WAITING",
+    /** Only the workspace owner approves a permission request. */
+    ApprovalNotOwner = "AGENT_WORK_APPROVAL_NOT_OWNER",
+    /** A staff member does not decide a permission request. */
+    ApprovalNotAllowed = "AGENT_WORK_APPROVAL_NOT_ALLOWED",
 }
 
 /** How each agent-work code travels. */
@@ -40,6 +49,11 @@ export const AGENT_WORK_ERROR_KINDS: Record<AgentWorkErrorCode, ErrorKind> = {
     [AgentWorkErrorCode.HandlerDuplicate]: "internal",
     [AgentWorkErrorCode.SourceUnknown]: "internal",
     [AgentWorkErrorCode.SourceInvalid]: "internal",
+    [AgentWorkErrorCode.ApprovalPayloadInvalid]: "invalid",
+    [AgentWorkErrorCode.ApprovalNotFound]: "not-found",
+    [AgentWorkErrorCode.ApprovalNotWaiting]: "conflict",
+    [AgentWorkErrorCode.ApprovalNotOwner]: "forbidden",
+    [AgentWorkErrorCode.ApprovalNotAllowed]: "forbidden",
 }
 
 /** The one error class of the agent-work capability. */

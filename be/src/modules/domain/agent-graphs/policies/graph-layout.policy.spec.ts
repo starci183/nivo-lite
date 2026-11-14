@@ -1,11 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { AgentGraphsErrorCode } from "../errors/agent-graphs.error"
-import {
-    GRAPH_LAYOUT_SETTING,
-    checkedLayout,
-    layoutOfSettings,
-    settingsWithLayout,
-} from "./graph-layout.policy"
+import { GRAPH_LAYOUT_SETTING, checkedLayout, layoutOfSettings, settingsWithLayout } from "./graph-layout.policy"
 
 const SUBJECT = Symbol("graph-layout.policy")
 

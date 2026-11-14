@@ -19,13 +19,10 @@ interface BrainSearch {
     readonly edit?: string
     readonly answer?: string
     readonly lesson?: string
-    readonly dossier?: string
-    readonly finding?: string
-    readonly draft?: string
-    readonly node?: string
     readonly compose?: string
     readonly title?: string
     readonly doc?: string
+    readonly policy?: string
 }
 
 /** What the page receives from Next. */
@@ -44,7 +41,7 @@ const paramsOf = (search: BrainSearch): Readonly<Record<string, string | undefin
 const Page = async ({ params, searchParams }: BrainRouteProps): Promise<ReactElement> => {
     const { workspaceId } = await params
     const search = await searchParams
-    const { tab, view, fact, edit, answer, lesson, dossier, finding, draft, node, compose, title, doc } = search
+    const { tab, view, fact, edit, answer, lesson, compose, title, doc, policy } = search
     return (
         <BrainPage
             workspaceId={workspaceId}
@@ -55,13 +52,10 @@ const Page = async ({ params, searchParams }: BrainRouteProps): Promise<ReactEle
             edit={edit}
             answer={answer}
             lesson={lesson}
-            dossier={dossier}
-            finding={finding}
-            draft={draft}
-            node={node}
             compose={compose}
             title={title}
             doc={doc}
+            policy={policy}
         />
     )
 }

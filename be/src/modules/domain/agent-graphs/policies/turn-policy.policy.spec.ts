@@ -1,70 +1,12 @@
+import type { RunStop } from "@modules/domain/agent-threads/stops/run-stop.contracts"
 import {
     alreadySentOf,
-    leadStopsQueryOf,
+    founderDecisionsOf,
     ledgerLinesOf,
-    policyValuesOf,
-    savedNamesOf,
-    sentLinesOf,
-    settingsEntityOf,
-    stepLedgerQueryOf,
-    stepLinePrefixOf,
     stepPlaceOf,
     stopCounts,
     stopToldOf,
 } from "./turn-policy.policy"
-
-describe("policyValuesOf", () => {
-    it("replaces a default by the workspace's saved value of the same name and kind, and keeps every other default", () => {
-        const defaults = { approvalThresholdVnd: 5_000_000, refund: "never", autoWon: true }
-        expect(policyValuesOf(defaults, { approvalThresholdVnd: 3_000_000, autoWon: false, other: 1 })).toEqual({
-            approvalThresholdVnd: 3_000_000,
-            refund: "never",
-            autoWon: false,
-        })
-    })
-
-    it("keeps the default when the saved value is of another kind, is no number, or is missing", () => {
-        const defaults = { approvalThresholdVnd: 5_000_000, refund: "never" }
-        expect(policyValuesOf(defaults, { approvalThresholdVnd: "3000000", refund: null })).toEqual(defaults)
-        expect(policyValuesOf(defaults, { approvalThresholdVnd: Number.NaN })).toEqual(defaults)
-        expect(policyValuesOf({}, { approvalThresholdVnd: 1 })).toEqual({})
-    })
-})
-
-describe("savedNamesOf and settingsEntityOf", () => {
-    it("names the settings entity of a module and the policy names its record has a field for", () => {
-        expect(settingsEntityOf("sales")).toBe("sales.settings")
-        expect(savedNamesOf({ approvalThresholdVnd: 1, refund: "never" }, ["key", "approvalThresholdVnd"])).toEqual([
-            "approvalThresholdVnd",
-        ])
-    })
-})
-
-describe("sentLinesOf", () => {
-    const STEP = "run-1:create-order"
-
-    it("keeps the lines kept under the step's own key, oldest first, with their words and time", () => {
-        const rows = [
-            { channelRef: `${stepLinePrefixOf(STEP)}bbbb`, text: "Đơn đã được duyệt ạ.", sentAt: "2026-11-10T03:05:00.000Z" },
-            { channelRef: `${stepLinePrefixOf(STEP)}aaaa`, text: "Dạ shop đang kiểm tra ạ.", sentAt: new Date("2026-11-10T03:00:00.000Z") },
-        ]
-        expect(sentLinesOf(rows, STEP)).toEqual([
-            { text: "Dạ shop đang kiểm tra ạ.", at: "2026-11-10T03:00:00.000Z" },
-            { text: "Đơn đã được duyệt ạ.", at: "2026-11-10T03:05:00.000Z" },
-        ])
-    })
-
-    it("leaves out a line of another step, a line with no key, no words or no time", () => {
-        const rows = [
-            { channelRef: "line:run-1:create-order-2:aaaa", text: "x", sentAt: "2026-11-10T03:00:00.000Z" },
-            { channelRef: "line:run-2:create-order:aaaa", text: "x", sentAt: "2026-11-10T03:00:00.000Z" },
-            { channelRef: null, text: "x", sentAt: "2026-11-10T03:00:00.000Z" },
-            { channelRef: `${stepLinePrefixOf(STEP)}cccc`, text: "", sentAt: "2026-11-10T03:00:00.000Z" },
-            { channelRef: `${stepLinePrefixOf(STEP)}dddd`, text: "x", sentAt: null },
-        ]
-        expect(sentLinesOf(rows, STEP)).toEqual([])
-    })
-})
 
 describe("stepPlaceOf", () => {
     it("reads the run and the step of a step key, and nothing of another key", () => {
@@ -79,17 +21,54 @@ describe("stepPlaceOf", () => {
 describe("ledgerLinesOf", () => {
     it("keeps the words of the customer sends whose arguments were kept, oldest first, at the time they were kept", () => {
         const rows = [
-            { data: { effectId: "nivo.lead.message.send", args: { conversationId: "c-2", text: "B" } }, createdAt: "2026-11-10T03:05:00.000Z" },
-            { data: { effectId: "nivo.lead.message.send", args: { leadId: "l-1", text: "A" } }, createdAt: "2026-11-10T03:00:00.000Z" },
-            { data: { effectId: "nivo.team.message.post", args: { text: "team" } }, createdAt: "2026-11-10T03:01:00.000Z" },
-            { data: { effectId: "nivo.lead.message.send", args: null }, createdAt: "2026-11-10T03:02:00.000Z" },
-            { data: { effectId: "nivo.lead.message.send" }, createdAt: "2026-11-10T03:03:00.000Z" },
+            {
+                data: { effectId: "nivo.tool.customer.message.send", args: { conversationId: "c-2", text: "B" } },
+                createdAt: "2026-11-10T03:05:00.000Z",
+            },
+            {
+                data: { effectId: "nivo.tool.customer.message.send", args: { leadId: "l-1", text: "A" } },
+                createdAt: "2026-11-10T03:00:00.000Z",
+            },
+            {
+                data: { effectId: "nivo.tool.team.message.post", args: { text: "team" } },
+                createdAt: "2026-11-10T03:01:00.000Z",
+            },
+            {
+                data: { effectId: "nivo.tool.customer.message.send", args: null },
+                createdAt: "2026-11-10T03:02:00.000Z",
+            },
+            { data: { effectId: "nivo.tool.customer.message.send" }, createdAt: "2026-11-10T03:03:00.000Z" },
         ]
-        expect(ledgerLinesOf(rows, ["nivo.lead.message.send"])).toEqual([
+        expect(ledgerLinesOf(rows, ["nivo.tool.customer.message.send"])).toEqual([
             { text: "A", at: "2026-11-10T03:00:00.000Z" },
             { text: "B", at: "2026-11-10T03:05:00.000Z" },
         ])
     })
+})
+
+/** A stop as the stops' store answers it, with the members a case sets. */
+const stopOf = (values: Partial<RunStop>): RunStop => ({
+    id: "stop-1",
+    version: "1",
+    runId: "run-1",
+    stepKey: "match",
+    agentId: "agent-1",
+    workflowId: null,
+    contactId: null,
+    conversationId: null,
+    kind: "ai_report",
+    state: "open",
+    reason: "R",
+    question: null,
+    detail: { suggestions: [], facts: [] },
+    cardMessageId: null,
+    customerLines: [],
+    answers: [],
+    decision: null,
+    repeats: 1,
+    stoppedAt: "2026-11-10T03:00:00.000Z",
+    resolvedAt: null,
+    ...values,
 })
 
 describe("stopToldOf and stopCounts", () => {
@@ -97,30 +76,30 @@ describe("stopToldOf and stopCounts", () => {
 
     it("reads a stop's run, step, lines and resolution, and leaves out a line with no words or time", () => {
         expect(
-            stopToldOf({
-                runId: "run-1",
-                stepKey: "match",
-                customerLines: {
-                    lines: [
+            stopToldOf(
+                stopOf({
+                    runId: "run-1",
+                    stepKey: "match",
+                    customerLines: [
                         { conversationId: "c-1", text: "Da nhan", at: "2026-11-10T03:00:00.000Z" },
                         { conversationId: "c-1", text: "", at: "2026-11-10T03:00:00.000Z" },
-                        { conversationId: "c-1", text: "no time" },
+                        { conversationId: "c-1", text: "no time", at: "" },
                     ],
-                },
-                resolvedAt: null,
-            }),
+                    resolvedAt: null,
+                }),
+            ),
         ).toEqual({
             runId: "run-1",
             stepKey: "match",
             lines: [{ text: "Da nhan", at: "2026-11-10T03:00:00.000Z" }],
             resolvedAt: null,
+            decisions: [],
         })
-        expect(stopToldOf({ stepKey: "match" })).toBeNull()
-        expect(stopToldOf({ runId: "run-1", stepKey: "match", customerLines: null })?.lines).toEqual([])
+        expect(stopToldOf(stopOf({ customerLines: [] })).lines).toEqual([])
     })
 
     it("counts an open stop always, a resolved one within the day only, and with no clock only an open one", () => {
-        const open = { runId: "r", stepKey: "s", lines: [], resolvedAt: null }
+        const open = { runId: "r", stepKey: "s", lines: [], resolvedAt: null, decisions: [] }
         const recent = { ...open, resolvedAt: "2026-11-09T06:00:00.000Z" }
         const old = { ...open, resolvedAt: "2026-11-09T04:59:59.000Z" }
         expect(stopCounts(open, NOW)).toBe(true)
@@ -128,6 +107,32 @@ describe("stopToldOf and stopCounts", () => {
         expect(stopCounts(old, NOW)).toBe(false)
         expect(stopCounts(open, null)).toBe(true)
         expect(stopCounts(recent, null)).toBe(false)
+    })
+})
+
+describe("founderDecisionsOf (D-MX-1)", () => {
+    const stop = (runId: string, stepKey: string, answers: RunStop["answers"], question = "Q?") =>
+        stopToldOf(stopOf({ runId, stepKey, question, reason: "R", customerLines: [], answers, resolvedAt: null }))
+
+    it("reads the answers in words of other stops with the question they answer, oldest first, each once; never the own stop", () => {
+        const stops = [
+            stop("run-2", "answer", [
+                { kind: "answer", text: "Co VAT 8%", by: "o", at: "2026-11-10T04:10:00.000Z" },
+                { kind: "retry", text: null, by: "o", at: "2026-11-10T04:11:00.000Z" },
+            ]),
+            stop(
+                "run-1",
+                "consult",
+                [{ kind: "answer", text: "Dong y doi", by: "o", at: "2026-11-10T03:00:00.000Z" }],
+                "",
+            ),
+            stop("run-3", "match", [{ kind: "answer", text: "own", by: "o", at: "2026-11-10T05:00:00.000Z" }]),
+        ]
+
+        expect(founderDecisionsOf(stops, { runId: "run-3", stepKey: "match" })).toEqual([
+            { question: "R", answer: "Dong y doi", at: "2026-11-10T03:00:00.000Z" },
+            { question: "Q?", answer: "Co VAT 8%", at: "2026-11-10T04:10:00.000Z" },
+        ])
     })
 })
 
@@ -147,31 +152,5 @@ describe("alreadySentOf", () => {
             at: new Date(Date.UTC(2026, 10, 10, 0, index)).toISOString(),
         }))
         expect(alreadySentOf(many).map((line) => line.text)).toEqual(many.slice(5).map((line) => line.text))
-    })
-})
-
-describe("the reads of what a customer was told", () => {
-    it("reads a step's ledger records by run and step, and a customer's stops by customer and state", () => {
-        expect(stepLedgerQueryOf({ runId: "run-1", stepKey: "match" })).toMatchObject({
-            from: "agent.node-effect",
-            where: {
-                op: "and",
-                of: [
-                    { op: "eq", field: "runId", value: "run-1" },
-                    { op: "eq", field: "stepKey", value: "match" },
-                ],
-            },
-            order: [["id", "asc"]],
-        })
-        expect(leadStopsQueryOf("lead-1", "open")).toMatchObject({
-            from: "agent.run-stop",
-            where: {
-                op: "and",
-                of: [
-                    { op: "eq", field: "leadId", value: "lead-1" },
-                    { op: "eq", field: "state", value: "open" },
-                ],
-            },
-        })
     })
 })

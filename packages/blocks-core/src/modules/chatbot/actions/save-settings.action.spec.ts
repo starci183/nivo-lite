@@ -9,11 +9,11 @@ import { SAVE_SETTINGS } from "./save-settings.action"
 const save = (world: MemoryWorld, input: unknown, memberId: string | null = MANAGER_ID) =>
     SAVE_SETTINGS.execute?.(memoryProvider(world), input, { ...STAFF_CONTEXT, memberId })
 
-describe("the chatbot.save-settings action", () => {
+describe("the blocks-core.chatbot.settings-save action", () => {
     it("is for owners and managers: its own permission, a different one from replying", () => {
         expect(SAVE_SETTINGS.permission).toBe("chatbot.manage")
         expect(SAVE_SETTINGS.transactional).toBe(true)
-        expect(SAVE_SETTINGS.refreshes).toEqual(["chatbot.settings"])
+        expect(SAVE_SETTINGS.refreshes).toEqual(["blocks-core.chatbot.api.settings.get"])
     })
 
     it("saves the rules as the one settings record, with who saved them, the holding message without the blanks around it", async () => {
@@ -78,7 +78,7 @@ describe("the chatbot.save-settings action", () => {
     })
 })
 
-describe("the chatbot.settings read", () => {
+describe("the blocks-core.chatbot.api.settings.get read", () => {
     it("answers the defaults before the first save", async () => {
         const result = await SETTINGS_READ.execute?.(memoryProvider(memoryWorld()), {}, STAFF_CONTEXT)
         expect(result).toEqual({ ok: true, data: { ...CHATBOT_SETTINGS_DEFAULTS, updatedBy: "" } })

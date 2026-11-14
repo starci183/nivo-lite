@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AdminSupportService } from "@modules/domain/platform-admin"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { ExtendSubscriptionResult } from "./extend-subscription.contracts"
 import { ExtendSubscriptionCommand } from "./extend-subscription.command"
 

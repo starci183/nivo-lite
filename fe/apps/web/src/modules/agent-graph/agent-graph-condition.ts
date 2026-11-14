@@ -28,7 +28,7 @@ export const termsOfWhen = (when: unknown): ReadonlyArray<AgentGraphTermForm> | 
     const single = comparisonSchema.safeParse(when)
     if (single.success) return [termOf(single.data)]
     const flat = flatSchema.safeParse(when)
-    return flat.success ? flat.data.all.map(termOf) : null
+    return flat.success ? flat.data.all.map((entry) => termOf(entry)) : null
 }
 
 /** What a term of the form writes into the draft: the value its fact's type asks for. */

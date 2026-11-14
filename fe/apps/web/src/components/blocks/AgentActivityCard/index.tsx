@@ -1,31 +1,32 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentWorkSwitch } from "@/hooks/agentWork"
 import { useAgentInstallation, useAgentRights, useChooseLive } from "@/hooks/agentSettings"
-import { AgentActivityCardBase } from "./component"
-import type { ActivityRowView } from "./component"
+import { AgentActivityCardBase, type ActivityRowView } from "./component"
 
 /** The installation whose switches the card holds. */
 type AgentActivityCardProps = {
-    readonly installationId: string
-    readonly module: string
+    readonly installationId?: string | undefined
+    readonly module?: string | undefined
     /** The type answers customers: the live row shows. */
-    readonly answersCustomers: boolean
+    readonly answersCustomers?: boolean | undefined
 }
 
 /** The connected activity card: the work switch and (for a type that talks to customers) the live switch, each acting at once. */
 export const AgentActivityCard = (props: AgentActivityCardProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("modulesCore")
     const tw = useTranslations("agentWork")
     const tg = useTranslations("agentGeneral")
     const { canEdit } = useAgentRights()
-    const work = useAgentWorkSwitch(props.installationId)
-    const { slot } = useAgentInstallation(props.installationId, props.module)
+    const work = useAgentWorkSwitch(route.installationId)
+    const { slot } = useAgentInstallation(route.installationId, route.module)
     const agent = "items" in slot ? slot.items : undefined
     const [chosen, setChosen] = useState<boolean | null>(null)
-    const { choose, isSaving } = useChooseLive(props.installationId)
+    const { choose, isSaving } = useChooseLive(route.installationId)
     const workView = "items" in work.slot ? work.slot.items : undefined
     const isLive = chosen ?? agent?.isLive ?? false
     const pending = agent?.isSetupPending === true
@@ -39,7 +40,7 @@ export const AgentActivityCard = (props: AgentActivityCardProps) => {
             blocker: workView?.canChange === false ? tw("switchOwnerOnly") : "",
         },
     ]
-    if (props.answersCustomers) {
+    if (props.answersCustomers ?? route.answersCustomers) {
         rows.push({
             id: "live",
             title: tg("rowLive"),

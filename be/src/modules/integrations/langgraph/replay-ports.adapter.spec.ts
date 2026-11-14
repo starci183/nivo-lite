@@ -6,6 +6,7 @@ import { mock } from "@starci/jest-preset"
 import { z } from "zod"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { LanggraphError, LanggraphErrorCode } from "./errors/langgraph.error"
 import { LanggraphClient } from "./langgraph.client"
 import { GRAPH_CHECKPOINTS, LANGGRAPH_OPTIONS } from "./langgraph.decorators"
 import { LanggraphLogEvent } from "./langgraph.log-events"
@@ -19,28 +20,34 @@ const ORDER_CREATE = defineEffect({
     id: "sales.order.create",
     title: { key: "orderCreate" },
     payload: z.object({ qty: z.number() }).strict(),
-    rights: [],
 })
 const MESSAGE_SEND = defineEffect({
-    id: "nivo.lead.message.send",
+    id: "nivo.tool.customer.message.send",
     title: { key: "messageSend" },
-    payload: z.object({ text: z.string() }).strict(),
-    rights: [],
+    payload: z.object({ text: z.string().max(500) }).strict(),
 })
 const ORDER_READ = defineTool({
     id: "sales.order.read",
     title: { key: "orderRead" },
-    args: z.object({ orderId: z.string() }).strict(),
+    args: z.object({ orderId: z.string().max(500) }).strict(),
     result: z.object({ total: z.number() }).strict(),
     mutates: false,
-    rights: [],
 })
-const TURN = z.object({ say: z.string() }).strict()
+const TURN = z.object({ say: z.string().max(500) }).strict()
 
-/** A refusal as a door throws it: a class of its own with a code, which the node tells apart by class. */
-class ApprovalRequired extends Error {
-    readonly code = "TOOL_APPROVAL_REQUIRED"
-}
+/** A refusal as a door throws it: a class of its own, which the node tells apart by class. */
+class ApprovalRequired extends LanggraphError {}
+
+/** The code the refusals and cuts of these specs carry: any code of the capability stands in for "the call failed". */
+const FAILURE = LanggraphErrorCode.ThreadNotStopped
+const failureOf = (): LanggraphError => new LanggraphError({ code: FAILURE })
+
+/** Settles a call into its result or its cause, so a failure is carried on and never swallowed. */
+const attemptOf = <Value>(call: Promise<Value>): Promise<{ readonly done: Value } | { readonly cause: unknown }> =>
+    call.then(
+        (done) => ({ done }),
+        (cause: unknown) => ({ cause }),
+    )
 
 /** A saver that loses every recorded call, as a crash between an effect and its record does: the checkpoint is there, the record is not. */
 class ForgetfulSaver extends MemorySaver {
@@ -54,44 +61,58 @@ class ForgetfulSaver extends MemorySaver {
     }
 }
 
+/** What a host's ports were called with, in order. */
+interface HostSeen {
+    readonly execute: Array<string>
+    readonly tool: Array<string>
+    readonly model: Array<string>
+    read: number
+    now: number
+}
+
 /** Counts every call a host's ports receive, and answers from a script. */
 const hostOf = () => {
-    const seen = { execute: [] as Array<string>, tool: [] as Array<string>, model: [] as Array<string>, read: 0, now: 0 }
+    const seen: HostSeen = { execute: [], tool: [], model: [], read: 0, now: 0 }
     const refuse = { tool: 0 }
     const ports: NodeHostPorts = {
-        read: async () => {
+        read: () => {
             seen.read += 1
-            return []
+            return Promise.resolve([])
         },
-        write: async (kind) => ({ kind, id: "w-1" }),
+        write: (kind) => Promise.resolve({ kind, id: "w-1" }),
         now: () => {
             seen.now += 1
             return new Date(0)
         },
-        execute: async (effect, _payload, call): Promise<SubjectRef> => {
+        execute: (effect, _payload, call): Promise<SubjectRef> => {
             seen.execute.push(`${effect.id}:${call.key}`)
-            return { kind: "sales.order", id: `subject-${seen.execute.length}` }
+            return Promise.resolve({ kind: "sales.order", id: `subject-${seen.execute.length}` })
         },
-        callTool: async (tool, _args, key) => {
+        callTool: (tool, _args, key) => {
             seen.tool.push(`${tool.id}:${key}`)
             if (refuse.tool > 0) {
                 refuse.tool -= 1
-                throw new ApprovalRequired("ask the founder")
+                return Promise.reject(new ApprovalRequired({ code: FAILURE }))
             }
-            return { total: 1000 * seen.tool.length }
+            return Promise.resolve({ total: 1000 * seen.tool.length })
         },
         model: {
-            text: async (request) => {
+            text: (request) => {
                 seen.model.push(`text:${request.purpose}`)
-                return `text-${seen.model.length}`
+                return Promise.resolve(`text-${seen.model.length}`)
             },
-            json: async (schema, request) => {
+            json: (schema, request) => {
                 seen.model.push(`json:${request.purpose}`)
-                return schema.parse({ say: `turn-${seen.model.length}` })
+                return Promise.resolve(schema.parse({ say: `turn-${seen.model.length}` }))
             },
         },
     }
     return { ports, seen, refuse }
+}
+
+/** How many model turns a host's loop has asked for. */
+interface AskCount {
+    count: number
 }
 
 const ask = (purpose: string): NodeModelRequest => ({ purpose, instructions: "stable", input: {} })
@@ -118,7 +139,7 @@ const cutOnce = (): (() => void) => {
     return () => {
         if (left.cuts > 0) {
             left.cuts -= 1
-            throw new Error("cut")
+            throw failureOf()
         }
     }
 }
@@ -146,7 +167,7 @@ describe("replayPortsOf", () => {
             return { update: { steps: { consult: { order: order.id } } } }
         })
 
-        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
+        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
         const driven = await threads.drive(THREAD, graph)
 
         expect(driven).toMatchObject({ status: "ended", state: { steps: { consult: { order: "subject-1" } } } })
@@ -175,7 +196,7 @@ describe("replayPortsOf", () => {
             status: "ended",
             state: { steps: { consult: { order: "subject-1", sent: "subject-2", approved: true } } },
         })
-        expect(host.seen.execute).toEqual([`sales.order.create:${STEP_KEY}:aaaa`, `nivo.lead.message.send:${STEP_KEY}:cccc`])
+        expect(host.seen.execute).toEqual([`sales.order.create:${STEP_KEY}:aaaa`, `nivo.tool.customer.message.send:${STEP_KEY}:cccc`])
     })
 
     it("passes read, write and now through unrecorded: a restart reads the world again", async () => {
@@ -190,7 +211,7 @@ describe("replayPortsOf", () => {
             return {}
         })
 
-        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
+        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
         await threads.drive(THREAD, graph)
 
         expect(host.seen).toMatchObject({ read: 2, now: 2 })
@@ -203,10 +224,9 @@ describe("replayPortsOf", () => {
         const caught: Array<unknown> = []
         const graph = graphOf(async () => {
             const ports = threads.replayPortsOf(host.ports)
-            const read = await ports.callTool(ORDER_READ, { orderId: "o-1" }, `${STEP_KEY}:bbbb`).catch((cause: unknown) => {
-                caught.push(cause)
-                return null
-            })
+            const attempt = await attemptOf(ports.callTool(ORDER_READ, { orderId: "o-1" }, `${STEP_KEY}:bbbb`))
+            if ("cause" in attempt) caught.push(attempt.cause)
+            const read = "done" in attempt ? attempt.done : null
             const words = await ports.model.text(ask("consult:words"))
             return { update: { steps: { consult: { read, words } } } }
         })
@@ -216,7 +236,7 @@ describe("replayPortsOf", () => {
         expect(ended).toMatchObject({ status: "ended", state: { steps: { consult: { read: null, words: "text-1" } } } })
         expect(caught).toHaveLength(1)
         expect(caught[0]).toBeInstanceOf(ApprovalRequired)
-        expect(caught[0]).toMatchObject({ code: "TOOL_APPROVAL_REQUIRED", message: "ask the founder" })
+        expect(caught[0]).toMatchObject({ code: FAILURE })
     })
 
     it("tries a call that failed again on a restart and makes everything after it live, never replaying a failure", async () => {
@@ -226,7 +246,8 @@ describe("replayPortsOf", () => {
         const graph = graphOf(async (_state, scope) => {
             const ports = threads.replayPortsOf(host.ports)
             const turn = await ports.model.json(TURN, ask("consult:agent"))
-            const read = await ports.callTool(ORDER_READ, { orderId: "o-1" }, `${STEP_KEY}:bbbb`).catch(() => null)
+            const attempt = await attemptOf(ports.callTool(ORDER_READ, { orderId: "o-1" }, `${STEP_KEY}:bbbb`))
+            const read = "done" in attempt ? attempt.done : null
             if (read === null) scope.stop({ approve: "sales.order.read" })
             const words = await ports.model.text(ask("consult:words"))
             return { update: { steps: { consult: { turn, read, words } } } }
@@ -266,7 +287,7 @@ describe("replayPortsOf", () => {
             return { update: { steps: { consult: { turn, order: order.id, sent: sent.id } } } }
         })
 
-        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
+        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
         const driven = await threads.drive(THREAD, graph)
 
         expect(driven).toMatchObject({
@@ -276,9 +297,9 @@ describe("replayPortsOf", () => {
         expect(host.seen.model).toEqual(["json:consult:agent"])
         expect(host.seen.execute).toEqual([
             `sales.order.create:${STEP_KEY}:aaaa`,
-            `nivo.lead.message.send:${STEP_KEY}:cccc`,
+            `nivo.tool.customer.message.send:${STEP_KEY}:cccc`,
             `sales.order.create:${STEP_KEY}:zzzz`,
-            `nivo.lead.message.send:${STEP_KEY}:cccc`,
+            `nivo.tool.customer.message.send:${STEP_KEY}:cccc`,
         ])
         expect(logger.warn).toHaveBeenCalledWith(LanggraphLogEvent.ReplayLeft, {
             thread: "run-1",
@@ -313,7 +334,7 @@ describe("replayPortsOf", () => {
             return { update: { steps: { consult: { sent: sent.id, words } } } }
         })
 
-        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
+        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
         const driven = await threads.drive(THREAD, graph)
 
         expect(driven).toMatchObject({ status: "ended", state: { steps: { consult: { sent: "subject-1" } } } })
@@ -344,9 +365,9 @@ describe("replayPortsOf", () => {
                 },
                 model: {
                     text: host.ports.model.text,
-                    json: async (schema, request) => {
+                    json: (schema, request) => {
                         asked.push(request)
-                        return schema.parse({ confused: script[asked.length - 1] ?? false })
+                        return Promise.resolve(schema.parse({ confused: script[asked.length - 1] ?? false }))
                     },
                 },
             }
@@ -376,10 +397,13 @@ describe("replayPortsOf", () => {
                 {
                     key: GATE,
                     ends: ["match"],
-                    run: async (state, scope) => {
+                    run: (state, scope) => {
                         const decision = scope.stop<{ readonly kind: string; readonly text?: string }>({ ask: state.trouble })
                         const words = decision.kind === "answer" ? [{ text: decision.text ?? "" }] : []
-                        return { update: { trouble: null, founderAnswers: [...state.founderAnswers, ...words] }, goto: "match" }
+                        return Promise.resolve({
+                            update: { trouble: null, founderAnswers: [...state.founderAnswers, ...words] },
+                            goto: "match",
+                        })
                     },
                 },
             ],
@@ -443,13 +467,13 @@ describe("replayPortsOf", () => {
                 await replayed.model.json(DECIDE, { purpose: "consult:agent", instructions: "stable", input: { lines: [...lines] } })
                 if (cuts.left > 0) {
                     cuts.left -= 1
-                    throw new Error("cut")
+                    throw failureOf()
                 }
                 return { update: { steps: { consult: { line: line.id } } } }
             })
 
-            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
-            await expect(threads.drive(THREAD, graph)).rejects.toThrow("cut")
+            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
+            await expect(threads.drive(THREAD, graph)).rejects.toMatchObject({ code: FAILURE })
             const same = world.asked.length
             lines.push("I paid already")
             const driven = await threads.drive(THREAD, graph)
@@ -474,12 +498,12 @@ describe("replayPortsOf", () => {
                 const request = requests[pass.count] ?? requests[0]
                 pass.count += 1
                 if (request !== undefined) await threads.replayPortsOf(world.ports).model.json(DECIDE, request)
-                if (pass.count < requests.length) throw new Error("cut")
+                if (pass.count < requests.length) throw failureOf()
                 return {}
             })
 
-            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
-            await expect(threads.drive(THREAD, graph)).rejects.toThrow("cut")
+            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
+            await expect(threads.drive(THREAD, graph)).rejects.toMatchObject({ code: FAILURE })
             const afterReordered = world.asked.length
             await threads.drive(THREAD, graph)
 
@@ -491,7 +515,7 @@ describe("replayPortsOf", () => {
 
 describe("replayRunOf: the model turns of a host's own agent loop, in the same record", () => {
     /** A model turn as a host's loop records it: its name (content included) and the plain answer the model gave. */
-    const turnOf = (asked: { count: number }, say: string) => (): Promise<{ readonly say: string }> => {
+    const turnOf = (asked: AskCount, say: string) => (): Promise<{ readonly say: string }> => {
         asked.count += 1
         return Promise.resolve({ say })
     }
@@ -527,7 +551,7 @@ describe("replayRunOf: the model turns of a host's own agent loop, in the same r
             return { update: { steps: { consult: { order: order.id } } } }
         })
 
-        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
+        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
         const driven = await threads.drive(THREAD, graph)
 
         expect(driven.status).toBe("ended")
@@ -557,7 +581,7 @@ describe("replayRunOf: the model turns of a host's own agent loop, in the same r
             return {}
         })
 
-        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
+        await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: FAILURE })
         await threads.drive(THREAD, graph)
 
         // Turn 1 and the read replay; turn 2 is asked again and the effect after it goes live (the ledger under the port holds it).
@@ -570,7 +594,7 @@ describe("replayRunOf: the model turns of a host's own agent loop, in the same r
     it("never replays a turn that failed: the model's error reaches the loop as thrown and the restart asks again", async () => {
         const { threads } = await build()
         const host = hostOf()
-        const failure = new ApprovalRequired("all tries failed")
+        const failure = new ApprovalRequired({ code: FAILURE })
         const asked = { count: 0 }
         const pass = { count: 0 }
         const caught: Array<unknown> = []

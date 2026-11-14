@@ -1,9 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { AGENTS_QUEUE, AgentsJob, agentsDedupeKey } from "./agents.contracts"
-import type { GenerateWithAgentPayload, SetupTurnPayload } from "./agents.contracts"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    AGENTS_QUEUE,
+    AgentsJob,
+    agentsDedupeKey,
+    type GenerateWithAgentPayload,
+    type SetupTurnPayload,
+} from "./agents.contracts"
 
 @Injectable()
 /** The typed producer of the agents queue: the one way a generation or a setup-turn job starts from the back end. */

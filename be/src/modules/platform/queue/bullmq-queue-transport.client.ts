@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { UnrecoverableError } from "bullmq"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BullmqQueueDeliveryClient } from "./bullmq-queue-delivery.client"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import type { OptionalSlot, QueueHandler, QueueSchedule } from "./queue.contracts"
@@ -49,7 +48,7 @@ const TRANSPORT_STATES: Readonly<Record<string, QueueTransportState>> = {
 @Injectable()
 /**
  * The QueueTransport port over BullMQ on Redis: the relay publishes committed outbox rows as jobs keyed by their row id
- * and a worker per queue hands each job to the delivery client, which runs it against the durable record — the
+ * and a worker per queue hands each job to the delivery client, which runs it against the durable record - the
  * per-workspace slot limit, the start count and the reason of a failure stay in PostgreSQL, while the broker orders,
  * retries and holds the deliveries.
  */
@@ -209,7 +208,7 @@ export class BullmqQueueTransportClient implements QueueTransport {
                     cause,
                     { queue: handler.queue, jobId: delivery.id, job: delivery.job, attempt: delivery.attempt },
                 )
-                return Promise.reject(dead ? new UnrecoverableError(reasonOf(cause)) : cause)
+                throw dead ? new UnrecoverableError(reasonOf(cause)) : cause
             })
     }
 
@@ -234,7 +233,7 @@ export class BullmqQueueTransportClient implements QueueTransport {
         this.abortAll()
         const cause = new QueueError({ code: QueueErrorCode.ShutdownDeadline })
         this.logger.error(QueueLogEvent.ShutdownDeadline, cause)
-        return Promise.reject(cause)
+        throw cause
     }
 
     /** Bounds readiness and commands alike, including BullMQ's pre-command wait for the initial connection. */
@@ -252,7 +251,7 @@ export class BullmqQueueTransportClient implements QueueTransport {
             .finally(() => clearTimeout(timer))
             .catch((cause: unknown) => {
                 this.logger.error(QueueLogEvent.RedisFailed, cause)
-                return Promise.reject(cause)
+                throw cause
             })
     }
 
@@ -291,14 +290,14 @@ export class BullmqQueueTransportClient implements QueueTransport {
             .getBackend()
             .client.then(async (client) => {
                 if (!isQueueMemoryBounded(await client.info("memory"))) {
-                    return Promise.reject(new QueueError({ code: QueueErrorCode.RedisConfigurationInvalid }))
+                    throw new QueueError({ code: QueueErrorCode.RedisConfigurationInvalid })
                 }
                 return undefined
             })
             .catch((cause: unknown) => {
                 this.verified.delete(name)
                 this.logger.error(QueueLogEvent.RedisFailed, cause, { queue: name })
-                return Promise.reject(cause)
+                throw cause
             })
         this.verified.set(name, checking)
         return checking

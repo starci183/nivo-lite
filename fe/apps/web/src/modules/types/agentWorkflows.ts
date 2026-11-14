@@ -37,6 +37,8 @@ export interface WorkflowNoticeView {
     readonly title: string
     readonly changelog: string
     readonly diffLine: string
+    /** False when the template version the workflow was made from is gone: the update and its preview cannot be read. */
+    readonly canUpdate: boolean
 }
 
 /** One version of the history. */

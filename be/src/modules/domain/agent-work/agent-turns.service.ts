@@ -1,17 +1,12 @@
-import { Injectable, Optional } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Injectable } from "@nestjs/common"
+import { In, type EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectAgentWorkOptions } from "./agent-work.decorators"
 import {
     LEASE_SECONDS,
     BREAKER_AFTER,
     BREAKER_SECONDS,
-    debounceMaxMsOf,
-    debounceMsOf,
     retryWaitOf,
 } from "./agent-work.policy"
-import type { AgentWorkOptions } from "./agent-work.options"
 import { parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTurnEntity, AgentWakeEntity } from "./persistence/entities"
@@ -39,19 +34,16 @@ const jsonParameter = (value: unknown): string | null =>
 export class AgentTurnsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @Optional() @InjectAgentWorkOptions() private readonly options: AgentWorkOptions | null = null,
     ) {}
 
     /** Takes the next wake of the scope for `owner`: killed, busy, idle, or a turn begun with its fence. */
     async begin(agentId: string, scopeKey: string, owner: string): Promise<AgentBegin> {
-        const window = debounceMsOf(this.options?.debounceMs)
+        // The settle time rides on each wake (its source's declaration): `begin` reads it there.
         const [row] = await callDbFunction<FunctionRow>(this.entityManager, "public.agent_turn_begin", [
             agentId,
             scopeKey,
             owner,
             LEASE_SECONDS,
-            window,
-            debounceMaxMsOf(this.options?.debounceMaxMs, window),
         ])
         const begin = parseBegin(row?.agent_turn_begin, agentId, scopeKey)
         if (begin === null) throw rejected()

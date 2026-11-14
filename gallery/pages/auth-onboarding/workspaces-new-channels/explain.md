@@ -22,10 +22,10 @@ Vì sao: form footer zone: neutral pill left, primary commit with end arrow righ
 Luật: `table-heroui-native-section-head.md`, `page-header-left-sublabel-xs.md`.
 Grammar: `SurfaceCard footers`, `Button endArrow`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`.
 
-## Dòng "Kết nối ít nhất một kênh để AI đọc tin khách. Bạn có thể làm sau." dưới thẻ
-Vì sao: SAI — a loose explanatory caption under the card; captions under a card are only legends or notes about the card's data. The rule belongs as the card subtitle under the title.
-Luật: `surfacecard-select-subtitle.md` (subtitle rule).
-Grammar: `SurfaceCard note` / subtitle under `Heading`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`.
+## Dòng "Kết nối ít nhất một kênh để AI đọc tin khách. Bạn có thể làm sau."
+Vì sao: since 2026-11-13 (PL-6) it is the muted subtitle under the question inside the card header (`FirstRunCard`), not a caption under the card. The step offers channels so the AI can READ customers; it does not promise any inbox page (/inbox is retired).
+Luật: `surfacecard-select-subtitle.md` (subtitle under a title).
+Grammar: `Heading` + `Text tone="muted"` in `SurfaceCard headers`.
 
 ## Trạng thái chưa có kênh nào / lỗi (không có trong shot)
 Vì sao: CHƯA RÕ — the block draws an `EmptyNotice` when the list fails; every channel in the shot is already connected so the interesting states (not connected: a Button per row; empty) are not shown.

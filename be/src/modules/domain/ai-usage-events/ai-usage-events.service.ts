@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger, runInScope, workInScope } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { noticeBody, noticeLevelOf } from "./notice.policy"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, runInScope, workInScope, type Logger } from "@modules/platform/logging"
+import { InjectUsageNoticeDoor } from "./ai-usage-events.decorators"
+import { noticeLevelOf, noticeUseOf, usageNoticeKeyOf } from "./notice.policy"
 import { AiUsageEventEntity } from "./persistence/entities"
 import { quotaFiguresOf, quotaLookupOf, quotaOf, stopsCall } from "./quota.policy"
 import type {
@@ -13,16 +14,16 @@ import type {
     RunCallKindUsage,
     UsageInput,
     UsageKind,
+    UsageNoticeDoor,
     UsageSummary,
 } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { callColumnsOf } from "./call-facts.policy"
 import { workColumnsOf } from "./work-columns.policy"
-import { toRunCallKind } from "./run-calls.mapper"
-import type { RunCallKindAggregate } from "./run-calls.mapper"
+import { toRunCallKind, type RunCallKindAggregate } from "./run-calls.mapper"
+import { creditsFromSql } from "./credits.policy"
 import { CREDIT_USD_VALUE, figuresOf } from "./usage-cost.policy"
-import { toDailyModuleUsage, toUsageSummary } from "./usage-summary.mapper"
-import type { MonthlyUsageAggregate } from "./usage-summary.mapper"
+import { toDailyModuleUsage, toUsageSummary, type MonthlyUsageAggregate } from "./usage-summary.mapper"
 
 /** The most day-and-module rollups the billing card reads. */
 const MONTHLY_ROW_LIMIT = 2000
@@ -64,12 +65,20 @@ const RUN_KIND_SUMS: ReadonlyArray<readonly [string, string]> = [
     ["array_agg(DISTINCT u.work_kind)", "work_kinds"],
 ]
 
+/**
+ * The credits of the calls selected: each call books cost / credit value exactly; the SUM is numeric, rounded to 6 decimals once, and read
+ * as text (see `creditsFromSql`). Never `ceil` per call.
+ */
+const CREDITS_SUM = "COALESCE(round(sum(u.cost_usd / CAST(:creditUsd AS numeric)), 6), 0)::text"
+
 @Injectable()
 /** Meters every model call of a workspace and answers where the month stands against the allowance; the only writer of ai_usage_events. */
 export class AiUsageEventsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectLogger() private readonly logger: Logger,
+        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        @Optional() @InjectUsageNoticeDoor() private readonly notices: UsageNoticeDoor | null = null,
     ) {}
 
     /**
@@ -117,7 +126,7 @@ export class AiUsageEventsService {
 
     /** The browser's quota read: absence is nullable, while a database failure propagates to the caller. */
     async readQuotaStatus(workspaceId: string): Promise<QuotaLookup> {
-        return quotaLookupOf((await this.quotaRecords(workspaceId)).map(quotaFiguresOf))
+        return quotaLookupOf((await this.quotaRecords(workspaceId)).map((item) => quotaFiguresOf(item)))
     }
 
     /** Current-month use for the billing card, after the application proves the caller's manager role. */
@@ -141,7 +150,7 @@ export class AiUsageEventsService {
             .addOrderBy("module", "ASC")
             .limit(MONTHLY_ROW_LIMIT)
             .getRawMany<MonthlyUsageAggregate>()
-        return toUsageSummary(status, rows.map(toDailyModuleUsage))
+        return toUsageSummary(status, rows.map((item) => toDailyModuleUsage(item)))
     }
 
     /** The model cost from a selected day onward, used by the credits run-out forecast. */
@@ -156,27 +165,27 @@ export class AiUsageEventsService {
         return row?.cost_usd ?? 0
     }
 
-    /** The credits one module used in the last `days` days; every call counts as whole credits, rounded up. */
+    /** The exact credits one module used in the last `days` days (the sum of each call's cost / credit value, 6 decimals; no call is rounded). */
     async creditsUsedBy(workspaceId: string, module: string, days: number): Promise<number> {
         const row = await this.entityManager
             .createQueryBuilder(AiUsageEventEntity, "u")
-            .select("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
+            .select(CREDITS_SUM, "credits")
             .where("u.workspace_id = :workspaceId AND u.module = :module AND u.failure IS NULL", {
                 workspaceId,
                 module,
                 creditUsd: CREDIT_USD_VALUE,
             })
             .andWhere("u.created_at >= now() - CAST(:days AS integer) * interval '1 day'", { days })
-            .getRawOne<{ credits: number }>()
-        return row?.credits ?? 0
+            .getRawOne<{ credits: string | null }>()
+        return creditsFromSql(row?.credits)
     }
 
-    /** The credits each module used between two instants (the guide never counts), whole credits per call, one grouped statement. */
+    /** The credits each module used between two instants (the guide never counts), exact credits (the sum, never rounded per call), one grouped statement. */
     async creditsByModule(workspaceId: string, from: Date, to: Date): Promise<ReadonlyMap<string, number>> {
         const rows = await this.entityManager
             .createQueryBuilder(AiUsageEventEntity, "u")
             .select("COALESCE(u.module, 'other')", "module")
-            .addSelect("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
+            .addSelect(CREDITS_SUM, "credits")
             .where("u.workspace_id = :workspaceId AND u.kind <> 'guide' AND u.failure IS NULL", {
                 workspaceId,
                 creditUsd: CREDIT_USD_VALUE,
@@ -188,13 +197,13 @@ export class AiUsageEventsService {
         return new Map(rows.map((row) => [row.module, row.credits]))
     }
 
-    /** The credits each run used, whole credits per call (the guide never counts), for the runs given; a run with no call is absent. */
+    /** The credits each run used, exact credits (the guide never counts), for the runs given; a run with no call is absent. */
     async creditsByRun(workspaceId: string, runIds: ReadonlyArray<string>): Promise<ReadonlyMap<string, number>> {
         if (runIds.length === 0) return new Map()
         const rows = await this.entityManager
             .createQueryBuilder(AiUsageEventEntity, "u")
             .select("u.run_id", "run_id")
-            .addSelect("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
+            .addSelect(CREDITS_SUM, "credits")
             .where("u.workspace_id = :workspaceId AND u.kind <> 'guide' AND u.failure IS NULL", {
                 workspaceId,
                 creditUsd: CREDIT_USD_VALUE,
@@ -243,16 +252,19 @@ export class AiUsageEventsService {
         return status
     }
 
+    /** Tells the founder in /chat, once per month and level; a notice that cannot be posted is logged and never breaks the call. */
     private async notifyOwner(workspaceId: string, status: QuotaStatus): Promise<void> {
         const level = noticeLevelOf(status)
-        if (level === null) return
+        if (level === null || this.notices === null) return
         try {
-            await callDbFunction<{ usage_notice_post: boolean }>(this.entityManager, "public.usage_notice_post", [
-                workspaceId,
-                status.periodStart,
-                level,
-                noticeBody(level, status),
-            ])
+            await this.notices.postNotice(workspaceId, {
+                key: usageNoticeKeyOf(status.periodStart, level),
+                body: this.catalog.get(
+                    `usage.notice.${level}`,
+                    { percent: Math.round(status.ratio * 100), use: noticeUseOf(status) },
+                    "vi",
+                ),
+            })
         } catch (cause) {
             this.logger.error(AiUsageEventsLogEvent.NoticeFailed, cause, { workspaceId })
         }

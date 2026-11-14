@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 
 /** The durable queue of the deferred telegram receipt consumer. */
 export const TELEGRAM_DELIVERY_QUEUE = "telegram-delivery"

@@ -1,10 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { HealthCandidate } from "@modules/domain/connections"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { ConnectionsService, type HealthCandidate } from "@modules/domain/connections"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { isConnectionHealthPayload } from "@modules/queues/connection-health"
 import type { HealthSummary, HealthTally } from "./channels.contracts"
@@ -30,7 +27,7 @@ export class ConnectionHealthService {
 
     /** Judges every connection that is set up and records the verdicts that changed; answers how many it saw in each state. */
     async checkAll(silentAfterHours: number = DEFAULT_SILENT_AFTER_HOURS): Promise<HealthSummary> {
-        const tally: HealthTally = { checked: 0, ok: 0, silent: 0, failing: 0, changed: 0 }
+        const tally: HealthTally = { checked: 0, ok: 0, silent: 0, failing: 0, degraded: 0, changed: 0 }
         await this.page("", silentAfterHours, tally)
         return { ...tally }
     }
@@ -53,7 +50,7 @@ export class ConnectionHealthService {
         if (connection.status === "pending") return
         counts.checked += 1
         const verdict = judgeConnection(connection, this.clock.now().getTime(), silentAfterHours)
-        counts[verdict.state] += 1
+        counts[verdict.state === "needs_reauth" ? "failing" : verdict.state] += 1
         if (connection.health === verdict.state || (verdict.state === "ok" && connection.health === "")) return
         await this.connections.markHealth(connection.id, { ...verdict, checkedAt: this.clock.now().toISOString() })
         counts.changed += 1

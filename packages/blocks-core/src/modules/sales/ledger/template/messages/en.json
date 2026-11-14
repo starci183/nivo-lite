@@ -1,0 +1,18 @@
+{
+  "gates.scope.label": "Scope",
+  "gates.scope.hint": "What the accounting agent covers: invoices, reconciliation, reminders...",
+  "gates.scope.writes.0.attributeLabel": "Phạm vi kế toán AI",
+  "gates.currency_tax.label": "Currency and tax",
+  "gates.currency_tax.hint": "Currency, VAT rate, rounding rules.",
+  "gates.currency_tax.writes.0.attributeLabel": "Thuế VAT và làm tròn",
+  "gates.source_evidence.label": "Source evidence",
+  "gates.source_evidence.hint": "Where figures come from: orders, bank statements, files...",
+  "gates.approval_policy.label": "Approval policy and thresholds",
+  "gates.approval_policy.hint": "Amounts the AI handles alone and amounts you approve.",
+  "gates.evidence_requirements.label": "Evidence requirements",
+  "gates.evidence_requirements.hint": "Documents required before invoicing or recording a payment.",
+  "gates.evidence_requirements.writes.0.attributeLabel": "Chứng từ bắt buộc",
+  "gates.prohibited_actions.label": "Prohibited actions",
+  "gates.prohibited_actions.hint": "Actions it must never take alone (refunds, voiding invoices...).",
+  "gates.prohibited_actions.writes.0.attributeLabel": "Việc kế toán AI không được tự làm"
+}

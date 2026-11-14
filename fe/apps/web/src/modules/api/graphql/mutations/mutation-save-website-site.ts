@@ -1,11 +1,10 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { SaveWebsiteSiteMutation, SaveWebsiteSiteMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the SaveWebsiteSite mutation. */
-type MutateSaveWebsiteSiteRequest = WireInput<SaveWebsiteSiteMutationVariables["input"]>
+export type MutateSaveWebsiteSiteRequest = WireInput<SaveWebsiteSiteMutationVariables["input"]>
 
 type MutateSaveWebsiteSiteResponse = SaveWebsiteSiteMutation
 
@@ -34,17 +33,12 @@ const mutationMap: Record<MutationSaveWebsiteSite, Document> = { [MutationSaveWe
 /** Parameters of the SaveWebsiteSite mutation. */
 type MutateSaveWebsiteSiteParams = MutateParams<MutationSaveWebsiteSite, MutateSaveWebsiteSiteRequest>
 
-/** Changes the switches and the agent of the website intake; owner or manager. */
+/** Changes the switches and the agent of the website intake; owner or manager. Rejects with the back end failure. */
 export const mutateSaveWebsiteSite = async ({
     mutation = MutationSaveWebsiteSite.Mutation1,
     request,
     signal,
-    headers,
 }: MutateSaveWebsiteSiteParams): Promise<ApolloClient.MutateResult<MutateSaveWebsiteSiteResponse>> => {
-    const apollo = createAuthApolloClient({ signal, headers })
-    return apollo.mutate({
-        mutation: mutationMap[mutation],
-        variables: { input: request },
-        context: { headers },
-    })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
+    return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

@@ -63,9 +63,13 @@ Focus is AGENTS only: `shell` (the shared frame, explained once in `shell/khung-
 `agent-connections`, `agent-knowledge`, `flowgraph`. The viewer lists them first; every other area sits in a collapsed "Khác (chưa rà)"
 group and is excluded from the top counts. Do not write or curate `explain.md` outside the agent areas for now.
 
-## Shots: no loading, no error states
+## Shots: no loading, no error states (loading folders excepted)
 
-A screen is the settled design, never a skeleton, spinner or error notice. Every shot script MUST use the shared helper:
+A screen is the settled design, never a skeleton, spinner or error notice. The one exception is a folder named `<screen>-dang-tai`: it holds the
+approved loading design of that screen (law `page-loading-own-shape`: loading mirrors the page, the chrome is real text and only the data is a
+skeleton). `shoot` detects such a folder from the file path and runs in expect-loading mode: it asserts a skeleton IS visible (for 300 ms in a
+row) and no error is, and refuses a page that already settled into content, an error notice or a fatal page. An error shot never has a folder.
+Every shot script MUST use the shared helper:
 
 ```js
 const { shoot, refuseAndExit } = require('D:/starci-lanes/nivo-auth-ux/gallery/scripts/wait-ready.cjs')
@@ -77,9 +81,9 @@ try { await shoot(page, 'gallery/pages/<area>/<screen>/1440.png') } catch (e) { 
 `[data-grammar-loading-region]`, the `starci-core-*skeleton*` parts, progress bars or spinners, for 600 ms in a row.
 It also refuses AT ONCE (no waiting) any fatal page: the Next.js error overlay (`nextjs-portal` dialog, `[data-nextjs-dialog]`, "Build Error" / "Unhandled Runtime Error" / "Failed to compile" / "Can't resolve" text), the 500 page (`__NEXT_DATA__` statusCode 500 or `/_error`, "Internal Server Error"), and an app with nothing rendered (empty body or empty `<main>`). The dev "N / Issues" badge alone is not fatal.
 If it never settles within 20 s it refuses the shot (nothing is written) and the script exits non-zero.
-Pass `{ allowError: true }` only for a screen whose design IS an error state. Self-test (ready page, skeleton, aria-busy, Next overlay, 500, empty page): `node scripts/wait-ready.cjs --selftest`.
+Pass `{ expectLoading: true }` to force expect-loading mode for a folder the name does not mark (a loading screen always gets a `-dang-tai` folder instead). Pass `{ allowError: true }` only for a screen whose design IS an error state. Self-test (ready page, skeleton, aria-busy, Next overlay, 500, empty page): `node scripts/wait-ready.cjs --selftest`.
 Never overwrite an existing gallery image from a script run that did not pass the helper.
-Screens that are loading or error shots are deleted from the gallery, not explained.
+A loading shot lives only in a `<screen>-dang-tai` folder and is explained like any screen; an error shot is deleted from the gallery, not explained.
 
 ## Bản đồ luồng (flow map) — `/flow.html`
 

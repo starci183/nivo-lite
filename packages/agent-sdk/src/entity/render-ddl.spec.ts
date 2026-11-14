@@ -105,7 +105,7 @@ describe("checkPieces", () => {
         expect(sqlOf(checkPieces(lead), `${P}_age_adult`)[0]).toContain(
             "CHECK (((data->>'age')::integer) >= 18) NOT VALID",
         )
-        expect(checkPieces(bare)).toEqual([])
+        expect(checkPieces(bare).map((piece) => piece.name)).toEqual(["records_x_y_agent_scope_chk"])
     })
 })
 
@@ -113,9 +113,9 @@ describe("excludePieces", () => {
     it("writes an EXCLUDE with the workspace, the equal fields and the range, partial or not", () => {
         const pieces = excludePieces(lead)
         expect(sqlOf(pieces, `${P}_no_overlap`)[0]).toBe(
-            `ALTER TABLE public."${P}" ADD CONSTRAINT "${P}_no_overlap" EXCLUDE USING gist (workspace_id WITH =, ((data->>'owner')::uuid) WITH =, tstzrange(public.engine_ts((data->>'at')), public.engine_ts((data->>'day'))) WITH &&) WHERE (((data->>'owner')::uuid) IS NOT NULL)`,
+            `ALTER TABLE public."${P}" ADD CONSTRAINT "${P}_no_overlap" EXCLUDE USING gist (workspace_id WITH =, agent_id WITH =, ((data->>'owner')::uuid) WITH =, tstzrange(public.engine_ts((data->>'at')), public.engine_ts((data->>'day'))) WITH &&) WHERE (((data->>'owner')::uuid) IS NOT NULL) AND deleted_at IS NULL`,
         )
-        expect(sqlOf(pieces, `${P}_plain_overlap`)[0]).not.toContain("WHERE")
+        expect(sqlOf(pieces, `${P}_plain_overlap`)[0]).toMatch(/ WHERE deleted_at IS NULL$/)
         expect(excludePieces(bare)).toEqual([])
     })
 })
@@ -132,14 +132,14 @@ describe("indexPieces", () => {
             "USING gin (workspace_id, public.knowledge_fold((data->>'name')), ((data->'custom'->>'tier')::integer), (data->'custom'->>'ghost'))",
         )
         expect(one("part_idx")).toBe(
-            `CREATE UNIQUE INDEX "${P}_part_idx" ON public."${P}" USING btree (workspace_id, ((data->>'age')::integer)) WHERE ((data->>'age')::integer) IS NOT NULL`,
+            `CREATE UNIQUE INDEX "${P}_part_idx" ON public."${P}" USING btree (workspace_id, agent_id, ((data->>'age')::integer)) WHERE (((data->>'age')::integer) IS NOT NULL) AND deleted_at IS NULL`,
         )
     })
 
     it("turns unique constraints into unique indexes", () => {
         expect(one("ws_name_key")).toContain("CREATE UNIQUE INDEX")
-        expect(one("ws_name_key")).toContain("WHERE (data->>'name') IS NOT NULL")
-        expect(one("plain_key")).not.toContain("WHERE")
+        expect(one("ws_name_key")).toContain("WHERE ((data->>'name') IS NOT NULL) AND deleted_at IS NULL")
+        expect(one("plain_key")).toMatch(/ WHERE deleted_at IS NULL$/)
     })
 
     it("adds trigram, nested key and free key indexes", () => {

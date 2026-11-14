@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ZaloArticleClient } from "./zalo-article.client"
 import { ZaloClient } from "./zalo.client"
 import { ZALO, ZALO_ARTICLES } from "./zalo.decorators"

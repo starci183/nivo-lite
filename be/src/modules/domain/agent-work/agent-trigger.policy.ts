@@ -1,5 +1,4 @@
 import { WAKE_SOURCE_KEY } from "@modules/domain/agent-wake-rules"
-import { DEFAULT_TIME_ZONE } from "./agent-work.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentTriggerKind, AgentTriggerPreset, AgentTriggerWrite } from "./agent-work.contracts"
 
@@ -32,7 +31,7 @@ const needsTime = (preset: AgentTriggerPreset): boolean => preset === "daily_at"
 
 const shapeInvalid = (): AgentWorkError => new AgentWorkError({ code: AgentWorkErrorCode.TriggerShapeInvalid })
 
-const clockFields = (write: AgentTriggerWrite, preset: AgentTriggerPreset): TriggerFields => {
+const clockFields = (write: AgentTriggerWrite, preset: AgentTriggerPreset, workspaceZone: string): TriggerFields => {
     if (write.eventName !== null) throw shapeInvalid()
     if (needsTime(preset) && (write.atTime === null || !TIME_OF_DAY.test(write.atTime))) {
         throw new AgentWorkError({ code: AgentWorkErrorCode.TimeInvalid })
@@ -41,7 +40,7 @@ const clockFields = (write: AgentTriggerWrite, preset: AgentTriggerPreset): Trig
         kind: "schedule",
         preset,
         atTime: needsTime(preset) ? write.atTime : null,
-        timeZone: write.timeZone ?? DEFAULT_TIME_ZONE,
+        timeZone: write.timeZone ?? workspaceZone,
         eventName: null,
         probeKey: write.probeKey,
         enabled: write.enabled,
@@ -49,11 +48,14 @@ const clockFields = (write: AgentTriggerWrite, preset: AgentTriggerPreset): Trig
     }
 }
 
-/** Checks a trigger the owner wrote and answers the fields its row keeps: a clock needs a preset (and a time for the daily ones), an event needs its name, and never both. */
-export const triggerFields = (write: AgentTriggerWrite): TriggerFields => {
+/**
+ * Checks a trigger the owner wrote and answers the fields its row keeps: a clock needs a preset (and a time for the daily ones), an event
+ * needs its name, and never both. A trigger that names no zone takes the workspace's own (`workspaceZone`, the workspace setting).
+ */
+export const triggerFields = (write: AgentTriggerWrite, workspaceZone: string): TriggerFields => {
     if (write.kind === "schedule") {
         if (write.preset === null) throw shapeInvalid()
-        return clockFields(write, write.preset)
+        return clockFields(write, write.preset, workspaceZone)
     }
     if (write.eventName === null || write.eventName === "" || write.preset !== null) throw shapeInvalid()
     const sources = [...new Set(write.sources ?? [])]
@@ -64,7 +66,7 @@ export const triggerFields = (write: AgentTriggerWrite): TriggerFields => {
         kind: "event",
         preset: null,
         atTime: null,
-        timeZone: write.timeZone ?? DEFAULT_TIME_ZONE,
+        timeZone: write.timeZone ?? workspaceZone,
         eventName: write.eventName,
         probeKey: write.probeKey,
         enabled: write.enabled,

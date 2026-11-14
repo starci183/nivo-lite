@@ -1,14 +1,19 @@
-import { ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
-import type { ZaloProviderOptions } from "./zalo-provider.options"
+import type { ZaloProviderConfig } from "./zalo-provider.options"
 
 const DAY_MS = 86_400_000
 
+/**
+ * Zalo's consultation window: an OA may reply free for 48 hours after the customer's last interaction (the same rule the channel send
+ * keeps as `ZALO_FREE_WINDOW_MS`; it is Zalo's, so the provider states it itself).
+ */
+export const ZALO_REPLY_WINDOW_MS: number = 48 * 60 * 60 * 1000
+
 /** The reconcile rules with every default filled in. */
-export type ZaloPollRules = Required<ZaloProviderOptions>
+export type ZaloPollRules = Required<ZaloProviderConfig>
 
 /** Zalo lets the OA reply as a consultation message for 48 hours after the customer's last message; a day-old message is stale for an agent. */
 export const ZALO_POLL_DEFAULTS: ZaloPollRules = {
-    replyWindowMs: ZALO_FREE_WINDOW_MS,
+    replyWindowMs: ZALO_REPLY_WINDOW_MS,
     staleAfterMs: DAY_MS,
 }
 
@@ -22,7 +27,10 @@ export const ZALO_POLL_MAX_PAGES = 30
 export const ZALO_POLL_PAUSE_MS = 400
 
 /** The rules the options give, the defaults where they give none. */
-export const pollRulesOf = (options: ZaloProviderOptions): ZaloPollRules => ({ ...ZALO_POLL_DEFAULTS, ...options })
+export const pollRulesOf = (options: ZaloProviderConfig): ZaloPollRules => ({
+    replyWindowMs: options.replyWindowMs ?? ZALO_POLL_DEFAULTS.replyWindowMs,
+    staleAfterMs: options.staleAfterMs ?? ZALO_POLL_DEFAULTS.staleAfterMs,
+})
 
 /**
  * True when a message must not be answered by an agent: it is older than the reply window (Zalo would refuse or charge the reply) or older

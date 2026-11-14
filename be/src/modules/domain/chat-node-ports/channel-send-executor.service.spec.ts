@@ -1,117 +1,30 @@
-import { Test } from "@nestjs/testing"
-import { FakeClock, mock } from "@starci/jest-preset"
-import { TOOL } from "@nivo-lite/blocks-core"
-import { ChannelDeliveryService, ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
-import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
-import type { ChatHumanConversation, ChatTurnConversation } from "@modules/domain/chat-records"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
-import type { NodeDataPort, NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
-import { CLOCK } from "@modules/platform/clock"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { ChannelSendExecutorService } from "./channel-send-executor.service"
-import { ChatLineMediaService } from "./chat-line-media.service"
-import { CustomerDraftsService } from "./customer-drafts.service"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { ChannelsError, ChannelsErrorCode, ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
 import { ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
+import {
+    NOW,
+    TURN,
+    PERSON,
+    TELEGRAM_ACCOUNT,
+    WHERE,
+    build,
+    contact,
+    identity,
+    SEND,
+    CALL,
+} from "@tests/fixtures/builders/channel-send-executor.builder"
 
-const NOW = new Date("2026-11-04T10:00:00.000Z")
+type World = Awaited<ReturnType<typeof build>>
 
-const TURN: NodeTurn = {
-    turnId: "t",
-    workspaceId: "ws-1",
-    agentId: "a-1",
-    subject: null,
-    conversationId: "c1",
-    locale: "vi",
-}
-
-const AGENT: ChatTurnConversation["agent"] = {
-    id: "a-1",
-    name: "Chatbot",
-    handle: "chatbot",
-    role: "Customer chat",
-    module: "chatbot",
-    instructions: "Be kind",
-    knowledge: "Tea",
-    approvalRule: "",
-    greeting: "Hi",
-}
-
-const conversation = (overrides: Partial<ChatTurnConversation> = {}): ChatTurnConversation => ({
-    id: "c1",
-    workspaceId: "ws-1",
-    channel: "telegram",
-    externalId: "555",
-    connectionId: "k1",
-    leadId: "l1",
-    handledBy: null,
-    visitorName: "An",
-    installationId: null,
-    agent: AGENT,
-    speaksAs: null,
-    ...overrides,
-})
-
-const human = (id: string, channel: string): ChatHumanConversation => ({
-    id,
-    workspaceId: "ws-1",
-    channel,
-    externalId: "555",
-    connectionId: "k1",
-    leadId: "l1",
-    handledBy: null,
-})
-
-const WHERE = { conversationId: "c1", channel: "telegram", connectionId: "k1" }
-
-const build = async () => {
-    const registry = mock<GraphNodeRegistryService>()
-    const conversations = mock<ChatConversationsService>()
-    const messages = mock<ChatMessagesService>()
-    const delivery = mock<ChannelDeliveryService>()
-    const drafts = mock<CustomerDraftsService>()
-    const media = mock<ChatLineMediaService>()
-    const logger = mock<Logger>()
-    const leads = mock<NodeDataPort>()
-    const team = mock<NodeEffectExecutor>()
-    const access = mock<ProviderAbilitiesService>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            ChannelSendExecutorService,
-            { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: LOGGER, useValue: logger },
-            { provide: GraphNodeRegistryService, useValue: registry },
-            { provide: ChatConversationsService, useValue: conversations },
-            { provide: ChatMessagesService, useValue: messages },
-            { provide: ChannelDeliveryService, useValue: delivery },
-            { provide: CustomerDraftsService, useValue: drafts },
-            { provide: ChatLineMediaService, useValue: media },
-            { provide: ProviderAbilitiesService, useValue: access },
-        ],
-    }).compile()
-    conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation() })
-    messages.storeAgentLine.mockResolvedValue({ id: "m1", body: "Hello", sent: false })
-    messages.lastCustomerAt.mockResolvedValue({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
-    delivery.deliver.mockResolvedValue({ delivered: true, failure: null, outcome: "acknowledged" })
-    media.resolved.mockImplementation((_turn, asked) =>
-        Promise.resolve({ conversationId: asked.conversationId, text: asked.text }),
+/** The person known on Telegram and on Zalo (two accounts), the Telegram one first. */
+const onTwoChannels = (world: World): void => {
+    world.contacts.get.mockResolvedValue(
+        contact([
+            identity({ id: "i-1" }),
+            identity({ id: "i-2", provider: "zalo", account: "z1", value: "123", at: "2026-11-02T10:00:00.000Z" }),
+        ]),
     )
-    media.of.mockResolvedValue({})
-    leads.read.mockResolvedValue([{ output: { value: {} } }])
-    registry.portOf.mockReturnValue(leads)
-    registry.optionalPortOf.mockReturnValue(leads)
-    team.execute.mockResolvedValue({ kind: "chat-message", id: "team-1" })
-    registry.optionalExecutorOf.mockImplementation((effect) => (effect === TOOL.teamMessagePost ? team : undefined))
-    access.judge.mockResolvedValue({ kind: "allow", provider: "telegram", ability: "customer.send", connectionId: "k1" })
-    drafts.draftOf.mockResolvedValue(null)
-    drafts.propose.mockResolvedValue({ id: "d1", status: "proposed", text: "Hello" })
-    const executor = moduleRef.get(ChannelSendExecutorService)
-    return { executor, registry, conversations, messages, delivery, drafts, media, logger, leads, team, access }
 }
-
-const SEND = { conversationId: "c1", text: "Hello" }
-const CALL = { key: "run:1", dedupeKey: null }
 
 describe("ChannelSendExecutorService sending", () => {
     it("registers the one customer send", async () => {
@@ -121,151 +34,260 @@ describe("ChannelSendExecutorService sending", () => {
         expect(registry.addExecutor).toHaveBeenCalledWith(executor)
     })
 
-    it("stores the line under the call's key, pushes it and answers the message with the channel, the connection and the verdict", async () => {
-        const { executor, messages, delivery } = await build()
+    it("claims the send key, pushes to the person's identity on the woken route and answers the delivery receipt", async () => {
+        const { executor, delivery, ledger } = await build()
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({
+        const answered = await executor.execute(TURN, SEND, CALL)
+
+        expect(answered).toEqual({
             kind: "message",
-            id: "m1",
-            facts: { ...WHERE, delivery: "delivered" },
+            id: "run:1",
+            facts: {
+                delivered: true,
+                state: "delivered",
+                reason: null,
+                ...WHERE,
+                providerMessageId: null,
+                at: NOW.toISOString(),
+                sendKey: "run:1",
+            },
         })
-        expect(messages.storeAgentLine).toHaveBeenCalledWith({
+        expect(delivery.deliverToPerson).toHaveBeenCalledWith({
             workspaceId: "ws-1",
-            conversationId: "c1",
-            body: "Hello",
-            key: "run:1",
-            sentBy: "a-1",
-        })
-        expect(delivery.deliver).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            conversationId: "c1",
-            messageId: "m1",
+            routeId: "route-1",
+            channel: "telegram",
+            accountId: TELEGRAM_ACCOUNT,
+            userId: "555",
+            sendKey: "run:1",
             text: "Hello",
+            windowChecked: true,
         })
-    })
-
-    it("builds the order card and the pictures from the ids the caller names", async () => {
-        const { executor, media } = await build()
-
-        await executor.execute(TURN, { ...SEND, orderId: "o1", catalogueItemIds: ["i1"] }, CALL)
-
-        expect(media.resolved).toHaveBeenCalledWith(TURN, {
-            conversationId: "c1",
+        expect(ledger.rows).toHaveLength(1)
+        expect(ledger.rows[0]).toMatchObject({
+            sendKey: "run:1",
+            routeId: "route-1",
+            contactId: PERSON,
+            agentId: "a-1",
+            runId: null,
             text: "Hello",
-            orderId: "o1",
-            catalogueItemIds: ["i1"],
+            state: "delivered",
+            channel: "telegram",
+            accountId: TELEGRAM_ACCOUNT,
+            attachmentCount: 0,
         })
     })
 
-    it("throws on a payload that addresses nobody or has no words", async () => {
-        const { executor } = await build()
-        await expect(executor.execute(TURN, { text: "Hello" }, CALL)).rejects.toMatchObject({
-            code: ChatNodePortsErrorCode.InvalidPayload,
-        })
-        await expect(executor.execute(TURN, { conversationId: "c1", text: "" }, CALL)).rejects.toMatchObject({
-            code: ChatNodePortsErrorCode.InvalidPayload,
-        })
+    it("reads and writes no chatbot record and keeps no draft: it claims the key, pushes once and tells the team nothing", async () => {
+        const { executor, delivery, team, ledger } = await build()
+
+        await executor.execute(TURN, SEND, CALL)
+
+        expect(delivery.deliverToPerson).toHaveBeenCalledTimes(1)
+        expect(ledger.rows).toHaveLength(1)
+        expect(team.execute).not.toHaveBeenCalled()
     })
 
-    it("answers an unknown verdict as sent with delivery unknown, so a retry never says it twice", async () => {
-        const { executor, delivery } = await build()
-        delivery.deliver.mockResolvedValue({ delivered: false, failure: null, outcome: "ambiguous" })
+    it("keeps the pictures the caller gives (a payment QR) in order, and sums them up in the ledger; the card is the node's, never sent to the channel", async () => {
+        const { executor, delivery, ledger } = await build()
+        const qr = { url: "https://img.example/qr.png", caption: "QR" }
+        const card = { orderNo: "DH-1", lines: [{ name: "Basket", qty: 1 }], amountText: "2.000", address: "", paid: false }
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({
+        await executor.execute(TURN, { ...SEND, images: [qr], order: card }, CALL)
+
+        expect(delivery.deliverToPerson).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining("Hello"), images: [qr] }))
+        expect(ledger.rows[0]).toMatchObject({ attachmentCount: 1, attachmentKinds: ["image"] })
+    })
+
+    it("refuses a card that is not of a line card's shape, more than ten pictures, empty words, before anything is claimed", async () => {
+        const { executor, ledger } = await build()
+        const many = Array.from({ length: 11 }, () => ({ url: "https://img.example/a.png", caption: "" }))
+
+        for (const bad of [{ ...SEND, order: { orderNo: "DH-1" } }, { ...SEND, images: many }, { text: "" }])
+            await expect(executor.execute(TURN, bad, CALL)).rejects.toMatchObject({ code: ChatNodePortsErrorCode.InvalidPayload })
+        expect(ledger.rows).toEqual([])
+    })
+
+    it("answers an unknown verdict as sent with state unknown, settled unknown in the ledger, so a retry never says it twice", async () => {
+        const { executor, delivery, ledger } = await build()
+        delivery.deliverToPerson.mockResolvedValue({ delivered: false, failure: null, outcome: "ambiguous" })
+
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
             kind: "message",
-            id: "m1",
-            facts: { ...WHERE, delivery: "unknown" },
+            id: "run:1",
+            facts: { delivered: false, state: "unknown", reason: "delivery_outcome_unknown", ...WHERE },
         })
+        expect(ledger.rows[0]?.state).toBe("unknown")
+    })
+})
+
+describe("ChannelSendExecutorService the delivery ledger", () => {
+    it("answers the SAME receipt for the same send key asked again, and asks the provider once", async () => {
+        const { executor, delivery, ledger } = await build()
+
+        const first = await executor.execute(TURN, SEND, CALL)
+        const again = await executor.execute(TURN, SEND, CALL)
+
+        expect(again).toEqual(first)
+        expect(delivery.deliverToPerson).toHaveBeenCalledTimes(1)
+        expect(ledger.rows).toHaveLength(1)
+    })
+
+    it("answers a key in flight (claimed, never settled) as unknown and never sends it again (engine-core rule 9)", async () => {
+        const { executor, delivery, ledger, deliveries } = await build()
+        await deliveries.claim("ws-1", {
+            sendKey: "run:1",
+            routeId: "route-1",
+            contactId: PERSON,
+            agentId: "a-1",
+            runId: "t",
+            stepKey: null,
+            text: "Hello",
+            attachmentCount: 0,
+            attachmentKinds: [],
+            channel: "telegram",
+            accountId: TELEGRAM_ACCOUNT,
+        })
+
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
+            kind: "message",
+            facts: { delivered: false, state: "unknown", reason: "delivery_outcome_unknown" },
+        })
+        expect(delivery.deliverToPerson).not.toHaveBeenCalled()
+        expect(ledger.rows).toHaveLength(1)
+    })
+
+    it("answers the earlier receipt of a delivered key even when the window has closed since", async () => {
+        const world = await build()
+        const first = await world.executor.execute(TURN, SEND, CALL)
+        world.contacts.get.mockResolvedValue(contact([identity({ provider: "zalo", account: "z1", value: "123" })]))
+        world.lines.lastHeardAt.mockResolvedValue(new Date(NOW.getTime() - ZALO_FREE_WINDOW_MS - 1))
+
+        await expect(world.executor.execute(TURN, SEND, CALL)).resolves.toEqual(first)
+    })
+
+    it("records a refusal as a ledger row with the words not told, and a later try of the same key is claimed again", async () => {
+        const { executor, delivery, ledger, memory } = await build()
+        memory.snapshot.mockResolvedValue({
+            subject: { key: "contact:k-1", contactId: PERSON, conversationId: null },
+            lead: { careOptOut: true },
+            workflows: {},
+        })
+        const unprompted = { ...SEND, contactId: PERSON, channel: "telegram" }
+        await expect(executor.execute({ ...TURN, conversationId: null }, unprompted, CALL)).resolves.toMatchObject({
+            kind: "refused",
+            id: "customer_opted_out",
+            facts: { state: "refused", reason: "customer_opted_out", ...WHERE },
+        })
+        expect(ledger.rows[0]).toMatchObject({ sendKey: "run:1", state: "refused", reason: "customer_opted_out", text: "Hello" })
+
+        memory.snapshot.mockResolvedValue(null)
+        await expect(executor.execute({ ...TURN, conversationId: null }, unprompted, CALL)).resolves.toMatchObject({
+            kind: "message",
+        })
+        expect(delivery.deliverToPerson).toHaveBeenCalledTimes(1)
+        expect(ledger.rows).toHaveLength(1)
+        expect(ledger.rows[0]?.state).toBe("delivered")
+    })
+
+    it("settles a busy token refresh as refused and throws, so the run engine's retry claims the key again and sends", async () => {
+        const { executor, delivery, ledger } = await build()
+        delivery.deliverToPerson.mockRejectedValueOnce(new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy }))
+
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.DeliveryRateLimited,
+        })
+        expect(ledger.rows[0]?.state).toBe("refused")
+
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "message", facts: { state: "delivered" } })
+        expect(ledger.rows).toHaveLength(1)
     })
 })
 
 describe("ChannelSendExecutorService rules", () => {
-    it.each([
-        ["conversation_missing", (world: Awaited<ReturnType<typeof build>>) => {
-            world.conversations.turnOf.mockResolvedValue({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
-        }],
-        ["held_by_person", (world: Awaited<ReturnType<typeof build>>) => {
-            world.conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ handledBy: "Thu Ha" }) })
-        }],
-        ["not_speaking", (world: Awaited<ReturnType<typeof build>>) => {
-            world.conversations.turnOf.mockResolvedValue({
-                kind: "ok",
-                value: conversation({ agent: { ...AGENT, id: "a-2" } }),
-            })
-        }],
-        ["connection_missing", (world: Awaited<ReturnType<typeof build>>) => {
-            world.conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ connectionId: null }) })
-        }],
-    ])("answers the refusal %s as a fact and stores nothing", async (reason, arrange) => {
-        const world = await build()
-        arrange(world)
+    it("refuses when the person is no one the workspace holds, or the call and the run name nobody", async () => {
+        const { executor, contacts, ledger } = await build()
 
-        await expect(world.executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "refused", id: reason })
-        expect(world.messages.storeAgentLine).not.toHaveBeenCalled()
-        expect(world.delivery.deliver).not.toHaveBeenCalled()
-    })
-
-})
-
-describe("ChannelSendExecutorService who may speak", () => {
-    it("refuses another conversation than the one the run serves", async () => {
-        const { executor, conversations, messages } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ id: "c9" }) })
-
-        await expect(executor.execute(TURN, { conversationId: "c9", text: "Hi" }, CALL)).resolves.toMatchObject({
+        contacts.get.mockResolvedValue(null)
+        await expect(executor.execute(TURN, { ...SEND, contactId: "ghost" }, CALL)).resolves.toEqual({
             kind: "refused",
-            id: "wrong_conversation",
+            id: "no_recipient",
+            facts: { contactId: "ghost" },
         })
-        expect(messages.storeAgentLine).not.toHaveBeenCalled()
+        await expect(
+            executor.execute({ ...TURN, contactId: null, conversationId: null }, SEND, CALL),
+        ).resolves.toEqual({ kind: "refused", id: "no_recipient", facts: {} })
+        expect(ledger.rows).toEqual([])
     })
 
-    it("lets the agent the conversation's agent handed it to speak, and no one else", async () => {
-        const { executor, conversations } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ agent: { ...AGENT, id: "a-2" } }) })
+    it("refuses the connection the person came in on when the workspace no longer has it, and stores nothing but the refusal", async () => {
+        const { executor, connections, delivery, ledger } = await build()
+        connections.find.mockResolvedValue(null)
 
-        await expect(executor.execute({ ...TURN, handedOffBy: "a-2" }, SEND, CALL)).resolves.toMatchObject({
-            kind: "message",
-        })
-        await expect(executor.execute({ ...TURN, handedOffBy: "a-3" }, SEND, CALL)).resolves.toMatchObject({
-            id: "not_speaking",
-        })
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "refused", id: "connection_missing" })
+        expect(delivery.deliverToPerson).not.toHaveBeenCalled()
+        expect(ledger.rows[0]).toMatchObject({ state: "refused", reason: "connection_missing" })
     })
 
+    it("asks no connection of the website, a channel of no connection", async () => {
+        const { executor, contacts, connections } = await build()
+        contacts.get.mockResolvedValue(contact([identity({ provider: "website", account: "site-1", value: "visitor-1" })]))
+
+        await expect(executor.execute({ ...TURN, conversationId: null }, SEND, CALL)).resolves.toMatchObject({ kind: "message" })
+        expect(connections.find).not.toHaveBeenCalled()
+    })
 })
+
+// Ledger (ROAD Opus-1d, 2026-11-14): "who may speak" (a reply refused on a route another agent keeps, `not_speaking`) is deleted with the
+// engine's agent conversation hold (ruling R35): a send no longer reads any keeper of a route.
 
 describe("ChannelSendExecutorService reaching the customer", () => {
-    it("refuses on Zalo after the free window, before anything is stored, and sends inside it", async () => {
-        const { executor, conversations, messages } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ channel: "zalo", externalId: "123" }) })
-        messages.lastCustomerAt.mockResolvedValue({
-            kind: "ok",
-            value: new Date(NOW.getTime() - ZALO_FREE_WINDOW_MS - 1),
-        })
+    /** The person known only on Zalo, with the run woken on that route. */
+    const onZalo = async (): Promise<World> => {
+        const world = await build()
+        world.contacts.get.mockResolvedValue(contact([identity({ provider: "zalo", account: "z1", value: "123" })]))
+        world.access.judgeSend.mockResolvedValue({ kind: "allow", provider: "zalo_oa", connectionId: "z1" })
+        await world.routes.ensure("ws-1", { contactId: PERSON, channel: "zalo", accountId: "z1" })
+        return world
+    }
+    const zaloTurn = { ...TURN, conversationId: "route-2" }
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
+    it("refuses on Zalo after the free window, read from the person's last line in the core store, before anything is pushed; sends inside it", async () => {
+        const { executor, lines, delivery, ledger, ...rest } = await onZalo()
+        void rest
+        lines.lastHeardAt.mockResolvedValue(new Date(NOW.getTime() - ZALO_FREE_WINDOW_MS - 1))
+
+        await expect(executor.execute(zaloTurn, SEND, CALL)).resolves.toMatchObject({
             kind: "refused",
             id: "outside_window",
-            facts: { channel: "zalo" },
+            facts: { channel: "zalo", accountId: "z1" },
         })
-        expect(messages.storeAgentLine).not.toHaveBeenCalled()
+        expect(lines.lastHeardAt).toHaveBeenCalledWith("ws-1", "route-2")
+        expect(delivery.deliverToPerson).not.toHaveBeenCalled()
+        expect(ledger.rows[0]).toMatchObject({ state: "refused", reason: "outside_window" })
 
-        messages.lastCustomerAt.mockResolvedValue({ kind: "ok", value: new Date(NOW.getTime() - 1000) })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "message" })
+        lines.lastHeardAt.mockResolvedValue(new Date(NOW.getTime() - 1000))
+        await expect(executor.execute(zaloTurn, SEND, { key: "run:2", dedupeKey: null })).resolves.toMatchObject({ kind: "message" })
     })
 
-    it("keeps the line marked not sent and refuses when the channel knows no recipient (no id, an imported placeholder)", async () => {
-        const { executor, conversations, messages, delivery } = await build()
-        for (const value of [conversation({ externalId: null }), conversation({ channel: "zalo", externalId: "imp-x" })]) {
-            conversations.turnOf.mockResolvedValue({ kind: "ok", value })
+    it("treats a Zalo person who never wrote in as open", async () => {
+        const { executor } = await onZalo()
 
-            await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
+        await expect(executor.execute(zaloTurn, SEND, CALL)).resolves.toMatchObject({ kind: "message" })
+    })
+
+    it("records the refusal when the channel knows no recipient (no id, an imported placeholder), pushing nothing", async () => {
+        for (const value of ["", "imp-x"]) {
+            const world = await onZalo()
+            world.contacts.get.mockResolvedValue(contact([identity({ provider: "zalo", account: "z1", value })]))
+
+            await expect(world.executor.execute(zaloTurn, SEND, CALL)).resolves.toMatchObject({
                 kind: "refused",
                 id: "recipient_not_linked",
-                facts: { messageId: "m1", delivery: "not_delivered" },
+                facts: { state: "refused", reason: "recipient_not_linked" },
             })
+            expect(world.delivery.deliverToPerson).not.toHaveBeenCalled()
+            expect(world.ledger.rows[0]).toMatchObject({ state: "refused", reason: "recipient_not_linked" })
         }
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "m1", false, "recipient_not_linked")
-        expect(delivery.deliver).not.toHaveBeenCalled()
     })
 })
 
@@ -274,201 +296,251 @@ describe("ChannelSendExecutorService channel verdicts", () => {
         ["channel_plan", "plan_blocked"],
         ["zalo_recipient", "recipient_not_linked"],
         [null, "not_delivered"],
-    ] as const)("answers a rejection for %s as the refusal %s", async (failure, reason) => {
-        const { executor, delivery } = await build()
-        delivery.deliver.mockResolvedValue({ delivered: false, failure, outcome: "rejected" })
+    ] as const)("answers a rejection for %s as the refusal %s, settled refused in the ledger", async (failure, reason) => {
+        const { executor, delivery, ledger } = await build()
+        delivery.deliverToPerson.mockResolvedValue({ delivered: false, failure, outcome: "rejected" })
 
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
             kind: "refused",
             id: reason,
-            facts: { ...WHERE, messageId: "m1", delivery: "not_delivered" },
+            facts: { ...WHERE, state: "refused", reason, failure },
         })
+        expect(ledger.rows[0]).toMatchObject({ state: "refused", reason })
     })
 
     it("throws for a channel that is not taking messages for now, so the run engine tries again", async () => {
-        const { executor, delivery } = await build()
-        delivery.deliver.mockResolvedValue({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
+        const { executor, delivery, ledger } = await build()
+        delivery.deliverToPerson.mockResolvedValue({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
 
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.DeliveryRateLimited,
         })
+        expect(ledger.rows[0]).toMatchObject({ state: "refused", reason: "zalo_quota" })
+    })
+
+    it("carries the Zalo route that took the message (consultation, zns) in the receipt", async () => {
+        const { executor, delivery } = await build()
+        delivery.deliverToPerson.mockResolvedValue({ delivered: true, failure: null, outcome: "acknowledged", via: "zns" })
+
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ facts: { via: "zns" } })
     })
 })
 
-describe("ChannelSendExecutorService addressed by the customer", () => {
-    it("writes to the customer's most recently active conversation, or the one on the channel asked for", async () => {
-        const { executor, conversations } = await build()
-        conversations.ofLeads.mockResolvedValue([human("c1", "telegram"), human("c2", "zalo")])
-        const turn = { ...TURN, conversationId: null }
+describe("ChannelSendExecutorService addressed by the person", () => {
+    it("writes to the person the run serves on the route it was woken on, and to the one named on the channel asked for", async () => {
+        const world = await build()
+        onTwoChannels(world)
+        const { executor, delivery } = world
 
-        await executor.execute(turn, { leadId: "l1", text: "Hello" }, CALL)
-        expect(conversations.turnOf).toHaveBeenLastCalledWith("ws-1", "c1")
+        await executor.execute(TURN, { text: "Hello" }, CALL)
+        expect(delivery.deliverToPerson).toHaveBeenLastCalledWith(expect.objectContaining({ channel: "telegram", userId: "555" }))
 
-        await executor.execute(turn, { leadId: "l1", text: "Hello", channel: "zalo" }, CALL)
-        expect(conversations.turnOf).toHaveBeenLastCalledWith("ws-1", "c2")
+        await executor.execute(TURN, { text: "Hello", channel: "zalo" }, { key: "run:2", dedupeKey: null })
+        expect(delivery.deliverToPerson).toHaveBeenLastCalledWith(expect.objectContaining({ channel: "zalo", accountId: "z1", userId: "123" }))
     })
 
-    it("speaks unprompted in a conversation another agent holds, as the shop", async () => {
-        const { executor, conversations } = await build()
-        conversations.ofLeads.mockResolvedValue([human("c1", "telegram")])
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ agent: { ...AGENT, id: "a-2" } }) })
+    it("a run woken on no route writes to the person's newest channel identity", async () => {
+        const world = await build()
+        onTwoChannels(world)
 
-        await expect(executor.execute(TURN, { leadId: "l1", text: "Hello" }, CALL)).resolves.toMatchObject({
-            kind: "message",
-        })
+        await world.executor.execute({ ...TURN, conversationId: null }, SEND, CALL)
+
+        expect(world.delivery.deliverToPerson).toHaveBeenLastCalledWith(expect.objectContaining({ channel: "zalo", userId: "123" }))
     })
 
-    it("refuses a customer with no conversation, or none on the channel asked for, naming the channels they have", async () => {
-        const { executor, conversations } = await build()
-        conversations.ofLeads.mockResolvedValue([human("c1", "telegram")])
+    it("an account named picks among the person's accounts of a channel; several of one channel with none named is ambiguous", async () => {
+        const world = await build()
+        world.contacts.get.mockResolvedValue(
+            contact([
+                identity({ id: "i-1", provider: "zalo", account: "z1", value: "1" }),
+                identity({ id: "i-2", provider: "zalo", account: "z2", value: "2" }),
+            ]),
+        )
+        const none = { ...TURN, conversationId: null }
 
-        await expect(executor.execute(TURN, { leadId: "l1", text: "Hi", channel: "zalo" }, CALL)).resolves.toEqual({
+        await expect(world.executor.execute(none, { ...SEND, channel: "zalo" }, CALL)).resolves.toMatchObject({
             kind: "refused",
-            id: "no_conversation",
-            facts: { leadId: "l1", channel: "zalo", channels: ["telegram"] },
+            id: "channel_ambiguous",
+            facts: { channels: ["zalo"] },
         })
-        conversations.ofLeads.mockResolvedValue([])
-        await expect(executor.execute(TURN, { leadId: "l1", text: "Hi" }, CALL)).resolves.toMatchObject({
-            id: "no_conversation",
-        })
+        await world.executor.execute(none, { ...SEND, accountId: "z2" }, { key: "run:2", dedupeKey: null })
+        expect(world.delivery.deliverToPerson).toHaveBeenLastCalledWith(expect.objectContaining({ accountId: "z2", userId: "2" }))
     })
 
-    it("refuses an unprompted message to a customer who opted out", async () => {
-        const { executor, conversations, leads, messages } = await build()
-        conversations.ofLeads.mockResolvedValue([human("c1", "telegram")])
-        leads.read.mockResolvedValue([{ output: { value: { careOptOut: true } } }])
+    it("refuses a person with no identity on the channel asked for, naming the channels they have", async () => {
+        const { executor, ledger } = await build()
 
-        await expect(executor.execute(TURN, { leadId: "l1", text: "Hi" }, CALL)).resolves.toMatchObject({
+        await expect(executor.execute(TURN, { ...SEND, channel: "zalo" }, CALL)).resolves.toEqual({
+            kind: "refused",
+            id: "no_channel_identity",
+            facts: { contactId: PERSON, channel: "zalo", accountId: null, channels: ["telegram"] },
+        })
+        expect(ledger.rows).toEqual([])
+    })
+
+    it("speaks unprompted to a person on another route, making the route; and refuses one who opted out", async () => {
+        const world = await build()
+        onTwoChannels(world)
+
+        await expect(world.executor.execute(TURN, { ...SEND, channel: "zalo" }, CALL)).resolves.toMatchObject({
+            kind: "message",
+            facts: { routeId: "route-2", channel: "zalo" },
+        })
+        world.memory.snapshot.mockResolvedValue({
+            subject: { key: "contact:k-1", contactId: PERSON, conversationId: null },
+            lead: { careOptOut: true },
+            workflows: {},
+        })
+        await expect(world.executor.execute(TURN, { ...SEND, channel: "zalo" }, { key: "run:2", dedupeKey: null })).resolves.toMatchObject({
             id: "customer_opted_out",
         })
-        expect(messages.storeAgentLine).not.toHaveBeenCalled()
+        // The opt-out reads the woken route as a reply: the person's own thread is never refused as unprompted.
+        await expect(world.executor.execute(TURN, SEND, { key: "run:3", dedupeKey: null })).resolves.toMatchObject({ kind: "message" })
     })
 })
 
 describe("ChannelSendExecutorService when the owner approves first", () => {
-    const asking = conversation({ agent: { ...AGENT, approvalRule: "ask" } })
+    it("is not its business: the tool door asked at the call (rights rule 11), so the executor sends what reaches it, draws no draft and posts no owner notice", async () => {
+        const { executor, access, delivery, team, ledger } = await build()
+        // Whatever the verdict kind the accounts judge once returned, only a refusal stops the executor: the attachment is all it judges.
+        access.judgeSend.mockResolvedValue({ kind: "allow", provider: "telegram", connectionId: TELEGRAM_ACCOUNT })
 
-    it("stores a draft, tells the owner in the team chat and answers waits_owner with the draft, sending nothing", async () => {
-        const { executor, conversations, drafts, team, messages, delivery } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: asking })
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "message", facts: { state: "delivered", ...WHERE } })
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({
-            kind: "refused",
-            id: "waits_owner",
-            facts: { ...WHERE, draftId: "d1" },
-        })
-        expect(drafts.propose).toHaveBeenCalledWith(TURN, { conversationId: "c1", text: "Hello", key: "run:1" })
-        expect(team.execute).toHaveBeenCalledWith(
-            TURN,
-            expect.objectContaining({ kind: "message.text", intent: "ask" }),
-            { key: "run:1:owner", dedupeKey: null },
-        )
-        expect(messages.storeAgentLine).not.toHaveBeenCalled()
-        expect(delivery.deliver).not.toHaveBeenCalled()
-    })
-
-    it("keeps waiting on a retry while the draft waits, and tells the owner once", async () => {
-        const { executor, conversations, drafts, team } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: asking })
-        drafts.draftOf.mockResolvedValue({ id: "d1", status: "proposed", text: "Hello" })
-
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ id: "waits_owner" })
-        expect(drafts.propose).not.toHaveBeenCalled()
+        expect(delivery.deliverToPerson).toHaveBeenCalledTimes(1)
         expect(team.execute).not.toHaveBeenCalled()
+        expect(ledger.rows[0]).toMatchObject({ sendKey: CALL.key, state: "delivered" })
     })
 
-    it("sends the approved draft, in the owner's words, when the call is made again", async () => {
-        const { executor, conversations, drafts, delivery } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: asking })
-        drafts.draftOf.mockResolvedValue({ id: "d1", status: "posted", text: "Hello, edited" })
+    it("answers a replay of an approved call with the first receipt and asks the provider once (the ledger fence)", async () => {
+        const { executor, delivery } = await build()
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({
-            kind: "message",
-            id: "d1",
-            facts: { ...WHERE, delivery: "delivered" },
-        })
-        expect(delivery.deliver).toHaveBeenCalledWith(expect.objectContaining({ messageId: "d1", text: "Hello, edited" }))
-    })
+        const first = await executor.execute(TURN, SEND, CALL)
+        const again = await executor.execute(TURN, SEND, CALL)
 
-    it("refuses when the owner turned the draft down", async () => {
-        const { executor, conversations, drafts } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: asking })
-        drafts.draftOf.mockResolvedValue({ id: "d1", status: "rejected", text: "Hello" })
-
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
-            id: "owner_rejected",
-            facts: { draftId: "d1" },
-        })
+        expect(again).toEqual(first)
+        expect(delivery.deliverToPerson).toHaveBeenCalledTimes(1)
     })
 })
 
-describe("ChannelSendExecutorService send on the conversation's channel", () => {
-    it("asks the calling agent's \"send to customer\" ability on the provider of the conversation's channel: not attached and unticked refuse, ask waits, auto sends", async () => {
-        const { executor, access, messages, drafts } = await build()
-        const off = { ability: "customer.send", providers: ["telegram"] }
+describe("ChannelSendExecutorService refusalFor: what it would refuse, judged before anyone is asked, writing nothing", () => {
+    const onZalo = async (): Promise<World> => {
+        const world = await build()
+        world.contacts.get.mockResolvedValue(contact([identity({ provider: "zalo", account: "z1", value: "123" })]))
+        world.access.attachmentOf.mockResolvedValue({ kind: "allow", provider: "zalo_oa", connectionId: "z1" })
+        await world.routes.ensure("ws-1", { contactId: PERSON, channel: "zalo", accountId: "z1" })
+        return world
+    }
+    const zaloTurn = { ...TURN, conversationId: "route-2" }
+    const closedWindow = new Date(NOW.getTime() - ZALO_FREE_WINDOW_MS - 1)
 
-        access.judge.mockResolvedValue({ kind: "refuse", reason: "not_attached", ...off })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({
+    it("a closed reply window is the refusal execute would answer, and nothing is written: no ledger row, no audit, no provider call", async () => {
+        const { executor, lines, delivery, ledger, access } = await onZalo()
+        lines.lastHeardAt.mockResolvedValue(closedWindow)
+
+        await expect(executor.refusalFor(zaloTurn, SEND, CALL)).resolves.toMatchObject({
             kind: "refused",
-            id: "channel_no_access",
-            facts: { ...WHERE, provider: "telegram", ability: "customer.send", reason: "not_attached" },
+            id: "outside_window",
+            facts: { channel: "zalo", accountId: "z1", reason: "outside_window" },
         })
-        access.judge.mockResolvedValue({ kind: "refuse", reason: "ability_off", ...off })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
-            kind: "refused",
+
+        expect(ledger.rows).toEqual([])
+        expect(access.judgeSend).not.toHaveBeenCalled()
+        expect(access.effectJudged).not.toHaveBeenCalled()
+        expect(delivery.deliverToPerson).not.toHaveBeenCalled()
+    })
+
+    it("an open window refuses nothing: the approval may be asked", async () => {
+        const { executor, lines } = await onZalo()
+        lines.lastHeardAt.mockResolvedValue(new Date(NOW.getTime() - 1000))
+
+        await expect(executor.refusalFor(zaloTurn, SEND, CALL)).resolves.toBeNull()
+    })
+
+    it("approved while the window was open, closed by the time it runs: execute refuses at run (the same rules judge again)", async () => {
+        const { executor, lines, delivery, ledger } = await onZalo()
+        lines.lastHeardAt.mockResolvedValue(new Date(NOW.getTime() - 1000))
+        await expect(executor.refusalFor(zaloTurn, SEND, CALL)).resolves.toBeNull()
+
+        lines.lastHeardAt.mockResolvedValue(closedWindow)
+        await expect(executor.execute(zaloTurn, SEND, CALL)).resolves.toMatchObject({ kind: "refused", id: "outside_window" })
+
+        expect(delivery.deliverToPerson).not.toHaveBeenCalled()
+        expect(ledger.rows[0]).toMatchObject({ state: "refused", reason: "outside_window" })
+    })
+
+    it("refuses for an agent not attached to the account (read quietly), an opted-out person, a route another agent keeps, and an unknown person", async () => {
+        const detached = await build()
+        detached.access.attachmentOf.mockResolvedValue({ kind: "refuse", reason: "not_attached", providers: ["telegram"] })
+        await expect(detached.executor.refusalFor(TURN, SEND, CALL)).resolves.toMatchObject({
             id: "channel_no_access",
-            facts: { reason: "ability_off" },
+            facts: { reason: "not_attached", provider: "telegram" },
         })
-        expect(messages.storeAgentLine).not.toHaveBeenCalled()
-        access.judge.mockResolvedValue({ kind: "approval", provider: "telegram", ability: "customer.send", connectionId: "k1" })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ id: "waits_owner" })
-        expect(drafts.propose).toHaveBeenCalled()
-        expect(messages.storeAgentLine).not.toHaveBeenCalled()
-        access.judge.mockResolvedValue({ kind: "allow", provider: "telegram", ability: "customer.send", connectionId: "k1" })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "message" })
-        expect(access.judge).toHaveBeenCalledWith("ws-1", TURN.agentId, TOOL.customerMessageSend, false, {
-            provider: "telegram",
-            connectionId: "k1",
+        expect(detached.access.judgeSend).not.toHaveBeenCalled()
+
+        const optedOut = await build()
+        optedOut.memory.snapshot.mockResolvedValue({ lead: { careOptOut: true } } as never)
+        await expect(optedOut.executor.refusalFor({ ...TURN, conversationId: null }, SEND, CALL)).resolves.toMatchObject({ id: "customer_opted_out" })
+
+        const nobody = await build()
+        nobody.contacts.get.mockResolvedValue(null)
+        await expect(nobody.executor.refusalFor(TURN, SEND, CALL)).resolves.toMatchObject({ id: "no_recipient" })
+    })
+
+    it("makes no route for a person with none yet, and leaves a key already delivered to execute's receipt", async () => {
+        const fresh = await build()
+        fresh.contacts.get.mockResolvedValue(contact([identity({ provider: "zalo", account: "z9", value: "9" })]))
+        fresh.access.attachmentOf.mockResolvedValue({ kind: "allow", provider: "zalo_oa", connectionId: "z9" })
+        const before = fresh.routeRows.rows.length
+        await expect(fresh.executor.refusalFor({ ...TURN, conversationId: null }, SEND, CALL)).resolves.toBeNull()
+        expect(fresh.routeRows.rows).toHaveLength(before)
+
+        const sent = await build()
+        await sent.executor.execute(TURN, SEND, CALL)
+        await expect(sent.executor.refusalFor(TURN, SEND, CALL)).resolves.toBeNull()
+    })
+})
+
+describe("ChannelSendExecutorService keeps the line whole in the core store", () => {
+    it("claims the send with its pictures by address, its order card and the member who typed it", async () => {
+        const { executor, deliveries } = await build()
+        const claim = jest.spyOn(deliveries, "claim")
+        const order = { orderNo: "DH-7", lines: [], amountText: "120.000 đ", address: "", paid: false }
+
+        await executor.execute(
+            { ...TURN, memberId: "m-1" },
+            { ...SEND, images: [{ url: "https://img.example/qr.png", caption: "QR" }], order },
+            CALL,
+        )
+
+        expect(claim.mock.calls[0]?.[1]).toMatchObject({
+            sendKey: CALL.key,
+            attachmentCount: 1,
+            files: [{ url: "https://img.example/qr.png", name: "", contentType: "", caption: "QR" }],
+            order,
+            memberId: "m-1",
         })
     })
 
-    it("judges the provider of the channel the conversation is on, and no provider right at all on the website chat", async () => {
-        const { executor, access, conversations } = await build()
+    it("writes no run for a job turn (a reply a person typed) and the member who typed it, and the run and step of a step's send", async () => {
+        const { executor, deliveries } = await build()
+        const claim = jest.spyOn(deliveries, "claim")
+        const step = { nodeKey: "tell", versionId: "v-1", workflowId: null }
 
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ channel: "zalo", externalId: "123" }) })
+        await executor.execute({ ...TURN, memberId: "m-1" }, SEND, CALL)
+        await executor.execute({ ...TURN, step }, SEND, { ...CALL, key: "run:step" })
+
+        expect(claim.mock.calls[0]?.[1]).toMatchObject({ runId: null, stepKey: null, memberId: "m-1" })
+        expect(claim.mock.calls[1]?.[1]).toMatchObject({ runId: "t", stepKey: "tell", memberId: null })
+    })
+
+    it("claims a plain send with no files, no order and no member", async () => {
+        const { executor, deliveries } = await build()
+        const claim = jest.spyOn(deliveries, "claim")
+
         await executor.execute(TURN, SEND, CALL)
-        expect(access.judge).toHaveBeenLastCalledWith("ws-1", TURN.agentId, TOOL.customerMessageSend, false, {
-            provider: "zalo_oa",
-            connectionId: "k1",
-        })
 
-        access.judge.mockClear()
-        conversations.turnOf.mockResolvedValue({
-            kind: "ok",
-            value: conversation({ channel: "website", connectionId: null }),
-        })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "message" })
-        expect(access.judge).not.toHaveBeenCalled()
-    })
-})
-
-describe("ChannelSendExecutorService composed", () => {
-    it("pushes the pictures of a message the back end composed and keeps the stored line to the text", async () => {
-        const { executor, conversations, messages, delivery } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ channel: "zalo", externalId: "123" }) })
-        const images = [{ url: "https://api/p/1/image", caption: "Basket\n2.000 VND" }]
-
-        await expect(executor.composed(TURN, { ...SEND, images }, CALL)).resolves.toMatchObject({ kind: "message" })
-        expect(messages.storeAgentLine).toHaveBeenCalledWith(expect.objectContaining({ body: "Hello" }))
-        expect(delivery.deliver).toHaveBeenCalledWith(expect.objectContaining({ text: "Hello", images }))
-    })
-
-    it("refuses a composed message with more than ten images", async () => {
-        const { executor } = await build()
-        const images = Array.from({ length: 11 }, (_unused, index) => ({ url: `https://api/${String(index)}`, caption: "x" }))
-
-        await expect(executor.composed(TURN, { ...SEND, images }, CALL)).rejects.toMatchObject({
-            code: ChatNodePortsErrorCode.InvalidPayload,
-        })
+        expect(claim.mock.calls[0]?.[1]).toMatchObject({ files: [], memberId: null })
+        expect(claim.mock.calls[0]?.[1]).not.toHaveProperty("order")
     })
 })

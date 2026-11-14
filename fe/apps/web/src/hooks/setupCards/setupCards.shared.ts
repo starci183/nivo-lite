@@ -1,18 +1,15 @@
 import type { MutateDecideSetupCardRequest } from "@/hooks/swr"
-import { isActionKey } from "@/modules/catalog"
-import { FACT_SCOPES, FACT_SUBJECT_TYPES } from "@/modules/types"
-import type {
-    FactScope,
-    FactSubjectType,
-    FlowRuleMode,
-    SetupFactWrite,
-    SetupResolution,
-    SetupRuleWrite,
-    SetupWrite,
-    SetupWriteDecision,
-    SetupWriteDecided,
-    SetupWriteWords,
-    SetupWriteStatus,
+import {
+    FACT_SCOPES,
+    FACT_SUBJECT_TYPES,
+    type FactScope,
+    type FactSubjectType,
+    type SetupResolution,
+    type SetupWrite,
+    type SetupWriteDecision,
+    type SetupWriteDecided,
+    type SetupWriteWords,
+    type SetupWriteStatus,
 } from "@/modules/types"
 
 const WRITE_STATUSES: ReadonlyArray<SetupWriteStatus> = ["proposed", "applied", "rejected", "superseded"]
@@ -21,7 +18,6 @@ const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
 
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "")
 
-const MODES: ReadonlyArray<FlowRuleMode> = ["auto", "ask", "never"]
 const RESOLUTIONS: ReadonlyArray<SetupResolution> = ["replace", "keep", "both"]
 
 interface SetupCardWire {
@@ -40,7 +36,7 @@ interface SetupCardWire {
     readonly current?: unknown
 }
 
-const toResult = (value: unknown): SetupFactWrite["result"] => {
+const toResult = (value: unknown): SetupWrite["result"] => {
     if (!isRecord(value)) return null
     const resolution = RESOLUTIONS.find((candidate) => candidate === value.resolution)
     return { outcome: textOf(value.outcome), ...(resolution === undefined ? {} : { resolution }) }
@@ -48,8 +44,6 @@ const toResult = (value: unknown): SetupFactWrite["result"] => {
 
 const scopeOf = (value: unknown): FactScope => FACT_SCOPES.find((scope) => scope === value) ?? "internal"
 const subjectTypeOf = (value: unknown): FactSubjectType => FACT_SUBJECT_TYPES.find((type) => type === value) ?? "other"
-const modeOf = (value: unknown): FlowRuleMode => MODES.find((mode) => mode === value) ?? "ask"
-const limitOf = (value: unknown): number | null => (typeof value === "number" ? value : null)
 
 /** One confirm card of the chat as the Setup screen draws it; none for a card whose payload names nothing the catalogue knows. */
 export const toSetupWrite = (view: SetupCardWire): SetupWrite | null => {
@@ -68,7 +62,7 @@ export const toSetupWrite = (view: SetupCardWire): SetupWrite | null => {
     }
     if (card.kind === "fact") {
         const gapId = payload.gapId
-        const write: SetupFactWrite = {
+        const write: SetupWrite = {
             ...base,
             kind: "fact",
             payload: {
@@ -90,20 +84,7 @@ export const toSetupWrite = (view: SetupCardWire): SetupWrite | null => {
         }
         return write
     }
-    const action = textOf(payload.action)
-    if (card.kind !== "rule" || !isActionKey(action)) return null
-    const write: SetupRuleWrite = {
-        ...base,
-        kind: "rule",
-        payload: {
-            action,
-            field: payload.field === "limit_vnd" ? "limit_vnd" : "mode",
-            mode: modeOf(payload.mode),
-            limitVnd: limitOf(payload.limitVnd),
-        },
-        current: current === null ? null : { mode: modeOf(current.mode), limitVnd: limitOf(current.limitVnd) },
-    }
-    return write
+    return null
 }
 
 /** The wire decision of the owner on one card. */
@@ -115,8 +96,6 @@ export const toCardDecision = (change: SetupWriteDecision): MutateDecideSetupCar
         scope: change.fact?.scope,
         subjectLabel: change.fact?.subjectLabel,
         attributeLabel: change.fact?.attributeLabel,
-        mode: change.rule?.mode,
-        limitVnd: change.rule?.limitVnd,
         resolution: change.resolution,
         situation: change.situation,
         onlyThisAgent: change.onlyThisAgent,
@@ -130,27 +109,17 @@ export const WRITE_SCOPE_KEY = {
     restricted: "wScopeRestricted",
 } as const
 
-const ruleLine = (write: SetupWrite, words: Omit<SetupWriteWords, "decidedOf">): string => {
-    if (write.kind !== "rule") return ""
-    const limit = words.actionRules(write.payload.action).hasLimit ? ` · ${words.money(write.payload.limitVnd)}` : ""
-    return `${words.actionLabel(write.payload.action)} · ${words.modeLabel(write.payload.mode)}${limit}`
-}
-
 /** Resolves the settled card summary; proposed writes continue to show their editor. */
 export const setupWriteDecidedOf = (
     write: SetupWrite,
     words: Omit<SetupWriteWords, "decidedOf">,
 ): SetupWriteDecided | null => {
     if (write.status === "proposed") return null
-    const line =
-        write.kind === "fact"
-            ? `${write.payload.subjectLabel} · ${write.payload.attributeLabel}: ${write.payload.value}`
-            : ruleLine(write, words)
+    const line = `${write.payload.subjectLabel} · ${write.payload.attributeLabel}: ${write.payload.value}`
     const rejectedLabel = write.result?.resolution === "keep" ? words.kept : words.rejected
-    const appliedLabel = write.kind === "fact" ? words.applied : words.appliedRule
     return {
         line,
-        label: write.status === "rejected" ? rejectedLabel : appliedLabel,
+        label: write.status === "rejected" ? rejectedLabel : words.applied,
         tone: write.status === "applied" ? "success" : "neutral",
     }
 }

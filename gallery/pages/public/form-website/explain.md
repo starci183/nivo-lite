@@ -1,9 +1,9 @@
 ---
 title: Biểu mẫu website công khai
-route: /w/<siteKey>
+route: /form/<siteKey>
 area: public
 ---
-# Biểu mẫu để lại thông tin (/w/<siteKey>)
+# Biểu mẫu để lại thông tin (/form/<siteKey>)
 
 Block `WebsiteForm` (components/blocks/WebsiteForm/component.tsx) in `PublicShell` (components/frames/PublicShell). A visitor who never signs in leaves name, phone and a message for the shop. Shots `1440.png`, `390.png`; before shots are in `before/`. Grammar paths under `node_modules/@starci/grammar/dist/core/`. Next dev overlay in shots is not product UI.
 

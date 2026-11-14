@@ -34,10 +34,10 @@ describe("platform.parked-runs", () => {
     })
 
     it("hands the module, the subject and the limit to the port", async () => {
-        const { asked } = run(0, { module: "sales", subjectKind: "sales.order", subjectId: "order-1", limit: 5 })
+        const { asked } = run(0, { module: "sales", subjectKind: "blocks-core.sales.order", subjectId: "order-1", limit: 5 })
         await Promise.resolve()
         expect(asked).toEqual([
-            { filter: { module: "sales", subjectKind: "sales.order", subjectId: "order-1" }, limit: 5 },
+            { filter: { module: "sales", subjectKind: "blocks-core.sales.order", subjectId: "order-1" }, limit: 5 },
         ])
     })
 

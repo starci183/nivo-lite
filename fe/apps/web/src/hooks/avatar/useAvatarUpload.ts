@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { usePutPresignedSwr } from "@/hooks/swr"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
-import { avatarProblemOf } from "./avatar.shared"
-import type { AvatarDoors, AvatarProblem } from "./avatar.shared"
+import { avatarProblemOf, type AvatarDoors, type AvatarProblem } from "./avatar.shared"
 
 /** The view `useAvatarUpload` returns. */
 export interface AvatarUploadView {
@@ -25,7 +24,7 @@ export const useAvatarUpload = (doors: AvatarDoors): AvatarUploadView => {
     const { trigger: putPresigned } = usePutPresignedSwr()
     const [preview, setPreview] = useState<string | null>(null)
     const [problem, setProblem] = useState<AvatarProblem | null>(null)
-    const [isBusy, setBusy] = useState(false)
+    const [isBusy, setIsBusy] = useState(false)
 
     useEffect(() => {
         if (preview === null) return undefined
@@ -40,7 +39,7 @@ export const useAvatarUpload = (doors: AvatarDoors): AvatarUploadView => {
             setProblem(refused)
             if (refused !== null) return
             setPreview(URL.createObjectURL(file))
-            setBusy(true)
+            setIsBusy(true)
             const ticket = await runGraphQL(() => doors.request({ contentType: file.type, sizeBytes: file.size }), {
                 showSuccessToast: false,
             })
@@ -56,17 +55,17 @@ export const useAvatarUpload = (doors: AvatarDoors): AvatarUploadView => {
                     : await runGraphQL(() => doors.set(ticket.path), { successMessage: doors.savedMessage })
             if (kept !== undefined) await doors.refresh()
             setPreview(null)
-            setBusy(false)
+            setIsBusy(false)
         },
         [doors, runGraphQL, runRest, putPresigned],
     )
 
     const remove = useCallback(async (): Promise<void> => {
         setProblem(null)
-        setBusy(true)
+        setIsBusy(true)
         const removed = await runGraphQL(() => doors.set(null), { successMessage: doors.removedMessage })
         if (removed !== undefined) await doors.refresh()
-        setBusy(false)
+        setIsBusy(false)
     }, [doors, runGraphQL])
 
     return { preview, problem, isBusy, choose, remove }

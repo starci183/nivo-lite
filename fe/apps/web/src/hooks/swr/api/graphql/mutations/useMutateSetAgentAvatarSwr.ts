@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetAgentAvatar,
     type MutateSetAgentAvatarRequest,
 } from "@/modules/api/graphql/mutations/mutation-set-agent-avatar"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetAgentAvatarMutation } from "@/modules/api"
 
 /** What the SetAgentAvatar mutation is triggered with. */

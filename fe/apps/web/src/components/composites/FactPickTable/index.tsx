@@ -8,8 +8,10 @@ import {
     Stack,
     SurfaceCard,
     Text,
+    type FooterZone,
+    type HeaderZone,
+    type TableRowData,
 } from "@starci/grammar/common"
-import type { FooterZone, HeaderZone, TableRowData } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { FactPickCopy, FactPickGroupView, FactPickRowView } from "@/modules/types"
 

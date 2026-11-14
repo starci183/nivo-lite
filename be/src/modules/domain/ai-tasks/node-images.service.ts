@@ -1,8 +1,7 @@
-import { Injectable } from "@nestjs/common"
-import { InjectRemoteFiles } from "@modules/integrations/remote-files"
-import type { RemoteFiles } from "@modules/integrations/remote-files"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { Injectable, Optional } from "@nestjs/common"
+import { CustomerFilesService, isCustomerFileRef } from "@modules/domain/chat-files"
+import { InjectRemoteFiles, type RemoteFiles } from "@modules/integrations/remote-files"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AiTasksLogEvent } from "./ai-tasks.log-events"
 
 /** The largest picture a model call carries, bytes: a larger one is left out and logged. */
@@ -32,11 +31,17 @@ export class NodeImagesService {
     constructor(
         @InjectRemoteFiles() private readonly files: RemoteFiles,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() private readonly customerFiles?: CustomerFilesService,
     ) {}
 
-    /** The pictures inlined, in order, with the count of those left out. */
-    async inline(urls: ReadonlyArray<string>): Promise<InlinedImages> {
-        const read = await Promise.all(urls.map((url) => this.dataUrlOf(url)))
+    /**
+     * The pictures inlined, in order, with the count of those left out. A picture a customer sent is read from the shop's own store by
+     * its `chat-file:` address (only within the workspace of the call), never fetched: the store is private and its address never expires.
+     */
+    async inline(urls: ReadonlyArray<string>, workspaceId?: string): Promise<InlinedImages> {
+        const read = await Promise.all(
+            urls.map((url) => (isCustomerFileRef(url) ? this.keptDataUrlOf(url, workspaceId) : this.dataUrlOf(url))),
+        )
         const images = read.filter((image): image is string => image !== null)
         if (images.length < urls.length) {
             this.logger.warn(AiTasksLogEvent.ImagesDropped, {
@@ -45,6 +50,19 @@ export class NodeImagesService {
             })
         }
         return { images, dropped: urls.length - images.length }
+    }
+
+    /** A customer's kept picture as a data URL, or null (another workspace's, gone from the store, not a picture, too large). */
+    private async keptDataUrlOf(url: string, workspaceId: string | undefined): Promise<string | null> {
+        if (workspaceId === undefined || this.customerFiles === undefined) return null
+        try {
+            const kept = await this.customerFiles.bytesOf(workspaceId, url)
+            if (kept === null || !kept.contentType.startsWith("image/") || kept.bytes.length > IMAGE_MAX_BYTES) return null
+            return `data:${kept.contentType};base64,${Buffer.from(kept.bytes).toString("base64")}`
+        } catch (cause) {
+            this.logger.warn(AiTasksLogEvent.ImageUnreadable, { error: cause instanceof Error ? cause.name : typeof cause })
+            return null
+        }
     }
 
     private async dataUrlOf(url: string): Promise<string | null> {

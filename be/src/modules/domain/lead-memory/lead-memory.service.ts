@@ -1,15 +1,27 @@
-import { Injectable } from "@nestjs/common"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { Inject, Injectable, Optional } from "@nestjs/common"
+import {
+    CONTACT_KEY,
+    CONTACTS_STORE,
+    CONTACT_MEMORY_STORE,
+    type ContactMemoryEntry,
+    type ContactMemoryNote,
+    type ContactMemoryReader,
+    type ContactMemoryStore,
+    type ContactMemoryTx,
+    type ContactMemoryValues,
+    type ContactMemoryView,
+    type ContactsStore,
+    type ContactWithIdentities,
+} from "@modules/domain/contacts"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
-import { maskSnapshot } from "@nivo-lite/agent-sdk/node"
-import type { LeadMemoryStore, MemoryReader, MemorySubject, MemoryWrite } from "@nivo-lite/agent-sdk/node"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
-import { QUERY_BOUNDS } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
+import {
+    maskSnapshot,
+    type LeadMemoryStore,
+    type MemoryReader,
+    type MemorySubject,
+    type MemoryWrite,
+} from "@nivo-lite/agent-sdk/node"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { LeadMemoryError, LeadMemoryErrorCode } from "./errors/lead-memory.error"
 import type { OptionalSnapshot, OptionalStepMemory, SensitiveOf } from "./lead-memory.contracts"
@@ -20,10 +32,8 @@ import {
     FACTS_NODE,
     factsValuesOf,
     isJsonRecord,
-    jsonOf,
-    LEAD_KEY,
     LEAD_NAMESPACE,
-    leadMemorySubjectOf,
+    contactMemorySubjectOf,
     snapshotOf,
     stepMemoryOfRow,
     stepValuesOf,
@@ -31,82 +41,36 @@ import {
     valueOfRow,
 } from "./lead-memory.policy"
 
-const MEMORY = "agent.lead-memory"
-const LEAD = "sales.lead"
-
-/** Binds the cursor of every list of this store. */
-const LIST_SCOPE = "lead-memory"
-
-/** The unique constraint an entry is upserted on. */
-const ENTRY_UNIQUE = "entry_key"
-
 /** The most entries of one customer a read takes: one per node of every workflow, far fewer in practice. */
 const ENTRIES_PAGE = 500
 
 /** The most entries one sweep deletes. */
 const SWEEP_PAGE = 200
 
-/** What one list asks: the filter and the order, which must follow an index of the entity. */
-interface ListFilter {
-    /** The rows asked for. */
-    readonly where: FilterExpr
-    /** Their order. */
-    readonly order: OrderBy
-}
-
-/** Every list in id order, the tail of each index of the entity. */
-const BY_ID: OrderBy = [["id", "asc"]]
-
-/** The sweep in the order of its index: the oldest expiry first. */
-const BY_EXPIRY: OrderBy = [
-    ["expiresAt", "asc"],
-    ["id", "asc"],
-]
-
 /** How often the facts are written again after another writer moved them first. */
 const WRITE_TRIES = 5
 
-const SELECT: ReadonlyArray<string> = [
-    "entryKey",
-    "subjectKey",
-    "leadId",
-    "conversationId",
-    "namespace",
-    "nodeKey",
-    "step",
-    "kind",
-    "agentId",
-    "workflowId",
-    "runId",
-    "versionId",
-    "output",
-    "error",
-    "writtenAt",
-    "closedAt",
-    "expiresAt",
-]
-
-const eq = (field: string, value: string): FilterExpr => ({ op: "eq", field, value })
-
 /** The values of an entry as they stand, to write it again under another customer or another expiry. */
-const valuesOfRow = (row: RecordRow): MutationValues =>
-    Object.fromEntries(SELECT.map((name) => [name, jsonOf(row.data[name])]))
+const valuesOfRow = (row: ContactMemoryEntry): ContactMemoryValues => {
+    const { id: _id, version: _version, updatedAt: _updatedAt, ...values } = row
+    return values
+}
 
 @Injectable()
 /**
- * The one memory of each customer (`LeadMemoryStore`), across every workflow and run of theirs, on the `agent.lead-memory` entity: one
- * entry per (customer, workflow namespace, node) with the latest outcome of that node, one trigger entry per workflow and one facts entry
- * per customer. A step reads the raw snapshot; display reads it masked. Resume asks `stepOf` before it runs a node, so a step that already
- * has an outcome in this run is never run (nor its AI called) again.
+ * The one memory of each customer (`LeadMemoryStore`), across every workflow and run of theirs, on the contacts' memory table
+ * (`public.contact_memory`, `CONTACT_MEMORY_STORE`): one entry per (customer, workflow namespace, node) with the latest outcome of that
+ * node, one trigger entry per workflow and one facts entry per customer. A step reads the raw snapshot; display reads it masked. Resume
+ * asks `stepOf` before it runs a node, so a step that already has an outcome in this run is never run (nor its AI called) again.
  */
 export class LeadMemoryService implements LeadMemoryStore {
     constructor(
-        private readonly engine: EntityEngineService,
-        private readonly mutations: EntityMutationService,
+        @Inject(CONTACT_MEMORY_STORE) private readonly store: ContactMemoryStore,
         @InjectClock() private readonly clock: Clock,
+        @Optional() @Inject(CONTACTS_STORE) private readonly contacts?: ContactsStore,
     ) {}
 
-    /** The snapshot of a customer: the entries under their lead and under their conversation, and their lead record. */
+    /** The snapshot of a person: the entries under their contact and under their conversation, and their contact. */
     async snapshot(workspaceId: string, subject: MemorySubject, reader: MemoryReader): Promise<OptionalSnapshot> {
         return this.snapshotWith(workspaceId, subject, reader, () => ({}))
     }
@@ -118,29 +82,24 @@ export class LeadMemoryService implements LeadMemoryStore {
         reader: MemoryReader,
         sensitiveOf: SensitiveOf,
     ): Promise<OptionalSnapshot> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const rows = await this.rowsOfSubject(tx, subject)
-            const lead = subject.leadId === null ? null : await this.engine.get(tx, LEAD, subject.leadId)
-            if (rows.length === 0 && lead === null) return null
-            const snapshot = snapshotOf(subject, rows, lead)
-            return reader === "display" ? maskSnapshot(snapshot, sensitiveOf) : snapshot
-        })
+        const rows = await this.store.transaction((tx) => tx.entriesOf(workspaceId, this.keysOf(subject), ENTRIES_PAGE))
+        const contact = subject.contactId === null ? null : await this.contactOf(workspaceId, subject.contactId)
+        if (rows.length === 0 && contact === null) return null
+        const snapshot = snapshotOf(subject, rows, contact)
+        return reader === "display" ? maskSnapshot(snapshot, sensitiveOf) : snapshot
     }
 
     /** The outcome one node had in one run, or null: what resume and replay return instead of running it again. */
     async stepOf(workspaceId: string, subject: MemorySubject, runId: string, nodeKey: string): Promise<OptionalStepMemory> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const where: FilterExpr = { op: "and", of: [eq("runId", runId), eq("nodeKey", nodeKey)] }
-            const rows = await this.rows(tx, where, 5)
-            const keys = this.keysOf(subject)
-            const row = rows.find((candidate) => keys.includes(String(candidate.data.subjectKey))) ?? rows.at(0)
-            return row === undefined ? null : stepMemoryOfRow(row)
-        })
+        const rows = await this.store.transaction((tx) => tx.entriesOfRunNode(workspaceId, runId, nodeKey, 5))
+        const keys = this.keysOf(subject)
+        const row = rows.find((candidate) => keys.includes(candidate.subjectKey)) ?? rows.at(0)
+        return row === undefined ? null : stepMemoryOfRow(row)
     }
 
     /**
-     * Lays facts over the customer's facts entry, outside any step (what `nivo.lead.update` says the consult learned): only lead facts are
-     * kept (`LEAD_FACTS`), the newest value wins, another writer is waited out a few times.
+     * Lays facts over the person's facts entry, outside any step (what `nivo.tool.contact.memory.remember` says was learned): only lead
+     * facts are kept (`LEAD_FACTS`), the newest value wins, another writer is waited out a few times.
      */
     async remember(
         workspaceId: string,
@@ -148,95 +107,135 @@ export class LeadMemoryService implements LeadMemoryStore {
         facts: Readonly<Record<string, JsonValue>>,
     ): Promise<void> {
         if (Object.keys(facts).length === 0) return
-        await this.engine.scoped(workspaceId, (tx) => this.mergeFacts(tx, subject, facts, WRITE_TRIES))
+        await this.store.transaction((tx) => this.mergeFacts(tx, workspaceId, subject, facts, WRITE_TRIES))
     }
 
     /** Writes one step's outcome, the run's trigger under its workflow, and the facts it proves; a repeat writes the same values again. */
     async write(workspaceId: string, write: MemoryWrite): Promise<void> {
         const now = this.clock.now()
-        await this.engine.scoped(workspaceId, async (tx) => {
-            await this.upsert(tx, stepValuesOf(write, now))
-            await this.upsert(tx, triggerValuesOf(write, now))
-            if (Object.keys(write.facts).length > 0) await this.mergeFacts(tx, write.subject, write.facts, WRITE_TRIES)
+        await this.store.transaction(async (tx) => {
+            await tx.put(workspaceId, stepValuesOf(write, now))
+            await tx.put(workspaceId, triggerValuesOf(write, now))
+            if (Object.keys(write.facts).length > 0) await this.mergeFacts(tx, workspaceId, write.subject, write.facts, WRITE_TRIES)
         })
     }
 
-    /** Moves the entries of a conversation to the lead it became: written again under the lead (the lead's own win), then removed. */
-    async adopt(workspaceId: string, conversationId: string, leadId: string): Promise<void> {
-        const from = `${CONVERSATION_KEY}${conversationId}`
-        const to = leadMemorySubjectOf(leadId, conversationId)
+    /** Moves the entries of a conversation to the contact it is: written again under the contact (the contact's own win), then removed. */
+    async adopt(workspaceId: string, conversationId: string, contactId: string): Promise<void> {
+        await this.moveEntries(workspaceId, `${CONVERSATION_KEY}${conversationId}`, contactMemorySubjectOf(contactId, conversationId))
+    }
+
+    /** What the workflows remember of a contact: the facts entry and the step outcomes, newest first (masked for display). */
+    async read(workspaceId: string, contactId: string, reader: ContactMemoryReader): Promise<ContactMemoryView> {
+        const subject = contactMemorySubjectOf(contactId, null)
+        const snapshot = await this.snapshot(workspaceId, subject, reader)
+        const row = await this.store.transaction((tx) => tx.entryOf(workspaceId, entryKeyOf(subject.key, LEAD_NAMESPACE, FACTS_NODE)))
+        const value = row === null ? null : valueOfRow(row)
+        const facts = isJsonRecord(value) ? value : {}
+        const notes: ReadonlyArray<ContactMemoryNote> = Object.entries(snapshot?.workflows ?? {})
+            .flatMap(([workflow, steps]) =>
+                Object.entries(steps).map(([step, memory]) => ({ workflow, step, status: memory.status, at: memory.at, output: memory.output })),
+            )
+            .toSorted((left, right) => right.at.localeCompare(left.at))
+        return { facts, notes }
+    }
+
+    /** Removes the named facts of a contact's facts entry; answers the names that were held. */
+    async forget(workspaceId: string, contactId: string, names: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+        const subject = contactMemorySubjectOf(contactId, null)
+        return this.store.transaction(async (tx) => {
+            const row = await tx.entryOf(workspaceId, entryKeyOf(subject.key, LEAD_NAMESPACE, FACTS_NODE))
+            if (row === null) return []
+            const held = valueOfRow(row)
+            const facts = isJsonRecord(held) ? held : {}
+            const gone = names.filter((name) => Object.hasOwn(facts, name))
+            if (gone.length === 0) return []
+            const kept = Object.fromEntries(Object.entries(facts).filter(([name]) => !gone.includes(name)))
+            const written = await tx.update(workspaceId, row.id, row.version, { output: { value: kept } })
+            if (!written) throw new LeadMemoryError({ code: LeadMemoryErrorCode.Contended })
+            return gone
+        })
+    }
+
+    /** Moves every entry of a merged contact to the survivor (the survivor's own entries win). */
+    async rekey(workspaceId: string, from: string, into: string): Promise<void> {
+        await this.moveEntries(workspaceId, `${CONTACT_KEY}${from}`, contactMemorySubjectOf(into, null))
+    }
+
+    /** Writes the entries under one key again under another subject (the subject's own win), then removes them. */
+    private async moveEntries(workspaceId: string, from: string, to: MemorySubject): Promise<void> {
         const now = this.clock.now()
-        await this.engine.scoped(workspaceId, async (tx) => {
-            const moving = await this.rows(tx, eq("subjectKey", from), ENTRIES_PAGE)
+        await this.store.transaction(async (tx) => {
+            const moving = await tx.entriesOf(workspaceId, [from], ENTRIES_PAGE)
             await eachInOrder(moving, async (row) => {
-                const namespace = String(row.data.namespace)
-                const nodeKey = String(row.data.nodeKey)
-                if (namespace === LEAD_NAMESPACE && nodeKey === FACTS_NODE) {
+                if (row.namespace === LEAD_NAMESPACE && row.nodeKey === FACTS_NODE) {
                     const value = valueOfRow(row)
-                    if (isJsonRecord(value)) await this.mergeFacts(tx, to, value, WRITE_TRIES, true)
+                    if (isJsonRecord(value)) await this.mergeFacts(tx, workspaceId, to, value, WRITE_TRIES, true)
                 } else {
-                    const key = entryKeyOf(to.key, namespace, nodeKey)
-                    const taken = await this.rows(tx, eq("entryKey", key), 1)
-                    if (taken.length === 0)
-                        await this.upsert(tx, {
+                    const key = entryKeyOf(to.key, row.namespace, row.nodeKey)
+                    const taken = await tx.entryOf(workspaceId, key)
+                    if (taken === null)
+                        await tx.put(workspaceId, {
                             ...valuesOfRow(row),
                             entryKey: key,
                             subjectKey: to.key,
-                            leadId,
-                            conversationId,
+                            contactId: to.contactId,
+                            conversationId: to.conversationId ?? row.conversationId,
                             expiresAt: expiresAtOf(to, now, null).toISOString(),
                         })
                 }
-                await this.mutations.mutate(tx, { op: "delete", entity: MEMORY, key: row.id }, "job")
+                await tx.remove(workspaceId, [row.id])
             })
         })
     }
 
-    /** Marks the lead closed: every entry of theirs now goes 30 days after `at`. */
-    async closed(workspaceId: string, leadId: string, at: Date): Promise<void> {
-        const subject = leadMemorySubjectOf(leadId, null)
+    /** Marks the contact's memory closed: every entry of theirs now goes 30 days after `at`. */
+    async closed(workspaceId: string, contactId: string, at: Date): Promise<void> {
+        const subject = contactMemorySubjectOf(contactId, null)
         const expiresAt = expiresAtOf(subject, at, at).toISOString()
-        await this.engine.scoped(workspaceId, async (tx) => {
-            const rows = await this.rows(tx, eq("subjectKey", subject.key), ENTRIES_PAGE)
-            await eachInOrder(rows, (row) =>
-                this.upsert(tx, { ...valuesOfRow(row), closedAt: at.toISOString(), expiresAt }),
-            )
+        await this.store.transaction(async (tx) => {
+            const rows = await tx.entriesOf(workspaceId, [subject.key], ENTRIES_PAGE)
+            await eachInOrder(rows, (row) => tx.put(workspaceId, { ...valuesOfRow(row), closedAt: at.toISOString(), expiresAt }))
         })
     }
 
     /** Deletes one page of the entries whose retention ran out; answers how many went. */
     async sweep(workspaceId: string, now: Date): Promise<number> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const due = await this.rows(tx, { op: "lt", field: "expiresAt", value: now.toISOString() }, SWEEP_PAGE, BY_EXPIRY)
-            await eachInOrder(due, async (row) => {
-                await this.mutations.mutate(tx, { op: "delete", entity: MEMORY, key: row.id }, "job")
-            })
+        return this.store.transaction(async (tx) => {
+            const due = await tx.dueBefore(workspaceId, now, SWEEP_PAGE)
+            await tx.remove(
+                workspaceId,
+                due.map((row) => row.id),
+            )
             return due.length
         })
     }
 
-    /** The keys a customer's entries may sit under: their lead, then their conversation. */
+    /** The contact with its identities, read from the contacts store; null without one. */
+    private async contactOf(workspaceId: string, contactId: string): Promise<ContactWithIdentities | null> {
+        if (this.contacts === undefined) return null
+        return this.contacts.transaction(async (tx) => {
+            const [contact] = await tx.contactsOf(workspaceId, [contactId])
+            if (contact?.state !== "active") return null
+            return { ...contact, identities: await tx.identitiesOf(workspaceId, [contact.id]) }
+        })
+    }
+
+    /** The keys a person's entries may sit under: their contact, then their conversation. */
     private keysOf(subject: MemorySubject): ReadonlyArray<string> {
         return [
-            subject.key,
-            ...(subject.leadId === null ? [] : [`${LEAD_KEY}${subject.leadId}`]),
-            ...(subject.conversationId === null ? [] : [`${CONVERSATION_KEY}${subject.conversationId}`]),
+            ...new Set([
+                subject.key,
+                ...(subject.contactId === null ? [] : [`${CONTACT_KEY}${subject.contactId}`]),
+                ...(subject.conversationId === null ? [] : [`${CONVERSATION_KEY}${subject.conversationId}`]),
+            ]),
         ]
-    }
-
-    private async rowsOfSubject(tx: ScopedTx, subject: MemorySubject): Promise<ReadonlyArray<RecordRow>> {
-        const keys = [...new Set(this.keysOf(subject))]
-        const pages = await Promise.all(keys.map((key) => this.rows(tx, eq("subjectKey", key), ENTRIES_PAGE)))
-        return pages.flat()
-    }
-
-    private async upsert(tx: ScopedTx, values: MutationValues): Promise<void> {
-        await this.mutations.mutate(tx, { op: "upsert", entity: MEMORY, on: ENTRY_UNIQUE, values }, "job")
     }
 
     /** Lays `facts` over the facts entry of the customer under the version read; `under` keeps what the entry holds over them. */
     private async mergeFacts(
-        tx: ScopedTx,
+        tx: ContactMemoryTx,
+        workspaceId: string,
         subject: MemorySubject,
         facts: Readonly<Record<string, JsonValue>>,
         left: number,
@@ -244,56 +243,15 @@ export class LeadMemoryService implements LeadMemoryStore {
     ): Promise<void> {
         if (left <= 0) throw new LeadMemoryError({ code: LeadMemoryErrorCode.Contended })
         const now = this.clock.now()
-        const key = entryKeyOf(subject.key, LEAD_NAMESPACE, FACTS_NODE)
-        const [row] = await this.rows(tx, eq("entryKey", key), 1)
-        if (row === undefined) {
-            await this.upsert(tx, factsValuesOf(subject, {}, facts, now))
+        const row = await tx.entryOf(workspaceId, entryKeyOf(subject.key, LEAD_NAMESPACE, FACTS_NODE))
+        if (row === null) {
+            await tx.put(workspaceId, factsValuesOf(subject, {}, facts, now))
             return
         }
         const held = valueOfRow(row)
         const before = isJsonRecord(held) ? held : {}
         const values = under ? factsValuesOf(subject, facts, before, now) : factsValuesOf(subject, before, facts, now)
-        const result = await this.mutations.mutate(
-            tx,
-            { op: "update", entity: MEMORY, key: row.id, expected: row.version, values },
-            "job",
-        )
-        if (!result.ok && result.reason === "stale") await this.mergeFacts(tx, subject, facts, left - 1, under)
-    }
-
-    /**
-     * The rows that match, at most `limit`, read page by page within the engine's page bound (`QUERY_BOUNDS.pageSize`): a customer with
-     * more entries than one page holds is read in full, never refused for its size.
-     */
-    private async rows(
-        tx: ScopedTx,
-        where: FilterExpr,
-        limit: number,
-        order: OrderBy = BY_ID,
-    ): Promise<ReadonlyArray<RecordRow>> {
-        return this.pagesFrom(tx, { where, order }, limit, undefined)
-    }
-
-    private async pagesFrom(
-        tx: ScopedTx,
-        filter: ListFilter,
-        left: number,
-        after: string | undefined,
-    ): Promise<ReadonlyArray<RecordRow>> {
-        const size = Math.min(left, QUERY_BOUNDS.pageSize)
-        const page = await this.engine.list(
-            tx,
-            {
-                from: MEMORY,
-                select: SELECT,
-                where: filter.where,
-                order: filter.order,
-                page: after === undefined ? { size } : { size, after },
-            },
-            LIST_SCOPE,
-        )
-        const rows = page.rows.map((row) => row.row)
-        if (page.next === null || rows.length >= left) return rows.slice(0, left)
-        return [...rows, ...(await this.pagesFrom(tx, filter, left - rows.length, page.next))]
+        if (!(await tx.update(workspaceId, row.id, row.version, values)))
+            await this.mergeFacts(tx, workspaceId, subject, facts, left - 1, under)
     }
 }

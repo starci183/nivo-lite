@@ -104,6 +104,20 @@ export interface QueueHandler {
     readonly concurrency?: number | undefined
     /** True when the jobs of the queue come from a job scheduler keyed by a row, not from the outbox: no durable job row exists, so the worker skips the admission. */
     readonly scheduled?: boolean | undefined
+    /**
+     * How many more jobs of the same workspace may already run when one of this handler's jobs starts, beyond the app's workspace
+     * limit: short work that must not wait behind the workspace's long work (a document is searchable as soon as it is stored). Its
+     * own slot still counts, so the workspace's other jobs wait for it, never the reverse. 0 when absent.
+     */
+    readonly workspaceHeadroom?: number | undefined
+    /** The headroom of one job of the queue by its name, on a handler that routes several jobs (the worker's router). */
+    readonly headroomOf?: ((job: string) => number) | undefined
+    /**
+     * The FAIR GROUP of one delivery (job name and payload): what it belongs to for fairness inside its workspace, such as the document a
+     * truths job reads. A job whose group has nothing running in the workspace is admitted up to one job beyond the workspace limit, so
+     * a small document never waits behind another document's chain of jobs. Null or absent: no group, the plain limit.
+     */
+    readonly fairGroupOf?: ((job: string, payload: object) => Promise<string | null>) | undefined
     /** Handles one delivery. */
     handle(delivery: QueueDelivery): Promise<void>
     /** Runs once when the job ends as failed (attempts used up or an unrecoverable error): write the failure the owner sees. */

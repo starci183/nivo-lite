@@ -49,3 +49,11 @@ export interface ConnectionBoardEntry {
     /** The agents that use it, in the order they were attached. */
     readonly grants: ReadonlyArray<ConnectionGrantEntry>
 }
+
+/** One active agent of the workspace that may be bound to a connection of a provider, and what it would do there. */
+export interface BindableAgent {
+    /** The agent. */
+    readonly agentId: string
+    /** What the agent would use the connection for. */
+    readonly purpose: string
+}

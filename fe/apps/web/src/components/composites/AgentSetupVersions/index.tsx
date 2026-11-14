@@ -1,5 +1,4 @@
-import { EmptyNotice, Section } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Section, type ListRowData } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { AgentGraphVersionsView, AgentSetupCopy } from "@/modules/types"
 

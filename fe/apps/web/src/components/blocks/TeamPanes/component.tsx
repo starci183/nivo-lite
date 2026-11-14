@@ -158,7 +158,7 @@ const Confirmation = (props: Props) => {
     )
 }
 
-/** The page header: the team's title and line, the Members / Permissions tabs and the one command that invites. */
+/** The page header: the team's title and line and the one command that invites. */
 const headerOf = (props: Props) => {
     const { copy } = props.props
     if (props.props.access !== "manager")
@@ -178,15 +178,6 @@ const headerOf = (props: Props) => {
                 </Button>
             </GuideTarget>
         ),
-        tabs: {
-            label: copy.tabsLabel,
-            selectedKey: "members",
-            labelVisibility: "always" as const,
-            items: [
-                { id: "members", label: copy.membersTab, href: copy.membersHref },
-                { id: "permissions", label: copy.permissionsTab, href: copy.permissionsHref },
-            ],
-        },
     }
 }
 

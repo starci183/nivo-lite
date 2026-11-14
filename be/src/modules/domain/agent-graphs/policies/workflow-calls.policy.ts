@@ -4,8 +4,11 @@ import {
     LATEST_VERSION,
     callProblems,
     mappedOf,
+    type ContractProblem,
+    type GraphSpec,
+    type GraphSpecNode,
+    type WorkflowContract,
 } from "@nivo-lite/agent-sdk/graph"
-import type { ContractProblem, GraphSpec, GraphSpecNode, WorkflowContract } from "@nivo-lite/agent-sdk/graph"
 
 /** One workflow of the workspace a hand-off may call: its agent, module, key, the graph it runs and the numbers of its versions. */
 export interface CallableWorkflow {

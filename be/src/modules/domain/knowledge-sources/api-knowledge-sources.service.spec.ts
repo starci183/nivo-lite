@@ -40,7 +40,7 @@ describe("ApiKnowledgeSourcesService addText", () => {
         const { service, queue, quota } = await build()
 
         await expect(service.addText(sourceOf(), tx)).resolves.toEqual({ id: "request-1" })
-        expect(quota.admit).toHaveBeenCalledWith(tx, WS, 7)
+        expect(quota.admit).toHaveBeenCalledWith(tx, WS, 7, "internal")
         expect(tx.insert).toHaveBeenCalledWith(KnowledgeSourceEntity, {
             id: "request-1",
             workspaceId: WS,

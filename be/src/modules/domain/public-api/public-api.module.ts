@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { PublicApiQueueModule } from "@modules/queues/public-api"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./public-api.module-definition"
@@ -8,6 +7,8 @@ import { PublicKnowledgeService } from "./public-knowledge.service"
 import { PublicMessagesService } from "./public-messages.service"
 import { PublicApiProcessingService } from "./public-api-processing.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
+import { PublicMessageDeliveryService } from "./public-message-delivery.service"
+import { PublicMessageHoldsService } from "./public-message-holds.service"
 import { PublicApiLedgerService } from "./public-api-ledger.service"
 import { PublicConversationsService } from "./public-conversations.service"
 
@@ -28,6 +29,8 @@ export class PublicApiModule extends ConfigurableModuleClass {
                 PublicMessagesService,
                 PublicApiProcessingService,
                 PublicMessageFulfillmentService,
+                PublicMessageHoldsService,
+                PublicMessageDeliveryService,
                 PublicApiLedgerService,
                 PublicConversationsService,
             ],

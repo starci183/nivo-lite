@@ -5,12 +5,11 @@ import { useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 import { useAgentGraphRead } from "@/hooks/agentGraph"
 import { useQueryAgentWorkflowSwr, useQueryAgentWorkflowsSwr } from "@/hooks/swr"
-import { useWorkflowSteps } from "./useWorkflowSteps"
-import type { WorkflowSteps } from "./useWorkflowSteps"
+import { useWorkflowSteps, type WorkflowSteps } from "./useWorkflowSteps"
 
 /**
  * The card map of the Setup page and the drawer of its steps: the graph of the workflow `?workflow=` names (any of the agent's, as
- * "Sửa sơ đồ" of the Workflows tab opens it), else of the agent's main workflow (the version it runs), else the flow of the agent graph
+ * "Edit graph" of the Workflows tab opens it), else of the agent's main workflow (the version it runs), else the flow of the agent graph
  * while the agent has no workflow. A save writes the next version of that workflow (`expectedLatest` the version read), never the
  * template, then reads the workflow and the agent graph again, so the map shows the new values.
  */

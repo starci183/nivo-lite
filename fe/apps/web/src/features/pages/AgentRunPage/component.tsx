@@ -5,9 +5,9 @@ import type { ModuleKey } from "@/modules/catalog"
 /** The type, the instance and the run whose page this is. */
 export interface AgentRunPageBaseProps {
     readonly props: {
-        readonly module: ModuleKey
-        readonly installationId: string
-        readonly runId: string
+        readonly module: ModuleKey | undefined
+        readonly installationId: string | undefined
+        readonly runId: string | undefined
     }
 }
 

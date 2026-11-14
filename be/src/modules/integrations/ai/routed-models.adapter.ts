@@ -1,5 +1,4 @@
-import { createRoutedModels } from "@starci/ai-router/langchain"
-import type { RoutedChat as PackageRoutedChat } from "@starci/ai-router/langchain"
+import { createRoutedModels, type RoutedChat as PackageRoutedChat } from "@starci/ai-router/langchain"
 import type { AiChatModel, AiFetch, RoutedChat, RoutedModels } from "./ai.contracts"
 import type { AiEndpoint } from "./ai.options"
 
@@ -17,7 +16,7 @@ const ownOf = (routed: PackageRoutedChat): RoutedChat => ({
     kind: routed.kind,
     name: routed.name,
     model: routed.model as unknown as AiChatModel,
-    fallbacks: routed.fallbacks.map(ownOf),
+    fallbacks: routed.fallbacks.map((fallback) => ownOf(fallback)),
 })
 
 /**

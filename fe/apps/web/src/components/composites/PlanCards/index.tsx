@@ -91,7 +91,10 @@ const PlanCard = (props: PlanCardProps) => {
 }
 
 /** Four plans stand in one row; five or more wrap three to a row, so no single card is left alone on the last row. */
-const columnsOf = (count: number): 2 | 3 | 4 => (count === 4 ? 4 : count > 4 || count === 3 ? 3 : 2)
+const columnsOf = (count: number): 2 | 3 | 4 => {
+    if (count === 4) return 4
+    return count > 4 || count === 3 ? 3 : 2
+}
 
 /** The plans side by side as cards, the same in the plan step and in the plan change: one ringed card, one command each. */
 export const PlanCards = (props: PlanCardsProps) => (

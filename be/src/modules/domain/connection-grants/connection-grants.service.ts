@@ -2,16 +2,21 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentAccessLogService } from "@modules/domain/agent-access-log"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type ConnectionMember,
+} from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { planExactly, purposeFor } from "./connection-access.policy"
-import type { GrantChange } from "./connection-access.policy"
+import { planExactly, purposeFor, type GrantChange } from "./connection-access.policy"
 import type {
     AgentGrantWish,
+    BindableAgent,
     ConnectionBoardEntry,
     ConnectionCandidate,
     ConnectionGrantEntry,
@@ -21,6 +26,8 @@ import { ConnectionGrantsError, ConnectionGrantsErrorCode } from "./errors/conne
 
 const OWNER_ONLY = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
+/** Most agents a workspace is asked about when the bindable ones of a provider are listed. */
+const AGENT_LIMIT = 200
 const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const pairKey = (agentId: string, connectionId: string): string => `${agentId}:${connectionId}`
@@ -96,6 +103,23 @@ export class ConnectionGrantsService {
                     bound: boundTo.has(connection.id),
                 },
             ]
+        })
+    }
+
+    /**
+     * The active agents of the workspace that may be bound to a connection of this provider, with what each would do there: the
+     * answer the installation gives (`purposeFor`), asked before any connection exists. Any member may look.
+     */
+    async bindableAgents(
+        userId: string,
+        workspaceId: string,
+        provider: string,
+    ): Promise<ReadonlyArray<BindableAgent>> {
+        await this.members.require(userId, workspaceId)
+        const agents = await this.agents.activeModuleRefsOf(workspaceId, AGENT_LIMIT)
+        return agents.flatMap((agent) => {
+            const purpose = purposeFor(agent.module, provider)
+            return purpose === null ? [] : [{ agentId: agent.id, purpose }]
         })
     }
 

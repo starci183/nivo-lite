@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
-import { ChatMessagesService } from "@modules/domain/chat-records"
+import { ChannelDeliveriesService, type StoredDelivery } from "@modules/domain/customer-routes"
 import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { AgentGraphAiCoreService } from "./agent-graph-ai-core.service"
@@ -60,10 +60,32 @@ const askOf = (over: Partial<CoreAsk> = {}): CoreAsk => ({
     ...over,
 })
 
+/** One ledger row of what the shop told on the route. */
+const toldOf = (text: string, state: StoredDelivery["state"]): StoredDelivery => ({
+    id: `d-${text}`,
+    seq: "1",
+    sendKey: `k-${text}`,
+    routeId: "c-1",
+    contactId: "contact-1",
+    agentId: "agent-1",
+    runId: "run-0",
+    stepKey: "answer",
+    text,
+    attachmentCount: 0,
+    attachmentKinds: [],
+    state,
+    reason: null,
+    providerMessageId: null,
+    channel: "zalo",
+    accountId: "conn-1",
+    createdAt: "2026-11-14T01:00:00.000Z",
+    deliveredAt: state === "delivered" ? "2026-11-14T01:00:01.000Z" : null,
+})
+
 const buildCore = async () => {
     const host = mock<GraphNodeHostService>()
-    const messages = mock<ChatMessagesService>()
-    messages.transcript.mockResolvedValue([{ role: "user", body: "Tôi chuyển 2k dư r" }])
+    const messages = mock<ChannelDeliveriesService>()
+    messages.listByRoute.mockResolvedValue({ rows: [toldOf("Da em ghi nhan a", "delivered")], next: null })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphAiCoreService,
@@ -72,7 +94,7 @@ const buildCore = async () => {
                 provide: GraphNodeRegistryService,
                 useValue: mock<GraphNodeRegistryService>({ installed: jest.fn(installed) }),
             },
-            { provide: ChatMessagesService, useValue: messages },
+            { provide: ChannelDeliveriesService, useValue: messages },
         ],
     }).compile()
     return { core: moduleRef.get(AgentGraphAiCoreService), host, messages }
@@ -83,7 +105,11 @@ describe("AgentGraphAiCoreService the one decision on a step that could not comp
         const { core, host } = await buildCore()
         host.core.mockResolvedValue({ decision: "output", output: { names: [] } })
 
-        await expect(core.decide(askOf())).resolves.toEqual({ kind: "output", output: { names: [] } })
+        const trigger = {
+            conversationId: "c-1",
+            messages: [{ id: "m-1", text: "Tôi chuyển 2k dư r", at: "2026-11-14T00:59:00.000Z", attachments: [] }],
+        }
+        await expect(core.decide(askOf({ trigger }))).resolves.toEqual({ kind: "output", output: { names: [] } })
 
         expect(host.core).toHaveBeenCalledTimes(1)
         const [turn, ask] = host.core.mock.calls[0] ?? []
@@ -91,27 +117,56 @@ describe("AgentGraphAiCoreService the one decision on a step that could not comp
         expect(ask?.purpose).toBe("engine:step-trouble")
         expect(ask?.input).toMatchObject({
             step: { key: "evidence", node: "payment.evidence" },
-            conversation: [{ role: "user", body: "Tôi chuyển 2k dư r" }],
+            // The wake's own lines and what the ledger says was told on the route, oldest first: no chatbot record is read.
+            conversation: [
+                { role: "user", body: "Tôi chuyển 2k dư r" },
+                { role: "agent", body: "Da em ghi nhan a" },
+            ],
             whatWentWrong: { kind: "threw", code: "handler_threw", text: "TypeError: claim.names is not iterable" },
         })
+    })
+
+    it("shows the AI core only what the customer was told: a refused or unknown send is no part of the thread", async () => {
+        const { core, host, messages } = await buildCore()
+        host.core.mockResolvedValue({ decision: "report", report: "x", customerLine: null })
+        messages.listByRoute.mockResolvedValue({
+            rows: [toldOf("not sent", "refused"), toldOf("maybe", "unknown"), toldOf("told", "delivered")],
+            next: null,
+        })
+
+        await core.decide(askOf())
+
+        expect(host.core.mock.calls.map(([, ask]) => Reflect.get(Object(ask?.input), "conversation"))).toEqual([
+            [{ role: "agent", body: "told" }],
+        ])
+    })
+
+    it("ENG1: hands the host the run step the call is booked to (the iteration's key), else the node key", async () => {
+        const { core, host } = await buildCore()
+        host.core.mockResolvedValue({ decision: "output", output: { names: [] } })
+
+        await core.decide(askOf({ stepKey: "evidence[1]" }))
+        await core.decide(askOf())
+
+        expect(host.core.mock.calls.map((call) => call[3])).toEqual(["evidence[1]", "evidence"])
     })
 
     it("answers the AI's report in its own words, and the line it chose for the customer (none when it chose none)", async () => {
         const { core, host } = await buildCore()
         const suggestions = [
-            { text: "Nhận khoản dư và ghi sổ", handledBy: "workflow" },
-            { text: "Hoàn lại khách", handledBy: "person" },
+            { text: "Nh\u1eadn kho\u1ea3n d\u01b0 v\u00e0 ghi s\u1ed5", handledBy: "workflow" },
+            { text: "Ho\u00e0n l\u1ea1i kh\u00e1ch", handledBy: "person" },
         ]
         host.core.mockResolvedValueOnce({
             decision: "report",
-            reason: " Cần anh xem khoản dư. ",
-            question: " Nhận khoản dư không? ",
+            reason: " C\u1ea7n anh xem kho\u1ea3n d\u01b0. ",
+            question: " Nh\u1eadn kho\u1ea3n d\u01b0 kh\u00f4ng? ",
             suggestions,
-            customerLine: "Dạ shop đang kiểm tra ạ.",
+            customerLine: "D\u1ea1 shop \u0111ang ki\u1ec3m tra \u1ea1.",
         })
         host.core.mockResolvedValueOnce({
             decision: "report",
-            reason: "Cần anh xem.",
+            reason: "C\u1ea7n anh xem.",
             question: "  ",
             suggestions,
             customerLine: "  ",
@@ -119,14 +174,14 @@ describe("AgentGraphAiCoreService the one decision on a step that could not comp
 
         await expect(core.decide(askOf())).resolves.toEqual({
             kind: "report",
-            reason: "Cần anh xem khoản dư.",
-            question: "Nhận khoản dư không?",
+            reason: "C\u1ea7n anh xem kho\u1ea3n d\u01b0.",
+            question: "Nh\u1eadn kho\u1ea3n d\u01b0 kh\u00f4ng?",
             suggestions,
-            customerLine: "Dạ shop đang kiểm tra ạ.",
+            customerLine: "D\u1ea1 shop \u0111ang ki\u1ec3m tra \u1ea1.",
         })
         await expect(core.decide(askOf())).resolves.toEqual({
             kind: "report",
-            reason: "Cần anh xem.",
+            reason: "C\u1ea7n anh xem.",
             question: null,
             suggestions,
             customerLine: null,
@@ -137,11 +192,11 @@ describe("AgentGraphAiCoreService the one decision on a step that could not comp
         const { core, host } = await buildCore()
         host.core.mockResolvedValue({
             decision: "report",
-            reason: "Giao dịch không khớp đơn.",
+            reason: "Giao d\u1ecbch kh\u00f4ng kh\u1edbp \u0111\u01a1n.",
             question: null,
             suggestions: [
-                { text: "Nhận khoản dư và ghi sổ", handledBy: "workflow" },
-                { text: "Hoàn lại khách", handledBy: "person" },
+                { text: "Nh\u1eadn kho\u1ea3n d\u01b0 v\u00e0 ghi s\u1ed5", handledBy: "workflow" },
+                { text: "Ho\u00e0n l\u1ea1i kh\u00e1ch", handledBy: "person" },
             ],
             customerLine: null,
         })
@@ -173,7 +228,7 @@ describe("AgentGraphAiCoreService the one decision on a step that could not comp
     it("decides without a conversation when the run serves none or it cannot be read", async () => {
         const { core, host, messages } = await buildCore()
         host.core.mockResolvedValue({ decision: "report", report: "x", customerLine: null })
-        messages.transcript.mockRejectedValueOnce(new Error("db"))
+        messages.listByRoute.mockRejectedValueOnce(new Error("db"))
 
         await core.decide(askOf())
         await core.decide(askOf({ conversationId: null }))

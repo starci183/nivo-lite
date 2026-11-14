@@ -4,7 +4,7 @@ import type { EntityManager } from "typeorm"
 
 /** A named channel of frames of one type: the one object a publisher pushes to and a door subscribes to, built by the owning domain contract. */
 export interface RealtimeTopic<T extends object> {
-    /** The channel name, unique per owner and scope (for example `booking-status:<owner>`). */
+    /** The channel name, unique per owner and scope (for example `run-status:<owner>`). */
     readonly name: string
     /** True when a value is a frame of this topic; a value that is not one is never delivered. */
     accepts(frame: unknown): frame is T

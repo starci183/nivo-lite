@@ -148,11 +148,6 @@ interface TeamPanesCopy {
     readonly breadcrumbs: PageHeaderBreadcrumbs
     readonly title: string
     readonly description: string
-    readonly tabsLabel: string
-    readonly membersTab: string
-    readonly membersHref: string
-    readonly permissionsTab: string
-    readonly permissionsHref: string
     readonly inviteAction: string
     readonly listTitle: string
     readonly listLabel: string

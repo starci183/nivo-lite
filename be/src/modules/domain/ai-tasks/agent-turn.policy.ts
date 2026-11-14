@@ -1,3 +1,4 @@
+import { turnEffortOf } from "@modules/integrations/ai"
 import type { AiTasksOptions, NodeReasoning } from "./ai-tasks.options"
 
 /** What a node asks of the model side for one run of its agent loop. */
@@ -9,10 +10,15 @@ export interface AgentTurnsAsk {
 }
 
 /**
- * The reasoning the turns of an agent run with: the node's own word, else the app's setting for node calls, else the model's default.
+ * The reasoning the turns of an agent run with: the node's own word, else the lane's effort for the weight blocks-core declares for
+ * its step (`turnEffortOf`: a light step's short answer `low`, a heavy step's multi-step tool turn `medium`), else the app's setting
+ * for node calls, else the model's default.
  */
-export const agentReasoningOf = (options: Pick<AiTasksOptions, "nodeReasoning">, ask: AgentTurnsAsk): NodeReasoning =>
-    ask.reasoning ?? options.nodeReasoning ?? "default"
+export const agentReasoningOf = (
+    options: Pick<AiTasksOptions, "nodeReasoning">,
+    ask: AgentTurnsAsk,
+    weight?: "light" | "heavy",
+): NodeReasoning => ask.reasoning ?? (weight === undefined ? undefined : turnEffortOf(weight)) ?? options.nodeReasoning ?? "default"
 
 /**
  * The tool choice of every request of an agent's step. Forcing a tool call on every turn (`required`) makes this model spend no
@@ -21,8 +27,16 @@ export const agentReasoningOf = (options: Pick<AiTasksOptions, "nodeReasoning">,
  */
 export const agentToolChoiceOf = (reasoning: NodeReasoning): "auto" | "required" => (reasoning === "off" ? "required" : "auto")
 
+/** How one agent turn is metered: its kind and the module namespace it is charged to. */
+export interface AgentTurnMeta {
+    /** The metering kind the turn is charged as. */
+    readonly kind: string
+    /** The module namespace the turn is charged to. */
+    readonly module: string
+}
+
 /** How the turns of a node's agent are metered: engine work of the namespace its purpose starts with, like every call of the node. */
-export const agentTurnMetaOf = (ask: AgentTurnsAsk): { readonly kind: string; readonly module: string } => ({
+export const agentTurnMetaOf = (ask: AgentTurnsAsk): AgentTurnMeta => ({
     kind: "engine",
     module: ask.purpose.split(".", 1).join(""),
 })

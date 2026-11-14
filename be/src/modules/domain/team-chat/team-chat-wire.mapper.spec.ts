@@ -92,6 +92,7 @@ const MESSAGE: MessageView = {
     forwardedFrom: null,
     stop: null,
     brainChange: null,
+    backgroundStopped: null,
 }
 
 const ROOM: ChatRoomView = {
@@ -100,6 +101,7 @@ const ROOM: ChatRoomView = {
     purpose: "group",
     purposeModule: null,
     name: "Ops",
+    withNivo: false,
     position: 1,
     createdBy: ID_C,
     createdAt: AT,
@@ -226,6 +228,8 @@ describe("wire shape of a stop card", () => {
             stoppedAt: ISO,
             resolvedAt: null,
             approval: null,
+            decision: null,
+            preview: null,
             revision: 2,
         }
         expect(subject.messageWireOf({ ...MESSAGE, stop }).stop).toEqual(stop)
@@ -267,7 +271,9 @@ describe("wire shape of a stop card", () => {
         expect(subject.messageWireOf({ ...MESSAGE, brainChange }).brainChange).toEqual(brainChange)
         expect(subject.messageWireOf(MESSAGE).brainChange).toBeNull()
     })
+})
 
+describe("wire shape of a room", () => {
     it("shows a room with its members and last message, a list, a page and an absent room", async () => {
         const subject = await buildSubject()
         expect(subject.roomWireOf(ROOM)).toMatchObject({
@@ -355,7 +361,9 @@ describe("request builders of a thread, a room and a message", () => {
         expect(subject.decideRequestOf(ID_A, { decisionId: ID_B, verdict: "reject" }).verdict).toBe("reject")
         expect(subject.decideRequestOf(ID_A, { decisionId: ID_B, verdict: "approve" }).verdict).toBe("approve")
     })
+})
 
+describe("request builders of a message", () => {
     it("builds the send request with defaults for what is absent", async () => {
         const subject = await buildSubject()
         expect(

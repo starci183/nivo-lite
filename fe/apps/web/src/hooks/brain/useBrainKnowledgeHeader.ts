@@ -6,8 +6,7 @@ import { useWorkspaceId } from "@/hooks/workspaces"
 import { headerWithAdd } from "@/modules/brain"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading } from "@/modules/types"
-import { useBrainPageHeader } from "./useBrainPageHeader"
-import type { BrainPageHeaderViewShape } from "./useBrainPageHeader"
+import { useBrainPageHeader, type BrainPageHeaderViewShape } from "./useBrainPageHeader"
 
 /**
  * The header of a knowledge page drawn as tables (the documents chip, the facts chip): the four tabs, the chips with their counts, and

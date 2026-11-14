@@ -1,6 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { InjectJobClaims, InjectParkedJobResumer } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep, ParkedJobResumerService } from "@modules/platform/jobs"
+import {
+    InjectJobClaims,
+    InjectParkedJobResumer,
+    type ClaimedJob,
+    type JobClaims,
+    type JobStep,
+    type ParkedJobResumerService,
+} from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the sweep: the parked jobs (every one, or those of another build when the boot asks) go back to their queue, keeping its recorded steps and effect keys. */

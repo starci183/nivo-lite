@@ -22,10 +22,10 @@ const reasonOf = (
 /** The connected workspaces overview: the header, the first-run welcome or the list, by what the back end GraphQL API answers. */
 export const WorkspacesOverview = (props: WorkspacesOverviewProps) => {
     const t = useTranslations("onboarding")
-    const { status } = useWorkspaceCards()
+    const { slot } = useWorkspaceCards()
     return (
         <WorkspacesOverviewBase
-            shape={status === "empty" ? "welcome" : "list"}
+            shape={"isEmpty" in slot ? "welcome" : "list"}
             props={{
                 createFirstLabel: t("createFirstCta"),
                 createFirstNote: t("createFirstNote"),

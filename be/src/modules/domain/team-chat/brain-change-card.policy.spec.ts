@@ -17,18 +17,18 @@ const GIVEN: BrainChangePayloadGiven = {
     changeId: "p-ship",
     origin: "chat",
     kind: "change",
-    factKey: { subjectLabel: "Giao hàng", attributeLabel: "Phí ship nội thành" },
-    oldValue: "20.000 đ",
-    current: { value: "20.000 đ", version: 2, source: "Quy định giao hàng.docx" },
-    newValue: "30.000 đ",
+    factKey: { subjectLabel: "Giao h\u00e0ng", attributeLabel: "Ph\u00ed ship n\u1ed9i th\u00e0nh" },
+    oldValue: "20.000 \u0111",
+    current: { value: "20.000 \u0111", version: 2, source: "Quy \u0111\u1ecbnh giao h\u00e0ng.docx" },
+    newValue: "30.000 \u0111",
     unit: null,
     validFrom: null,
     validTo: null,
-    reason: "Anh vừa nhắn từ mai phí ship nội thành là 30k, thay giá 20.000 đ đang dùng.",
+    reason: "Anh v\u1eeba nh\u1eafn t\u1eeb mai ph\u00ed ship n\u1ed9i th\u00e0nh l\u00e0 30k, thay gi\u00e1 20.000 \u0111 \u0111ang d\u00f9ng.",
     evidence: [
         {
             kind: "message",
-            quote: "từ mai phí ship nội thành là 30k nhé",
+            quote: "t\u1eeb mai ph\u00ed ship n\u1ed9i th\u00e0nh l\u00e0 30k nh\u00e9",
             ref: "team-chat:m1",
             by: { name: "nivo-owner", memberId: "u-owner" },
             at: "2026-11-11T17:40:00.000Z",
@@ -69,7 +69,10 @@ describe("brain.change card: one card, rewritten in place", () => {
         const again = countedPayloadOf(
             {
                 ...GIVEN,
-                evidence: [...GIVEN.evidence, { ...GIVEN.evidence[0]!, ref: "team-chat:m2", quote: "nhớ nha 30k" }],
+                evidence: [
+                    ...GIVEN.evidence,
+                    ...GIVEN.evidence.slice(0, 1).map((one) => ({ ...one, ref: "team-chat:m2", quote: "nh\u1edb nha 30k" })),
+                ],
             },
             first,
         )
@@ -95,12 +98,12 @@ describe("brain.change card: one card, rewritten in place", () => {
             kind: BRAIN_CHANGE_MESSAGE_KIND,
             intent: "ask",
             options: [],
-            summary: "Giao hàng · Phí ship nội thành: 20.000 đ → 30.000 đ",
+            summary: "Giao h\u00e0ng \u00b7 Ph\u00ed ship n\u1ed9i th\u00e0nh: 20.000 \u0111 \u2192 30.000 \u0111",
         })
     })
 })
 
-describe("brain.change card: only the workspace owner gets Đồng ý", () => {
+describe("brain.change card: only the workspace owner gets \u0110\u1ed3ng \u00fd", () => {
     const stored = storedOf(countedPayloadOf(GIVEN, null))
 
     it.each([

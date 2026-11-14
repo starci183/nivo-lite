@@ -1,7 +1,7 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { CHAT_FILE_ACCEPT, isChatRefusal, mentionTriggerOf, suggestionsOf } from "@/modules/teamChat"
+import { useLocale, useTranslations } from "next-intl"
+import { CHAT_FILE_ACCEPT, isChatRefusal, mentionTriggerOf, quoteOf, suggestionsOf } from "@/modules/teamChat"
 import { messagesCopyOf } from "./teamChat.copy"
 import { useChatRowWords } from "./useChatRowWords"
 import { headOf, panelsOf } from "./teamChat.head"
@@ -9,7 +9,6 @@ import type { TeamChatRoomState } from "./useTeamChatRoomState"
 import type { AgentOfRoom, RoomViewContext, Words } from "./teamChat.view"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { isWaitingOf, useSlotLabels } from "@/hooks/slot"
-import { quoteOf } from "./teamChat.shared"
 import type {
     DataSlot,
     TeamChatForwardView,
@@ -32,6 +31,7 @@ const copyOf = (t: Words, backLabel: string, agent: AgentOfRoom | null): TeamCha
     pinnedEmpty: t("pinnedEmpty"),
     membersOpen: t("membersTitle"),
     panelClose: t("newChatClose"),
+    readOnly: t("nivoRoom.readOnly"),
 })
 
 /** A refusal code in the viewer's words; a code the app does not know reads as a plain failure. */
@@ -104,6 +104,18 @@ const forwardOf = (context: RoomViewContext): TeamChatForwardView => {
 const noRoomSlotOf = (rooms: RoomViewContext["room"]["rooms"]["slot"]): DataSlot<ReadonlyArray<TeamChatMessageRow>> =>
     "items" in rooms ? { isEmpty: true } : rooms
 
+/**
+ * Whether the viewer may write in the open room: the post right of the viewer's OWN seat (`mayPost` of the member row that is the
+ * viewer; true in every room except the NIVO room). `withNivo` stays the read-only hint of that room. No room yet (an agent's room
+ * opens on the first message) or no seat found: the composer is drawn, and the door still proves the right.
+ */
+const canPostIn = (room: TeamChatRoomState["rooms"]["room"], viewerId: string): boolean => {
+    if (room === undefined) return true
+    if (room.withNivo) return false
+    const seat = room.members.find((member) => member.memberKind === "user" && member.memberId === viewerId)
+    return seat === undefined || seat.mayPost
+}
+
 /** What the room draws, from its state. */
 const roomViewPropsOf = (context: RoomViewContext): TeamChatRoomViewProps => {
     const { room, t } = context
@@ -120,15 +132,17 @@ const roomViewPropsOf = (context: RoomViewContext): TeamChatRoomViewProps => {
         head: headOf(context),
         panels: panelsOf(context),
         canWrite: rooms.roomId !== null || context.agent !== null,
+        canPost: canPostIn(rooms.room, rooms.viewerId),
         canGoBack: context.canGoBack,
         isMuted: rooms.roomId === null ? null : rooms.isMuted,
-        messagesCopy: messagesCopyOf(t),
+        messagesCopy: messagesCopyOf(t, context.locale),
         askSuggestions: hasAgent ? [t("agentSuggest1"), t("agentSuggest2"), t("agentSuggest3")] : [],
         hasOlder: thread.hasOlder,
         isLoadingOlder: thread.isLoadingOlder,
         decidingId: cards.decidingId,
         decideError: cards.decideRefusal === null ? null : refusalWordsOf(t, cards.decideRefusal),
         stops: { isOwner: room.stops.isOwner, pendingKey: room.stops.pendingKey },
+        changes: { pendingId: room.changes.pendingId },
         forward: forwardOf(context),
         composer: composerOf(context),
     }
@@ -143,12 +157,14 @@ interface RoomMode {
 /** What the room draws, from its state, in the viewer's words. */
 export const useTeamChatRoomView = (room: TeamChatRoomState, mode: RoomMode): TeamChatRoomViewProps => {
     const t = useTranslations("teamChat")
+    const locale = useLocale()
     const pane = usePaneCopy()
     const slotLabels = useSlotLabels()
     const words = useChatRowWords()
     return roomViewPropsOf({
         room,
         t,
+        locale,
         words,
         backLabel: pane.backToList,
         labels: { ...slotLabels(t("roomsEmpty")), error: t("errorTitle") },

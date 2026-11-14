@@ -6,12 +6,16 @@ import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builde
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { readable } from "@tests/fixtures/builders/knowledge-sources.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { PASSAGE_JOIN, customerTextOf } from "./customer-text.policy"
 import { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"
 import type { ReadableSourceProjection } from "./persistence/knowledge-source.projection"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const AT = "2026-10-12T10:00:00.000Z"
 const READY = { workspaceId: WS, status: In(["ready", "extracting_facts"]) }
+const OF_DOC = "FROM public.knowledge_chunks c WHERE c.source_id = ks.id AND c.workspace_id = ks.workspace_id"
+/** The condition that makes a fully withheld document absent for a customer view (BR2). */
+const SERVED = `(NOT EXISTS (SELECT 1 ${OF_DOC}) OR EXISTS (SELECT 1 ${OF_DOC} AND c.customer_ready))`
 
 const readableRowOf = builder<ReadableSourceProjection>({
     id: "shared",
@@ -61,6 +65,7 @@ describe("KnowledgeSourcesReadableService", () => {
             [expect.any(Brackets)],
             [expect.any(Brackets)],
             [{ visibility: "public" }],
+            [SERVED],
             [{ visibility: "public" }],
         ])
         expect(fakes[1]?.callsOf("andWhere")).toEqual([
@@ -118,7 +123,79 @@ describe("KnowledgeSourcesReadableService", () => {
             [expect.any(Brackets)],
             [expect.any(Brackets)],
             [{ visibility: "public" }],
+            [SERVED],
         ])
+    })
+})
+
+describe("KnowledgeSourcesReadableService: the trust gate on the whole-document read (BR1)", () => {
+    const customer = { workspaceId: WS, module: "chatbot", installationId: null, audience: "customer" as const }
+    const docs = {
+        getRawMany: [
+            { ...readableRowOf({ id: "reviewed", content: "Hours 8-20. Fee 30.000 d" }), passages: 2, served: 2, servedText: "x" },
+            { ...readableRowOf({ id: "partly", content: "Hours 8-20. Rush: ask us" }), passages: "2", served: "1", servedText: "Hours 8-20." },
+            { ...readableRowOf({ id: "unreviewed", content: "New price list" }), passages: 1, served: 0, servedText: null },
+            { ...readableRowOf({ id: "no-passage", content: "" }), passages: 0, served: 0, servedText: null },
+        ],
+    }
+    it("serves a customer agent only what the passage search serves it: whole text, served passages only, or nothing", async () => {
+        const { service, fakes } = await build(docs)
+
+        const found = await service.readableFor(customer, 5)
+
+        expect(found.map((one) => [one.id, one.content])).toEqual([
+            ["reviewed", "Hours 8-20. Fee 30.000 d"],
+            ["partly", "Hours 8-20."],
+            ["no-passage", ""],
+        ])
+        expect(fakes[0]?.callsOf("addSelect")).toEqual(
+            expect.arrayContaining([
+                [`(SELECT count(*)::int ${OF_DOC})`, "passages"],
+                [`(SELECT count(*)::int ${OF_DOC} AND c.customer_ready)`, "served"],
+                [`(SELECT string_agg(c.content, :passageJoin ORDER BY c.ord) ${OF_DOC} AND c.customer_ready)`, "servedText"],
+            ]),
+        )
+        expect(fakes[0]?.callsOf("setParameter")).toEqual([["passageJoin", PASSAGE_JOIN]])
+    })
+
+    it.each([
+        [{ passages: 3, served: 3, servedText: "a" }, "whole"],
+        [{ passages: 3, served: 1, servedText: "a" }, "a"],
+        [{ passages: 3, served: 0, servedText: null }, null],
+        [{ passages: 0, served: 0, servedText: null }, "whole"],
+    ])("customerTextOf(%j) = %s", (gate, expected) => {
+        expect(customerTextOf("whole", gate)).toBe(expected)
+    })
+
+    it("leaves internal readers the whole text (the search marks their unreviewed hits) and reads no gate for them", async () => {
+        const { service, em, fakes } = await build(docs)
+
+        const found = await service.readableFor({ ...customer, audience: "internal" }, 5)
+
+        expect(found.map((one) => one.id)).toEqual(["reviewed", "partly", "unreviewed", "no-passage"])
+        expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
+        expect(fakes[0]?.callsOf("setParameter")).toEqual([])
+        expect(fakes[0]?.callsOf("andWhere")).not.toContainEqual([SERVED])
+    })
+
+    it("leaves a fully withheld document out of a customer view's list and count, not only its text (BR2)", async () => {
+        const { service, fakes } = await build({ getRawMany: [readableRowOf()] }, { getCount: 1 })
+
+        await service.summariesFor(customer, 50)
+        await expect(service.countReadable(customer, "public")).resolves.toBe(1)
+
+        expect(fakes[0]?.callsOf("andWhere")).toContainEqual([SERVED])
+        expect(fakes[1]?.callsOf("andWhere")).toContainEqual([SERVED])
+    })
+
+    it("keeps the team's list of the same documents ungated: the owner still sees what a customer agent leaves out", async () => {
+        const { service, fakes } = await build({ getRawMany: [readableRowOf()] }, { getCount: 1 })
+
+        await service.summariesFor({ ...customer, audience: "internal" }, 50)
+        await service.countReadable({ ...customer, audience: "internal" }, "public")
+
+        expect(fakes[0]?.callsOf("andWhere")).not.toContainEqual([SERVED])
+        expect(fakes[1]?.callsOf("andWhere")).not.toContainEqual([SERVED])
     })
 })
 

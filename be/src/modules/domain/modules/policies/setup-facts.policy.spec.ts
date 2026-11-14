@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { conflictsOf, knownLinesOf, unmentionedConflicts } from "./setup-facts.policy"
-import type { ProposedWrite } from "./setup-writes.policy"
+import type { ProposedFact } from "./setup-writes.policy"
 
 const SUBJECT = Symbol("setup-facts.policy")
 
@@ -42,7 +42,7 @@ const factOf = builder<FactRecord>({
     decisionNote: null,
 })
 
-const writeOf = (subjectLabel: string, attributeLabel: string, value: string): ProposedWrite => ({
+const writeOf = (subjectLabel: string, attributeLabel: string, value: string): ProposedFact => ({
     gateKey: "hours",
     kind: "fact",
     payload: { subjectType: "business", subjectLabel, attributeLabel, value, scope: "public" },
@@ -107,17 +107,12 @@ describe("conflictsOf", () => {
         expect(subject.conflictsOf([writeOf("shop", "hours", "8  to 21")], [factOf()])).toEqual([])
     })
 
-    it("ignores an unrelated key and a rule", async () => {
+    it("ignores an unrelated key", async () => {
         const subject = await build()
-        const rule: ProposedWrite = {
-            gateKey: "g",
-            kind: "rule",
-            payload: { action: "refund", field: "mode", mode: "ask", limitVnd: undefined },
-        }
 
-        expect(
-            subject.conflictsOf([writeOf("Shop", "Phone", "123"), writeOf("Bar", "Hours", "1"), rule], [factOf()]),
-        ).toEqual([])
+        expect(subject.conflictsOf([writeOf("Shop", "Phone", "123"), writeOf("Bar", "Hours", "1")], [factOf()])).toEqual(
+            [],
+        )
     })
 })
 

@@ -119,7 +119,7 @@ export const createReactionBatcher = (
         },
         flush: () => {
             const keys = [...bursts.keys()]
-            keys.forEach(flushKey)
+            keys.forEach((entry) => flushKey(entry))
         },
     }
 }

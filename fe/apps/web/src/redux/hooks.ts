@@ -1,7 +1,6 @@
-import { useDispatch, useSelector } from "react-redux"
+import { useDispatch, useSelector, type UseDispatch, type UseSelector } from "react-redux"
 import type { AppDispatch, RootState } from "./store"
 
-import type { UseDispatch, UseSelector } from "react-redux"
 import type { ThunkDispatch, UnknownAction, Dispatch } from "@reduxjs/toolkit"
 import type { ViewerSliceState } from "./slices/viewer"
 

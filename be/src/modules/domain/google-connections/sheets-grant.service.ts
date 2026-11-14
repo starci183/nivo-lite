@@ -1,8 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { InjectGoogleClient, SHEETS_PURPOSE, SHEETS_SCOPE, sheetUrlOf } from "@modules/integrations/google"
-import type { GoogleClient } from "@modules/integrations/google"
+import { ConnectionsService, type ConnectionActor, type ConnectionRecord } from "@modules/domain/connections"
+import {
+    InjectGoogleClient,
+    SHEETS_PURPOSE,
+    SHEETS_SCOPE,
+    sheetUrlOf,
+    type GoogleClient,
+} from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type { ConsentStart, LedgerGrant } from "./google-connections.contracts"
 import { GoogleTokensService } from "./google-tokens.service"

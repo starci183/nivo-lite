@@ -4,6 +4,7 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { AgentRunAiCalls, type AgentRunAiCallsProps } from "@/components/composites/AgentRunAiCalls"
 import { AgentRunCanvas } from "@/components/composites/AgentRunCanvas"
+import { AgentRunReads, type AgentRunReadsProps } from "@/components/composites/AgentRunReads"
 import { AgentRunHead, type AgentRunHeadCopy } from "@/components/composites/AgentRunHead"
 import { AgentRunDecisionCard, type AgentRunDecisionCopy } from "@/components/composites/AgentRunDecisionCard"
 import { AgentRunStepParams, type AgentRunStepParamsCopy } from "@/components/frames/AgentRunStepParams"
@@ -52,6 +53,8 @@ export interface AgentRunPanesBaseProps {
         readonly grid: PaneGridLayout
         /** The AI calls of the run under its graph; left out while there is none (not read yet, not on the back end, or no call). */
         readonly aiCalls: AgentRunAiCallsProps
+        /** The truths the run read, under their small label; the card is left out when the run read none. */
+        readonly reads: { readonly title: string; readonly slot: DataSlot<AgentRunReadsProps["rows"]> }
     }
     readonly on: {
         readonly select: (nodeKey: string) => void
@@ -65,6 +68,12 @@ export interface AgentRunPanesBaseProps {
     }
 }
 
+/** What the card of reads shows while the run or the brain is read: two rows of the same height. */
+const READS_PLACEHOLDER: AgentRunReadsProps["rows"] = [
+    { id: "a", title: "", subtitle: "", value: "", isGone: false },
+    { id: "b", title: "", subtitle: "", value: "", isGone: false },
+]
+
 /** What the cards of the main pane draw: the page, the run and whether it is the placeholder. */
 interface RunCardsProps {
     readonly page: AgentRunPanesBaseProps
@@ -72,7 +81,7 @@ interface RunCardsProps {
     readonly isLoading: boolean
 }
 
-/** The main pane, stacked: the head, the map (the steps on a phone), the decision the run waits on and the AI calls. */
+/** The main pane, stacked: the head, the map (the steps on a phone), the decision the run waits on the truths it read and the AI calls. */
 const RunCards = (props: RunCardsProps) => {
     const { copy, isPhone, isResuming, isCancelling, isDeciding } = props.page.props
     const { view, isLoading } = props
@@ -109,6 +118,17 @@ const RunCards = (props: RunCardsProps) => {
                     on={{ decide: on.decide }}
                 />
             )}
+            <SlotView
+                render={(rows, isReading) => (
+                    <AgentRunReads title={props.page.props.reads.title} rows={rows} isLoading={isReading} />
+                )}
+                empty="collapse"
+                forbidden="hide"
+                onRetry={on.retry}
+                labels={props.page.props.slotLabels}
+                placeholder={READS_PLACEHOLDER}
+                slot={props.page.props.reads.slot}
+            />
             {props.page.props.aiCalls.rows.length === 0 ? null : <AgentRunAiCalls {...props.page.props.aiCalls} />}
         </>
     )

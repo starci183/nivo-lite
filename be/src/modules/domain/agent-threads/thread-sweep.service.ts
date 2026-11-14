@@ -1,25 +1,23 @@
 import { Injectable, Optional } from "@nestjs/common"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
-import type { StepEffect, StepSpec } from "@modules/domain/agent-runs"
+import { AgentRunRecordsService, type StepEffect, type StepSpec, type StoredRun, type StoredStep } from "@modules/domain/agent-runs"
 import { AgentWorkReadService } from "@modules/domain/agent-work"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { InjectGraphThreads } from "@modules/integrations/langgraph"
-import type { GraphThreads, ThreadRef, ThreadView } from "@modules/integrations/langgraph"
+import { InjectGraphThreads, type GraphThreads, type ThreadRef, type ThreadView } from "@modules/integrations/langgraph"
 import { InjectClock, type Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
-import { RunStopRecordsService, runStopOf } from "./stops/run-stop-records.service"
+import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import type { RunStop } from "./stops/run-stop.contracts"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
 import type { ThreadRunEndParams, ThreadStepFactParams } from "./thread-projection.contracts"
 import { ThreadProjectionService } from "./thread-projection.service"
 import { ThreadRunsService } from "./thread-runs.service"
+import { UntilRoundWakesService } from "./until-round-wakes.service"
+import { ThreadWaitsService } from "./thread-waits.service"
 
 /** How many workspaces one pass visits; the next pass takes the next slice (the old sweep's bound). */
 const WORKSPACE_SLICE = 100
@@ -42,50 +40,8 @@ const OPEN_RUNS: ReadonlyArray<string> = ["running", "waiting"]
 /** The statuses of a run that is closed. */
 const CLOSED_RUNS: ReadonlySet<string> = new Set(["done", "failed", "cancelled", "dead", "compensated"])
 
-/** The list cursors of this service are never paged past one page. */
-const LIST_SCOPE = "agent-threads.sweep"
-
-const RUN = "agent.run"
-const STEP = "agent.run-step"
-const STOP = "agent.run-stop"
-
-/** The fields of a stop the sweep reads: all of them, as the stop records read them. */
-const STOP_FIELDS: ReadonlyArray<string> = [
-    "runId",
-    "stepKey",
-    "agentId",
-    "workflowId",
-    "leadId",
-    "conversationId",
-    "kind",
-    "state",
-    "reason",
-    "question",
-    "detail",
-    "cardMessageId",
-    "customerLines",
-    "answers",
-    "decision",
-    "repeats",
-    "stoppedAt",
-    "resolvedAt",
-]
-
-/** The fields of a step row the projection repair reads back. */
-const STEP_FIELDS: ReadonlyArray<string> = [
-    "stepKey",
-    "nodeKey",
-    "kind",
-    "effect",
-    "input",
-    "ordinal",
-    "attempt",
-    "maxAttempts",
-    "deadlineMs",
-    "errorCode",
-    "error",
-    "waitItemId",
-]
+/** The engine a thread run is marked with. */
+const THREAD_ENGINE = "langgraph"
 
 /** Why the sweep closed a run whose thread cannot go on. */
 export type ThreadAbandonCode = "thread_never_started" | "thread_redrive_exhausted"
@@ -116,8 +72,6 @@ const textOf = (value: unknown): string | null => (typeof value === "string" && 
 
 const numberOf = (value: unknown, fallback: number): number =>
     typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback
-
-const eq = (field: string, value: string): FilterExpr => ({ op: "eq", field, value })
 
 /** The effect a step row keeps, read back; a row with none it can read is a pivot (the safe side: nothing is ever undone). */
 const effectOf = (value: unknown): StepEffect => {
@@ -177,6 +131,7 @@ export class ThreadSweepService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly engine: EntityEngineService,
+        private readonly runRows: AgentRunRecordsService,
         private readonly records: RunStopRecordsService,
         private readonly stops: RunStopsService,
         private readonly projection: ThreadProjectionService,
@@ -185,6 +140,8 @@ export class ThreadSweepService {
         @Optional() @InjectGraphThreads() private readonly port?: GraphThreads,
         @Optional() private readonly wakes?: AgentWorkReadService,
         @Optional() private readonly workspaces?: WorkspacesService,
+        @Optional() private readonly rounds?: UntilRoundWakesService,
+        @Optional() private readonly waits?: ThreadWaitsService,
     ) {}
 
     /**
@@ -261,19 +218,27 @@ export class ThreadSweepService {
     }
 
     /** One open thread run whose row has been still a while. */
-    private async run(workspaceId: string, row: RecordRow): Promise<Done> {
+    private async run(workspaceId: string, row: StoredRun): Promise<Done> {
         const port = this.portOf()
         const ref: ThreadRef = { workspaceId, runId: row.id }
         const view = await port.stateOf(ref)
         if (view === null) return this.neverStarted(ref, row)
         if (view.status === "ended") return this.endedRepair(ref)
-        if (view.status === "stopped")
-            return row.data.status === "running" ? this.stoppedRepair(ref, view) : null
+        if (view.status === "stopped") {
+            // A `loop({ until, every })` parked between two rounds is no stop: past its instant (its timer's job did not fire) the
+            // round's wake is written here; not due yet, it waits.
+            const parked = (await this.rounds?.swept(ref, view, FIRE_GRACE_MS)) ?? null
+            if (parked !== null) return parked === "fired" ? "fired" : null
+            // A `wait` parked on its run is no stop either: past its timeout (its job did not fire) the timeout's wake is written here.
+            const waiting = (await this.waits?.swept(ref, view, FIRE_GRACE_MS)) ?? null
+            if (waiting !== null) return waiting === "fired" ? "fired" : null
+            return row.status === "running" ? this.stoppedRepair(ref, view) : null
+        }
         return this.crashed(ref, row, view)
     }
 
     /** A thread with unfinished work and no interrupt that nobody drives: one re-drive per position, then the run is closed. */
-    private async crashed(ref: ThreadRef, row: RecordRow, view: ThreadView): Promise<Done> {
+    private async crashed(ref: ThreadRef, row: StoredRun, view: ThreadView): Promise<Done> {
         if (await this.live(ref, row)) return null
         const admission = await this.runs.redrive(ref, threadPositionOf(view))
         if (admission.kind === "refused") return null
@@ -285,7 +250,7 @@ export class ThreadSweepService {
     }
 
     /** A run whose thread never got a checkpoint and whose wake is gone: it cannot start any more. */
-    private async neverStarted(ref: ThreadRef, row: RecordRow): Promise<Done> {
+    private async neverStarted(ref: ThreadRef, row: StoredRun): Promise<Done> {
         if (await this.live(ref, row)) return null
         return this.abandoned(ref, null, "thread_never_started")
     }
@@ -315,7 +280,7 @@ export class ThreadSweepService {
         const row = await this.stepRowOf(ref, stepKey)
         if (row === null) return null
         const stop = await this.stops.stopOf(ref, stepKey)
-        const data = row.data
+        const data = row
         const spec: StepSpec = {
             stepKey,
             nodeKey: textOf(data.nodeKey) ?? stepKey,
@@ -348,8 +313,8 @@ export class ThreadSweepService {
     /** One open stop: closed with its run when the run is closed; else its deadline armed, or fired when its job has not. */
     private async stop(workspaceId: string, stop: RunStop): Promise<Done> {
         const ref: ThreadRef = { workspaceId, runId: stop.runId }
-        const run = await this.engine.scoped(workspaceId, (tx) => this.engine.get(tx, RUN, stop.runId))
-        if (run === null || CLOSED_RUNS.has(textOf(run.data.status) ?? "")) {
+        const run = await this.engine.scoped(workspaceId, (tx) => this.runRows.runRow(tx, stop.runId))
+        if (run === null || CLOSED_RUNS.has(run.status)) {
             const closed = await this.stops.runClosed(ref, { locale: localeOf(await this.portOf().stateOf(ref)) })
             return closed > 0 ? "closed" : null
         }
@@ -363,80 +328,35 @@ export class ThreadSweepService {
     }
 
     /** Whether a wake that could still move the run is alive; without the work core's reader, assume one is (never re-drive blind). */
-    private async live(ref: ThreadRef, row: RecordRow): Promise<boolean> {
+    private async live(ref: ThreadRef, row: StoredRun): Promise<boolean> {
         if (this.wakes === undefined) return true
-        const agentId = textOf(row.data.agentId)
+        const agentId = textOf(row.agentId)
         if (agentId === null) return true
-        return this.wakes.hasLiveWake(ref.workspaceId, agentId, { wakeId: textOf(row.data.wakeId), subjectId: ref.runId })
+        return this.wakes.hasLiveWake(ref.workspaceId, agentId, { wakeId: textOf(row.wakeId), subjectId: ref.runId })
     }
 
     /** The thread runs of the workspace that read running or waiting and whose row has been still for a while. */
-    private async openRuns(workspaceId: string): Promise<ReadonlyArray<RecordRow>> {
+    private async openRuns(workspaceId: string): Promise<ReadonlyArray<StoredRun>> {
         const quietBefore = this.clock.now().getTime() - RUN_QUIET_MS
-        const order: OrderBy = [
-            ["resumeNotBefore", "asc"],
-            ["id", "asc"],
-        ]
-        const rows: Array<RecordRow> = []
+        const rows: Array<StoredRun> = []
         await eachInOrder(OPEN_RUNS, async (status) => {
             const page = await this.engine.scoped(workspaceId, (tx) =>
-                this.engine.list(
-                    tx,
-                    {
-                        from: RUN,
-                        select: ["agentId", "wakeId", "status", "engine"],
-                        where: { op: "and", of: [eq("status", status), { op: "in", field: "engine", values: ["langgraph"] }] },
-                        order,
-                        page: { size: SWEEP_PAGE },
-                    },
-                    LIST_SCOPE,
-                ),
+                this.runRows.runRows(tx, { statuses: [status], engine: THREAD_ENGINE, order: "resume" }, SWEEP_PAGE),
             )
-            rows.push(...page.rows.map((listed) => listed.row))
+            rows.push(...page)
         })
         return rows.filter((row) => new Date(row.updatedAt).getTime() <= quietBefore)
     }
 
     /** The open stops of the workspace, newest first. */
-    private async openStops(workspaceId: string): Promise<ReadonlyArray<RunStop>> {
-        const page = await this.engine.scoped(workspaceId, (tx) =>
-            this.engine.list(
-                tx,
-                {
-                    from: STOP,
-                    select: STOP_FIELDS,
-                    where: eq("state", "open"),
-                    order: [
-                        ["stoppedAt", "desc"],
-                        ["id", "desc"],
-                    ],
-                    page: { size: SWEEP_PAGE },
-                },
-                LIST_SCOPE,
-            ),
-        )
-        return page.rows.map((listed) => runStopOf(listed.row))
+    private openStops(workspaceId: string): Promise<ReadonlyArray<RunStop>> {
+        return this.records.newest(workspaceId, "open", SWEEP_PAGE)
     }
 
-    /** The row of one step of a run, read through the run's ordinal index as the projection reads it. */
-    private async stepRowOf(ref: ThreadRef, stepKey: string): Promise<RecordRow | null> {
-        const page = await this.engine.scoped(ref.workspaceId, (tx) =>
-            this.engine.list(
-                tx,
-                {
-                    from: STEP,
-                    select: STEP_FIELDS,
-                    where: eq("runId", ref.runId),
-                    order: [
-                        ["ordinal", "asc"],
-                        ["id", "asc"],
-                    ],
-                    page: { size: SWEEP_PAGE },
-                },
-                LIST_SCOPE,
-            ),
-        )
-        return page.rows.map((listed) => listed.row).find((row) => row.data.stepKey === stepKey) ?? null
+    /** The row of one step of a run, read in the run order as the projection reads it. */
+    private async stepRowOf(ref: ThreadRef, stepKey: string): Promise<StoredStep | null> {
+        const rows = await this.engine.scoped(ref.workspaceId, (tx) => this.runRows.stepRowsOf(tx, ref.runId))
+        return rows.find((row) => row.stepKey === stepKey) ?? null
     }
 
     private portOf(): GraphThreads {

@@ -7,7 +7,7 @@ import type { AgentProfileView, RegionView } from "./agentProfile.shared"
 import { useAgentProfile } from "./useAgentProfile"
 
 /**
- * One region of the profile page (rules, tags, recent work) as a slot: its lines once the page arrived, an error when the page or
+ * One region of the profile page (tags, recent work) as a slot: its lines once the page arrived, an error when the page or
  * this region could not be read, the words of that status and the reload. A region that failed in place does not fail the page.
  */
 export const useProfileRegion = <T>(

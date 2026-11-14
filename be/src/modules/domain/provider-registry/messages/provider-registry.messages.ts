@@ -3,11 +3,35 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the provider-registry codes, Vietnamese and English. */
 export const PROVIDER_REGISTRY_MESSAGES: MessageBundle = {
     vi: {
-        "errors.PROVIDER_REGISTRY_LEDGER_CONNECTION_REFUSED":
-            "{{provider}} từ chối kết nối sổ cái của workspace; bạn cần kết nối lại.",
+        "errors.PROVIDER_REGISTRY_LEDGER_CONNECTION_REFUSED": "{{provider}} từ chối kết nối sổ cái của workspace; bạn cần kết nối lại.",
+        "errors.PROVIDER_REGISTRY_REFUSED_REJECTED": "{{provider}} từ chối yêu cầu này.",
+        "errors.PROVIDER_REGISTRY_REFUSED_NOT_FOUND": "{{provider}} không tìm thấy mục được yêu cầu.",
+        "errors.PROVIDER_REGISTRY_REFUSED_AUTH": "{{provider}} từ chối thông tin đăng nhập của tài khoản.",
+        "errors.PROVIDER_REGISTRY_REFUSED_NO_CREDENTIAL": "Tài khoản {{provider}} chưa có thông tin đăng nhập.",
+        "errors.PROVIDER_REGISTRY_REFUSED_NOT_AVAILABLE": "{{provider}} chưa hỗ trợ thao tác này.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_NOT_AVAILABLE": "Nhà đăng ký tên miền chưa hỗ trợ thao tác này.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_NOT_FOUND": "Nhà đăng ký không tìm thấy tên miền hoặc bản ghi này.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_ALREADY_EXISTS": "Tên miền hoặc bản ghi này đã tồn tại.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_REJECTED": "Nhà đăng ký từ chối yêu cầu tên miền này.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_CONTACTS_REQUIRED": "Đăng ký tên miền cần thông tin liên hệ.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_CONTACTS_UNSUPPORTED": "Nhà đăng ký này không nhận thông tin liên hệ khi đăng ký.",
+        "errors.PROVIDER_REGISTRY_CALL_NOT_SENT": "Cuộc gọi tới nhà cung cấp thất bại trước khi được gửi đi.",
+        "errors.PROVIDER_REGISTRY_CALL_UNKNOWN": "Cuộc gọi tới nhà cung cấp thất bại và chưa rõ đã có hiệu lực hay chưa.",
     },
     en: {
-        "errors.PROVIDER_REGISTRY_LEDGER_CONNECTION_REFUSED":
-            "{{provider}} refused the workspace's ledger connection; the owner has to connect it again.",
+        "errors.PROVIDER_REGISTRY_LEDGER_CONNECTION_REFUSED": "{{provider}} refused the workspace's ledger connection; the owner has to connect it again.",
+        "errors.PROVIDER_REGISTRY_REFUSED_REJECTED": "{{provider}} refused this request.",
+        "errors.PROVIDER_REGISTRY_REFUSED_NOT_FOUND": "{{provider}} could not find what was asked for.",
+        "errors.PROVIDER_REGISTRY_REFUSED_AUTH": "{{provider}} refused the account's credential.",
+        "errors.PROVIDER_REGISTRY_REFUSED_NO_CREDENTIAL": "The {{provider}} account holds no credential.",
+        "errors.PROVIDER_REGISTRY_REFUSED_NOT_AVAILABLE": "{{provider}} does not support this operation yet.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_NOT_AVAILABLE": "The domain registrar does not support this operation yet.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_NOT_FOUND": "The registrar could not find this domain or record.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_ALREADY_EXISTS": "This domain or record already exists.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_REJECTED": "The registrar refused this domain request.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_CONTACTS_REQUIRED": "A domain registration needs contact data.",
+        "errors.PROVIDER_REGISTRY_DOMAIN_CONTACTS_UNSUPPORTED": "This registrar takes no contact data on a registration.",
+        "errors.PROVIDER_REGISTRY_CALL_NOT_SENT": "The provider call failed before it was sent.",
+        "errors.PROVIDER_REGISTRY_CALL_UNKNOWN": "The provider call failed and it is not known whether it took effect.",
     },
 }

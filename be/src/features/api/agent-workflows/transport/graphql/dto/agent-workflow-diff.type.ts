@@ -1,4 +1,5 @@
 import { Field, ObjectType } from "@nestjs/graphql"
+import { AgentWorkflowNodeRightType } from "./agent-workflow-node-right.type"
 import { AgentWorkflowStepDiffType } from "./agent-workflow-step-diff.type"
 
 @ObjectType()
@@ -11,14 +12,6 @@ export class AgentWorkflowDiffType {
     /** Whether what wakes the graph changed. */
     @Field(() => Boolean)
     triggerChanged!: boolean
-
-    /** The rights gained. */
-    @Field(() => [String])
-    rightsAdded!: ReadonlyArray<string>
-
-    /** The rights lost. */
-    @Field(() => [String])
-    rightsRemoved!: ReadonlyArray<string>
 
     /** The tools gained. */
     @Field(() => [String])
@@ -35,6 +28,18 @@ export class AgentWorkflowDiffType {
     /** The effects lost. */
     @Field(() => [String])
     effectsRemoved!: ReadonlyArray<string>
+
+    /** The operations on connected accounts the nodes ask for that they did not. */
+    @Field(() => [AgentWorkflowNodeRightType])
+    nodeRightsAdded!: ReadonlyArray<AgentWorkflowNodeRightType>
+
+    /** The operations on connected accounts the nodes no longer ask for. */
+    @Field(() => [AgentWorkflowNodeRightType])
+    nodeRightsRemoved!: ReadonlyArray<AgentWorkflowNodeRightType>
+
+    /** The operations the nodes asked to call after a person's yes and now ask to call by themselves. */
+    @Field(() => [AgentWorkflowNodeRightType])
+    nodeRightsLoosened!: ReadonlyArray<AgentWorkflowNodeRightType>
 
     /** The graph before, or null for a first version. */
     @Field(() => String, { nullable: true })

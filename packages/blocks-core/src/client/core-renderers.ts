@@ -1,5 +1,4 @@
-import { defineRenderer } from "@nivo-lite/agent-sdk/client"
-import type { BlockRenderer } from "@nivo-lite/agent-sdk/client"
+import { defineRenderer, type BlockRenderer } from "@nivo-lite/agent-sdk/client"
 import {
     asideDetailBlock,
     cardGridBlock,
@@ -18,21 +17,29 @@ import {
     stackBlock,
     waitingBlock,
 } from "../index"
+import { agentFlowsBlock } from "../blocks/agent-flows.block"
 import { boardBlock } from "../blocks/board.block"
+import { filePreviewBlock } from "../blocks/file-preview.block"
+import { fileUploadBlock } from "../blocks/file-upload.block"
+import { dataSetsBlock } from "../blocks/data-sets.block"
+import { reachCardBlock } from "../blocks/reach-card.block"
 import { graphBlock } from "../blocks/graph.block"
 import { runTimelineBlock } from "../blocks/run-timeline.block"
 import { agentMessageBlock } from "../blocks/agent-message.block"
-import { approvalCardBlock } from "../blocks/chatbot/approval-card.block"
 import { inboxBlock } from "../blocks/chatbot/inbox.block"
 import { rulesBlock } from "../blocks/chatbot/rules.block"
 import { AgentMessageBlock } from "./agent-message/AgentMessageBlock"
-import { ApprovalCardBlock } from "./chatbot/ApprovalCardBlock"
 import { InboxBlock } from "./chatbot/InboxBlock"
 import { RulesBlock } from "./chatbot/RulesBlock"
-import { accountingRenderers } from "./accounting/accounting-renderers"
+import { accountingRenderers } from "./sales/ledger/accounting-renderers"
+import { AgentFlowsBlock } from "./blocks/AgentFlowsBlock"
 import { AsideDetailBlock } from "./blocks/AsideDetailBlock"
+import { DataSetsBlock } from "./blocks/DataSetsBlock"
+import { ReachCardBlock } from "./blocks/ReachCardBlock"
 import { BoardBlock } from "./blocks/BoardBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
+import { FilePreviewBlock } from "./blocks/FilePreviewBlock"
+import { FileUploadBlock } from "./blocks/FileUploadBlock"
 import { FormBlock } from "./blocks/FormBlock"
 import { ListEditorBlock } from "./blocks/ListEditorBlock"
 import { linkBlock } from "../blocks/link.block"
@@ -53,7 +60,7 @@ import { RecordListBlock } from "./blocks/RecordListBlock"
 import { SectionBlock } from "./blocks/SectionBlock"
 import { StackBlock } from "./blocks/StackBlock"
 import { WaitingBlock } from "./blocks/WaitingBlock"
-import { loyaltyRenderers } from "./loyalty/loyalty-renderers"
+import { loyaltyRenderers } from "./sales/loyalty/loyalty-renderers"
 import { salesRenderers } from "./sales/sales-renderers"
 
 /** The components of every core block, one per definition of the root export; the app hands them to the spec renderer. */
@@ -69,11 +76,12 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(tableBlock, TableBlock),
     defineRenderer(boardBlock, BoardBlock),
     defineRenderer(formBlock, FormBlock),
+    defineRenderer(fileUploadBlock, FileUploadBlock),
+    defineRenderer(filePreviewBlock, FilePreviewBlock),
     defineRenderer(listEditorBlock, ListEditorBlock),
     defineRenderer(tabbedPanelBlock, TabbedPanelBlock),
     defineRenderer(asideDetailBlock, AsideDetailBlock),
     defineRenderer(inboxBlock, InboxBlock),
-    defineRenderer(approvalCardBlock, ApprovalCardBlock),
     defineRenderer(rulesBlock, RulesBlock),
     defineRenderer(waitingBlock, WaitingBlock),
     defineRenderer(decisionQueueBlock, DecisionQueueBlock),
@@ -83,6 +91,9 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(explanationBlock, ExplanationBlock),
     defineRenderer(graphBlock, GraphBlock),
     defineRenderer(runTimelineBlock, RunTimelineBlock),
+    defineRenderer(agentFlowsBlock, AgentFlowsBlock),
+    defineRenderer(reachCardBlock, ReachCardBlock),
+    defineRenderer(dataSetsBlock, DataSetsBlock),
     ...salesRenderers,
     ...loyaltyRenderers,
     ...accountingRenderers,

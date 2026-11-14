@@ -1,5 +1,4 @@
-import { ConnectionEventsCard } from "@/components/composites/ConnectionEventsCard"
-import type { ConnectionEventLine } from "@/components/composites/ConnectionEventsCard"
+import { ConnectionEventsCard, type ConnectionEventLine } from "@/components/composites/ConnectionEventsCard"
 
 /** The words and the lines of the live card of a connection without a page of its own. */
 export interface ConnectionOpenEventsBaseProps {

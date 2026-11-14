@@ -4,13 +4,14 @@ import { AgentsService } from "@modules/domain/agents"
 import type { AgentSummary } from "@modules/domain/agents"
 import { BrainCommandsService } from "@modules/domain/brain-commands"
 import { BrainExtractionsService } from "@modules/domain/brain-extractions"
-import { BrainFactsService } from "@modules/domain/brain-facts"
+import { BrainFactsPagingService } from "@modules/domain/brain-facts"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { BrainPageService } from "./brain-page.service"
 import { BrainErrorCode } from "./errors/brain.error"
+import { HOA_HONG_VI } from "@tests/fixtures/i18n/brain-a-spec.messages"
 
 const USER = "user-1"
 const WORKSPACE = "ws-1"
@@ -37,7 +38,9 @@ const memberOf = (role: WorkspaceRole): WorkspaceMember => ({
 
 const build = async (role: WorkspaceRole = "owner") => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf(role))) })
-    const facts = mock<BrainFactsService>({ list: jest.fn(() => Promise.resolve([])) })
+    const facts = mock<BrainFactsPagingService>({
+        page: jest.fn(() => Promise.resolve({ facts: [], nextCursor: "c-2000", total: 5000 })),
+    })
     const lessons = mock<BrainLessonsService>({ list: jest.fn(() => Promise.resolve([])) })
     const gaps = mock<KnowledgeGapsService>({
         list: jest.fn(() => Promise.resolve([])),
@@ -50,9 +53,9 @@ const build = async (role: WorkspaceRole = "owner") => {
             Promise.resolve([
                 agentOf(),
                 agentOf({ id: "a-2", name: "Second booking agent" }),
-                agentOf({ id: "a-3", module: "accounting", name: "Tam", status: "paused" }),
+                agentOf({ id: "a-3", module: "sales", name: "Tam", status: "paused" }),
                 agentOf({ id: "a-4", module: "unknown", name: "Ghost" }),
-                agentOf({ id: "a-5", module: "accounting", name: "Kim" }),
+                agentOf({ id: "a-5", module: "sales", name: "Kim" }),
             ]),
         ),
     })
@@ -60,7 +63,7 @@ const build = async (role: WorkspaceRole = "owner") => {
         providers: [
             BrainPageService,
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: BrainFactsService, useValue: facts },
+            { provide: BrainFactsPagingService, useValue: facts },
             { provide: BrainLessonsService, useValue: lessons },
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: BrainExtractionsService, useValue: extractions },
@@ -79,20 +82,28 @@ describe("BrainPageService overview", () => {
 
         expect(overview).toEqual({
             facts: [],
+            factsTotal: 5000,
+            factsNextCursor: "c-2000",
             lessons: [],
             gaps: [],
             gapsOpen: 7,
             extractions: [],
             lenses: [
                 { module: "booking", name: "Mai", audience: "customer" },
-                { module: "accounting", name: "Kim", audience: "internal" },
+                { module: "sales", name: "Kim", audience: "internal" },
             ],
         })
-        expect(facts.list).toHaveBeenCalledWith(WORKSPACE, {
-            statuses: ["active", "proposed", "scheduled"],
-            limit: 2000,
-        })
+        // No arguments: the first page of 2,000 with the default statuses, exactly the window the page read before, now with its total.
+        expect(facts.page).toHaveBeenCalledWith(WORKSPACE, {}, 2000, null)
         expect(gaps.list).toHaveBeenCalledWith(WORKSPACE, ["open"], 50)
+    })
+
+    it("reads a null page ask as no ask: the first page of 2,000 with the default statuses", async () => {
+        const { page, facts } = await build("manager")
+
+        await page.overview(USER, WORKSPACE, null)
+
+        expect(facts.page).toHaveBeenCalledWith(WORKSPACE, {}, 2000, null)
     })
 
     it("shows a staff member the lessons only", async () => {
@@ -102,8 +113,29 @@ describe("BrainPageService overview", () => {
 
         expect(overview.gapsOpen).toBe(0)
         expect(overview.lenses).toHaveLength(2)
-        expect(facts.list).not.toHaveBeenCalled()
+        expect(facts.page).not.toHaveBeenCalled()
+        expect(overview).toMatchObject({ facts: [], factsTotal: 0, factsNextCursor: null })
         expect(gaps.countOpen).not.toHaveBeenCalled()
+    })
+
+    it("pages on: the cursor and the filters reach the keyset read (BRAIN-LIMITS item 4)", async () => {
+        const { page, facts } = await build("owner")
+
+        await page.overview(USER, WORKSPACE, {
+            first: 100,
+            after: "c-2000",
+            statuses: ["proposed"],
+            sourceId: "doc-1",
+            subjectType: "product",
+            search: HOA_HONG_VI,
+        })
+
+        expect(facts.page).toHaveBeenCalledWith(
+            WORKSPACE,
+            { first: 100, after: "c-2000", statuses: ["proposed"], sourceId: "doc-1", subjectType: "product", search: HOA_HONG_VI },
+            100,
+            "c-2000",
+        )
     })
 })
 describe("BrainPageService requestMining", () => {

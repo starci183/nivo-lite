@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
+import { AGENT_RUN_STEPS } from "@tests/fixtures/builders/engine-core-tables.builder"
 import { mock } from "@starci/jest-preset"
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { AiTasksService } from "@modules/domain/ai-tasks"
 import type { AgentTurnView } from "@modules/domain/agent-work"
 import { GRAPH_NODE_MODEL, type NodeModelDoor } from "@modules/domain/graph-nodes"
@@ -13,9 +14,10 @@ import type { AiTaskMeter } from "../../modules/domain/ai-tasks/ai-tasks.port"
 import { NodeImagesService } from "../../modules/domain/ai-tasks/node-images.service"
 import { NotesService } from "../../modules/domain/ai-tasks/notes.service"
 import { agentTurnViewOf } from "../fixtures/builders/agent-work.builder"
-import { CONV, WS, actsOf, redrive, rowsOf, runsViewOf, stopsOf, type ThreadProcess } from "./thread-world"
-import { SALES, consultWake, linesOf, moneyDbOf, type MoneyDb } from "./workflows/reconcile/thread-world-money"
+import { CONTACT, CONV, WS, actsOf, redrive, rowsOf, runsViewOf, stopsOf, type ThreadProcess } from "./thread-world"
+import { SALES, linesOf, moneyDbOf, type MoneyDb } from "./workflows/reconcile/thread-world-money"
 import { moneyProcessOf } from "./workflows/reconcile/thread-world-money-process"
+import { calledWorkflow, type HeardWake } from "./thread-world-intake"
 
 // Package FX1 (D-P10-6, D-P10-7): the LIVE sequence of run 3355daf0 on dev (restart FOURTEEN), with the REAL run reader (records +
 // mapper, `AgentRunsViewService`) and the REAL tries policy (`AiTasksService.nodeJson`) over a scripted AI endpoint. The consult's first
@@ -26,14 +28,21 @@ import { moneyProcessOf } from "./workflows/reconcile/thread-world-money-process
 // world faked that reader, so no spec saw it. Now: the step continues (the ledger answers the send), ONE customer line, the run ends.
 
 const HOLDING = "Da em can hoi chu tiem xac nhan, em hoi roi bao minh som a."
+/**
+ * The consult turn's answer (version 9, the flip): the turn's agent writes the holding line as its `reply`, and the node sends it (the
+ * agent itself calls no send). The send is still the step's own act, and the process still dies right after it.
+ */
 const ASKED = {
     branch: "asked",
-    leadId: "lead-1",
+    reply: HOLDING,
     items: [],
     address: null,
     recipientName: null,
     recipientPhone: null,
     deliveryAt: null,
+    occasions: null,
+    cancelOrderId: null,
+    cancelReason: null,
 }
 
 type Attempt = "fails" | Readonly<Record<string, unknown>>
@@ -95,31 +104,47 @@ const endpointOf = async (attempts: Array<Attempt>): Promise<Endpoint> => {
     return { door: moduleRef.get(AiTasksService), tries: () => ai.attempt.mock.calls.length, runsInScope }
 }
 
-const send = { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: HOLDING } } }
-
 /** One process of the money world on the thread engine for the consult, with the REAL tries policy as its model door. */
 const processOf = (db: MoneyDb, endpoint: Endpoint): Promise<ThreadProcess> =>
     moneyProcessOf(db, [{ provide: GRAPH_NODE_MODEL, useValue: endpoint.door }])
 
 /** The process dies on the first `done` write of a step row: the send is in the ledger, the step row still says `running`. */
 const diesRightAfterTheSend = (db: MoneyDb): void => {
-    db.records.crashOnce(
-        (mutation) => mutation.entity === "agent.run-step" && mutation.op === "update" && mutation.values.status === "done",
-    )
+    // The talk loop's round 1 starts with its `opening` step (a data `if`), whose `done` write comes first: the consult's is the second.
+    let doneWrites = 0
+    db.records.crashOnce((mutation) => {
+        if (mutation.entity !== AGENT_RUN_STEPS || mutation.op !== "update" || mutation.values.status !== "done") return false
+        doneWrites += 1
+        return doneWrites === 2
+    })
 }
 
-/** The consult's hand-off wake, as one turn of the work core; the same wake tried again keeps its id under a fresh fence. */
-const turnOf = (db: MoneyDb, wakeId: string, attempts = 1): AgentTurnView => {
+/** The hand-off wake each database's delivery wrote (written once: the same wake is tried again). */
+const handedOff = new WeakMap<MoneyDb, HeardWake>()
+
+/** The consult's hand-off, as the REAL `deliver` of the call writes its wake, as one turn of the work core; the same wake tried again keeps its id under a fresh fence. */
+const turnOf = async (db: MoneyDb, wakeId: string, attempts = 1): Promise<AgentTurnView> => {
     db.fence += 1
-    const input = consultWake("Shop oi bo hong mini giam cho minh 20% duoc khong a?")
+    if (!handedOff.has(db)) {
+        const [written] = await calledWorkflow(db, {
+            agentId: SALES,
+            workflow: "consult",
+            params: { conversationId: CONV, text: "Shop oi bo hong mini giam cho minh 20% duoc khong a?", channel: "zalo", contactId: CONTACT },
+            key: "call:front-desk:kill",
+            contactId: CONTACT,
+            routeId: CONV,
+        })
+        if (written !== undefined) handedOff.set(db, written)
+    }
+    const input = handedOff.get(db)
     return agentTurnViewOf({
         workspaceId: WS,
         agentId: SALES,
         wakeId,
-        eventKey: input.eventKey,
-        source: "tag",
-        scopeKey: input.scopeKey,
-        context: structuredClone(input.context),
+        eventKey: input?.eventKey ?? "",
+        source: input?.source ?? "trigger",
+        scopeKey: input?.scopeKey ?? "",
+        context: structuredClone(input?.context ?? {}),
         actorMemberId: null,
         fence: db.fence,
         turnId: `turn-${String(db.fence)}`,
@@ -127,14 +152,20 @@ const turnOf = (db: MoneyDb, wakeId: string, attempts = 1): AgentTurnView => {
     })
 }
 
+/** The consult step of the sale's first talk round (the body step of the `talk` loop). */
+const CONSULT_STEP = "talk[r1].consult"
+
 const runOfWake = (db: MoneyDb, wakeId: string): string =>
     [...db.runs.values()].find((run) => run.wakeId === wakeId)?.id ?? ""
 
 const statusOf = async (process: ThreadProcess, runId: string) =>
     (await process.threads.stateOf({ workspaceId: WS, runId }))?.status
 
-/** Try 1 times out, try 2 answers the send, then `done`; after the restart the re-run step asks again (the ledger answers the send). */
-const LIVE: ReadonlyArray<Attempt> = ["fails", send, { done: ASKED }, send, { done: ASKED }, send, { done: ASKED }]
+/**
+ * Try 1 times out, try 2 answers the turn with the holding line (the node sends it); after the restart the re-run step asks again (the
+ * ledger answers the send). On the old consult the agent sent itself: three tries before the death (timeout, send, done), now two.
+ */
+const LIVE: ReadonlyArray<Attempt> = ["fails", { done: ASKED }, { done: ASKED }, { done: ASKED }]
 
 /** Plays the live first process: the timeout, the answer, the one holding line, and the death right after it. */
 const killedAfterTheSend = async () => {
@@ -142,7 +173,7 @@ const killedAfterTheSend = async () => {
     const endpoint = await endpointOf([...LIVE])
     diesRightAfterTheSend(db)
     const first = await processOf(db, endpoint)
-    const turn = turnOf(db, "wake-live")
+    const turn = await turnOf(db, "wake-live")
     const died = await first.flows.run(turn, new AbortController().signal).then(
         () => null,
         (error: unknown) => error,
@@ -155,12 +186,13 @@ describe("FX1: the api is killed right after a step told the customer (D-P10-6, 
         const { db, endpoint, died, runId } = await killedAfterTheSend()
 
         expect(String(died)).toContain("WORLD_PROCESS_DIED")
-        expect(endpoint.tries()).toBe(3)
+        expect(endpoint.tries()).toBe(2)
         expect(linesOf(db)).toEqual([HOLDING])
-        const [step] = rowsOf(db, runId).steps
+        // The sale starts in its talk loop: the loop node `talk` is a read, the consult is its round-1 body step.
+        const step = rowsOf(db, runId).steps.find((row) => row.stepKey === CONSULT_STEP)
         expect(step).toMatchObject({
             kind: "graph_node",
-            stepKey: "consult",
+            stepKey: CONSULT_STEP,
             status: "running",
             effect: { kind: "pivot" },
             result: null,
@@ -174,62 +206,77 @@ describe("FX1: the api is killed right after a step told the customer (D-P10-6, 
         const detail = await runsViewOf(db.records).detail(WS, SALES, runId)
 
         expect(detail?.engine).toBe("langgraph")
-        expect(detail?.steps.map((step) => [step.stepKey, step.status])).toEqual([["consult", "running"]])
-        expect(rowsOf(db, runId).steps[0]?.deadlineMs).toBe(120_000)
+        expect(detail?.steps.map((step) => [step.stepKey, step.status])).toEqual([
+            ["talk", "running"],
+            ["talk[r1].opening", "done"],
+            [CONSULT_STEP, "running"],
+        ])
+        expect(rowsOf(db, runId).steps.find((row) => row.stepKey === CONSULT_STEP)?.deadlineMs).toBe(120_000)
     })
 
     it("a step row written before the fix (deadline null, as every thread step row on dev) is read, and its wake runs again", async () => {
         const { db, endpoint, runId } = await killedAfterTheSend()
         for (const held of db.records.rows.values())
-            if (held.entity === "agent.run-step") held.row = { ...held.row, data: { ...held.row.data, deadlineMs: null } }
+            if (held.entity === AGENT_RUN_STEPS) held.row = { ...held.row, data: { ...held.row.data, deadlineMs: null } }
         const second = await processOf(db, endpoint)
 
         expect((await runsViewOf(db.records).detail(WS, SALES, runId))?.engine).toBe("langgraph")
-        const retried = await second.flows.run(turnOf(db, "wake-live", 2), new AbortController().signal)
+        const retried = await second.flows.run(await turnOf(db, "wake-live", 2), new AbortController().signal)
 
         expect(retried).toMatchObject({ status: "done" })
         expect(linesOf(db)).toEqual([HOLDING])
-        expect(rowsOf(db, runId).run).toMatchObject({ status: "done" })
+        // The sale is one run: after the consult's `asked` it PARKS at its talk wait (the run is not over).
+        expect(rowsOf(db, runId).run).toMatchObject({ status: "running" })
     })
 
-    it("a new process runs the SAME wake again: the step continues, no second line, the run ends done, no stop", async () => {
+    it("a new process runs the SAME wake again: the step continues, no second line, the run parks at its wait, no stop", async () => {
         const { db, endpoint, runId } = await killedAfterTheSend()
         const second = await processOf(db, endpoint)
 
-        const retried = await second.flows.run(turnOf(db, "wake-live", 2), new AbortController().signal).then(
+        const retried = await second.flows.run(await turnOf(db, "wake-live", 2), new AbortController().signal).then(
             (ending) => ({ ending, error: null }),
             (error: unknown) => ({ ending: null, error }),
         )
 
         expect(retried.error).toBeNull()
         expect(retried.ending).toMatchObject({ status: "done" })
-        expect(await statusOf(second, runId)).toBe("ended")
+        // The sale is one run: the consult asked, so the run PARKS at its talk wait (stopped on the thread, not ended).
+        expect(await statusOf(second, runId)).toBe("stopped")
         expect(linesOf(db)).toEqual([HOLDING])
         expect(actsOf(db, TOOL.customerMessageSend)).toHaveLength(1)
-        expect(rowsOf(db, runId).run).toMatchObject({ status: "done" })
-        expect(rowsOf(db, runId).steps).toEqual([expect.objectContaining({ stepKey: "consult", status: "done" })])
+        expect(rowsOf(db, runId).run).toMatchObject({ status: "running" })
+        // Round 1: its consult step is done once; round 2 opens and its `hear` wait is running (parked).
+        expect(rowsOf(db, runId).steps.map((step) => [step.stepKey, step.status])).toEqual([
+            ["talk", "running"],
+            ["talk[r1].opening", "done"],
+            [CONSULT_STEP, "done"],
+            ["talk[r2].opening", "done"],
+            ["talk[r2].hear", "running"],
+        ])
         expect(await stopsOf(second, runId)).toEqual([])
     })
 
     it("the sweep's re-drive of the dead wake is admitted and continues the step the same way", async () => {
         const { db, runId } = await killedAfterTheSend()
-        const second = await processOf(db, await endpointOf([send, { done: ASKED }, send, { done: ASKED }]))
+        const second = await processOf(db, await endpointOf([{ done: ASKED }, { done: ASKED }]))
 
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])
-        expect(await statusOf(second, runId)).toBe("ended")
+        expect(await statusOf(second, runId)).toBe("stopped")
         expect(linesOf(db)).toEqual([HOLDING])
         expect(actsOf(db, TOOL.customerMessageSend)).toHaveLength(1)
-        expect(rowsOf(db, runId).run).toMatchObject({ status: "done" })
+        expect(rowsOf(db, runId).run).toMatchObject({ status: "running" })
     })
 
     it("every model try of the thread's step is metered to its run, before and after the restart (D-P10-7)", async () => {
         const { db, endpoint, runId } = await killedAfterTheSend()
         const second = await processOf(db, endpoint)
-        await second.flows.run(turnOf(db, "wake-live", 2), new AbortController().signal)
+        await second.flows.run(await turnOf(db, "wake-live", 2), new AbortController().signal)
 
-        expect(endpoint.runsInScope.length).toBeGreaterThan(3)
+        // The re-run step asks no model after the restart: the turn's answer is a recorded call the ledger answers (finding F2 of the
+        // flip: 3 tries before the death and more after it on the old consult; 2 before, none after, now). Every try is the run's.
+        expect(endpoint.runsInScope).toHaveLength(2)
         expect(new Set(endpoint.runsInScope)).toEqual(new Set([runId]))
     })
 })

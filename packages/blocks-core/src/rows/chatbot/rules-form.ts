@@ -1,6 +1,10 @@
 import { textOf, valueAt } from "../../slots/paths"
-import { CHATBOT_SETTINGS_DEFAULTS, SETTINGS_ISSUE_KEYS, settingsProblemsOf } from "../../rules/chatbot/settings"
-import type { ChatbotSettings } from "../../rules/chatbot/settings"
+import {
+    CHATBOT_SETTINGS_DEFAULTS,
+    SETTINGS_ISSUE_KEYS,
+    settingsProblemsOf,
+    type ChatbotSettings,
+} from "../../rules/chatbot/settings"
 
 /** The words of the rules form while it is being filled. */
 export interface RulesDraft {

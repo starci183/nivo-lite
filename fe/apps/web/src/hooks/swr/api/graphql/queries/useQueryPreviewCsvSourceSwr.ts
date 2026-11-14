@@ -4,8 +4,7 @@ import {
     queryPreviewCsvSource,
     type queryPreviewCsvSource as QueryPreviewCsvSourceOperation,
 } from "@/modules/api/graphql/queries/query-preview-csv-source"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { PreviewCsvSourceQuery } from "@/modules/api"
 
 /** The SWR key of the previewCsvSource query. */

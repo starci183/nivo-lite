@@ -99,13 +99,18 @@ const StepNeeds = (props: RunStepBodyProps): ReactNode => {
             ) : null}
             {props.resume === null || !row.canResume ? null : (
                 <Cluster gap="inline">
-                    <Button intent="commit" size="sm" isPending={props.resume.isPending} onPress={props.resume.onPress}>
+                    <Button
+                        intent="neutral"
+                        size="sm"
+                        isPending={props.resume.isPending}
+                        onPress={props.resume.onPress}
+                    >
                         {props.resume.label}
                     </Button>
                 </Cluster>
             )}
             {props.approvalHref === null ? null : (
-                <Link href={props.approvalHref} isDisabled={props.isLoading}>
+                <Link href={props.approvalHref} variant="plain" isDisabled={props.isLoading}>
                     {props.words.approval}
                 </Link>
             )}

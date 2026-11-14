@@ -1,21 +1,16 @@
 import { Module, type DynamicModule } from "@nestjs/common"
-import { DecisionLogReadService } from "@modules/domain/decisions"
-import { WorkItemsDecisionsReadService, WorkItemsService } from "@modules/domain/work-items"
+import { WorkItemsService } from "@modules/domain/work-items"
 import { AgentRunEngineAlertsService, AgentRunsModule } from "@modules/domain/agent-runs"
 import { EntityEngineModule } from "@modules/domain/entity-engine"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { JobsModule } from "@modules/platform/jobs"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import { AGENT_WORK_MODULES } from "./agent-work-capabilities.options"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 
 @Module({
-    providers: [
-        DecisionLogReadService,
-        WorkItemsService,
-        WorkItemsDecisionsReadService,
-    ],
-    exports: [DecisionLogReadService, WorkItemsService, WorkItemsDecisionsReadService],
+    providers: [WorkItemsService],
+    exports: [WorkItemsService],
 })
 class RecordedDecisionsModule {}
 
@@ -36,7 +31,7 @@ export const AGENT_RUNS_MODULES: Array<DynamicModule> = [
     AgentRunsModule.register({ isGlobal: true }),
     EntityEngineModule.register({
         isGlobal: true,
-        entities: FLOW_F_ENTITIES,
+        entities: INSTALLED.entities(),
         jobs: [],
         alerts: AgentRunEngineAlertsService,
         cursorKey: CURSOR_KEY,

@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRetryKnowledgeSource,
     type MutateRetryKnowledgeSourceRequest,
 } from "@/modules/api/graphql/mutations/mutation-retry-knowledge-source"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RetryKnowledgeSourceMutation } from "@/modules/api"
 
 /** What the RetryKnowledgeSource mutation is triggered with. */

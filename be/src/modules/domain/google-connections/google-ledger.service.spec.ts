@@ -1,7 +1,8 @@
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { ConnectionsService } from "@modules/domain/connections"
-import { ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
+import { ProviderRegistryErrorCode, proofOf } from "@modules/domain/provider-registry"
 import type { BusinessLedgerEntry } from "@modules/domain/provider-registry"
 import { GOOGLE_CLIENT, ledgerCategoryText, ledgerVoidText } from "@modules/integrations/google"
 import type { GoogleClient } from "@modules/integrations/google"
@@ -48,6 +49,7 @@ const build = async (rows = [ledgerRow()]) => {
     const store = mock<GoogleTokensService>()
     const clock = new FakeClock(NOW)
     runRealGoogleTokens(store, connections, google, clock)
+    const zones = mock<WorkspaceTimeZoneService>({ timeZoneOf: jest.fn().mockResolvedValue("Asia/Ho_Chi_Minh") })
     const moduleRef = await Test.createTestingModule({
         providers: [
             GoogleLedgerService,
@@ -55,9 +57,10 @@ const build = async (rows = [ledgerRow()]) => {
             { provide: GOOGLE_CLIENT, useValue: google },
             { provide: GoogleTokensService, useValue: store },
             { provide: CLOCK, useValue: clock },
+            { provide: WorkspaceTimeZoneService, useValue: zones },
         ],
     }).compile()
-    return { service: moduleRef.get(GoogleLedgerService), connections, google }
+    return { service: moduleRef.get(GoogleLedgerService), connections, google, zones }
 }
 
 describe("GoogleLedgerService > ready", () => {
@@ -135,11 +138,8 @@ describe("GoogleLedgerService > append", () => {
 
         expect(google.ensureTab).toHaveBeenCalledTimes(1)
         expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [LEDGER_HEADER, ROW])
-        expect(connections.patch).toHaveBeenCalledWith(
-            "ws-1",
-            "c1",
-            expect.objectContaining({ meta: expect.objectContaining({ ledgerHeader: "written", ledgerLayout: "v2" }) }),
-        )
+        const written: unknown = expect.objectContaining({ ledgerHeader: "written", ledgerLayout: "v2" })
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", expect.objectContaining({ meta: written }))
     })
 
     it("does not look for the tab again once the sheet is laid out", async () => {
@@ -157,6 +157,9 @@ describe("GoogleLedgerService > append", () => {
         await expect(service.append("ws-1", ENTRY)).resolves.toBe(SHEET)
     })
 
+})
+
+describe("GoogleLedgerService > append, refused tokens and failures", () => {
     it("refreshes the token once and writes again when Google refuses the one it holds with 401", async () => {
         const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockRejectedValueOnce(googleRefusal({ status: 401 })).mockResolvedValueOnce("Sheet1!A4:G4")
@@ -192,6 +195,27 @@ describe("GoogleLedgerService > append", () => {
         await expect(service.append("ws-1", ENTRY)).rejects.toBe(failure)
     })
 
+    it("says what a failure proves where it happened: before the append the row never left, after it the row may be there", async () => {
+        const before = await build([ledgerRow()])
+        const tab = new Error("tab")
+        before.google.ensureTab.mockRejectedValue(tab)
+        await expect(before.service.append("ws-1", ENTRY)).rejects.toBe(tab)
+        expect(proofOf(tab)).toBe("not_sent")
+
+        const after = await build([ledgerRow(HEADED)])
+        const lost = new Error("lost")
+        after.google.appendValues.mockRejectedValue(lost)
+        await expect(after.service.append("ws-1", ENTRY)).rejects.toBe(lost)
+        expect(proofOf(lost)).toBe("unknown")
+    })
+
+    it("writes on the connection the tool runner handed the call, and on no other", async () => {
+        const { service, google } = await build([ledgerRow(HEADED)])
+
+        await expect(service.append("ws-1", ENTRY, "another-connection")).resolves.toBeUndefined()
+        expect(google.appendValues).not.toHaveBeenCalled()
+    })
+
     it("is refused when Google is not set up on the deployment", async () => {
         const { service, google } = await build()
         google.isConfigured.mockReturnValue(false)
@@ -213,5 +237,15 @@ describe("GoogleLedgerService > void", () => {
         expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [
             ["2026-10-12", "'sepay:95958515", `'${ledgerVoidText()}`, "", "", "", "", BALANCE_FORMULA],
         ])
+    })
+
+    it("dates the row on the wall clock of the zone the workspace saved", async () => {
+        const { service, google, zones } = await build([ledgerRow(HEADED)])
+        zones.timeZoneOf.mockResolvedValue("Pacific/Pago_Pago")
+
+        await service.void("ws-1", ENTRY.transactionId)
+
+        expect(zones.timeZoneOf).toHaveBeenCalledWith("ws-1")
+        expect(google.appendValues.mock.calls[0]?.[3]?.[0]?.[0]).toBe("2026-10-11")
     })
 })

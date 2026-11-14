@@ -6,7 +6,6 @@ import {
     PlatformAdminModule,
 } from "@modules/domain/platform-admin"
 import { PlatformAuditModule } from "@modules/domain/platform-audit"
-import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import type { ApiOptions } from "../api.options"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
@@ -15,7 +14,6 @@ export const adminModules = (options: ApiOptions): Array<DynamicModule> => [
     PlatformAuditModule.register({ isGlobal: true }),
     AiQuotaOverridesModule.register({ isGlobal: true }),
     PlatformAdminModule.register({ isGlobal: true, ...options.platformAdmin }),
-    AuthorityActionsModule.register({ isGlobal: true }),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AgentWorkDoorsService } from "@modules/domain/agent-work"
-import type { AgentGoalRecord } from "@modules/domain/agent-work"
+import { AgentWorkDoorsService, type AgentGoalRecord } from "@modules/domain/agent-work"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveAgentGoalCommand } from "./save-agent-goal.command"
 
 @CommandHandler(SaveAgentGoalCommand)

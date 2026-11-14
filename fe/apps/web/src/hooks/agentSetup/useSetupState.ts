@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import { displayNameOf } from "@/modules/installations"
+import { displayNameOf, type SetupMessage, type SetupRevision, type SetupSession } from "@/modules/installations"
 import type { SetupWrite, DataSlot } from "@/modules/types"
-import type { SetupMessage, SetupRevision, SetupSession } from "@/modules/installations"
 
 import { toSetupWrite } from "@/hooks/setupCards"
 import {
@@ -14,8 +13,8 @@ import {
     toSetupMessage,
     toSetupRevision,
     toSetupSession,
+    type SetupTurnState,
 } from "./agentSetup.shared"
-import type { SetupTurnState } from "./agentSetup.shared"
 import { useQuerySetupStateSwr } from "@/hooks/swr"
 
 /** The setup chat of one instance: its draft, the whole chat, the confirm cards, and whether NIVO is still answering. */
@@ -73,8 +72,8 @@ export const useSetupState = (
                           activeVersionId: data.installation.activeContextVersionId ?? null,
                       },
                       session: toSetupSession(data.session),
-                      revisions: data.revisions.map(toSetupRevision),
-                      messages: data.messages.map(toSetupMessage),
+                      revisions: data.revisions.map((entry) => toSetupRevision(entry)),
+                      messages: data.messages.map((entry) => toSetupMessage(entry)),
                       writes: data.cards.flatMap((card) => toSetupWrite(card) ?? []),
                       ...turnOf(staleAt, nowMs),
                   },

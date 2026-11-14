@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { BrainTodoService } from "@modules/domain/brain"
-import type { BrainTodo } from "@modules/domain/brain"
+import { BrainTodoService, type BrainTodo } from "@modules/domain/brain"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BrainTodoQuery } from "./brain-todo.query"
 
 @QueryHandler(BrainTodoQuery)

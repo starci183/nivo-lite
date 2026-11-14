@@ -3,15 +3,14 @@ import { agentCreatedAt, agentEntityOf, lanAgent } from "@tests/fixtures/builder
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, Not } from "typeorm"
-import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentDirectoryService } from "./agent-directory.service"
 import { AgentEntity } from "./persistence/entities"
 
-const SELECT = { id: true, name: true, module: true, canTagAgentIds: true }
+const SELECT = { id: true, name: true, module: true }
 
-const BOT = { id: "a1", name: "Bot", module: "chatbot", canTagAgentIds: [] }
-const LAN = { id: "a2", name: "Lan", module: "shifts", canTagAgentIds: ["a1"] }
+const BOT = { id: "a1", name: "Bot", module: "chatbot" }
+const LAN = { id: "a2", name: "Lan", module: "shifts" }
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -150,46 +149,6 @@ describe("AgentDirectoryService > handles, seats and ids", () => {
                 where: { workspaceId: "w1" },
                 take: 9,
             })
-        })
-    })
-
-    describe("countOf", () => {
-        it("counts the agents of the workspace", async () => {
-            const em = mockEntityManager({ count: [AgentEntity, 3] })
-
-            await expect((await build(em)).countOf("w1")).resolves.toBe(3)
-            expect(em.count).toHaveBeenCalledWith(AgentEntity, { where: { workspaceId: "w1", module: Not("nivo") } })
-        })
-    })
-
-    describe("firstSeats", () => {
-        it("reads the oldest agents as seats, oldest first, bounded", async () => {
-            const em = mockEntityManager()
-            const [read] = queueSubQueryBuilders(em, [{ getRawMany: [{ id: "a1" }] }])
-
-            await expect((await build(em)).firstSeats("w1", 4)).resolves.toEqual([{ id: "a1" }])
-            expect(read?.argsOf("where")).toContainEqual(["a.workspaceId = :workspaceId", { workspaceId: "w1" }])
-            expect(read?.argsOf("andWhere")).toContainEqual(["a.module <> :internal", { internal: "nivo" }])
-            expect(read?.argsOf("orderBy")).toContainEqual(["a.createdAt"])
-            expect(read?.argsOf("addOrderBy")).toContainEqual(["a.id"])
-            expect(read?.argsOf("limit")).toContainEqual([4])
-        })
-    })
-
-    describe("seatsOf", () => {
-        it("asks for nothing when no id is given", async () => {
-            const em = mockEntityManager()
-
-            await expect((await build(em)).seatsOf("w1", [])).resolves.toEqual([])
-            expect(em.createQueryBuilder).not.toHaveBeenCalled()
-        })
-
-        it("reads the given agents once each as seats", async () => {
-            const em = mockEntityManager()
-            const [read] = queueSubQueryBuilders(em, [{ getRawMany: [{ id: "a1" }] }])
-
-            await expect((await build(em)).seatsOf("w1", ["a1", "a1"])).resolves.toEqual([{ id: "a1" }])
-            expect(read?.argsOf("andWhere")).toContainEqual(["a.id IN (:...agentIds)", { agentIds: ["a1"] }])
         })
     })
 })
@@ -455,6 +414,18 @@ describe("AgentDirectoryService chat and turn facts", () => {
 })
 
 describe("AgentDirectoryService module lookups", () => {
+    it("answers the id and module of the active agents without the internal one, oldest first, bounded", async () => {
+        const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
+
+        await expect((await build(em)).activeModuleRefsOf("w1", 100)).resolves.toEqual([{ id: "a1", module: "chatbot" }])
+        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
+            select: { id: true, module: true },
+            where: { workspaceId: "w1", status: "active", module: Not("nivo") },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 100,
+        })
+    })
+
     it("answers the ids of the agents serving a module, bounded", async () => {
         const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf(), lanAgent()]] })
 

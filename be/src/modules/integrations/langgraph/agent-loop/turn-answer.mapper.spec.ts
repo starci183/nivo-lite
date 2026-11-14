@@ -25,7 +25,7 @@ describe("turn-answer.mapper", () => {
                 { type: "tool_call", id: "p-1", name: "order.read", args: { id: "o-1" } },
                 { type: "tool_call", name: "order.void", args: {} },
             ],
-            invalid_tool_calls: [{ type: "invalid_tool_call", id: "p-3", name: "nivo.order.create", args: "{oops", error: "x" }],
+            invalid_tool_calls: [{ type: "invalid_tool_call", id: "p-3", name: "nivo.tool.order.create", args: "{oops", error: "x" }],
         })
 
         const answer = mapper.answerOf(message, 3)
@@ -35,7 +35,7 @@ describe("turn-answer.mapper", () => {
             calls: [
                 { id: "p-1", name: "order.read", args: { id: "o-1" } },
                 { id: "turn-3-call-2", name: "order.void", args: {} },
-                { id: "p-3", name: "nivo.order.create", args: "{oops" },
+                { id: "p-3", name: "nivo.tool.order.create", args: "{oops" },
             ],
         })
         // Plain data: what a record of the turn keeps comes back equal.
@@ -49,7 +49,7 @@ describe("turn-answer.mapper", () => {
             new AIMessage({
                 content: "",
                 tool_calls: [{ type: "tool_call", id: "p-1", name: "order.read", args: { id: "o-1" } }],
-                invalid_tool_calls: [{ type: "invalid_tool_call", id: "p-2", name: "nivo.order.create", args: "{oops", error: "x" }],
+                invalid_tool_calls: [{ type: "invalid_tool_call", id: "p-2", name: "nivo.tool.order.create", args: "{oops", error: "x" }],
                 additional_kwargs: { reasoning: "hidden" },
             }),
             1,
@@ -60,7 +60,7 @@ describe("turn-answer.mapper", () => {
 
         expect(live.tool_calls).toEqual([
             { type: "tool_call", id: "p-1", name: "order.read", args: { id: "o-1" } },
-            { type: "tool_call", id: "p-2", name: "nivo.order.create", args: {} },
+            { type: "tool_call", id: "p-2", name: "nivo.tool.order.create", args: {} },
         ])
         expect(replayed.tool_calls).toEqual(live.tool_calls)
         expect(replayed.content).toBe(live.content)

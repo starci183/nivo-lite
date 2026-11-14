@@ -5,8 +5,7 @@ import {
     type mutateAuthorizeZalo as MutateAuthorizeZaloOperation,
 } from "@/modules/api/graphql/mutations/mutation-authorize-zalo"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { AuthorizeZaloMutation } from "@/modules/api"
 
 /** The SWR key of the authorizeZalo mutation. */

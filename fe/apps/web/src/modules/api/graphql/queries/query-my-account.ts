@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { MyAccountQuery } from "../__generated__/graphql"
 
 /** The response of the `myAccount` query: the typed payload straight from the back end contract. */
@@ -44,6 +43,6 @@ type QueryMyAccountParams = QueryParams<QueryMyAccount>
 export const queryMyAccount = async ({ query = QueryMyAccount.Query1, signal }: QueryMyAccountParams = {}): Promise<
     ApolloClient.QueryResult<QueryMyAccountResponse>
 > => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query] })
 }

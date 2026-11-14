@@ -8,7 +8,7 @@ import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evalua
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { FindOperator, Not } from "typeorm"
+import { FindOperator, IsNull, Not } from "typeorm"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -309,7 +309,7 @@ describe("ConnectionsService > patch", () => {
             publicMeta: ":meta::jsonb",
             lastError: null,
         })
-        expect(whereOf(fakes[0])).toEqual([[{ workspaceId: "ws-1", id: "c1" }]])
+        expect(whereOf(fakes[0])).toEqual([[{ workspaceId: "ws-1", id: "c1", deletedAt: IsNull() }]])
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["meta", '{"a":"b"}']])
     })
 
@@ -350,17 +350,40 @@ describe("ConnectionsService > secrets", () => {
     })
 })
 
-describe("ConnectionsService > remove", () => {
-    it("deletes a connection of the workspace", async () => {
-        const { em, fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }])
-        await expect((await build(em)).remove("ws-1", "c1")).resolves.toBeUndefined()
-        expect(em.createQueryBuilder).toHaveBeenCalledWith(ConnectionEntity, "co")
-        expect(whereOf(fakes[0])).toEqual([[{ workspaceId: "ws-1", id: "c1" }]])
+describe("ConnectionsService > remove (a SOFT delete that wipes the secrets, owner rulings R36 and R38)", () => {
+    it("marks a live connection of the workspace removed with one UPDATE and wipes its secrets in the same transaction", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const { fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }, { execute: { raw: [] } }], tx.em)
+        const { service, secrets } = await buildWith(tx.em)
+        await expect(service.remove("ws-1", "c1")).resolves.toBeUndefined()
+        expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(ConnectionEntity, "co")
+        expect(fakes[0]?.callsOf("update")).toHaveLength(1)
+        expect(fakes[0]?.callsOf("delete")).toHaveLength(0)
+        expect(Object.keys(fakes[0]?.callsOf("set")[0]?.[0] ?? {})).toEqual(["deletedAt"])
+        expect(JSON.stringify(whereOf(fakes[0]))).toContain('"workspaceId":"ws-1","id":"c1"')
+        expect(JSON.stringify(whereOf(fakes[0]))).toContain("isNull")
+        expect(secrets.wipe).toHaveBeenCalledWith("c1", expect.anything())
+        expect(fakes[1]?.callsOf("delete")).toHaveLength(1)
+        expect(fakes[1]?.callsOf("from")).toEqual([["zalo_wizard_drafts"]])
+        expect(fakes[1]?.callsOf("where")).toEqual([["connection_id = :id", { id: "c1" }]])
+        expect(tx.commits).toBe(1)
     })
 
-    it("answers not found for a connection that is not there", async () => {
-        const { em } = withBuilders([{ execute: { raw: [] } }])
-        await expect((await build(em)).remove("ws-1", "c9")).rejects.toMatchObject(missing)
+    it("keeps the row (provider, name, deleted mark) and deletes nothing from connections itself", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const { fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }, { execute: { raw: [] } }], tx.em)
+        await (await buildWith(tx.em)).service.remove("ws-1", "c1")
+        expect(tx.em.delete).not.toHaveBeenCalled()
+        expect(fakes[0]?.callsOf("delete")).toHaveLength(0)
+    })
+
+    it("answers not found for a connection that is not there, or already removed, and wipes nothing", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        withBuilders([{ execute: { raw: [] } }], tx.em)
+        const { service, secrets } = await buildWith(tx.em)
+        await expect(service.remove("ws-1", "c9")).rejects.toMatchObject(missing)
+        expect(secrets.wipe).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(0)
     })
 })
 
@@ -497,7 +520,7 @@ describe("ConnectionsService > intake", () => {
         await service.applyZaloAuthorization("c-1", "oa-9")
         await service.applyZaloAuthorization("c-1")
         expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
-            ["ConnectionEntity", { id: "c-1" }, { status: "error", lastError: "Reconnect" }],
+            ["ConnectionEntity", { id: "c-1", deletedAt: IsNull() }, { status: "error", lastError: "Reconnect" }],
         ])
         expect(received[0]?.callsOf("setParameter")).toEqual([["first", JSON.stringify(first)]])
         expect(setOf(received[0])).toEqual({
@@ -522,13 +545,13 @@ describe("ConnectionsService > intake", () => {
         const { fakes } = withBuilders([{ execute: {} }, { execute: {} }], em)
         const service = await build(em)
 
-        await service.applyZaloOaName("c-1", "  Tiệm hoa NIVO ")
+        await service.applyZaloOaName("c-1", "  Ti\u1ec7m hoa NIVO ")
         await service.applyZaloOaName("c-1", "   ")
         await service.applyZaloOaName("c-1", "x".repeat(200))
 
         expect(setOf(fakes[0])).toEqual({ publicMeta: "jsonb_concat(public_meta, CAST(:meta AS jsonb))" })
         expect(fakes.map((fake) => fake.callsOf("setParameter")[0])).toEqual([
-            ["meta", '{"oa_name":"Tiệm hoa NIVO"}'],
+            ["meta", '{"oa_name":"Ti\u1ec7m hoa NIVO"}'],
             ["meta", JSON.stringify({ oa_name: "x".repeat(120) })],
         ])
     })
@@ -580,6 +603,6 @@ describe("ConnectionsService > settleWizard", () => {
         expect(setOf(fakes[0])).toEqual({
             publicMeta: "jsonb_concat(public_meta, CAST(:facts AS jsonb))",
         })
-        expect(whereOf(fakes[0])).toEqual([[{ id: "c-1" }]])
+        expect(whereOf(fakes[0])).toEqual([[{ id: "c-1", deletedAt: IsNull() }]])
     })
 })

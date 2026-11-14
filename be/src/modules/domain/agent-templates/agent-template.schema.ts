@@ -1,7 +1,11 @@
 import { z } from "zod"
-import { graphDocumentSchema, graphRightSchema } from "@modules/domain/agent-graphs"
-import { MAX_PARAMETERS, TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN } from "./agent-templates.contracts"
-import type { AgentTemplatePackage } from "./agent-templates.contracts"
+import { graphDocumentSchema } from "@modules/domain/agent-graphs"
+import {
+    MAX_PARAMETERS,
+    TEMPLATE_FORMAT,
+    TEMPLATE_KEY_PATTERN,
+    type AgentTemplatePackage,
+} from "./agent-templates.contracts"
 
 const textSchema = z.object({ vi: z.string().max(400), en: z.string().max(400) }).strict()
 
@@ -81,7 +85,6 @@ export const agentTemplatePackageSchema: z.ZodType<AgentTemplatePackage> = z
         graph: graphDocumentSchema,
         parameters: z.array(parameterSchema).max(MAX_PARAMETERS),
         bindings: z.array(bindingSchema).max(MAX_PARAMETERS * 3),
-        proposedRights: z.array(graphRightSchema).max(10),
         requiredProviders: z.array(z.string().max(40)).max(20),
         requiredAuthorityActions: z.array(z.string().max(100)).max(40),
         starterKnowledge: z

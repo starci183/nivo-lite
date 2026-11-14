@@ -6,6 +6,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KNOWLEDGE_QUEUE_PRODUCER } from "@modules/queues/knowledge"
+import { VectorSyncService } from "@modules/domain/vector-sync"
 import { row } from "@tests/fixtures/builders/knowledge-sources.builder"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
@@ -20,6 +21,7 @@ const codes = KnowledgeSourcesErrorCode
 const input = { title: " Opening hours ", content: " Open 8 to 21 " }
 
 const build = async (em: MockEntityManager) => {
+    const vectorSync = mock<VectorSyncService>()
     const queue = mock<KnowledgeQueue>()
     const quota = mock<SourceQuotaService>()
     const progress = mock<KnowledgeProgressService>()
@@ -32,9 +34,10 @@ const build = async (em: MockEntityManager) => {
             { provide: KNOWLEDGE_QUEUE_PRODUCER, useValue: queue },
             { provide: SourceQuotaService, useValue: quota },
             { provide: KnowledgeProgressService, useValue: progress },
+            { provide: VectorSyncService, useValue: vectorSync },
         ],
     }).compile()
-    return { service: moduleRef.get(PublishedSourcesService), queue, quota, progress }
+    return { service: moduleRef.get(PublishedSourcesService), queue, quota, progress, vectorSync }
 }
 
 describe("PublishedSourcesService publish", () => {
@@ -46,7 +49,8 @@ describe("PublishedSourcesService publish", () => {
 
         await expect(service.publish(WS, "u1", "s1", input)).resolves.toEqual({ id: "s1" })
 
-        expect(quota.admit).toHaveBeenCalledWith(expect.anything(), WS, 14)
+        // An approved public document is held to the PUBLIC area's cap.
+        expect(quota.admit).toHaveBeenCalledWith(expect.anything(), WS, 14, "public")
         expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeSourceEntity, {
             id: "s1",
             workspaceId: WS,
@@ -165,6 +169,17 @@ describe("PublishedSourcesService withdraw", () => {
             workspaceId: WS,
             origin: "public_document",
         })
+    })
+})
+
+describe("PublishedSourcesService withdraw and the vector index", () => {
+    it("writes the vector index's sync event through the manager the delete ran on (the caller's transaction)", async () => {
+        const tx = fakeTransaction(mockEntityManager({ delete: [KnowledgeSourceEntity, { affected: 1 }] }))
+        const { service, vectorSync } = await build(tx.em)
+
+        await service.withdraw(WS, "s1", tx.em)
+
+        expect(vectorSync.changedSource).toHaveBeenCalledWith(WS, "s1", tx.em)
     })
 })
 

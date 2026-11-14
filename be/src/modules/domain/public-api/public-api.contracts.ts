@@ -3,14 +3,34 @@ export type RequestKind = "message" | "knowledge"
 
 /** The body of an accepted message request, as the job reads it from the ledger. */
 export interface MessageRequestBody {
-    /** The customer conversation to message. */
+    /** The customer conversation to message: the ROUTE id. */
     readonly conversationId: string
     /** The text to send. */
     readonly text: string
-    /** True forces a waiting decision whatever the owner's rule says. */
+    /** True asks for an approval first: the message is held (no approval road takes a message outside a run). */
     readonly requireApproval: boolean
     /** The source named in evidence: `api:<key name>`. */
     readonly source: string
+}
+
+/** An API message admitted and still to send on the person's channel, after the request's transaction commits. */
+export interface PendingMessageDelivery {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The once-key of the send in the delivery ledger (`api.message:<request id>`). */
+    readonly sendKey: string
+    /** The route (the conversation id the API names). */
+    readonly routeId: string
+    /** The person the route reaches. */
+    readonly contactId: string
+    /** The agent that tells it: the API key's agent, else the route's front door. */
+    readonly agentId: string
+    /** The channel of the route. */
+    readonly channel: string
+    /** The connection, site or API key of the entrance, or null. */
+    readonly accountId: string | null
+    /** The text to send. */
+    readonly text: string
 }
 
 /** The body of an accepted knowledge source, as the job reads it from the ledger; the job writes the source with the ledger id as its id. */
@@ -55,7 +75,7 @@ export interface AcceptMessageParams {
     readonly text: string
     /** The customer conversation. */
     readonly conversationId: string
-    /** True forces a waiting decision whatever the owner's rule says. */
+    /** True holds the message: it is not sent, and the founder is told on /chat with its text. */
     readonly requireApproval?: boolean | undefined
     /** The caller's `Idempotency-Key`. */
     readonly idempotencyKey?: string | undefined
@@ -65,7 +85,7 @@ export interface AcceptMessageParams {
 export interface AcceptedMessage {
     /** The conversation the message goes to. */
     readonly conversationId: string
-    /** The message is queued; the owner's authority rule decides whether it is sent or waits for a decision. */
+    /** The message is queued: it is sent on the conversation's channel, or held (asked approval, or past its auto-send window) and reported to the founder. */
     readonly status: "queued"
 }
 

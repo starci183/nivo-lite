@@ -1,5 +1,4 @@
-import { isBusinessFailure, isNodeConfused } from "@nivo-lite/agent-sdk/node"
-import type { NodeConfusion, StepFailure } from "@nivo-lite/agent-sdk/node"
+import { isBusinessFailure, isNodeConfused, type NodeConfusion, type StepFailure } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { isDomainError } from "@modules/platform/errors"
 

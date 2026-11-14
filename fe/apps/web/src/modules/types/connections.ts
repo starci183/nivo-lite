@@ -71,7 +71,7 @@ export type ConnectorCategory =
 export type ConnectorStatus = "official" | "early" | "soon"
 
 /** Which agents a connector is for ("any": every agent may read it, given access). */
-export type ConnectorAudience = "chatbot" | "sales" | "accounting" | "any"
+export type ConnectorAudience = "chatbot" | "sales" | "any"
 
 /** Glyph of a connector without its own logo. */
 export type ConnectorGlyph = "wallet" | "community" | "cart" | "servers" | "email" | "apps" | "trigger" | "code"
@@ -232,23 +232,6 @@ export interface ConnectionRefusalView {
     readonly homeHref: string
     readonly message: string
     readonly description: string
-}
-
-/** The tabs every connection page has. */
-export type ConnectionPageTabId = "overview" | "events" | "agents" | "settings"
-
-/** The tabs of a connection page as links of its own address, and the one the address opens. */
-export interface ConnectionPageTabsView {
-    readonly label: string
-    readonly selected: ConnectionPageTabId
-    readonly items: ReadonlyArray<{
-        readonly id: ConnectionPageTabId
-        readonly label: string
-        readonly href: string
-        readonly count?: number
-    }>
-    /** The address of one tab. */
-    readonly hrefOf: (id: ConnectionPageTabId) => string
 }
 
 /** The setup card of a connection page while the connection is unfinished: the four phases and the one being worked on. */

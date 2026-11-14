@@ -2,8 +2,13 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { QUERY_BRAIN_SWR_KEY, QUERY_BRAIN_TODO_SWR_KEY } from "@/hooks/swr"
-import type { MutateDecideBrainFactRequest, MutateKeepCurrentBrainFactRequest } from "@/hooks/swr"
+import {
+    QUERY_BRAIN_FACTS_PAGE_SWR_KEY,
+    QUERY_BRAIN_SWR_KEY,
+    QUERY_BRAIN_TODO_SWR_KEY,
+    type MutateDecideBrainFactRequest,
+    type MutateKeepCurrentBrainFactRequest,
+} from "@/hooks/swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { toast } from "@/modules/toast"
 import { mutate } from "@/modules/viewer-cache"
@@ -32,20 +37,20 @@ export const useFactBatch = (): FactBatch => {
     const t = useTranslations("brainInbox")
     const workspace = useWorkspaceKey(QUERY_BRAIN_SWR_KEY, [])
     const { triggers } = useBrainFactTriggers()
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const send = (operation: FactOperation): Promise<unknown> =>
         operation.kind === "decide"
             ? triggers["fact.decide"](operation.request)
             : triggers["fact.keep"](operation.request)
     const run = async (operations: ReadonlyArray<FactOperation>, done: (count: number) => string): Promise<number> => {
         if (workspace === null || operations.length === 0) return 0
-        setPending(true)
+        setIsPending(true)
         const chunks = Array.from({ length: Math.ceil(operations.length / AT_ONCE) }, (_, index) =>
             operations.slice(index * AT_ONCE, (index + 1) * AT_ONCE),
         )
         // One chunk after the other, the decisions of a chunk together: the count of those that went through.
         const sendChunk = async (chunk: ReadonlyArray<FactOperation>): Promise<number> =>
-            (await Promise.allSettled(chunk.map(send))).filter((outcome) => outcome.status === "fulfilled").length
+            (await Promise.allSettled(chunk.map((entry) => send(entry)))).filter((outcome) => outcome.status === "fulfilled").length
         let passed = 0
         try {
             passed = await chunks.reduce<Promise<number>>(
@@ -56,10 +61,12 @@ export const useFactBatch = (): FactBatch => {
                 (key) =>
                     Array.isArray(key) &&
                     key[1] === workspace[1] &&
-                    (key[0] === QUERY_BRAIN_SWR_KEY || key[0] === QUERY_BRAIN_TODO_SWR_KEY),
+                    (key[0] === QUERY_BRAIN_SWR_KEY ||
+                        key[0] === QUERY_BRAIN_TODO_SWR_KEY ||
+                        key[0] === QUERY_BRAIN_FACTS_PAGE_SWR_KEY),
             )
         } finally {
-            setPending(false)
+            setIsPending(false)
         }
         if (passed > 0) toast.success(done(passed))
         if (passed < operations.length) toast.danger(t("batchFailed", { count: operations.length - passed }))

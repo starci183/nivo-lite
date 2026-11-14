@@ -1,17 +1,17 @@
 import type { ReactNode } from "react"
 import { Disclosure, Stack, SurfaceCard } from "@starci/grammar/common"
 import { messageFactGroupsOf, type MessageFactGroups } from "../../agent-message/agent-message-facts"
-import type { MessageFact } from "../../agent-message/agent-message-kinds"
+import type { MessageFact } from "@nivo-lite/agent-sdk/team-chat"
 import type { AgentMessageWords } from "./agent-message-words"
 
 /** A named set of facts drawn as rows. */
-interface FactRowsProps {
+export interface FactRowsProps {
     readonly label: string
     readonly facts: MessageFactGroups["worded"]
 }
 
 /** Label/value rows inside the card: a bordered list with full-width dividers (a surface in the surface), never a grey box. */
-const FactRows = (props: FactRowsProps): ReactNode => (
+export const FactRows = (props: FactRowsProps): ReactNode => (
     <SurfaceCard
         kind="list"
         layout="keyValue"

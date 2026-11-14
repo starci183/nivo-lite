@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { GapProposalsService } from "./gap-proposals.service"
 import { InternalReaderService } from "./internal-reader.service"
 import { PublicDocumentsService } from "./public-documents.service"
@@ -9,7 +8,7 @@ import { PublicDraftWriterService } from "./public-draft-writer.service"
 
 @Module({})
 /**
- * The documents customers may read, written apart from the internal ones: drafting from internal documents through NIVO MCP, the
+ * The documents customers may read, written apart from the internal ones: drafting from documents of the PUBLIC area only, the
  * owner's approval, publishing, the review a changed source asks for, and the proposals for questions the public layer cannot answer.
  */
 export class PublicDocumentsModule extends ConfigurableModuleClass {

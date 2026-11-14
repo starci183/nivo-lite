@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the graph-nodes capability. */
 export enum GraphNodesErrorCode {
@@ -57,7 +56,7 @@ export class GraphNodesError extends DomainError<GraphNodesErrorCode> {}
 /**
  * The codes of an effect call whose outcome nobody knows (a tool call sent with no answer, a delivery with no clear receipt, a decision
  * with no known person). They are the codes of other capabilities (`agent-runs` `TOOL_OUTCOME_UNKNOWN`, `DECISION_ACTOR_UNKNOWN`,
- * `chat-records` `CHAT_DELIVERY_UNKNOWN`), kept as they are because both engines hand exactly these to a person.
+ * `customer-send` `CHAT_DELIVERY_UNKNOWN`), kept as they are because both engines hand exactly these to a person.
  */
 export enum EffectOutcomeUnknownCode {
     /** A tool call was sent and no answer came back. */

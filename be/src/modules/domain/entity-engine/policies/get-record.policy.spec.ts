@@ -59,4 +59,28 @@ describe("getRecord", () => {
             await policy.getRecord(mintScopedTx({ manager: em, workspaceId: WORKSPACE_ID }), "sales.lead", "r-9"),
         ).toBeNull()
     })
+
+    it("reads only the scope's agent's records in a scope confined to an agent, and every record in a scope that only stamps", async () => {
+        const policy = await build()
+        const AGENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        const em = mockEntityManager({ findOne: [RecordEntity, null] })
+
+        await policy.getRecord(
+            mintScopedTx({ manager: em, workspaceId: WORKSPACE_ID, agent: { id: AGENT, sees: "own" } }),
+            "sales.lead",
+            "r-1",
+        )
+        await policy.getRecord(
+            mintScopedTx({ manager: em, workspaceId: WORKSPACE_ID, agent: { id: AGENT, sees: "all" } }),
+            "sales.lead",
+            "r-1",
+        )
+
+        expect(em.findOne).toHaveBeenNthCalledWith(1, RecordEntity, {
+            where: { entity: "sales.lead", id: "r-1", workspaceId: WORKSPACE_ID, agentId: AGENT },
+        })
+        expect(em.findOne).toHaveBeenNthCalledWith(2, RecordEntity, {
+            where: { entity: "sales.lead", id: "r-1", workspaceId: WORKSPACE_ID },
+        })
+    })
 })

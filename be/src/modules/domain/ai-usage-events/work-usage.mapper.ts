@@ -1,4 +1,5 @@
-import { creditsExact, usdExact } from "./credits.policy"
+import { usdExact } from "./credits.policy"
+import { creditsOf } from "./usage-cost.policy"
 import type { AgentStepUsage, DocumentAiCost, WorkCost, WorkKindUsage } from "./work-usage.contracts"
 
 /** A figure as the driver answers it (sums are cast to float8 in SQL, so numbers; text tolerated). */
@@ -6,25 +7,41 @@ export type Figure = number | string | null
 
 /** One step's rollup of an agent's calls as the driver answers it. */
 export interface AgentStepAggregate {
+    /** The step key the calls belong to. */
     readonly step_key: string
+    /** Runs that reached the step. */
     readonly runs: Figure
+    /** Calls the step made. */
     readonly calls: Figure
+    /** Tries that failed. */
     readonly failed_tries: Figure
+    /** Cost of all calls, in USD. */
     readonly cost_usd: Figure
+    /** Cost of the failed tries, in USD. */
     readonly failed_cost_usd: Figure
+    /** Average duration of a call, in milliseconds. */
     readonly average_ms: Figure
+    /** The models the calls used, as the driver lists them. */
     readonly models: ReadonlyArray<string | null> | null
 }
 
 /** One record and work kind's rollup as the driver answers it. */
 export interface WorkKindAggregate {
+    /** The record the work belongs to. */
     readonly work_ref: string
+    /** The kind of work. */
     readonly work_kind: string
+    /** Calls the step made. */
     readonly calls: Figure
+    /** Tries that failed. */
     readonly failed_tries: Figure
+    /** Tokens the calls used. */
     readonly tokens: Figure
+    /** Cost of all calls, in USD. */
     readonly cost_usd: Figure
+    /** Cost of the failed tries, in USD. */
     readonly failed_cost_usd: Figure
+    /** The models the calls used, as the driver lists them. */
     readonly models: ReadonlyArray<string | null> | null
 }
 
@@ -47,7 +64,7 @@ const namesOf = (values: ReadonlyArray<string | null> | null): ReadonlyArray<str
 export const toAgentStepUsage = (row: AgentStepAggregate): AgentStepUsage => {
     const runs = countOf(row.runs)
     const costUsd = usdExact(numberOf(row.cost_usd))
-    const credits = creditsExact(costUsd)
+    const credits = creditsOf(costUsd)
     return {
         stepKey: row.step_key,
         runs,
@@ -56,7 +73,7 @@ export const toAgentStepUsage = (row: AgentStepAggregate): AgentStepUsage => {
         costUsd,
         failedCostUsd: usdExact(numberOf(row.failed_cost_usd)),
         credits,
-        creditsPerRun: runs === 0 ? 0 : creditsExact(costUsd / runs),
+        creditsPerRun: runs === 0 ? 0 : creditsOf(costUsd / runs),
         averageMs: row.average_ms === null ? null : countOf(row.average_ms),
         models: namesOf(row.models),
     }
@@ -73,7 +90,7 @@ export const toWorkKindUsage = (row: WorkKindAggregate): WorkKindUsage => {
         tokens: countOf(row.tokens),
         costUsd,
         failedCostUsd: usdExact(numberOf(row.failed_cost_usd)),
-        credits: creditsExact(costUsd),
+        credits: creditsOf(costUsd),
         models: namesOf(row.models),
     }
 }
@@ -90,21 +107,30 @@ const DOCUMENT_READ = "document_read"
 const DOCUMENT_CRITIQUE = "document_critique"
 const DOCUMENT_REREAD = "document_reread"
 
-/** The cost of some kinds of work summed: the exact cost first, then credits once (never per call). */
-export const workCostOf = (rows: ReadonlyArray<WorkKindUsage>): WorkCost => {
-    const sum = (pick: (row: WorkKindUsage) => number): number => rows.reduce((total, row) => total + pick(row), 0)
-    const costUsd = usdExact(sum((row) => row.costUsd))
-    const failedCostUsd = usdExact(sum((row) => row.failedCostUsd))
-    return {
-        calls: sum((row) => row.calls),
-        failedTries: sum((row) => row.failedTries),
-        tokens: sum((row) => row.tokens),
-        costUsd,
-        credits: creditsExact(costUsd),
-        failedCostUsd,
-        failedCredits: creditsExact(failedCostUsd),
-    }
+/** One figure of some rows added up. */
+export const summed = <Row>(rows: ReadonlyArray<Row>, pick: (row: Row) => number): number =>
+    rows.reduce((total, row) => total + pick(row), 0)
+
+/** The exact cost of the answers and of the failed tries given as sums in USD, each with its credits turned once (never per call). */
+export const costFiguresOf = (
+    costSum: number,
+    failedCostSum: number,
+): Pick<WorkCost, "costUsd" | "credits" | "failedCostUsd" | "failedCredits"> => {
+    const costUsd = usdExact(costSum)
+    const failedCostUsd = usdExact(failedCostSum)
+    return { costUsd, credits: creditsOf(costUsd), failedCostUsd, failedCredits: creditsOf(failedCostUsd) }
 }
+
+/** The cost of some kinds of work summed: the exact cost first, then credits once (never per call). */
+export const workCostOf = (rows: ReadonlyArray<WorkKindUsage>): WorkCost => ({
+    calls: summed(rows, (row) => row.calls),
+    failedTries: summed(rows, (row) => row.failedTries),
+    tokens: summed(rows, (row) => row.tokens),
+    ...costFiguresOf(
+        summed(rows, (row) => row.costUsd),
+        summed(rows, (row) => row.failedCostUsd),
+    ),
+})
 
 /** What one document cost, per kind of work, from its rows (`byRefs` of `source:<id>`). */
 export const documentCostOf = (rows: ReadonlyArray<WorkKindUsage>): DocumentAiCost => {

@@ -1,6 +1,6 @@
 import type { MessageBundle } from "@modules/platform/i18n"
 
-/** Display text of the billing codes and of the lines billing writes into customer-visible records, Vietnamese and English. */
+/** Display text of the billing codes, Vietnamese and English. */
 export const BILLING_MESSAGES: MessageBundle = {
     vi: {
         "errors.BILLING_FORBIDDEN":
@@ -23,9 +23,6 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_SEAT_LIMIT_REACHED": "Đã dùng hết các ghế đã mua. Hãy thêm ghế trước khi mời thêm người.",
         "errors.BILLING_STORAGE_QUOTA_EXCEEDED":
             "Đã đầy dung lượng lưu trữ của gói ({{quotaGb}} GB). Hãy xóa bớt tệp hoặc nâng cấp gói.",
-        "billing.bankEventBody": "{{bank}} b\u00e1o c\u00f3: {{content}}",
-        "billing.manualBank": "Thủ công",
-        "billing.manualEvidenceLog": "Ghi nhận thủ công {{amount}} đ ngày {{date}}",
     },
     en: {
         "errors.BILLING_FORBIDDEN": "Only an owner or a manager can pay.",
@@ -45,9 +42,5 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_SEAT_LIMIT_REACHED": "Every paid seat is taken. Add seats before inviting more people.",
         "errors.BILLING_STORAGE_QUOTA_EXCEEDED":
             "The storage of your plan ({{quotaGb}} GB) is full. Delete some files or upgrade your plan.",
-        "billing.bankEventBody": "{{bank}} credit: {{content}}",
-        "billing.bankFeedTag": "Money in: +{{amount}} VND, content: {{content}}",
-        "billing.manualBank": "Manual",
-        "billing.manualEvidenceLog": "Manual evidence of {{amount}} VND dated {{date}}",
     },
 }

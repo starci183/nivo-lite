@@ -1,13 +1,5 @@
 import { Test } from "@nestjs/testing"
-import {
-    CHAT_FILE_MAX_BYTES,
-    chatFileNameOf,
-    filesOfMessage,
-    chatFilePathOf,
-    isAcceptedChatFile,
-    isChatFilePath,
-    sniffChatFile,
-} from "./chat-file.policy"
+import { chatFileNameOf, sniffChatFile } from "./chat-file.policy"
 
 const POLICY = Symbol("chat-file.policy")
 
@@ -17,66 +9,12 @@ const build = async () => {
         providers: [
             {
                 provide: POLICY,
-                useValue: {
-                    chatFileNameOf,
-                    filesOfMessage,
-                    chatFilePathOf,
-                    isAcceptedChatFile,
-                    isChatFilePath,
-                    sniffChatFile,
-                },
+                useValue: { chatFileNameOf, sniffChatFile },
             },
         ],
     }).compile()
     return moduleRef.get<typeof import("./chat-file.policy")>(POLICY)
 }
-
-const SCOPE = { workspaceId: "ws-1" }
-const OBJECT_ID = "0f8fad5b-d9cb-469f-a165-70867728950e"
-
-describe("isAcceptedChatFile", () => {
-    it.each(["image/jpeg", "image/png", "image/webp", "application/pdf"])(
-        "accepts %s within the limit",
-        async (contentType) => {
-            expect((await build()).isAcceptedChatFile({ contentType, sizeBytes: CHAT_FILE_MAX_BYTES })).toBe(true)
-        },
-    )
-
-    it.each([
-        ["over the limit", { contentType: "image/png", sizeBytes: CHAT_FILE_MAX_BYTES + 1 }],
-        ["empty", { contentType: "image/png", sizeBytes: 0 }],
-        ["a type the route cannot read", { contentType: "application/zip", sizeBytes: 10 }],
-    ])("refuses a file %s", async (_case, file) => {
-        expect((await build()).isAcceptedChatFile(file)).toBe(false)
-    })
-})
-
-describe("chat file paths", () => {
-    it("keeps a file inside the Office folder of its workspace", async () => {
-        expect((await build()).chatFilePathOf(SCOPE, OBJECT_ID, "application/pdf")).toBe(
-            `ws-1/chat/office/${OBJECT_ID}.pdf`,
-        )
-    })
-
-    it("accepts the path it issued", async () => {
-        expect((await build()).isChatFilePath(SCOPE, chatFilePathOf(SCOPE, OBJECT_ID, "image/png"))).toBe(true)
-    })
-
-    it("issues no recognized extension for an unsupported content type", async () => {
-        expect((await build()).chatFilePathOf(SCOPE, OBJECT_ID, "application/zip")).toBe(
-            `ws-1/chat/office/${OBJECT_ID}.`,
-        )
-    })
-
-    it.each([
-        ["another workspace", `ws-2/chat/office/${OBJECT_ID}.png`],
-        ["another folder", `ws-1/chat/other/${OBJECT_ID}.png`],
-        ["a traversal", `ws-1/chat/office/../${OBJECT_ID}.png`],
-        ["another extension", `ws-1/chat/office/${OBJECT_ID}.svg`],
-    ])("refuses %s", async (_case, path) => {
-        expect((await build()).isChatFilePath(SCOPE, path)).toBe(false)
-    })
-})
 
 describe("sniffChatFile", () => {
     it.each([
@@ -108,19 +46,5 @@ describe("chatFileNameOf", () => {
 
     it("retains the empty object name when both supplied names are empty", async () => {
         expect((await build()).chatFileNameOf("", "")).toBe("")
-    })
-})
-
-describe("filesOfMessage", () => {
-    it("keeps the files of the named line only", async () => {
-        const mine = {
-            id: "f-1",
-            messageId: "m-1",
-            name: "a.png",
-            contentType: "image/png",
-            url: "https://x.invalid/a",
-        }
-        const other = { ...mine, id: "f-2", messageId: "m-2" }
-        expect((await build()).filesOfMessage([mine, other], "m-1")).toEqual([mine])
     })
 })

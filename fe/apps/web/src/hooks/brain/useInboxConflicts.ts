@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { documentsOfFact, keyDocumentsOf, mergedPairsOf, valueOf } from "@/modules/brain"
-import type { FactKey } from "@/modules/brain"
+import { documentsOfFact, keyDocumentsOf, mergedPairsOf, valueOf, type FactKey } from "@/modules/brain"
 import type { InboxConflictRowView } from "@/modules/types"
 import type { FactWords } from "./useFactWords"
 
@@ -29,7 +28,7 @@ export const useInboxConflicts = (input: InboxConflictsInput): InboxConflicts =>
     const pairs = mergedPairsOf(input.keys.filter((one) => one.kind !== "settled"))
     const rowOf = (one: FactKey): InboxConflictRowView => {
         const doc = documentsOfFact(one.lead)[0]
-        const values = [...one.options.map(valueOf), ...(one.retire === null ? [] : [drawer.retireOption])]
+        const values = [...one.options.map((entry) => valueOf(entry)), ...(one.retire === null ? [] : [drawer.retireOption])]
         return {
             id: one.key,
             title: `${one.lead.subjectLabel} · ${one.lead.attributeLabel}`,
@@ -43,7 +42,7 @@ export const useInboxConflicts = (input: InboxConflictsInput): InboxConflicts =>
         }
     }
     return {
-        conflicts: input.keys.filter((one) => one.kind === "conflict").map(rowOf),
+        conflicts: input.keys.filter((one) => one.kind === "conflict").map((entry) => rowOf(entry)),
         mergedNote:
             pairs.length === 0
                 ? null

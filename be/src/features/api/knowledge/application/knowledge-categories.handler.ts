@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { SourceCategoriesService } from "@modules/domain/knowledge-sources"
-import type { SourceCategory } from "@modules/domain/knowledge-sources"
+import { SourceCategoriesService, type SourceCategory } from "@modules/domain/knowledge-sources"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KnowledgeCategoriesQuery } from "./knowledge-categories.query"
 
 @QueryHandler(KnowledgeCategoriesQuery)

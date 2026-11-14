@@ -10,7 +10,7 @@ import { PublicApiLedgerService } from "./public-api-ledger.service"
 import { PublicConversationsService } from "./public-conversations.service"
 
 @Injectable()
-/** The messages the public API asks the chatbot to send, reached only through the shared primary EntityManager; the sending itself is a job decided by the owner's authority rule. */
+/** The messages the public API asks the chatbot to send, reached only through the shared primary EntityManager; the sending itself is a job (sent, or held and reported to the founder on /chat). */
 export class PublicMessagesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,

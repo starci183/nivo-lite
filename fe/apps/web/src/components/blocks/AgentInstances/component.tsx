@@ -1,10 +1,16 @@
-import { Button, EmptyNotice, Page, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
+import {
+    Button,
+    EmptyNotice,
+    Page,
+    Stack,
+    SurfaceCard,
+    type BadgeTone,
+    type BreadcrumbItem,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
-import { AddInstanceDialog } from "@/components/composites/AddInstanceDialog"
-import type { AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
+import { AddInstanceDialog, type AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
 
 /** One instance as the list draws it. */
 export interface InstanceRowView {
@@ -13,6 +19,8 @@ export interface InstanceRowView {
     readonly description: string
     readonly statusLabel: string
     readonly statusTone: BadgeTone
+    /** The status chip's dot: only a live status has one; an agent whose setup is not applied wears a muted chip without it. */
+    readonly isStatusDot: boolean
     /** What a `needs_connection` instance waits for and where to connect it; no lines otherwise. */
     readonly needs: ConnectionNeedsProps
     readonly openHref: string
@@ -82,7 +90,7 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                                 id: row.id,
                                 title: row.title,
                                 description: row.description,
-                                badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
+                                badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: row.isStatusDot }],
                                 action: { label: view.openLabel, intent: "neutral" as const, href: row.openHref },
                                 detail: <ConnectionNeeds {...row.needs} />,
                             }))}

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
-import { purposeFor } from "@/hooks/connection-access"
+import { bindableOf, useBindableAgents } from "@/hooks/bindable-agents"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import {
@@ -16,8 +16,7 @@ import {
 } from "@/hooks/connections"
 import { slotOfReads, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import type { AgentOption, Connection, DataSlot } from "@/modules/types"
-import { ConnectionWizardOverlayBase } from "./component"
-import type { WizardBoard, WizardTargetView } from "./component"
+import { ConnectionWizardOverlayBase, type WizardBoard, type WizardTargetView } from "./component"
 
 /**
  * What a page that already read the workspace may hand the wizard drawer. A route that mounts the drawer on its own passes nothing:
@@ -54,11 +53,10 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
     const def = found === null ? null : PROVIDERS[found.provider]
     const target: WizardTargetView | null =
         found === null || def === null ? null : { ...found, kind: def.kind, money: moneyProviderOf(found.provider) }
-    // Every agent whose module may use this provider (purposeFor): chatbot, booking, loyalty, sales and shifts for chat, accounting for bank feeds.
-    const eligible =
-        target === null || def?.module === null
-            ? []
-            : agents.filter((agent) => purposeFor(agent.module, target.provider) !== null)
+    // Every agent the back end says may be bound to a connection of this provider, with what it would do there. Until it answers
+    // the board loads, so the wizard never offers a guessed pair.
+    const bindable = useBindableAgents(target?.provider)
+    const eligible = target === null ? [] : bindableOf(agents, bindable.data ?? [])
     const board: WizardBoard = {
         agents,
         eligible,
@@ -67,11 +65,12 @@ export const ConnectionWizardOverlay = (props: ConnectionWizardOverlayProps) => 
         ),
     }
     const hasOwnRead = props.items === undefined || props.agents === undefined
-    const dependencyReads = [access.read, ...(hasOwnRead ? data.reads : [])]
+    const dependencyReads = [access.read, ...(hasOwnRead ? data.reads : []), bindable]
     const slot: DataSlot<WizardBoard> = slotOfReads(dependencyReads, () => board)
     const retry = () => {
         access.retry()
         if (hasOwnRead) data.retry()
+        void bindable.mutate()
     }
     const close = (changed: boolean) => {
         overlays.closeWizard()

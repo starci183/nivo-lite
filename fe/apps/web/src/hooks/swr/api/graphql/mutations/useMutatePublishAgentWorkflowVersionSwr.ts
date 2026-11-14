@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutatePublishAgentWorkflowVersion, type MutatePublishAgentWorkflowVersionRequest } from "@/modules/api/graphql/mutations/mutation-publish-agent-workflow-version"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { PublishAgentWorkflowVersionMutation } from "@/modules/api"
 
 /** What the PublishAgentWorkflowVersion mutation is triggered with. */

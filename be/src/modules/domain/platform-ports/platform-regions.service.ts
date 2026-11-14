@@ -2,12 +2,18 @@ import { Injectable } from "@nestjs/common"
 import { AgentBindingsService, PURPOSES } from "@modules/domain/agent-connections"
 import { AgentKnowledgeLensService } from "@modules/domain/agent-knowledge"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
+import { AgentAccountsService } from "@modules/domain/tools"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { ABILITY_SEPARATOR, GAPS_SHOWN, accessOf, abilitiesHeld, pick, regionKey } from "./platform-regions.policy"
-import type { ConnectionsRegion, KnowledgeRegion } from "./platform-regions.policy"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
+import {
+    ABILITY_SEPARATOR,
+    ATTACHED_ACCESS,
+    GAPS_SHOWN,
+    pick,
+    regionKey,
+    type ConnectionsRegion,
+    type KnowledgeRegion,
+} from "./platform-regions.policy"
 
 @Injectable()
 /**
@@ -22,19 +28,19 @@ export class PlatformRegionsService {
         private readonly directory: AgentDirectoryService,
         private readonly gaps: KnowledgeGapsService,
         private readonly lens: AgentKnowledgeLensService,
-        private readonly abilities: ProviderAbilitiesService,
+        private readonly accounts: AgentAccountsService,
     ) {}
 
     /**
-     * The accounts attached to the agent, read only, one row per attachment: "provider · account", and the abilities the agent holds on
-     * it from the provider rights (the abilities' own labels; a write ability says its mode, auto or ask). An account attached with no
-     * ability says it holds none. The default receiving account is flagged in the data only; the aside draws no marker. The masked account of a
-     * bank feed rides along for the readers that match a bank payment to it. The link goes to the agent's rights, where all of it changes.
+     * The accounts attached to the agent, read only, one row per attachment: "provider · account", and the groups of tools its provider
+     * serves (their own labels: an attached account reaches them all; the mode of a call is its node's). A provider that serves no tool
+     * says it holds none. The masked account of a bank feed rides along for the readers that match a bank payment to it. The link
+     * goes to the agent's rights, where all of it changes.
      */
     async connectionsOf(workspaceId: string, agentId: string, locale: Locale): Promise<ConnectionsRegion> {
         const say = (key: string): string => this.catalog.get(key, {}, locale)
         const [board, bound] = await Promise.all([
-            this.abilities.board(workspaceId),
+            this.accounts.board(workspaceId),
             this.bindings.connectionsFor(agentId, PURPOSES),
         ])
         const maskedOf = new Map(
@@ -42,20 +48,13 @@ export class PlatformRegionsService {
                 connection.accountMasked === null ? [] : [[connection.id, connection.accountMasked] as const],
             ),
         )
-        const modeWord = { auto: say(regionKey("connections", "mode_auto")), ask: say(regionKey("connections", "mode_ask")) }
         const rows = board.attachments
             .filter((attachment) => attachment.agentId === agentId)
             .flatMap((attachment) => {
                 const provider = board.providers.find((one) => one.provider === attachment.provider)
                 const account = provider?.accounts.find((one) => one.connectionId === attachment.connectionId)
                 if (provider === undefined || account === undefined) return []
-                const held = abilitiesHeld(provider.abilities, attachment.abilities)
-                const words = held.map((ability) =>
-                    ability.scope === "write"
-                        ? `${pick(ability.label, locale)} (${modeWord[ability.mode]})`
-                        : pick(ability.label, locale),
-                )
-                const access = accessOf(held)
+                const words = provider.abilities.map((ability) => pick(ability.label, locale))
                 const masked = maskedOf.get(account.connectionId)
                 return [
                     {
@@ -64,8 +63,7 @@ export class PlatformRegionsService {
                         description: words.length === 0 ? say(regionKey("connections", "none")) : words.join(ABILITY_SEPARATOR),
                         provider: provider.provider,
                         account: account.label,
-                        ...(account.isDefault ? { isDefaultReceiving: true } : {}),
-                        ...(access === null ? {} : { access }),
+                        access: ATTACHED_ACCESS,
                         ...(masked === undefined ? {} : { accountMasked: masked }),
                     },
                 ]

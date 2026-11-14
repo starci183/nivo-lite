@@ -97,7 +97,7 @@ const NameSheet = (props: LedgerBodyProps) => (
 
 /** The ready ledger: the sheet it writes to, with the way to open it and to change it. */
 const ReadySheet = (props: LedgerBodyProps) => {
-    const [isChanging, setChanging] = useState(false)
+    const [isChanging, setIsChanging] = useState(false)
     if (isChanging) return <NameSheet base={props.base} view={props.view} />
     return (
         <Stack gap="row">
@@ -105,11 +105,11 @@ const ReadySheet = (props: LedgerBodyProps) => {
             <Text size="xs" tone="muted">
                 {props.view.sheetLine}
             </Text>
-            <Cluster gap="inline" justify="between">
-                <Link kind="external" href={props.view.sheetUrl}>
+            <Cluster gap="inline" justify="between" align="center">
+                <Link kind="external" variant="plain" href={props.view.sheetUrl}>
                     {props.base.props.copy.open}
                 </Link>
-                <Button intent="neutral" onPress={() => setChanging(true)}>
+                <Button intent="neutral" onPress={() => setIsChanging(true)}>
                     {props.base.props.copy.change}
                 </Button>
             </Cluster>
@@ -168,7 +168,7 @@ export const DriveLedgerBase = (props: DriveLedgerBaseProps) => (
                 isLoading={isLoading}
                 action={<Badge tone={view.chip.tone}>{view.chip.label}</Badge>}
             >
-                <Stack gap="row">
+                <Stack gap="inline">
                     <Text size="sm" tone="muted">
                         {props.props.copy.body}
                     </Text>

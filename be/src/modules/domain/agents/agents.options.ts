@@ -5,16 +5,13 @@ import type {
     ConversationChannelOwners,
     InstallationDirectory,
     KnowledgeLens,
-    ModuleProfiles,
     WorkDashboardDirectory,
 } from "./agents.port"
 
-/** The ports the setup mode binds: the installations and the module definitions, without the knowledge lens. */
+/** The ports the setup mode binds: the installations, without the knowledge lens. */
 export interface AgentsSetupPorts {
     /** Implements the module installations port. */
     readonly installations: Type<InstallationDirectory>
-    /** Implements the module definitions port. */
-    readonly modules: Type<ModuleProfiles>
     /** Implements the agent connections port; an existing provider of the app. */
     readonly connections: Type<AgentConnectionsDirectory>
     /** Implements the team-chat room directory port; an existing provider of the app. */
@@ -46,7 +43,7 @@ export interface AgentsFullOptions {
  * knowledge lens, so a call that reads knowledge is refused.
  */
 export interface AgentsSetupOptions {
-    /** The classes behind the installations and module definitions ports. */
+    /** The classes behind the installations port. */
     readonly ports: AgentsSetupPorts
     /** Registers the setup mode. */
     readonly setupOnly: true

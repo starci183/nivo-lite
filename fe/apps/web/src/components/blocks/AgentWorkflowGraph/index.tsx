@@ -1,5 +1,6 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
 import { useAgentWorkflowGraphView, type WorkflowGraphView } from "@/hooks/agentWorkflowGraph"
 import { useSlotLabels } from "@/hooks/slot"
@@ -7,8 +8,8 @@ import { AgentWorkflowGraphBase } from "./component"
 
 /** The agent whose graph this is. */
 interface AgentWorkflowGraphProps {
-    readonly module: string
-    readonly installationId: string
+    readonly module?: string | undefined
+    readonly installationId?: string | undefined
 }
 
 const EMPTY: WorkflowGraphView = { nodes: [], edges: [], total: 0, running: 0, off: 0 }
@@ -19,9 +20,10 @@ const EMPTY: WorkflowGraphView = { nodes: [], edges: [], total: 0, running: 0, o
  * call and are called by nothing stand as islands.
  */
 export const AgentWorkflowGraph = (props: AgentWorkflowGraphProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("agentGraphTab")
     const labels = useSlotLabels()
-    const graph = useAgentWorkflowGraphView(props.module, props.installationId)
+    const graph = useAgentWorkflowGraphView(route.module, route.installationId)
     const view = "items" in graph.slot ? graph.slot.items : EMPTY
     return (
         <AgentWorkflowGraphBase

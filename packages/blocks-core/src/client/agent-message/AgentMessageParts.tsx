@@ -1,8 +1,7 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Cluster, Stack, Text } from "@starci/grammar/common"
-import type { BadgeTone } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Stack, Text, type BadgeTone } from "@starci/grammar/common"
 import type { AgentMessageIntent, AgentMessageRecord } from "../../agent-message/agent-message-item"
-import type { AgentMessageState } from "../../agent-message/agent-message-kinds"
+import type { AgentMessageState } from "@nivo-lite/agent-sdk/team-chat"
 import type { AgentMessageWords } from "./agent-message-words"
 
 /** The tone of the chip a state draws. */
@@ -23,7 +22,7 @@ const INTENT_TONES: Readonly<Record<AgentMessageIntent, BadgeTone>> = {
     report: "neutral",
 }
 
-const SEPARATOR = " · "
+const SEPARATOR = " \u00b7 "
 
 /** The meta line under the card: which agent said it and when. */
 export const metaOf = (record: AgentMessageRecord): string =>
@@ -77,7 +76,7 @@ export const Summary = (props: SummaryProps): ReactNode => (
     <Stack gap="inline">
         <Text size="sm">{props.record.summary}</Text>
         {props.record.detailHref === "" ? null : (
-            <Cluster gap="inline">
+            <Cluster gap="identity">
                 <Button endArrow intent="neutral" href={props.record.detailHref}>
                     {props.openDetail}
                 </Button>

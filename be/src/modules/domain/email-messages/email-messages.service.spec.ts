@@ -6,7 +6,6 @@ import { EmailMessagesService } from "./email-messages.service"
 import type { EmailRecord } from "./email-messages.contracts"
 import { EmailMessagesErrorCode } from "./errors/email-messages.error"
 import { EmailMessageEntity } from "./persistence/entities"
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 
 const ENTRY: EmailRecord = {
@@ -104,20 +103,5 @@ describe("EmailMessagesService counts", () => {
         expect(em.count).toHaveBeenCalledWith(EmailMessageEntity, {
             where: { workspaceId: "ws-1", status: "sent", createdAt: MoreThanOrEqual(SINCE) },
         })
-    })
-
-    it("knows whether a waiting customer email is already written down for a work item", async () => {
-        const em = mockEntityManager({})
-        const [found, none] = queueQueryBuilders(em, [{ getOne: { id: "msg-1" } }, { getOne: null }])
-        const service = await build(em)
-
-        await expect(service.isWaitingFor("ws-1", "w1")).resolves.toBe(true)
-        await expect(service.isWaitingFor("ws-1", "w1")).resolves.toBe(false)
-
-        expect(found?.callsOf("andWhere")).toContainEqual([
-            "email.refs ->> 'work_item_id' = :workItemId",
-            { workItemId: "w1" },
-        ])
-        expect(none?.callsOf("limit")).toEqual([[1]])
     })
 })

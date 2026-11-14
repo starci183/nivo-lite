@@ -424,6 +424,13 @@ describe("MetaClient subscriptions", () => {
     })
 })
 describe("MetaClient reads", () => {
+    it("skips an empty name and falls through to the next filled field", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(answer({ name: "  ", first_name: "", last_name: "", username: "ig_user" }))
+
+        await expect(client.fetchProfileName(PAGE, "instagram", "U")).resolves.toBe("ig_user")
+    })
+
     it("fetches a profile name from the best field", async () => {
         const { client, http, logger } = await build()
         const cause = new Error("down")

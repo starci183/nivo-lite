@@ -1,11 +1,17 @@
-import type { JobClaims, FencedProcessor, ClaimedJob, AdvanceWrite } from "@modules/platform/jobs"
+import {
+    type JobClaims,
+    type FencedProcessor,
+    type ClaimedJob,
+    type AdvanceWrite,
+    JOB_CLAIMS,
+} from "@modules/platform/jobs"
 import { MetaInboxService } from "@modules/domain/meta-inbox"
 import { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
-import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { LiteWorld } from "./lite-world.service"
 import {
     cleanupJobs,
+    cleanupWebhook,
     cleanupWorkspace,
     deliveryEnvelopes,
     deliveryPublications,
@@ -16,8 +22,9 @@ import {
     persistDeliveryWorkspaceRows,
     deliveryIntakeBuilder,
     deliveryClaimBuilder,
+    type DeliveryKind,
+    type DeliveryMessage,
 } from "../fixtures/builders/delivery-jobs.builder"
-import type { DeliveryKind, DeliveryMessage } from "../fixtures/builders/delivery-jobs.builder"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
 import type { MetaDeliveryRecorded } from "@modules/queues/meta-delivery"
 import type { SepayDeliveryRecorded } from "@modules/queues/sepay-delivery"
@@ -73,6 +80,8 @@ export const deliveryIntakeFixture = async (
         await removeDeliveryOutbox(world.db.primary, fixture.queue, deliveryId)
         await removeReceipts(world.db.primary, kind, deliveryId)
     })
+    // A Meta event the consumer processed also queued its inbound job, keyed by the message id (the proof id).
+    if (kind === "meta") cleanupWebhook(world, world.key(id), deliveryId)
     const state = async () => ({
         receipts: await receiptsOf(world.db.primary, kind, deliveryId),
         jobs: await deliveryPublications(world.db.primary, fixture.queue, deliveryId),

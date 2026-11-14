@@ -17,7 +17,7 @@ export interface FactSpec {
     readonly key: string
     /** The type. */
     readonly type: "number" | "string" | "boolean"
-    /** `vnd` makes the fact an amount the authority rules cap. */
+    /** What the value is counted in; `vnd` for an amount in dong. */
     readonly unit: "vnd" | "percent" | "count" | null
     /** True when it says something about the turn or its text, so it is never taken for the amount of the work. */
     readonly notWorkAmount?: boolean | undefined

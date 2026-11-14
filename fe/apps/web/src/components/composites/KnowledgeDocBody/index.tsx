@@ -70,7 +70,7 @@ export const KnowledgeDocBody = (props: KnowledgeDocBodyProps) => {
                 kind="list"
                 title={body.passages.title}
                 meta={body.passages.count}
-                description={body.passages.hint}
+                caption={body.passages.hint}
                 headingLevel={2}
                 isLoading={props.isLoading}
                 items={body.passages.rows.map((row, index) => ({

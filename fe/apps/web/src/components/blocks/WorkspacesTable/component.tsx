@@ -91,7 +91,7 @@ const ActionCell = (props: RowDrawProps) => {
     return (
         <Button
             intent={props.row.isPrimary ? "commit" : "neutral"}
-            {...(action === "open" ? { endArrow: true } : {})}
+            {...(action === "open" && props.row.isPrimary ? { endArrow: true } : {})}
             isPending={props.row.isBusy}
             isLoading={props.isLoading}
             onPress={() => props.on[action](props.row.id)}
@@ -108,7 +108,7 @@ const renderCell = (props: RowDrawProps, columnId: string) => {
             return <WorkspaceCell row={props.row} isLoading={props.isLoading} />
         case "status":
             return (
-                <Badge tone={STATUS_TONES[props.row.status]} isDot isLoading={props.isLoading}>
+                <Badge tone={STATUS_TONES[props.row.status]} isLoading={props.isLoading}>
                     {props.copy.statuses[props.row.status]}
                 </Badge>
             )

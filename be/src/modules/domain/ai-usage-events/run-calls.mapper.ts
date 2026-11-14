@@ -1,5 +1,7 @@
 import type { RunAiTotals, RunCallKindUsage } from "./ai-usage-events.contracts"
-import { creditsExact, usdExact } from "./credits.policy"
+import { usdExact } from "./credits.policy"
+import { creditsOf } from "./usage-cost.policy"
+import { costFiguresOf, summed } from "./work-usage.mapper"
 
 /** One row of a run's call-kind rollup as the driver answers it: sums cast to numbers in SQL, the lists as text arrays. */
 export interface RunCallKindAggregate {
@@ -78,8 +80,8 @@ export const toRunCallKind = (row: RunCallKindAggregate): RunCallKindUsage => ({
     failedCostUsd: usdOf(row.failed_cost_usd),
     failures: namesOf(row.failures ?? null),
     workKinds: namesOf(row.work_kinds ?? null),
-    credits: creditsExact(usdOf(row.cost_usd)),
-    failedCredits: creditsExact(usdOf(row.failed_cost_usd)),
+    credits: creditsOf(usdOf(row.cost_usd)),
+    failedCredits: creditsOf(usdOf(row.failed_cost_usd)),
     maxTry: row.max_try === null ? null : countOf(row.max_try),
     promptTokens: countOf(row.prompt_tokens),
     cachedTokens: countOf(row.cached_tokens),
@@ -98,9 +100,7 @@ export const toRunCallKind = (row: RunCallKindAggregate): RunCallKindUsage => ({
 
 /** The totals of a run from its steps' rows: the exact cost summed, then turned into credits once (a fraction, never rounded per call). */
 export const runTotalsOf = (rows: ReadonlyArray<RunCallKindUsage>): RunAiTotals => {
-    const sum = (pick: (row: RunCallKindUsage) => number): number => rows.reduce((total, row) => total + pick(row), 0)
-    const costUsd = usdExact(sum((row) => row.costUsd))
-    const failedCostUsd = usdExact(sum((row) => row.failedCostUsd))
+    const sum = (pick: (row: RunCallKindUsage) => number): number => summed(rows, pick)
     return {
         calls: sum((row) => row.calls),
         tries: sum((row) => row.tries),
@@ -110,9 +110,9 @@ export const runTotalsOf = (rows: ReadonlyArray<RunCallKindUsage>): RunAiTotals 
         cacheWriteTokens: sum((row) => row.cacheWriteTokens),
         completionTokens: sum((row) => row.completionTokens),
         reasoningTokens: sum((row) => row.reasoningTokens),
-        costUsd,
-        credits: creditsExact(costUsd),
-        failedCostUsd,
-        failedCredits: creditsExact(failedCostUsd),
+        ...costFiguresOf(
+            sum((row) => row.costUsd),
+            sum((row) => row.failedCostUsd),
+        ),
     }
 }

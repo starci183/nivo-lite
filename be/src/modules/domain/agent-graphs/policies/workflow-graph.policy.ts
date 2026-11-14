@@ -1,13 +1,17 @@
-import { AGENT_LABELS, callEdgesOf, entryViewOf, outcomeViewsOf, triggerViewsOf } from "@nivo-lite/blocks-core/graph"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { callEdgesOf, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { Locale } from "@modules/platform/i18n"
 import type { WorkflowGraphCall, WorkflowGraphEntry, WorkflowRecord } from "../agent-workflows.contracts"
+import { CONTRACT_VIEWS, agentLabelOf } from "./contract-views.policy"
 
 /** A workflow of the workspace a call may land on: its module, key and name, and the agent that runs it. */
 export interface WorkflowGraphTarget {
+    /** The agent that runs the workflow. */
     readonly agentId: string
+    /** The module the workflow belongs to. */
     readonly moduleKey: string
+    /** The workflow key. */
     readonly key: string
+    /** The name the owner knows it by. */
     readonly name: string
 }
 
@@ -24,7 +28,7 @@ const callOf = (
         nodeKey: call.nodeKey,
         outcome: call.outcome,
         agent: call.agent,
-        agentLabel: AGENT_LABELS[call.agent]?.[locale] ?? call.agent,
+        agentLabel: agentLabelOf(call.agent, locale) ?? call.agent,
         workflow: call.workflow,
         workflowName: target?.name ?? null,
         version: call.version,
@@ -43,7 +47,7 @@ export const workflowGraphEntryOf = (
     targets: ReadonlyArray<WorkflowGraphTarget>,
     locale: Locale,
 ): WorkflowGraphEntry => {
-    const entry = graph === null ? null : entryViewOf(graph, locale)
+    const entry = graph === null ? null : CONTRACT_VIEWS.entryViewOf(graph, locale)
     return {
         id: workflow.id,
         key: workflow.key,
@@ -57,7 +61,7 @@ export const workflowGraphEntryOf = (
         triggers:
             graph === null
                 ? []
-                : triggerViewsOf(graph, locale).map((trigger) => ({
+                : CONTRACT_VIEWS.triggerViewsOf(graph, locale).map((trigger) => ({
                       key: trigger.key,
                       sourceKind: trigger.sourceKind,
                       sourceLabel: trigger.sourceLabel,
@@ -66,7 +70,7 @@ export const workflowGraphEntryOf = (
         outcomes:
             graph === null
                 ? []
-                : outcomeViewsOf(graph, locale).map((outcome) => ({
+                : CONTRACT_VIEWS.outcomeViewsOf(graph, locale).map((outcome) => ({
                       key: outcome.key,
                       label: outcome.label,
                       outputs: outcome.outputs.map((output) => ({ name: output.name, type: output.type })),

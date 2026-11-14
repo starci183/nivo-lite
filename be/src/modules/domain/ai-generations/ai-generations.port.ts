@@ -30,8 +30,10 @@ export interface GenerationUsageRecord {
     readonly work?: GenerationWork | undefined
     /** The model a record with no usage asked for (a failed try); absent books `unknown`. */
     readonly model?: string | undefined
-    /** Set for a FAILED try (`timeout`, `no_answer`): booked estimated from `promptChars`, never billed (U1). */
+    /** Set for a FAILED try (`timeout`, `no_answer`): never billed (U1); booked estimated from `promptChars` unless `reported`. */
     readonly failure?: string | undefined
+    /** A failed try booked with the provider's own figures (a try cut at its cap reports its usage): not estimated, still never billed. */
+    readonly reported?: boolean | undefined
 }
 
 /**

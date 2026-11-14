@@ -1,15 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { Not, Raw } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { IsNull, Not, Raw, type EntityManager, type SelectQueryBuilder } from "typeorm"
+import { ConnectionSecretsService, type OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
-import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { cleanConnectionName } from "./connection-name.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
 import { publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
@@ -47,8 +43,7 @@ import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import { ConnectionEntity } from "./persistence/entities"
-import { returnedIds, projectConnections } from "./persistence/connection.projection"
-import type { ConnectionProjection } from "./persistence/connection.projection"
+import { returnedIds, projectConnections, type ConnectionProjection } from "./persistence/connection.projection"
 
 /** The most rows any list of connections returns. */
 const LIST_MAX = 500
@@ -144,7 +139,7 @@ export class ConnectionsService {
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
             .getRawMany<ConnectionProjection>()
-        return rows.map(toConnectionRecord)
+        return rows.map((row) => toConnectionRecord(row))
     }
 
     /**
@@ -181,7 +176,7 @@ export class ConnectionsService {
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
             .getRawMany<ConnectionProjection>()
-        return rows.map(toConnectionRecord)
+        return rows.map((row) => toConnectionRecord(row))
     }
 
     /** The providers the workspace is connected to (one entry each, a disconnected connection does not count), at most `limit`. */
@@ -208,7 +203,7 @@ export class ConnectionsService {
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
             .getRawMany<ConnectionProjection>()
-        return rows.map(toConnectionRecord)
+        return rows.map((row) => toConnectionRecord(row))
     }
 
     /** Creates a connection and its sealed secret in one transaction (the caller's when handed in); answers the id. */
@@ -258,13 +253,19 @@ export class ConnectionsService {
             .update()
             // An empty patch still needs one assignment: the self-assignment lets the update trigger stamp updated_at and the row check run.
             .set(Object.keys(fields).length === 0 ? { workspaceId: () => "workspace_id" } : fields)
-            .where({ workspaceId, id })
+            .where({ workspaceId, id, deletedAt: IsNull() })
             .setParameter("meta", patch.meta === undefined ? null : JSON.stringify(patch.meta))
             .returning("id")
             .execute()
         if (returnedIds(updated.raw).length === 0) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
         }
+    }
+
+    /** Renames a connection of the workspace (owner or manager); a blank or unusable name is refused `NameInvalid`. */
+    async rename(actor: ConnectionActor, id: string, name: string): Promise<void> {
+        await this.authorize(actor, ["owner", "manager"])
+        await this.patch(actor.workspaceId, id, { name })
     }
 
     /** Opens the stored secret of a connection; null when there is none or it cannot be opened with the current key. */
@@ -277,6 +278,11 @@ export class ConnectionsService {
         }
     }
 
+    /** True when the connection has a sealed secret; it is never opened. */
+    hasSecret(connectionId: string): Promise<boolean> {
+        return this.secrets.has(connectionId)
+    }
+
     /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */
     writeSecret(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
         return this.secrets.write(connectionId, plain, webhookSecret)
@@ -287,17 +293,29 @@ export class ConnectionsService {
         return this.secrets.wipe(connectionId)
     }
 
-    /** Deletes a connection of the workspace (its secret and bindings go with it); a missing one is a typed not-found. */
+    /**
+     * Removes a connection of the workspace SOFTLY (owner ruling R36) and wipes its secret material in the same transaction (R38): the row gets
+     * its deleted mark, and its sealed credential (connection_secrets: tokens, refresh state, webhook secret) and any Zalo wizard keys
+     * (zalo_wizard_drafts) are deleted, so a removed connection can never be used again and reconnecting means authorising anew. The
+     * non-secret facts (provider, public facts, name, deleted mark), bindings, synced data, routes and customer lines stay and every read
+     * leaves them out (the entity's delete-date column hides the row from every find and select; its poll, webhook intake and tools find no
+     * connection and refuse as a missing one). A missing or already removed one is a typed not-found and nothing is wiped.
+     */
     async remove(workspaceId: string, id: string): Promise<void> {
-        const deleted = await this.entityManager
-            .createQueryBuilder(ConnectionEntity, "co")
-            .delete()
-            .where({ workspaceId, id })
-            .returning("id")
-            .execute()
-        if (returnedIds(deleted.raw).length === 0) {
-            throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
-        }
+        await this.entityManager.transaction(async (tx) => {
+            const removed = await tx
+                .createQueryBuilder(ConnectionEntity, "co")
+                .update()
+                .set({ deletedAt: () => "now()" })
+                .where({ workspaceId, id, deletedAt: IsNull() })
+                .returning("id")
+                .execute()
+            if (returnedIds(removed.raw).length === 0) {
+                throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
+            }
+            await this.secrets.wipe(id, tx)
+            await tx.createQueryBuilder().delete().from("zalo_wizard_drafts").where("connection_id = :id", { id }).execute()
+        })
     }
 
     /**
@@ -326,7 +344,7 @@ export class ConnectionsService {
                 status: () => RECOVERED_STATUS,
                 firstEvent: () => "COALESCE(first_event, :first::jsonb)",
             })
-            .where({ id: connectionId })
+            .where({ id: connectionId, deletedAt: IsNull() })
             .setParameters({ at: event.at, first: JSON.stringify(first) })
             .returning("name, environment")
             .execute()
@@ -367,7 +385,12 @@ export class ConnectionsService {
 
     /** Marks the connection as failing with the reason the owner reads on Connections. */
     async markFailing(connectionId: string, reason: string): Promise<void> {
-        await this.entityManager.update(ConnectionEntity, { id: connectionId }, { status: "error", lastError: reason })
+        await this.entityManager.update(ConnectionEntity, { id: connectionId, deletedAt: IsNull() }, { status: "error", lastError: reason })
+    }
+
+    /** A poll ended well after the connection was marked failing: it works again, and the error the owner read clears. Only an `error` status changes. */
+    async markRecovered(connectionId: string): Promise<void> {
+        await this.entityManager.update(ConnectionEntity, { id: connectionId, status: "error", deletedAt: IsNull() }, { status: "connected", lastError: null })
     }
 
     /**
@@ -383,7 +406,7 @@ export class ConnectionsService {
                 lastError: () => "CASE WHEN status IN ('pending', 'error') THEN NULL ELSE last_error END",
                 firstEvent: () => "COALESCE(first_event, :first::jsonb)",
             })
-            .where({ id: connectionId })
+            .where({ id: connectionId, deletedAt: IsNull() })
             .setParameter("first", JSON.stringify(firstEvent))
             .execute()
     }
@@ -398,7 +421,7 @@ export class ConnectionsService {
                 status: () => "CASE WHEN status = 'error' THEN 'connected' ELSE status END",
                 lastError: null,
             })
-            .where({ id: connectionId })
+            .where({ id: connectionId, deletedAt: IsNull() })
             .setParameter(
                 "meta",
                 JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId }),
@@ -408,7 +431,7 @@ export class ConnectionsService {
 
     /**
      * Keeps the display name Zalo reported for the OA (`oa_name`) among the public facts of the connection, so the account reads by its
-     * name ("Tiệm hoa NIVO"). Blank is never written; a long name is cut to 120 characters.
+     * name ("NIVO Flower Shop"). Blank is never written; a long name is cut to 120 characters.
      */
     async applyZaloOaName(connectionId: string, oaName: string): Promise<void> {
         const name = oaName.trim().slice(0, OA_NAME_MAX)
@@ -417,7 +440,7 @@ export class ConnectionsService {
             .createQueryBuilder(ConnectionEntity, "co")
             .update()
             .set({ publicMeta: () => "jsonb_concat(public_meta, CAST(:meta AS jsonb))" })
-            .where({ id: connectionId })
+            .where({ id: connectionId, deletedAt: IsNull() })
             .setParameter("meta", JSON.stringify({ oa_name: name }))
             .execute()
     }
@@ -439,7 +462,7 @@ export class ConnectionsService {
             .createQueryBuilder(ConnectionEntity, "co")
             .update()
             .set({ publicMeta: () => "jsonb_concat(public_meta, CAST(:facts AS jsonb))" })
-            .where({ id: connectionId })
+            .where({ id: connectionId, deletedAt: IsNull() })
             .andWhere("public_meta -> 'wizard' ->> 'ticket' = :ticket", { ticket })
             .setParameter("facts", JSON.stringify(facts))
             .execute()

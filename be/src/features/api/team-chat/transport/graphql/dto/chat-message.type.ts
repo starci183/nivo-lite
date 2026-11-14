@@ -9,6 +9,7 @@ import { ChatReactionType } from "./chat-reaction.type"
 import { ChatReplyType } from "./chat-reply.type"
 import { ChatBrainChangeCardType } from "./chat-brain-change-card.type"
 import { ChatStopCardType } from "./chat-stop-card.type"
+import { ChatBackgroundStoppedCardType } from "./chat-background-stopped-card.type"
 
 @ObjectType()
 /** One message of a room. */
@@ -92,4 +93,8 @@ export class ChatMessageType {
     /** The truth-graph change card (`brain.change`) as this viewer sees it (with what the viewer may do); null for any other line. */
     @Field(() => ChatBrainChangeCardType, { nullable: true })
     brainChange!: ChatBrainChangeCardType | null
+
+    /** NIVO's "background work stopped" card (`background.stopped`): what stopped, why, since when, where to retry; null for any other line. */
+    @Field(() => ChatBackgroundStoppedCardType, { nullable: true })
+    backgroundStopped!: ChatBackgroundStoppedCardType | null
 }

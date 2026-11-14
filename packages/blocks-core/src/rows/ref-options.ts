@@ -1,9 +1,8 @@
 import { LEAD_FACTS, OUTCOME_STEP } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { z } from "zod"
-import { coreNodes } from "../nodes/core-nodes"
-import { nodeTitleOf } from "../nodes/node-ui"
+import { coreNodeViews } from "../nodes/node-lists"
+import { nodeTitleOf, type ViewNode } from "../nodes/node-ui"
 import type { NodeLocale } from "../nodes/node-schema.types"
 import { paramLabelOf } from "./workflow-contract-view"
 
@@ -22,11 +21,11 @@ export interface RefOption {
     readonly ref: string
     /** `= <ref>`, as the pink chip shows it. */
     readonly text: string
-    /** The group the picker lists it under: the step's title, "Đầu vào", "Khách", "Kết quả". */
+    /** The group the picker lists it under: the step's title, "Dau vao", "Khach", "Ket qua". */
     readonly group: string
-    /** The words of the value: "Tư vấn → Sản phẩm". */
+    /** The words of the value: "Tu van -> San pham". */
     readonly label: string
-    /** The words of the member alone ("Sản phẩm"), which the chip shows with its group: "= Sản phẩm · Tư vấn". */
+    /** The words of the member alone ("San pham"), which the chip shows with its group: "= San pham . Tu van". */
     readonly field: string
     /** Its type. */
     readonly type: PickType
@@ -34,9 +33,13 @@ export interface RefOption {
 
 /** One param of a step that takes a binding (a ref or a fixed value). */
 export interface BindableField {
+    /** The name of the field. */
     readonly name: string
+    /** The label the page shows for the field. */
     readonly label: string
+    /** The kind of value the field holds. */
     readonly type: PickType
+    /** True when the field must be given. */
     readonly required: boolean
 }
 
@@ -45,7 +48,7 @@ type JsonSchemaObject = Readonly<Record<string, unknown>>
 const isRecord = (value: unknown): value is JsonSchemaObject =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
-const DEFINITIONS: ReadonlyMap<string, NodeDefinition> = new Map(coreNodes.map((node) => [node.id, node]))
+const DEFINITIONS: ReadonlyMap<string, ViewNode> = new Map(coreNodeViews.map((node) => [node.id, node]))
 
 /** The JSON Schema of a zod schema, or null when it cannot be drawn. */
 const jsonOf = (schema: z.ZodType, io: "input" | "output"): JsonSchemaObject | null => {
@@ -68,21 +71,21 @@ const typeOf = (schema: unknown): PickType => {
     }
     const options = schema.anyOf ?? schema.oneOf
     if (Array.isArray(options)) {
-        const typed = options.map(typeOf).filter((one) => one !== "null" && one !== "unknown")
-        return typed[0] ?? "unknown"
+        const typed = options.map((option) => typeOf(option)).find((one) => one !== "null" && one !== "unknown")
+        return typed ?? "unknown"
     }
     return "unknown"
 }
 
-const PICK_TYPES: ReadonlyArray<PickType> = ["string", "number", "integer", "boolean", "object", "array", "null", "unknown"]
-const isPickType = (text: string): text is PickType => PICK_TYPES.some((one) => one === text)
+const PICK_TYPES: ReadonlySet<string> = new Set<PickType>(["string", "number", "integer", "boolean", "object", "array", "null", "unknown"])
+const isPickType = (text: string): text is PickType => PICK_TYPES.has(text)
 
 /** The properties of an object schema (looking through a nullable union), or none. */
 const propertiesOf = (schema: unknown): ReadonlyArray<readonly [string, unknown]> => {
     if (!isRecord(schema)) return []
     if (isRecord(schema.properties)) return Object.entries(schema.properties)
     const options = schema.anyOf ?? schema.oneOf
-    return Array.isArray(options) ? options.flatMap(propertiesOf) : []
+    return Array.isArray(options) ? options.flatMap((option) => propertiesOf(option)) : []
 }
 
 const requiredOf = (schema: unknown): ReadonlySet<string> =>
@@ -146,9 +149,9 @@ const upstreamOf = (spec: GraphSpec, key: string): ReadonlySet<string> => {
 }
 
 const WORDS: Readonly<Record<"inputs" | "lead" | "outcome", Readonly<Record<NodeLocale, string>>>> = {
-    inputs: { vi: "Đầu vào", en: "Inputs" },
-    lead: { vi: "Khách", en: "Customer" },
-    outcome: { vi: "Kết quả", en: "Outcome" },
+    inputs: { vi: "\u0110\u1ea7u v\u00e0o", en: "Inputs" },
+    lead: { vi: "Kh\u00e1ch", en: "Customer" },
+    outcome: { vi: "K\u1ebft qu\u1ea3", en: "Outcome" },
 }
 
 const option = (ref: string, group: string, label: string, type: PickType, field: string = label): RefOption => ({
@@ -192,7 +195,7 @@ export const refOptionsOf = (
                 option(
                     `steps.${node.key}.output.${member.path}`,
                     title,
-                    `${title} → ${paramLabelOf(member.path, locale)}`,
+                    `${title} \u2192 ${paramLabelOf(member.path, locale)}`,
                     member.type,
                     paramLabelOf(member.path, locale),
                 ),
@@ -209,20 +212,20 @@ export const outputFieldsOf = (
     outputMembersOf(step).map((member) => ({ name: member.path, label: paramLabelOf(member.path, locale), type: member.type }))
 
 /**
- * The words of a ref as its chip shows them, `= <member> · <where>` ("= Khách · Đầu vào", "= Mã đơn · Ghi đơn từ chat"): from the picker's
+ * The words of a ref as its chip shows them, `= <member> . <where>` ("= Khach . Dau vao", "= Ma don . Ghi don tu chat"): from the picker's
  * option when it offers the ref, else worded from the ref itself (a deeper member, a ref this step may no longer read).
  */
 export const refChipTextOf = (spec: GraphSpec, nodeKey: string, ref: string, locale: NodeLocale): string => {
     const offered = refOptionsOf(spec, nodeKey, locale).find((one) => one.ref === ref)
-    if (offered !== undefined) return `= ${offered.field} · ${offered.group}`
+    if (offered !== undefined) return `= ${offered.field} \u00b7 ${offered.group}`
     const [root = "", ...rest] = ref.split(".")
-    if (root === "trigger") return `= ${paramLabelOf(rest.join("."), locale)} · ${WORDS.inputs[locale]}`
-    if (root === "lead") return `= ${paramLabelOf(rest.join("."), locale)} · ${WORDS.lead[locale]}`
-    if (root === "out") return `= ${paramLabelOf(rest.join("."), locale)} · ${WORDS.outcome[locale]}`
+    if (root === "trigger") return `= ${paramLabelOf(rest.join("."), locale)} \u00b7 ${WORDS.inputs[locale]}`
+    if (root === "lead") return `= ${paramLabelOf(rest.join("."), locale)} \u00b7 ${WORDS.lead[locale]}`
+    if (root === "out") return `= ${paramLabelOf(rest.join("."), locale)} \u00b7 ${WORDS.outcome[locale]}`
     if (root === "steps") {
         const [key = "", , ...path] = rest
         const step = spec.nodes.find((node) => node.key === key)?.step ?? key
-        return `= ${paramLabelOf(path.join("."), locale)} · ${nodeTitleOf({ id: step }, locale)}`
+        return `= ${paramLabelOf(path.join("."), locale)} \u00b7 ${nodeTitleOf({ id: step }, locale)}`
     }
     return `= ${ref}`
 }

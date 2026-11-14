@@ -1,13 +1,22 @@
 "use client"
 
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import type { GraphView } from "@nivo-lite/blocks-core/graph"
+import { type GraphView } from "@/modules/plugin-registry"
+import type { FlowGraphChip } from "@starci/grammar/common"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { useCallback, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { mapSlot } from "@/hooks/slot"
 import { useMutatePublishAgentWorkflowVersionSwr } from "@/hooks/swr"
+import { WORKFLOW_STEP_PARAM } from "@/modules/routes"
 import { toast } from "@/modules/toast"
 import {
+    accountChipsOf,
     changesOf,
+    stepAccountsViewOf,
+    withAccountAdded,
+    withAccountRemoved,
+    withNodeMode,
     formOfNode,
     graphOfSpec,
     patchedSpecOf,
@@ -19,9 +28,17 @@ import {
     withCallTarget,
     withSource,
     withStepAfter,
+    type StepForm,
+    type StepWords,
 } from "@/modules/workflowSteps"
-import type { StepForm, StepWords } from "@/modules/workflowSteps"
-import type { StepAction, StepDrawerView, StepsMapView } from "@/modules/types"
+import type {
+    AgentRightAccountView,
+    StepAccountsSlotView,
+    StepAction,
+    StepDrawerView,
+    StepsMapView,
+} from "@/modules/types"
+import { useStepAccounts } from "./useStepAccounts"
 
 /** The workflow a save writes to: its id and the newest version number the page read. */
 interface StepsWorkflow {
@@ -140,8 +157,8 @@ const useStepSave = (save: StepSaveInput): { readonly run: () => void; readonly 
         const working = state.draft ?? spec
         const title = map.nodes.find((entry) => entry.id === state.openKey)?.label ?? node?.label ?? ""
         setState((current) => ({ ...current, error: "" }))
-        void publish
-            .trigger({
+        const road = async (): Promise<void> => {
+            await publish.trigger({
                 installationId,
                 workflowId: workflow.id,
                 graphJson: JSON.stringify(
@@ -150,21 +167,26 @@ const useStepSave = (save: StepSaveInput): { readonly run: () => void; readonly 
                 note: t("saveNote", { step: title }),
                 expectedLatest: workflow.latestNumber,
             })
-            .then(async () => {
-                toast.success(t("savedTitle"), { description: t("saved", { number: workflow.latestNumber + 1 }) })
-                setState(() => SHUT)
-                await onSaved?.()
-            })
-            .catch((failure: unknown) =>
-                setState((current) => ({ ...current, error: messageOf(failure, t("saveFailed")) })),
-            )
+            toast.success(t("savedTitle"), { description: t("saved", { number: workflow.latestNumber + 1 }) })
+            setState(() => SHUT)
+            await onSaved?.()
+        }
+        void road().catch((error: unknown) =>
+            setState((current) => ({ ...current, error: messageOf(error, t("saveFailed")) })),
+        )
     }, [graph, map.nodes, state, workflow, spec, publish, installationId, t, onSaved, setState])
     return { run, isSaving: publish.isMutating }
 }
 
+/** A spec with the key of the step to open. */
+interface OpenedSpec {
+    readonly spec: GraphSpec
+    readonly key: string
+}
+
 /** The state after a structural edit of the drawer: a new step (opened), a binding, a source, a target. */
 const editedState = (current: StepState, spec: GraphSpec, action: StepAction): StepState => {
-    const opened = (next: { readonly spec: GraphSpec; readonly key: string }): StepState => ({
+    const opened = (next: OpenedSpec): StepState => ({
         ...current,
         draft: next.spec,
         openKey: next.key,
@@ -188,15 +210,56 @@ const editedState = (current: StepState, spec: GraphSpec, action: StepAction): S
             return { ...current, draft: withSource(spec, action.triggerKey, action.source) }
         case "set-call":
             return { ...current, draft: withCallTarget(spec, current.openKey, action.target) }
-        default:
+        case "account-add":
+        case "account-remove":
+        case "change":
+        case "close":
+        case "node-mode":
+        case "open":
+        case "save":
             return current
     }
 }
 
+/** The state after an edit of the open step's rights (the node's mode, an account joining or leaving); anything else is left as it is. */
+const accountEditedState = (
+    current: StepState,
+    spec: GraphSpec,
+    action: StepAction,
+    attached: ReadonlyArray<AgentRightAccountView> | undefined,
+): StepState => {
+    const draft = (next: GraphSpec): StepState => ({ ...current, draft: next })
+    switch (action.kind) {
+        case "account-add": {
+            const account = attached?.find((one) => one.connectionId === action.connectionId)
+            return account === undefined ? current : draft(withAccountAdded(spec, current.openKey, account))
+        }
+        case "account-remove":
+            return draft(withAccountRemoved(spec, current.openKey, action.index))
+        case "node-mode":
+            return draft(withNodeMode(spec, current.openKey, action.mode))
+        case "add":
+        case "bind":
+        case "change":
+        case "close":
+        case "open":
+        case "pick-step":
+        case "save":
+        case "set-call":
+        case "set-source":
+            return current
+    }
+}
+
+/** The loading shape of the accounts section: its real titles, one row. */
+const placeholderGroup = { index: 0, name: "-", line: "-" }
+
+/** The key of the step the address names (`?step=<node>`), or an empty string. */
+const useWantedStep = (): string => useSearchParams().get(WORKFLOW_STEP_PARAM) ?? ""
+
 /**
  * The card map of a workflow and the drawer of its steps: pressing a step opens its settings as a form; saving writes the next version
- * of that workflow. A refusal (a newer version, a change that widens the agent's rights for a manager) stays in the drawer in the
- * back end's words.
+ * of that workflow. A refusal (a newer version) stays in the drawer in the back end's words. `?step=<node>` opens that step.
  */
 export const useWorkflowSteps = (input: WorkflowStepsInput): WorkflowSteps => {
     const locale = stepsLocaleOf(useLocale())
@@ -204,10 +267,39 @@ export const useWorkflowSteps = (input: WorkflowStepsInput): WorkflowSteps => {
     const read = useMemo(() => specOf(input.graph), [input.graph])
     const spec = state.draft ?? read
     const graph = useMemo(() => graphOfSpec(spec, locale), [spec, locale])
-    const map = useMemo(() => stepsMapOf(graph, locale), [graph, locale])
+    const accounts = useStepAccounts(input.installationId)
+    const { attached, words: accountWords } = accounts
+    const baseMap = useMemo(() => stepsMapOf(graph, locale), [graph, locale])
+    // Each card's accounts as chips: the signature keeps the map the same object while nothing on the cards changed.
+    const chips: Readonly<Record<string, ReadonlyArray<FlowGraphChip>>> =
+        attached === undefined
+            ? {}
+            : Object.fromEntries(
+                  graph.nodes.map((node) => [node.id, accountChipsOf(spec, node.id, attached, accountWords)]),
+              )
+    const chipsKey = JSON.stringify(chips)
+    const map = useMemo<StepsMapView>(() => {
+        const own = JSON.parse(chipsKey) as Record<string, ReadonlyArray<FlowGraphChip>>
+        return {
+            ...baseMap,
+            nodes: baseMap.nodes.map((node) => {
+                const added = own[node.id] ?? []
+                return added.length === 0 ? node : { ...node, chips: [...(node.chips ?? []), ...added] }
+            }),
+        }
+    }, [baseMap, chipsKey])
     const words = useStepWords(input.isReadOnly === true)
     const save = useStepSave({ input, spec: read, graph, map, state, setState })
-    const drawer = stepDrawerOf(
+    const wanted = useWantedStep()
+    const opened = useRef("")
+    useEffect(() => {
+        const node = graph.nodes.find((one) => one.id === wanted)
+        if (wanted === "" || node === undefined || opened.current === wanted) return
+        opened.current = wanted
+        setState((current) => ({ ...current, openKey: wanted, form: formOfNode(node), error: "", picking: null }))
+    }, [wanted, graph])
+    const nextNumber = (input.workflow?.latestNumber ?? 0) + 1
+    const base = stepDrawerOf(
         {
             spec,
             isPicking: state.picking !== null,
@@ -217,12 +309,31 @@ export const useWorkflowSteps = (input: WorkflowStepsInput): WorkflowSteps => {
             nodeKey: state.openKey,
             form: state.form,
             isReadOnly: input.isReadOnly === true || input.workflow === null,
-            nextNumber: (input.workflow?.latestNumber ?? 0) + 1,
+            nextNumber,
             isSaving: save.isSaving,
             error: state.error,
         },
         words,
     )
+    const hasStep = spec?.nodes.some((node) => node.key === state.openKey) === true
+    const accountsView: StepAccountsSlotView | undefined =
+        accounts.isKnown && hasStep
+            ? {
+                  slot: mapSlot(accounts.slot, (list) =>
+                      stepAccountsViewOf(spec, state.openKey, list, accountWords, base.isReadOnly),
+                  ),
+                  placeholder: {
+                      ...stepAccountsViewOf(spec, state.openKey, [], accountWords, true),
+                      accounts: [placeholderGroup],
+                  },
+                  labels: accounts.slotLabels,
+                  retry: accounts.retry,
+              }
+            : undefined
+    const drawer: StepDrawerView = {
+        ...base,
+        ...(accountsView === undefined ? {} : { accounts: accountsView }),
+    }
     return {
         map,
         selectedId: state.openKey === "" ? null : state.openKey,
@@ -234,9 +345,17 @@ export const useWorkflowSteps = (input: WorkflowStepsInput): WorkflowSteps => {
                 return setState((current) => ({ ...current, form: { ...current.form, [action.name]: action.value } }))
             if (action.kind === "open") {
                 const node = graph.nodes.find((one) => one.id === action.nodeKey)
-                return setState((current) => ({ ...current, openKey: action.nodeKey, form: formOfNode(node), error: "", picking: null }))
+                return setState((current) => ({
+                    ...current,
+                    openKey: action.nodeKey,
+                    form: formOfNode(node),
+                    error: "",
+                    picking: null,
+                }))
             }
             if (spec === null || input.isReadOnly === true) return undefined
+            if (action.kind.startsWith("account-") || action.kind === "node-mode")
+                return setState((current) => accountEditedState(current, spec, action, attached))
             return setState((current) => editedState(current, spec, action))
         },
     }

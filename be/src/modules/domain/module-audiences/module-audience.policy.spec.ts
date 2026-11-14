@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { catalogAudienceOf as realCatalogAudienceOf, MODULE_AUDIENCES } from "./module-audience.policy"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { catalogAudienceOf as realCatalogAudienceOf } from "./module-audience.policy"
 
 const SUBJECT = Symbol("module-audience.policy")
 type Subject = { catalogAudienceOf: typeof realCatalogAudienceOf }
@@ -12,20 +13,17 @@ const buildSubject = async () => {
 }
 
 describe("catalogAudienceOf", () => {
-    it("answers the audience of a catalogued module", async () => {
+    it("answers the audience each installed module's template declares", async () => {
         const subject = await buildSubject()
 
-        expect(subject.catalogAudienceOf("chatbot")).toBe("customer")
-        expect(subject.catalogAudienceOf("accounting")).toBe("internal")
+        for (const server of INSTALLED.servers()) {
+            expect(subject.catalogAudienceOf(server.key)).toBe(server.template.audience)
+        }
     })
 
-    it("answers null for a key the catalogue does not carry", async () => {
+    it("answers null for a key no installed module carries", async () => {
         const subject = await buildSubject()
 
         expect(subject.catalogAudienceOf("nonsense")).toBeNull()
-    })
-
-    it("carries one audience for each of the eleven modules", () => {
-        expect(Object.keys(MODULE_AUDIENCES)).toHaveLength(11)
     })
 })

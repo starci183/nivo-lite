@@ -1,7 +1,5 @@
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import { coreNodes } from "./core-nodes"
-import { paramFieldsOf } from "./node-params"
-import type { ParamField } from "./node-params"
+import { coreNodeViews } from "./node-lists"
+import { paramFieldsOf, type ParamField } from "./node-params"
 import type { NodeLocale } from "./node-schema.types"
 import {
     NODE_HEROICONS,
@@ -12,8 +10,10 @@ import {
     nodeSubtitleOf,
     nodeTitleOf,
     nodeUiOf,
+    type NodeIcon,
+    type NodeKind,
+    type ViewNode,
 } from "./node-ui"
-import type { NodeIcon, NodeKind } from "./node-ui"
 
 /** One named output of a condition: the id a graph routes on and the words for it. */
 export interface NodeOutputView {
@@ -65,7 +65,7 @@ const cardOf = (
 
 /** The card of a node, in one language. */
 export const nodeCardOf = (
-    node: NodeDefinition,
+    node: ViewNode,
     locale: NodeLocale,
     values: Readonly<Record<string, unknown>> = {},
 ): NodeCard =>
@@ -79,10 +79,10 @@ export const triggerCardOf = (locale: NodeLocale): NodeCard =>
 export const stopCardOf = (locale: NodeLocale): NodeCard =>
     cardOf(STOP_STEP_ID, nodeTitleOf({ id: STOP_STEP_ID }, locale), locale, [], [])
 
-/** The cards of every core node, the trigger and the end, by id, in one language. */
+/** The cards of every installed step of blocks-core (control and template nodes), the trigger and the end, by id, in one language. */
 export const nodeCardsOf = (locale: NodeLocale): ReadonlyMap<string, NodeCard> =>
     new Map<string, NodeCard>([
-        ...coreNodes.map((node): [string, NodeCard] => [node.id, nodeCardOf(node, locale)]),
+        ...coreNodeViews.map((node): [string, NodeCard] => [node.id, nodeCardOf(node, locale)]),
         [TRIGGER_STEP, triggerCardOf(locale)],
         [STOP_STEP_ID, stopCardOf(locale)],
     ])

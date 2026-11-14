@@ -1,10 +1,10 @@
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import {
     ANSWER,
     COMPLAINT,
+    CONTACT,
     CONV,
     CORE,
-    FRONT,
     UNDERSTAND,
     WS,
     actsOf,
@@ -20,7 +20,20 @@ import {
     stopsOf,
     threadDbOf,
     type ThreadDb,
+    ZALO,
+    ZALO_USER,
 } from "./thread-world"
+
+// The world's desk installed beside the core: an agent step that acts itself, on the template road (`thread-desk-plugin.builder.ts`).
+jest.mock("@nivo-lite/plugin-registry", () => {
+    const parts: typeof import("@tests/fixtures/builders/installation-parts.builder") = jest.requireActual(
+        "@tests/fixtures/builders/installation-parts.builder",
+    )
+    const desk: typeof import("@tests/fixtures/builders/thread-desk-plugin.builder") = jest.requireActual(
+        "@tests/fixtures/builders/thread-desk-plugin.builder",
+    )
+    return { installed: parts.installationWith([desk.DESK_PLUGIN], "world-desk") }
+})
 
 // Package 0-9, items 6 and 8: the stop of a thread, with the real stops (records, cards, gate) and the real projection.
 
@@ -39,7 +52,7 @@ const sends = (text: string) => ({ call: { tool: TOOL.customerMessageSend, args:
 
 /** The answer step cannot go on; the AI core reports: one stop of kind ai_report at `answer`. */
 const stopsAtAnswer = async (db: ThreadDb) => {
-    db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+    db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
     db.model.script(ANSWER, { confused: { reason: "Khong ro gio mo cua", question: "Shop mo may gio?" } })
     db.model.script(CORE, report())
     const process = await processOf(db)
@@ -67,7 +80,7 @@ describe("a stop for a run with no customer at all (the bank-fed shape: no lead,
             stepKey: "understand",
             kind: "ai_report",
             state: "open",
-            leadId: null,
+            contactId: null,
             conversationId: null,
             repeats: 1,
         })
@@ -168,7 +181,6 @@ describe("a stop with a conversation", () => {
             rewrite: { stop: { state: "skipped", resolvedAt: expect.any(String) } },
         })
         expect(rowsOf(db, runId).run).toMatchObject({ status: "cancelled" })
-        expect(db.released).toContain(FRONT)
     })
 
     it("take over: the thread stays at the gate, the run waits as taken over; a later answer still runs the step", async () => {
@@ -197,14 +209,22 @@ describe("a side node (blocking: false) that fails (item 8)", () => {
             ...flow,
             nodes: flow.nodes.map((node) => (node.key === "complaint" ? { ...node, blocking: false } : node)),
         }
-        db.model.script(UNDERSTAND, { answer: { branch: "complaint", summary: "Lan: hoa heo" } })
+        db.model.script(UNDERSTAND, { done: { branch: "complaint", summary: "Lan: hoa heo" } })
         db.model.script(COMPLAINT, { confused: { reason: "Khong ro don nao", question: null } })
         const process = await processOf(db)
         const started = await startThread(process, {
             flow: variant,
             versionId: "chatbot-agent:front-desk@9",
-            trigger: { conversationId: CONV, text: "Hoa heo het roi", channel: "zalo", leadId: "lead-1" },
-            scopeKey: `conversation:${CONV}`,
+            // The generic trigger scope of a channel message (the one event pipeline): the route, the person, the account, the subject and the line in `data`.
+            trigger: {
+                eventId: "m-side",
+                routeId: CONV,
+                contactId: CONTACT,
+                accountId: ZALO,
+                subject: { channel: "zalo", id: ZALO_USER },
+                data: { messageKey: "zalo:m-side", text: "Hoa heo het roi", at: null, files: [] },
+            },
+            scopeKey: `key:routeId=${CONV}`,
         })
 
         expect(started.error).toBeNull()

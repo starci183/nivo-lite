@@ -1,4 +1,5 @@
 import type { MessageBundle } from "@modules/platform/i18n"
+import type { FieldWords } from "@modules/domain/connection-fields"
 
 /** Display text of the channel-connections codes, Vietnamese and English. */
 export const CHANNEL_CONNECTIONS_MESSAGES: MessageBundle = {
@@ -45,4 +46,21 @@ export const CHANNEL_CONNECTIONS_MESSAGES: MessageBundle = {
         "errors.CHANNEL_CONNECTIONS_PROVIDER_UNSUPPORTED": "Something went wrong. Please try again.",
         "errors.CHANNEL_CONNECTIONS_FAILED": "Something went wrong. Please try again.",
     },
+}
+
+/** One field word in both languages. */
+const wordsOf = (vi: string, en: string): FieldWords => ({ vi, en })
+
+/** The words of a bank feed's connection form fields (Kết nối card). */
+export const MONEY_FIELD_WORDS: Readonly<
+    Record<"bankCode" | "accountNumber" | "holder" | "environment" | "apiKey" | "test" | "live" | "webhookUrl", FieldWords>
+> = {
+    bankCode: wordsOf("Mã ngân hàng", "Bank code"),
+    accountNumber: wordsOf("Số tài khoản", "Account number"),
+    holder: wordsOf("Chủ tài khoản", "Account holder"),
+    environment: wordsOf("Môi trường", "Environment"),
+    apiKey: wordsOf("Khoá API của SePay", "SePay API key"),
+    test: wordsOf("Thử nghiệm", "Test"),
+    live: wordsOf("Chính thức", "Live"),
+    webhookUrl: wordsOf("URL nhận webhook", "Webhook address"),
 }

@@ -9,6 +9,7 @@ import type {
     TranscriptOutcome,
     Transcriber,
 } from "./document-readers.contracts"
+import { DocumentReadersError, DocumentReadersErrorCode } from "./errors/document-readers.error"
 import { readPdf } from "./pdf-reader.client"
 
 /** The first bytes of a PDF: the reader checks them before it opens anything. */
@@ -49,10 +50,10 @@ const tools = () => {
 }
 
 const librariesOf = (pdf: PdfDocument | Error, pictures: PictureTools = tools().pictures): DocumentLibraries => ({
-    wordToHtml: () => Promise.reject(new Error("unused")),
+    wordToHtml: () => Promise.reject(new DocumentReadersError({ code: DocumentReadersErrorCode.LibraryMissing, params: { library: "unused" } })),
     openPdf: () => (pdf instanceof Error ? Promise.reject(pdf) : Promise.resolve(pdf)),
     pictures: () => Promise.resolve(pictures),
-    heicToJpeg: () => Promise.reject(new Error("unused")),
+    heicToJpeg: () => Promise.reject(new DocumentReadersError({ code: DocumentReadersErrorCode.LibraryMissing, params: { library: "unused" } })),
 })
 
 /** A transcriber scripted by page label; it keeps the pages it was sent. */
@@ -70,15 +71,15 @@ const scripted = (answer: (label: string) => TranscriptOutcome) => {
 describe("pdf reader", () => {
     it("reads a PDF with a text layer page by page and never calls the model", async () => {
         const { transcriber, sent } = scripted(() => ok("never"))
-        const read = await readPdf(PDF, librariesOf(pdfOf(["Bảng giá tháng 11", "Hồng đỏ 35.000"])), transcriber)
+        const read = await readPdf(PDF, librariesOf(pdfOf(["B\u1EA3ng gi\u00E1 th\u00E1ng 11", "H\u1ED3ng \u0111\u1ECF 35.000"])), transcriber)
         expect(read).toEqual({
             kind: "ok",
             value: {
                 reader: "pdf",
-                text: "Bảng giá tháng 11\n\nHồng đỏ 35.000",
+                text: "B\u1EA3ng gi\u00E1 th\u00E1ng 11\n\nH\u1ED3ng \u0111\u1ECF 35.000",
                 pages: [
-                    { kind: "page", label: "1", text: "Bảng giá tháng 11", transcribed: false },
-                    { kind: "page", label: "2", text: "Hồng đỏ 35.000", transcribed: false },
+                    { kind: "page", label: "1", text: "B\u1EA3ng gi\u00E1 th\u00E1ng 11", transcribed: false },
+                    { kind: "page", label: "2", text: "H\u1ED3ng \u0111\u1ECF 35.000", transcribed: false },
                 ],
                 pageCount: 2,
                 sheetCount: null,
@@ -91,15 +92,15 @@ describe("pdf reader", () => {
 
     it("transcribes a scanned page from its largest picture, one call per page, and names a page it could not read", async () => {
         const { pictures, calls } = tools()
-        const pdf = pdfOf(["Trang chữ", "", " 3 "], (page) => (page === 2 ? [LOGO, SCAN] : [SCAN]))
+        const pdf = pdfOf(["Trang ch\u1EEF", "", " 3 "], (page) => (page === 2 ? [LOGO, SCAN] : [SCAN]))
         const { transcriber, sent } = scripted((label) =>
-            label === "2" ? ok("Hoa cưới | 1.200.000") : refused("failed"),
+            label === "2" ? ok("Hoa c\u01B0\u1EDBi | 1.200.000") : refused("failed"),
         )
         const read = await readPdf(PDF, librariesOf(pdf, pictures), transcriber)
         expect(read).toMatchObject({
             kind: "ok",
             value: {
-                text: "Trang chữ\n\nHoa cưới | 1.200.000",
+                text: "Trang ch\u1EEF\n\nHoa c\u01B0\u1EDBi | 1.200.000",
                 transcribed: true,
                 warnings: [
                     { code: DocumentWarningCode.PageTranscribed, place: "2", count: null },
@@ -113,7 +114,7 @@ describe("pdf reader", () => {
 
     it("paints a page with no text and no picture when a painter is installed, and says so when none is", async () => {
         const painted = tools()
-        const { transcriber } = scripted(() => ok("Vẽ tay: hoa ly 50k"))
+        const { transcriber } = scripted(() => ok("V\u1EBD tay: hoa ly 50k"))
         const withPainter = await readPdf(
             PDF,
             librariesOf(
@@ -122,7 +123,7 @@ describe("pdf reader", () => {
             ),
             transcriber,
         )
-        expect(withPainter).toMatchObject({ kind: "ok", value: { text: "Vẽ tay: hoa ly 50k", transcribed: true } })
+        expect(withPainter).toMatchObject({ kind: "ok", value: { text: "V\u1EBD tay: hoa ly 50k", transcribed: true } })
         expect(painted.calls.file).toBe(1)
         const without = await readPdf(PDF, librariesOf(pdfOf([""], () => [LOGO], null)), transcriber)
         expect(without).toMatchObject({ code: DocumentRefusalCode.ReaderUnavailable })
@@ -163,11 +164,11 @@ describe("pdf reader", () => {
     })
 
     it("names every scanned page unreadable when there is no transcriber but other pages have text", async () => {
-        const read = await readPdf(PDF, librariesOf(pdfOf(["Có chữ", ""])), null)
+        const read = await readPdf(PDF, librariesOf(pdfOf(["C\u00F3 ch\u1EEF", ""])), null)
         expect(read).toMatchObject({
             kind: "ok",
             value: {
-                text: "Có chữ",
+                text: "C\u00F3 ch\u1EEF",
                 warnings: [{ code: DocumentWarningCode.PageUnreadable, place: "2", count: null }],
             },
         })
@@ -187,6 +188,7 @@ describe("pdf reader", () => {
         const broken: PdfDocument = { ...pdfOf(["x"]), pageTexts: () => Promise.reject(new Error("bad stream")) }
         await expect(readPdf(PDF, librariesOf(broken), null)).resolves.toMatchObject({
             code: DocumentRefusalCode.Unreadable,
+            cause: expect.objectContaining({ message: "bad stream" }),
         })
         await expect(readPdf(PDF, librariesOf(pdfOf([" 1 ", "2"])), null)).resolves.toMatchObject({
             code: DocumentRefusalCode.TranscriptionUnavailable,

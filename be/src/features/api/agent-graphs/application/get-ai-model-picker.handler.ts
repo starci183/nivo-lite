@@ -1,9 +1,8 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { InjectAiTasks } from "@modules/domain/ai-tasks"
-import type { AiTasksService, ModelPicker } from "@modules/domain/ai-tasks"
+import type { ModelPicker } from "@modules/domain/ai-tasks"
+import { AgentModelPickerService } from "@modules/domain/agent-pages"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetAiModelPickerQuery } from "./get-ai-model-picker.query"
 
 @QueryHandler(GetAiModelPickerQuery)
@@ -14,12 +13,12 @@ import { GetAiModelPickerQuery } from "./get-ai-model-picker.query"
 export class GetAiModelPickerHandler extends ICQRSHandler<GetAiModelPickerQuery, ModelPicker> {
     constructor(
         @InjectLogger() logger: Logger,
-        @InjectAiTasks() private readonly ai: AiTasksService,
+        private readonly pickers: AgentModelPickerService,
     ) {
         super(logger)
     }
 
     protected override process(query: GetAiModelPickerQuery): Promise<ModelPicker> {
-        return Promise.resolve(this.ai.modelPicker(query.params.request.locale === "en" ? "en" : "vi"))
+        return this.pickers.picker(query.params.request.locale)
     }
 }

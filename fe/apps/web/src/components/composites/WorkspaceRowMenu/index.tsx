@@ -1,5 +1,4 @@
-import { DropdownMenu, IconButton } from "@starci/grammar/common"
-import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
+import { DropdownMenu, IconButton, type DropdownMenuEntry, type DropdownMenuItem } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { WorkspaceMenuCommand, WorkspaceMenuView } from "@/modules/types"
 

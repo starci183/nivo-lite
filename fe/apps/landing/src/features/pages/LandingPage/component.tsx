@@ -36,8 +36,7 @@ export const LandingPageBase = (props: LandingPageBaseProps) => (
             </>
         }
         body={
-            <>
-                <Page measure="product">
+            <Page measure="product">
                     <Stack gap="region">
                         <LandingHero />
                         <LandingTrustStrip />
@@ -51,7 +50,6 @@ export const LandingPageBase = (props: LandingPageBaseProps) => (
                         <LandingFooter anchorBase="" />
                     </Stack>
                 </Page>
-            </>
         }
     />
 )

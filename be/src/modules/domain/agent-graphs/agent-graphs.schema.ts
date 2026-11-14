@@ -1,10 +1,19 @@
 import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import { branchModeRead } from "@nivo-lite/agent-sdk/template"
 import { z } from "zod"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { MAX_LIMITS, MAX_LIMIT_LENGTH, MAX_TASK_LENGTH } from "./agent-graphs-contract.contracts"
-import { MAX_CONDITION_TERMS, MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "./agent-graphs.contracts"
-import type { DataRight } from "@modules/domain/mcp-gateway"
-import type { Condition, GraphDocument, GraphNodeKind, GraphNodeStep, ToolUse } from "./agent-graphs.contracts"
+import {
+    MAX_CONDITION_TERMS,
+    MAX_DOES_LENGTH,
+    MAX_GRAPH_NODES,
+    MAX_TITLE_LENGTH,
+    type Condition,
+    type GraphDocument,
+    type GraphNodeKind,
+    type GraphNodeStep,
+    type ToolUse,
+} from "./agent-graphs.contracts"
 
 const factValueSchema = z.union([z.string().max(200), z.number(), z.boolean()])
 
@@ -75,17 +84,25 @@ const sourceSchema = z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("rule"), action: z.string().max(200) }).strict(),
 ])
 
-const branchSchema = z
-    .object({
-        key: z.string().min(1).max(60),
-        when: z.union([conditionSchema, z.literal("else")]),
-        then: z.enum(["auto", "ask", "stop"]),
-        next: z.string().min(1).max(60),
-        approver: approverSchema.nullable(),
-        sources: z.array(sourceSchema).max(10),
-        selfCorrected: z.boolean().optional(),
-    })
-    .strict()
+/**
+ * One branch of a decide point. A version stored before the member was named `mode` still holds it under its old name: it is read
+ * as `mode` here (`branchModeRead`), the one place a stored graph is parsed, and never rewritten. A branch carrying both members is
+ * refused, since the strict object knows only `mode`.
+ */
+const branchSchema = z.preprocess(
+    branchModeRead,
+    z
+        .object({
+            key: z.string().min(1).max(60),
+            when: z.union([conditionSchema, z.literal("else")]),
+            mode: z.enum(["auto", "ask", "stop"]),
+            next: z.string().min(1).max(60),
+            approver: approverSchema.nullable(),
+            sources: z.array(sourceSchema).max(10),
+            selfCorrected: z.boolean().optional(),
+        })
+        .strict(),
+)
 
 const nodeSchema = z
     .object({
@@ -146,16 +163,6 @@ const nodeSchema = z
             .optional(),
         handoverTo: z.string().max(100).optional(),
         triggerSources: z.array(z.string().min(1).max(40)).max(10).optional(),
-    })
-    .strict()
-
-/** A data right of a graph: what it opens, to whom it reaches and what it hides or masks. */
-export const graphRightSchema: z.ZodType<DataRight> = z
-    .object({
-        kind: z.enum(["brain", "customers", "documents", "payments", "channels", "invoices"]),
-        scope: z.enum(["conversation", "workspace"]),
-        hide: z.array(z.string().max(60)).max(40),
-        mask: z.array(z.string().max(60)).max(40),
     })
     .strict()
 
@@ -280,8 +287,10 @@ export const intentBusinessSchema: z.ZodObject<
 export const graphDocumentSchema: z.ZodType<GraphDocument> = z
     .object({
         nodes: z.array(nodeSchema).max(MAX_GRAPH_NODES * 2),
-        rights: z.array(graphRightSchema).max(10),
+        /** Legacy: an old row stored data rights here. They are accepted and dropped, so an old row still reads. */
+        rights: z.unknown().optional(),
         contracts: z.array(intentBusinessSchema).max(MAX_GRAPH_NODES).optional(),
         flow: graphSpecSchema.optional(),
     })
     .strict()
+    .transform(({ rights: _legacyRights, ...document }) => document)

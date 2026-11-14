@@ -16,7 +16,7 @@ export {
     modelEntryOf,
 } from "./models"
 export type { ModelChoice, ModelEntry, ModelId, ModelProvider, RetiredModelEntry, RetiredModelId, StepWeight } from "./models"
-export { ENGINE_CORE_MODEL, NODE_MODELS, graphModelProblems, nodeModelOf, withDeclaredModels } from "./node-models"
-export type { GraphModelProblem, NodeModel } from "./node-models"
+export { ENGINE_CORE_MODEL, NODE_MODELS, nodeModelOf } from "./node-models"
+export type { NodeModel, NodeWorkKind } from "./node-models"
 export { EMBEDDING_PROFILE, EMBEDDING_PROFILES, OPENAI_EMBEDDING_MODEL, embeddingIdentityOf } from "./embeddings"
 export type { EmbeddingModelOfProfile } from "./embeddings"

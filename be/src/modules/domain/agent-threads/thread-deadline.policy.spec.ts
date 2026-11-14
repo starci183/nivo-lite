@@ -1,4 +1,4 @@
-import type { RunStopAnswer } from "@nivo-lite/blocks-core/entities"
+import type { RunStopAnswer } from "./stops/run-stop.shapes"
 import {
     APPROVAL_DEADLINE_MS,
     OWNER_DEADLINE_MS,
@@ -26,6 +26,17 @@ describe("deadlineWindowOf", () => {
     it("sets no deadline on an engine stop, nor on a stop a deadline already answered (one timeout per stop)", () => {
         expect(deadlineWindowOf({ kind: "engine", answers: [] }, "2h")).toBeNull()
         expect(deadlineWindowOf({ kind: "approval", answers: [answer("timeout")] }, undefined)).toBeNull()
+    })
+
+    // Ruling R52: a take-over disarms the stop's deadline (no step re-run under the person's hold, no race with the hand-back's close).
+    it("sets no deadline on a stop a person took over, whatever its kind or the template's wait; a later retry or words arm it again", () => {
+        const taken = answer("take_over")
+        expect(deadlineWindowOf({ kind: "ai_report", answers: [taken], decision: taken }, undefined)).toBeNull()
+        expect(deadlineWindowOf({ kind: "approval", answers: [taken], decision: taken }, "2h")).toBeNull()
+        const retried = answer("retry")
+        expect(deadlineWindowOf({ kind: "ai_report", answers: [taken, retried], decision: retried }, undefined)).toBe(OWNER_DEADLINE_MS)
+        const words = answer("answer")
+        expect(deadlineWindowOf({ kind: "ai_error", answers: [taken, words], decision: words }, "30m")).toBe(1_800_000)
     })
 })
 

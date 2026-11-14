@@ -7,9 +7,13 @@ import { KnowledgeDriveService, KnowledgeReembedService, KnowledgeSearchService 
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { DocumentAreaService } from "./document-area.service"
 import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
+import { JOB_TICKS } from "@modules/platform/jobs/job-ticks.contracts"
+import { KNOWLEDGE_QUEUE, KnowledgeJob } from "@modules/queues/knowledge"
 import { BrainLogEvent } from "./brain.log-events"
+import { BRAIN_UPKEEP_PAYLOAD, isUpkeepTick } from "./command-job.policy"
 import { BrainService } from "./brain.service"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
 
@@ -85,6 +89,7 @@ const build = async (command: CommandRecord | null = commandOf()) => {
     const search = mock<KnowledgeSearchService>({ ask: jest.fn(() => Promise.resolve([])) })
     const drive = mock<KnowledgeDriveService>()
     const reembed = mock<KnowledgeReembedService>()
+    const areas = mock<DocumentAreaService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainCommandRunnerService,
@@ -96,10 +101,12 @@ const build = async (command: CommandRecord | null = commandOf()) => {
             { provide: KnowledgeSearchService, useValue: search },
             { provide: KnowledgeDriveService, useValue: drive },
             { provide: KnowledgeReembedService, useValue: reembed },
+            { provide: DocumentAreaService, useValue: areas },
         ],
     }).compile()
     return {
         runner: moduleRef.get(BrainCommandRunnerService),
+        areas,
         logger,
         commands,
         brain,
@@ -262,12 +269,13 @@ describe("BrainCommandRunnerService run", () => {
             module: "sales",
             visibility: "internal",
         }
-        const { runner, commands, sources } = await build(commandOf({ kind: "source.update", payload: update }))
-        sources.updateSource.mockResolvedValue()
+        const { runner, commands, areas } = await build(commandOf({ kind: "source.update", payload: update }))
+        areas.update.mockResolvedValue()
 
         await expect(runner.run(PAYLOAD)).resolves.toBe("done")
 
-        expect(sources.updateSource.mock.calls).toEqual([["user-1", "ws-1", update]])
+        // One door for a change of metadata: a change of area moves the document's truths too.
+        expect(areas.update.mock.calls).toEqual([["user-1", "ws-1", update]])
         expect(commands.finish.mock.calls).toEqual([["ws-1", "cmd-1", null]])
     })
 
@@ -372,5 +380,34 @@ describe("BrainCommandRunnerService giveUp", () => {
         await runner.giveUp({ other: true })
 
         expect(commands.fail.mock.calls).toEqual([["ws-1", "cmd-1", "BRAIN_COMMAND_FAILED"]])
+    })
+})
+
+describe("BrainCommandRunnerService: the timed upkeep tick (BR1)", () => {
+    it("answers the tick of the one app scheduler with the upkeep, reading no command row", async () => {
+        const { runner, brain, commands } = await build()
+        brain.upkeep.mockResolvedValue({ workspaces: 1, activated: 1, expired: 0, failed: 0, vectors: 0, readingsResumed: 0 })
+
+        await expect(runner.run({ ...BRAIN_UPKEEP_PAYLOAD })).resolves.toBe("done")
+
+        expect(brain.upkeep).toHaveBeenCalledTimes(1)
+        expect(commands.get).not.toHaveBeenCalled()
+    })
+
+    it("is wired to the tick: JOB_TICKS names this queue, job and payload, every 5 minutes, once (one timer system)", () => {
+        const ticks = JOB_TICKS.filter((tick) => tick.name === "brain-upkeep")
+
+        expect(ticks).toEqual([
+            {
+                name: "brain-upkeep",
+                cron: "*/5 * * * *",
+                timeZone: "UTC",
+                queue: KNOWLEDGE_QUEUE,
+                job: KnowledgeJob.BrainCommand,
+                payload: BRAIN_UPKEEP_PAYLOAD,
+            },
+        ])
+        expect(isUpkeepTick({ ...PAYLOAD })).toBe(false)
+        expect(isUpkeepTick({ upkeep: "brain", commandId: "x" })).toBe(false)
     })
 })

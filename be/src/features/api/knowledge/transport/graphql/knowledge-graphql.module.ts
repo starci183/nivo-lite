@@ -4,18 +4,18 @@ import { ConfigurableModuleClass } from "./knowledge-graphql.module-definition"
 import { KnowledgeSourcesResolver } from "./knowledge-sources.resolver"
 import { KnowledgeUsageResolver } from "./knowledge-usage.resolver"
 import { KnowledgeCategoriesResolver } from "./knowledge-categories.resolver"
-import { BrainDossiersResolver } from "./brain-dossiers.resolver"
-import { ImportBrainDossiersResolver } from "./import-brain-dossiers.resolver"
 import { KnowledgeSourceResolver } from "./knowledge-source.resolver"
 import { NivoKnowledgeCountResolver } from "./nivo-knowledge-count.resolver"
 import { NivoKnowledgeResolver } from "./nivo-knowledge.resolver"
 import { KnowledgeSuggestionsResolver } from "./knowledge-suggestions.resolver"
 import { AskKnowledgeResolver } from "./ask-knowledge.resolver"
+import { ProbeAgentSearchResolver } from "./probe-agent-search.resolver"
 import { DriveLinkedFolderResolver } from "./drive-linked-folder.resolver"
 import { DrivePickedFolderResolver } from "./drive-picked-folder.resolver"
 import { EnqueueKnowledgeSourceResolver } from "./enqueue-knowledge-source.resolver"
 import { RetryKnowledgeSourceResolver } from "./retry-knowledge-source.resolver"
 import { ReindexKnowledgeSourceResolver } from "./reindex-knowledge-source.resolver"
+import { SetKnowledgeSourceNatureResolver } from "./set-knowledge-source-nature.resolver"
 import { UpdateKnowledgeSourceResolver } from "./update-knowledge-source.resolver"
 import { DeleteKnowledgeSourceResolver } from "./delete-knowledge-source.resolver"
 import { SetKnowledgeSuggestionStateResolver } from "./set-knowledge-suggestion-state.resolver"
@@ -45,17 +45,17 @@ import { AgentKnowledgeLensesResolver } from "./agent-knowledge-lenses.resolver"
         KnowledgeSourceResolver,
         KnowledgeUsageResolver,
         KnowledgeCategoriesResolver,
-        BrainDossiersResolver,
-        ImportBrainDossiersResolver,
         NivoKnowledgeCountResolver,
         NivoKnowledgeResolver,
         KnowledgeSuggestionsResolver,
         AskKnowledgeResolver,
+        ProbeAgentSearchResolver,
         DriveLinkedFolderResolver,
         DrivePickedFolderResolver,
         EnqueueKnowledgeSourceResolver,
         RetryKnowledgeSourceResolver,
         ReindexKnowledgeSourceResolver,
+        SetKnowledgeSourceNatureResolver,
         UpdateKnowledgeSourceResolver,
         DeleteKnowledgeSourceResolver,
         SetKnowledgeSuggestionStateResolver,

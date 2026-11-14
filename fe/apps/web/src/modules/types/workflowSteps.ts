@@ -1,4 +1,6 @@
 import type { FlowGraphEdge, FlowGraphLegendItem, FlowGraphNode, FlowGraphRunStatus } from "@starci/grammar/common"
+import type { DataSlot, SlotLabels } from "./slot"
+import type { NodeRightMode } from "./node-rights"
 
 /** The card map of a workflow as `FlowGraph layout="steps"` draws it: the cards, the edges, the kind legend and the status words. */
 export interface StepsMapView {
@@ -75,7 +77,7 @@ export interface StepBindingView {
 /** One input (trigger) of the workflow as the trigger step's drawer draws it. */
 export interface StepTriggerView {
     readonly key: string
-    /** The source kind, the value of the "Nguồn" select. */
+    /** The source kind, the value of the source select. */
     readonly source: string
     readonly sourceOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
     readonly conditions: ReadonlyArray<string>
@@ -99,6 +101,64 @@ export interface StepCallView {
 export interface StepPickerView {
     readonly isOpen: boolean
     readonly options: ReadonlyArray<{ readonly id: string; readonly label: string; readonly description: string }>
+}
+
+/** The one mode control of the open step: how the node's calls run (rights.md: ONE mode per node, `auto | ask`, declared by the node). */
+export interface StepModeView {
+    readonly title: string
+    readonly hint: string
+    readonly label: string
+    /** The node's mode. */
+    readonly value: NodeRightMode
+    readonly options: { readonly auto: string; readonly ask: string }
+}
+
+/** One account entry of the open step: its name and provider line, in the order the node tries them. */
+export interface StepAccountView {
+    /** The position of the entry in the node's `accounts`. */
+    readonly index: number
+    readonly name: string
+    readonly line: string
+}
+
+/** One row of what the step can really do. */
+export interface StepEffectiveRowView {
+    readonly id: string
+    readonly title: string
+    /** The chip: the node's mode when the agent holds the account ("no mode declared" for a node that declares none), a not-attached line when it does not. */
+    readonly chip: string
+    readonly isNone: boolean
+}
+
+/** The mode and accounts sections of the open step's panel and the read-only effective rights beside them. */
+export interface StepAccountsView {
+    readonly sectionTitle: string
+    readonly sectionHint: string
+    /** The node's one mode; null where the node declares none. */
+    readonly mode: StepModeView | null
+    /** Said when the node acts through providers but declares no mode (a graph stored before every node declared one); null otherwise. */
+    readonly modeNote: string | null
+    readonly accounts: ReadonlyArray<StepAccountView>
+    /** Said when the step uses no account (no provider). */
+    readonly noProvider: string
+    /** The attached accounts the step does not use yet: what add provider offers. */
+    readonly addOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
+    readonly addLabel: string
+    /** the count of attached accounts (N from the API). */
+    readonly addHint: string
+    readonly removeLabel: string
+    readonly effectiveTitle: string
+    readonly effectiveHint: string
+    readonly effective: ReadonlyArray<StepEffectiveRowView>
+    readonly isReadOnly: boolean
+}
+
+/** The panel's slot with what a slot needs to draw. */
+export interface StepAccountsSlotView {
+    readonly slot: DataSlot<StepAccountsView>
+    readonly placeholder: StepAccountsView
+    readonly labels: SlotLabels
+    readonly retry: () => void
 }
 
 /** The drawer of one step: its title and line, the form of its settings, its branches, and what saving does. */
@@ -150,6 +210,8 @@ export interface StepDrawerView {
     readonly errorTitle: string
     /** What the back end said when it refused the save; empty otherwise. */
     readonly error: string
+    /** The accounts the step may call (node rights); absent where the drawer has no agent to choose among. */
+    readonly accounts?: StepAccountsSlotView
 }
 
 /** What a person does with the step drawer: open a step, close it, change a setting, save. */
@@ -168,3 +230,9 @@ export type StepAction =
     | { readonly kind: "set-source"; readonly triggerKey: string; readonly source: string }
     /** The target of the open hand-off, `<agent>.<workflow>`. */
     | { readonly kind: "set-call"; readonly target: string }
+    /** An attached account joins the step (the account's connection id). */
+    | { readonly kind: "account-add"; readonly connectionId: string }
+    /** An account entry leaves the step. */
+    | { readonly kind: "account-remove"; readonly index: number }
+    /** The node's one mode changed. */
+    | { readonly kind: "node-mode"; readonly mode: NodeRightMode }

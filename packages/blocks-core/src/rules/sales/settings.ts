@@ -1,8 +1,5 @@
 import { z } from "zod"
 
-/** The default threshold: an order of 5,000,000 VND or more waits for the owner. */
-export const DEFAULT_THRESHOLD_VND = 5_000_000
-
 /** The most the owner threshold may be set to, VND. */
 export const MAX_THRESHOLD_VND = 1_000_000_000_000
 
@@ -32,9 +29,13 @@ export interface SalesSettings {
     readonly notifyAccounting: boolean
 }
 
-/** The settings of a workspace that never saved any. */
+/**
+ * The settings of a workspace that never saved any: the ONE home of each setting's default (the settings page shows them, the owner
+ * edits them, every reader takes them through `settingsOf`). The approval threshold's default: an order of 5,000,000 VND or more waits
+ * for the owner.
+ */
 export const SALES_SETTINGS_DEFAULTS: SalesSettings = {
-    approvalThresholdVnd: DEFAULT_THRESHOLD_VND,
+    approvalThresholdVnd: 5_000_000,
     draftWithoutTotalNeedsApproval: true,
     closedDealsCanFlip: true,
     reopenNeedsApproval: true,
@@ -43,6 +44,9 @@ export const SALES_SETTINGS_DEFAULTS: SalesSettings = {
     autoWon: true,
     notifyAccounting: true,
 }
+
+/** The default approval threshold, VND: the settings' default (`SALES_SETTINGS_DEFAULTS`), named for the agent's policy and its words. */
+export const DEFAULT_THRESHOLD_VND: number = SALES_SETTINGS_DEFAULTS.approvalThresholdVnd
 
 /** The shape of the saved settings, each value in range. */
 export const salesSettingsShape: z.ZodObject<{

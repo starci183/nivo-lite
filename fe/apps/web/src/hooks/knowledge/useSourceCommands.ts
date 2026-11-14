@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import {
     QUERY_KNOWLEDGE_SOURCE_SWR_KEY,
-    QUERY_BRAIN_DOSSIERS_SWR_KEY,
     QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY,
     QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
     QUERY_KNOWLEDGE_USAGE_SWR_KEY,
@@ -41,7 +40,6 @@ const revalidateDocuments = (workspaceId: string) =>
             (key[0] === QUERY_KNOWLEDGE_SOURCE_SWR_KEY ||
                 key[0] === QUERY_KNOWLEDGE_SOURCES_SWR_KEY ||
                 key[0] === QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY ||
-                key[0] === QUERY_BRAIN_DOSSIERS_SWR_KEY ||
                 key[0] === QUERY_KNOWLEDGE_USAGE_SWR_KEY ||
                 key[0] === QUERY_PUBLIC_DOCUMENTS_SWR_KEY ||
                 key[0] === QUERY_BRAIN_SWR_KEY ||

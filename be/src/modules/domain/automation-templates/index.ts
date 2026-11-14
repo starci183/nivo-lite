@@ -1,6 +1,0 @@
-export { AutomationTemplatesModule } from "./automation-templates.module"
-export { AutomationTemplatesService } from "./automation-templates.service"
-export type { ConfigValue, TemplateDefinition } from "./automation-templates.contracts"
-export { AUTOMATION_TEMPLATES_ERROR_KINDS } from "./errors/automation-templates.error"
-export { AUTOMATION_TEMPLATES_MESSAGES } from "./messages/automation-templates.messages"
-export { automationTemplatesEntities } from "./persistence/entities"

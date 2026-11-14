@@ -1,5 +1,4 @@
-import { factLine, isRelationKind } from "@modules/domain/brain-facts"
-import type { FactRecord, RelationInput } from "@modules/domain/brain-facts"
+import { factLine, isRelationKind, type FactRecord, type RelationInput } from "@modules/domain/brain-facts"
 import { fieldsOf } from "./extraction.policy"
 
 /** The most facts of one document the relation pass reads in one call. */

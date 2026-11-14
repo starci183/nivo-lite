@@ -34,6 +34,8 @@ export interface RunOpen {
     readonly versionId: string | null
     /** What a person needs when the run dies: the trigger, intact. */
     readonly context: StepJson
+    /** The run's subject (the event's correlation key: its scope path and value); absent for a run about no subject. */
+    readonly subject?: { readonly kind: string; readonly id: string } | null | undefined
 }
 
 /** One step to write. */

@@ -1,5 +1,4 @@
-import { Button, Stack, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, Stack, Text, type ListRowData } from "@starci/grammar/common"
 import { RunAsideGroup, RunParamValue } from "@/components/composites/RunAsideGroup"
 import type { RunBranchView, RunParamView, RunStepDetailView } from "@/modules/types"
 

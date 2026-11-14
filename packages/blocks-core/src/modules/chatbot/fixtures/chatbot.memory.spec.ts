@@ -2,7 +2,7 @@ import { doorPort, outboxPort } from "@nivo-lite/agent-sdk/mutation"
 import { definePort, portsOf } from "@nivo-lite/agent-sdk/port"
 import { membersPort } from "../../platform/ports"
 import { DELIVER_REPLY } from "../jobs/deliver-reply.job"
-import { CONVERSATIONS, MESSAGES, SETTINGS, THREADS_LIST } from "../ports"
+import { CONVERSATIONS, NOTES, SETTINGS, THREADS_LIST } from "../ports"
 import { THREADS_SHAPE } from "../reads/threads.read"
 import { HANDLED_ROW } from "./chatbot.fixtures"
 import {
@@ -10,20 +10,23 @@ import {
     conversationOf,
     memoryProvider,
     memoryWorld,
-    messageApi,
+    noteApi,
     putConversation,
     recordOfThread,
     settingsApi,
     threadsList,
 } from "./chatbot.memory"
+import { CHATBOT_NOTE_ENTITY } from "../../../entities/chat/chatbot-entity-names"
 
 const QUERY = { q: null, filters: {}, sort: "recent", cursor: null, size: 2 }
 
-const LINE = {
+// Design change (owner ruling R26): the chatbot keeps no line record; the record it writes beside a chat is its own note.
+const NOTE = {
     conversationId: "c1",
-    role: "user",
-    text: "Hi",
-    sentAt: "2026-11-05T00:00:00.000Z",
+    kind: "taken",
+    text: "Ha took over",
+    at: "2026-11-05T00:00:00.000Z",
+    memberId: "member-staff",
 }
 
 const RECENT = [
@@ -35,48 +38,49 @@ describe("the fake engine", () => {
     it("update a conversation by its version, and refuse a missing one or a stale version", async () => {
         const world = memoryWorld()
         const api = conversationApi(world)
-        expect(await api.update("c3", "2", { handledBy: "Ha" })).toMatchObject({ ok: true, row: { version: "3" } })
-        expect(await api.update("c3", "2", { handledBy: "Lan" })).toEqual({ ok: false, reason: "stale" })
+        expect(await api.update("c3", "2", { name: "Ha" })).toMatchObject({ ok: true, row: { version: "3" } })
+        expect(await api.update("c3", "2", { name: "Lan" })).toEqual({ ok: false, reason: "stale" })
         expect(await api.update("nope", "1", {})).toEqual({ ok: false, reason: "missing" })
         expect(await api.get("nope")).toBeNull()
-        expect(conversationOf(world, "c3")).toMatchObject({ handledBy: "Ha", version: "3" })
+        expect(conversationOf(world, "c3")).toMatchObject({ name: "Ha", version: "3" })
     })
 
-    it("store a line with its links and update it by its version", async () => {
+    it("store a note with its links and update it by its version", async () => {
         const world = memoryWorld()
-        const api = messageApi(world)
-        const stored = await api.insert(LINE, { conversation: "c1" })
-        expect(stored).toMatchObject({ ok: true, version: "1", created: true, row: { id: "m1" } })
-        expect(world.links).toContainEqual({ entity: "chat.message", id: "m1", relation: "conversation", to: "c1" })
-        const patch = { deliveryStatus: "sent", deliveryError: null }
-        expect(await api.update("m1", "1", patch)).toMatchObject({ ok: true, row: { version: "2" } })
-        expect(await api.update("m1", "1", patch)).toEqual({ ok: false, reason: "stale" })
+        const api = noteApi(world)
+        const stored = await api.insert(NOTE, { conversation: "c1" })
+        expect(stored).toMatchObject({ ok: true, version: "1", created: true, row: { id: "n1" } })
+        expect(world.links).toContainEqual({
+            entity: CHATBOT_NOTE_ENTITY,
+            id: "n1",
+            relation: "conversation",
+            to: "c1",
+        })
+        const patch = { text: "Ha took over the conversation" }
+        expect(await api.update("n1", "1", patch)).toMatchObject({ ok: true, row: { version: "2" } })
+        expect(await api.update("n1", "1", patch)).toEqual({ ok: false, reason: "stale" })
         expect(await api.update("nope", "1", patch)).toEqual({ ok: false, reason: "missing" })
         expect(await api.get("nope")).toBeNull()
-        expect((await api.insert(LINE)).ok).toBe(true)
-        expect(world.links).toHaveLength(2)
+        expect((await api.insert(NOTE)).ok).toBe(true)
+        expect(world.links).toHaveLength(1)
     })
 
-    it("list a page of a query the planner accepts: selected fields, order, cursor and the joined customer", async () => {
+    it("list a page of a query the planner accepts: selected fields, order and cursor", async () => {
         const api = conversationApi(memoryWorld())
         const zalo = await api.list({
             select: ["name", "lastAt"],
-            join: { lead: ["contactName"] },
             where: { op: "eq", field: "channel", value: "zalo" },
             order: [["channel", "asc"], ...RECENT],
             page: { size: 5 },
         })
         expect(zalo.rows.map((row) => row.row.id)).toEqual(["c1"])
         expect(zalo.rows[0]?.row.data).toEqual({ name: "Minh Anh Nguyen", lastAt: "2026-11-04T01:09:00.000Z" })
-        expect(zalo.rows[0]?.joined).toEqual({ lead: { id: "l1", data: { contactName: "Minh Anh Nguyen" } } })
         const first = await api.list({
             select: ["name"],
-            join: { lead: ["contactName"] },
             order: RECENT,
             page: { size: 2 },
         })
         expect(first.rows.map((row) => row.row.id)).toEqual(["c1", "c2"])
-        expect(first.rows[1]?.joined).toEqual({ lead: null })
         expect(first.next).toBe("2")
         const rest = await api.list({ select: ["name"], order: RECENT, page: { size: 5, after: "2" } })
         expect(rest.rows.map((row) => row.row.id)).toEqual(["c3", "c4"])
@@ -103,7 +107,8 @@ describe("the fake engine", () => {
             order: [["status", "asc"], ...RECENT],
             page: { size: 5 },
         })
-        expect(one.rows.map((row) => row.row.id)).toEqual(["c3", "c4"])
+        // R43: the held chat c2 stores the mark `ai` too (its hold is the engine's route).
+        expect(one.rows.map((row) => row.row.id)).toEqual(["c2", "c3", "c4"])
         const other = await api.list({
             select: ["name"],
             where: { op: "notNull", field: "lastAt" },
@@ -132,8 +137,8 @@ describe("the fake engine", () => {
         await expect(api.aggregate({ measures: {}, limit: 1 })).rejects.toThrow("does not run")
         await expect(api.ensure("key", {})).rejects.toThrow("does not run")
         await expect(api.delete("c1")).rejects.toThrow("does not run")
-        await expect(api.link("c1", "lead", "l1")).rejects.toThrow("does not run")
-        await expect(api.unlink("c1", "lead", "l1")).rejects.toThrow("does not run")
+        await expect(api.link("c1", "messages", "m1")).rejects.toThrow("does not run")
+        await expect(api.unlink("c1", "messages", "m1")).rejects.toThrow("does not run")
     })
 
     it("upsert a settings record by its unique key: add the first, set the fields of the one that holds the key", async () => {
@@ -165,9 +170,10 @@ describe("the fake engine", () => {
             cursor: null,
             size: 10,
         }
+        // R43: a held chat is counted by its stored mark (`ai`); `handled` is no stored mark.
         expect(await source.counts(THREADS_SHAPE, "status", query)).toEqual({
             needs: 1,
-            handled: 1,
+            ai: 1,
         })
         const page = await source.page(THREADS_SHAPE, query)
         expect(page.rows.map((row) => row.id)).toEqual(["c1", "c2"])
@@ -176,9 +182,9 @@ describe("the fake engine", () => {
     it("hold a conversation row of the world and replace or add one", () => {
         const world = memoryWorld()
         expect(conversationOf(world, "c2")).toEqual(HANDLED_ROW)
-        putConversation(world, { ...HANDLED_ROW, handledBy: null })
+        putConversation(world, { ...HANDLED_ROW, name: "Renamed" })
         putConversation(world, { ...HANDLED_ROW, id: "c9" })
-        expect(conversationOf(world, "c2")).toMatchObject({ handledBy: null })
+        expect(conversationOf(world, "c2")).toMatchObject({ name: "Renamed" })
         expect(conversationOf(world, "c9")).not.toBeNull()
         expect(conversationOf(world, "nope")).toBeNull()
         expect(world.conversations).toHaveLength(5)
@@ -199,7 +205,7 @@ describe("the fake engine", () => {
             website: 1,
             facebook: 1,
         })
-        expect(await source.counts(THREADS_SHAPE, "status", QUERY)).toEqual({ needs: 1, handled: 1, ai: 2 })
+        expect(await source.counts(THREADS_SHAPE, "status", QUERY)).toEqual({ needs: 1, ai: 3 })
         world.conversations.push({ ...recordOfThread(HANDLED_ROW), id: "bad", data: { name: 1 } })
         expect((await source.page(THREADS_SHAPE, { ...QUERY, size: 9 })).rows).toHaveLength(4)
     })
@@ -207,13 +213,16 @@ describe("the fake engine", () => {
     it("record the jobs and the sends, and answer for the door what the world says", async () => {
         const world = memoryWorld()
         const { outbox, door } = portsOf(memoryProvider(world), { outbox: outboxPort, door: doorPort })
-        await outbox.enqueue(DELIVER_REPLY, { messageId: "m1" })
-        expect(world.jobs).toEqual([{ job: "chatbot.deliver-reply", input: { messageId: "m1" } }])
-        expect(await door.call("nivo.chat.send", { conversationId: "c1", text: "Hi", key: "k" })).toEqual({
+        const reply = { replyId: "r1" }
+        await outbox.enqueue(DELIVER_REPLY, reply)
+        expect(world.jobs).toEqual([{ job: "chatbot.deliver-reply", input: reply }])
+        expect(await door.call("nivo.tool.customer.message.send", { text: "Hi" }, { onceBy: "k", routeId: "r1" })).toEqual({
             ok: true,
             output: null,
         })
-        expect(world.sends).toEqual([{ tool: "nivo.chat.send", input: { conversationId: "c1", text: "Hi", key: "k" } }])
+        expect(world.sends).toEqual([
+            { tool: "nivo.tool.customer.message.send", input: { text: "Hi" }, options: { onceBy: "k", routeId: "r1" } },
+        ])
     })
 
     it("answer for the members and nobody else, and provide the entity ports", async () => {
@@ -221,7 +230,7 @@ describe("the fake engine", () => {
         const { members } = portsOf(provider, { members: membersPort })
         expect(await members.get("nobody")).toBeNull()
         expect(await members.get("member-manager")).toEqual({ displayName: "Lan Pham", isManager: true })
-        for (const port of [THREADS_LIST, CONVERSATIONS, MESSAGES, SETTINGS])
+        for (const port of [THREADS_LIST, CONVERSATIONS, NOTES, SETTINGS])
             expect(provider.implementationOf(port)).toBeDefined()
     })
 

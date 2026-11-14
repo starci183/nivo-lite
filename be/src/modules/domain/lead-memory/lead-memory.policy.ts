@@ -1,15 +1,15 @@
-import { LEAD_FACTS, MEMORY_RETENTION } from "@nivo-lite/agent-sdk/node"
-import type {
-    LeadFact,
-    LeadMemorySnapshot,
-    MemorySubject,
-    MemoryWrite,
-    StepFailure,
-    StepMemory,
-    StepOutcomeStatus,
+import {
+    LEAD_FACTS,
+    MEMORY_RETENTION,
+    type LeadFact,
+    type LeadMemorySnapshot,
+    type MemorySubject,
+    type MemoryWrite,
+    type StepFailure,
+    type StepMemory,
+    type StepOutcomeStatus,
 } from "@nivo-lite/agent-sdk/node"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
+import { CONTACT_KEY, type ContactMemoryEntry, type ContactMemoryValues, type ContactWithIdentities } from "@modules/domain/contacts"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type { OptionalMemorySubject, OptionalText, TriggerScope } from "./lead-memory.contracts"
 
@@ -22,10 +22,7 @@ export const FACTS_NODE = "$facts"
 /** The node key of a workflow's trigger entry: the trigger of its latest run. */
 export const TRIGGER_NODE = "$trigger"
 
-/** The prefix of the key of a customer who is a lead. */
-export const LEAD_KEY = "lead:"
-
-/** The prefix of the key of a customer who is not a lead yet: their conversation. */
+/** The prefix of the key of a person no contact holds yet: their conversation. */
 export const CONVERSATION_KEY = "conversation:"
 
 const DAY_MS = 24 * 60 * 60_000
@@ -47,19 +44,31 @@ export const jsonOf = (value: unknown): JsonValue => (isJson(value) ? value : nu
 /** The lead facts, for a quick check of a member name. */
 const LEAD_FACT_SET: ReadonlySet<string> = new Set(LEAD_FACTS)
 
-/** Who a trigger scope is about: the lead it names, else its conversation; null for a run about no customer. */
+/** Who a trigger scope is about: the contact it names, else its conversation; null for a run about nobody. */
 export const memorySubjectOf = (trigger: TriggerScope): OptionalMemorySubject => {
-    const leadId = textOf(trigger.leadId)
+    const contactId = textOf(trigger.contactId)
     const conversationId = textOf(trigger.conversationId)
-    if (leadId !== null) return { key: `${LEAD_KEY}${leadId}`, leadId, conversationId }
-    if (conversationId !== null) return { key: `${CONVERSATION_KEY}${conversationId}`, leadId: null, conversationId }
+    if (contactId !== null) return { key: `${CONTACT_KEY}${contactId}`, contactId, conversationId }
+    if (conversationId !== null) return { key: `${CONVERSATION_KEY}${conversationId}`, contactId: null, conversationId }
     return null
 }
 
-/** The subject of a lead, with the conversation it came from when known. */
+/** The subject of a contact, with the conversation it came from when known. */
+export const contactMemorySubjectOf = (contactId: string, conversationId: OptionalText): MemorySubject => ({
+    key: `${CONTACT_KEY}${contactId}`,
+    contactId,
+    conversationId,
+})
+
+/**
+ * The memory subject of a lead id, keyed `lead:<id>`, for the sales module's bridge.
+ * @deprecated A BRIDGE for the sales module only (`sales-effects`, the care opt-out door), which still names its own lead: the subject of
+ * a lead id under `lead:<id>`, read by no engine read (the engine keys memory by the contact). Removed when that module remembers
+ * through the contact (`nivo.tool.contact.memory.remember`, or its lead's `contact_id`).
+ */
 export const leadMemorySubjectOf = (leadId: string, conversationId: OptionalText): MemorySubject => ({
-    key: `${LEAD_KEY}${leadId}`,
-    leadId,
+    key: `lead:${leadId}`,
+    contactId: null,
     conversationId,
 })
 
@@ -68,12 +77,12 @@ export const entryKeyOf = (subjectKey: string, namespace: string, nodeKey: strin
     `${subjectKey}|${namespace}|${nodeKey}`
 
 /**
- * When an entry goes, by the retention policy (`MEMORY_RETENTION`): 30 days after the lead closed; 365 days after the last write while
- * it is open; 30 days after the last write for a conversation that never became a lead.
+ * When an entry goes, by the retention policy (`MEMORY_RETENTION`): 30 days after the memory closed; 365 days after the last write
+ * while it is open; 30 days after the last write for a conversation no contact holds.
  */
 export const expiresAtOf = (subject: MemorySubject, now: Date, closedAt: Date | null): Date => {
     if (closedAt !== null) return new Date(closedAt.getTime() + MEMORY_RETENTION.afterCloseDays * DAY_MS)
-    const days = subject.leadId === null ? MEMORY_RETENTION.conversationIdleDays : MEMORY_RETENTION.openIdleDays
+    const days = subject.contactId === null ? MEMORY_RETENTION.conversationIdleDays : MEMORY_RETENTION.openIdleDays
     return new Date(now.getTime() + days * DAY_MS)
 }
 
@@ -81,10 +90,10 @@ export const expiresAtOf = (subject: MemorySubject, now: Date, closedAt: Date | 
 const kindOf = (status: StepOutcomeStatus): string => status
 
 /** The values of the entry of one step's outcome. */
-export const stepValuesOf = (write: MemoryWrite, now: Date): MutationValues => ({
+export const stepValuesOf = (write: MemoryWrite, now: Date): ContactMemoryValues => ({
     entryKey: entryKeyOf(write.subject.key, write.namespace, write.nodeKey),
     subjectKey: write.subject.key,
-    leadId: write.subject.leadId,
+    contactId: write.subject.contactId,
     conversationId: write.subject.conversationId,
     namespace: write.namespace,
     nodeKey: write.nodeKey,
@@ -97,11 +106,12 @@ export const stepValuesOf = (write: MemoryWrite, now: Date): MutationValues => (
     output: { value: write.outcome.output },
     error: write.outcome.error === null ? null : { ...write.outcome.error },
     writtenAt: write.outcome.at,
+    closedAt: null,
     expiresAt: expiresAtOf(write.subject, now, null).toISOString(),
 })
 
 /** The values of the trigger entry of a workflow: the trigger of its latest run. */
-export const triggerValuesOf = (write: MemoryWrite, now: Date): MutationValues => ({
+export const triggerValuesOf = (write: MemoryWrite, now: Date): ContactMemoryValues => ({
     ...stepValuesOf(write, now),
     entryKey: entryKeyOf(write.subject.key, write.namespace, TRIGGER_NODE),
     nodeKey: TRIGGER_NODE,
@@ -111,16 +121,42 @@ export const triggerValuesOf = (write: MemoryWrite, now: Date): MutationValues =
     error: null,
 })
 
-/** The values of the facts entry of a customer, with `facts` laid over what it held. */
+/** The most dates a customer's memory keeps (`occasions`): the newest are kept. */
+export const OCCASIONS_MAX = 20
+
+/**
+ * `facts` laid over what the entry held. A list fact (`occasions`, the dates the customer cares about) ADDS to the list held, each entry
+ * once, newest last: a step that hears one new date keeps the ones heard before (D-MX-6); any other fact is replaced by the newer value.
+ */
+/** The entries of a list fact, or null for a value that is no list. */
+const listOf = (value: JsonValue | undefined): ReadonlyArray<JsonValue> | null =>
+    Array.isArray(value) ? value.filter((entry: unknown): entry is JsonValue => isJson(entry)) : null
+
+const laidOver = (
+    held: Readonly<Record<string, JsonValue>>,
+    facts: Readonly<Record<string, JsonValue>>,
+): Readonly<Record<string, JsonValue>> =>
+    Object.fromEntries(
+        Object.entries({ ...held, ...facts }).map(([name, value]): [string, JsonValue] => {
+            const before = listOf(held[name])
+            const after = listOf(value)
+            if (before === null || after === null || held[name] === value) return [name, value]
+            const entries = [...before, ...after]
+            const byText = new Map(entries.map((entry): [string, JsonValue] => [JSON.stringify(entry), entry]))
+            return [name, [...byText.values()].slice(-OCCASIONS_MAX)]
+        }),
+    )
+
+/** The values of the facts entry of a customer, with `facts` laid over what it held (a list fact adds to the list). */
 export const factsValuesOf = (
     subject: MemorySubject,
     held: Readonly<Record<string, JsonValue>>,
     facts: Readonly<Partial<Record<LeadFact, JsonValue>>>,
     now: Date,
-): MutationValues => ({
+): ContactMemoryValues => ({
     entryKey: entryKeyOf(subject.key, LEAD_NAMESPACE, FACTS_NODE),
     subjectKey: subject.key,
-    leadId: subject.leadId,
+    contactId: subject.contactId,
     conversationId: subject.conversationId,
     namespace: LEAD_NAMESPACE,
     nodeKey: FACTS_NODE,
@@ -130,9 +166,10 @@ export const factsValuesOf = (
     workflowId: null,
     runId: null,
     versionId: null,
-    output: { value: { ...held, ...factsOnly(facts) } },
+    output: { value: laidOver(held, factsOnly(facts)) },
     error: null,
     writtenAt: now.toISOString(),
+    closedAt: null,
     expiresAt: expiresAtOf(subject, now, null).toISOString(),
 })
 
@@ -146,9 +183,8 @@ const factsOnly = (facts: Readonly<Record<string, unknown>>): Readonly<Record<st
     )
 
 /** What an entry holds: `output.value`. */
-export const valueOfRow = (row: RecordRow): JsonValue => {
-    const output = row.data.output
-    const value: unknown = isObject(output) ? output["value"] : null
+export const valueOfRow = (row: ContactMemoryEntry): JsonValue => {
+    const value: unknown = row.output["value"]
     return isJson(value) ? value : null
 }
 
@@ -170,54 +206,49 @@ const failureOf = (value: unknown): StepFailure | null => {
 }
 
 /** The step outcome an entry holds, or null for a trigger or facts entry. */
-export const stepMemoryOfRow = (row: RecordRow): StepMemory | null => {
-    const kind = textOf(row.data.kind) ?? ""
+export const stepMemoryOfRow = (row: ContactMemoryEntry): StepMemory | null => {
+    const kind = row.kind
     if (!isStatus(kind)) return null
     return {
         status: kind,
         output: valueOfRow(row),
-        error: failureOf(row.data.error),
-        runId: textOf(row.data.runId) ?? "",
-        versionId: textOf(row.data.versionId) ?? "",
-        at: textOf(row.data.writtenAt) ?? row.updatedAt,
+        error: failureOf(row.error),
+        runId: row.runId ?? "",
+        versionId: row.versionId ?? "",
+        at: textOf(row.writtenAt) ?? row.updatedAt,
     }
 }
 
 /**
- * The facts of a customer the lead record itself holds: the name, the phone, the email and the channel. The delivery details (address,
- * recipient, time) and what care needs (`careOptOut`, `occasions`) live in this memory only (`nivo.lead.update` writes them here): an order is
- * the one home of how a delivery goes; the record keeps no copy (its old copy went stale and was dropped).
+ * The facts of a person the contact itself holds: the name and the first verified phone, mail and channel. The delivery details
+ * (address, recipient, time) and what care needs (`careOptOut`, `occasions`) live in this memory only: an order is the one home of how a
+ * delivery goes.
  */
-export const factsOfLead = (lead: RecordRow | null): Readonly<Partial<Record<LeadFact, JsonValue>>> => {
-    if (lead === null) return {}
-    return factsOnly({
-        name: lead.data.contactName,
-        phone: lead.data.phone,
-        email: lead.data.email,
-        channel: lead.data.channel,
-    })
+export const factsOfContact = (contact: ContactWithIdentities | null): Readonly<Partial<Record<LeadFact, JsonValue>>> => {
+    if (contact === null) return {}
+    const first = (kind: string): string | null =>
+        contact.identities.find((one) => one.kind === kind && one.verified)?.[kind === "channel" ? "provider" : "value"] ?? null
+    return factsOnly({ name: contact.displayName, phone: first("phone"), email: first("email"), channel: first("channel") })
 }
 
 /**
- * The snapshot of a customer from their entries and their lead record: the facts (the lead record's, overlaid with the facts the nodes
- * proved: what a node saw last is newer than the record) and the latest outcome of each node of each workflow. Entries under the lead
- * win over the ones still under the conversation.
+ * The snapshot of a person from their entries and their contact: the facts (the contact's, overlaid with the facts the nodes proved:
+ * what a node saw last is newer) and the latest outcome of each node of each workflow. Entries under the contact win over the ones
+ * still under the conversation.
  */
 export const snapshotOf = (
     subject: MemorySubject,
-    rows: ReadonlyArray<RecordRow>,
-    lead: RecordRow | null,
+    rows: ReadonlyArray<ContactMemoryEntry>,
+    contact: ContactWithIdentities | null,
 ): LeadMemorySnapshot => {
     const ordered = [...rows].sort(
-        (left, right) =>
-            Number(String(left.data.subjectKey) === subject.key) - Number(String(right.data.subjectKey) === subject.key),
+        (left, right) => Number(left.subjectKey === subject.key) - Number(right.subjectKey === subject.key),
     )
     const proved: Record<string, JsonValue> = {}
     const workflows: Record<string, Record<string, StepMemory>> = {}
     for (const row of ordered) {
-        const namespace = textOf(row.data.namespace) ?? ""
-        const nodeKey = textOf(row.data.nodeKey) ?? ""
-        if (row.data.kind === "facts") {
+        const { namespace, nodeKey } = row
+        if (row.kind === "facts") {
             const value = valueOfRow(row)
             if (isObject(value)) Object.assign(proved, value)
             continue
@@ -226,5 +257,5 @@ export const snapshotOf = (
         if (memory === null) continue
         workflows[namespace] = { ...workflows[namespace], [nodeKey]: memory }
     }
-    return { subject, lead: { ...factsOfLead(lead), ...factsOnly(proved) }, workflows }
+    return { subject, lead: { ...factsOfContact(contact), ...factsOnly(proved) }, workflows }
 }

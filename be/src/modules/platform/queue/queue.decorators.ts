@@ -1,6 +1,5 @@
 import type { QueueTimeout } from "./queue-timeout.port"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { QueueOptions } from "./queue.options"
 import type { QueueOutbox, QueueSchedules, QueueWorkerRegistry } from "./queue.port"
 import type { QueueFactory, QueueTransport } from "./queue-transport.port"

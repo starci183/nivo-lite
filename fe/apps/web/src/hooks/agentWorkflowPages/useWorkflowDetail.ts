@@ -5,10 +5,11 @@ import { useEffect, useMemo, useRef } from "react"
 import { useAgentRuns, type AgentRunsData } from "@/hooks/agentRuns"
 import { useAgentWorkflows, useWorkflowWrites } from "@/hooks/agentWorkflows"
 import { useWorkflowSteps, type WorkflowSteps } from "@/hooks/workflowSteps"
+import { paramLabelOf } from "@/modules/plugin-registry"
 import { useWorkflowId } from "./useWorkflowId"
 import { overviewOf } from "@/modules/agentWorkflowPages"
 import { graphOfSpec, specOf, stepsLocaleOf } from "@/modules/workflowSteps"
-import type { DataSlot, WorkflowDetailView, WorkflowOverviewView } from "@/modules/types"
+import type { DataSlot, WorkflowDetailView, WorkflowOverviewView, WorkflowStatus } from "@/modules/types"
 
 /** Everything the page of one workflow draws: the workflow, its overview, its map and drawer, its runs. */
 export interface WorkflowDetail {
@@ -17,11 +18,21 @@ export interface WorkflowDetail {
     readonly steps: WorkflowSteps
     readonly runs: AgentRunsData
     readonly rollback: (number: number) => void
+    /** Turns the workflow on or pauses it. */
+    readonly setStatus: (status: WorkflowStatus) => void
+    /** Updates the workflow to the newer template version (a new version). */
+    readonly sync: () => void
+    /** True while one of the writes of this page is on its way. */
+    readonly isWriting: boolean
     readonly retry: () => void
 }
 
 /** The page of one workflow of an agent: its read, its overview, the map with its step drawer, and the runs narrowed to it. */
-export const useWorkflowDetail = (module: string, installationId: string, key: string): WorkflowDetail => {
+export const useWorkflowDetail = (
+    module: string,
+    installationId: string,
+    key: string,
+): WorkflowDetail => {
     const t = useTranslations("agentWorkflowPages")
     const locale = stepsLocaleOf(useLocale())
     const workflowId = useWorkflowId(installationId, key)
@@ -49,7 +60,13 @@ export const useWorkflowDetail = (module: string, installationId: string, key: s
     })
     const spec = useMemo(() => specOf(workflows.graphJson), [workflows.graphJson])
     const overview = useMemo(
-        () => overviewOf(spec, graphOfSpec(spec, locale), (word, values) => t(word, values)),
+        () =>
+            overviewOf(
+                spec,
+                graphOfSpec(spec, locale),
+                (word, values) => t(word, values),
+                (name) => paramLabelOf(name, locale),
+            ),
         [spec, locale, t],
     )
     return {
@@ -58,6 +75,9 @@ export const useWorkflowDetail = (module: string, installationId: string, key: s
         steps,
         runs,
         rollback: writes.rollback,
+        setStatus: writes.setStatus,
+        sync: writes.sync,
+        isWriting: writes.isWriting,
         retry: () => void workflows.refresh(),
     }
 }

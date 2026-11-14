@@ -1,5 +1,4 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
-import { ProposedRightType } from "./proposed-right.type"
 import { TemplateParameterType } from "./template-parameter.type"
 
 @ObjectType()
@@ -36,10 +35,6 @@ export class PackageSummaryType {
     /** The settings of the buyer. */
     @Field(() => [TemplateParameterType])
     parameters!: Array<TemplateParameterType>
-
-    /** The rights proposed. */
-    @Field(() => [ProposedRightType])
-    proposedRights!: Array<ProposedRightType>
 
     /** The real person the persona is modelled on, or null. */
     @Field(() => String, { nullable: true })

@@ -6,7 +6,6 @@ export interface ProviderDef {
     readonly kind: ProviderKind
     /** The provider's own brand name, as the wizard prints it ("Open SePay", "Follow on payOS"). */
     readonly brand: string
-    readonly module: "accounting" | "chatbot" | null
     /** True when the docs could not be fully confirmed: shown as early access. */
     readonly earlyAccess?: boolean
     readonly environments: ReadonlyArray<Environment>
@@ -24,7 +23,6 @@ const data = (id: Provider, brand: string, early = false): ProviderDef => ({
     id,
     kind: "data",
     brand,
-    module: null,
     environments: ["live"],
     needsBank: false,
     dashboard: {},
@@ -43,7 +41,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "sepay",
         kind: "money",
         brand: "SePay",
-        module: "accounting",
         environments: ["test", "live"],
         needsBank: true,
         dashboard: { test: "https://my.sepay.vn/testmode/webhook", live: "https://my.sepay.vn/webhook" },
@@ -53,7 +50,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "payos",
         kind: "money",
         brand: "payOS",
-        module: "accounting",
         earlyAccess: true,
         environments: ["live"],
         needsBank: false,
@@ -66,7 +62,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "casso",
         kind: "money",
         brand: "Casso",
-        module: "accounting",
         environments: ["live"],
         needsBank: true,
         hasNoTestNote: true,
@@ -77,7 +72,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "telegram",
         kind: "telegram",
         brand: "Telegram",
-        module: "chatbot",
         environments: ["live"],
         needsBank: false,
         dashboard: { live: "https://t.me/BotFather" },
@@ -87,7 +81,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "zalo_oa",
         kind: "zalo",
         brand: "Zalo",
-        module: "chatbot",
         environments: ["live"],
         needsBank: false,
         dashboard: { live: "https://developers.zalo.me/apps" },
@@ -97,7 +90,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "meta",
         kind: "meta",
         brand: "Meta",
-        module: "chatbot",
         earlyAccess: true,
         environments: ["live"],
         needsBank: false,
@@ -108,8 +100,7 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "webhook",
         kind: "webhook",
         brand: "n8n",
-        module: null,
-        environments: ["live"],
+            environments: ["live"],
         needsBank: false,
         dashboard: { live: "https://n8n.io" },
         credentials: [],
@@ -118,8 +109,7 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "google",
         kind: "google",
         brand: "Google",
-        module: null,
-        environments: ["live"],
+            environments: ["live"],
         needsBank: false,
         dashboard: { live: "https://sheets.google.com" },
         credentials: [],
@@ -128,8 +118,7 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "google_drive",
         kind: "drive",
         brand: "Drive",
-        module: null,
-        environments: ["live"],
+            environments: ["live"],
         needsBank: false,
         dashboard: { live: "https://drive.google.com" },
         credentials: [],
@@ -138,8 +127,7 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderDef>> = {
         id: "smtp",
         kind: "email",
         brand: "SMTP",
-        module: null,
-        environments: ["live"],
+            environments: ["live"],
         needsBank: false,
         dashboard: {},
         credentials: [],
@@ -166,25 +154,6 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
     telegram_user: "/logos/connectors/telegram_user.svg",
     smtp: "/logos/connectors/smtp.svg",
 }
-
-/**
- * The marks of the services inside one Google account, in their official colours (the services list of the Google page): the 2020
- * Google Workspace product marks, one generation for all four. Each file is the original, unedited, from Wikimedia Commons, whose
- * file page states "Public domain" (Google's logos are trademarks):
- * Drive https://commons.wikimedia.org/wiki/File:Google_Drive_icon_(2020).svg (the same mark as google_drive.svg, which is kept),
- * Sheets https://commons.wikimedia.org/wiki/File:Google_Sheets_2020_Logo.svg,
- * Calendar https://commons.wikimedia.org/wiki/File:Google_Calendar_icon_(2020).svg,
- * Gmail https://commons.wikimedia.org/wiki/File:Gmail_icon_(2020).svg.
- */
-export const GOOGLE_SERVICE_LOGO: Readonly<Record<"drive" | "sheets" | "calendar" | "gmail", string>> = {
-    drive: "/logos/providers/google_drive.svg",
-    sheets: "/logos/providers/googlesheets.svg",
-    calendar: "/logos/providers/googlecalendar.svg",
-    gmail: "/logos/providers/gmail.svg",
-}
-
-/** The mark of the Google account itself (the "G"): the page of the one account that holds Drive, Sheets and the services to come. */
-export const GOOGLE_ACCOUNT_LOGO = "/logos/providers/google.svg"
 
 /** Whether a string is one of the registry's providers. */
 export const isProvider = (value: string): value is Provider => Object.hasOwn(PROVIDERS, value)

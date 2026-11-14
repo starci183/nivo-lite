@@ -7,7 +7,6 @@ export {
     agentLifecycleTone,
     agentSubtitleOf,
     isSetupPending,
-    setupLabelKey,
     foldText,
     installationLifecycleOf,
 } from "./installations.status"

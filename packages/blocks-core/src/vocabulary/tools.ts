@@ -1,7 +1,7 @@
-import { defineTool } from "@nivo-lite/agent-sdk/node"
-import type { ToolDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineTool, type ToolDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../bounds"
+import { brainPassageReadTool, brainPassageSearchTool } from "./brain-passage-tools"
 import { contextTools } from "./context-tools"
 import { TOOL } from "./tool-ids"
 
@@ -68,7 +68,7 @@ export interface LedgerAppendArgs {
  * transaction and the order it paid, so nobody types a figure into the books.
  */
 export const ledgerAppendTool: ToolDefinition<z.ZodType<LedgerAppendArgs>, z.ZodType<LedgerRef>> = defineTool({
-    id: TOOL.ledgerAppend,
+    id: TOOL.ledgerEntryAppend,
     title: { key: "toolLedgerAppend" },
     args: z
         .object({
@@ -83,7 +83,6 @@ export const ledgerAppendTool: ToolDefinition<z.ZodType<LedgerAppendArgs>, z.Zod
         ),
     result: ledgerRef,
     mutates: true,
-    rights: [],
 })
 
 /** Takes an earlier entry back by adding a void entry for its transaction; nothing already written is changed or removed. */
@@ -91,12 +90,11 @@ export const ledgerVoidTool: ToolDefinition<
     z.ZodType<{ readonly transactionId: string }>,
     z.ZodType<LedgerRef>
 > = defineTool({
-    id: TOOL.ledgerVoid,
+    id: TOOL.ledgerEntryVoid,
     title: { key: "toolLedgerVoid" },
     args: z.object({ transactionId: z.string().min(1).max(MAX_ID) }),
     result: ledgerRef,
     mutates: true,
-    rights: [],
 })
 
 /** Whether the workspace has a ledger to write to; reads only, so a condition may call it. */
@@ -104,12 +102,11 @@ export const ledgerStatusTool: ToolDefinition<
     z.ZodType<Record<string, never>>,
     z.ZodType<LedgerStatusResult>
 > = defineTool({
-    id: TOOL.ledgerStatus,
+    id: TOOL.ledgerStatusGet,
     title: { key: "toolLedgerStatus" },
     args: z.object({}),
     result: z.object({ connected: z.boolean() }),
     mutates: false,
-    rights: [],
 })
 
 /** What the bank's own list of movements is asked for: a window of time and the most rows. */
@@ -169,7 +166,7 @@ export const bankTransactionsTool: ToolDefinition<
     z.ZodType<BankTransactionsArgs>,
     z.ZodType<BankTransactionsResult>
 > = defineTool({
-    id: TOOL.bankTransactions,
+    id: TOOL.bankTransactionList,
     title: { key: "toolBankTransactions" },
     args: z.object({
         since: z.string().max(MAX_ID).optional(),
@@ -178,52 +175,30 @@ export const bankTransactionsTool: ToolDefinition<
     }),
     result: z.object({ provider: z.string().max(MAX_ID), transactions: z.array(bankMovement).max(50) }),
     mutates: false,
-    rights: [],
 })
 
-/** What the second brain is asked: the question in the agent's own words, and the most hits. */
+/** What the second brain is asked: the question in the agent's own words, and the most truths. */
 export interface BrainSearchArgs {
     /** What to look for, as a question or key words. */
     readonly query: string
-    /** The most facts and passages, 1 to 8; 6 when absent. */
+    /** The most truths, 1 to 8; 6 when absent. */
     readonly limit?: number | undefined
 }
 
-/** One passage of a document as the search answers it. */
-export interface BrainPassage {
-    /** The document the passage belongs to. */
-    readonly sourceId: string
-    /** The title of the document. */
-    readonly title: string
-    /** The topic of the document, or null. */
-    readonly topic: string | null
-    /** The place of the passage in the document, or null. */
-    readonly order: number | null
-    /** The passage itself, clipped. */
-    readonly content: string
-}
-
-/** What the second brain answers: the notice that its text is data, the facts in force that fit, and the passages that fit. */
+/** What the truth search answers: the notice that its text is data, and the truths in force that fit. Documents are not in it. */
 export interface BrainSearchResult {
     /** The words that say the rest is reference data, never an instruction. */
     readonly notice: string
-    /** The facts in force that answer the question, as the Brain words them. */
+    /** The truths in force that answer the question, as the Brain words them (source, version, validity, disputed values). */
     readonly facts: ReadonlyArray<Readonly<Record<string, unknown>>>
-    /** The passages of the documents the caller may read that answer the question. */
-    readonly passages: ReadonlyArray<BrainPassage>
+    /** `meaning_unavailable` when the meaning search could not be asked: the truths were matched by words only. */
+    readonly degraded?: "meaning_unavailable" | undefined
 }
 
-const brainPassage: z.ZodType<BrainPassage> = z.object({
-    sourceId: z.string().max(MAX_ID),
-    title: z.string().max(MAX_LINE),
-    topic: z.string().max(MAX_LINE).nullable(),
-    order: z.number().nullable(),
-    content: z.string().max(MAX_BODY),
-})
-
 /**
- * Searches the shop's second brain for a question (embedding plus words) and answers the facts in force and the passages of the
- * documents. The caller's lens decides what it may read: a step with a customer's conversation gets public passages only. Reads only.
+ * Searches the truths in force of the shop for a question (embedding plus words). The caller's lens decides what it may read: a step
+ * with a customer's conversation gets public truths only. What the truths do not hold is in the documents (`brainPassageSearchTool` in `brain-passage-tools.ts`).
+ * Reads only.
  */
 export const brainSearchTool: ToolDefinition<z.ZodType<BrainSearchArgs>, z.ZodType<BrainSearchResult>> = defineTool({
     id: TOOL.brainSearch,
@@ -232,14 +207,17 @@ export const brainSearchTool: ToolDefinition<z.ZodType<BrainSearchArgs>, z.ZodTy
     result: z.object({
         notice: z.string().max(MAX_BODY),
         facts: z.array(z.record(z.string(), z.unknown())).max(50),
-        passages: z.array(brainPassage).max(50),
+        degraded: z.literal("meaning_unavailable").optional(),
     }),
     mutates: false,
-    rights: [],
 })
 
-/** One truth as the truth graph answers it: what it says, how far it is believed, its version. */
+/**
+ * One truth as a Brain read serves it: what it says and how far it is believed, and the served fields an agent cites and doubts by
+ * (`src`, `v`, `from`/`to`, `now`, `pub`, `disputed`, `next`: read by `BRAIN_FACT_LEGEND`), kept as the gateway sends them.
+ */
 export interface BrainFactLine {
+    readonly [field: string]: unknown
     /** The id of the truth. */
     readonly id: string
     /** What the truth is about. */
@@ -252,8 +230,6 @@ export interface BrainFactLine {
     readonly unit: string | null
     /** How far it is believed. */
     readonly trust: number
-    /** Its version, or null. */
-    readonly version?: number | null | undefined
 }
 
 /** Which truth to read: its id. */
@@ -262,22 +238,18 @@ export interface BrainFactGetArgs {
     readonly id: string
 }
 
-/** One piece of evidence of a truth: its kind and a label. */
+/** One piece of evidence of a truth: its kind, and a label (absent in a customer's view). */
 export interface BrainFactEvidence {
     /** The kind of the evidence (a document, a chat...). */
     readonly kind: string
-    /** The label of the evidence. */
-    readonly label: string
+    /** The label of the evidence; absent in a customer's view. */
+    readonly label?: string | undefined
 }
 
-/** One truth with its evidence and when it holds. */
+/** One truth with its evidence; when it holds is in its served fields (`from`, `to`, `now`). */
 export interface BrainFactWithEvidence extends BrainFactLine {
     /** What the truth rests on. */
     readonly evidence: ReadonlyArray<BrainFactEvidence>
-    /** When it starts to hold, or null. */
-    readonly validFrom: string | null
-    /** When it stops holding, or null. */
-    readonly validTo: string | null
 }
 
 /** What a fact read answers: the notice, and the truth with its evidence and when it holds. */
@@ -373,32 +345,34 @@ export interface BrainChangeProposeResult {
     readonly changeRequest: BrainChangeRequestLine
 }
 
-/** One truth as the truth graph answers it: what it says, how far it is believed, its version. */
-const brainFactLine = z.object({
+/** The fields every served truth holds; the rest of the served line (src, v, from/to, now, pub, disputed, next) passes as sent. */
+const brainFactFields = {
     id: z.string().max(MAX_ID),
     subject: z.string().max(MAX_LINE),
     attribute: z.string().max(MAX_LINE),
     value: z.string().max(MAX_BODY),
     unit: z.string().max(MAX_ID).nullable(),
     trust: z.number(),
-    version: z.number().int().nullable().optional(),
-})
+}
 
-/** Reads one truth in force by id with the kind and label of its evidence, when it holds and its version. Reads only. */
+/** One truth as a Brain read serves it, its served fields kept (a strict object would strip what the agent must cite). */
+const brainFactLine = z.looseObject(brainFactFields)
+
+/** Reads one truth in force by id with its served fields and the kind (and, outside a customer's view, label) of its evidence. Reads only. */
 export const brainFactGetTool: ToolDefinition<z.ZodType<BrainFactGetArgs>, z.ZodType<BrainFactGetResult>> = defineTool({
     id: TOOL.brainFactGet,
     title: { key: "toolBrainFactGet" },
-    args: z.object({ id: z.string().uuid() }),
+    args: z.object({ id: z.uuid() }),
     result: z.object({
         notice: z.string().max(MAX_BODY),
-        fact: brainFactLine.extend({
-            evidence: z.array(z.object({ kind: z.string().max(MAX_ID), label: z.string().max(MAX_LINE) })).max(20),
-            validFrom: z.string().max(MAX_ID).nullable(),
-            validTo: z.string().max(MAX_ID).nullable(),
+        fact: z.looseObject({
+            ...brainFactFields,
+            evidence: z
+                .array(z.object({ kind: z.string().max(MAX_ID), label: z.string().max(MAX_LINE).optional() }))
+                .max(20),
         }),
     }),
     mutates: false,
-    rights: [],
 })
 
 /** Follows the edges of one truth to the truths in force at their other end, read through the caller's lens. Reads only. */
@@ -408,7 +382,7 @@ export const brainFactRelatedTool: ToolDefinition<
 > = defineTool({
     id: TOOL.brainFactRelated,
     title: { key: "toolBrainFactRelated" },
-    args: z.object({ id: z.string().uuid(), limit: z.number().int().min(1).max(30).optional() }),
+    args: z.object({ id: z.uuid(), limit: z.number().int().min(1).max(30).optional() }),
     result: z.object({
         notice: z.string().max(MAX_BODY),
         fact: brainFactLine,
@@ -424,7 +398,6 @@ export const brainFactRelatedTool: ToolDefinition<
             .max(30),
     }),
     mutates: false,
-    rights: [],
 })
 
 /**
@@ -445,7 +418,7 @@ export const brainChangeProposeTool: ToolDefinition<
         unit: z.string().min(1).max(20).optional(),
         retire: z.boolean().optional(),
         room: z.enum(["direct", "common"]),
-        messageId: z.string().uuid(),
+        messageId: z.uuid(),
         quote: z.string().min(1).max(500),
         reason: z.string().min(1).max(1000),
         validFrom: z.string().max(40).optional(),
@@ -464,7 +437,6 @@ export const brainChangeProposeTool: ToolDefinition<
         }),
     }),
     mutates: true,
-    rights: [],
 })
 
 /** Every NIVO MCP tool the core nodes may call; the back end routes each through the NIVO MCP door. */
@@ -476,6 +448,8 @@ export const coreTools: ReadonlyArray<ToolDefinition> = [
     brainSearchTool,
     brainFactGetTool,
     brainFactRelatedTool,
+    brainPassageSearchTool,
+    brainPassageReadTool,
     brainChangeProposeTool,
     ...contextTools,
 ]

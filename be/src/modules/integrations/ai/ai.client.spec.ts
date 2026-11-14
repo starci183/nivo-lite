@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { Secret } from "@modules/platform/config"
+import { gatewayCompletion, gatewayVectors, gatewayAnthropicMessage, gatewayAnswering, gatewayPostsOf, gatewaySentOf, gatewayJsonBodyOf } from "@tests/fixtures/builders/ai.builder"
 import { parseJsonText } from "@modules/platform/primitives"
 import { HTTP_CLIENT } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
@@ -10,68 +11,6 @@ import type { AiChatRequest } from "./ai.contracts"
 import { AI_ENDPOINT_OPTIONS } from "./ai.decorators"
 import type { AiEndpoint } from "./ai.options"
 import { ANY_OBJECT } from "./ai.schema"
-
-const completion = (content: string): string =>
-    JSON.stringify({
-        id: "chatcmpl-1",
-        object: "chat.completion",
-        created: 1,
-        model: "fake-model",
-        choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
-        usage: { prompt_tokens: 3, completion_tokens: 2, total_tokens: 5 },
-    })
-
-const vectors = (count: number): string =>
-    JSON.stringify({
-        object: "list",
-        model: "fake-embed",
-        data: Array.from({ length: count }, (_, index) => ({ object: "embedding", index, embedding: [index, 1] })),
-        usage: { prompt_tokens: count, total_tokens: count },
-    })
-
-/** An answer of the gateway's Anthropic Messages route, with the lane the gateway names in its usage (`usage.served`). */
-const anthropicMessage = (content: string): string =>
-    JSON.stringify({
-        id: "msg_1",
-        type: "message",
-        role: "assistant",
-        model: "claude-sonnet-5-5",
-        content: [{ type: "text", text: content }],
-        stop_reason: "end_turn",
-        stop_sequence: null,
-        usage: {
-            input_tokens: 10,
-            output_tokens: 2,
-            cache_read_input_tokens: 5,
-            cache_creation_input_tokens: 3,
-            served: { provider: "anthropic", model: "claude-sonnet-5-5", attempts: 1, cost: 0.0012 },
-        },
-    })
-
-/** The names the fake gateway lists (`GET /v1/models`), each with the protocols it is served through. */
-const CATALOG: ReadonlyArray<{ readonly id: string; readonly kinds: ReadonlyArray<string>; readonly serves: ReadonlyArray<string> }> = [
-    { id: "work", kinds: ["openai"], serves: ["chat"] },
-    { id: "upstream-profile", kinds: ["openai"], serves: ["chat"] },
-    { id: "sonnet", kinds: ["openai"], serves: ["chat"] },
-    { id: "deepseek", kinds: ["openai"], serves: ["chat"] },
-    { id: "auto-light", kinds: ["openai"], serves: ["chat"] },
-    { id: "claude", kinds: ["anthropic"], serves: ["chat"] },
-    { id: "both", kinds: ["anthropic", "openai"], serves: ["chat"] },
-    { id: "embed", kinds: ["openai"], serves: ["embeddings"] },
-]
-
-const catalogBody = (): string => JSON.stringify({ object: "list", data: CATALOG.map((entry) => ({ object: "model", ...entry })) })
-
-/** A fake gateway that answers its catalog and every other request with `body`. */
-const answering = (http: ReturnType<typeof mock<HttpClient>>, body: (url: string) => unknown, headers?: Record<string, string>) => {
-    http.request.mockImplementation((request) =>
-        Promise.resolve(
-            request.method === "GET"
-                ? { status: 200, headers: { "content-type": "application/json" }, body: catalogBody() }
-                : { status: 200, ...(headers === undefined ? {} : { headers }), body: body(request.url) },
-        ),
-    )
-}
 
 /** The client over a fake gateway: a chat call answers `content`, an embeddings call two vectors. */
 const build = async (content = "hello") => {
@@ -82,11 +21,11 @@ const build = async (content = "hello") => {
         embeddingModel: "embed",
     })()
     const http = mock<HttpClient>()
-    answering(
+    gatewayAnswering(
         http,
         (url) => {
-            if (url.endsWith("/embeddings")) return vectors(2)
-            return url.endsWith("/messages") ? anthropicMessage(content) : completion(content)
+            if (url.endsWith("/embeddings")) return gatewayVectors(2)
+            return url.endsWith("/messages") ? gatewayAnthropicMessage(content) : gatewayCompletion(content)
         },
         { "content-type": "application/json" },
     )
@@ -98,21 +37,6 @@ const build = async (content = "hello") => {
         ],
     }).compile()
     return { client: moduleRef.get(AiClient), http }
-}
-
-/** The model calls the client sent (the catalog reads left out). */
-const postsOf = (http: ReturnType<typeof mock<HttpClient>>) =>
-    http.request.mock.calls.map(([request]) => request).filter((request) => request.method !== "GET")
-
-/** What the n-th model call of the client sent to the gateway (the catalog reads left out); the body as text. */
-const sentOf = (http: ReturnType<typeof mock<HttpClient>>, at: number) => {
-    const request = postsOf(http)[at]
-    return {
-        url: request?.url ?? "",
-        timeoutMs: request?.timeoutMs ?? 0,
-        headers: request?.headers ?? {},
-        text: request?.bytes?.toString("utf8") ?? "",
-    }
 }
 
 const ASK: AiChatRequest = {
@@ -148,7 +72,7 @@ const registerMultimodalChatCase = () => {
                 ],
             }),
         ).resolves.toMatchObject({ content: "hello" })
-        const read = parseJsonText(sentOf(http, 0).text)
+        const read = parseJsonText(gatewaySentOf(http, 0).text)
         assert.ok(read.ok, "AI request body was not valid JSON")
         const sent = read.value
         expect(sent).toMatchObject({
@@ -180,7 +104,7 @@ describe("AiClient chat", () => {
             retrieved: 0,
             usageMetadata: { input_tokens: 3, output_tokens: 2, total_tokens: 5 },
         })
-        const sent = sentOf(http, 0)
+        const sent = gatewaySentOf(http, 0)
         expect(sent).toMatchObject({ url: "http://gateway.test/v1/chat/completions", timeoutMs: 5000 })
         expect(sent.headers).toMatchObject({ authorization: "Bearer sk-starci-test" })
         expect(sent.text).toContain('"model":"work"')
@@ -221,7 +145,7 @@ describe("AiClient chat", () => {
 
         expect(search).toHaveBeenCalledWith("hours?")
         expect(reply.retrieved).toBe(2)
-        const sent = sentOf(http, 0).text
+        const sent = gatewaySentOf(http, 0).text
         expect(sent).toContain("Business notes")
         expect(sent).toContain("Hours: Open 8 to 21")
         expect(sent).not.toContain("beyond the limit")
@@ -234,7 +158,7 @@ describe("AiClient chat", () => {
         const reply = await client.chat({ ...ASK, context: { question: "q", limit: 4, search } })
 
         expect(reply.retrieved).toBe(0)
-        expect(sentOf(http, 0).text).not.toContain("Business notes")
+        expect(gatewaySentOf(http, 0).text).not.toContain("Business notes")
     })
 
     it("sends each role as its own message", async () => {
@@ -242,7 +166,7 @@ describe("AiClient chat", () => {
 
         await client.chat({ ...ASK, messages: [...ASK.messages, { role: "assistant", content: "ok" }] })
 
-        expect(sentOf(http, 0).text).toMatch(/system.*user.*assistant/su)
+        expect(gatewaySentOf(http, 0).text).toMatch(/system.*user.*assistant/su)
     })
 })
 
@@ -255,17 +179,17 @@ describe("AiClient prompt cache", () => {
         await client.chat({ ...ASK_UP, affinity: "workspace-2" })
         await client.chat(ASK_UP)
 
-        const sessions = [0, 1, 2].map((at) => /"session_id":"([0-9a-f]{32})"/u.exec(sentOf(http, at).text)?.[1])
+        const sessions = [0, 1, 2].map((at) => /"session_id":"([0-9a-f]{32})"/u.exec(gatewaySentOf(http, at).text)?.[1])
         expect(sessions[0]).toBeDefined()
         expect(sessions[1]).toBe(sessions[0])
         expect(sessions[2]).not.toBe(sessions[0])
-        expect(sentOf(http, 0).text).not.toContain("workspace-1")
-        expect(sentOf(http, 3).text).not.toContain("session_id")
+        expect(gatewaySentOf(http, 0).text).not.toContain("workspace-1")
+        expect(gatewaySentOf(http, 3).text).not.toContain("session_id")
     })
 
     it("reads the upstream that served the call from the raw answer", async () => {
         const { client, http } = await build()
-        answering(http, () => completion("ok").replace('"object"', '"provider":"DeepInfra","object"'), {
+        gatewayAnswering(http, () => gatewayCompletion("ok").replace('"object"', '"provider":"DeepInfra","object"'), {
             "content-type": "application/json",
         })
 
@@ -282,7 +206,7 @@ describe("AiClient upstream routing", () => {
         await client.chat({ ...ASK_UP, routing: { order: [], only: [] } })
         await (await client.turnModel({ timeoutMs: 45_000 })).invoke([{ role: "user", content: "STEP" }])
 
-        for (const at of [0, 1, 2, 3]) expect(sentOf(http, at).text).not.toContain('"provider"')
+        for (const at of [0, 1, 2, 3]) expect(gatewaySentOf(http, at).text).not.toContain('"provider"')
     })
 
     it("sends the routing as OpenRouter's provider object, only the fields it names, beside the reasoning and the session", async () => {
@@ -301,7 +225,7 @@ describe("AiClient upstream routing", () => {
         ).invoke([{ role: "user", content: "STEP" }])
 
         const sent = [0, 1, 2, 3].map((at) => {
-            const read = parseJsonText(sentOf(http, at).text)
+            const read = parseJsonText(gatewaySentOf(http, at).text)
             assert.ok(read.ok, "AI request body was not valid JSON")
             return read.value
         })
@@ -309,11 +233,11 @@ describe("AiClient upstream routing", () => {
             provider: { order: ["wafer", "together"], allow_fallbacks: true },
             reasoning: { effort: "low", exclude: true },
         })
-        expect(sentOf(http, 0).text).toMatch(/"session_id":"[0-9a-f]{32}"/u)
+        expect(gatewaySentOf(http, 0).text).toMatch(/"session_id":"[0-9a-f]{32}"/u)
         expect(sent[1]).toMatchObject({ provider: { sort: "throughput" } })
-        expect(sentOf(http, 1).text).toContain('"provider":{"sort":"throughput"}')
-        expect(sentOf(http, 2).text).toContain('"provider":{"only":["wafer","digitalocean"],"allow_fallbacks":false}')
-        expect(sentOf(http, 3).text).toContain('"provider":{"order":["together","wafer"]}')
+        expect(gatewaySentOf(http, 1).text).toContain('"provider":{"sort":"throughput"}')
+        expect(gatewaySentOf(http, 2).text).toContain('"provider":{"only":["wafer","digitalocean"],"allow_fallbacks":false}')
+        expect(gatewaySentOf(http, 3).text).toContain('"provider":{"order":["together","wafer"]}')
     })
 })
 
@@ -330,7 +254,7 @@ describe("AiClient the client of one try of an agent turn", () => {
             {
                 type: "function" as const,
                 function: {
-                    name: "nivo.payment.order.settle",
+                    name: "nivo.tool.payment.order.settle",
                     description: "Mark the order paid.",
                     parameters: { type: "object", properties: { orderId: { type: "string" } }, required: ["orderId"] },
                 },
@@ -342,10 +266,10 @@ describe("AiClient the client of one try of an agent turn", () => {
             { role: "user", content: "STEP" },
         ])
 
-        expect(postsOf(http)).toHaveLength(1)
-        expect(postsOf(http)[0]).toMatchObject({ timeoutMs: 45_000 })
-        const sent = sentOf(http, 0).text
-        expect(sent).toContain('"name":"nivo.payment.order.settle"')
+        expect(gatewayPostsOf(http)).toHaveLength(1)
+        expect(gatewayPostsOf(http)[0]).toMatchObject({ timeoutMs: 45_000 })
+        const sent = gatewaySentOf(http, 0).text
+        expect(sent).toContain('"name":"nivo.tool.payment.order.settle"')
         expect(sent).toContain('"tool_choice":"auto"')
         expect(sent).toContain('"reasoning":{"effort":"low","exclude":true}')
         expect(sent).toContain('"max_tokens":4000')
@@ -363,7 +287,7 @@ describe("AiClient chat budget", () => {
 
         await client.chat(ASK_UP)
 
-        const sent = sentOf(http, 0)
+        const sent = gatewaySentOf(http, 0)
         expect(sent.text).not.toContain("max_tokens")
         expect(sent.text).not.toContain("reasoning")
     })
@@ -373,7 +297,7 @@ describe("AiClient chat budget", () => {
 
         await client.chat({ ...ASK_UP, budget: { effort: "off", maxTokens: 800 } })
 
-        const sent = sentOf(http, 0)
+        const sent = gatewaySentOf(http, 0)
         expect(sent.text).toContain('"max_tokens":800')
         expect(sent.text).toContain('"reasoning":{"enabled":false}')
     })
@@ -384,10 +308,10 @@ describe("AiClient chat budget", () => {
         await client.chat({ ...ASK_UP, budget: { effort: "low", maxTokens: 800 } })
         await client.chat({ ...ASK_UP, budget: { effort: "minimal" } })
 
-        expect(sentOf(http, 0).text).toContain('"reasoning":{"effort":"low","exclude":true}')
-        expect(sentOf(http, 0).text).toContain('"max_tokens":800')
-        expect(sentOf(http, 1).text).toContain('"reasoning":{"effort":"minimal","exclude":true}')
-        expect(sentOf(http, 1).text).not.toContain("max_tokens")
+        expect(gatewaySentOf(http, 0).text).toContain('"reasoning":{"effort":"low","exclude":true}')
+        expect(gatewaySentOf(http, 0).text).toContain('"max_tokens":800')
+        expect(gatewaySentOf(http, 1).text).toContain('"reasoning":{"effort":"minimal","exclude":true}')
+        expect(gatewaySentOf(http, 1).text).not.toContain("max_tokens")
     })
 
     it("sends a direct cap on reasoning in place of the effort when the budget names one, and none with reasoning off", async () => {
@@ -396,9 +320,9 @@ describe("AiClient chat budget", () => {
         await client.chat({ ...ASK_UP, budget: { effort: "low", reasoningMaxTokens: 1024 } })
         await client.chat({ ...ASK_UP, budget: { effort: "off", reasoningMaxTokens: 1024 } })
 
-        expect(sentOf(http, 0).text).toContain('"reasoning":{"max_tokens":1024,"exclude":true}')
-        expect(sentOf(http, 0).text).not.toContain('"effort"')
-        expect(sentOf(http, 1).text).toContain('"reasoning":{"enabled":false}')
+        expect(gatewaySentOf(http, 0).text).toContain('"reasoning":{"max_tokens":1024,"exclude":true}')
+        expect(gatewaySentOf(http, 0).text).not.toContain('"effort"')
+        expect(gatewaySentOf(http, 1).text).toContain('"reasoning":{"enabled":false}')
     })
 })
 
@@ -410,9 +334,9 @@ describe("AiClient embed", () => {
             [0, 1],
             [1, 1],
         ])
-        expect(sentOf(http, 0)).toMatchObject({ timeoutMs: 4000 })
-        expect(sentOf(http, 0).text).toContain('"model":"embed"')
-        expect(sentOf(http, 0).text).not.toContain('"dimensions"')
+        expect(gatewaySentOf(http, 0)).toMatchObject({ timeoutMs: 4000 })
+        expect(gatewaySentOf(http, 0).text).toContain('"model":"embed"')
+        expect(gatewaySentOf(http, 0).text).not.toContain('"dimensions"')
     })
 })
 
@@ -424,22 +348,22 @@ describe("AiClient gateway fetch", () => {
         const fromUrl = await fetcher(new URL("http://gateway.test/v1/a"), { headers: { "x-a": "1" }, body: "payload" })
         const fromRequest = await fetcher(new Request("http://gateway.test/v1/b", { method: "POST" }))
 
-        expect(await fromUrl.text()).toBe(completion("hello"))
+        expect(await fromUrl.text()).toBe(gatewayCompletion("hello"))
         expect(fromRequest.status).toBe(200)
-        expect(sentOf(http, 0)).toMatchObject({ url: "http://gateway.test/v1/a", timeoutMs: 3000, text: "payload" })
-        expect(sentOf(http, 0).headers).toEqual({ "x-a": "1" })
-        expect(sentOf(http, 1)).toMatchObject({ url: "http://gateway.test/v1/b", text: "" })
+        expect(gatewaySentOf(http, 0)).toMatchObject({ url: "http://gateway.test/v1/a", timeoutMs: 3000, text: "payload" })
+        expect(gatewaySentOf(http, 0).headers).toEqual({ "x-a": "1" })
+        expect(gatewaySentOf(http, 1)).toMatchObject({ url: "http://gateway.test/v1/b", text: "" })
     })
 
     it("reads a non-text body as empty and a missing header set as none", async () => {
         const { client, http } = await build()
-        answering(http, () => new Uint8Array([1]))
+        gatewayAnswering(http, () => new Uint8Array([1]))
 
         const answer = await client["fetcher"](1000)("http://gateway.test/v1/c", { body: new Uint8Array([1]) })
 
         expect(answer.status).toBe(200)
         expect(await answer.text()).toBe("")
-        expect(sentOf(http, 0).text).toBe("")
+        expect(gatewaySentOf(http, 0).text).toBe("")
     })
 })
 
@@ -457,7 +381,7 @@ describe("AiClient chat, the model a call targets", () => {
             target: { name: "sonnet", sampling: false, forcedToolChoice: false, upstreamFields: false },
         })
 
-        const sent = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
+        const sent = gatewayJsonBodyOf(gatewaySentOf(http, 0).text)
         expect(sent.model).toBe("sonnet")
         expect(sent.max_tokens).toBe(4000)
         for (const field of ["temperature", "reasoning", "session_id", "provider"]) expect(sent).not.toHaveProperty(field)
@@ -473,7 +397,7 @@ describe("AiClient chat, the model a call targets", () => {
             target: { name: "auto-light", sampling: false, forcedToolChoice: false, upstreamFields: true },
         })
 
-        const sent = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
+        const sent = gatewayJsonBodyOf(gatewaySentOf(http, 0).text)
         expect(sent.model).toBe("auto-light")
         expect(sent).not.toHaveProperty("temperature")
         expect(sent).toMatchObject({ reasoning: { effort: "low", exclude: true } })
@@ -485,7 +409,7 @@ describe("AiClient chat, the model a call targets", () => {
 
         await client.chat({ ...ASK, budget: BUDGET, affinity: "ws-1", routing: { order: ["together"] } })
 
-        const sent = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
+        const sent = gatewayJsonBodyOf(gatewaySentOf(http, 0).text)
         expect(sent).toMatchObject({ model: "work", max_tokens: 4000 })
         for (const field of ["temperature", "reasoning", "session_id", "provider"]) expect(sent).not.toHaveProperty(field)
     })
@@ -493,104 +417,11 @@ describe("AiClient chat, the model a call targets", () => {
     it("sends a marked message as plain text while breakpoints are off the wire", async () => {
         const { client, http } = await build()
 
-        await client.chat({ ...ASK, messages: [{ role: "system", content: "stable", cacheMark: true }, ASK.messages[1]!] })
+        await client.chat({ ...ASK, messages: [{ role: "system", content: "stable", cacheMark: true }, ...ASK.messages.slice(1)] })
 
-        const sent = JSON.parse(sentOf(http, 0).text) as { messages: ReadonlyArray<{ content: unknown }> }
-        expect(sent.messages[0]?.content).toBe("stable")
+        const { messages } = gatewayJsonBodyOf(gatewaySentOf(http, 0).text)
+        assert.ok(Array.isArray(messages), "AI request body had no messages")
+        expect(messages[0]).toHaveProperty("content", "stable")
     })
 })
 
-describe("AiClient over the router 0.7.0: the protocol the gateway serves a name through", () => {
-    const CLAUDE = { name: "claude", sampling: true, forcedToolChoice: false, upstreamFields: true }
-
-    it("reads the catalog once and asks a name served through Anthropic on the Messages route, under the same virtual key", async () => {
-        const { client, http } = await build()
-
-        const reply = await client.chat({ ...ASK, target: CLAUDE, budget: { effort: "low", maxTokens: 900 }, affinity: "ws-1" })
-        await client.chat({ ...ASK, target: CLAUDE })
-
-        expect(http.request.mock.calls.filter(([request]) => request.method === "GET")).toHaveLength(1)
-        const sent = sentOf(http, 0)
-        expect(sent.url).toBe("http://gateway.test/v1/messages")
-        expect(sent.headers).toMatchObject({ "x-ai-router-kind": "anthropic" })
-        // The one virtual key, in whichever header the Anthropic client sends it (the gateway takes `x-api-key` or a bearer token).
-        expect(Object.values(sent.headers).some((value) => value.includes("sk-starci-test"))).toBe(true)
-        const body = JSON.parse(sent.text) as Record<string, unknown>
-        expect(body).toMatchObject({ model: "claude", max_tokens: 900 })
-        // The `openai` kind's own fields never reach the other protocol: no temperature, no OpenRouter field.
-        for (const field of ["temperature", "reasoning", "session_id", "provider", "modelKwargs"]) expect(body).not.toHaveProperty(field)
-        expect(reply).toMatchObject({
-            content: "hello",
-            usageMetadata: { input_tokens: 18, output_tokens: 2, input_token_details: { cache_read: 5, cache_creation: 3 } },
-        })
-    })
-
-    it("marks the prompt cache on anthropic: the automatic breakpoint and a marked layer end, the text unchanged", async () => {
-        const { client, http } = await build()
-
-        await client.chat({
-            ...ASK,
-            target: CLAUDE,
-            messages: [
-                { role: "system", content: "CRAFT TOOLS SHOP STEP", cacheMark: true },
-                { role: "system", content: "this call only" },
-                { role: "user", content: "{}" },
-            ],
-        })
-
-        const body = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
-        expect(body.cache_control).toEqual({ type: "ephemeral" })
-        expect(body.system).toEqual([
-            { type: "text", text: "CRAFT TOOLS SHOP STEP", cache_control: { type: "ephemeral" } },
-            { type: "text", text: "this call only" },
-        ])
-    })
-
-    it("marks nothing on openai: the same marked prompt goes as plain text with no breakpoint anywhere", async () => {
-        const { client, http } = await build()
-
-        await client.chat({ ...ASK, messages: [{ role: "system", content: "STABLE", cacheMark: true }, { role: "user", content: "q" }] })
-
-        expect(sentOf(http, 0).url).toBe("http://gateway.test/v1/chat/completions")
-        expect(sentOf(http, 0).text).not.toContain("cache_control")
-        expect(sentOf(http, 0).text).toContain('"content":"STABLE"')
-    })
-
-    it("parses a JSON answer of the Messages route from its text (no JSON mode there) and ends the prompt with the JSON line", async () => {
-        const { client, http } = await build('```json\n{"stage":"new"}\n```')
-
-        const reply = await client.chat({ ...ASK, target: CLAUDE, json: true, schema: ANY_OBJECT })
-
-        expect(reply.parsed).toEqual({ stage: "new" })
-        expect(sentOf(http, 0).text).toContain("Answer with one JSON object only")
-        expect(sentOf(http, 0).text).not.toContain("response_format")
-    })
-
-    it("asks JSON mode on the OpenAI route for a JSON call", async () => {
-        const { client, http } = await build('{"a":1}')
-
-        await client.chat({ ...ASK, json: true })
-
-        expect(sentOf(http, 0).text).toContain('"response_format":{"type":"json_object"}')
-    })
-
-    it("takes the name's next protocol on a retry after a provider failure, and the first one otherwise", async () => {
-        const { client, http } = await build()
-
-        await client.chat({ ...ASK, target: { ...CLAUDE, name: "both" } })
-        await client.chat({ ...ASK, target: { ...CLAUDE, name: "both" }, fallback: true })
-        await client.chat({ ...ASK, target: CLAUDE, fallback: true })
-
-        expect(postsOf(http).map((request) => request.url)).toEqual([
-            "http://gateway.test/v1/messages",
-            "http://gateway.test/v1/chat/completions",
-            "http://gateway.test/v1/messages",
-        ])
-    })
-
-    it("fails loudly when the gateway does not serve the name (no Anthropic key: no chat profile is declared)", async () => {
-        const { client } = await build()
-
-        await expect(client.chat({ ...ASK, target: { ...CLAUDE, name: "haiku" } })).rejects.toMatchObject({ code: "ROUTED_NAME_UNKNOWN" })
-    })
-})

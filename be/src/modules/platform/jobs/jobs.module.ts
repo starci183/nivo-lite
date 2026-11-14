@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ScheduleModule, SchedulerRegistry } from "@nestjs/schedule"
 import { CronJob } from "cron"
 import type { EntityManager } from "typeorm"

@@ -1,14 +1,14 @@
 import type * as SubjectModule from "./csv-import-mapping.policy"
 import { Test } from "@nestjs/testing"
-import { carryMapping, suggestMapping } from "./csv-import-mapping.policy"
+import { blankMapping, carryMapping } from "./csv-import-mapping.policy"
 import type { CsvConfig } from "./csv-import.contracts"
 
 const SUBJECT = Symbol("csv-import-mapping.policy")
-type Subject = Pick<typeof SubjectModule, "suggestMapping" | "carryMapping">
+type Subject = Pick<typeof SubjectModule, "blankMapping" | "carryMapping">
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { suggestMapping, carryMapping } }],
+        providers: [{ provide: SUBJECT, useValue: { blankMapping, carryMapping } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -40,19 +40,19 @@ const saved: CsvConfig = {
     columns: table.headers,
 }
 
-describe("suggestMapping", () => {
-    it("guesses the customer id, name, phone, email, date and a quantity", async () => {
+describe("blankMapping", () => {
+    it("maps no id, title or date column whatever the headings say, and reads each column by its values", async () => {
         const subject = await buildSubject()
 
-        expect(subject.suggestMapping(table, "customer")).toEqual({
-            idColumn: "M\u00e3 KH",
-            titleColumn: "H\u1ecd t\u00ean",
-            dateColumn: "Ng\u00e0y t\u1ea1o",
+        expect(subject.blankMapping(table)).toEqual({
+            idColumn: null,
+            titleColumn: null,
+            dateColumn: null,
             kinds: {
                 "M\u00e3 KH": "text",
                 "H\u1ecd t\u00ean": "text",
-                "S\u0110T": "phone",
-                Email: "email",
+                "S\u0110T": "text",
+                Email: "text",
                 "Ng\u00e0y t\u1ea1o": "date",
                 "Ghi ch\u00fa": "text",
                 "S\u1ed1 l\u01b0\u1ee3ng": "number",
@@ -61,140 +61,51 @@ describe("suggestMapping", () => {
         })
     })
 
-    it("uses a product name and an order title, and only a code as the id", async () => {
+    it("reads a date from the values alone, not from the heading", async () => {
         const subject = await buildSubject()
 
-        const product = {
-            headers: ["T\u00ean s\u1ea3n ph\u1ea9m", "Gi\u00e1"],
-            rows: [["Tr\u00e0", "50000"]],
-        }
-        expect(subject.suggestMapping(product, "product")).toMatchObject({
-            idColumn: null,
-            titleColumn: "T\u00ean s\u1ea3n ph\u1ea9m",
-            kinds: { "T\u00ean s\u1ea3n ph\u1ea9m": "text", "Gi\u00e1": "number" },
+        const dated = subject.blankMapping({
+            headers: ["Note", "Ng\u00e0y"],
+            rows: [
+                ["2026-10-14", "2026-10-14"],
+                ["2026-10-15", "nope"],
+            ],
         })
-        const order = { headers: ["M\u00e3 \u0111\u01a1n", "Kh\u00e1ch h\u00e0ng"], rows: [["D1", "Lan"]] }
-        expect(subject.suggestMapping(order, "order")).toMatchObject({
-            idColumn: "M\u00e3 \u0111\u01a1n",
-            titleColumn: "M\u00e3 \u0111\u01a1n",
-        })
-    })
-
-    it("falls back from a code to an email, then a phone, for a customer", async () => {
-        const subject = await buildSubject()
-
-        expect(
-            subject.suggestMapping({ headers: ["Email", "S\u0110T"], rows: [["a@b.c", "0912"]] }, "customer").idColumn,
-        ).toBe("Email")
-        expect(subject.suggestMapping({ headers: ["S\u0110T"], rows: [["0912"]] }, "customer").idColumn).toBe(
-            "S\u0110T",
-        )
-        expect(subject.suggestMapping({ headers: ["S\u0110T"], rows: [["0912"]] }, "other").idColumn).toBeNull()
-    })
-
-    it("reads a date from the values, and from the heading when most values are dates", async () => {
-        const subject = await buildSubject()
-
-        const dated = subject.suggestMapping(
-            {
-                headers: ["Note", "Ng\u00e0y"],
-                rows: [
-                    ["2026-10-14", "2026-10-14"],
-                    ["2026-10-15", "nope"],
-                ],
-            },
-            "other",
-        )
         expect(dated.kinds.Note).toBe("date")
-        expect(dated.kinds["Ng\u00e0y"]).toBe("date")
-        expect(dated.dateColumn).toBe("Ng\u00e0y")
-    })
-})
-
-describe("suggestMapping", () => {
-    it("keeps a code as text even when the cells are digits, and ignores a leading zero", async () => {
-        const subject = await buildSubject()
-
-        const coded = subject.suggestMapping(
-            { headers: ["M\u00e3", "S\u1ed1 ti\u1ec1n", "Phone book"], rows: [["0123", "5000", "0123"]] },
-            "other",
-        )
-        expect(coded.kinds["M\u00e3"]).toBe("text")
-        expect(coded.kinds["S\u1ed1 ti\u1ec1n"]).toBe("number")
-        expect(coded.kinds["Phone book"]).toBe("phone")
-        expect(coded.idColumn).toBe("M\u00e3")
+        expect(dated.kinds["Ng\u00e0y"]).toBe("text")
+        expect(dated.dateColumn).toBeNull()
     })
 
-    it("does not call a mixed column a date or a number", async () => {
+    it("does not call a mixed column a date or a number, and ignores a leading zero", async () => {
         const subject = await buildSubject()
 
-        const mixed = subject.suggestMapping(
-            {
-                headers: ["Ng\u00e0y", "Qty", "Note"],
-                rows: [
-                    ["2026-10-14", "0123", "2026-10-14"],
-                    ["nope", "2", "nope"],
-                    ["later", "3", "later"],
-                ],
-            },
-            "other",
-        )
-        expect(mixed.kinds["Ng\u00e0y"]).toBe("text")
-        expect(mixed.kinds.Qty).toBe("text")
-        expect(mixed.kinds.Note).toBe("text")
-        expect(mixed.dateColumn).toBeNull()
-    })
-
-    it("uses the first text column, then the first header, when no name heading exists", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.suggestMapping({ headers: ["id", "city"], rows: [["1", "Hue"]] }, "other")).toMatchObject({
-            idColumn: "id",
-            titleColumn: "city",
+        const mixed = subject.blankMapping({
+            headers: ["Ng\u00e0y", "Qty", "Note", "Code"],
+            rows: [
+                ["2026-10-14", "0123", "2026-10-14", "5000"],
+                ["nope", "2", "nope", "0123"],
+                ["later", "3", "later", "7"],
+            ],
         })
-        expect(subject.suggestMapping({ headers: ["id"], rows: [["1"]] }, "other").titleColumn).toBe("id")
-        expect(subject.suggestMapping({ headers: [], rows: [] }, "other")).toEqual({
+        expect(mixed.kinds).toEqual({ "Ng\u00e0y": "text", Qty: "text", Note: "text", Code: "text" })
+    })
+
+    it("reads a column of numbers as numbers, and missing cells as empty text", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.blankMapping({ headers: ["Qty", "Notes"], rows: [["42"]] })).toEqual({
+            idColumn: null,
+            titleColumn: null,
+            dateColumn: null,
+            kinds: { Qty: "number", Notes: "text" },
+            columns: ["Qty", "Notes"],
+        })
+        expect(subject.blankMapping({ headers: [], rows: [] })).toEqual({
             idColumn: null,
             titleColumn: null,
             dateColumn: null,
             kinds: {},
             columns: [],
-        })
-    })
-
-    it("uses the first date column when none of the date headings match", async () => {
-        const subject = await buildSubject()
-
-        const mapped = subject.suggestMapping({ headers: ["Opened"], rows: [["2026-10-14"], ["2026-10-15"]] }, "other")
-        expect(mapped.kinds.Opened).toBe("date")
-        expect(mapped.dateColumn).toBe("Opened")
-    })
-
-    it("reads missing cells as empty text and recognises a code prefix beyond an exact heading", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.suggestMapping({ headers: ["sku internal", "Notes"], rows: [["0012"]] }, "product")).toEqual({
-            idColumn: "sku internal",
-            titleColumn: "Notes",
-            dateColumn: null,
-            kinds: { "sku internal": "text", Notes: "text" },
-            columns: ["sku internal", "Notes"],
-        })
-    })
-})
-
-describe("suggestMapping", () => {
-    it("keeps a number-like code prefix as text but reads a quantity as a number", async () => {
-        const subject = await buildSubject()
-
-        expect(
-            subject.suggestMapping({ headers: ["so internal", "so luong"], rows: [["123", "42"]] }, "other"),
-        ).toEqual({
-            idColumn: null,
-            titleColumn: "so internal",
-            dateColumn: null,
-            kinds: { "so internal": "text", "so luong": "number" },
-            columns: ["so internal", "so luong"],
         })
     })
 })
@@ -211,26 +122,15 @@ describe("carryMapping", () => {
         })
     })
 
-    it("falls back when a saved column is gone, and keeps an explicit empty id or date", async () => {
+    it("leaves a saved column unmapped when the new data no longer has it", async () => {
         const subject = await buildSubject()
 
-        const fresh = subject.suggestMapping({ headers: ["Email"], rows: [["a@b.c"]] }, "customer")
         expect(
             subject.carryMapping(
                 { ...saved, idColumn: "gone", titleColumn: "gone", dateColumn: "gone" },
                 { headers: ["Email"], rows: [["a@b.c"]] },
             ),
-        ).toMatchObject({
-            idColumn: fresh.idColumn,
-            titleColumn: fresh.titleColumn,
-            dateColumn: fresh.dateColumn,
-        })
-        expect(
-            subject.carryMapping(
-                { ...saved, idColumn: null, titleColumn: null, dateColumn: null },
-                { headers: ["Email"], rows: [["a@b.c"]] },
-            ),
-        ).toMatchObject({ idColumn: null, dateColumn: null, titleColumn: "Email" })
+        ).toMatchObject({ idColumn: null, titleColumn: null, dateColumn: null })
     })
 
     it("preserves inherited prototype-header kinds and the order of mapped headers", async () => {
@@ -243,7 +143,7 @@ describe("carryMapping", () => {
         expect(carried.kinds.Note).toBe("text")
     })
 
-    it("uses fresh kinds for missing or null saved entries, including text for empty cells", async () => {
+    it("reads the kind of a header with no saved entry from its values, including text for empty cells", async () => {
         const subject = await buildSubject()
 
         const kinds: CsvConfig["kinds"] = {}
@@ -255,16 +155,14 @@ describe("carryMapping", () => {
             ),
         ).toEqual({
             idColumn: null,
-            titleColumn: "Note",
+            titleColumn: null,
             dateColumn: null,
             kinds: { Qty: "number", Note: "text" },
             columns: ["Qty", "Note"],
         })
     })
-})
 
-describe("carryMapping", () => {
-    it("uses text for a header the provider adds after the fresh mapping was built", async () => {
+    it("uses text for a header the provider adds after the blank mapping was built", async () => {
         const subject = await buildSubject()
 
         let reads = 0
@@ -282,7 +180,7 @@ describe("carryMapping", () => {
             ),
         ).toEqual({
             idColumn: null,
-            titleColumn: "Qty",
+            titleColumn: null,
             dateColumn: null,
             kinds: { Note: "text" },
             columns: ["Note"],

@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
+import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
 import { ownerEdited } from "@tests/fixtures/builders/agent-workflows.builder"
 import type { WorkflowRecord, WorkflowVersionRecord } from "../agent-workflows.contracts"
 import { jsonOf } from "../agent-graphs.mapper"
@@ -58,11 +58,11 @@ const build = async () => {
     return moduleRef.get<Policies>(SUBJECT)
 }
 
-const RECONCILE = templateRequired("accounting.reconcile")
+const CONSULT = templateRequired("sales.consult")
 
 /** The newest version of the template (the one the workflow came from), its graph, and that graph with the owner's one change. */
-const NEWEST = latestTemplateVersion(RECONCILE).version
-const SHIPPED = templateGraphOf(RECONCILE, NEWEST)
+const NEWEST = latestTemplateVersion(CONSULT).version
+const SHIPPED = templateGraphOf(CONSULT, NEWEST)
 const EDITED = ownerEdited(SHIPPED)
 
 const WORKFLOW: WorkflowRecord = {
@@ -70,14 +70,14 @@ const WORKFLOW: WorkflowRecord = {
     workspaceId: "ws-1",
     fence: "2",
     agentId: "agent-1",
-    key: "reconcile",
-    name: "Reconcile",
+    key: "consult",
+    name: "Consult",
     status: "active",
     primary: true,
     position: 0,
     activeVersionId: "v-2",
     latestNumber: 2,
-    template: { templateId: "accounting.reconcile", templateVersion: NEWEST },
+    template: { templateId: "sales.consult", templateVersion: NEWEST },
     createdBy: null,
     createdAt: new Date("2026-11-01T00:00:00.000Z"),
     updatedAt: new Date("2026-11-02T00:00:00.000Z"),
@@ -95,7 +95,7 @@ const versionOf = (id: string, number: number, graph: GraphSpec): WorkflowVersio
     authorKind: "owner",
     authorId: "member-1",
     note: "",
-    template: { templateId: "accounting.reconcile", templateVersion: NEWEST },
+    template: { templateId: "sales.consult", templateVersion: NEWEST },
     fromNumber: null,
     graphVersionId: null,
     publishedAt: new Date("2026-11-09T02:00:00.000Z"),
@@ -120,7 +120,7 @@ describe("workflow views", () => {
 
         expect(subject.workflowViewOf(WORKFLOW, HISTORY[0] ?? null, "en")).toMatchObject({
             activeNumber: 2,
-            templateName: RECONCILE.name.en,
+            templateName: CONSULT.name.en,
             templateLatest: NEWEST,
             templateChangedSteps: 1,
             updatedAt: "2026-11-02T00:00:00.000Z",
@@ -165,7 +165,9 @@ describe("workflow diffs and requests", () => {
             SHIPPED.nodes.length,
         )
         expect(subject.againstGraphOf(WORKFLOW, HISTORY, newest, { kind: "template", version: null })).toEqual(SHIPPED)
-        expect(subject.againstGraphOf(WORKFLOW, HISTORY, newest, { kind: "template", version: NEWEST })).toEqual(SHIPPED)
+        expect(subject.againstGraphOf(WORKFLOW, HISTORY, newest, { kind: "template", version: NEWEST })).toEqual(
+            SHIPPED,
+        )
         // A template version the catalogue does not hold is refused, never guessed.
         expect(
             codeOf(() => subject.againstGraphOf(WORKFLOW, HISTORY, newest, { kind: "template", version: NEWEST + 1 })),

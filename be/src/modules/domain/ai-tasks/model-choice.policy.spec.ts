@@ -1,6 +1,7 @@
 import type { ConfiguredProviders, DeclaredModel } from "./ai-tasks.contracts"
 import { modelChoiceOf, modelFactsOf, servedModelOf } from "./model-choice.policy"
 import type { ModelChoice, ModelChoiceResult } from "./model-choice.policy"
+import { TestWorldError, TestWorldErrorCode } from "@tests/world/test-world.error"
 
 const SONNET = "claude-sonnet-5-5"
 const HAIKU = "claude-haiku-5-5"
@@ -13,7 +14,7 @@ const CLAUDE_WIRE = { sampling: false, forcedToolChoice: false, upstreamFields: 
 const auto = (weight: DeclaredModel["weight"]): DeclaredModel => ({ model: "auto", weight, source: "declared" })
 
 const chosen = (result: ModelChoiceResult): ModelChoice => {
-    if (!result.ok) throw new Error(`not chosen: ${result.model}`)
+    if (!result.ok) throw new TestWorldError({ code: TestWorldErrorCode.RowMissing, params: { what: `not chosen: ${result.model}` } })
     return result.choice
 }
 

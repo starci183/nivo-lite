@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useOpenAgentCreate } from "@/hooks/agentCreate"
 import { navigation } from "@/modules/i18n"
+import { useAgentRemovalImpact } from "@/hooks/agentSettings"
 import { useAgentCatalog, type AgentCatalogRoleEntry, type AgentCatalogRow } from "@/hooks/agentCatalog"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AGENT_ROLES_ANCHOR } from "@/modules/routes"
@@ -28,8 +29,6 @@ const placeholderRoleOf = (key: string): AgentCatalogRoleEntry => ({
 const placeholderAgentOf = (key: string): AgentCatalogRow => ({
     key,
     name: "-",
-    emblem: "/agents/chatbot.webp",
-    emblemKind: "chatbot",
     roleKey: "chatbot",
     picture: null,
     isInitials: false,
@@ -42,13 +41,7 @@ const placeholderAgentOf = (key: string): AgentCatalogRow => ({
     waiting: 0,
     canAddSame: false,
     liveAction: "none",
-    countLabel: "-",
-    overflowLabel: "",
     menuLabel: "-",
-    grantHref: "#",
-    knowledgeLine: "-",
-    knowledgeNote: "",
-    waitingLabel: "",
     statusLabel: "-",
     statusTone: "neutral",
     href: "#",
@@ -76,6 +69,7 @@ export const AgentCatalog = () => {
     const tc = useTranslations("modulesCore")
     const { slot, reload, table, roles, cardActions } = useAgentCatalog()
     const [removing, setRemoving] = useState<{ readonly key: string; readonly name: string } | null>(null)
+    const impact = useAgentRemovalImpact(removing?.key ?? null)
     return (
         <AgentCatalogBase
             props={{
@@ -96,7 +90,8 @@ export const AgentCatalog = () => {
                     removing === null
                         ? null
                         : { ...removing, title: tc("removeDialogTitle", { name: removing.name }) },
-                removeBody: tc("removeBody1"),
+                removeImpact: impact.lines,
+                removeImpactLabels: impact.labels,
                 removeConfirm: tc("removeConfirm"),
                 removeCancel: tc("removeCancel"),
                 isBusy: cardActions.isBusy,
@@ -126,6 +121,7 @@ export const AgentCatalog = () => {
                 clear: table.clear,
                 category: roles.setCategory,
                 retry: reload,
+                retryImpact: impact.retry,
                 install: roles.install,
                 open: (href) => router.push(href),
                 add: openCreate,

@@ -1,14 +1,10 @@
-import { entityEngineEntities } from "@modules/domain/entity-engine"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import { saveRecord } from "../../fixtures/builders/sales-door.builder"
+import { AgentRunEntity, AgentRunStepEntity } from "../../../modules/domain/agent-runs/persistence/entities"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox, currentRole } from "../../world/backend-role-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { doorCallsOf, useSeedConnection } from "../../world/sales-door-world.service"
 import { useTestWorld } from "../../world/use-test-world"
-
-const [RecordEntity] = entityEngineEntities
 
 /** The real app opens in about a minute on the world; the whole suite shares that one boot. */
 jest.setTimeout(240_000)
@@ -22,10 +18,13 @@ const RUN = world.id()
 const STEP = world.id()
 const SUBJECT = world.id()
 
-/** A run the OLD engine parked on its failed step, about an accounting entry: the records it wrote when a step failed (history rows). */
+/** A run the OLD engine parked on its failed step, about an accounting entry: the rows it wrote when a step failed (history rows). */
 const parkedRun = async (): Promise<void> => {
-    const at = "2026-11-06T09:00:00.000Z"
-    await saveRecord(seed.manager, who.workspaceId, "agent.run", RUN, {
+    const at = new Date("2026-11-06T09:00:00.000Z")
+    await seed.manager.save(AgentRunEntity, {
+        id: RUN,
+        workspaceId: who.workspaceId,
+        engine: "legacy",
         agentId: who.agentId,
         wakeId: world.id(),
         trigger: "payment.settled",
@@ -37,7 +36,9 @@ const parkedRun = async (): Promise<void> => {
         startedAt: at,
         endedAt: at,
     })
-    await saveRecord(seed.manager, who.workspaceId, "agent.run-step", STEP, {
+    await seed.manager.save(AgentRunStepEntity, {
+        id: STEP,
+        workspaceId: who.workspaceId,
         runId: RUN,
         ordinal: 1,
         stepKey: "post",
@@ -65,12 +66,8 @@ beforeAll(async () => {
 })
 
 const statusOfRun = async (): Promise<unknown> => {
-    const row = await seed.manager.findOneBy(RecordEntity, {
-        workspaceId: who.workspaceId,
-        entity: "agent.run",
-        id: RUN,
-    })
-    return row?.data["status"]
+    const row = await seed.manager.findOneBy(AgentRunEntity, { workspaceId: who.workspaceId, id: RUN })
+    return row?.status
 }
 
 describe("the platform module through the door, as the back-end role", () => {
@@ -92,8 +89,8 @@ describe("the platform module through the door, as the back-end role", () => {
     })
 
     // Phase 3 (package D): the engine parks no run any more (a thread run that cannot go on stops for the founder), so the parked-runs
-    // port answers an empty list and resumes nothing, even over an old-engine row left `parked` in the records.
-    it("lists no parked run, whatever the records hold and however it is narrowed", async () => {
+    // port answers an empty list and resumes nothing, even over an old-engine row left `parked` in the runs table.
+    it("lists no parked run, whatever the runs table holds and however it is narrowed", async () => {
         expect(await door.read(who.userId, "platform.parked-runs")).toMatchObject({ count: null, rows: [] })
         expect(await door.read(who.userId, "platform.parked-runs", { module: "accounting" })).toMatchObject({ count: null })
         expect(await door.read(who.userId, "platform.parked-runs", { subjectId: SUBJECT })).toMatchObject({ count: null })

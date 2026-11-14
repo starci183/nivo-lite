@@ -46,7 +46,14 @@ describe("fact-relation.policy", () => {
     it("keeps two different facts with a known kind and a trimmed short label", async () => {
         const policy = await build()
 
-        expect(policy.checkRelation({ ...inputOf("related"), kind: "applies_to", label: "  applies  ", createdBy: " Ada " })).toEqual({
+        expect(
+            policy.checkRelation({
+                ...inputOf("related"),
+                kind: "applies_to",
+                label: "  applies  ",
+                createdBy: " Ada ",
+            }),
+        ).toEqual({
             ok: true,
             relation: { fromFactId: A, toFactId: B, kind: "applies_to", label: "applies", createdBy: "Ada" },
         })
@@ -56,8 +63,14 @@ describe("fact-relation.policy", () => {
         const policy = await build()
 
         expect(policy.checkRelation(inputOf("related", { toFactId: A }))).toEqual({ ok: false, reason: "self" })
-        expect(policy.checkRelation({ ...inputOf("related"), kind: JSON.parse('"owns"') })).toEqual({ ok: false, reason: "kind" })
-        expect(policy.checkRelation(inputOf("related", { label: "x".repeat(81) }))).toEqual({ ok: false, reason: "label" })
+        expect(policy.checkRelation(Object.assign(inputOf("related"), { kind: "owns" }))).toEqual({
+            ok: false,
+            reason: "kind",
+        })
+        expect(policy.checkRelation(inputOf("related", { label: "x".repeat(81) }))).toEqual({
+            ok: false,
+            reason: "label",
+        })
     })
 
     it("reads the other end of an edge from either fact, and none from a third", async () => {

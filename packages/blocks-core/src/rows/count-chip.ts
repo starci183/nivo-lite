@@ -11,3 +11,9 @@ export const waitingChipOf = (count: string | null): CountChipFields => {
     const value = count === null ? Number.NaN : Number(count)
     return Number.isFinite(value) ? { count: value, isAttention: value > 0 } : {}
 }
+
+/** The chip fields of a count that arrives as text and counts what is settled, not work waiting: grey; none when it is not a number. */
+export const countChipOf = (count: string | null): CountChipFields => {
+    const value = count === null ? Number.NaN : Number(count)
+    return Number.isFinite(value) ? { count: value } : {}
+}

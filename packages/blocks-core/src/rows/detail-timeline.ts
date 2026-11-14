@@ -1,7 +1,6 @@
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { textOf, valueAt } from "../slots/paths"
-import { formatValue } from "./cell-format"
-import type { CellContext } from "./cell-format"
+import { formatValue, type CellContext } from "./cell-format"
 
 /** What the detail's timeline reads from a record: the list of steps and where each step's words and time stand. */
 export interface DetailTimelineSpec {

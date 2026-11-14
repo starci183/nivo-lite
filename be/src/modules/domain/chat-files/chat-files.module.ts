@@ -1,12 +1,10 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
-import { ChatFileReadsService } from "./chat-file-reads.service"
-import { CHAT_FILES_STORAGE } from "./chat-files.decorators"
+import { Module, type DynamicModule } from "@nestjs/common"
+import { CHAT_FILES_ASSETS, CHAT_FILES_STORAGE } from "./chat-files.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-files.module-definition"
-import { ChatFilesService } from "./chat-files.service"
+import { CustomerFilesService } from "./customer-files.service"
 
 @Module({})
-/** The files of the Office: upload addresses, the check of what was stored, their addresses and bytes. */
+/** The pictures and files customers send on a channel: the shop keeps a checked copy and hands its bytes to a model call. */
 export class ChatFilesModule extends ConfigurableModuleClass {
     /** Registers the storage binding and service once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -16,10 +14,10 @@ export class ChatFilesModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: CHAT_FILES_STORAGE, useExisting: options.storage },
-                ChatFilesService,
-                ChatFileReadsService,
+                ...(options.assets === undefined ? [] : [{ provide: CHAT_FILES_ASSETS, useExisting: options.assets }]),
+                CustomerFilesService,
             ],
-            exports: [ChatFilesService, ChatFileReadsService],
+            exports: [CustomerFilesService],
         }
     }
 }

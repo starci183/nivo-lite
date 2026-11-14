@@ -1,6 +1,5 @@
-import type { GraphView } from "@nivo-lite/blocks-core/graph"
-import { graphOfSpec, nodeOfKey, specOf } from "@/modules/workflowSteps"
-import type { StepsLocale } from "@/modules/workflowSteps"
+import { type GraphView } from "@/modules/plugin-registry"
+import { graphOfSpec, nodeOfKey, specOf, type StepsLocale } from "@/modules/workflowSteps"
 import type { RunGraphNode } from "@/modules/types"
 import type { AgentRunStepWire } from "./agentRuns.types"
 
@@ -8,8 +7,8 @@ import type { AgentRunStepWire } from "./agentRuns.types"
 export const humanLabelOf = (text: string): string => {
     if (text.includes(" ")) return text
     const words = text
-        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-        .replace(/[-_.]+/g, " ")
+        .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replaceAll(/[-_.]+/g, " ")
         .trim()
         .toLowerCase()
     return words.charAt(0).toUpperCase() + words.slice(1)
@@ -20,7 +19,7 @@ export type NodeNamer = (squashedKey: string) => string | undefined
 
 /** The name of a node by its key: the catalogue's name for the key when it has one, else the words of the key. */
 export const nodeNameOf = (key: string, nameOf: NodeNamer): string =>
-    nameOf(key.replace(/[-_.\s]+/g, "").toLowerCase()) ?? humanLabelOf(key)
+    nameOf(key.replaceAll(/[-_.\s]+/g, "").toLowerCase()) ?? humanLabelOf(key)
 
 /** The graph of a run: each node of the flow with its title and where it goes, and the card view of the whole flow. */
 export interface RunGraph {

@@ -1,21 +1,15 @@
 /**
- * What a workflow reset leaves of the runs it deletes, beyond the records it always cleared (runs, steps, workflows, holds, lead rows):
+ * What a workflow reset leaves of the runs it deletes, beyond what it always cleared (runs, steps, workflows, holds, memory, freezes):
  * the run state of the LangGraph engine and of the work around a run. Each kind is one statement over one table, keyed by "a run that is
- * gone": a run of a reset agent (deleted in the same transaction) or a run no record names any more (left by an earlier reset). The same
+ * gone": a run of a reset agent (deleted in the same transaction) or a run no row of `public.agent_runs` names any more (left by an earlier reset). The same
  * condition counts it (the dry run) and clears it, so a dry run after a reset reads zero for every kind here.
  *
- * Kept on purpose: `agent.node-effect` (the effect ledger: business dedupe keys of kept orders and bank transactions), done or failed
+ * Kept on purpose: `agent_node_effects` (the effect ledger: business dedupe keys of kept orders and bank transactions), done or failed
  * jobs and wakes (history), lesson candidates already on a truth-graph change card (the founder decides those), care timers of agents
  * outside the reset modules. Not reachable: the delayed BullMQ job of a deadline in Redis (no queue API removes a job by id, and the CLI
  * app runs the queue as a producer only); it is harmless, since a deadline that fires for a stop that no longer exists does nothing
  * (`ThreadDeadlinesService.fire` answers `closed`).
  */
-
-/** The run records: a run that no record names is gone. */
-export const RESET_RUN_ENTITY = "agent.run"
-
-/** The stop records of thread runs (one per run and step). */
-export const RESET_STOP_ENTITY = "agent.run-stop"
 
 /** The queues whose jobs name one run: the old engine's step job and the thread stops' deadline job. */
 export const RESET_RUN_QUEUES: ReadonlyArray<string> = ["agent_step", "thread_deadline"]
@@ -69,11 +63,11 @@ export interface ResetKind {
 }
 
 /**
- * A run named by `expression` is gone: it is a run the reset deletes (`$2`), or no run record names it (`$3` = the run entity). A null
- * name is never gone (a row that names no run is not a run's row).
+ * A run named by `expression` is gone: it is a run the reset deletes (`$2`), or no row of the runs table names it. A null name is never
+ * gone (a row that names no run is not a run's row).
  */
 const goneRun = (expression: string): string =>
-    `(${expression} IS NOT NULL AND (${expression} = ANY($2) OR NOT EXISTS (SELECT 1 FROM public.records run WHERE run.workspace_id = $1 AND run.entity = $3 AND run.id::text = ${expression})))`
+    `(${expression} IS NOT NULL AND (${expression} = ANY($2) OR NOT EXISTS (SELECT 1 FROM public.agent_runs run WHERE run.workspace_id = $1 AND run.id::text = ${expression})))`
 
 /** The two statements of a kind that deletes rows of one table. */
 const deleting = (table: string, where: string): Pick<ResetKind, "count" | "clear"> => ({
@@ -87,27 +81,16 @@ const closing = (table: string, set: string, where: string): Pick<ResetKind, "co
     clear: `UPDATE ${table} SET ${set} WHERE ${where}`,
 })
 
-/** The record links of a stop record of a gone run ($4 = the stop entity). */
-const STOP_LINK_WHERE = `l.workspace_id = $1 AND EXISTS (SELECT 1 FROM public.records s
-                WHERE s.workspace_id = $1 AND s.entity = $4 AND ${goneRun("s.data->>'runId'")}
-                  AND ((l.from_entity = s.entity AND l.from_id = s.id) OR (l.to_entity = s.entity AND l.to_id = s.id)))`
-
 /** The run id an owner's item names: its fields' `runId`, or the run of a thread approval's key `tool-approval:<run>:<step>:…`. */
 const ITEM_RUN = `COALESCE(i.proposal->'fields'->>'runId', CASE WHEN i.dedupe_key LIKE 'tool-approval:%' THEN split_part(i.dedupe_key, ':', 2) END)`
 
-/** The kinds, in the order the reset clears them (a stop's links before the stop). */
+/** The kinds, in the order the reset clears them. */
 export const RESET_RUN_STATE: ReadonlyArray<ResetKind> = [
     {
-        what: "run stop links",
-        ...deleting("public.record_links l", STOP_LINK_WHERE),
-        key: "runs",
-        extra: [RESET_STOP_ENTITY],
-    },
-    {
         what: "run stops",
-        ...deleting("public.records s", `s.workspace_id = $1 AND s.entity = $4 AND ${goneRun("s.data->>'runId'")}`),
+        ...deleting("public.run_stops s", `s.workspace_id = $1 AND ${goneRun("s.run_id::text")}`),
         key: "runs",
-        extra: [RESET_STOP_ENTITY],
+        extra: [],
     },
     {
         what: "LangGraph checkpoint writes",
@@ -131,7 +114,7 @@ export const RESET_RUN_STATE: ReadonlyArray<ResetKind> = [
         what: "open step and deadline jobs",
         ...deleting(
             "public.job_outbox j",
-            `j.workspace_id = $1 AND j.queue = ANY($4) AND j.state = ANY($5) AND ${goneRun("j.payload->>'runId'")}`,
+            `j.workspace_id = $1 AND j.queue = ANY($3) AND j.state = ANY($4) AND ${goneRun("j.payload->>'runId'")}`,
         ),
         key: "runs",
         extra: [RESET_RUN_QUEUES, RESET_OPEN_JOB_STATES],
@@ -140,8 +123,8 @@ export const RESET_RUN_STATE: ReadonlyArray<ResetKind> = [
         what: "open thread wakes (closed dead)",
         ...closing(
             "public.agent_wakes w",
-            "status = 'dead', reason = $6, finished_at = now()",
-            `w.workspace_id = $1 AND w.source = $4 AND w.status = ANY($5) AND ${goneRun("w.context->>'subjectId'")}`,
+            "status = 'dead', reason = $5, finished_at = now()",
+            `w.workspace_id = $1 AND w.source = $3 AND w.status = ANY($4) AND ${goneRun("w.context->>'subjectId'")}`,
         ),
         key: "runs",
         extra: [RESET_THREAD_WAKE_SOURCE, RESET_OPEN_WAKE_STATES],
@@ -151,8 +134,8 @@ export const RESET_RUN_STATE: ReadonlyArray<ResetKind> = [
         what: "open work items of gone runs and lead freezes (closed rejected)",
         ...closing(
             "public.work_items i",
-            "status = 'rejected', error = $6, completed_at = now()",
-            `i.workspace_id = $1 AND i.status = ANY($4) AND (i.action = $5 OR ${goneRun(ITEM_RUN)})`,
+            "status = 'rejected', error = $5, completed_at = now()",
+            `i.workspace_id = $1 AND i.status = ANY($3) AND (i.action = $4 OR ${goneRun(ITEM_RUN)})`,
         ),
         key: "runs",
         extra: [RESET_OPEN_ITEM_STATES, RESET_FREEZE_ITEM_ACTION],
@@ -173,7 +156,7 @@ export const RESET_RUN_STATE: ReadonlyArray<ResetKind> = [
         ...closing(
             `${RESET_LESSON_TABLE} b`,
             "status = 'declined'",
-            `b.workspace_id = $1 AND b.status = ANY($4) AND ${goneRun("b.run_id::text")}`,
+            `b.workspace_id = $1 AND b.status = ANY($3) AND ${goneRun("b.run_id::text")}`,
         ),
         key: "runs",
         extra: [RESET_OPEN_LESSON_STATES],
@@ -194,7 +177,7 @@ export interface ResetScope {
 /** The values of a kind's count, in its key's order. */
 export const resetCountValuesOf = (kind: ResetKind, scope: ResetScope): ReadonlyArray<unknown> =>
     kind.key === "runs"
-        ? [scope.workspaceId, scope.runs, RESET_RUN_ENTITY, ...kind.extra]
+        ? [scope.workspaceId, scope.runs, ...kind.extra]
         : [scope.workspaceId, scope.agents, ...kind.extra]
 
 /** The values of a kind's clear: the count's, then what only its SET takes. */

@@ -1,6 +1,12 @@
 import { itemOfFile, itemOfLink } from "./queue-items"
-import { UPLOAD_PARALLEL, stripExt } from "./queue"
-import type { BatchMeta, QueueActions, QueueItem } from "./queue"
+import {
+    UPLOAD_PARALLEL,
+    stripExt,
+    type BatchMeta,
+    type QueueActions,
+    type QueueItem,
+    type UploadOutcome,
+} from "./queue"
 import { forgetUploads, rememberUploads } from "./upload-marker"
 
 /** A link chosen in a service: its address and the name the document is stored under. */
@@ -22,7 +28,7 @@ export const withFiles = (queued: ReadonlyArray<QueueItem>, files: ReadonlyArray
                 : [...kept, file],
         [],
     )
-    return [...queued, ...fresh.map(itemOfFile)]
+    return [...queued, ...fresh.map((entry) => itemOfFile(entry))]
 }
 
 /** The queue items of links chosen in a service, leaving out the ones already queued. */
@@ -56,10 +62,21 @@ export const sendAllOf = (sendOne: (item: QueueItem, meta: BatchMeta) => Promise
     }
 }
 
+/** Where the bytes of an item are: already in storage, sent now (or refused for room), or nowhere for a link. */
+const bytesOf = async (
+    item: QueueItem,
+    actions: QueueActions,
+    patch: (id: string, change: Partial<QueueItem>) => void,
+): Promise<UploadOutcome> => {
+    if (item.file === undefined) return { path: null }
+    if (item.storagePath !== undefined) return { path: item.storagePath }
+    return actions.upload(item.file, (fraction) => patch(item.id, { uploaded: Math.min(fraction, 1) }))
+}
+
 /** Sends one item: its bytes to storage, then the document to the job queue. */
 export const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => void, actions: QueueActions) => {
     return async (item: QueueItem, meta: BatchMeta): Promise<boolean> => {
-        patch(item.id, { status: "uploading", error: undefined, uploaded: 0 })
+        patch(item.id, { status: "uploading", error: undefined, refusal: undefined, uploaded: 0 })
         const info = {
             topic: meta.topic ?? item.topic ?? null,
             tags: meta.tags,
@@ -67,23 +84,29 @@ export const sendOneOf = (patch: (id: string, change: Partial<QueueItem>) => voi
             installationId: meta.installationId,
             origin: item.origin ?? null,
         }
-        const path =
-            item.file === undefined
-                ? null
-                : (item.storagePath ??
-                  (await actions.upload(item.file, (fraction) => patch(item.id, { uploaded: Math.min(fraction, 1) }))))
+        const sent = await bytesOf(item, actions, patch)
+        const { path } = sent
+        if (sent.refusal !== undefined) {
+            patch(item.id, { status: "failed", error: "errQuota", refusal: sent.refusal, uploaded: undefined })
+            return false
+        }
         if (item.kind === "file" && path === null) {
             patch(item.id, { status: "failed", error: "errUpload" })
             return false
         }
         if (path !== null) patch(item.id, { uploaded: 1, storagePath: path })
-        const sourceId = await actions.enqueue({
+        const queued = await actions.enqueueOutcome({
             kind: item.kind === "link" ? "url" : "file",
             title: item.title ?? (item.kind === "link" ? item.name.replace(/^https?:\/\//i, "") : stripExt(item.name)),
             storagePath: path,
             url: item.kind === "link" ? item.name : null,
             meta: info,
         })
+        const sourceId = queued.id
+        if (queued.refusal !== undefined) {
+            patch(item.id, { status: "failed", error: "errQuota", refusal: queued.refusal, uploaded: undefined })
+            return false
+        }
         patch(
             item.id,
             sourceId === null

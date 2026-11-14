@@ -6,7 +6,7 @@ import type {
     AgentGraphOp,
     AgentGraphRowForm,
     AgentGraphTermForm,
-    AgentGraphThen,
+    AgentGraphBranchMode,
 } from "@/modules/types"
 import { isOp, newTermAfter, newTermOf, termsOfWhen } from "./agent-graph-condition"
 import type { AgentGraphWireNode } from "./agent-graph-wire"
@@ -20,7 +20,7 @@ export const MAX_ROWS = 12
 /** The most comparisons one branch holds: the limit of the contract for the terms of a condition. */
 export const MAX_TERMS = 6
 
-const THENS: ReadonlyArray<AgentGraphThen> = ["auto", "ask", "stop"]
+const BRANCH_MODES: ReadonlyArray<AgentGraphBranchMode> = ["auto", "ask", "stop"]
 const TIMEOUTS: ReadonlyArray<AgentGraphOnTimeout> = ["backup", "stop", "agent_owner", "unset"]
 
 const DEFAULT_HOURS = 4
@@ -31,7 +31,7 @@ const newRowOf = (term: AgentGraphTermForm): AgentGraphRowForm => ({
     isElse: false,
     isLocked: false,
     terms: [term],
-    then: "ask",
+    mode: "ask",
     approverId: "",
     timeoutHours: DEFAULT_HOURS,
     onTimeout: "agent_owner",
@@ -55,7 +55,7 @@ export const decideFormOf = (node: AgentGraphWireNode): AgentGraphDecideForm | n
                 isElse,
                 isLocked: terms === null,
                 terms: terms ?? [],
-                then: branch.then,
+                mode: branch.mode,
                 approverId: member ?? (isGroup ? KEEP_GROUP : ""),
                 timeoutHours: approver === null ? DEFAULT_HOURS : Math.max(1, Math.round(approver.timeoutMinutes / 60)),
                 onTimeout: approver?.onTimeout.kind ?? "agent_owner",
@@ -76,14 +76,14 @@ const replaceAt = <T>(items: ReadonlyArray<T>, index: number, change: (item: T) 
 
 const rowWithField = (
     row: AgentGraphRowForm,
-    field: "then" | "approverId" | "timeoutHours" | "onTimeout" | "backupId",
+    field: "mode" | "approverId" | "timeoutHours" | "onTimeout" | "backupId",
     value: string | number,
 ): AgentGraphRowForm => {
     if (typeof value === "number") return field === "timeoutHours" ? { ...row, timeoutHours: Math.max(1, value) } : row
     if (field === "approverId") return { ...row, approverId: value }
     if (field === "backupId") return { ...row, backupId: value }
-    const then = THENS.find((entry) => entry === value)
-    if (field === "then" && then !== undefined) return { ...row, then }
+    const mode = BRANCH_MODES.find((entry) => entry === value)
+    if (field === "mode" && mode !== undefined) return { ...row, mode }
     const onTimeout = TIMEOUTS.find((entry) => entry === value)
     return field === "onTimeout" && onTimeout !== undefined ? { ...row, onTimeout } : row
 }

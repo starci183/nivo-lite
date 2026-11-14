@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID, MAX_LINE } from "../../../bounds"
 import { contactParts } from "../../../rules/sales/contact"
@@ -36,5 +35,5 @@ export const replyAction: ActionDefinition = defineAction({
         if (written.reason === "taken") return refusedWith("phone_taken")
         return written.reason === "missing" ? refusedWith("missing") : CONFLICT
     },
-    refreshes: ["sales.attention", "sales.leads", "sales.lead"],
+    refreshes: ["blocks-core.sales.api.lead.attention", "blocks-core.sales.api.lead.list", "blocks-core.sales.api.lead.get"],
 })

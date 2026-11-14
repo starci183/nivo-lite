@@ -1,0 +1,686 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "content",
+  "params": {
+    "status": {
+      "type": "enum",
+      "of": [
+        "all",
+        "draft",
+        "approved",
+        "published"
+      ],
+      "url": "status",
+      "default": "all"
+    },
+    "post": {
+      "type": "string",
+      "url": "post"
+    }
+  },
+  "views": [
+    {
+      "id": "posts",
+      "label": {
+        "key": "tab_posts"
+      },
+      "root": {
+        "id": "posts-page",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "posts-week",
+            "block": "core.figures",
+            "props": {
+              "label": {
+                "key": "week_label"
+              },
+              "variant": "ribbon",
+              "items": [
+                {
+                  "term": {
+                    "key": "week_planned"
+                  },
+                  "path": "planned",
+                  "format": "count"
+                },
+                {
+                  "term": {
+                    "key": "week_drafts"
+                  },
+                  "path": "drafts",
+                  "format": "count"
+                },
+                {
+                  "term": {
+                    "key": "week_approved"
+                  },
+                  "path": "approved",
+                  "format": "count"
+                },
+                {
+                  "term": {
+                    "key": "week_published"
+                  },
+                  "path": "published",
+                  "format": "count"
+                }
+              ]
+            },
+            "bind": {
+              "data": {
+                "read": "blocks-core.content.api.post.week"
+              }
+            }
+          },
+          {
+            "id": "posts-master",
+            "block": "core.master-detail",
+            "props": {
+              "emptyTitle": {
+                "key": "post_idle_title"
+              },
+              "emptyBody": {
+                "key": "post_idle_body"
+              }
+            },
+            "children": [
+              {
+                "id": "posts-pane",
+                "block": "core.list-card",
+                "props": {
+                  "label": {
+                    "key": "posts_title"
+                  },
+                  "empty": {
+                    "key": "posts_empty"
+                  },
+                  "idPath": "id",
+                  "titlePath": "title",
+                  "descriptionPath": "day",
+                  "badgePath": "status",
+                  "selectParam": "post",
+                  "badgeTones": {
+                    "draft": "muted",
+                    "approved": "warning",
+                    "published": "success"
+                  },
+                  "labels": {
+                    "status": {
+                      "draft": {
+                        "key": "status_draft"
+                      },
+                      "approved": {
+                        "key": "status_approved"
+                      },
+                      "published": {
+                        "key": "status_published"
+                      }
+                    },
+                    "channel": {
+                      "facebook": {
+                        "key": "channel_facebook"
+                      },
+                      "zalo": {
+                        "key": "channel_zalo"
+                      },
+                      "tiktok": {
+                        "key": "channel_tiktok"
+                      },
+                      "instagram": {
+                        "key": "channel_instagram"
+                      }
+                    }
+                  },
+                  "search": false,
+                  "filterParam": "status",
+                  "filterLabel": {
+                    "key": "status_label"
+                  },
+                  "filterAll": {
+                    "key": "filter_all"
+                  },
+                  "filters": [
+                    {
+                      "value": "draft",
+                      "label": {
+                        "key": "status_draft"
+                      }
+                    },
+                    {
+                      "value": "approved",
+                      "label": {
+                        "key": "status_approved"
+                      },
+                      "attention": true
+                    },
+                    {
+                      "value": "published",
+                      "label": {
+                        "key": "status_published"
+                      }
+                    }
+                  ]
+                },
+                "bind": {
+                  "rows": {
+                    "read": "blocks-core.content.api.post.list",
+                    "variables": {
+                      "status": "$status"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "post-pane",
+                "block": "core.stack",
+                "props": {
+                  "gap": "section"
+                },
+                "children": [
+                  {
+                    "id": "post-detail",
+                    "block": "core.detail",
+                    "props": {
+                      "label": {
+                        "key": "post_label"
+                      },
+                      "titlePath": "title",
+                      "closeParam": "post",
+                      "labels": {
+                        "status": {
+                          "draft": {
+                            "key": "status_draft"
+                          },
+                          "approved": {
+                            "key": "status_approved"
+                          },
+                          "published": {
+                            "key": "status_published"
+                          }
+                        },
+                        "channel": {
+                          "facebook": {
+                            "key": "channel_facebook"
+                          },
+                          "zalo": {
+                            "key": "channel_zalo"
+                          },
+                          "tiktok": {
+                            "key": "channel_tiktok"
+                          },
+                          "instagram": {
+                            "key": "channel_instagram"
+                          }
+                        }
+                      },
+                      "items": [
+                        {
+                          "term": {
+                            "key": "fact_status"
+                          },
+                          "path": "status",
+                          "format": "badge"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_channel"
+                          },
+                          "path": "channel"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_day"
+                          },
+                          "path": "day"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_time"
+                          },
+                          "path": "time"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_pillar"
+                          },
+                          "path": "pillar"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_brief"
+                          },
+                          "path": "brief"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_text"
+                          },
+                          "path": "text"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_note"
+                          },
+                          "path": "note"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_published"
+                          },
+                          "path": "publishedAt",
+                          "format": "dateTime"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_url"
+                          },
+                          "path": "url"
+                        }
+                      ],
+                      "primaryWhen": "isDraft",
+                      "secondaryWhen": "isApproved"
+                    },
+                    "bind": {
+                      "record": {
+                        "read": "blocks-core.content.api.post.get",
+                        "variables": {
+                          "id": "$post"
+                        }
+                      },
+                      "primary": {
+                        "action": "blocks-core.content.post-approve"
+                      },
+                      "secondary": {
+                        "action": "blocks-core.content.post-publish"
+                      }
+                    }
+                  },
+                  {
+                    "id": "post-edit",
+                    "block": "core.form",
+                    "props": {
+                      "label": {
+                        "key": "edit_title"
+                      },
+                      "submitLabel": {
+                        "key": "edit_submit"
+                      },
+                      "successNotice": {
+                        "key": "edit_done"
+                      },
+                      "requireRecord": true,
+                      "idle": {
+                        "key": "post_idle_body"
+                      },
+                      "fields": [
+                        {
+                          "name": "title",
+                          "label": {
+                            "key": "field_title"
+                          },
+                          "kind": "text",
+                          "required": true,
+                          "max": 500
+                        },
+                        {
+                          "name": "brief",
+                          "label": {
+                            "key": "field_brief"
+                          },
+                          "kind": "textarea",
+                          "max": 5000
+                        },
+                        {
+                          "name": "text",
+                          "label": {
+                            "key": "field_text"
+                          },
+                          "kind": "textarea",
+                          "max": 5000
+                        }
+                      ]
+                    },
+                    "bind": {
+                      "record": {
+                        "read": "blocks-core.content.api.post.get",
+                        "variables": {
+                          "id": "$post"
+                        }
+                      },
+                      "submit": {
+                        "action": "blocks-core.content.post-save"
+                      }
+                    },
+                    "when": {
+                      "permission": "content.manage"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "new",
+      "label": {
+        "key": "tab_new"
+      },
+      "root": {
+        "id": "new-form",
+        "block": "core.form",
+        "props": {
+          "label": {
+            "key": "new_title"
+          },
+          "submitLabel": {
+            "key": "new_submit"
+          },
+          "successNotice": {
+            "key": "new_done"
+          },
+          "fields": [
+            {
+              "name": "channel",
+              "label": {
+                "key": "field_channel"
+              },
+              "kind": "choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "facebook",
+                  "label": {
+                    "key": "channel_facebook"
+                  }
+                },
+                {
+                  "value": "zalo",
+                  "label": {
+                    "key": "channel_zalo"
+                  }
+                },
+                {
+                  "value": "tiktok",
+                  "label": {
+                    "key": "channel_tiktok"
+                  }
+                },
+                {
+                  "value": "instagram",
+                  "label": {
+                    "key": "channel_instagram"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "title",
+              "label": {
+                "key": "field_title"
+              },
+              "kind": "text",
+              "required": true,
+              "max": 500
+            },
+            {
+              "name": "brief",
+              "label": {
+                "key": "field_brief"
+              },
+              "kind": "textarea",
+              "max": 5000
+            },
+            {
+              "name": "text",
+              "label": {
+                "key": "field_text"
+              },
+              "kind": "textarea",
+              "max": 5000
+            },
+            {
+              "name": "day",
+              "label": {
+                "key": "field_day"
+              },
+              "kind": "date"
+            },
+            {
+              "name": "time",
+              "label": {
+                "key": "field_time"
+              },
+              "hint": {
+                "key": "field_time_hint"
+              },
+              "kind": "text",
+              "max": 5
+            }
+          ]
+        },
+        "bind": {
+          "submit": {
+            "action": "blocks-core.content.post-save"
+          }
+        },
+        "when": {
+          "permission": "content.manage"
+        }
+      }
+    },
+    {
+      "id": "brand",
+      "label": {
+        "key": "tab_brand"
+      },
+      "root": {
+        "id": "brand-form",
+        "block": "core.form",
+        "props": {
+          "label": {
+            "key": "brand_title"
+          },
+          "submitLabel": {
+            "key": "brand_submit"
+          },
+          "successNotice": {
+            "key": "brand_done"
+          },
+          "fields": [
+            {
+              "name": "voice",
+              "label": {
+                "key": "field_voice"
+              },
+              "hint": {
+                "key": "field_voice_hint"
+              },
+              "kind": "textarea",
+              "max": 2000
+            },
+            {
+              "name": "avoid",
+              "label": {
+                "key": "field_avoid"
+              },
+              "kind": "textarea",
+              "max": 2000
+            },
+            {
+              "name": "audience",
+              "label": {
+                "key": "field_audience"
+              },
+              "kind": "textarea",
+              "max": 2000
+            },
+            {
+              "name": "cta",
+              "label": {
+                "key": "field_cta"
+              },
+              "kind": "text",
+              "max": 500
+            },
+            {
+              "name": "hashtags",
+              "label": {
+                "key": "field_hashtags"
+              },
+              "kind": "text",
+              "max": 500
+            },
+            {
+              "name": "pillars",
+              "label": {
+                "key": "field_pillars"
+              },
+              "hint": {
+                "key": "field_pillars_hint"
+              },
+              "kind": "textarea",
+              "max": 8000
+            },
+            {
+              "name": "facebookPosts",
+              "label": {
+                "key": "field_facebook_posts"
+              },
+              "kind": "number",
+              "max": 14
+            },
+            {
+              "name": "facebookDays",
+              "label": {
+                "key": "field_facebook_days"
+              },
+              "hint": {
+                "key": "field_days_hint"
+              },
+              "kind": "text",
+              "max": 20
+            },
+            {
+              "name": "facebookTime",
+              "label": {
+                "key": "field_facebook_time"
+              },
+              "hint": {
+                "key": "field_time_hint"
+              },
+              "kind": "text",
+              "max": 5
+            },
+            {
+              "name": "zaloPosts",
+              "label": {
+                "key": "field_zalo_posts"
+              },
+              "kind": "number",
+              "max": 14
+            },
+            {
+              "name": "zaloDays",
+              "label": {
+                "key": "field_zalo_days"
+              },
+              "hint": {
+                "key": "field_days_hint"
+              },
+              "kind": "text",
+              "max": 20
+            },
+            {
+              "name": "zaloTime",
+              "label": {
+                "key": "field_zalo_time"
+              },
+              "hint": {
+                "key": "field_time_hint"
+              },
+              "kind": "text",
+              "max": 5
+            },
+            {
+              "name": "tiktokPosts",
+              "label": {
+                "key": "field_tiktok_posts"
+              },
+              "kind": "number",
+              "max": 14
+            },
+            {
+              "name": "tiktokDays",
+              "label": {
+                "key": "field_tiktok_days"
+              },
+              "hint": {
+                "key": "field_days_hint"
+              },
+              "kind": "text",
+              "max": 20
+            },
+            {
+              "name": "tiktokTime",
+              "label": {
+                "key": "field_tiktok_time"
+              },
+              "hint": {
+                "key": "field_time_hint"
+              },
+              "kind": "text",
+              "max": 5
+            },
+            {
+              "name": "instagramPosts",
+              "label": {
+                "key": "field_instagram_posts"
+              },
+              "kind": "number",
+              "max": 14
+            },
+            {
+              "name": "instagramDays",
+              "label": {
+                "key": "field_instagram_days"
+              },
+              "hint": {
+                "key": "field_days_hint"
+              },
+              "kind": "text",
+              "max": 20
+            },
+            {
+              "name": "instagramTime",
+              "label": {
+                "key": "field_instagram_time"
+              },
+              "hint": {
+                "key": "field_time_hint"
+              },
+              "kind": "text",
+              "max": 5
+            }
+          ]
+        },
+        "bind": {
+          "record": {
+            "read": "blocks-core.content.api.brand.get"
+          },
+          "submit": {
+            "action": "blocks-core.content.brand-save"
+          }
+        },
+        "when": {
+          "permission": "content.manage"
+        }
+      }
+    }
+  ]
+}

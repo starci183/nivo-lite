@@ -14,7 +14,7 @@
         "required": ["entity", "on", "values"],
         "additionalProperties": false,
         "properties": {
-          "entity": { "type": "string", "pattern": "^[a-z][a-z0-9]*\\.[a-z][a-z0-9-]*$" },
+          "entity": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*){1,2}$" },
           "on": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
           "values": {
             "type": "object",

@@ -2,8 +2,7 @@
 
 import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
-import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import useSWR, { type SWRConfiguration } from "swr"
 import { queryAgentGraph, type QueryAgentGraphRequest } from "@/modules/api/graphql/queries/query-agent-graph"
 import type { AgentGraphQuery } from "@/modules/api"
 

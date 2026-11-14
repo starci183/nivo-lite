@@ -1,7 +1,6 @@
 import { builder } from "@starci/jest-preset"
 import type {
     GraphContext,
-    GraphDecisionRecord,
     GraphDocument as DomainGraphDocument,
     GraphRecord,
     ProposalRecord,
@@ -37,7 +36,7 @@ type Term =
 interface Branch {
     readonly key: string
     readonly when: Term | "else"
-    readonly then: "auto" | "ask" | "stop"
+    readonly mode: "auto" | "ask" | "stop"
     readonly next: string
     readonly approver: Approver | null
     readonly sources: ReadonlyArray<
@@ -99,12 +98,6 @@ interface Node {
 /** The whole graph of one agent. */
 interface GraphDocument {
     readonly nodes: ReadonlyArray<Node>
-    readonly rights: ReadonlyArray<{
-        readonly kind: "brain" | "customers" | "documents" | "payments" | "channels" | "invoices"
-        readonly scope: "conversation" | "workspace"
-        readonly hide: ReadonlyArray<string>
-        readonly mask: ReadonlyArray<string>
-    }>
     /** The flow of nodes a version may carry beside its rules. */
     readonly flow?: DomainGraphDocument["flow"]
 }
@@ -156,8 +149,11 @@ export const FACTS: FactsShape = {
 } as const
 
 /** A catalog lookup that answers the key with its parameters, so a spec reads which sentence a policy asked for. */
-export const say = (key: string, params?: Readonly<Record<string, string | number>>): string =>
-    key === "agentGraphs.unit.million" ? "tr" : `${key}${params === undefined ? "" : JSON.stringify(params)}`
+export const say = (key: string, params?: Readonly<Record<string, string | number>>): string => {
+    if (key === "agentGraphs.unit.million") return "tr"
+    const asked = params === undefined ? "" : JSON.stringify(params)
+    return `${key}${asked}`
+}
 
 /** The approver of a branch: a manager group, asked as a group, with a day to answer and the owner of the agent after. */
 export const approverOf: (overrides?: Partial<Approver>) => Approver = builder<Approver>({
@@ -178,7 +174,7 @@ export const amountIs = (op: "lt" | "lte" | "gt" | "gte" | "eq", value: number):
 export const branchOf: (overrides?: Partial<Branch>) => Branch = builder<Branch>({
     key: "small",
     when: amountIs("lt", 5_000_000),
-    then: "auto",
+    mode: "auto",
     next: "act",
     approver: null,
     sources: [],
@@ -249,49 +245,32 @@ export const graphOf = (branches: ReadonlyArray<Branch>): GraphDocument => {
             ...(leads.has("stop") ? [nodeOf({ key: "stop", kind: "output", step: "stop", next: [] })] : []),
             ...(act ? [END] : []),
         ],
-        rights: [],
     }
 }
 
 /** The three branches of the owner example: under 5tr alone, up to 20tr Dinh, above it Mr Nam. */
 export const OWNER_EXAMPLE: ReadonlyArray<Branch> = [
-    branchOf({ key: "small", when: amountIs("lt", 5_000_000), then: "auto", next: "act" }),
+    branchOf({ key: "small", when: amountIs("lt", 5_000_000), mode: "auto", next: "act" }),
     branchOf({
         key: "middle",
         when: { all: [amountIs("gte", 5_000_000), amountIs("lt", 20_000_000)] },
-        then: "ask",
+        mode: "ask",
         next: "ask",
         approver: approverOf(),
     }),
     branchOf({
         key: "else",
         when: "else",
-        then: "ask",
+        mode: "ask",
         next: "ask",
         approver: approverOf({ group: { roles: [], rooms: [], members: ["nam"] } }),
     }),
 ]
 
-/** The ceiling the rules put on one action. */
-interface Ceiling {
-    readonly action: string
-    readonly mode: "auto" | "ask" | "never"
-    readonly limitVnd: number | null
-    readonly autoMax: number | null
-    readonly maxMode: "ask" | "never" | null
-}
-
-const NO_CEILINGS: ReadonlyArray<Ceiling> = []
-const OUTWARD: boolean = false
-
-/** A workspace in which every approver is covered, the rule is open, every tool is granted and the agent faces nobody. */
+/** A workspace in which every tool is granted. */
 export const contextOf: (overrides?: Partial<GraphContext>) => GraphContext = builder<GraphContext>({
     facts: FACTS,
-    ceilings: NO_CEILINGS,
     isGranted: (_tool: string): boolean => true,
-    approverCovers: (_action: string, _group: object, _top: number | null): boolean => true,
-    groupHasPeople: (_group: object): boolean => true,
-    facesCustomers: OUTWARD,
 })
 
 /** The graph of one agent as the store reads it. */
@@ -321,7 +300,7 @@ export const stateOf: (overrides?: Partial<State>) => State = builder<State>({
 })
 
 /** A graph document the product cannot read: a title longer than a node may carry. */
-export const UNREADABLE_DOCUMENT: GraphDocument = { nodes: [nodeOf({ title: "x".repeat(40) })], rights: [] }
+export const UNREADABLE_DOCUMENT: GraphDocument = { nodes: [nodeOf({ title: "x".repeat(40) })] }
 
 /** The instant the records of the specs were written. */
 export const ROW_TIME: Date = new Date("2026-11-01T01:00:00.000Z")
@@ -365,58 +344,6 @@ export const versionRow = (
     publishedBy: "member-1",
     publishedAt: ROW_TIME,
 })
-
-const rowOfDecision = (
-    id: string,
-    closedAs: GraphDecisionRecord["closedAs"],
-    facts: GraphDecisionRecord["facts"],
-    overrides: Partial<GraphDecisionRecord>,
-): GraphDecisionRecord => ({
-    id,
-    workspaceId: "ws-1",
-    fence: "2",
-    agentId: "agent-1",
-    workItemId: "item-9",
-    road: "work",
-    mode: "enforced",
-    gateVerdict: "ask",
-    versionId: "version-1",
-    wakeId: null,
-    action: "pay_supplier",
-    path: ["decide", "middle"],
-    branchKey: "middle",
-    outcome: "ask",
-    approvalRequestId: "request-1",
-    unread: [],
-    unjudged: null,
-    subjectType: null,
-    subjectId: null,
-    shadowDiff: false,
-    createdAt: ROW_TIME,
-    updatedAt: ROW_TIME,
-    closedAs,
-    facts,
-    ...overrides,
-})
-
-/** One stored decision of a graph. */
-export const decisionRow = (
-    id = "decision-1",
-    closedAs: GraphDecisionRecord["closedAs"] = null,
-    facts: GraphDecisionRecord["facts"] = { [AMOUNT_FACT]: 7_200_000 },
-): GraphDecisionRecord => rowOfDecision(id, closedAs, facts, {})
-
-/** A stored run that left no work item: a reply the graph judged, keyed on the digest of its text. */
-export const unfiledDecisionRow = (id = "decision-2"): GraphDecisionRecord =>
-    rowOfDecision(id, null, {}, { workItemId: null, road: "reply", gateVerdict: null })
-
-/** A stored run the graph stopped, whose work closed as stopped. */
-export const stoppedDecisionRow = (id = "decision-3"): GraphDecisionRecord =>
-    rowOfDecision(id, "stopped", { "order.amount_vnd": 9 }, { outcome: "stop", shadowDiff: true })
-
-/** A stored run no branch decided, which entered the graph at the node of the branch key. */
-export const unbranchedDecisionRow = (id = "decision-4"): GraphDecisionRecord =>
-    rowOfDecision(id, "approved", {}, { path: ["decide"], branchKey: "decide" })
 
 /** One stored proposal of a graph. */
 export const proposalRow = (overrides: Partial<ProposalRecord> = {}): ProposalRecord => ({

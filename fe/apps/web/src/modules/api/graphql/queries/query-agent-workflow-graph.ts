@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentWorkflowGraphQuery, AgentWorkflowGraphQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `agentWorkflowGraph` query. */
@@ -44,6 +43,6 @@ export const queryAgentWorkflowGraph = async ({
     request,
     signal,
 }: QueryAgentWorkflowGraphParams): Promise<ApolloClient.QueryResult<AgentWorkflowGraphQueryResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

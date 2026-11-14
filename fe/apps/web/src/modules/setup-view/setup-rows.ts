@@ -1,5 +1,4 @@
-import { groupPositionsOf } from "@/modules/teamChat"
-import type { GroupItem } from "@/modules/teamChat"
+import { groupPositionsOf, type GroupItem } from "@/modules/teamChat"
 import type { SetupWrite, TeamChatMessageRow } from "@/modules/types"
 import type { setupThreadOf } from "./setup-thread"
 

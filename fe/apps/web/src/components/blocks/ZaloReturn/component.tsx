@@ -1,5 +1,4 @@
-import { Heading, Page, Progress, Text } from "@starci/grammar/common"
-import type { BreadcrumbItem } from "@starci/grammar/common"
+import { Heading, Page, Progress, Text, type BreadcrumbItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { DataSlot, SlotLabels } from "@/modules/types"

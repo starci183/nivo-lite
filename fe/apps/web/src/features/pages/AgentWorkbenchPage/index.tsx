@@ -1,13 +1,14 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
-import type { ReactNode, ReactElement } from "react"
+import type { ReactElement } from "react"
 import { SpecWorkbenchFrame } from "@/components/blocks/SpecWorkbenchFrame"
-import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
+import { isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 import { workbenchSpec } from "@/modules/workbench-spec"
 import { AgentWorkbenchPageBase } from "./component"
+import { AgentWorkbenchLoadingBody } from "./LoadingBody"
 
 /** The document title of the workbench tab. */
 export const agentWorkbenchMetadata = async (): Promise<Metadata> => {
@@ -23,21 +24,9 @@ type AgentWorkbenchPageProps = {
     readonly installationId: string
     /** The `tab` of the query: the workbench area to open (the agent dashboard frame validates it). */
     readonly tab: string | null
-    /** The `focus` of the query: the record a waiting row leads to. */
-    readonly focus: string | null
-    /** The `conversation` of the query: the thread of a customer a desk draws beside its areas. */
-    readonly conversation?: string | null
-    /** The workbench of each module by the workbench key of its catalogue entry; the route registers them. A module without one shows the pending state. */
-    readonly workbenches: Readonly<Record<string, WorkbenchComponent>>
 }
 
-/**
- * A workbench receives the tab, the focus and the id of the installation it is opened for (it reads its own data in the browser); a
- * multi-instance type scopes its data to that installation, a single-instance type may ignore it.
- */
-export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>
-
-/** The workbench slot of one instance: the spec of the module drawn on the installation of the url, else the working screen of the module scoped to the instance, or the pending state. */
+/** The workbench slot of one instance: the spec of the module drawn on the installation of the url, else the pending state. */
 export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps): Promise<ReactElement> => {
     if (!isModuleKey(props.module)) notFound()
     const resolved = workbenchSpec(props.module)
@@ -51,17 +40,6 @@ export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps): Promis
                 tab={props.tab}
             />
         )
-    const key = MODULE_REGISTRY[props.module].workbench
-    const Workbench = key === null ? undefined : props.workbenches[key]
-    if (Workbench !== undefined)
-        return (
-            <Workbench
-                tab={props.tab}
-                focus={props.focus}
-                conversation={props.conversation ?? null}
-                installationId={props.installationId}
-            />
-        )
     const t = await getTranslations("modulesCore")
     return (
         <AgentWorkbenchPageBase
@@ -70,6 +48,18 @@ export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps): Promis
                 body: t("workbenchBody"),
                 setupLabel: t("workbenchSetup"),
                 setupHref: workspaceHref(props.workspaceId, agentHref(props.module, props.installationId)),
+            }}
+        />
+    )
+}
+
+/** The workbench while its route loads: the words of every layout are translated here, the browser's address picks the layout of the agent type. */
+export const AgentWorkbenchLoadingPage = async (): Promise<ReactElement> => {
+    const modules = await getTranslations("modulesCore")
+    return (
+        <AgentWorkbenchLoadingBody
+            words={{
+                pending: { title: modules("workbenchTitle"), body: modules("workbenchBody"), setupLabel: modules("workbenchSetup") },
             }}
         />
     )

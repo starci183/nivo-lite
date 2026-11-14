@@ -42,6 +42,33 @@ describe("sepayPolledCredit", () => {
         })
     })
 
+    it("keeps the row's bank reference and its own account number, under the unchanged event id", async () => {
+        const subject = await build()
+
+        const row = { ...REAL, reference: "FT25308XYZ", account: "525209999" }
+        expect(subject.sepayPolledCredit("conn-1", row, "0123456789")).toEqual({
+            deliveryId: "conn-1:sepay:95958515",
+            credit: {
+                amount: 5000,
+                content: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
+                eventId: "sepay:95958515",
+                fallbackBankName: "MBBank",
+                account: "525209999",
+                occurredAt: "2026-11-03T18:06:00.000Z",
+                bankRef: "FT25308XYZ",
+            },
+        })
+    })
+
+    it("falls back to the connection's account and adds no reference when the row names neither", async () => {
+        const subject = await build()
+
+        const credit = subject.sepayPolledCredit("conn-1", REAL, "0123456789")?.credit
+        expect(credit?.account).toBe("0123456789")
+        expect(credit).not.toHaveProperty("bankRef")
+        expect(credit?.eventId).toBe("sepay:95958515")
+    })
+
     it("maps money out to a debit", async () => {
         const subject = await build()
 

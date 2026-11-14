@@ -36,7 +36,7 @@ export interface LobbyWorkspace {
     readonly seatLimit: number | null
     /** When the person last opened it, ISO 8601; null when never. */
     readonly lastOpenedAt: string | null
-    /** The most recently opened usable workspace: it carries the primary action. */
+    /** The row that carries the lobby's red (see `lobbyPrimaryRowOf`): false while a create action is on screen. */
     readonly isPrimary: boolean
     /** Owner or manager: may rename and copy an invitation link. */
     readonly canManage: boolean
@@ -94,13 +94,22 @@ const primaryIdOf = (memberships: ReadonlyArray<Membership>, joinedId: string | 
     return latest?.workspace.id
 }
 
+/**
+ * The lobby's one red (red budget): the single "create workspace" action whenever one is on screen; only when none is does the enter
+ * of the most recently opened row take it. Every other lobby action (invitation accept, join by link, the other rows) is neutral, so
+ * two reds can never render together. Returns the id of the row that carries the red, or undefined when the create action does.
+ */
+export const lobbyPrimaryRowOf = (isCreateOnScreen: boolean, recentRowId: string | undefined): string | undefined =>
+    isCreateOnScreen ? undefined : recentRowId
+
 /** The lobby rows of the memberships: the one just joined on top, then the order the back end answers. */
 export const lobbyWorkspacesOf = (
     memberships: ReadonlyArray<Membership>,
     locale: string,
     joinedId: string | undefined,
+    isCreateOnScreen: boolean,
 ): ReadonlyArray<LobbyWorkspace> => {
-    const primaryId = primaryIdOf(memberships, joinedId)
+    const primaryId = lobbyPrimaryRowOf(isCreateOnScreen, primaryIdOf(memberships, joinedId))
     const rows = memberships.map((membership): LobbyWorkspace => {
         const role = roleOf(membership.member.role)
         return {

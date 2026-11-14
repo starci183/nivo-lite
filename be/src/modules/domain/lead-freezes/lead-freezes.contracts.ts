@@ -1,3 +1,4 @@
+import type { JsonObject } from "@nivo-lite/agent-sdk/schema"
 /** Where the freeze of a customer stands: frozen for the owner, being retried, or released. */
 export type FreezeStatus = "frozen" | "retrying" | "released"
 
@@ -33,16 +34,31 @@ export interface PendingEvent {
     readonly messageIds: ReadonlyArray<string>
     /** True once a retry showed the lines to the failed turn: a successful retry answered them, so they are not replayed. */
     readonly folded: boolean
+    /**
+     * The trigger scope of the event as the flow formed it (what its verb supplies): what a thread run's nodes read of an event that
+     * JOINED the run while it waited at a stop (`ctx.run.joined`). Absent on an event kept before the member.
+     */
+    readonly trigger?: JsonObject | undefined
+    /**
+     * The step visit of the run that TOOK the event into its queue snapshot (`<run>:<step>:<visit>`, ROAD-API section 4): a taken event is
+     * the run's work and is never replayed as a run of its own; one never taken is replayed when the hold is released. Absent: not taken.
+     */
+    readonly taken?: string | undefined
 }
 
-/** Who a freeze is about: a lead, else the conversation of a customer who is not a lead yet. */
+/** Who a freeze is about: a contact (the engine's person), else the conversation of a person no contact holds yet. */
 export interface FreezeSubject {
-    /** `lead:<id>` or `conversation:<id>`, with `|wf:<workflowId>` when the freeze holds one workflow of the customer. */
+    /** `contact:<id>` or `conversation:<id>`, with `|wf:<workflowId>` when the freeze holds one workflow of the person. */
     readonly key: string
-    /** The lead, when known. */
-    readonly leadId: string | null
+    /** The contact, when known. */
+    readonly contactId: string | null
     /** The conversation, when known. */
     readonly conversationId: string | null
+    /**
+     * The ids merged into the contact (read from the contacts' one redirect table): a stop or a hold written under one of them before
+     * the merge is about the same person. Absent when none are known.
+     */
+    readonly aliases?: ReadonlyArray<string> | undefined
 }
 
 /** The freeze of one customer, as the record keeps it. */
@@ -117,7 +133,7 @@ export interface HeldStop {
     /** The workflow the run executes, or null for an agent's own graph. */
     readonly workflowId: string | null
     /** The customer, when the run names one. */
-    readonly leadId: string | null
+    readonly contactId: string | null
     /** The conversation of the run, when it has one. */
     readonly conversationId: string | null
     /**
@@ -138,7 +154,7 @@ export interface FreezeState {
     /** The workflow whose run stopped, the only one the freeze holds; null for a freeze that holds the customer as a whole. */
     readonly workflowId: string | null
     /** The lead, when known. */
-    readonly leadId: string | null
+    readonly contactId: string | null
     /** The conversation, when known. */
     readonly conversationId: string | null
     /** The run that failed. */

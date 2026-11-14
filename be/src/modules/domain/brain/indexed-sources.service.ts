@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import type { IndexedSource, InboxClaim } from "./brain.contracts"
 

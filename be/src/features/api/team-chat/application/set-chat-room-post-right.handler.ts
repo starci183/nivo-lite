@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatAudienceService } from "@modules/domain/team-chat"
-import type { ChatRoomView, TeamChatResult } from "@modules/domain/team-chat"
+import { TeamChatAudienceService, type ChatRoomView, type TeamChatResult } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetChatRoomPostRightCommand } from "./set-chat-room-post-right.command"
 
 @CommandHandler(SetChatRoomPostRightCommand)
@@ -20,7 +18,12 @@ export class SetChatRoomPostRightHandler extends ICQRSHandler<
     }
 
     protected override process(command: SetChatRoomPostRightCommand): Promise<TeamChatResult<ChatRoomView>> {
-        const r = command.params.request
-        return this.audience.setPostRight(r.workspaceId, command.params.principal.id, r.roomId, r.agentId, r.mayPost)
+        return this.audience.setPostRight(
+            command.params.request.workspaceId,
+            command.params.principal.id,
+            command.params.request.roomId,
+            command.params.request.agentId,
+            command.params.request.mayPost,
+        )
     }
 }

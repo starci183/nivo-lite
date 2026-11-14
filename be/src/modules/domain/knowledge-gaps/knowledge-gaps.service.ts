@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { factSlugOf } from "@modules/domain/brain-facts"
 import { InjectPrimaryEntityManager, returnedRows } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { isGapReturned, toGapFields, toGapRecord } from "./gap-record.mapper"
-import type { GapFields } from "./gap-record.mapper"
-import { answers, keywordsOf, sameQuestion, splitTopic, wordSet } from "./gap-keywords.policy"
+import { isGapReturned, toGapFields, toGapRecord, type GapFields } from "./gap-record.mapper"
+import { splitTopic } from "./gap-keywords.policy"
 import type {
     Answerer,
     GapInput,
@@ -32,10 +30,22 @@ const CANDIDATES = 300
 /** The most gaps a list returns. */
 const LIST_MAX = 200
 
+/** The key of a subject and an attribute as written (`factSlugOf` of each, exact); null when either has no letter or digit. */
+const keyOf = (subject: string, attribute: string): string | null => {
+    const [left, right] = [factSlugOf(subject), factSlugOf(attribute)]
+    return left === "" || right === "" ? null : `${left}|${right}`
+}
+
+/** The key of the topic and attribute a gap was reported with, or null when the model gave it none. */
+const gapKeyOf = (gap: Pick<KnowledgeGapEntity, "topic" | "attributeGuess">): string | null =>
+    gap.topic === null || gap.attributeGuess === null ? null : keyOf(gap.topic, gap.attributeGuess)
+
 @Injectable()
 /**
- * The questions customers asked that the brain could not answer: a similar question counts again on the same gap, the owner adds a
- * fact or a document that answers it, and a customer asking it again reopens it. Similar questions are merged by their significant words.
+ * The questions customers asked that the brain could not answer. The SAME gap is counted again when the question is the same text
+ * (its normal form, exact) or when the model that reported it gave it the same topic and attribute (exact keys of what the model
+ * wrote); a truth ANSWERS a gap when its subject and attribute are those same keys; a customer asking again reopens it. No word of a
+ * question is compared with another (owner 2026-11-12): what two questions mean is read by the model in the turn that reports them.
  */
 export class KnowledgeGapsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
@@ -51,19 +61,20 @@ export class KnowledgeGapsService {
             order: { count: "DESC", lastSeenAt: "DESC" },
             take: Math.min(limit, LIST_MAX),
         })
-        return rows.map(toGapRecord)
+        return rows.map((item) => toGapRecord(item))
     }
 
     /**
-     * A customer asked something the brain could not answer. A similar gap of the same agent counts it again (an answered one opens
-     * again); otherwise a new gap starts. Answers null when the question has no significant word to remember it by.
+     * A customer asked something the brain could not answer. The same gap of the same agent counts it again (an answered one opens
+     * again): the same question text, or the same topic AND attribute as the model wrote them; otherwise a new gap starts. Answers
+     * null when the question has no letter or digit to remember it by.
      */
     async record(workspaceId: string, input: GapInput): Promise<MaybeGapRecorded> {
-        const question = input.question.replace(/\s+/g, " ").trim().slice(0, QUESTION_MAX)
-        const keywords = keywordsOf(question)
-        if (keywords.length === 0) return null
+        const question = input.question.replaceAll(/\s+/g, " ").trim().slice(0, QUESTION_MAX)
         const key = factSlugOf(question)
+        if (key === "") return null
         const { subject, attribute } = splitTopic(input.topic)
+        const topicKey = subject === null || attribute === null ? null : keyOf(subject, attribute)
         const bump = async (row: GapFields): Promise<GapRecorded> => {
             const changed = await this.countAgain(workspaceId, row.id, subject, attribute, input.conversationId ?? null)
             return { gap: toGapRecord(changed ?? row), isNew: false, reopened: row.status === "answered" }
@@ -76,7 +87,7 @@ export class KnowledgeGapsService {
             })
             return (
                 rows.find((row) => row.questionKey === key) ??
-                rows.find((row) => sameQuestion(keywords, row.keywords ?? keywordsOf(row.question)))
+                (topicKey === null ? undefined : rows.find((row) => gapKeyOf(row) === topicKey))
             )
         }
         const existing = await find()
@@ -89,7 +100,7 @@ export class KnowledgeGapsService {
                 module: input.module,
                 question,
                 questionKey: key,
-                keywords,
+                keywords: [],
                 topic: subject,
                 attributeGuess: attribute,
                 exampleConversationId: input.conversationId ?? null,
@@ -123,18 +134,20 @@ export class KnowledgeGapsService {
         )
     }
 
-    /** Answers every open gap whose question words the text covers. Answers how many. */
+    /**
+     * Answers every open gap whose topic and attribute (as the model that reported it wrote them) are the keys of this truth's
+     * subject and attribute. Exact keys only: a gap the model gave no topic is answered by a person. Answers how many.
+     */
     async resolve(workspaceId: string, answerer: Answerer): Promise<number> {
-        const words = wordSet(answerer.text)
+        const key = keyOf(answerer.subject, answerer.attribute)
+        if (key === null) return 0
         const open = await this.entityManager.find(KnowledgeGapEntity, {
-            select: { id: true, module: true, keywords: true, question: true },
+            select: { id: true, module: true, topic: true, attributeGuess: true },
             where: { workspaceId, status: "open" },
             take: CANDIDATES,
         })
         const matching = open.filter(
-            (gap) =>
-                (answerer.module === null || answerer.module === gap.module) &&
-                answers(gap.keywords ?? keywordsOf(gap.question), words, answerer.minimum),
+            (gap) => (answerer.module === null || answerer.module === gap.module) && gapKeyOf(gap) === key,
         )
         await eachInOrder(matching, (gap) => this.answer(workspaceId, gap.id, answerer.by))
         return matching.length
@@ -155,7 +168,7 @@ export class KnowledgeGapsService {
             }),
             this.entityManager.count(KnowledgeGapEntity, { where: { workspaceId, module, status: "open" } }),
         ])
-        return { openCount, items: rows.map(toGapRecord) }
+        return { openCount, items: rows.map((item) => toGapRecord(item)) }
     }
 
     /** Counts a question once more in one statement; an answered gap opens again. Answers the changed gap, or undefined when it is gone. */

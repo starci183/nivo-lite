@@ -26,6 +26,6 @@ describe("TickJobsCli", () => {
         const { cli, ticks } = await build()
         const failure = new Error("enqueue refused")
         ticks.tick.mockRejectedValue(failure)
-        await expect(cli.run(["content-tick"])).rejects.toBe(failure)
+        await expect(cli.run(["data-sync-tick"])).rejects.toBe(failure)
     })
 })

@@ -1,35 +1,17 @@
-import { foldText } from "./document-state.policy"
-import {
-    CRITIC_CAPS,
-    isCriticKind,
-    type CriticCandidate,
-    type CriticChoice,
-    type CriticFact,
-    type CriticKind,
-    type CriticPassage,
-    type CriticPoint,
-    type CriticQuote,
-    type CritiqueInput,
-} from "./document-critic.contracts"
-import type { CritiqueAnswer, CritiqueBundle, CritiqueFinding } from "./document-critic.port"
+import { foldText } from "./text-fold.policy"
+import { CRITIC_CAPS, type CriticPassage, type CriticPoint, type CriticQuote, type CritiqueInput } from "./document-critic.contracts"
+import type { BundleItem, CritiqueAnswer, CritiqueBundle, CritiqueFinding } from "./document-critic.port"
+import { kindDropOf, type ModelDrop } from "./document-critic-guard.policy"
 import { modelSubjectOf } from "./document-critic-reconcile.policy"
 import { ownHashesOf } from "./document-critic-rules.policy"
-import { inputChoice, removeChoice, valueChoice } from "./document-critic-text.policy"
-import type { BundleItem } from "./dossier-review.port"
 import { normalizeQuote } from "./evidence.policy"
-
-/** What a key of the bundle stands for. */
-type Keyed =
-    | { readonly type: "passage"; readonly passage: CriticPassage; readonly changed: boolean }
-    | { readonly type: "fact"; readonly fact: CriticFact }
-    | { readonly type: "shop"; readonly candidate: CriticCandidate }
 
 /** A bundle and what each of its keys stands for. */
 export interface BuiltCritique {
     /** What the model reads. */
     readonly bundle: CritiqueBundle
-    /** Key → item. */
-    readonly keys: ReadonlyMap<string, Keyed>
+    /** Key → the passage it stands for. */
+    readonly keys: ReadonlyMap<string, CriticPassage>
     /** Key → the text the quote must be copied from. */
     readonly texts: ReadonlyMap<string, string>
     /** The hashes of the passages the model critiques. */
@@ -38,150 +20,81 @@ export interface BuiltCritique {
     readonly chars: number
 }
 
-const within = <T extends { readonly text: string }>(items: ReadonlyArray<T>, max: number): Array<T> => {
+/** The first items whose texts fit in `max` characters; with `atLeastOne`, the first item even when it alone is longer. */
+const within = <T extends { readonly text: string }>(items: ReadonlyArray<T>, max: number, atLeastOne = false): Array<T> => {
     const kept: Array<T> = []
     let used = 0
     for (const item of items) {
-        if (used + item.text.length > max) break
+        if (used + item.text.length > max && !(atLeastOne && kept.length === 0)) break
         kept.push(item)
         used += item.text.length
     }
     return kept
 }
 
-const factText = (fact: CriticFact): string =>
-    `${fact.subjectLabel} - ${fact.attributeLabel}: ${fact.value}${fact.unit === null ? "" : ` ${fact.unit}`}`
-
-const shopText = (candidate: CriticCandidate): string =>
-    `${factText(candidate.fact)} [${candidate.fact.status === "active" ? "in force" : "waiting"}${
-        candidate.sourceTitle === null ? "" : ` · ${candidate.sourceTitle}`
-    }]`
-
 /** The passages a model call critiques: all of them on the first upload, else those whose hash no finished critique read. */
 export const changedPassages = (input: CritiqueInput): ReadonlyArray<CriticPassage> =>
     input.passages.filter((passage) => !input.reviewed.has(passage.hash))
 
 /**
- * The bundle of ONE model call for a document: the changed passages (P), the unchanged ones as context (C, within a cap), the facts born
- * from the changed passages (F; on the first upload every fact), what the shop holds on the same things (T), and the rule points already
- * found (K). Answers null when nothing changed: no call.
+ * The bundle of ONE model call for a document: the SECURITY read (D4, owner 2026-11-12). The model is asked one thing only: whether
+ * a changed passage carries text addressed to an AI instead of stating something of the business. Every kind of document is read
+ * the same way, so the bundle carries the changed passages (P) and nothing else: no context, no truths, no shop values, no rule
+ * points (the `CritiqueBundle` shape keeps those members, empty). Answers null when nothing changed: no call. `window` is the most
+ * characters of changed passages this call reads: the whole `changedChars` normally, less when the answer over a larger window was
+ * cut at the token cap (the next try reads fewer passages; a passage longer than the window is still read, alone).
  */
-export const buildCritique = (input: CritiqueInput, known: ReadonlyArray<CriticPoint>): BuiltCritique | null => {
-    const changed = within(changedPassages(input), CRITIC_CAPS.changedChars)
+export const buildCritique = (
+    input: CritiqueInput,
+    first: boolean = input.reviewed.size === 0,
+    window: number = CRITIC_CAPS.changedChars,
+): BuiltCritique | null => {
+    // One call reads at most `window` characters and `passages` passages; the critique calls again for the rest.
+    const changed = within(changedPassages(input), window, true).slice(0, CRITIC_CAPS.passages)
     if (changed.length === 0) return null
-    const changedHashes = new Set(changed.map((passage) => passage.hash))
-    const firstUpload = input.reviewed.size === 0
-    const context = firstUpload
-        ? []
-        : within(
-              input.passages.filter((passage) => !changedHashes.has(passage.hash)),
-              CRITIC_CAPS.contextChars,
-          )
-    const facts = input.facts
-        .filter((fact) => firstUpload || fact.chunkHash === null || changedHashes.has(fact.chunkHash))
-        .slice(0, CRITIC_CAPS.facts)
-    const shop = [
-        ...new Map(
-            facts.flatMap((fact) => (input.candidates.get(fact.id) ?? []).map((candidate) => [candidate.fact.id, candidate] as const)),
-        ).values(),
-    ].slice(0, CRITIC_CAPS.facts)
-    const keys = new Map<string, Keyed>()
+    const keys = new Map<string, CriticPassage>()
     const texts = new Map<string, string>()
-    const item = (key: string, text: string, keyed: Keyed): BundleItem => {
-        keys.set(key, keyed)
-        texts.set(key, text)
-        return { key, text }
+    const item = (key: string, passage: CriticPassage): BundleItem => {
+        keys.set(key, passage)
+        texts.set(key, passage.text)
+        return { key, text: passage.text }
     }
     const bundle: CritiqueBundle = {
         workspaceId: input.workspaceId,
         today: input.today,
         title: input.title,
-        firstUpload,
-        changed: changed.map((passage, index) =>
-            item(`P${index + 1}`, passage.text, { type: "passage", passage, changed: true }),
-        ),
-        context: context.map((passage, index) =>
-            item(`C${index + 1}`, passage.text, { type: "passage", passage, changed: false }),
-        ),
-        facts: facts.map((fact, index) => item(`F${index + 1}`, factText(fact), { type: "fact", fact })),
-        shop: shop.map((candidate, index) => item(`T${index + 1}`, shopText(candidate), { type: "shop", candidate })),
-        known: known.map((point, index) => ({ key: `K${index + 1}`, text: `${point.kind}: ${point.line}` })),
+        firstUpload: first,
+        changed: changed.map((passage, index) => item(`P${index + 1}`, passage)),
+        context: [],
+        facts: [],
+        shop: [],
+        known: [],
     }
-    const chars = [...texts.values(), ...bundle.known.map((one) => one.text)].reduce((sum, text) => sum + text.length, 0)
-    return { bundle, keys, texts, changed: changedHashes, chars }
+    const chars = [...texts.values()].reduce((sum, text) => sum + text.length, 0)
+    return { bundle, keys, texts, changed: new Set(changed.map((passage) => passage.hash)), chars }
 }
 
-const severityOf = (value: string): CriticPoint["severity"] =>
-    value === "high" || value === "low" ? value : "medium"
+/**
+ * The window (characters of changed passages) the try after a CUT answer reads: half of what the cut call read, so it reads fewer
+ * passages and its answer is shorter. Null when the cut call read one passage: there is nothing left to halve.
+ */
+export const narrowerWindow = (built: BuiltCritique): number | null => {
+    if (built.changed.size <= 1) return null
+    const read = built.bundle.changed.reduce((sum, passage) => sum + passage.text.length, 0)
+    return Math.max(1, Math.floor(read / 2))
+}
 
-/** The quote of a cited key, when the words are really in it (folded, whitespace collapsed). */
+/** The quote of a cited passage key, when the words are really in it (folded, whitespace collapsed). */
 const quoteOfKey = (built: BuiltCritique, input: CritiqueInput, key: string, words: string): CriticQuote | null => {
-    const keyed = built.keys.get(key)
+    const passage = built.keys.get(key)
     const text = built.texts.get(key)
     const quote = words.trim().slice(0, CRITIC_CAPS.quoteMax)
-    if (keyed === undefined || text === undefined || quote.length < 3) return null
+    if (passage === undefined || text === undefined || quote.length < 3) return null
     if (!normalizeQuote(foldText(text)).includes(normalizeQuote(foldText(quote)))) return null
-    if (keyed.type === "passage") {
-        const words = foldText(quote)
-        const born = input.facts.find(
-            (fact) =>
-                fact.chunkHash === keyed.passage.hash &&
-                fact.quote !== null &&
-                (words.includes(foldText(fact.quote)) || foldText(fact.quote).includes(words)),
-        )
-        return { text: quote, passageId: keyed.passage.id, chunkHash: keyed.passage.hash, role: "this", factId: born?.id ?? null, sourceId: input.sourceId, sourceTitle: input.title }
-    }
-    if (keyed.type === "fact") {
-        return { text: keyed.fact.quote ?? quote, passageId: input.passages.find((one) => one.hash === keyed.fact.chunkHash)?.id ?? null, chunkHash: keyed.fact.chunkHash, role: "this", factId: keyed.fact.id, sourceId: input.sourceId, sourceTitle: input.title }
-    }
-    return { text: quote, passageId: null, chunkHash: keyed.candidate.fact.chunkHash, role: "other", factId: keyed.candidate.fact.id, sourceId: null, sourceTitle: keyed.candidate.sourceTitle }
+    return { text: quote, passageId: passage.id, chunkHash: passage.hash, role: "this", factId: null, sourceId: input.sourceId, sourceTitle: input.title }
 }
 
-/** The buttons of a model point: built by the core from what it cites, never taken as instructions from the model. */
-const choicesOf = (
-    say: CritiqueInput["say"],
-    kind: CriticKind,
-    quotes: ReadonlyArray<CriticQuote>,
-    values: ReadonlyArray<string>,
-    against: CriticCandidate | null,
-): ReadonlyArray<CriticChoice> => {
-    const own = quotes.filter((quote) => quote.role === "this")
-    const ownFact = own.find((quote) => quote.factId !== null)?.factId ?? null
-    const [first, second] = values
-    switch (kind) {
-        case "inside_contradiction": {
-            const facts = own.filter((quote) => quote.factId !== null)
-            if (first !== undefined && second !== undefined) {
-                return [valueChoice("a", first, first, facts[0]?.factId ?? null), valueChoice("b", second, second, facts[1]?.factId ?? null)]
-            }
-            return [inputChoice("a", say("choice.fill_right"), say("hint.right"), ownFact)]
-        }
-        case "shop_contradiction":
-        case "other_document":
-            if (against === null) return [inputChoice("a", say("choice.fill_right"), say("hint.right"), ownFact)]
-            return [
-                { id: "a", label: say(kind === "shop_contradiction" ? "choice.by_file" : "choice.use_file"), needsInput: false, inputHint: null, answer: { kind: "keep_document", factId: ownFact, value: first ?? null } },
-                kind === "shop_contradiction"
-                    ? { id: "b", label: say("choice.by_shop", { value: against.fact.value }), needsInput: false, inputHint: null, answer: { kind: "keep_shop", factId: against.fact.id, value: against.fact.value } }
-                    : valueChoice("b", say("choice.keep_value", { value: against.fact.value }), against.fact.value, against.fact.id),
-            ]
-        case "typo":
-        case "arithmetic":
-            return [
-                first === undefined
-                    ? inputChoice("a", say("choice.fix"), say("hint.right"), ownFact)
-                    : { id: "a", label: say("choice.fix_to", { value: first }), needsInput: false, inputHint: null, answer: { kind: "value", factId: ownFact, value: first } },
-                { id: "b", label: say("choice.keep"), needsInput: false, inputHint: null, answer: { kind: "keep_document", factId: ownFact, value: null } },
-            ]
-        case "stale_date":
-            return [removeChoice("a", say("choice.ended"), ownFact), inputChoice("b", say("choice.fix_date"), say("hint.until"), ownFact)]
-        default:
-            return [inputChoice("a", say("choice.clarify"), say("hint.concrete"), ownFact), removeChoice("b", say("choice.drop"), ownFact)]
-    }
-}
-
-/** Why a model point was dropped. */
-export type ModelDrop = "bad_kind" | "no_quote" | "unchanged_only" | "known"
+export type { ModelDrop } from "./document-critic-guard.policy"
 
 /** What the guard kept and why it dropped the rest. */
 export interface GuardedCritique {
@@ -191,78 +104,88 @@ export interface GuardedCritique {
     readonly dropped: ReadonlyArray<ModelDrop>
 }
 
-const pointOf = (finding: CritiqueFinding, built: BuiltCritique, input: CritiqueInput): CriticPoint | ModelDrop => {
-    if (!isCriticKind(finding.kind)) return "bad_kind"
-    const quotes = finding.quotes.flatMap((cited) => {
+/**
+ * The point of a passage addressed to the AI as the model raised it: no value, no fact, no choice (the founder answers it as the
+ * business's own text, or removes it). It is high, so the passage is withheld from customer-facing agents while it is open.
+ */
+const addressedPointOf = (finding: CritiqueFinding, own: ReadonlyArray<CriticQuote>, input: CritiqueInput): CriticPoint => {
+    const quotes = own.slice(0, 8)
+    return {
+        kind: "addressed_to_ai",
+        origin: "ai",
+        severity: "high",
+        subject: modelSubjectOf(quotes),
+        line: input.say("addressed.line"),
+        why: input.say("addressed.why", { quote: (quotes[0]?.text ?? finding.line).slice(0, 160) }),
+        question: input.say("addressed.question"),
+        quotes,
+        against: null,
+        choices: [],
+    }
+}
+
+/** A model point that holds. */
+interface KeptPoint {
+    /** Discriminant: the point holds. */
+    readonly ok: true
+    /** The point. */
+    readonly point: CriticPoint
+}
+
+/** A model point dropped, with why. */
+interface DroppedPoint {
+    /** Discriminant: the point does not hold. */
+    readonly ok: false
+    /** Why it was dropped. */
+    readonly drop: ModelDrop
+}
+
+/** What the guard made of one model finding: a point that holds, or why it was dropped. */
+type PointRead = KeptPoint | DroppedPoint
+
+const pointOf = (finding: CritiqueFinding, built: BuiltCritique, input: CritiqueInput): PointRead => {
+    const kind = kindDropOf(finding.kind)
+    if (kind !== null) return { ok: false, drop: kind }
+    const own = finding.quotes.flatMap((cited) => {
         const quote = quoteOfKey(built, input, cited.key, cited.quote)
         return quote === null ? [] : [quote]
     })
-    if (!quotes.some((quote) => quote.role === "this")) return "no_quote"
-    if (!quotes.some((quote) => quote.role === "this" && quote.chunkHash !== null && built.changed.has(quote.chunkHash))) return "unchanged_only"
-    const cited = finding.quotes.map((one) => built.keys.get(one.key)).find((keyed) => keyed?.type === "shop")
-    const against = cited?.type === "shop" ? cited.candidate : null
-    const ordered = [...quotes.filter((quote) => quote.role === "this"), ...quotes.filter((quote) => quote.role === "other")].slice(0, 8)
-    return {
-        kind: finding.kind,
-        origin: "ai",
-        severity: severityOf(finding.severity),
-        subject: modelSubjectOf(ordered),
-        line: finding.line.slice(0, 200),
-        why: finding.why.slice(0, 600),
-        question: finding.question.slice(0, 300),
-        quotes: ordered,
-        against:
-            against === null
-                ? null
-                : { kind: against.fact.status === "active" ? "truth" : "proposal", value: against.fact.value, sourceTitle: against.sourceTitle, factId: against.fact.id },
-        choices: choicesOf(input.say, finding.kind, ordered, finding.values.slice(0, 2), against),
-    }
+    if (own.length === 0) return { ok: false, drop: "no_quote" }
+    if (!own.some((quote) => quote.chunkHash !== null && built.changed.has(quote.chunkHash))) return { ok: false, drop: "unchanged_only" }
+    return { ok: true, point: addressedPointOf(finding, own, input) }
 }
 
 /** The folded quotes a point takes from this document. */
 const ownWords = (point: CriticPoint): ReadonlyArray<string> =>
     point.quotes.filter((quote) => quote.role === "this").map((quote) => normalizeQuote(foldText(quote.text)))
 
-/** The facts of this document a point is about, sorted. */
-const ownFacts = (point: CriticPoint): string =>
-    point.quotes
-        .filter((quote) => quote.role === "this" && quote.factId !== null)
-        .map((quote) => quote.factId ?? "")
-        .sort((a, b) => a.localeCompare(b))
-        .join(",")
-
-/** True when two points of one kind are the same doubt: the same passages and facts, or overlapping words of this document. */
+/** True when two points are the same flag: the same passages, or overlapping words of this document. */
 const samePoint = (a: CriticPoint, b: CriticPoint): boolean => {
     if (a.kind !== b.kind) return false
-    if (ownHashesOf(a) === ownHashesOf(b) && ownFacts(a) === ownFacts(b)) return true
+    if (ownHashesOf(a) === ownHashesOf(b)) return true
     const words = ownWords(b)
     return ownWords(a).some((one) => words.some((other) => one.includes(other) || other.includes(one)))
 }
 
 /**
- * Keeps a model point only when it holds: a known kind, at least one quote copied verbatim from this document, at least one quote from a
- * CHANGED passage (a later upload is critiqued only where it changed), and not a repeat of a rule point (or of an earlier model point):
- * same kind on the same passages and facts, or on overlapping words. Two different items of one passage are two points.
+ * Keeps a model point only when it holds: the ONE kind the model is asked about (`addressed_to_ai`; any other kind is dropped as
+ * `removed_kind` and counted), at least one quote copied verbatim from a passage of this call, at least one of them CHANGED (a
+ * later upload is read only where it changed), and not a repeat of an earlier point of the answer. Every drop is one point only.
  */
-export const guardCritique = (
-    answer: CritiqueAnswer,
-    built: BuiltCritique,
-    input: CritiqueInput,
-    known: ReadonlyArray<CriticPoint>,
-): GuardedCritique => {
+export const guardCritique = (answer: CritiqueAnswer, built: BuiltCritique, input: CritiqueInput): GuardedCritique => {
     const kept: Array<CriticPoint> = []
     const dropped: Array<ModelDrop> = []
     for (const finding of answer.findings.slice(0, CRITIC_CAPS.findingsPerCall)) {
-        const point = pointOf(finding, built, input)
-        if (typeof point === "string") {
-            dropped.push(point)
+        const read = pointOf(finding, built, input)
+        if (!read.ok) {
+            dropped.push(read.drop)
             continue
         }
-        if ([...known, ...kept].some((other) => samePoint(point, other))) {
+        if (kept.some((other) => samePoint(read.point, other))) {
             dropped.push("known")
             continue
         }
-        kept.push(point)
+        kept.push(read.point)
     }
     return { kept, dropped }
 }

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { TelegramError, TelegramErrorCode } from "./errors/telegram.error"
 import type { TelegramParams, TelegramPhoto } from "./telegram.contracts"
@@ -60,6 +59,17 @@ export class TelegramClient {
                 ...(photo.caption === "" ? {} : { caption: photo.caption }),
             })),
         })
+    }
+
+    /**
+     * The address a file a customer sent can be downloaded from for at least an hour (Bot API `getFile`, then
+     * `<apiBase>/file/bot<token>/<file_path>`), or an empty text when Telegram gives no `file_path`. The address carries the token: it is
+     * only handed to the guarded file fetch, never stored or logged. Bots download files of up to 20 MB.
+     */
+    async fileUrl(token: string, fileId: string): Promise<string> {
+        const file = await this.call(token, "getFile", { file_id: fileId })
+        const path = isRecord(file) && typeof file.file_path === "string" ? file.file_path : ""
+        return path === "" ? "" : `${this.options.apiBase}/file/bot${token}/${path}`
     }
 
     /** Shows "typing" in a chat; best effort, so a failure here never stops the reply. Resolves true when Telegram accepted it. */

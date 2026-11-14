@@ -1,9 +1,12 @@
 import {
     agentCardOf,
+    backgroundStoppedViewOf,
+    brainChangeViewOf,
     chatMarkOf,
     daysAgoOf,
     groupPositionsOf,
     stopCardViewOf,
+    stopPreviewOf,
     withPendingTaps,
     type GroupPosition,
 } from "@/modules/teamChat"
@@ -150,7 +153,23 @@ const messageRowOf = (
         ...row,
         card: agentCardOf({ ...row, agentMessage: agentMessageOf(message) }, words.copy, words.hrefOf),
     }
-    return message.stop === null ? carded : { ...carded, stop: stopCardViewOf(message.stop, words.stop, chatMarkOf(carded)) }
+    const stopped =
+        message.stop === null
+            ? carded
+            : { ...carded, stop: stopCardViewOf({ ...message.stop, preview: stopPreviewOf(message.stop.preview) }, words.stop, chatMarkOf(carded)) }
+    const changed =
+        message.brainChange == null
+            ? stopped
+            : {
+                  ...stopped,
+                  brainChange: brainChangeViewOf(message.brainChange, words.brainChange, chatMarkOf(carded), {
+                      name: message.authorName,
+                      time: row.timeLabel,
+                  }),
+              }
+    return message.backgroundStopped == null
+        ? changed
+        : { ...changed, backgroundStopped: backgroundStoppedViewOf(message.backgroundStopped, words.backgroundStopped) }
 }
 
 /**

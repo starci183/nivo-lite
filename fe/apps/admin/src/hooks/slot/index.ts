@@ -1,2 +1,2 @@
-export { slotOfSwr } from "./slot.shared"
-export { useSlotLabels } from "./useSlotLabels"
+export { slotOfSwr } from "@nivo-lite/fe-shared"
+export { useSlotLabels } from "@nivo-lite/fe-shared/use-slot-labels"

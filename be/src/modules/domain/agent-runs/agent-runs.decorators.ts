@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentRunsOptions } from "./agent-runs.options"
 
 /** Token of the agent-runs options, exported so a spec can provide it. */

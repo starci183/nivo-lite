@@ -1,8 +1,6 @@
-import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { stepsFlowOf, stepsLegendOf, stepsStatusLabelsOf } from "@nivo-lite/blocks-core/client"
-import { graphViewOfSpec, nodeCardsOf } from "@nivo-lite/blocks-core/graph"
-import type { GraphNodeView, GraphView, ParamField } from "@nivo-lite/blocks-core/graph"
+import { graphSpecSchema, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { type GraphNodeView, type GraphView, graphViewOfSpec, nodeCardsOf, type ParamField } from "@/modules/plugin-registry"
+import { stepsFlowOf, stepsLegendOf, stepsStatusLabelsOf } from "@/modules/plugin-registry/client"
 import type {
     StepBranchView,
     StepDrawerView,
@@ -50,7 +48,7 @@ export const stepsMapOf = (graph: GraphView, locale: StepsLocale): StepsMapView 
 }
 
 /** A node key or node id in one comparable form: letters and digits only, lower case ("matchCode", "match-code" → "matchcode"). */
-const squashed = (text: string): string => text.toLowerCase().replace(/[^a-z0-9]/g, "")
+const squashed = (text: string): string => text.toLowerCase().replaceAll(/[^a-z0-9]/g, "")
 
 /**
  * The card of a node known only by its key (a run on a graph version that is no longer the one read): the core node whose id ends in

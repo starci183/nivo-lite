@@ -10,11 +10,15 @@ export const DECISION_ACTOR_UNKNOWN = "decision_actor_unknown"
 /** The code a run and its stopped steps carry when an owner or manager cancelled the run. */
 export const RUN_CANCELLED = "run_cancelled"
 
-/** How many runs one process drives at once when the app says nothing. */
-export const RUNS_CONCURRENCY = 4
+/**
+ * How many runs execute at once when the app says nothing (`AGENT_RUNS_CONCURRENCY`): the drains the api, the one consumer of the
+ * agent-turn queue, runs at once. A run parked at a wait or a stop holds none: its turn ended (only a drain in flight holds a slot).
+ */
+export const RUNS_CONCURRENCY = 100
 
-/** The most runs one process may be told to drive at once. */
-export const RUNS_CONCURRENCY_MAX = 64
+/** The most runs the app may be told to execute at once: a bound against a typo, far above what one api process carries. */
+export const RUNS_CONCURRENCY_MAX = 1000
+
 
 /** The most steps one run holds and reads: a run is a short chain, and one page of the engine holds them all. */
 export const STEPS_MAX = 100

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Badge, Cluster, IconButton, MessageBubble, Quote, Stack } from "@starci/grammar/common"
 import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
 import { ChatPartyMark } from "@/components/branches/ChatPartyMark"
@@ -18,13 +19,13 @@ interface TeamChatBubbleProps extends MessageReactionActions {
 const markOf = (row: TeamChatMessageRow) => <ChatPartyMark size="sm" mark={chatMarkOf(row)} />
 
 /** What the bubble holds: the words, under the quote of the message they answer, or as a quote of whose words they were when forwarded. */
-const bodyOf = (row: TeamChatMessageRow, copy: TeamChatBubbleProps["copy"]) => {
+const bodyOf = (row: TeamChatMessageRow, copy: TeamChatBubbleProps["copy"]): ReactNode => {
     if (row.forwardedFrom !== null) {
         const source =
             row.forwardedFrom === "" ? copy.reactions.forwardedUnknown : copy.reactions.forwarded(row.forwardedFrom)
         return <Quote source={source} text={row.body} />
     }
-    if (row.replyTo === null) return <>{row.body}</>
+    if (row.replyTo === null) return row.body
     return (
         <Stack gap="inline">
             <Quote source={copy.reactions.repliedTo(row.replyTo.authorName)} text={row.replyTo.body} />

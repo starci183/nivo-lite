@@ -3,7 +3,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { LanggraphErrorCode } from "./errors/langgraph.error"
+import { LanggraphError, LanggraphErrorCode } from "./errors/langgraph.error"
 import { LanggraphClient } from "./langgraph.client"
 import { GRAPH_CHECKPOINTS, LANGGRAPH_OPTIONS } from "./langgraph.decorators"
 import { LanggraphLogEvent } from "./langgraph.log-events"
@@ -14,6 +14,9 @@ import type { ThreadGraph, ThreadGraphNode, ThreadNodeRun, ThreadRef } from "./l
 const OPTIONS: LanggraphOptions = { compiledMax: 2, stepLimit: 50 }
 const THREAD: ThreadRef = { workspaceId: "ws-1", runId: "run-1" }
 const GATE = "__freeze"
+/** The failure a node throws in these specs: any `DomainError` of the capability stands in for "the node broke". */
+const NODE_FAILURE = LanggraphErrorCode.ThreadUnreadable
+const nodeFailure = (): LanggraphError => new LanggraphError({ code: NODE_FAILURE })
 
 const build = async (saver: MemorySaver = new MemorySaver(), options: LanggraphOptions = OPTIONS) => {
     const logger = mock<Logger>()
@@ -32,10 +35,10 @@ const build = async (saver: MemorySaver = new MemorySaver(), options: LanggraphO
 const gate = (back: string): ThreadGraphNode => ({
     key: GATE,
     ends: [back],
-    run: async (state, scope) => {
+    run: (state, scope) => {
         const decision = scope.stop<{ readonly kind: string; readonly text?: string }>({ about: state.trouble })
-        if (decision.kind === "skip") return { update: { trouble: null }, goto: THREAD_END }
-        return { update: { trouble: null, founderAnswers: [...state.founderAnswers, decision] }, goto: back }
+        if (decision.kind === "skip") return Promise.resolve({ update: { trouble: null }, goto: THREAD_END })
+        return Promise.resolve({ update: { trouble: null, founderAnswers: [...state.founderAnswers, decision] }, goto: back })
     },
 })
 
@@ -48,15 +51,21 @@ const graphOf = (version: string, nodes: ReadonlyArray<ThreadGraphNode>): Thread
 /** A step that stops for the founder until an answer is in the state, then completes. */
 const askingStep =
     (runs: Array<number>): ThreadNodeRun =>
-    async (state) => {
+    (state) => {
         runs.push(state.founderAnswers.length)
-        return state.founderAnswers.length === 0
+        return Promise.resolve(state.founderAnswers.length === 0
             ? { update: { trouble: { reason: "unclear" } }, goto: GATE }
-            : { update: { steps: { consult: { answered: state.founderAnswers.length } } } }
+            : { update: { steps: { consult: { answered: state.founderAnswers.length } } } })
     }
 
+/** A pending promise and the function that settles it. */
+interface Latch {
+    readonly wait: Promise<void>
+    readonly open: () => void
+}
+
 /** A promise and the function that settles it, to hold a node open. */
-const latch = (): { readonly wait: Promise<void>; readonly open: () => void } => {
+const latch = (): Latch => {
     const gate = { open: (): void => undefined }
     const wait = new Promise<void>((resolve) => {
         gate.open = resolve
@@ -69,14 +78,14 @@ describe("LanggraphClient", () => {
         it("runs the nodes in the order their answers name and merges step outputs by node key", async () => {
             const { threads } = await build()
             const graph = graphOf("v1", [
-                { key: "greet", next: "branch", run: async () => ({ update: { steps: { greet: { hello: true } } } }) },
+                { key: "greet", next: "branch", run: () => Promise.resolve({ update: { steps: { greet: { hello: true } } } }) },
                 {
                     key: "branch",
                     ends: ["yes", "no"],
-                    run: async (state) => ({ update: { steps: { branch: "yes" } }, goto: "greet" in state.steps ? "yes" : "no" }),
+                    run: (state) => Promise.resolve({ update: { steps: { branch: "yes" } }, goto: "greet" in state.steps ? "yes" : "no" }),
                 },
-                { key: "yes", run: async () => ({ update: { steps: { yes: 1 }, loop: { index: 0 } } }) },
-                { key: "no", run: async () => ({ update: { steps: { no: 1 } } }) },
+                { key: "yes", run: () => Promise.resolve({ update: { steps: { yes: 1 }, loop: { index: 0 } } }) },
+                { key: "no", run: () => Promise.resolve({ update: { steps: { no: 1 } } }) },
             ])
 
             const outcome = await threads.start(THREAD, graph, { trigger: { tag: "t-1" } })
@@ -100,9 +109,9 @@ describe("LanggraphClient", () => {
             const graph = graphOf("v7", [
                 {
                     key: "only",
-                    run: async (_state, scope) => {
+                    run: (_state, scope) => {
                         seen.push({ thread: scope.thread, node: scope.node, version: scope.version })
-                        return {}
+                        return Promise.resolve({})
                     },
                 },
             ])
@@ -115,7 +124,7 @@ describe("LanggraphClient", () => {
         it("hands the saver the workspace and the caller's fence on every write", async () => {
             const { threads, saver } = await build()
             const put = jest.spyOn(saver, "put")
-            const graph = graphOf("v1", [{ key: "only", run: async () => ({}) }])
+            const graph = graphOf("v1", [{ key: "only", run: () => Promise.resolve({}) }])
 
             await threads.start(THREAD, graph, { trigger: null }, { fence: 7 })
 
@@ -127,7 +136,7 @@ describe("LanggraphClient", () => {
         it("refuses a start on a thread that already has a checkpoint, so an input is never fed twice", async () => {
             const { threads } = await build()
             const runs: Array<number> = []
-            const graph = graphOf("v1", [{ key: "only", run: async () => ({ update: { steps: { only: runs.push(1) } } }) }])
+            const graph = graphOf("v1", [{ key: "only", run: () => Promise.resolve({ update: { steps: { only: runs.push(1) } } }) }])
             await threads.start(THREAD, graph, { trigger: "first" })
 
             await expect(threads.start(THREAD, graph, { trigger: "second" })).rejects.toMatchObject({
@@ -173,7 +182,7 @@ describe("LanggraphClient", () => {
             const counted = gate("consult")
             const graph = graphOf("v1", [
                 { key: "consult", ends: [GATE], run: askingStep(runs) },
-                { ...counted, run: async (state, scope) => (gateRuns.push(1), counted.run(state, scope)) },
+                { ...counted, run: (state, scope) => Promise.resolve((gateRuns.push(1), counted.run(state, scope))) },
             ])
             await threads.start(THREAD, graph, { trigger: null })
 
@@ -202,7 +211,7 @@ describe("LanggraphClient", () => {
 
         it("refuses a decision for a thread that does not wait for one", async () => {
             const { threads } = await build()
-            const graph = graphOf("v1", [{ key: "only", run: async () => ({}) }])
+            const graph = graphOf("v1", [{ key: "only", run: () => Promise.resolve({}) }])
             await threads.start(THREAD, graph, { trigger: null })
 
             await expect(threads.resume(THREAD, graph, { kind: "retry" })).rejects.toMatchObject({
@@ -217,20 +226,20 @@ describe("LanggraphClient", () => {
             const graph = graphOf("v1", [
                 {
                     key: GATE,
-                    run: async (_state, scope) => {
+                    run: (_state, scope) => {
                         const decision = scope.stop<object>({ ask: true })
                         decisions.push(decision)
                         if (fail.once) {
                             fail.once = false
-                            throw new Error("died after the decision arrived")
+                            return Promise.reject(nodeFailure())
                         }
-                        return { update: { steps: { [GATE]: decision } } }
+                        return Promise.resolve({ update: { steps: { [GATE]: decision } } })
                     },
                 },
             ])
             await threads.start(THREAD, graph, { trigger: null })
 
-            await expect(threads.resume(THREAD, graph, { kind: "retry" })).rejects.toThrow("died after the decision arrived")
+            await expect(threads.resume(THREAD, graph, { kind: "retry" })).rejects.toMatchObject({ code: NODE_FAILURE })
             await expect(threads.stateOf(THREAD)).resolves.toMatchObject({ status: "open", next: [GATE], stop: null })
             const driven = await threads.drive(THREAD, graph)
 
@@ -273,17 +282,17 @@ describe("LanggraphClient", () => {
             const graph = graphOf("v1", [
                 {
                     key: "flaky",
-                    run: async () => {
+                    run: () => {
                         if (fail.once) {
                             fail.once = false
-                            throw new Error("boom")
+                            return Promise.reject(nodeFailure())
                         }
-                        return { update: { steps: { flaky: "done" } } }
+                        return Promise.resolve({ update: { steps: { flaky: "done" } } })
                     },
                 },
             ])
 
-            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("boom")
+            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: NODE_FAILURE })
             await expect(threads.stateOf(THREAD)).resolves.toMatchObject({ status: "open", next: ["flaky"] })
 
             await expect(threads.drive(THREAD, graph)).resolves.toMatchObject({
@@ -343,7 +352,7 @@ describe("LanggraphClient", () => {
             const { threads, logger } = await build()
             const compiledOf = (): ReadonlyArray<unknown> =>
                 logger.info.mock.calls.filter(([event]) => event === LanggraphLogEvent.GraphCompiled).map(([, fields]) => fields)
-            const only = (version: string): ThreadGraph => graphOf(version, [{ key: "only", run: async () => ({}) }])
+            const only = (version: string): ThreadGraph => graphOf(version, [{ key: "only", run: () => Promise.resolve({}) }])
             const thread = (runId: string): ThreadRef => ({ workspaceId: "ws-1", runId })
 
             await threads.start(thread("a"), only("v1"), { trigger: null })
@@ -365,7 +374,7 @@ describe("LanggraphClient", () => {
         it("answers absent for a thread with no checkpoint instead of the library's own error, and runs nothing", async () => {
             const { threads } = await build()
             const runs: Array<number> = []
-            const graph = graphOf("v1", [{ key: "only", run: async () => (runs.push(1), {}) }])
+            const graph = graphOf("v1", [{ key: "only", run: () => Promise.resolve((runs.push(1), {})) }])
 
             await expect(threads.drive(THREAD, graph)).resolves.toEqual({ status: "absent" })
             await expect(threads.resume(THREAD, graph, { kind: "retry" })).resolves.toEqual({ status: "absent" })
@@ -377,10 +386,10 @@ describe("LanggraphClient", () => {
             const saver = new MemorySaver()
             const { threads } = await build(saver)
             const runs: Array<number> = []
-            const graph = graphOf("v1", [{ key: "only", run: async () => (runs.push(1), { update: { steps: { only: 1 } } }) }])
-            jest.spyOn(saver, "put").mockRejectedValueOnce(new Error("database gone"))
+            const graph = graphOf("v1", [{ key: "only", run: () => Promise.resolve((runs.push(1), { update: { steps: { only: 1 } } })) }])
+            jest.spyOn(saver, "put").mockRejectedValueOnce(nodeFailure())
 
-            await expect(threads.start(THREAD, graph, { trigger: "t" })).rejects.toThrow("database gone")
+            await expect(threads.start(THREAD, graph, { trigger: "t" })).rejects.toMatchObject({ code: NODE_FAILURE })
             await expect(threads.stateOf(THREAD)).resolves.toBeNull()
             await expect(threads.drive(THREAD, graph)).resolves.toEqual({ status: "absent" })
 
@@ -392,21 +401,21 @@ describe("LanggraphClient", () => {
             const runs: Array<string> = []
             const fail = { once: true }
             const graph = graphOf("v1", [
-                { key: "a", next: "b", run: async () => (runs.push("a"), { update: { steps: { a: 1 } } }) },
+                { key: "a", next: "b", run: () => Promise.resolve((runs.push("a"), { update: { steps: { a: 1 } } })) },
                 {
                     key: "b",
-                    run: async () => {
+                    run: () => {
                         runs.push("b")
                         if (fail.once) {
                             fail.once = false
-                            throw new Error("cut")
+                            return Promise.reject(nodeFailure())
                         }
-                        return { update: { steps: { b: 2 } } }
+                        return Promise.resolve({ update: { steps: { b: 2 } } })
                     },
                 },
             ])
 
-            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toThrow("cut")
+            await expect(threads.start(THREAD, graph, { trigger: null })).rejects.toMatchObject({ code: NODE_FAILURE })
             const driven = await threads.drive(THREAD, graph)
 
             expect(driven).toMatchObject({ status: "ended", state: { steps: { a: 1, b: 2 } } })
@@ -420,7 +429,7 @@ describe("LanggraphClient", () => {
             ["a trigger with a function", { trigger: { run: (): number => 1 } }, "start.trigger.run"],
         ])("refuses %s that is not plain JSON before anything is stored", async (_name, input, at) => {
             const { threads } = await build()
-            const graph = graphOf("v1", [{ key: "only", run: async () => ({}) }])
+            const graph = graphOf("v1", [{ key: "only", run: () => Promise.resolve({}) }])
 
             await expect(threads.start(THREAD, graph, input)).rejects.toMatchObject({
                 code: LanggraphErrorCode.NotPlain,

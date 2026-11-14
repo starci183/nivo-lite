@@ -10,8 +10,10 @@ export interface PinnedAnswer {
     readonly status: number
     /** The response headers, names in lower case. */
     readonly headers: Readonly<Record<string, string>>
-    /** The raw body. */
+    /** The raw body; empty when `tooLarge`. */
     readonly body: Buffer
+    /** Set only when the request named its own `maxBytes` and the body passed it: the read stopped there and kept nothing. */
+    readonly tooLarge?: true
 }
 
 /** What a pinned request sends. */
@@ -26,9 +28,14 @@ export interface PinnedInit {
     readonly timeoutMs: number
     /** Cancels the call when aborted. */
     readonly signal?: AbortSignal
+    /**
+     * The most body bytes the caller wants to hold: a body that passes it (or that declares more) stops the read at once and the answer
+     * says `tooLarge`, nothing kept. Absent: the default cap, and a body over it fails the call.
+     */
+    readonly maxBytes?: number
 }
 
-/** The most bytes a pinned answer may carry before the call is cut. */
+/** The most bytes a pinned answer may carry before the call is cut when the caller names no limit. */
 const BODY_CAP = 25_000_000
 
 /** A lookup that answers only the pinned address, so the connection cannot be sent anywhere the caller did not check. */
@@ -58,26 +65,41 @@ export const sendPinned = (url: URL, pin: HttpPin, init: PinnedInit): Promise<Pi
                 ...(init.signal === undefined ? {} : { signal: init.signal }),
             },
             (res) => {
+                const status = res.statusCode ?? 0
+                const headers = Object.fromEntries(
+                    Object.entries(res.headers).map(([name, value]) => [
+                        name,
+                        Array.isArray(value) ? value.join(", ") : (value ?? ""),
+                    ]),
+                )
+                const own = init.maxBytes
+                const cap = own ?? BODY_CAP
+                const cutOver = (): void => {
+                    resolve({ status, headers, body: Buffer.alloc(0), tooLarge: true })
+                    res.destroy()
+                }
+                if (own !== undefined && Number(headers["content-length"] ?? 0) > cap) {
+                    cutOver()
+                    return
+                }
                 const chunks: Array<Buffer> = []
                 let size = 0
+                let cut = false
                 res.on("data", (chunk: Buffer) => {
+                    if (cut) return
                     size += chunk.length
-                    if (size > BODY_CAP) req.destroy(new Error("body too large"))
-                    else chunks.push(chunk)
+                    if (size <= cap) {
+                        chunks.push(chunk)
+                    } else if (own === undefined) {
+                        req.destroy(new Error("body too large"))
+                    } else {
+                        cut = true
+                        chunks.length = 0
+                        cutOver()
+                    }
                 })
                 res.on("error", (cause) => fail(cause, false))
-                res.on("end", () =>
-                    resolve({
-                        status: res.statusCode ?? 0,
-                        headers: Object.fromEntries(
-                            Object.entries(res.headers).map(([name, value]) => [
-                                name,
-                                Array.isArray(value) ? value.join(", ") : (value ?? ""),
-                            ]),
-                        ),
-                        body: Buffer.concat(chunks),
-                    }),
-                )
+                res.on("end", () => resolve({ status, headers, body: Buffer.concat(chunks) }))
             },
         )
         req.on("timeout", () => req.destroy(new Error("timeout")))

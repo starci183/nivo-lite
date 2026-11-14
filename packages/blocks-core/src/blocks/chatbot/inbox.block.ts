@@ -1,5 +1,4 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { paramName } from "../param-name"
 import type { OptionalAction, RequiredRead } from "../schema-types"
@@ -14,7 +13,7 @@ const props: z.ZodObject<{
 
 /**
  * The slots of the inbox: the conversations with their counts per tab, the open conversation with its lines, and what a person may
- * do with it. The reply the AI proposed is not a slot of this block: it is the `chatbot.approval-card` the spec places in it.
+ * do with it.
  */
 type Slots = {
     readonly threads: RequiredRead<"list">
@@ -38,8 +37,7 @@ const slots: Slots = {
 /**
  * The Chatbot inbox in three panes. The list of conversations (search, the tabs all, needs a person and today with their
  * counts, and a row per conversation with its avatar, name, last words, time, status and channel), the open conversation (its head
- * with the take-over control, the lines under day dividers, the approval card of the reply the AI drafted, and the composer), and the
- * contact of the customer. The one child it takes is the approval card, which stands under the lines of the open conversation. The
+ * with the take-over control, the lines under day dividers and the composer), and the contact of the customer. It takes no child. The
  * words and the order of every pane are the module's own; the spec places the block and names its params.
  */
 export const inboxBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
@@ -49,5 +47,5 @@ export const inboxBlock: BlockDefinition<typeof props, typeof slots> = defineBlo
     slots,
     params: ["searchParam", "statusParam", "periodParam", "selectParam"],
     layout: "panes",
-    children: { max: 1, accepts: ["chatbot.approval-card"] },
+    children: false,
 })

@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { ProviderRegistryError, ProviderRegistryErrorCode } from "./errors/provider-registry.error"
 import {
     BankFeedPollerRegistryService,
     BankTransactionsRegistryService,
@@ -35,7 +36,7 @@ describe("the registries of the provider capabilities", () => {
 
     it("keep the registrations of one capability apart from the others", async () => {
         const { instructions, transactions } = await build()
-        const port = { provider: "sepay", qrUrl: () => "qr" }
+        const port = { provider: "sepay", qrUrl: () => "qr", transfer: () => Promise.reject(new ProviderRegistryError({ code: ProviderRegistryErrorCode.CallNotSent })) }
 
         instructions.register(port)
 

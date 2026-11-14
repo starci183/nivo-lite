@@ -21,7 +21,7 @@ const ROOM = "41111111-1111-4111-8111-111111111111"
 const DIRECT = "42222222-1111-4111-8111-111111111111"
 const MSG = "51111111-1111-4111-8111-111111111111"
 const GROUP_MSG = "52222222-1111-4111-8111-111111111111"
-const SALES_BOT = { id: BOT, name: "Sales bot", module: "sales", canTagAgentIds: [] }
+const SALES_BOT = { id: BOT, name: "Sales bot", module: "sales" }
 const SALES = { purpose: "module" as const, module: "sales" }
 const MESSAGE: TeamCardMessage = { kind: "message.text", intent: "notify", title: "Hi", summary: "Hello", payload: {} }
 

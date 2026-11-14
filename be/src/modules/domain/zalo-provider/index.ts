@@ -1,4 +1,5 @@
 export { parseZaloProviderConfig } from "./zalo-provider.config"
 export { ZaloProviderModule } from "./zalo-provider.module"
-export { ZaloInboxPollTriggerService } from "./zalo-poll-trigger.service"
-export { ZaloReconcileService } from "./zalo-reconcile.service"
+export type { ZaloAccessToken, ZaloAccessTokens } from "./zalo-access-tokens.port"
+export { ZaloInboxPollerService, type PolledZaloItem } from "./zalo-inbox-poller.service"
+export { ZALO_MESSAGE_TRIGGER, zaloAppIdOf, type ZaloMessageData } from "./zalo-message.trigger"

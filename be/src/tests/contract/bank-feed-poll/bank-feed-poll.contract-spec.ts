@@ -3,8 +3,12 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { BankFeedPollTriggerService } from "@modules/domain/billing"
 import { ConnectionReadyEvent } from "@modules/events/api"
-import { CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE } from "@modules/platform/event-bus"
-import type { BaseEvent, EventConsumer, EventConsumerRegistry } from "@modules/platform/event-bus"
+import {
+    CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE,
+    type BaseEvent,
+    type EventConsumer,
+    type EventConsumerRegistry,
+} from "@modules/platform/event-bus"
 import { BankFeedPollMessageModule } from "@features/reactors/bank-feed-poll"
 
 const payload = { workspaceId: "ws-1", connectionId: "conn-1", provider: "sepay", dedupeKey: "conn-1:api_token:abc" }

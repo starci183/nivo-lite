@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { documentLibraries } from "./document-libraries.adapter"
 import { DocumentReadersClient } from "./document-readers.client"
 import { DOCUMENT_LIBRARIES, DOCUMENT_READERS } from "./document-readers.decorators"

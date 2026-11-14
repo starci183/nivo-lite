@@ -1,5 +1,5 @@
 import type { HeaderZone } from "@starci/grammar/common" with { "resolution-mode": "import" }
-import type { BookPeriod } from "../rules/accounting/book-view"
+import type { BookPeriod } from "../rules/sales/ledger/book-view"
 
 /** The fields of a switch zone. */
 type SwitchFields = Omit<Extract<HeaderZone, { readonly kind: "switch" }>, "kind">

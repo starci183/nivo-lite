@@ -1,5 +1,4 @@
-import { Button, ChoiceChips, Cluster, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, ChoiceChips, Cluster, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import type { TeamPanesBaseProps } from "@/modules/types"
 
 /** Derived from the panes contract. */

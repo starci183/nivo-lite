@@ -1,6 +1,5 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { Button, EmptyNotice, Page, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { BreadcrumbItem } from "@starci/grammar/common"
+import { Button, EmptyNotice, Page, Stack, SurfaceCard, type BreadcrumbItem } from "@starci/grammar/common"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { ConnectionProviderTable } from "@/components/frames/ConnectionProviderTable"
@@ -20,9 +19,7 @@ interface ConnectionProviderCopy {
         readonly account: string
         readonly status: string
         readonly agents: string
-        readonly action: string
     }
-    readonly open: string
     readonly agentsNone: string
     readonly agentsGrant: string
     /** Where an agent is granted a connection: the agents catalogue. */
@@ -104,7 +101,6 @@ const Body = (props: BodyProps) => {
                 copy={{
                     label: copy.listLabel,
                     columns: copy.columns,
-                    open: copy.open,
                     agentsNone: copy.agentsNone,
                     agentsGrant: copy.agentsGrant,
                     agentsHref: copy.agentsHref,

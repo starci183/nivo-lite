@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentLensesService } from "@modules/domain/agents"
-import type { AgentKnowledgeOverview } from "@modules/domain/agents"
+import { AgentLensesService, type AgentKnowledgeOverview } from "@modules/domain/agents"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetAgentKnowledgeQuery } from "./get-agent-knowledge.query"
 
 @QueryHandler(GetAgentKnowledgeQuery)

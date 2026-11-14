@@ -1,5 +1,4 @@
-import { usageOf as routedUsageOf } from "@starci/ai-router/langchain"
-import type { RoutedUsage } from "@starci/ai-router/langchain"
+import { usageOf as routedUsageOf, type RoutedUsage } from "@starci/ai-router/langchain"
 import { isRecord } from "@modules/platform/primitives"
 import type { ContextPassage, AiMessage, AiUsage } from "./ai.contracts"
 
@@ -18,7 +17,7 @@ const numberOf = (value: unknown): number | null =>
 
 /** The first number of the candidates; null when none is one. */
 const firstNumber = (...candidates: ReadonlyArray<unknown>): number | null =>
-    candidates.map(numberOf).find((candidate) => candidate !== null) ?? null
+    candidates.map((candidate) => numberOf(candidate)).find((candidate) => candidate !== null) ?? null
 
 /** The prompt tokens a call wrote to the provider's cache, as a field only when the endpoint said. */
 const cacheWriteOf = (usageMetadata: unknown, raw: unknown, routed: RoutedUsage): Pick<AiUsage, "cacheWriteTokens"> => {
@@ -66,11 +65,19 @@ export const usageOf = (usageMetadata: unknown, responseMetadata: unknown): AiUs
     }
 }
 
+/** The lane that served a reply: the pool model and the pool provider. */
+export interface ReplyLane {
+    /** The pool model, or null when the reply does not say. */
+    readonly model: string | null
+    /** The pool provider, or null when the reply does not say. */
+    readonly provider: string | null
+}
+
 /**
  * The lane that served a reply, as the gateway wrote it into the usage (`usage.served`, `@starci/ai-router` 0.7.0): the pool model
  * and the pool provider; each null when the reply does not say.
  */
-export const laneOf = (responseMetadata: unknown): { readonly model: string | null; readonly provider: string | null } => {
+export const laneOf = (responseMetadata: unknown): ReplyLane => {
     const routed = routedOf(undefined, responseMetadata)
     return { model: routed.model ?? null, provider: routed.provider ?? null }
 }
@@ -121,7 +128,7 @@ export const vectorsOf = (answer: unknown): Array<ReadonlyArray<number>> =>
 export const notesBlock = (passages: ReadonlyArray<ContextPassage>): string => {
     if (passages.length === 0) return ""
     const lines = passages.map((passage) => {
-        const text = passage.content.replace(/\s+/gu, " ").trim().slice(0, PASSAGE_MAX_CHARS)
+        const text = passage.content.replaceAll(/\s+/gu, " ").trim().slice(0, PASSAGE_MAX_CHARS)
         return passage.title === null ? `- ${text}` : `- ${passage.title}: ${text}`
     })
     return `${NOTES_HEADING}\n${lines.join("\n")}`

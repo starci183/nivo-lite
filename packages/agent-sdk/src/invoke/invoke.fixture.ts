@@ -3,10 +3,8 @@ import { defineAction, defineRead } from "../block/block"
 import { definePort, unprovided } from "../port/port"
 import type { PortDefinition, PortProvider, RunContext } from "../port/port.types"
 import type { ActionDefinition, ActionResult, ReadDefinition } from "../block/block.types"
-import { defineJob } from "../mutation/job"
-import type { JobContext, JobDefinition } from "../mutation/job"
-import { doorPort } from "../mutation/door-port"
-import type { DoorApi } from "../mutation/door-port"
+import { defineJob, type JobContext, type JobDefinition } from "../mutation/job"
+import { doorPort, type DoorApi } from "../mutation/door-port"
 
 /** A port with one method, and a provider that supports only it. */
 export interface Counter {

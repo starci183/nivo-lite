@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-quota-overrides.module-definition"
 import { AiQuotaOverridesService } from "./ai-quota-overrides.service"
 import { AiQuotaOverridesAdminReadService } from "./ai-quota-overrides-admin-read.service"

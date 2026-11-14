@@ -1,4 +1,5 @@
 export { coreBlocks } from "./core-renderers"
+export { CardScopeProvider } from "./composites/CardScope"
 export { AgentMessageCard } from "./agent-message/AgentMessageCard"
 export type { AgentMessageCardProps, AgentMessageWords } from "./agent-message/AgentMessageCard"
 export { agentMessageViews } from "./agent-message/module-agent-message-views"

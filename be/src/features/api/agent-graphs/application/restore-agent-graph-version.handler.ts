@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AgentGraphAdminService } from "@modules/domain/agent-graphs"
-import type { GraphVersionView } from "@modules/domain/agent-graphs"
+import { AgentGraphAdminService, type GraphVersionView } from "@modules/domain/agent-graphs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RestoreAgentGraphVersionCommand } from "./restore-agent-graph-version.command"
 
 @CommandHandler(RestoreAgentGraphVersionCommand)
@@ -21,6 +19,7 @@ export class RestoreAgentGraphVersionHandler extends ICQRSHandler<RestoreAgentGr
             { workspaceId: command.params.request.workspaceId, principalId: command.params.principal.id },
             command.params.request.agentId,
             command.params.request.versionId,
+            command.params.request.agreedRights,
         )
     }
 }

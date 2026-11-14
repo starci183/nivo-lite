@@ -4,8 +4,11 @@ import { DataSource } from "typeorm"
 import type { CustomerSession } from "./customer-sessions.contracts"
 import type { PostgresSessionTarget } from "./postgres-session.contracts"
 import { openMssqlSession, openMysqlSession, selectRows } from "./customer-sessions.client"
+import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 
 const SUBJECT = Symbol("customer-sessions.client")
+
+const refusal = () => new DatabaseError({ code: DatabaseErrorCode.MigrationFailed })
 
 type PolicySubject = {
     openMysqlSession: typeof openMysqlSession
@@ -121,7 +124,7 @@ const registerMysql = () => {
     describe("openMysqlSession", () => {
         it("opens one read only connection with the limits of the target and answers rows", async () => {
             const subject = await buildSubject()
-            control.executionError = new Error("unknown variable")
+            control.executionError = refusal()
 
             const session = await subject.openMysqlSession(target())
 
@@ -168,9 +171,9 @@ const registerMysql = () => {
 
         it("closes the connection when the read-only setting is refused, even if closing fails", async () => {
             const subject = await buildSubject()
-            const refused = new Error("readonly")
+            const refused = refusal()
             control.setError = refused
-            control.destroyError = new Error("destroy")
+            control.destroyError = refusal()
 
             await expect(subject.openMysqlSession(target())).rejects.toBe(refused)
             expect(opened[0]?.destroyed).toBe(true)
@@ -178,7 +181,7 @@ const registerMysql = () => {
 
         it("propagates a refused connect", async () => {
             const subject = await buildSubject()
-            const refused = new Error("connect")
+            const refused = refusal()
             control.connectError = refused
 
             await expect(subject.openMysqlSession(target())).rejects.toBe(refused)
@@ -187,7 +190,7 @@ const registerMysql = () => {
         it("swallows a failure while closing a live session", async () => {
             const subject = await buildSubject()
             const session = await subject.openMysqlSession(target())
-            control.destroyError = new Error("destroy")
+            control.destroyError = refusal()
 
             await expect(session.close()).resolves.toBeUndefined()
         })
@@ -235,7 +238,7 @@ const registerMssql = () => {
 
         it("propagates a refused connect", async () => {
             const subject = await buildSubject()
-            const refused = new Error("connect")
+            const refused = refusal()
             control.connectError = refused
 
             await expect(subject.openMssqlSession(target())).rejects.toBe(refused)

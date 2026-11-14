@@ -14,20 +14,6 @@ export interface AssignContext {
     readonly memberRooms: ReadonlyArray<string>
 }
 
-/** What deciding whether one agent may tag another needs. */
-export interface TagContext {
-    /** The tagging agent's status. */
-    readonly fromStatus: string
-    /** The tagged agent's status. */
-    readonly toStatus: string
-    /** Whether both agents belong to one workspace. */
-    readonly sameWorkspace: boolean
-    /** Whether the tagged agent is on the tagging agent's list. */
-    readonly listed: boolean
-    /** Whether both are the same agent. */
-    readonly sameAgent: boolean
-}
-
 /** One member as the ownership cards show them, with the first department room they sit in. */
 export interface MemberState {
     /** The seat id. */

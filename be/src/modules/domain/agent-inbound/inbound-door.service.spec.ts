@@ -333,10 +333,10 @@ describe("InboundDoorService.accept, a chain of agents", () => {
 
     it("lets a report that fails fail the delivery too", async () => {
         const { door, tx, stopReporter } = await build()
-        stopReporter.report.mockRejectedValue(new Error("office down"))
+        stopReporter.report.mockRejectedValue(new Error("chat down"))
 
         await expect(door.accept(tx, event({ chain: chain({ depth: CHAIN_DEPTH_MAX }) }))).rejects.toThrow(
-            "office down",
+            "chat down",
         )
     })
 })

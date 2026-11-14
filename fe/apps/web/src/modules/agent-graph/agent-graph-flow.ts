@@ -35,7 +35,7 @@ export const flowNodesOf = (
 ): ReadonlyArray<AgentGraphFlowNode> =>
     nodes.map((node) => {
         const isTraced = paint.path.length > 0
-        const isCurrent = isTraced && paint.path[paint.path.length - 1] === node.key
+        const isCurrent = isTraced && paint.path.at(-1) === node.key
         const { wait } = node.card
         const tone = (() => {
             if (isCurrent) return "success"

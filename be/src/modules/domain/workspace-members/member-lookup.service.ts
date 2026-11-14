@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Raw } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Raw, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { OptionalNamedMember, OptionalSeatFacts, OwnerMemberRef } from "./member-lookup.contracts"
 import { isManagerRole } from "./role.policy"

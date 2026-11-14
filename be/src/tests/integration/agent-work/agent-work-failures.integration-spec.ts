@@ -5,8 +5,7 @@ import { AgentWakeService } from "../../../modules/domain/agent-work/agent-wake.
 import { AgentWorkSettingsService } from "../../../modules/domain/agent-work/agent-work-settings.service"
 import type { AgentWake } from "../../../modules/domain/agent-work/agent-work.contracts"
 import { agentWakeOf } from "../../fixtures/builders/agent-work.builder"
-import { persistOfficeRows } from "../../fixtures/builders/office-chain.builder"
-import type { OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
+import { persistOfficeRows, type OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
 import { AGENT_WORK_MODULES, ScriptedAgentWork } from "../../world/agent-work-capabilities.options"
 import {
     lapseLease,
@@ -43,7 +42,7 @@ const wakeOf = (eventKey: string, over: Partial<AgentWake> = {}): AgentWake =>
     })
 
 const customerWake = (eventKey: string, conversationId: string): AgentWake =>
-    wakeOf(eventKey, { source: "customer", context: { conversationId } })
+    wakeOf(eventKey, { source: "trigger", context: { conversationId } })
 
 const post = (wake: AgentWake) => em().transaction((tx) => world.resolve(AgentWakeService).wake(tx, wake))
 

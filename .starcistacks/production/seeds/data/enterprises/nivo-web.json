@@ -1,0 +1,7 @@
+{
+  "schema": "nivo/enterprise-seed@1",
+  "identifier": "nivo-web",
+  "target": "off",
+  "workspaceName": "NIVO Web",
+  "ownerWorkspace": "NIVO"
+}

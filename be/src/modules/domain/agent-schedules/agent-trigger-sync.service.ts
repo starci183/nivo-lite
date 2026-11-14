@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { AgentTriggersService, AgentWorkSettingsService } from "@modules/domain/agent-work"
-import type { AgentTriggerRecord } from "@modules/domain/agent-work"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { AgentTriggersService, AgentWorkSettingsService, type AgentTriggerRecord } from "@modules/domain/agent-work"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectQueueSchedules } from "@modules/platform/queue"
-import type { QueueSchedules } from "@modules/platform/queue"
-import { AGENT_SCHEDULE_FIRE_JOB, AGENT_SCHEDULE_FIRE_QUEUE, agentTriggerSchedulerId } from "@modules/queues/agent-turn"
-import type { AgentScheduleTemplatePayload } from "@modules/queues/agent-turn"
+import { InjectQueueSchedules, type QueueSchedules } from "@modules/platform/queue"
+import {
+    AGENT_SCHEDULE_FIRE_JOB,
+    AGENT_SCHEDULE_FIRE_QUEUE,
+    agentTriggerSchedulerId,
+    type AgentScheduleTemplatePayload,
+} from "@modules/queues/agent-turn"
 import { scheduleOf } from "./agent-schedules.policy"
 import type { NextSlot, TriggerSeed } from "./agent-schedules.contracts"
 

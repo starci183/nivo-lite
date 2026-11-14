@@ -1,15 +1,14 @@
 "use client"
 
 import { wizardConnectionOf } from "@/hooks/connection-wire"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import {
     useMutateSaveProviderKeysSwr,
     useMutateStartMoneyConnectionSwr,
     useMutateUpdateMoneyConnectionSwr,
+    type MutateSaveProviderKeysRequest,
 } from "@/hooks/swr"
-import type { MutateSaveProviderKeysRequest } from "@/hooks/swr"
 import type { MoneyProvider, ProviderKeysResult, WizardConnection } from "@/modules/types"
 import { useMemo } from "react"
 import type { AccountForm } from "./money-wizard.shared"

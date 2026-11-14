@@ -1,50 +1,28 @@
-import { entityPort } from "@nivo-lite/agent-sdk/entity/port"
-import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { ListSource } from "@nivo-lite/agent-sdk/block"
-import { definePort } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
-import { agentGraphEntity } from "../../entities/agent/graph.entity"
-import { agentRunEntity } from "../../entities/agent/run.entity"
-import { agentRunStepEntity } from "../../entities/agent/run-step.entity"
+import { definePort, type PortDefinition } from "@nivo-lite/agent-sdk/port"
 import type { AgentRunRow } from "./agent-runs"
-import type {
-    AgentConnections,
-    AgentKnowledge,
-    InstallationSource,
-    MemberDirectory,
-    ParkedRuns,
-    RightsDirectory,
-} from "./platform.types"
+import type { AgentDesk } from "./platform.types"
 
-/** The installation of the app: the registry the back end runs and the modules the workspace has enabled. The door provides it. */
-export const installationPort: PortDefinition<InstallationSource> =
-    definePort<InstallationSource>("platform.installation")
+export {
+    CORE_READS_PORT_ID,
+    agentConnectionsPort,
+    agentKnowledgePort,
+    coreReadsPort,
+    installationPort,
+    membersPort,
+    parkedRunsPort,
+    rightsPort,
+} from "@nivo-lite/agent-sdk/platform"
 
-/** The active seats of the workspace: who acts, by the name shown and whether they manage. The door provides it. */
-export const membersPort: PortDefinition<MemberDirectory> = definePort<MemberDirectory>("platform.members")
-
-/** The permissions the members of the workspace hold: owners and managers hold every one, staff those the workspace granted. The door provides it. */
-export const rightsPort: PortDefinition<RightsDirectory> = definePort<RightsDirectory>("platform.rights")
-
-/** The runs of the agents (`agent.run`): what the agent finished is read from them, through the engine. */
-export const agentRuns: PortDefinition<EntityApi> = entityPort(agentRunEntity)
-
-/** The steps of the runs of the agents (`agent.run-step`): the timeline of one run is read from them. */
-export const agentRunSteps: PortDefinition<EntityApi> = entityPort(agentRunStepEntity)
-
-/** The graphs of the agents (`agent.graph`): the one that holds an installation tells which agent it runs. */
-export const agentGraphs: PortDefinition<EntityApi> = entityPort(agentGraphEntity)
-
-/** The connections of the workspace bound to an agent. */
-export const agentConnectionsPort: PortDefinition<AgentConnections> =
-    definePort<AgentConnections>("platform.agent-connections")
-
-/** The knowledge an agent reads and its open gaps. */
-export const agentKnowledgePort: PortDefinition<AgentKnowledge> = definePort<AgentKnowledge>("platform.agent-knowledge")
-
-/** The runs the engine parked and the resume of them. The door provides it, over the engine's park and resume of runs. */
-export const parkedRunsPort: PortDefinition<ParkedRuns> = definePort<ParkedRuns>("platform.parked-runs")
-
-/** The port `platform.agent-runs` declares as the list it pages, so a host pages it with a cursor; the read itself runs on the entity ports. */
+/** The port `platform.agent-runs` declares as the list it pages, so a host pages it with a cursor; the read itself runs on the core reads. */
 export const agentRunsList: PortDefinition<ListSource<AgentRunRow>> =
     definePort<ListSource<AgentRunRow>>("platform.agent-runs-list")
+
+/** The id the back end serves the agent's work desk under (`AGENT_DESK_PORT_ID` of its `platform-ports`). */
+export const AGENT_DESK_PORT_ID = "platform.agent-desk"
+
+/**
+ * The agent's work desk: how it works (its active workflows), what waits on a person and the verdict on it, the facts of its runs,
+ * today's counts and what it may touch. The door provides it, scoped to the member who reads; every method takes the installation.
+ */
+export const agentDeskPort: PortDefinition<AgentDesk> = definePort<AgentDesk>(AGENT_DESK_PORT_ID)

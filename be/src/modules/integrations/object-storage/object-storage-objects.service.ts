@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError as StoreFailure } from "@starci/object-storage"
-import type { ObjectStorage } from "@starci/object-storage"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { eachInOrder, ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import {
+    OBJECT_STORAGE_ERROR_CODES,
+    ObjectStorageError as StoreFailure,
+    type ObjectStorage,
+} from "@starci/object-storage"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { eachInOrder, ok, refused, type Outcome } from "@modules/platform/primitives"
 import { ObjectStorageError } from "./errors/object-storage.error"
 import type { SignedObjectUrl, StorageFailureCode } from "./object-storage.contracts"
 import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"
@@ -115,14 +116,14 @@ export class StorageObjectsService implements StorageObjectsPort {
     private async guard<T>(bucket: string, run: () => Promise<T>): Promise<Outcome<T, StorageFailureCode>> {
         try {
             return ok(await run())
-        } catch (failure) {
+        } catch (error) {
             if (
-                failure instanceof ObjectStorageError ||
-                (failure instanceof StoreFailure && failure.kind !== "unavailable")
+                error instanceof ObjectStorageError ||
+                (error instanceof StoreFailure && error.kind !== "unavailable")
             ) {
                 return refused(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound)
             }
-            this.logger.error(StorageLogEvent.Failed, failure, { bucket })
+            this.logger.error(StorageLogEvent.Failed, error, { bucket })
             return refused(OBJECT_STORAGE_ERROR_CODES.Unavailable)
         }
     }

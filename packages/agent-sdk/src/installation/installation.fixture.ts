@@ -4,6 +4,10 @@ import { defineModule } from "../module/declaration"
 import type { ModuleDeclaration } from "../module/declaration.types"
 import { defineNode } from "../node/node"
 import type { NodeDefinition } from "../node/node.types"
+import { defineService, defineServiceContract } from "../service/service"
+import type { AnyServiceDefinition, ServiceContract } from "../service/service.types"
+import { defineWebhookEvent } from "../webhook/webhook"
+import type { WebhookEventDefinition } from "../webhook/webhook.types"
 import type { InstalledEntity, InstalledJob } from "./installation.types"
 
 /** A module with one read and one action. */
@@ -43,7 +47,6 @@ export const nodeOf = (id: `${string}.${string}`): NodeDefinition =>
         params: z.object({}),
         input: z.object({}),
         output: z.object({}),
-        rights: [],
         effects: [],
         run: () => Promise.resolve({}),
         examples: [{ name: "one", params: {}, input: {}, output: {}, effects: [] }],
@@ -54,3 +57,20 @@ export const jobOf = (name: string): InstalledJob => ({ entry: "job", name })
 
 /** An entity of the given name. */
 export const entityOf = (name: string): InstalledEntity => ({ entry: "entity", name })
+
+/** The contract the fixture services implement. */
+export const FIXTURE_CONTRACT: ServiceContract<{ readonly hello: () => string }> = defineServiceContract<{ readonly hello: () => string }>("engine.fixture-store")
+
+/** A service `<package>.<module>.<name>` of the fixture contract (or of another contract id), owned by `moduleKey`. */
+export const serviceFixture = (id: string, moduleKey: string, contractId: `${string}.${string}` = "engine.fixture-store"): AnyServiceDefinition =>
+    defineService({
+        id,
+        contract: contractId === FIXTURE_CONTRACT.id ? FIXTURE_CONTRACT : defineServiceContract<{ readonly hello: () => string }>(contractId),
+        moduleKey,
+        ports: {},
+        build: () => ({ hello: () => id }),
+    })
+
+/** A webhook event `<domain>.<verb>` owned by `moduleKey`. */
+export const webhookEventFixture = (id: string, moduleKey: string): WebhookEventDefinition =>
+    defineWebhookEvent({ id, label: { vi: `vi ${id}`, en: `en ${id}` }, moduleKey })

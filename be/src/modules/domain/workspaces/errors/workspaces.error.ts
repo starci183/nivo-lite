@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the workspaces capability. */
 export enum WorkspacesErrorCode {
@@ -25,6 +24,14 @@ export enum WorkspacesErrorCode {
     DeleteConfirmMismatch = "WORKSPACES_DELETE_CONFIRM_MISMATCH",
     /** The deleted workspace is past its restore window. */
     RestoreExpired = "WORKSPACES_RESTORE_EXPIRED",
+    /** The enterprise identifier is not a lowercase slug of at most 40 characters. */
+    EnterpriseKeyInvalid = "WORKSPACES_ENTERPRISE_KEY_INVALID",
+    /** Another workspace already holds the enterprise identifier. */
+    EnterpriseKeyTaken = "WORKSPACES_ENTERPRISE_KEY_TAKEN",
+    /** The time zone is not an IANA name the platform knows. */
+    TimeZoneInvalid = "WORKSPACES_TIME_ZONE_INVALID",
+    /** A theme member is out of its range or not in its list. */
+    ThemeInvalid = "WORKSPACES_THEME_INVALID",
 }
 
 /** How each workspaces code travels. */
@@ -40,6 +47,10 @@ export const WORKSPACES_ERROR_KINDS: Record<WorkspacesErrorCode, ErrorKind> = {
     [WorkspacesErrorCode.NameUnavailable]: "conflict",
     [WorkspacesErrorCode.DeleteConfirmMismatch]: "invalid",
     [WorkspacesErrorCode.RestoreExpired]: "conflict",
+    [WorkspacesErrorCode.EnterpriseKeyInvalid]: "invalid",
+    [WorkspacesErrorCode.EnterpriseKeyTaken]: "conflict",
+    [WorkspacesErrorCode.TimeZoneInvalid]: "invalid",
+    [WorkspacesErrorCode.ThemeInvalid]: "invalid",
 }
 
 /** The one error class of the workspaces capability. */

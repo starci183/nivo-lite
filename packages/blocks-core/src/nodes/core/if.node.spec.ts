@@ -13,7 +13,7 @@ const branchOf = async (value: JsonValue, op: IfOp, compare?: JsonValue): Promis
             params: compare === undefined ? { op } : { op, compare },
             input: { value },
             turn: EXAMPLE_TURN,
-            grant: { rights: [] },
+            grant: {},
             effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
             tools: new Map(),
             key: "k",
@@ -60,10 +60,9 @@ const CASES: ReadonlyArray<readonly [IfOp, JsonValue, JsonValue, boolean]> = [
 ]
 
 describe("core.if", () => {
-    it("is a condition that reads and writes nothing", () => {
+    it("is a condition that runs no effect", () => {
         expect(coreIfNode.role).toBe("condition")
         expect(coreIfNode.effects).toEqual([])
-        expect(coreIfNode.rights).toEqual([])
     })
 
     it.each(coreIfNode.examples.map((each) => [each.name, each] as const))("example: %s", async (_name, each) => {

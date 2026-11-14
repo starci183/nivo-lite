@@ -1,6 +1,5 @@
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { LanggraphOptions } from "./langgraph.options"
 import type { GraphThreads } from "./langgraph.port"
 

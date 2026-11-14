@@ -1,10 +1,10 @@
 import { Test } from "@nestjs/testing"
-import type { GatewayCallResult } from "@modules/domain/mcp-gateway-receipts"
+import type { ToolCallResult } from "@modules/domain/tool-receipts"
 import type { DoorFailure } from "@nivo-lite/agent-sdk/mutation"
 import * as policy from "./door-call.policy"
 
 /** The code of a gateway answer that is not a value or a wait for approval. */
-type FailureCode = Exclude<Extract<GatewayCallResult, { ok: false }>["code"], "approval_required">
+type FailureCode = Exclude<Extract<ToolCallResult, { ok: false }>["code"], "approval_required">
 
 /** The policy functions as one provider, read through the Nest testing module. */
 class PolicySubject {
@@ -48,8 +48,6 @@ describe("doorResultOf", () => {
         ["invalid_arguments", "invalid"],
         ["invalid_name", "invalid"],
         ["idempotency_key_required", "invalid"],
-        ["connector_disabled", "forbidden"],
-        ["schema_unapproved", "forbidden"],
         ["not_granted", "forbidden"],
         ["internal_only", "forbidden"],
         ["unavailable", "transient"],
@@ -57,7 +55,7 @@ describe("doorResultOf", () => {
         ["tool_error", "failed"],
     ])("maps the gateway failure %s to %s and keeps its detail", async (code, reason) => {
         const p = await build()
-        const result: GatewayCallResult = { ok: false, code, detail: "why" }
+        const result: ToolCallResult = { ok: false, code, detail: "why" }
         expect(p.doorResultOf(result)).toEqual({ ok: false, reason, message: "why" })
     })
 

@@ -1,9 +1,6 @@
 import type { AiBudget, AiRouting } from "@modules/integrations/ai"
 import type { AiTasksOptions, NodeReasoning } from "./ai-tasks.options"
 
-/** The kinds of model call the prompt library makes: a fixed-shape task of the app, or a call of a graph node (a step's agent turn, a decision, the engine's own). */
-export type CallKind = "task" | "node"
-
 /**
  * The longest one try of a node call may be given, in milliseconds. A call that gets no answer is made once more, so a node call
  * holds its step for at most twice this: four minutes, well inside the ten minutes the heartbeat of a running turn renews its lease for.
@@ -24,21 +21,32 @@ export interface CallLimits {
 type NodeCaps = Pick<AiTasksOptions, "nodeMaxTokens" | "nodeReasoningMaxTokens">
 
 /**
- * What a node call may spend, or nothing when the setting leaves the model's own default: the effort, with the output limit and
- * the direct reasoning cap when the app set them. A call whose reasoning is off needs no reasoning cap, and keeps the output limit.
+ * The output limit of a node call: the smaller of the app's cap and the step's own (blocks-core's `maxOutputTokens`); none when
+ * neither is set.
  */
-const budgetOf = (reasoning: NodeReasoning, caps: NodeCaps): Pick<CallLimits, "budget"> =>
-    reasoning === "default"
-        ? {}
-        : {
-              budget: {
-                  effort: reasoning,
-                  ...(caps.nodeMaxTokens === undefined ? {} : { maxTokens: caps.nodeMaxTokens }),
-                  ...(caps.nodeReasoningMaxTokens === undefined || reasoning === "off"
-                      ? {}
-                      : { reasoningMaxTokens: caps.nodeReasoningMaxTokens }),
-              },
-          }
+const outputCapOf = (app: number | undefined, step: number | undefined): number | undefined => {
+    const caps = [app, step].filter((cap): cap is number => cap !== undefined && Number.isInteger(cap) && cap > 0)
+    return caps.length === 0 ? undefined : Math.min(...caps)
+}
+
+/**
+ * What a node call may spend, or nothing when the setting leaves the model's own default: the effort, with the output limit (the
+ * smaller of the app's and the step's) and the direct reasoning cap when they are set. A call whose reasoning is off needs no
+ * reasoning cap, and keeps the output limit.
+ */
+const budgetOf = (reasoning: NodeReasoning, caps: NodeCaps, stepMaxTokens: number | undefined): Pick<CallLimits, "budget"> => {
+    if (reasoning === "default") return {}
+    const maxTokens = outputCapOf(caps.nodeMaxTokens, stepMaxTokens)
+    return {
+        budget: {
+            effort: reasoning,
+            ...(maxTokens === undefined ? {} : { maxTokens }),
+            ...(caps.nodeReasoningMaxTokens === undefined || reasoning === "off"
+                ? {}
+                : { reasoningMaxTokens: caps.nodeReasoningMaxTokens }),
+        },
+    }
+}
 
 /**
  * The routing of one try of a node call, or nothing when the app set none. A retry starts the order one upstream later (the second
@@ -55,13 +63,14 @@ const routingOf = (routing: AiRouting | undefined, tryNumber: number): Pick<Call
 }
 
 /**
- * The limits of a call by its kind. A task keeps the library's deadline and the model's default. A node call reads a prompt of
+ * The limits of a node call. It reads a prompt of
  * thousands of tokens and answers a small JSON object: left alone, a reasoning model spends most of its answer on thinking nobody
  * reads, so its reasoning is bounded and its deadline is its own, never above the ceiling.
- */
-/**
+ *
  * `asked` is the reasoning a node named for its own call, when it named one. `tryNumber` is which try of the call this is, from
- * one: a node call's first try gets its full deadline, each retry the shorter one; a task keeps the same deadline on every try.
+ * one: a node call's first try gets its full deadline, each retry the shorter one.
+ * `stepMaxTokens` is the output bound blocks-core declares for the node's step beside its model (`NodeModel.maxOutputTokens`): the
+ * smaller of it and the app's `nodeMaxTokens` is sent, so a runaway answer is cut at the step's size, not the app's.
  */
 export const callLimitsOf = (
     options: Pick<
@@ -74,20 +83,17 @@ export const callLimitsOf = (
         | "nodeReasoningMaxTokens"
         | "nodeRouting"
     >,
-    kind: CallKind,
     asked?: Exclude<NodeReasoning, "default">,
     tryNumber = 1,
-): CallLimits =>
-    kind === "task"
-        ? { timeoutMs: options.timeoutMs }
-        : {
-              timeoutMs: Math.min(
-                  tryNumber <= 1
-                      ? (options.nodeTimeoutMs ?? options.timeoutMs)
-                      : (options.nodeRetryTimeoutMs ?? options.timeoutMs),
-                  NODE_TIMEOUT_CEILING_MS,
-              ),
-              // The node's own word wins over the default of node calls: its author knows what the call weighs.
-              ...budgetOf(asked ?? options.nodeReasoning ?? "default", options),
-              ...routingOf(options.nodeRouting, tryNumber),
-          }
+    stepMaxTokens?: number,
+): CallLimits => ({
+    timeoutMs: Math.min(
+        tryNumber <= 1
+            ? (options.nodeTimeoutMs ?? options.timeoutMs)
+            : (options.nodeRetryTimeoutMs ?? options.timeoutMs),
+        NODE_TIMEOUT_CEILING_MS,
+    ),
+    // The node's own word wins over the default of node calls: its author knows what the call weighs.
+    ...budgetOf(asked ?? options.nodeReasoning ?? "default", options, stepMaxTokens),
+    ...routingOf(options.nodeRouting, tryNumber),
+})

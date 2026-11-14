@@ -8,30 +8,53 @@ export const STOP_LEARNING_CARDS = "STOP_LEARNING_CARDS"
 
 /** BG4's `BrainChangePost`, as the learning sends it (structural: the brain module is not imported here). */
 export interface ChangeCardPost {
+    /** The workspace. */
     readonly workspaceId: string
     /** The proposed fact the card is about. */
     readonly changeId: string
+    /** Always `learning`: the card comes from repeated answers to stops. */
     readonly origin: "learning"
+    /** Why the truth is proposed, in the engine's words. */
     readonly reason: string
-    readonly evidence: ReadonlyArray<{
-        readonly kind: "answer"
-        readonly quote: string
-        readonly ref: string
-        readonly by: { readonly name: string; readonly memberId: string | null }
-        readonly at: string | null
-    }>
+    /** The answers the truth rests on. */
+    readonly evidence: ReadonlyArray<ChangeCardEvidence>
     /** The agent that asked: the card goes to the founder's direct room with it. */
     readonly agentId: string
+    /** Always null: the poster picks the founder's direct room with the agent. */
     readonly roomId: null
+}
+
+/** Who answered a stop, as a card names them. */
+export interface EvidenceAuthor {
+    /** The display name. */
+    readonly name: string
+    /** The account, or null when it cannot be read. */
+    readonly memberId: string | null
+}
+
+/** One answer a change card rests on, as BG4 takes it. */
+export interface ChangeCardEvidence {
+    /** Always `answer`: a person's answer to a stop. */
+    readonly kind: "answer"
+    /** The person's words. */
+    readonly quote: string
+    /** The run and the step. */
+    readonly ref: string
+    /** Who answered. */
+    readonly by: EvidenceAuthor
+    /** When, ISO, or null. */
+    readonly at: string | null
 }
 
 /** BG4's `BrainChangePosted`, as far as the learning reads it. */
 export interface ChangeCardPosted {
+    /** What became of the card: posted, rewritten in place, no longer waiting, or no room to post in. */
     readonly outcome: "posted" | "updated" | "not_waiting" | "no_room"
 }
 
 /** BG4's poster, as far as the learning uses it. */
 export interface ChangeCardPoster {
+    /** Posts the card of a change, or rewrites the one already posted. */
     post(change: ChangeCardPost): Promise<ChangeCardPosted>
 }
 
@@ -50,7 +73,7 @@ export interface LearningEvidence {
     /** The run and the step. */
     readonly ref: string
     /** Who answered. */
-    readonly by: { readonly name: string; readonly memberId: string | null }
+    readonly by: EvidenceAuthor
     /** When, ISO. */
     readonly at: string
 }
@@ -133,20 +156,4 @@ export interface StopLearningPass {
     readonly kept: number
     /** Cards posted. */
     readonly posted: number
-}
-
-/** Log events of the learning: ids, codes and counts only, never anyone's words. */
-export enum StopLearningLogEvent {
-    /** A settle kept new candidates (`kept`). */
-    CandidatesKept = "stop_learning.candidates_kept",
-    /** A card was posted (`changeId`, `candidates`, `kind`). */
-    CardPosted = "stop_learning.card_posted",
-    /** Three tries gave no usable draft; the candidates stay (`group`). */
-    DraftFailed = "stop_learning.draft_failed",
-    /** The model gave no rule for the group (`group`). */
-    NoRule = "stop_learning.no_rule",
-    /** A settle could not be learned from (logged, never fails the wake). */
-    PassFailed = "stop_learning.pass_failed",
-    /** The founder decided a card (`changeId`, `state`, `closed`). */
-    Decided = "stop_learning.decided",
 }

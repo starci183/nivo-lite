@@ -4,6 +4,7 @@ import { REMOTE_FILES } from "@modules/integrations/remote-files"
 import type { RemoteFileAnswer, RemoteFileRequest, RemoteFiles } from "@modules/integrations/remote-files"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { CustomerFilesService } from "@modules/domain/chat-files"
 import { IMAGE_MAX_BYTES, NodeImagesService } from "./node-images.service"
 
 /** What the remote files client answers for a file: it keeps the bytes out when the status, the type or the size of the request refuse them. */
@@ -19,14 +20,16 @@ const served =
 const build = async () => {
     const logger = mock<Logger>()
     const files = mock<RemoteFiles>()
+    const customerFiles = mock<CustomerFilesService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             NodeImagesService,
             { provide: REMOTE_FILES, useValue: files },
             { provide: LOGGER, useValue: logger },
+            { provide: CustomerFilesService, useValue: customerFiles },
         ],
     }).compile()
-    return { service: moduleRef.get(NodeImagesService), files, logger }
+    return { service: moduleRef.get(NodeImagesService), files, logger, customerFiles }
 }
 
 describe("NodeImagesService", () => {
@@ -69,5 +72,26 @@ describe("NodeImagesService", () => {
 
         await expect(service.inline(["1"])).resolves.toEqual({ images: [], dropped: 1 })
         expect(logger.warn).toHaveBeenCalledWith("ai_tasks.image_unreadable", { error: "string" })
+    })
+})
+
+describe("NodeImagesService: a picture a customer sent (D-MX-4)", () => {
+    const REF = "chat-file:ws-1/chat/customer/k-0.png"
+
+    it("reads a kept picture from the shop's own store by its address, never fetching it, within the workspace of the call", async () => {
+        const { service, files, customerFiles } = await build()
+        customerFiles.bytesOf.mockResolvedValue({ contentType: "image/png", bytes: new Uint8Array([1, 2, 3]) })
+
+        await expect(service.inline([REF], "ws-1")).resolves.toEqual({ images: ["data:image/png;base64,AQID"], dropped: 0 })
+        expect(customerFiles.bytesOf).toHaveBeenCalledWith("ws-1", REF)
+        expect(files.read).not.toHaveBeenCalled()
+    })
+
+    it("leaves out a kept picture with no workspace, one the store lost, and a picture the shop could not keep", async () => {
+        const { service, customerFiles } = await build()
+        customerFiles.bytesOf.mockResolvedValue(null)
+
+        await expect(service.inline([REF])).resolves.toMatchObject({ images: [], dropped: 1 })
+        await expect(service.inline([REF, ""], "ws-1")).resolves.toMatchObject({ images: [], dropped: 2 })
     })
 })

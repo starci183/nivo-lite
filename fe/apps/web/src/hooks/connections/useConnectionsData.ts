@@ -66,11 +66,11 @@ export const useConnectionsData = (): ConnectionsDataView => {
     const items = useMemo(() => (connectionRows === undefined ? [] : connectionsOf(connectionRows)), [connectionRows])
     const active = useMemo(
         () =>
-            agentRows === undefined ? [] : agentRows.filter((agent) => agent.status === "active").map(agentOptionOf),
+            agentRows === undefined ? [] : agentRows.filter((agent) => agent.status === "active").map((entry) => agentOptionOf(entry)),
         [agentRows],
     )
     const agentNames = useMemo(
-        () => Object.fromEntries((agentRows === undefined ? [] : agentRows).map((agent) => [agent.id, agent.name])),
+        () => Object.fromEntries((agentRows ?? []).map((agent) => [agent.id, agent.name])),
         [agentRows],
     )
     return {

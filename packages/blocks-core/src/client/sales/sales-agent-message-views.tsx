@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { Avatar, Cluster, Inset, Stack, Text } from "@starci/grammar/common"
-import { orderSummaryKind, paymentReceivedKind } from "../../modules/sales/agent-message-kinds"
-import type { OrderSummaryLine } from "../../modules/sales/agent-message-kinds"
+import { orderSummaryKind, paymentReceivedKind, type OrderSummaryLine } from "../../modules/sales/agent-message-kinds"
 import type { AgentMessageView, AgentMessageViewContext } from "../agent-message/agent-message-views"
 
 /** The facts of an order the body draws as key/value rows. */
@@ -34,7 +33,7 @@ interface OrderBodyProps {
     readonly kinds: OrderKindWords
 }
 
-/** "x 2 · 120.000 VND": how many and the price of one, muted under the item name; what is not known is left out. */
+/** "x 2 . 120.000 VND": how many and the price of one, muted under the item name; what is not known is left out. */
 const quantityTextOf = (line: OrderSummaryLine): string =>
     [`\u00d7 ${String(line.qty)}`, line.unitText ?? ""].filter((part) => part !== "").join(" \u00b7 ")
 
@@ -44,7 +43,7 @@ const OrderLineRow = (props: OrderLineRowProps): ReactNode => {
     const image = line.imageUrl ?? ""
     return (
         <Cluster gap="row" justify="between" align="center" wrap={false}>
-            <Cluster gap="row" align="center" wrap={false}>
+            <Cluster gap="inline" align="center" wrap={false}>
                 <Avatar
                     name={line.name}
                     {...(image === "" ? {} : { src: image })}
@@ -146,6 +145,6 @@ const paymentPreview = (payload: unknown, context: AgentMessageViewContext): Rea
 
 /** The views of the kinds the sales and payment flows register. */
 export const salesAgentMessageViews: ReadonlyArray<AgentMessageView> = [
-    { kind: orderSummaryKind, preview: orderPreview },
-    { kind: paymentReceivedKind, preview: paymentPreview },
+    { kind: orderSummaryKind, preview: orderPreview, workInHead: true },
+    { kind: paymentReceivedKind, preview: paymentPreview, workInHead: true },
 ]

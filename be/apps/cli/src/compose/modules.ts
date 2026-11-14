@@ -1,6 +1,5 @@
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import type { DynamicModule, Type } from "@nestjs/common"
-import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import { CliModule } from "@features/cli"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
@@ -10,7 +9,8 @@ import { AgentBindingsService, AgentConnectionsModule } from "@modules/domain/ag
 import { ConnectionGrantsModule } from "@modules/domain/connection-grants"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
-import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
+import { AccountDataModule } from "@modules/domain/account-data"
+import { ACCOUNT_DATA_CATALOG } from "@modules/domain/account-data-catalog"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { EmailMessagesModule } from "@modules/domain/email-messages"
 import { EntityPlannerModule } from "@modules/domain/entity-planner"
@@ -20,39 +20,33 @@ import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { AgentDirectoryService, AgentRecordsService } from "@modules/domain/agents"
-import { KnowledgeSourcesModule, ProfileSourcesService } from "@modules/domain/knowledge-sources"
+import { BrainModule } from "@modules/domain/brain"
+import { KnowledgeSourcesModule } from "@modules/domain/knowledge-sources"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
-import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { McpGatewayAdminService, McpGatewayModule } from "@modules/domain/mcp-gateway"
-import { McpCallLogModule } from "@modules/domain/mcp-call-log"
+import { ToolsModule } from "@modules/domain/tools"
+import { ToolCallLogModule } from "@modules/domain/tool-call-log"
 import { WorkspaceSeedModule } from "@modules/domain/workspace-seed"
 import { WorkspaceCleanupModule } from "@modules/domain/workspace-cleanup"
 import { CORE_FOLDER, NIVO_KNOWLEDGE_MESSAGES, NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
-import { VideoMusicModule } from "@modules/domain/video-music"
 import { AiModule } from "@modules/integrations/ai"
+import { chatProfileRoutes } from "@modules/integrations/ai-gateway"
 import { HttpModule } from "@modules/platform/http"
 import { I18nModule } from "@modules/platform/i18n"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
-import { STORAGE_ASSETS, ObjectStorageModule } from "@modules/integrations/object-storage"
+import { ObjectStorageModule } from "@modules/integrations/object-storage"
 import { IDENTITY_ACCOUNTS, IDENTITY_AUTHENTICATOR, IdentityModule } from "@modules/domain/identity"
-import { InventoryModule } from "@modules/domain/inventory"
 import { MailModule } from "@modules/integrations/mail"
 import { PassportModule } from "@modules/integrations/passport"
-import { AuthorityActionsModule } from "@modules/domain/authority-actions"
-import { AuthorityRulesModule } from "@modules/domain/authority-rules"
-import { MemberGrantsModule, OfficeAuthorityService } from "@modules/domain/member-grants"
 import { MODULE_KNOWLEDGE_FOLDERS, MODULES_MESSAGES } from "@modules/domain/modules"
 import { OwnersModule } from "@modules/domain/owners"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
-import { OfficeRoomsModule } from "@modules/domain/office-rooms"
 import { ClockModule } from "@modules/platform/clock"
 import { IdsModule } from "@modules/platform/ids"
 import { DatabaseModule } from "@modules/platform/database"
 import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { appPgTypes } from "@modules/integrations/data-sources"
 import { EventBusModule } from "@modules/platform/event-bus"
-import { QueueModule } from "@modules/platform/queue"
-import type { QueueOptions } from "@modules/platform/queue"
+import { QueueModule, type QueueOptions } from "@modules/platform/queue"
 import { LoggingModule, printConsoleLine } from "@modules/platform/logging"
 import type { CliAppOptions } from "../cli.options"
 import { entityEngineStoreModules } from "./entity-engine"
@@ -74,13 +68,8 @@ const CLI_QUEUE: QueueOptions = {
     schedulers: [],
 }
 
-/** The nodes the graphs a seed publishes are judged against: the core ones of the blocks package. */
-const GRAPH_NODES: NodeInstall = {
-    nodes: coreNodes,
-    effects: coreEffects,
-    tools: coreTools,
-    dataKinds: coreDataKinds,
-}
+/** The nodes the graphs a seed publishes are judged against: those of every installed plugin, the core package among them. */
+const GRAPH_NODES: NodeInstall = INSTALLED.nodeInstall()
 
 /** Registers the CLI capabilities in their boot order, with queue producers only. */
 export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> => [
@@ -97,17 +86,15 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     }),
     I18nModule.register({ isGlobal: true, bundles: [NIVO_KNOWLEDGE_MESSAGES, MODULES_MESSAGES] }),
     HttpModule.register({ isGlobal: true }),
-    AiModule.register({ isGlobal: true, ...options.ai }),
+    AiModule.register({ isGlobal: true, ...options.ai, profileRoutes: chatProfileRoutes() }),
     NivoKnowledgeModule.register({
         isGlobal: true,
         folders: [CORE_FOLDER, ...MODULE_KNOWLEDGE_FOLDERS],
     }),
-    AutomationTemplatesModule.register({ isGlobal: true }),
     MailModule.register({ isGlobal: true, ...options.mail }),
     PassportModule.register({ isGlobal: true, ...options.passport, authenticator: IDENTITY_AUTHENTICATOR }),
     IdentityModule.register({ isGlobal: true, ownTokens: true, auth: options.identityAuth }),
     ObjectStorageModule.register({ isGlobal: true, ...options.storage }),
-    VideoMusicModule.register({ isGlobal: true, store: STORAGE_ASSETS }),
     EventsModule.register({ isGlobal: true }),
     QueueModule.register({ isGlobal: true, ...CLI_QUEUE }),
     EventBusModule.register({ isGlobal: true }),
@@ -115,24 +102,16 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: true }),
-    AuthorityRulesModule.register({ isGlobal: true }),
-    OfficeRoomsModule.register({ isGlobal: true, directoryOnly: true }),
-    MemberGrantsModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
+    AccountDataModule.register({ isGlobal: true, types: ACCOUNT_DATA_CATALOG }),
     DataRecordsModule.register({ isGlobal: true }),
-    McpCallLogModule.register({ isGlobal: true }),
-    McpGatewayModule.register({ isGlobal: true, ...options.mcpGateway, console: true }),
+    ToolCallLogModule.register({ isGlobal: true }),
+    ToolsModule.register({ isGlobal: true, ...options.toolsConfig, console: true }),
     WorkspaceSeedModule.register({
         isGlobal: true,
         auth: IDENTITY_ACCOUNTS,
-        ports: {
-            agents: AgentRecordsService,
-            sources: ProfileSourcesService,
-            toolGrants: McpToolGrantsService,
-            connectors: McpGatewayAdminService,
-            officeAuthority: OfficeAuthorityService,
-        },
+        ports: { agents: AgentRecordsService },
         nodes: GRAPH_NODES,
         print: printConsoleLine,
         ...options.workspaceSeed,
@@ -140,7 +119,6 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ...entityEngineStoreModules(options),
     AgentGraphsModule.register({ isGlobal: true, storeOnly: true }),
     WorkspaceCleanupModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS, print: printConsoleLine }),
-    AuthorityActionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({
         isGlobal: true,
         tokenKey: options.channelConnections.channelTokenKey,
@@ -156,9 +134,9 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ConnectionGrantsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
     ChannelConnectionsModule.register({ isGlobal: true }),
-    InventoryModule.register({ isGlobal: true, seedOnly: true, assets: STORAGE_ASSETS }),
     KnowledgeSourcesModule.register({ isGlobal: true, seedOnly: true }),
+    BrainModule.register({ isGlobal: true, derivationsOnly: true }),
     ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
-    EntityPlannerModule.register({ isGlobal: true, entities: FLOW_F_ENTITIES }),
+    EntityPlannerModule.register({ isGlobal: true, entities: INSTALLED.entities() }),
     CliModule.register({}),
 ]

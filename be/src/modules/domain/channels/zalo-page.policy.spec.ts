@@ -107,13 +107,13 @@ describe("checksOf", () => {
 })
 
 describe("recipientsOf", () => {
-    it("keeps one row per Zalo user, strips the archive suffix and sorts newest first", async () => {
+    it("keeps one row per Zalo user and sorts newest first", async () => {
         const subject = await build()
         const rows = subject.recipientsOf([
-            { conversationId: "c1", externalId: "u1:1700000000", name: "An", lastAt: "2026-10-28T08:00:00.000Z" },
-            { conversationId: "c2", externalId: "u2", name: "", lastAt: "2026-10-28T09:00:00.000Z" },
-            { conversationId: "c3", externalId: "u1", name: "An", lastAt: "2026-10-28T07:00:00.000Z" },
-            { conversationId: "c4", externalId: ":1700", name: "x", lastAt: "2026-10-28T09:30:00.000Z" },
+            { userId: "u1", name: "An", lastAt: "2026-10-28T08:00:00.000Z" },
+            { userId: "u2", name: "", lastAt: "2026-10-28T09:00:00.000Z" },
+            { userId: "u1", name: "An", lastAt: "2026-10-28T07:00:00.000Z" },
+            { userId: "", name: "x", lastAt: "2026-10-28T09:30:00.000Z" },
         ])
         expect(rows.map((row) => row.userId)).toEqual(["u2", "u1"])
         expect(rows[1]).toEqual({ userId: "u1", name: "An", lastMessageAt: "2026-10-28T08:00:00.000Z" })

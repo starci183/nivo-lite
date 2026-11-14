@@ -16,6 +16,10 @@ import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine
 import { RecordEntity, RecordLinkEntity } from "./persistence/entities"
 import type { ScopedTx } from "./policies/scoped-tx.contracts"
 import { mintScopedTx } from "./policies/scoped-tx.policy"
+import { isRecord } from "@modules/platform/primitives"
+
+/** Matches the soft-delete guard TypeORM's `IsNull()` puts on `deletedAt`. */
+const IS_NULL: unknown = expect.objectContaining({ _type: "isNull" })
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const OWNER_ID = "22222222-2222-4222-8222-222222222222"
@@ -134,11 +138,18 @@ const build = async (em: MockEntityManager) => {
 
 const ANY_FUNCTION: unknown = expect.any(Function)
 
-const txOf = (manager: MockEntityManager): ScopedTx => mintScopedTx({ manager, workspaceId: WS })
+const AGENT_ID = "44444444-4444-4444-8444-444444444444"
+
+/** A scope of the sales agent acting for a person (it stamps the agent and sees every record of the workspace). */
+const txOf = (manager: MockEntityManager): ScopedTx =>
+    mintScopedTx({ manager, workspaceId: WS, agent: { id: AGENT_ID, sees: "all" } })
+
+/** The patch object of a recorded `set` call, empty when it recorded none. */
+const patchOf = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {})
 
 describe("EntityMutationService insert", () => {
     it("inserts the record with a minted id, links its toOne relations and answers the record after it", async () => {
-        const { mutations, em } = await build(mockEntityManager())
+        const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
         const [insert, unlink, link] = queueQueryBuilders(em, [
             { execute: { raw: [rawRecord(NEW_ID, { contactName: "An", stage: "new" })] } },
             { execute: {} },
@@ -149,7 +160,7 @@ describe("EntityMutationService insert", () => {
 
         expect(result).toEqual({ ok: true, row: rowOf(NEW_ID, { contactName: "An", stage: "new" }), version: "1" })
         expect(insert?.callsOf("values")).toEqual([
-            [{ id: NEW_ID, workspaceId: WS, entity: "sales.lead", data: ANY_FUNCTION }],
+            [{ id: NEW_ID, workspaceId: WS, entity: "sales.lead", agentId: AGENT_ID, data: ANY_FUNCTION }],
         ])
         expect(insert?.callsOf("setParameter")).toEqual([["data", '{"stage":"new","contactName":"An"}']])
         expect(unlink?.callsOf("from")).toEqual([[RecordLinkEntity]])
@@ -165,6 +176,16 @@ describe("EntityMutationService insert", () => {
                 },
             ],
         ])
+    })
+
+    it("refuses to insert a record that links to a deleted (or absent) target: missing, nothing written", async () => {
+        const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, null] }))
+
+        await expect(mutations.mutate(txOf(em), { ...INSERT, links: { owner: OWNER_ID } }, "action")).resolves.toEqual({
+            ok: false,
+            reason: "missing",
+        })
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("inserts a record that has no links", async () => {
@@ -189,7 +210,7 @@ describe("EntityMutationService insert", () => {
 describe("EntityMutationService database failures", () => {
     const failing = async (error: Error) => {
         const built = await build(mockEntityManager())
-        queueQueryBuilders(built.em, [{ execute: () => Promise.reject(error) }])
+        queueQueryBuilders(built.em, [{ execute: jest.fn().mockRejectedValue(error) }])
         return built
     }
 
@@ -248,7 +269,9 @@ describe("EntityMutationService update", () => {
             row: rowOf(LEAD_ID, { contactName: "An", stage: "won" }, "4"),
             version: "4",
         })
-        expect(fake?.callsOf("where")).toEqual([[{ entity: "sales.lead", id: LEAD_ID, workspaceId: WS, version: "3" }]])
+        expect(fake?.callsOf("where")).toEqual([
+            [{ entity: "sales.lead", id: LEAD_ID, workspaceId: WS, deletedAt: IS_NULL, version: "3" }],
+        ])
     })
 
     it("answers stale when the record exists at another version", async () => {
@@ -323,25 +346,27 @@ describe("EntityMutationService upsert and ensure", () => {
 })
 
 describe("EntityMutationService delete", () => {
-    const deletes = [{ execute: {} }, { execute: {} }, { execute: { raw: [{ id: LEAD_ID }] } }]
+    // The live-link count of the one restricting relation, then the one soft-delete statement.
+    const deletes = [{ getCount: 0 }, { execute: { raw: [{ id: LEAD_ID }] } }]
 
-    it("deletes the record and answers it as it was", async () => {
-        const { mutations, em } = await build(
-            mockEntityManager({ findOne: [RecordEntity, storedLead], exists: [RecordLinkEntity, false] }),
-        )
-        queueQueryBuilders(em, deletes)
+    it("soft-deletes the record and answers it as it was (the row before the delete)", async () => {
+        const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
+        const fakes = queueQueryBuilders(em, deletes)
 
         await expect(mutations.mutate(txOf(em), DELETE, "action")).resolves.toEqual({
             ok: true,
             row: rowOf(LEAD_ID, { contactName: "An", phone: "0900" }, "3"),
             version: "3",
         })
+        // The record is soft-deleted (one update setting deleted_at and bumping the version); no statement deletes a row or a link.
+        expect(fakes[1]?.callsOf("update")).toEqual([[RecordEntity]])
+        expect(Object.keys(patchOf(fakes[1]?.callsOf("set")[0]?.[0])).sort()).toEqual(["deletedAt", "version"])
+        expect(fakes.flatMap((fake) => fake.callsOf("delete"))).toEqual([])
+        expect(em.delete).not.toHaveBeenCalled()
     })
 
     it("deletes when the expected version still matches", async () => {
-        const { mutations, em } = await build(
-            mockEntityManager({ findOne: [RecordEntity, storedLead], exists: [RecordLinkEntity, false] }),
-        )
+        const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
         queueQueryBuilders(em, deletes)
 
         const result = await mutations.mutate(txOf(em), { ...DELETE, expected: "3" }, "action")
@@ -369,9 +394,8 @@ describe("EntityMutationService delete", () => {
     })
 
     it("answers invalid with the relation when a restricting relation still points at the record", async () => {
-        const { mutations, em } = await build(
-            mockEntityManager({ findOne: [RecordEntity, storedLead], exists: [RecordLinkEntity, true] }),
-        )
+        const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
+        queueQueryBuilders(em, [{ getCount: 1 }])
 
         await expect(mutations.mutate(txOf(em), DELETE, "action")).resolves.toEqual({
             ok: false,
@@ -381,10 +405,8 @@ describe("EntityMutationService delete", () => {
     })
 
     it("answers missing when the record disappeared between the read and the delete", async () => {
-        const { mutations, em } = await build(
-            mockEntityManager({ findOne: [RecordEntity, storedLead], exists: [RecordLinkEntity, false] }),
-        )
-        queueQueryBuilders(em, [{ execute: {} }, { execute: {} }, { execute: { raw: [] } }])
+        const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
+        queueQueryBuilders(em, [{ getCount: 0 }, { execute: { raw: [] } }])
 
         await expect(mutations.mutate(txOf(em), DELETE, "action")).resolves.toEqual({
             ok: false,
@@ -415,11 +437,34 @@ describe("EntityMutationService link and unlink", () => {
         ])
     })
 
+    it("answers missing for a link TO a deleted record (the source is live, the target is not): nothing is linked", async () => {
+        const em = mockEntityManager()
+        em.findOne.mockResolvedValueOnce(storedLead).mockResolvedValueOnce(null)
+        const { mutations } = await build(em)
+
+        await expect(mutations.mutate(txOf(em), LINK, "action")).resolves.toEqual({ ok: false, reason: "missing" })
+        expect(em.findOne).toHaveBeenCalledTimes(2)
+        expect(em.findOne.mock.calls[1]?.[1]).toEqual({
+            where: { entity: "sales.member", id: OWNER_ID, workspaceId: WS },
+        })
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("still unlinks from a deleted target (an unlink never needs the target to be live)", async () => {
+        const em = mockEntityManager()
+        em.findOne.mockResolvedValueOnce(storedLead)
+        const { mutations } = await build(em)
+        queueQueryBuilders(em, [{ execute: {} }])
+
+        await expect(mutations.mutate(txOf(em), UNLINK, "action")).resolves.toMatchObject({ ok: true })
+        expect(em.findOne).toHaveBeenCalledTimes(1)
+    })
+
     it("answers invalid when the foreign key refuses a target that is not a record of the workspace", async () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
         queueQueryBuilders(em, [
             { execute: {} },
-            { execute: () => Promise.reject(pgError("23503", "record_links_to_fkey")) },
+            { execute: jest.fn().mockRejectedValue(pgError("23503", "record_links_to_fkey")) },
         ])
 
         await expect(mutations.mutate(txOf(em), LINK, "action")).resolves.toEqual({

@@ -1,7 +1,6 @@
-import { gql } from "@apollo/client"
-import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { MyAgentTemplatesQuery } from "../__generated__/graphql"
 
 type QueryMyAgentTemplatesResponse = MyAgentTemplatesQuery
@@ -39,6 +38,6 @@ export const queryMyAgentTemplates = async ({
     query = QueryMyAgentTemplates.Query1,
     signal,
 }: QueryParams<QueryMyAgentTemplates> = {}): Promise<ApolloClient.QueryResult<QueryMyAgentTemplatesResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query] })
 }

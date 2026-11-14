@@ -89,12 +89,68 @@ export interface PaymentInstructionRequest {
     readonly transferContent: string
 }
 
+/** What the generic transfer tool asks of a provider: an instruction for an amount and a content. */
+export interface TransferInstructionRequest {
+    /** The amount to pay, in VND (a positive integer). */
+    readonly amountVnd: number
+    /** The transfer content the payer must write: the caller's own reference (for example an order code). */
+    readonly content: string
+}
+
+/**
+ * A bank-transfer instruction as a provider answers it: only the members the provider's documentation gives. The adapter fills at least
+ * one of `qrImageUrl` / `qrPayload`, or the plain account details (`accountNumber` is always present).
+ */
+export interface TransferInstruction {
+    /** An https address of the QR image to show the payer. */
+    readonly qrImageUrl?: string | undefined
+    /** The raw QR payload (the string a QR encoder draws). */
+    readonly qrPayload?: string | undefined
+    /** The short bank code. */
+    readonly bankCode?: string | undefined
+    /** The bank's name. */
+    readonly bankName?: string | undefined
+    /** The receiving account number. */
+    readonly accountNumber: string
+    /** The receiving account's holder. */
+    readonly accountHolder?: string | undefined
+    /** The transfer content, as the request gave it. */
+    readonly content: string
+    /** The amount, in VND. */
+    readonly amountVnd: number
+    /** When the instruction stops being valid, ISO 8601, when the provider says. */
+    readonly expiresAt?: string | undefined
+    /** The provider's own reference of the instruction, when it keeps one. */
+    readonly providerRef?: string | undefined
+}
+
+/**
+ * Every refusal the generic payment-instruction tool (`nivo.tool.payment.transfer.create`) answers, whichever provider served it. A
+ * leaf list, so the engine's tool registry states it without importing the tool.
+ */
+export const PAYMENT_TOOL_REFUSALS: readonly ["not_connected", "connection_refused", "rejected", "not_found", "not_available"] = [
+    "not_connected",
+    "connection_refused",
+    "rejected",
+    "not_found",
+    "not_available",
+] as const satisfies ReadonlyArray<string>
+
+/** The refusals of that tool a node reads and goes on from (class `business` in the tool's `PAYMENT_REFUSAL_CLASS`); the rest freeze the step. */
+export const PAYMENT_TOOL_BUSINESS_REFUSALS: readonly ["rejected", "not_found"] = ["rejected", "not_found"] as const satisfies ReadonlyArray<(typeof PAYMENT_TOOL_REFUSALS)[number]>
+
 /** A bank provider that builds the QR a payer scans. */
 export interface PaymentInstructionPort {
     /** The provider key of the account it draws for. */
     readonly provider: string
     /** The QR image link for one transfer into the account. */
     qrUrl(account: InstructionAccount, request: PaymentInstructionRequest): string
+    /**
+     * The transfer instruction of the generic tool for one account. It throws `providerRefusal` (a `ProviderRegistryError`) for an account that cannot give one (a
+     * missing receiving account is `no_credential`, an instruction the provider cannot express is `rejected`); it never calls the
+     * provider unless the provider's own API creates the instruction (and then proves `not_sent` / `unknown` with `providerCallFailure`).
+     */
+    transfer(connection: ConnectionRecord, request: TransferInstructionRequest): Promise<TransferInstruction>
 }
 
 /** What a transaction list is asked for. */
@@ -131,7 +187,10 @@ export interface BankTransactionsPort {
     transactions(connection: ConnectionRecord, query: BankTransactionsQuery): Promise<OptionalBankTransactions>
 }
 
-/** A messaging provider whose customer messages can be read back from its inbox to catch what the webhook never delivered. */
+/**
+ * A messaging provider whose customer messages can be read back from its inbox to catch what the webhook never delivered. It only reads
+ * (its poll face, as a bank feed's `BankFeedPoller`): the intake its webhook feeds keeps each item, under the webhook's key.
+ */
 export interface MessageInboxPoller<Item = unknown> {
     /** The provider key of the connections it reads. */
     readonly provider: string
@@ -139,8 +198,6 @@ export interface MessageInboxPoller<Item = unknown> {
     readonly limits: PollLimits
     /** Reads one page of one connection. */
     fetch(connection: ConnectionRecord, window: PollWindow): Promise<PollPage<Item>>
-    /** Stores one message through the inbox its webhook feeds, under the webhook's key; false when the webhook already delivered it. */
-    store(connection: ConnectionRecord, item: Item): Promise<boolean>
     /** Classifies a failure of `fetch` so the scheduler can back off, stop on a bad credential, retry or give up. */
     classify(error: unknown): PollFailure
 }
@@ -192,10 +249,16 @@ export interface LedgerPort {
     readonly provider: string
     /** True when the workspace connected this provider and told it where to write. */
     ready(workspaceId: string): Promise<boolean>
-    /** Adds one entry and answers the provider's reference to it; undefined when the workspace has nothing connected for it. */
-    append(workspaceId: string, entry: BusinessLedgerEntry): Promise<OptionalLedgerRef>
-    /** Adds the void entry of a transaction and answers the reference; undefined when the workspace has nothing connected for it. */
-    void(workspaceId: string, transactionId: string): Promise<OptionalLedgerRef>
+    /**
+     * Adds one entry and answers the provider's reference to it; undefined when the workspace has nothing connected for it. `connectionId`
+     * is the connected account the tool runner handed the call: the entry is written there alone; absent, the port picks as before.
+     */
+    append(workspaceId: string, entry: BusinessLedgerEntry, connectionId?: string): Promise<OptionalLedgerRef>
+    /**
+     * Adds the void entry of a transaction and answers the reference; undefined when the workspace has nothing connected for it (or not
+     * on the account named by `connectionId`, when the tool runner handed one).
+     */
+    void(workspaceId: string, transactionId: string, connectionId?: string): Promise<OptionalLedgerRef>
 }
 
 /** The port a provider registered, or undefined when none registered under that key. */

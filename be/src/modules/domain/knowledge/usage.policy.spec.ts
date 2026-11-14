@@ -143,7 +143,7 @@ describe("quotaStatusOf", () => {
     it("is ok and unlimited when there are no allowances, and derives credits from the cost", async () => {
         const subject = await build()
 
-        expect(subject.quotaStatusOf(rowOf({ cost_usd: "0.2" }))).toEqual(statusOf({ creditsUsed: 177 }))
+        expect(subject.quotaStatusOf(rowOf({ cost_usd: "0.2" }))).toEqual(statusOf({ creditsUsed: 176.99115 }))
     })
 
     it("reads the numbers PostgreSQL sends as text", async () => {

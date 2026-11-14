@@ -22,9 +22,9 @@ const build = (rows: ReadonlyArray<unknown> = []) => {
     return { service: new DoorPressesService(em as unknown as EntityManager), query }
 }
 
-/** The migration that declares the table and the two indexes its reads go by. */
+/** The baseline migration declares the table and the two indexes its reads go by. */
 const MIGRATION = readFileSync(
-    join(__dirname, "../../../../../db/migrations/20261112013600_agent-door-presses.sql"),
+    join(__dirname, "../../../../../db/migrations/20261113180000_baseline.sql"),
     "utf8",
 )
 

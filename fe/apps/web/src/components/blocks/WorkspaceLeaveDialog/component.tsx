@@ -1,4 +1,4 @@
-import { AlertDialog, DescriptionList } from "@starci/grammar/common"
+import { AlertDialog, DescriptionList, SurfaceCard } from "@starci/grammar/common"
 import type { WorkspaceLeaveView } from "@/modules/types"
 
 /** Copy and state the connected leave dialog supplies. */
@@ -48,6 +48,6 @@ export const WorkspaceLeaveDialogBase = (props: WorkspaceLeaveDialogBaseProps) =
         onConfirm={props.on.confirm}
         onCancel={props.on.close}
     >
-        <DescriptionList items={rowsOf(props)} />
+        <SurfaceCard><DescriptionList items={rowsOf(props)} /></SurfaceCard>
     </AlertDialog>
 )

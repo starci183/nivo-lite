@@ -1,6 +1,5 @@
 import { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
-import type { ProfileInput } from "./workspace-profile.contracts"
 import type { SeedAccount, SeedInput, SeedRequest, SeedRoleRequest } from "./workspace-seed.contracts"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -26,23 +25,6 @@ export const assertSeedScope = (request: SeedRequest): Readonly<{ id: string } |
     }
     if (!request.workspaceName?.trim() || request.workspaceName.length > 120) invalid()
     return { name: request.workspaceName }
-}
-
-/**
- * The private ensure input of a run that is bound to one named workspace and one owner. A role-change input, another owner or
- * another workspace name is refused, so a run can never write into a workspace its command did not name.
- */
-export const readEnsureFor = (
-    input: Secret | undefined,
-    owner: string | undefined,
-    workspaceName: string,
-): SeedRequest => {
-    const parsed = readSeedInput(input)
-    if (parsed.action !== "ensure") return invalid()
-    const { request } = parsed
-    if (request.owner.email !== (owner ?? "").trim().toLowerCase() || request.workspaceName !== workspaceName)
-        return invalid()
-    return request
 }
 
 /** Requires the initial password only at a missing-account boundary; existing users retain their credential. */
@@ -129,43 +111,6 @@ export const readSeedInput = (input: Secret | undefined): SeedInput => {
         if (value.action === "ensure") return { action: "ensure", request: ensureRequest(value) }
         if (value.action === "role") return { action: "role", request: roleRequest(value) }
         return invalid()
-    } catch (cause) {
-        throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputInvalid, cause })
-    }
-}
-
-const PROFILE_INPUT_KEYS: ReadonlySet<string> = new Set(["schema", "connectors"])
-const CONNECTOR_KEY = /^[a-z][a-z0-9-]{1,30}$/u
-
-const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1", "[::1]"])
-
-/** An endpoint of at most 2048 characters: https, or plain http to a loopback host for a local stack; anything else is refused. */
-const endpointUrl = (value: unknown): string => {
-    const url = text(value, 2048)
-    if (!URL.canParse(url)) return invalid()
-    const { protocol, hostname } = new URL(url)
-    return protocol === "https:" || (protocol === "http:" && LOOPBACK_HOSTS.has(hostname)) ? url : invalid()
-}
-
-const connectorUrls = (value: unknown): ReadonlyMap<string, string> => {
-    if (!isRecord(value)) invalid()
-    return new Map(
-        Object.entries(value).map(([key, entry]): [string, string] => {
-            if (!CONNECTOR_KEY.test(key) || !isRecord(entry) || Object.keys(entry).some((name) => name !== "url"))
-                invalid()
-            return [key, endpointUrl(entry.url)]
-        }),
-    )
-}
-
-/** Parses the private profile input (the connector endpoints) without including its content in public diagnostics. */
-export const readProfileInput = (input: Secret | undefined): ProfileInput => {
-    if (input === undefined) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputRequired })
-    try {
-        const value: unknown = JSON.parse(input.reveal())
-        if (!isRecord(value) || value.schema !== "nivo/workspace-profile-input@1") invalid()
-        if (Object.keys(value).some((key) => !PROFILE_INPUT_KEYS.has(key))) invalid()
-        return { urls: connectorUrls(value.connectors) }
     } catch (cause) {
         throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputInvalid, cause })
     }

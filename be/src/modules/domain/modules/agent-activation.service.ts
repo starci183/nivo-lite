@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { AgentBindingsService } from "@modules/domain/agent-connections"
-import type { OptionalResumeKeep } from "@modules/domain/agent-connections"
+import { AgentBindingsService, type OptionalResumeKeep } from "@modules/domain/agent-connections"
 import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 import type { InstallationView } from "./modules.contracts"
 import { ModuleInstallService } from "./module-install.service"
 

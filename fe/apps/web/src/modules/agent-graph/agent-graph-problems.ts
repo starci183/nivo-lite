@@ -64,8 +64,6 @@ export const problemWordsOf = (
         blank_answer: t("problem_blank_answer", { node, answer: blankWordOf(t, detail) }),
         on_timeout_unset: t("problem_on_timeout_unset", { branch }),
         approver_missing: t("problem_approver_missing", { branch }),
-        no_data_right: t("problem_no_data_right", { node }),
-        outsider_wide: t("problem_outsider_wide"),
         bad_condition: t("problem_bad_condition", { branch, why: conditionWhyOf(t, detail) }),
     }
     return words[problem.code] ?? t("problem_other", { node })
@@ -99,7 +97,6 @@ export const problemLinesOf = (data: AgentGraphData, t: AgentGraphT): ReadonlyAr
                 branch: branch === undefined ? "" : branch.whenFull,
                 detail: problem.detail,
             }),
-            isGrant:
-                problem.code === "approver_no_grant" || problem.code === "no_right" || problem.code === "no_data_right",
+            isGrant: problem.code === "approver_no_grant" || problem.code === "no_right",
         }
     })

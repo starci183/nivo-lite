@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { appPgTypes } from "@modules/integrations/data-sources"

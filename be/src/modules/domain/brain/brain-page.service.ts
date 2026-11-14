@@ -1,25 +1,24 @@
 import { Injectable } from "@nestjs/common"
-import { AgentsService } from "@modules/domain/agents"
-import type { AgentSummary } from "@modules/domain/agents"
-import { BrainExtractionsService } from "@modules/domain/brain-extractions"
-import type { ExtractionState } from "@modules/domain/brain-extractions"
-import { BrainFactsService } from "@modules/domain/brain-facts"
-import type { FactRecord } from "@modules/domain/brain-facts"
+import { AgentsService, type AgentSummary } from "@modules/domain/agents"
+import { BrainExtractionsService, type ExtractionState } from "@modules/domain/brain-extractions"
+import { BrainFactsPagingService, FACTS_PAGE_MAX, type FactPageFilter, type FactRecord } from "@modules/domain/brain-facts"
 import { BrainCommandsService } from "@modules/domain/brain-commands"
-import { BrainLessonsService } from "@modules/domain/brain-lessons"
-import type { LessonRecord } from "@modules/domain/brain-lessons"
-import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import type { GapRecord } from "@modules/domain/knowledge-gaps"
+import { BrainLessonsService, type LessonRecord } from "@modules/domain/brain-lessons"
+import { KnowledgeGapsService, type GapRecord } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG } from "@modules/domain/modules"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
 
 /** Who may change the brain, and who sees the facts, the unanswered questions and the reading of each document. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
-/** The most facts the page shows. */
-const FACTS_LIMIT = 2000
+/** What page of the facts the caller asks for: the first page of `FACTS_PAGE_MAX` with the default statuses when nothing is said. */
+export interface BrainFactsAsk extends FactPageFilter {
+    /** At most this many facts (capped at `FACTS_PAGE_MAX`). */
+    readonly first?: number | undefined
+    /** The cursor of the page before, or null / absent for the first page. */
+    readonly after?: string | null | undefined
+}
 
 /** The most unanswered questions the page lists (the most asked first); the count covers all of them. */
 const GAPS_LIMIT = 50
@@ -71,8 +70,12 @@ const countOf = (result: object | null, name: string): number | null => {
 
 /** Everything the Second Brain page shows. */
 export interface BrainOverview {
-    /** The facts in force, waiting or scheduled. */
+    /** One page of the facts in force, waiting or scheduled (or of the statuses asked), newest change first. */
     readonly facts: ReadonlyArray<FactRecord>
+    /** How many facts match in all (SQL count); more than `facts.length` means there are more pages. */
+    readonly factsTotal: number
+    /** The cursor of the next page of facts, or null when this is the last. */
+    readonly factsNextCursor: string | null
     /** The lessons in force, waiting or retired. */
     readonly lessons: ReadonlyArray<LessonRecord>
     /** The customer questions nobody answered, the most asked first. */
@@ -93,7 +96,7 @@ export interface BrainOverview {
 export class BrainPageService {
     constructor(
         private readonly members: WorkspaceMembersService,
-        private readonly facts: BrainFactsService,
+        private readonly facts: BrainFactsPagingService,
         private readonly lessons: BrainLessonsService,
         private readonly gaps: KnowledgeGapsService,
         private readonly extractions: BrainExtractionsService,
@@ -101,19 +104,35 @@ export class BrainPageService {
         private readonly agents: AgentsService,
     ) {}
 
-    /** The brain of the workspace as the caller may see it. */
-    async overview(userId: string, workspaceId: string): Promise<BrainOverview> {
+    /**
+     * The brain of the workspace as the caller may see it. The facts are one keyset page (BRAIN-LIMITS item 4): with no `ask` the first
+     * page of 2,000 in force, waiting or scheduled, newest change first (what the page read before, now with its total and the cursor of
+     * the rest), so a caller that pages nothing still gets what it got.
+     */
+    async overview(userId: string, workspaceId: string, asked: BrainFactsAsk | null = {}): Promise<BrainOverview> {
+        const ask = asked ?? {}
         const me = await this.members.require(userId, workspaceId)
         const lessons = await this.lessons.list(workspaceId, ["active", "proposed", "retired"])
         const lenses = lensesOf(await this.agents.list(userId, workspaceId))
-        if (!MANAGERS.includes(me.role)) return { facts: [], lessons, gaps: [], gapsOpen: 0, extractions: [], lenses }
-        const [facts, gaps, gapsOpen, extractions] = await Promise.all([
-            this.facts.list(workspaceId, { statuses: ["active", "proposed", "scheduled"], limit: FACTS_LIMIT }),
+        if (!MANAGERS.includes(me.role)) {
+            return { facts: [], factsTotal: 0, factsNextCursor: null, lessons, gaps: [], gapsOpen: 0, extractions: [], lenses }
+        }
+        const [page, gaps, gapsOpen, extractions] = await Promise.all([
+            this.facts.page(workspaceId, ask, ask.first ?? FACTS_PAGE_MAX, ask.after ?? null),
             this.gaps.list(workspaceId, ["open"], GAPS_LIMIT),
             this.gaps.countOpen(workspaceId),
             this.extractions.states(workspaceId),
         ])
-        return { facts, lessons, gaps, gapsOpen, extractions, lenses }
+        return {
+            facts: page.facts,
+            factsTotal: page.total,
+            factsNextCursor: page.nextCursor,
+            lessons,
+            gaps,
+            gapsOpen,
+            extractions,
+            lenses,
+        }
     }
 
     /** Asks the brain to study the corrections of one agent; the job proves the role again. Answers the command to follow. */

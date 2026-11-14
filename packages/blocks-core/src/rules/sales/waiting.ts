@@ -42,11 +42,11 @@ export interface WaitingView {
 
 /** The line under a waiting order: its items, then its amount when known. */
 const descriptionOf = (order: WaitingOrder): string =>
-    [order.items, moneyLine(order.amountVnd)].filter((part) => part !== "").join(" · ")
+    [order.items, moneyLine(order.amountVnd)].filter((part) => part !== "").join(" \u00b7 ")
 
 /** The headline of a waiting order: its number, then its customer when known. */
 const titleOf = (order: WaitingOrder): string =>
-    order.customer === null ? order.orderNo : `${order.orderNo} · ${order.customer}`
+    order.customer === null ? order.orderNo : `${order.orderNo} \u00b7 ${order.customer}`
 
 /**
  * The orders that wait for the owner as the waiting region reads them: the first `shown` rows, a count of all that wait and the

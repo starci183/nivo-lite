@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TelegramUserWizardService } from "@modules/domain/data-hub"
-import type { TelegramLoginStarted } from "@modules/domain/data-hub"
+import { TelegramUserWizardService, type TelegramLoginStarted } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { StartTelegramLoginCommand } from "./start-telegram-login.command"
 
 @CommandHandler(StartTelegramLoginCommand)

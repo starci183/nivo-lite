@@ -1,5 +1,4 @@
-import { Button, DescriptionList, EmptyNotice, Link, Section, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, DescriptionList, EmptyNotice, Link, Section, Text, type ListRowData, SurfaceCard } from "@starci/grammar/common"
 import type { DocFactView, DocIdeaView, DocIdeasView } from "@/modules/types"
 
 /** What the facts of the opened item and the suggestions draw and call. */
@@ -7,6 +6,8 @@ interface KnowledgeDocAsideProps {
     readonly facts: ReadonlyArray<DocFactView>
     readonly ideas: DocIdeasView | null
     readonly nextReview: { readonly label: string; readonly href: string } | null
+    /** The way to the questions of the opened document ("Questions of the document (3)"); null while none are open. */
+    readonly questions: { readonly label: string; readonly href: string } | null
     readonly isLoading: boolean
     readonly onIdea: (ideaId: string, menuId: string) => void
     readonly onMore: () => void
@@ -57,16 +58,25 @@ export const KnowledgeDocAside = (props: KnowledgeDocAsideProps) => {
     return (
         <>
             {props.facts.length === 0 ? null : (
-                <DescriptionList
-                    density="compact"
-                    isLoading={props.isLoading}
-                    items={props.facts.map((fact) => ({ id: fact.id, term: fact.term, description: fact.text }))}
-                />
+                <SurfaceCard>
+                    <DescriptionList
+                        density="compact"
+                        isLoading={props.isLoading}
+                        items={props.facts.map((fact) => ({ id: fact.id, term: fact.term, description: fact.text }))}
+                    />
+                </SurfaceCard>
             )}
             {props.nextReview === null ? null : (
                 <Text size="sm" isLoading={props.isLoading}>
-                    <Link href={props.nextReview.href} isDisabled={props.isLoading}>
+                    <Link variant="plain" href={props.nextReview.href} isDisabled={props.isLoading}>
                         {props.nextReview.label}
+                    </Link>
+                </Text>
+            )}
+            {props.questions === null ? null : (
+                <Text size="sm" isLoading={props.isLoading}>
+                    <Link href={props.questions.href} variant="plain" isDisabled={props.isLoading}>
+                        {props.questions.label}
                     </Link>
                 </Text>
             )}

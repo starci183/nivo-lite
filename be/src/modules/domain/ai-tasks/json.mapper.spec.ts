@@ -1,15 +1,5 @@
 import { Test } from "@nestjs/testing"
-import {
-    embeddedObject,
-    isJsonRecord,
-    numberMember,
-    optionalStringMember,
-    recordListMember,
-    recordMember,
-    stringListMember,
-    stringMember,
-    unfenced,
-} from "./json.mapper"
+import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
 
 const SUBJECT = Symbol("json.mapper")
 
@@ -18,17 +8,7 @@ const buildSubject = async () => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: {
-                    isJsonRecord,
-                    unfenced,
-                    embeddedObject,
-                    stringMember,
-                    optionalStringMember,
-                    numberMember,
-                    stringListMember,
-                    recordMember,
-                    recordListMember,
-                },
+                useValue: { isJsonRecord, unfenced, embeddedObject },
             },
         ],
     }).compile()
@@ -59,25 +39,5 @@ describe("json mapper", () => {
         expect(subject.embeddedObject('Sure: {"a":1} done')).toBe('{"a":1}')
         expect(subject.embeddedObject("no object")).toBeNull()
         expect(subject.embeddedObject("} backwards {")).toBeNull()
-    })
-
-    it("reads typed members with fallbacks", async () => {
-        const subject = await buildSubject()
-
-        const record = { s: "x", n: 2, bad: Number.NaN, list: [1, "b"], obj: { k: 1 }, objs: [{ a: 1 }, 5, null] }
-
-        expect(subject.stringMember(record, "s", "d")).toBe("x")
-        expect(subject.stringMember(record, "n", "d")).toBe("d")
-        expect(subject.optionalStringMember(record, "s")).toBe("x")
-        expect(subject.optionalStringMember(record, "n")).toBeNull()
-        expect(subject.numberMember(record, "n", 0)).toBe(2)
-        expect(subject.numberMember(record, "bad", 7)).toBe(7)
-        expect(subject.numberMember(record, "s", 7)).toBe(7)
-        expect(subject.stringListMember(record, "list")).toEqual(["1", "b"])
-        expect(subject.stringListMember(record, "s")).toEqual([])
-        expect(subject.recordMember(record, "obj")).toEqual({ k: 1 })
-        expect(subject.recordMember(record, "list")).toEqual({})
-        expect(subject.recordListMember(record, "objs")).toEqual([{ a: 1 }])
-        expect(subject.recordListMember(record, "s")).toEqual([])
     })
 })

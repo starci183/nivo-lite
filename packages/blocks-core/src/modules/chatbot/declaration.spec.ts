@@ -1,7 +1,9 @@
-import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
+import { contactBlockProblems, seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import { specProblems } from "@nivo-lite/agent-sdk/spec"
 import type { SpecDocument } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
+import { conversationEntity } from "../../entities/chat/conversation.entity"
+import { platformModule } from "../platform/declaration"
 import { CHATBOT_MESSAGES } from "./chatbot-messages"
 import { chatbotCopyKeys } from "./copy"
 import { CHATBOT_MODULE_KEY, CHATBOT_PERMISSIONS, chatbotModule } from "./declaration"
@@ -19,24 +21,22 @@ describe("the Chatbot module declaration", () => {
     it("declares the inbox reads and the person actions under the module key", () => {
         expect(chatbotModule.key).toBe(CHATBOT_MODULE_KEY)
         expect(chatbotModule.reads.map((read) => read.id)).toEqual([
-            "chatbot.threads",
-            "chatbot.thread-counts",
-            "chatbot.channel-counts",
-            "chatbot.thread",
-            "chatbot.messages",
-            "chatbot.figures",
-            "chatbot.decisions",
-            "chatbot.proposals",
-            "chatbot.settings",
+            "blocks-core.chatbot.api.chat.list",
+            "blocks-core.chatbot.api.chat.of-contact",
+            "blocks-core.chatbot.api.chat.status-counts",
+            "blocks-core.chatbot.api.chat.channel-counts",
+            "blocks-core.chatbot.api.chat.get",
+            "blocks-core.chatbot.api.message.list",
+            "blocks-core.chatbot.api.chat.figures",
+            "blocks-core.chatbot.api.chat.waiting",
+            "blocks-core.chatbot.api.settings.get",
         ])
         expect(chatbotModule.actions.map((action) => action.id)).toEqual([
-            "chatbot.reply",
-            "chatbot.handoff",
-            "chatbot.release",
-            "chatbot.decide",
-            "chatbot.approve-and-send",
-            "chatbot.reject-proposal",
-            "chatbot.save-settings",
+            "blocks-core.chatbot.chat-reply",
+            "blocks-core.chatbot.chat-handoff",
+            "blocks-core.chatbot.chat-release",
+            "blocks-core.chatbot.chat-decide",
+            "blocks-core.chatbot.settings-save",
         ])
     })
 
@@ -68,22 +68,31 @@ describe("the Chatbot module declaration", () => {
 
 describe("the Chatbot seed spec", () => {
     it("draws with the core blocks and the module own reads, actions and permissions", () => {
-        expect(seedSpecProblems(chatbotModule, coreBlocks)).toEqual([])
+        expect(seedSpecProblems(chatbotModule, coreBlocks, [platformModule])).toEqual([])
     })
 
-    it("holds the customers, the unanswered, the inbox and the rules views and names the module of the declaration", () => {
+    it("holds the agent's desk, then the customers, the unanswered, the inbox and the rules views, then the desk's data page, and names the module of the declaration", () => {
         const [spec] = chatbotModule.specs
         expect(spec?.module).toBe(CHATBOT_MODULE_KEY)
-        expect(spec?.views.map((view) => view.id)).toEqual(["customers", "unanswered", "inbox", "rules"])
+        expect(spec?.views.map((view) => view.id)).toEqual([
+            "desk",
+            "customers",
+            "unanswered",
+            "inbox",
+            "rules",
+            "data-conversations",
+        ])
     })
 
-    it("places the core blocks and the Chatbot's own: the inbox with the approval card inside it", () => {
+    // Design change (ruling R23): the draft road is removed, the approval card with it.
+    it("places the core blocks and the Chatbot's own: the inbox", () => {
         const [spec] = chatbotModule.specs
         const blocks = (JSON.stringify(spec).match(/"block":"([^"]+)"/g) ?? []).map((block) =>
             block.slice('"block":"'.length, -1),
         )
         expect(blocks.every((block) => block.startsWith("core.") || block.startsWith("chatbot."))).toBe(true)
-        expect(blocks).toEqual(expect.arrayContaining(["chatbot.inbox", "chatbot.approval-card"]))
+        expect(blocks).toEqual(expect.arrayContaining(["chatbot.inbox"]))
+        expect(blocks).not.toContain("chatbot.approval-card")
     })
 
     it("words every text with a key the catalogue holds in both languages", () => {
@@ -98,7 +107,7 @@ describe("the Chatbot seed spec", () => {
     it("words the action labels and refusals with catalogue keys too", () => {
         const known = new Set(chatbotCopyKeys("en"))
         const labels = chatbotModule.actions.flatMap((action) => keysIn(action.label))
-        expect(labels).toHaveLength(7)
+        expect(labels).toHaveLength(5)
         expect(labels.filter((key) => !known.has(key))).toEqual([])
     })
 
@@ -126,5 +135,25 @@ describe("the Chatbot seed spec", () => {
                 permissions: chatbotModule.permissions,
             }).map((problem) => problem.code),
         ).toContain("SPEC_BINDING_UNKNOWN")
+    })
+})
+
+describe("the Chatbot block on the contact detail", () => {
+    it("mounts the conversations of the person, over the Chatbot's own read that takes a contactId", () => {
+        expect(chatbotModule.contactBlocks?.map((block) => block.id)).toEqual(["conversations"])
+        expect(chatbotModule.contactBlocks?.map((block) => block.read)).toEqual(["blocks-core.chatbot.api.chat.of-contact"])
+    })
+
+    it("is sound: the read reaches a type with a contact field and the record list fits the read", () => {
+        expect(contactBlockProblems(chatbotModule, coreBlocks, [conversationEntity])).toEqual([])
+    })
+
+    it("words its block with catalogue keys of both languages", () => {
+        const keys = keysIn(chatbotModule.contactBlocks)
+        expect(keys.length).toBeGreaterThan(5)
+        for (const locale of ["vi", "en"] as const) {
+            const known = new Set(Object.keys(CHATBOT_MESSAGES[locale]))
+            expect(keys.filter((key) => !known.has(key))).toEqual([])
+        }
     })
 })

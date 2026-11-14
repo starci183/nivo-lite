@@ -1,4 +1,4 @@
-import type { EntityDefinition, FieldDef, FieldDefault, FieldKind } from "@nivo-lite/agent-sdk/entity"
+import { fileValueSchemaOf, type EntityDefinition, type FieldDef, type FieldDefault } from "@nivo-lite/agent-sdk/entity"
 import type { Scalar } from "@nivo-lite/agent-sdk/query"
 import { EntityEngineError, EntityEngineErrorCode } from "../errors/entity-engine.error"
 import type { InsertStamp } from "./compiler.contracts"
@@ -6,10 +6,19 @@ import type { InsertStamp } from "./compiler.contracts"
 const invalidValue = (entity: EntityDefinition, name: string): EntityEngineError =>
     new EntityEngineError({ code: EntityEngineErrorCode.ValueInvalid, params: { entity: entity.name, name } })
 
-/** The value to store for a declared field: a jsonb value passes through the field's declared shape, anything else is stored as given. */
+/**
+ * The value to store for a declared field: a jsonb value passes through the field's declared shape, a file reference through the
+ * field's accepted types and size limit, anything else is stored as given.
+ */
 const storedValue = (entity: EntityDefinition, name: string, field: FieldDef, value: unknown): unknown => {
     if (field.kind === "sequence") throw invalidValue(entity, name)
-    if (field.kind !== "jsonb" || value === null) return value
+    if (value === null) return value
+    if (field.kind === "file") {
+        const parsed = fileValueSchemaOf(field).safeParse(value)
+        if (!parsed.success) throw invalidValue(entity, name)
+        return parsed.data
+    }
+    if (field.kind !== "jsonb") return value
     if (field.shape === undefined) throw invalidValue(entity, name)
     return field.shape.parse(value)
 }
@@ -31,10 +40,16 @@ export const dataOf = (entity: EntityDefinition, values: Readonly<Record<string,
         }),
     )
 
-const defaultOf = (declared: FieldDefault, kind: FieldKind, stamp: InsertStamp): unknown => {
+/** The empty value of a field: an empty object for a jsonb, an empty list for a list file field, else an empty text. */
+const emptyOf = (field: FieldDef): unknown => {
+    if (field.kind === "jsonb") return {}
+    return field.kind === "file" && field.many === true ? [] : ""
+}
+
+const defaultOf = (declared: FieldDefault, field: FieldDef, stamp: InsertStamp): unknown => {
     if (declared === "now") return stamp.now
     if (declared === "uuid") return stamp.newId()
-    if (declared === "empty") return kind === "jsonb" ? {} : ""
+    if (declared === "empty") return emptyOf(field)
     return declared.literal
 }
 
@@ -44,7 +59,7 @@ export const defaultsOf = (entity: EntityDefinition, stamp: InsertStamp): Record
         Object.entries(entity.fields).flatMap(([name, field]) =>
             field.default === undefined || field.kind === "sequence"
                 ? []
-                : [[name, defaultOf(field.default, field.kind, stamp)]],
+                : [[name, defaultOf(field.default, field, stamp)]],
         ),
     )
 

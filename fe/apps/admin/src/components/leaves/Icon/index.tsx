@@ -26,4 +26,4 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphComponent>> = {
 }
 
 /** Resolves an app-owned semantic icon name to the glyph Grammar's Icon asks for (every usage draws the outline). */
-export const nivoIconSource = (name: IconName, _usage: IconUsage = "chip"): GlyphComponent => ICON_SOURCES[name]
+export const adminIconSource = (name: IconName, _usage: IconUsage = "chip"): GlyphComponent => ICON_SOURCES[name]

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { DeleteWorkspaceMutation, DeleteWorkspaceMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `deleteWorkspace` mutation. */
@@ -33,7 +32,7 @@ type MutateDeleteWorkspaceParams = MutateParams<MutationDeleteWorkspace, MutateD
 export const mutateDeleteWorkspace = (
     params: MutateDeleteWorkspaceParams,
 ): Promise<ApolloClient.MutateResult<MutateDeleteWorkspaceResponse>> =>
-    createAuthApolloClient({ signal: params.signal, headers: params.headers }).mutate({
+    createAuthApolloClient(webApiTransport, { signal: params.signal, headers: params.headers }).mutate({
         mutation: mutationMap[params.mutation ?? MutationDeleteWorkspace.Mutation1],
         variables: { input: params.request },
     })

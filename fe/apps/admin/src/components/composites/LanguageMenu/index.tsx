@@ -16,7 +16,7 @@ type LanguageMenuProps = {
 }
 
 /** The single-select list of spoken languages with the chosen one checked; the bar's menu and the drawer's menu both open it. */
-export const languageMenuEntries = (props: LanguageMenuProps): ReadonlyArray<DropdownMenuEntry> => [
+export const adminLanguageMenuEntries = (props: LanguageMenuProps): ReadonlyArray<DropdownMenuEntry> => [
     {
         kind: "section",
         id: "language",

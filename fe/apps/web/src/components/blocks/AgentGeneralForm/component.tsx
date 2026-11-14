@@ -1,7 +1,6 @@
 import { Button, Form, Grid, Input, PinnedActionBar, Stack, Switch, Text } from "@starci/grammar/common"
 import { FieldBlock } from "@/components/frames/FieldBlock"
-import { WorkingHoursList } from "@/components/composites/WorkingHoursList"
-import type { WorkingHoursListProps } from "@/components/composites/WorkingHoursList"
+import { WorkingHoursList, type WorkingHoursListProps } from "@/components/composites/WorkingHoursList"
 
 /** The two fields of the reply limits of a chatbot. */
 export interface ReplyLimitsView {
@@ -151,7 +150,7 @@ export const AgentGeneralFormBase = (props: AgentGeneralFormBaseProps) => (
         onReset={props.on.cancel}
         isPending={props.props.isPending}
     >
-        <Stack gap="region">
+        <Stack gap="row">
             <InfoFields props={props.props} on={props.on} />
             <HoursBoard props={props.props} on={props.on} />
             <FieldBlock

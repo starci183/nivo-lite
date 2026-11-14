@@ -4,20 +4,18 @@ import type { BoundAgent, BoundAgentFacts, BoundConnectionFacts } from "./agent-
 import {
     boundAgentsOf as boundAgentsOfImplementation,
     boundConnectionsOf as boundConnectionsOfImplementation,
-    handoversFrom as handoversFromImplementation,
     isPurpose as isPurposeImplementation,
     purposesOf as purposesOfImplementation,
-    splitRoute as splitRouteImplementation,
+    routeOf as routeOfImplementation,
 } from "./agent-bindings.policy"
 
 const SUBJECT = Symbol("subject")
 type Subject = {
     boundAgentsOf: typeof boundAgentsOfImplementation
     boundConnectionsOf: typeof boundConnectionsOfImplementation
-    handoversFrom: typeof handoversFromImplementation
     isPurpose: typeof isPurposeImplementation
     purposesOf: typeof purposesOfImplementation
-    splitRoute: typeof splitRouteImplementation
+    routeOf: typeof routeOfImplementation
 }
 
 const buildSubject = async () => {
@@ -28,10 +26,9 @@ const buildSubject = async () => {
                 useValue: {
                     boundAgentsOf: boundAgentsOfImplementation,
                     boundConnectionsOf: boundConnectionsOfImplementation,
-                    handoversFrom: handoversFromImplementation,
                     isPurpose: isPurposeImplementation,
                     purposesOf: purposesOfImplementation,
-                    splitRoute: splitRouteImplementation,
+                    routeOf: routeOfImplementation,
                 },
             },
         ],
@@ -89,10 +86,10 @@ describe("agent bindings policy", () => {
                 agentRow({ id: "a1" }),
             ]
 
-            expect(subject.boundAgentsOf(rows, {}).map((agent) => agent.id)).toEqual(["a1", "a2"])
+            expect(subject.boundAgentsOf(rows).map((agent) => agent.id)).toEqual(["a1", "a2"])
         })
 
-        it("counts every binding (a binding routes; rights live in attachments) and leaves out agents of other modules when asked", async () => {
+        it("counts every binding (a binding routes; rights live in attachments)", async () => {
             const subject = await buildSubject()
 
             const rows = [
@@ -101,14 +98,13 @@ describe("agent bindings policy", () => {
                 agentRow({ id: "a3" }),
             ]
 
-            expect(subject.boundAgentsOf(rows, {}).map((a) => a.id)).toEqual(["a1", "a2", "a3"])
-            expect(subject.boundAgentsOf(rows, { modules: ["booking"] }).map((a) => a.id)).toEqual(["a2"])
+            expect(subject.boundAgentsOf(rows).map((a) => a.id)).toEqual(["a1", "a2", "a3"])
         })
 
         it("drops a binding with a purpose it does not know", async () => {
             const subject = await buildSubject()
 
-            expect(subject.boundAgentsOf([agentRow({ purpose: "unknown" })], {})).toEqual([])
+            expect(subject.boundAgentsOf([agentRow({ purpose: "unknown" })])).toEqual([])
         })
     })
 })
@@ -155,63 +151,20 @@ describe("agent bindings policy", () => {
 })
 
 describe("agent bindings policy", () => {
-    describe("splitRoute", () => {
-        it("hands over to the oldest agent of a role that runs several on the channel (one answers per role)", async () => {
+    describe("routeOf", () => {
+        it("makes the oldest bound inbound agent the one front door, with nobody to hand over to", async () => {
             const subject = await buildSubject()
 
-            const route = subject.splitRoute([
-                agentOf({ id: "c1" }),
-                agentOf({ id: "s1", module: "sales" }),
-                agentOf({ id: "s2", module: "sales" }),
-            ])
+            const route = subject.routeOf([agentOf({ id: "c1" }), agentOf({ id: "c2" })])
 
             expect(route.front?.id).toBe("c1")
-            expect(route.handovers.map((agent) => agent.id)).toEqual(["s1"])
+            expect(route.handovers).toEqual([])
         })
 
-        it("lists one hand-over agent per other module from a conversation's own agent", async () => {
+        it("answers no front door when nobody is bound", async () => {
             const subject = await buildSubject()
 
-            const handovers = subject.handoversFrom(
-                [agentOf({ id: "c1" }), agentOf({ id: "s1", module: "sales" }), agentOf({ id: "s2", module: "sales" })],
-                "chatbot",
-            )
-
-            expect(handovers.map((agent) => agent.id)).toEqual(["s1"])
+            expect(subject.routeOf([])).toEqual({ front: null, handovers: [] })
         })
-
-        it("makes the chatbot the front door and hands over to one agent per other module", async () => {
-            const subject = await buildSubject()
-
-            const route = subject.splitRoute([
-                agentOf({ id: "l1", module: "loyalty" }),
-                agentOf({ id: "s1", module: "sales" }),
-                agentOf({ id: "b1", module: "booking" }),
-                agentOf({ id: "c1" }),
-                agentOf({ id: "c2" }),
-            ])
-
-            expect(route.front?.id).toBe("c1")
-            expect(route.handovers.map((agent) => agent.id)).toEqual(["b1", "l1", "s1"])
-        })
-
-        it("lets the first of the others answer without a chatbot, and nobody when none is bound", async () => {
-            const subject = await buildSubject()
-
-            expect(
-                subject.splitRoute([agentOf({ id: "l1", module: "loyalty" }), agentOf({ id: "b1", module: "booking" })])
-                    .front?.id,
-            ).toBe("b1")
-            expect(subject.splitRoute([agentOf({ id: "s1", module: "sales" })]).front?.id).toBe("s1")
-            expect(subject.splitRoute([agentOf({ module: "accounting" })])).toEqual({ front: null, handovers: [] })
-        })
-    })
-
-    it("hands over to the bound agents of another module", async () => {
-        const subject = await buildSubject()
-
-        const bound = [agentOf({ id: "a1" }), agentOf({ id: "a2", module: "booking" })]
-
-        expect(subject.handoversFrom(bound, "chatbot").map((agent) => agent.id)).toEqual(["a2"])
     })
 })

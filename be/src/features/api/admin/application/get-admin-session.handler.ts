@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { AdminDirectoryService } from "@modules/domain/platform-admin"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { GetAdminSessionResult } from "./get-admin-session.contracts"
 import { GetAdminSessionQuery } from "./get-admin-session.query"
 

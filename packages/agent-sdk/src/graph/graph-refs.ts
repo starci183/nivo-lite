@@ -1,6 +1,5 @@
 import { isRecord } from "../schema/is-record"
-import { isInputRef, TRIGGER_SOURCE } from "../node/binding"
-import type { NodeInputBinding, NodeInputBindings } from "../node/binding"
+import { isInputRef, TRIGGER_SOURCE, type NodeInputBinding, type NodeInputBindings } from "../node/binding"
 import { fixedParamsOf, isParamRef, paramRefsOf, parseRef, schemaKeysOf } from "../node/memory"
 import {
     LEAD_FACTS,
@@ -8,20 +7,17 @@ import {
     LOOP_ITEMS_PARAM,
     OUTCOME_PARAM,
     OUTCOME_STEP,
-} from "../node/memory.contracts"
-import type {
-    NodeOutcomeDeclaration,
-    ParamBindings,
-    ParamRef,
-    ParsedRef,
-    RefProblem,
-    RefProblemCode,
-    RefType,
-    RefValidationContext,
+    type NodeOutcomeDeclaration,
+    type ParamBindings,
+    type ParamRef,
+    type ParsedRef,
+    type RefProblem,
+    type RefProblemCode,
+    type RefType,
+    type RefValidationContext,
 } from "../node/memory.contracts"
 import type { NodeIndex } from "../node/problems"
-import { dominatorsOf, loopBodiesOf, loopOfNode, outcomeOfNode, reaches } from "./graph-dominators"
-import type { DominatorMap } from "./graph-dominators"
+import { dominatorsOf, loopBodiesOf, loopOfNode, outcomeOfNode, reaches, type DominatorMap } from "./graph-dominators"
 import {
     branchesOf,
     failureSchemaOf,
@@ -31,20 +27,22 @@ import {
     schemaAt,
     typeOfSchema,
     UNTYPED,
+    type Json,
 } from "./graph-ref-schema"
-import type { Json } from "./graph-ref-schema"
 import type { GraphSpec, GraphSpecNode } from "./graph-spec.types"
 
 /** The members of a trigger scope every run has, whatever the workflow's contract: the engine's own (`triggerScopeOf`). */
 export const TRIGGER_SYSTEM_MEMBERS: ReadonlyArray<string> = [
     "conversationId",
+    // The engine's person: the contact the channel's identity resolved to (contacts.md).
+    "contactId",
+    // The sales module's lead the conversation names: a module bridge member until that module reads its lead by `contactId`.
     "leadId",
     "subject",
     "locale",
     "origin",
     "source",
     "tagSource",
-    "context",
     "text",
     "messageId",
     "messageIds",
@@ -73,14 +71,14 @@ const LEAD_FACT_SET: ReadonlySet<string> = new Set(LEAD_FACTS)
 
 /** The catalog key of a problem's words: `workflowRef.<lowerCamel code>`. */
 export const refMessageKeyOf = (code: RefProblemCode): string =>
-    `workflowRef.${code.toLowerCase().replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())}`
+    `workflowRef.${code.toLowerCase().replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())}`
 
 /**
  * The words of a problem from a catalog of words keyed by `refMessageKeyOf` (`workflowRef.refNotDominator`); `{{node}}`, `{{field}}`,
  * `{{ref}}`, `{{expected}}` and `{{found}}` are filled in. The catalogs live with the back end's messages, not in the SDK.
  */
 export const refProblemText = (problem: RefProblem, words: Readonly<Record<string, string>>): string =>
-    (words[problem.messageKey] ?? problem.messageKey).replace(
+    (words[problem.messageKey] ?? problem.messageKey).replaceAll(
         /\{\{(\w+)\}\}/g,
         (_, name: string) => problem.params[name] ?? "",
     )
@@ -182,7 +180,7 @@ const legacySitesOf = (node: GraphSpecNode, context: RefValidationContext): Read
     const inside = (binding: NodeInputBinding): ReadonlyArray<string> => {
         if (isInputRef(binding)) return [binding.$ref]
         if (typeof binding !== "object" || binding === null) return []
-        return Object.values(binding).flatMap(inside)
+        return Object.values(binding).flatMap((entry) => inside(entry))
     }
     const bindings: NodeInputBindings = node.input ?? {}
     return Object.entries(bindings).flatMap(([field, binding]) =>

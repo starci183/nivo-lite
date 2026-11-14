@@ -1,6 +1,12 @@
 import { deriveStateKey, sameSitePath, signStateToken, verifyStateToken } from "@modules/platform/primitives"
-import { STATE_TTL_MS } from "./google.contracts"
-import type { ConsentResult, ConsentResultKey, OAuthState, OAuthStateInput, ReceivedText } from "./google.contracts"
+import {
+    STATE_TTL_MS,
+    type ConsentResult,
+    type ConsentResultKey,
+    type OAuthState,
+    type OAuthStateInput,
+    type ReceivedText,
+} from "./google.contracts"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 
 const DEFAULT_RETURN = "/connections"

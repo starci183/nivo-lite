@@ -2,30 +2,21 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { EntityEngineService } from "@modules/domain/entity-engine"
-import { OWNER_EXAMPLE, ROW_TIME, graphOf, proposalRow } from "@tests/fixtures/builders/agent-graph.builder"
+import { ROW_TIME, proposalRow } from "@tests/fixtures/builders/agent-graph.builder"
 import { SCOPE, wireScope } from "@tests/fixtures/builders/agent-graph-records.builder"
-import {
-    closedGraphDecisionsOf as approvals,
-    GRAPH_CONFLICT_CASES,
-} from "@tests/fixtures/builders/agent-graph-coverage.builder"
-import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
+import { GRAPH_CONFLICT_CASES } from "@tests/fixtures/builders/agent-graph-coverage.builder"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import type { IntentBusiness, IntentGap } from "@modules/domain/intent-contracts"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import type { ClosedDecision } from "./agent-graphs.contracts"
-
-const GRAPH = graphOf(OWNER_EXAMPLE)
 
 const DECIDED_AT = "2026-11-01T02:00:00.000Z"
 
-const build = async (closed: ReadonlyArray<ClosedDecision> = []) => {
-    const decisions = mock<AgentGraphDecisionsService>({ closedOf: jest.fn().mockResolvedValue(closed) })
+const build = async () => {
     const engine = mock<EntityEngineService>()
     wireScope(engine)
     const records = mock<AgentGraphRecordsService>()
     records.raiseProposal.mockResolvedValue(true)
-    records.spentProposalsOf.mockResolvedValue([])
     records.patchProposal.mockResolvedValue(proposalRow())
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -33,10 +24,9 @@ const build = async (closed: ReadonlyArray<ClosedDecision> = []) => {
             { provide: EntityEngineService, useValue: engine },
             { provide: AgentGraphRecordsService, useValue: records },
             { provide: CLOCK, useValue: new FakeClock(DECIDED_AT) },
-            { provide: AgentGraphDecisionsService, useValue: decisions },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphProposalsService), decisions, records }
+    return { service: moduleRef.get(AgentGraphProposalsService), records }
 }
 
 const raisedValues = (records: ReturnType<typeof mock<AgentGraphRecordsService>>) =>
@@ -61,83 +51,6 @@ describe("AgentGraphProposalsService.conflictOf", () => {
         await expect(service.conflictOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
         await expect(service.conflictOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
         await expect(service.conflictOf("ws-1", "agent-1", "p1")).resolves.toBeNull()
-    })
-})
-
-describe("AgentGraphProposalsService.learn", () => {
-    it("raises a proposal for the signal the decisions teach, with the decisions as evidence, and changes no version", async () => {
-        const { service, decisions, records } = await build(approvals(20))
-
-        await expect(service.learn("ws-1", "agent-1", "version-1", GRAPH)).resolves.toBe(1)
-
-        expect(decisions.closedOf).toHaveBeenCalledWith("ws-1", "agent-1")
-        expect(raisedValues(records)).toMatchObject({
-            agentId: "agent-1",
-            dedupeKey: "learned:trust:middle:d0",
-            kind: "learned",
-            baseVersionId: "version-1",
-            nodeKey: "decide",
-            branchKey: "middle",
-            patch: { signal: "trust", amounts: approvals(20).map((entry) => entry.amount) },
-            widens: true,
-            evidence: { ids: approvals(20).map((entry) => entry.id) },
-        })
-    })
-
-    it("counts only the proposals that were new, and none for an agent that taught nothing", async () => {
-        const known = await build(approvals(20))
-        known.records.raiseProposal.mockResolvedValue(false)
-        const quiet = await build(approvals(3))
-
-        await expect(known.service.learn("ws-1", "agent-1", null, GRAPH)).resolves.toBe(0)
-        await expect(quiet.service.learn("ws-1", "agent-1", null, GRAPH)).resolves.toBe(0)
-    })
-
-    it("names no node for a branch the graph no longer has", async () => {
-        const { service, records } = await build(approvals(20, "gone"))
-
-        await service.learn("ws-1", "agent-1", null, GRAPH)
-
-        expect(raisedValues(records)).toMatchObject({ nodeKey: null, branchKey: "gone", baseVersionId: null })
-    })
-})
-
-describe("AgentGraphProposalsService.learn a window already spent", () => {
-    const spentBy = (status: "declined" | "confirmed" | "open", signal: string, branchKey: string | null) =>
-        proposalRow({
-            status,
-            branchKey,
-            patch: { signal },
-            evidence: approvals(20).map((entry) => entry.id),
-        })
-
-    it.each([["declined" as const], ["confirmed" as const], ["open" as const]])(
-        "does not raise again what a %s proposal already named for the same branch and signal",
-        async (status) => {
-            const { service, records } = await build(approvals(20))
-            records.spentProposalsOf.mockResolvedValue([spentBy(status, "trust", "middle")])
-
-            await expect(service.learn("ws-1", "agent-1", "version-1", GRAPH)).resolves.toBe(0)
-            expect(records.raiseProposal).not.toHaveBeenCalled()
-            expect(records.spentProposalsOf).toHaveBeenCalledWith(SCOPE, "agent-1", "learned", 1000)
-        },
-    )
-
-    it("raises it for another branch or another signal, and for decisions the proposal did not name", async () => {
-        const { service, records } = await build(approvals(20))
-        records.spentProposalsOf.mockResolvedValue([
-            spentBy("declined", "reject", "middle"),
-            spentBy("declined", "trust", "small"),
-        ])
-
-        await expect(service.learn("ws-1", "agent-1", "version-1", GRAPH)).resolves.toBe(1)
-    })
-
-    it("reads a branch with no key as an empty one, so a proposal about nothing blocks nothing", async () => {
-        const { service, records } = await build(approvals(20))
-        records.spentProposalsOf.mockResolvedValue([spentBy("declined", "trust", null)])
-
-        await expect(service.learn("ws-1", "agent-1", "version-1", GRAPH)).resolves.toBe(1)
     })
 })
 

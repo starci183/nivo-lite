@@ -1,6 +1,5 @@
 import { useState } from "react"
-import { Cluster, EmptyNotice, Link, SurfaceCard, Text } from "@starci/grammar/common"
-import type { HeaderZone, TableRowData } from "@starci/grammar/common"
+import { Cluster, EmptyNotice, Link, SurfaceCard, Text, type HeaderZone, type TableRowData } from "@starci/grammar/common"
 import { AgentRunStatusMark, nivoIconSource } from "@/components/leaves/Icon"
 import { ALL } from "@/hooks/agentRuns"
 import type { RunsTableCopy, RunChipView, RunRowView, RunWorkflowView, RunsFilter, RunsView } from "@/modules/types"
@@ -32,7 +31,11 @@ const rowOf = (row: RunRowView): TableRowData => ({
     id: row.id,
     href: row.href,
     cells: {
-        run: <Link href={row.href}>{row.idLabel}</Link>,
+        run: (
+            <Link variant="plain" href={row.href}>
+                {row.idLabel}
+            </Link>
+        ),
         workflow: <Text>{row.workflowName}</Text>,
         started: <Text tone="muted">{row.startedLabel}</Text>,
         duration: <Text tone="muted">{row.durationLabel}</Text>,
@@ -140,7 +143,7 @@ export const AgentRunsListTable = (props: AgentRunsListTableProps) => {
                 { id: "duration", label: copy.duration, priority: "low", width: "fit" },
                 { id: "result", label: copy.result, width: "fit" },
             ]}
-            rows={shown.map(rowOf)}
+            rows={shown.map((row) => rowOf(row))}
             footers={
                 pageCount > 1
                     ? [

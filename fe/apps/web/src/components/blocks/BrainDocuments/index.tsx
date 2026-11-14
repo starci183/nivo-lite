@@ -18,6 +18,7 @@ interface BrainDocumentsProps {
 export const BrainDocuments = (props: BrainDocumentsProps) => {
     const header = useBrainKnowledgeHeader("sources", props.header)
     const t = useTranslations("brainDocuments")
+    const tt = useTranslations("brainTruths")
     const slotLabels = useSlotLabels()
     const docs = useBrainDocuments()
     return (
@@ -26,6 +27,7 @@ export const BrainDocuments = (props: BrainDocumentsProps) => {
                 ...docs.props,
                 labels: slotLabels(t("emptyTitle")),
                 header: header.props,
+                truthsCopy: { usageLabel: tt("usageCardLabel"), docsLabel: tt("docsLabel"), view: tt("actionView") },
                 copy: {
                     tableLabel: t("tableLabel"),
                     columns: {
@@ -43,7 +45,7 @@ export const BrainDocuments = (props: BrainDocumentsProps) => {
                     close: t("close"),
                 },
             }}
-            on={{ ...docs.on, reviewAll: header.on.reviewAll, selectTab: header.on.selectTab }}
+            on={{ ...docs.on, selectTab: header.on.selectTab }}
         />
     )
 }

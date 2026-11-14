@@ -34,13 +34,14 @@ const approvalOf = (order: OrderRow, settings: SalesSettings): OrderApproval => 
 /** The order with its customer's name and who confirms it, flat for a detail block. */
 export const orderDetailOf = (
     order: OrderRow,
+    leadId: string | null,
     customer: string | null,
     settings: SalesSettings,
     canCancel: boolean,
 ): OrderDetail => ({
     id: order.id,
     orderNo: order.orderNo,
-    leadId: order.leadId,
+    leadId,
     customer,
     items: order.itemsText,
     note: order.note,

@@ -24,7 +24,13 @@ export const useRunDecision = (installationId: string, runId: string): RunDecisi
             void runGraphQL(
                 async () => {
                     const outcome = await decideStep.trigger({ installationId, runId, verdict })
-                    if (!outcome.ok) throw new Error(outcome.refusal === "forbidden" ? t("decideForbidden") : t("decideRefused"))
+                    if (!outcome.ok) {
+                        // The verdicts the waiting decision takes come from the answer, never a guess.
+                        const accepted = outcome.accepted ?? []
+                        if (outcome.refusal === "option_not_offered" && accepted.length > 0)
+                            throw new Error(t("decideNotOffered", { list: accepted.map((one) => t(`verdictWord_${one}`)).join(", ") }))
+                        throw new Error(outcome.refusal === "forbidden" ? t("decideForbidden") : t("decideRefused"))
+                    }
                 },
                 { showSuccessToast: false },
             )

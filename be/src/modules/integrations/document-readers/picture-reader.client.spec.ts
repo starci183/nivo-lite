@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import sharp from "sharp"
 import { ok, refused } from "@modules/platform/primitives"
-import { DocumentRefusalCode, DocumentWarningCode, LibraryMissingError } from "./document-readers.contracts"
+import { DocumentRefusalCode, DocumentWarningCode } from "./document-readers.contracts"
+import { DocumentReadersError, DocumentReadersErrorCode } from "./errors/document-readers.error"
 import type { DocumentLibraries, PageImage, TranscriptOutcome, Transcriber } from "./document-readers.contracts"
 import { pictureToolsOf } from "./document-libraries.adapter"
 import { readPicture, transcriptRefusal } from "./picture-reader.client"
@@ -11,10 +12,10 @@ const photo = new Uint8Array(readFileSync(join(__dirname, "fixtures", "price-pho
 
 /** Real picture tools; no HEIC decoder, as on a server without the install. */
 const libraries: DocumentLibraries = {
-    wordToHtml: () => Promise.reject(new Error("unused")),
-    openPdf: () => Promise.reject(new Error("unused")),
+    wordToHtml: () => Promise.reject(new DocumentReadersError({ code: DocumentReadersErrorCode.LibraryMissing, params: { library: "unused" } })),
+    openPdf: () => Promise.reject(new DocumentReadersError({ code: DocumentReadersErrorCode.LibraryMissing, params: { library: "unused" } })),
     pictures: () => Promise.resolve(pictureToolsOf(sharp)),
-    heicToJpeg: () => Promise.reject(new LibraryMissingError("heic-convert")),
+    heicToJpeg: () => Promise.reject(new DocumentReadersError({ code: DocumentReadersErrorCode.LibraryMissing, params: { library: "heic-convert" } })),
 }
 
 /** A scripted transcriber that answers in turn and keeps what it was sent. */
@@ -31,14 +32,14 @@ const scripted = (...answers: ReadonlyArray<TranscriptOutcome>) => {
 
 describe("picture reader", () => {
     it("sends a photo of a hand-written price list as ONE JPEG transcription call and marks its text transcribed", async () => {
-        const { transcriber, sent } = scripted(ok("BẢNG GIÁ\nHồng đỏ | 35.000/bông"))
+        const { transcriber, sent } = scripted(ok("B\u1EA2NG GI\u00C1\nH\u1ED3ng \u0111\u1ECF | 35.000/b\u00F4ng"))
         const read = await readPicture("image", photo, libraries, transcriber)
         expect(read).toEqual({
             kind: "ok",
             value: {
                 reader: "image",
-                text: "BẢNG GIÁ\nHồng đỏ | 35.000/bông",
-                pages: [{ kind: "page", label: "1", text: "BẢNG GIÁ\nHồng đỏ | 35.000/bông", transcribed: true }],
+                text: "B\u1EA2NG GI\u00C1\nH\u1ED3ng \u0111\u1ECF | 35.000/b\u00F4ng",
+                pages: [{ kind: "page", label: "1", text: "B\u1EA2NG GI\u00C1\nH\u1ED3ng \u0111\u1ECF | 35.000/b\u00F4ng", transcribed: true }],
                 pageCount: 1,
                 sheetCount: null,
                 transcribed: true,
@@ -82,9 +83,9 @@ describe("picture reader", () => {
 
     it("decodes a HEIC photo once a decoder is installed", async () => {
         const withHeic: DocumentLibraries = { ...libraries, heicToJpeg: () => Promise.resolve(photo) }
-        await expect(readPicture("heic", photo, withHeic, scripted(ok("Giá 10k")).transcriber)).resolves.toMatchObject({
+        await expect(readPicture("heic", photo, withHeic, scripted(ok("Gi\u00E1 10k")).transcriber)).resolves.toMatchObject({
             kind: "ok",
-            value: { reader: "heic", text: "Giá 10k", transcribed: true },
+            value: { reader: "heic", text: "Gi\u00E1 10k", transcribed: true },
         })
     })
 

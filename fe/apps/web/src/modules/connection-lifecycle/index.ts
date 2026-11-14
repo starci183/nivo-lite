@@ -70,7 +70,7 @@ export type WizardPhaseKind =
     | "webhook"
     | "imap"
     | "database"
-    | "openapi"
+    | "crm"
     | "csv"
     | "csvDocs"
 
@@ -89,7 +89,7 @@ export const WIZARD_PHASES: Readonly<Record<WizardPhaseKind, ReadonlyArray<numbe
     webhook: [0, 1, 2, 3],
     imap: [1, 2, 2, 3],
     database: [1, 2, 2, 3],
-    openapi: [0, 1, 2, 2, 2, 2, 3],
+    crm: [0, 1, 3],
     csv: [0, 1, 1, 2, 3],
     csvDocs: [0, 1, 2, 3],
 }

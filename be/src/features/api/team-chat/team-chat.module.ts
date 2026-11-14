@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ChatApprovalDecisionService } from "@modules/domain/agent-pages"
 import { ChatRoomsHandler } from "./application/chat-rooms.handler"
 import { ChatRoomHandler } from "./application/chat-room.handler"
 import { ChatMessagesHandler } from "./application/chat-messages.handler"
@@ -21,6 +22,7 @@ import { ConfigurableModuleClass } from "./team-chat.module-definition"
 
 @Module({
     providers: [
+        ChatApprovalDecisionService,
         DecideChatApprovalHandler,
         RequestChatFileUploadHandler,
         SetChatRoomMutedHandler,

@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryInvitePreview, type QueryInvitePreviewRequest } from "@/modules/api/graphql/queries/query-invite-preview"
 import type { InvitePreviewQuery } from "@/modules/api"
 

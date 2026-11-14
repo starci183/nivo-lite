@@ -3,13 +3,20 @@ import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import { SurfaceCard } from "@starci/grammar/common"
 import type { decisionQueueBlock } from "../../blocks/decision-queue.block"
 import { cellContextOf } from "../../rows/cell-format"
-import { declaredQueue, editAnswerOf, editFailure, editInputOf, type EditAnswer } from "../../rows/decision-commands"
+import {
+    declaredQueue,
+    editAnswerOf,
+    editFailure,
+    editInputOf,
+    onePrimaryQueue,
+    type EditAnswer,
+} from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
 import { parsedSlot, derivedSlot } from "../../slots/slots"
 import { DECISION_QUEUE_PLACEHOLDER } from "../../views/placeholders"
 import { decisionQueueView } from "../../views/views"
 import type { DecisionQueueView } from "../../views/views.types"
-import { openOrdersView } from "../../rules/accounting/open-orders"
+import { openOrdersView } from "../../rules/sales/ledger/open-orders"
 import { amountOf, confirmWordsOf, pickWordsOf } from "../composites/queue-choice-words"
 import { useQueueCommands } from "../composites/useQueueChoices"
 import { QueueChoices } from "../composites/QueueChoices"
@@ -34,6 +41,31 @@ const QueueFrame = (props: QueueFrameProps): ReactNode =>
         props.children
     )
 
+/** The queue with the words of where it is answered at the end of each row that offers no command; the queue itself when the spec says none. */
+const answeredElsewhere = (queue: DecisionQueueView, elsewhere: string | null): DecisionQueueView =>
+    elsewhere === null
+        ? queue
+        : {
+              ...queue,
+              rows: queue.rows.map((row) =>
+                  row.primary === null && (row.alternative ?? null) === null && row.waitingFor === null
+                      ? { ...row, waitingFor: elsewhere }
+                      : row,
+              ),
+          }
+
+/** The command of the queue's slot. */
+type QueueCommand = RenderOf<typeof decisionQueueBlock>["slots"]["command"]
+
+/** The function that sends one edited row through the command and answers how it went; a failed send answers with the shared failure. */
+const editSenderOf =
+    (command: QueueCommand) =>
+    (rowId: string, values: FormValues): Promise<EditAnswer> =>
+        command
+            .run(editInputOf(rowId, values))
+            .then(editAnswerOf)
+            .catch(() => editFailure)
+
 /** The decisions waiting for a person, each decided in place; as a card it keeps its place while nothing waits and says so inside. */
 export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): ReactNode => {
     const host = useBlockHost()
@@ -45,11 +77,7 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
     const commands = useQueueCommands(command, spec.choices, () => host.notify("danger", labels.error))
     const options = parsedSlot(props.slots.options.slot, openOrdersView)
     const queueRows = parsedSlot(read.slot, decisionQueueView)
-    const sendEdit = (rowId: string, values: FormValues): Promise<EditAnswer> =>
-        command
-            .run(editInputOf(rowId, values))
-            .then(editAnswerOf)
-            .catch(() => editFailure)
+    const sendEdit = editSenderOf(command)
     const edit =
         spec.edit === undefined || !command.isAllowed
             ? null
@@ -64,8 +92,11 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
                   },
                   onSend: sendEdit,
               }
+    const elsewhere = spec.elsewhere === undefined ? null : words(spec.elsewhere)
     const queue = derivedSlot(parsedSlot(read.slot, decisionQueueView), (view: DecisionQueueView) =>
-        view.rows.length === 0 ? null : declaredQueue(view, spec.commands ?? [], spec.edit?.label, words),
+        view.rows.length === 0
+            ? null
+            : answeredElsewhere(onePrimaryQueue(declaredQueue(view, spec.commands ?? [], spec.edit?.label, words)), elsewhere),
     )
     return (
         <>

@@ -1,0 +1,592 @@
+{
+    "id": "accounting.reconcile",
+    "moduleKey": "accounting",
+    "primary": true,
+    "name": {
+        "vi": "Đối soát tiền về",
+        "en": "Reconcile incoming money"
+    },
+    "summary": {
+        "vi": "Khớp tiền về và tin khách báo đã chuyển với đơn, đánh dấu đã trả, ghi sổ và báo đội",
+        "en": "Matches money that arrives and a customer's word that they paid to the order, marks it paid, posts it and tells the team"
+    },
+    "requires": [
+        {
+            "kind": "sepay",
+            "label": {
+                "vi": "SePay",
+                "en": "SePay"
+            },
+            "why": {
+                "vi": "Đọc biến động số dư tài khoản ngân hàng",
+                "en": "Reads the bank account feed"
+            }
+        },
+        {
+            "kind": "google",
+            "label": {
+                "vi": "Google Sheets",
+                "en": "Google Sheets"
+            },
+            "why": {
+                "vi": "Ghi sổ thu chi vào bảng tính",
+                "en": "Writes the cash book to a sheet"
+            }
+        }
+    ],
+    "shops": 1284,
+    "versions": [
+        {
+            "version": 5,
+            "publishedAt": "2026-11-10T12:00:00.000Z",
+            "changes": [
+                {
+                    "vi": "Một quy trình cho tiền về và khách báo đã chuyển: Khớp tiền với đơn, Đánh dấu đã trả, Ghi sổ, Báo đội và cảm ơn khách. Khớp tiền tự xét chuyển thiếu hay dư theo chính sách; tiền chưa về, tiền không thuộc đơn nào (đã hỏi chủ tiệm) hay đơn được giữ mở thì dừng lượt ở bước khớp",
+                    "en": "One workflow for money arriving and a customer reporting a transfer: Match money to order, Mark paid, Post to the ledger, Tell the team and thank the customer. The match judges a short or over transfer from the policy; money not arrived yet, money for no order (the owner was asked) or an order kept open ends the turn at the match"
+                }
+            ],
+            "graph": {
+                "schema": "nivo/agent-graph@1",
+                "moduleKey": "accounting",
+                "contract": {
+                    "inputs": [
+                        {
+                            "name": "transactionId",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "conversationId",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "text",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "leadId",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "channel",
+                            "type": "string",
+                            "required": false
+                        }
+                    ]
+                },
+                "triggers": [
+                    {
+                        "key": "sepay",
+                        "source": {
+                            "kind": "sepay",
+                            "connectionId": null
+                        }
+                    },
+                    {
+                        "key": "call",
+                        "source": {
+                            "kind": "workflow",
+                            "connectionId": null
+                        }
+                    }
+                ],
+                "outcomes": [],
+                "entry": {
+                    "openTo": "any"
+                },
+                "trigger": {
+                    "kind": "tag",
+                    "sources": [
+                        "agent",
+                        "system-event"
+                    ]
+                },
+                "grant": {
+                    "rights": [
+                        {
+                            "kind": "bank-transaction",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "amountVnd",
+                                "reference",
+                                "payer",
+                                "occurredAt",
+                                "orderId",
+                                "status"
+                            ]
+                        },
+                        {
+                            "kind": "order",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "orderNo",
+                                "leadId",
+                                "items",
+                                "amountVnd",
+                                "status",
+                                "confirmedAt",
+                                "createdAt"
+                            ]
+                        },
+                        {
+                            "kind": "payment-claim",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "leadId",
+                                "conversationId",
+                                "amountVnd",
+                                "names",
+                                "body",
+                                "claimedAt",
+                                "status"
+                            ]
+                        },
+                        {
+                            "kind": "sales-lead",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "contactName"
+                            ]
+                        },
+                        {
+                            "kind": "payment-claim",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "leadId",
+                                "amountVnd",
+                                "names",
+                                "body"
+                            ]
+                        },
+                        {
+                            "kind": "message",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "body"
+                            ]
+                        },
+                        {
+                            "kind": "order",
+                            "access": "write",
+                            "scope": "workspace",
+                            "fields": [
+                                "status"
+                            ]
+                        },
+                        {
+                            "kind": "bank-transaction",
+                            "access": "write",
+                            "scope": "workspace",
+                            "fields": [
+                                "orderId"
+                            ]
+                        }
+                    ],
+                    "tools": [
+                        "nivo.tool.ledger.entry.append"
+                    ],
+                    "effects": [
+                        "nivo.tool.payment.claim.record",
+                        "nivo.tool.customer.message.send",
+                        "nivo.tool.payment.order.settle",
+                        "nivo.tool.team.message.post",
+                        "nivo.tool.agent.tag"
+                    ]
+                },
+                "nodes": [
+                    {
+                        "key": "match",
+                        "kind": "execute",
+                        "step": "accounting.match-payment",
+                        "params": {
+                            "transactionId": {
+                                "$ref": "trigger.transactionId",
+                                "default": null
+                            },
+                            "conversationId": {
+                                "$ref": "trigger.conversationId",
+                                "default": null
+                            },
+                            "text": {
+                                "$ref": "trigger.text",
+                                "default": null
+                            },
+                            "leadId": {
+                                "$ref": "trigger.leadId",
+                                "default": null
+                            }
+                        },
+                        "routes": {
+                            "matched": "mark-paid"
+                        }
+                    },
+                    {
+                        "key": "mark-paid",
+                        "kind": "output",
+                        "step": "payment.settle",
+                        "params": {
+                            "orderId": {
+                                "$ref": "steps.match.output.orderId"
+                            },
+                            "transactionId": {
+                                "$ref": "steps.match.output.transactionId"
+                            },
+                            "verdict": {
+                                "$ref": "steps.match.output.verdict"
+                            },
+                            "expectedVnd": {
+                                "$ref": "steps.match.output.expectedVnd"
+                            },
+                            "receivedVnd": {
+                                "$ref": "steps.match.output.receivedVnd"
+                            }
+                        },
+                        "next": "ledger"
+                    },
+                    {
+                        "key": "ledger",
+                        "kind": "output",
+                        "step": "accounting.post-payment",
+                        "params": {
+                            "transactionId": {
+                                "$ref": "steps.match.output.transactionId"
+                            },
+                            "orderId": {
+                                "$ref": "steps.mark-paid.output.orderId"
+                            }
+                        },
+                        "next": "notify-paid"
+                    },
+                    {
+                        "key": "notify-paid",
+                        "kind": "output",
+                        "step": "payment.received-notice",
+                        "params": {
+                            "orderId": {
+                                "$ref": "steps.mark-paid.output.orderId"
+                            }
+                        },
+                        "next": "to-after-sale"
+                    },
+                    {
+                        "key": "to-after-sale",
+                        "kind": "output",
+                        "step": "core.call-workflow",
+                        "params": {
+                            "agent": "sales",
+                            "workflow": "after-sale",
+                            "version": "latest",
+                            "inputs": {
+                                "orderId": {
+                                    "$ref": "steps.mark-paid.output.orderId"
+                                },
+                                "leadId": {
+                                    "$ref": "steps.mark-paid.output.leadId"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "version": 6,
+            "publishedAt": "2026-11-12T12:00:00.000Z",
+            "changes": [
+                {
+                    "vi": "Mỗi bước nêu rõ tài khoản và thao tác nó được dùng trên tài khoản đó (gửi tin cho khách, tạo QR thanh toán, ghi sổ), đúng như đang chạy; cách làm việc không đổi",
+                    "en": "Each step names the accounts it acts on and the operations it may call there (message the customer, create the payment QR, post to the ledger), exactly as it runs today; nothing about how it works changes"
+                }
+            ],
+            "graph": {
+                "schema": "nivo/agent-graph@1",
+                "moduleKey": "accounting",
+                "contract": {
+                    "inputs": [
+                        {
+                            "name": "transactionId",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "conversationId",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "text",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "leadId",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "channel",
+                            "type": "string",
+                            "required": false
+                        }
+                    ]
+                },
+                "triggers": [
+                    {
+                        "key": "sepay",
+                        "source": {
+                            "kind": "sepay",
+                            "connectionId": null
+                        }
+                    },
+                    {
+                        "key": "call",
+                        "source": {
+                            "kind": "workflow",
+                            "connectionId": null
+                        }
+                    }
+                ],
+                "outcomes": [],
+                "entry": {
+                    "openTo": "any"
+                },
+                "trigger": {
+                    "kind": "tag",
+                    "sources": [
+                        "agent",
+                        "system-event"
+                    ]
+                },
+                "grant": {
+                    "rights": [
+                        {
+                            "kind": "bank-transaction",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "amountVnd",
+                                "reference",
+                                "payer",
+                                "occurredAt",
+                                "orderId",
+                                "status"
+                            ]
+                        },
+                        {
+                            "kind": "order",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "orderNo",
+                                "leadId",
+                                "items",
+                                "amountVnd",
+                                "status",
+                                "confirmedAt",
+                                "createdAt"
+                            ]
+                        },
+                        {
+                            "kind": "payment-claim",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "leadId",
+                                "conversationId",
+                                "amountVnd",
+                                "names",
+                                "body",
+                                "claimedAt",
+                                "status"
+                            ]
+                        },
+                        {
+                            "kind": "sales-lead",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "contactName"
+                            ]
+                        },
+                        {
+                            "kind": "payment-claim",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "leadId",
+                                "amountVnd",
+                                "names",
+                                "body"
+                            ]
+                        },
+                        {
+                            "kind": "message",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "body"
+                            ]
+                        },
+                        {
+                            "kind": "order",
+                            "access": "write",
+                            "scope": "workspace",
+                            "fields": [
+                                "status"
+                            ]
+                        },
+                        {
+                            "kind": "bank-transaction",
+                            "access": "write",
+                            "scope": "workspace",
+                            "fields": [
+                                "orderId"
+                            ]
+                        }
+                    ],
+                    "tools": [
+                        "nivo.tool.ledger.entry.append"
+                    ],
+                    "effects": [
+                        "nivo.tool.payment.claim.record",
+                        "nivo.tool.customer.message.send",
+                        "nivo.tool.payment.order.settle",
+                        "nivo.tool.team.message.post",
+                        "nivo.tool.agent.tag"
+                    ]
+                },
+                "nodes": [
+                    {
+                        "key": "match",
+                        "kind": "execute",
+                        "step": "accounting.match-payment",
+                        "params": {
+                            "transactionId": {
+                                "$ref": "trigger.transactionId",
+                                "default": null
+                            },
+                            "conversationId": {
+                                "$ref": "trigger.conversationId",
+                                "default": null
+                            },
+                            "text": {
+                                "$ref": "trigger.text",
+                                "default": null
+                            },
+                            "leadId": {
+                                "$ref": "trigger.leadId",
+                                "default": null
+                            }
+                        },
+                        "routes": {
+                            "matched": "mark-paid"
+                        },
+                        "accounts": [
+                            {
+                                "kind": "messaging",
+                                "provider": null,
+                                "connectionId": null,
+                                "operations": {
+                                    "nivo.tool.customer.message.send": "auto"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "key": "mark-paid",
+                        "kind": "output",
+                        "step": "payment.settle",
+                        "params": {
+                            "orderId": {
+                                "$ref": "steps.match.output.orderId"
+                            },
+                            "transactionId": {
+                                "$ref": "steps.match.output.transactionId"
+                            },
+                            "verdict": {
+                                "$ref": "steps.match.output.verdict"
+                            },
+                            "expectedVnd": {
+                                "$ref": "steps.match.output.expectedVnd"
+                            },
+                            "receivedVnd": {
+                                "$ref": "steps.match.output.receivedVnd"
+                            }
+                        },
+                        "next": "ledger"
+                    },
+                    {
+                        "key": "ledger",
+                        "kind": "output",
+                        "step": "accounting.post-payment",
+                        "params": {
+                            "transactionId": {
+                                "$ref": "steps.match.output.transactionId"
+                            },
+                            "orderId": {
+                                "$ref": "steps.mark-paid.output.orderId"
+                            }
+                        },
+                        "next": "notify-paid",
+                        "accounts": [
+                            {
+                                "kind": "books",
+                                "provider": null,
+                                "connectionId": null,
+                                "operations": {
+                                    "nivo.tool.ledger.entry.append": "auto"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "key": "notify-paid",
+                        "kind": "output",
+                        "step": "payment.received-notice",
+                        "params": {
+                            "orderId": {
+                                "$ref": "steps.mark-paid.output.orderId"
+                            }
+                        },
+                        "next": "to-after-sale"
+                    },
+                    {
+                        "key": "to-after-sale",
+                        "kind": "output",
+                        "step": "core.call-workflow",
+                        "params": {
+                            "agent": "sales",
+                            "workflow": "after-sale",
+                            "version": "latest",
+                            "inputs": {
+                                "orderId": {
+                                    "$ref": "steps.mark-paid.output.orderId"
+                                },
+                                "leadId": {
+                                    "$ref": "steps.mark-paid.output.leadId"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

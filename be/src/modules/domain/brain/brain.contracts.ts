@@ -1,21 +1,3 @@
-import type { HashedPassage } from "./chunk-provenance.policy"
-
-/** What a reading of a document must do. */
-export interface ReadingPlan {
-    /** True when some passages are unchanged, so only the others are read. */
-    readonly partial: boolean
-    /** The hashes of every passage of the document. */
-    readonly hashes: ReadonlyArray<string>
-    /** Every passage of the document with its hash: what a filed fact names as the chunk it was read from. */
-    readonly passages: ReadonlyArray<HashedPassage>
-    /** The hashes of the passages that did not change. */
-    readonly unchangedHashes: ReadonlyArray<string>
-    /** The unchanged passages, as one text. */
-    readonly unchangedText: string
-    /** What the model reads. */
-    readonly windows: ReadonlyArray<string>
-}
-
 /** What a delivery of the event bus gives the inbox: the consumer's queue and the business key, claimed once per effect. */
 export interface InboxClaim {
     /** The reactor's queue, the first half of the inbox key. */
@@ -147,7 +129,7 @@ export interface LessonDecision {
 }
 
 /** What reading the facts of one document did. */
-export type FactsOutcome = "done" | "skipped" | "blocked" | "failed"
+export type FactsOutcome = "done" | "skipped" | "blocked" | "failed" | "continued" | "waiting"
 
 /** What running one command did. */
 export type CommandOutcome = "done" | "skipped" | "failed"
@@ -354,4 +336,8 @@ export interface BrainGraphTotals {
     readonly recentlyChanged: number
     /** Change requests waiting. */
     readonly pending: number
+    /** Truths in force or scheduled the capped read did NOT bring (0 when the graph is whole): the page says it is capped. */
+    readonly nodesNotShown: number
+    /** Waiting change requests the capped read did NOT bring (0 when all are listed). */
+    readonly pendingNotShown: number
 }

@@ -1,5 +1,5 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
+import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { ModuleJobsQueueModule } from "@modules/queues/module-jobs"
 import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine.module-definition"
@@ -8,6 +8,7 @@ import { EntityEngineService } from "./entity-engine.service"
 import { EntityMutationService } from "./entity-mutation.service"
 import { EntityPortsService } from "./entity-ports.service"
 import { ListSourceService } from "./list-source.service"
+import { ModuleAgentService } from "./module-agent.service"
 import { ModuleJobRunnerService } from "./module-job-runner.service"
 import { EntityNodePortsService } from "./entity-node-ports.service"
 
@@ -20,18 +21,24 @@ export class EntityEngineModule extends ConfigurableModuleClass {
         if (options.storeOnly === true)
             return {
                 ...base,
+                imports: [...(base.imports ?? []), ModuleInstallationsModule.register({})],
                 providers: [
                     ...(base.providers ?? []),
                     { provide: ENTITY_ENGINE_OPTIONS, useValue: options },
                     EngineFailureService,
                     EntityEngineService,
                     EntityMutationService,
+                    ModuleAgentService,
                 ],
-                exports: [EntityEngineService, EntityMutationService],
+                exports: [EntityEngineService, EntityMutationService, ModuleAgentService],
             }
         return {
             ...base,
-            imports: [...(base.imports ?? []), ModuleJobsQueueModule.register({})],
+            imports: [
+                ...(base.imports ?? []),
+                ModuleJobsQueueModule.register({}),
+                ModuleInstallationsModule.register({}),
+            ],
             providers: [
                 ...(base.providers ?? []),
                 { provide: ENTITY_ENGINE_OPTIONS, useValue: options },
@@ -41,6 +48,7 @@ export class EntityEngineModule extends ConfigurableModuleClass {
                 EntityMutationService,
                 EntityPortsService,
                 ListSourceService,
+                ModuleAgentService,
                 ModuleJobRunnerService,
                 EntityNodePortsService,
             ],
@@ -49,6 +57,7 @@ export class EntityEngineModule extends ConfigurableModuleClass {
                 EntityMutationService,
                 EntityPortsService,
                 ListSourceService,
+                ModuleAgentService,
                 ModuleJobRunnerService,
                 EntityNodePortsService,
                 ModuleJobsQueueModule,

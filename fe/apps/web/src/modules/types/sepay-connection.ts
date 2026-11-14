@@ -62,13 +62,6 @@ export interface SepayStepView {
     readonly state: SepayStepState
 }
 
-/** The bank account form of the Setup tab. */
-export interface SepayAccountForm {
-    readonly bank: string
-    readonly account: string
-    readonly holder: string
-}
-
 /** One agent that may use a SePay connection. */
 export interface SepayAgentView {
     readonly id: string

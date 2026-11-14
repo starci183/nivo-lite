@@ -1,2 +1,1 @@
-export { readError } from "./workspaceread.shared"
-export type { ReadResponse } from "./workspaceread.shared"
+export { readError, type ReadResponse } from "@nivo-lite/fe-shared"

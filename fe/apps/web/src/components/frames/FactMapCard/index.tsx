@@ -1,5 +1,13 @@
-import { BubbleMap, Cluster, Pane, PaneGrid, StatusDot, SurfaceCard, Text } from "@starci/grammar/common"
-import type { HeaderZone } from "@starci/grammar/common"
+import {
+    BubbleMap,
+    Cluster,
+    Pane,
+    PaneGrid,
+    StatusDot,
+    SurfaceCard,
+    Text,
+    type HeaderZone,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { FactMapPane } from "@/components/frames/FactMapPane"
 import type { FactCardWords, FactMapView, FactMode } from "@/modules/brain"
@@ -37,8 +45,13 @@ interface FactMapCardProps {
     }
 }
 
+/** The props of Legend. */
+interface LegendProps {
+    readonly view: FactMapView
+}
+
 /** The legend under the map: a dot per state of a fact, and the rectangle that marks a document. */
-const Legend = (props: { readonly view: FactMapView }) => (
+const Legend = (props: LegendProps) => (
     <Cluster gap="row" align="center">
         {props.view.legend.map((dot) => (
             <Cluster key={dot.id} gap="inline" align="center">

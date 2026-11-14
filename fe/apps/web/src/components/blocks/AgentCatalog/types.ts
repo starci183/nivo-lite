@@ -14,10 +14,6 @@ export interface GrantChipView {
 export interface AgentRowView {
     readonly key: string
     readonly name: string
-    /** The 3D emblem of the kind of agent. */
-    readonly emblem: string
-    /** The key of the kind, the name the emblem avatar carries. */
-    readonly emblemKind: string
     /** The agent's own picture (an upload or a preset image); null draws the default sprout, or the initials. */
     readonly picture: string | null
     /** The owner chose the initials preset. */
@@ -27,14 +23,7 @@ export interface AgentRowView {
     /** "@handle". */
     readonly subtitle: string
     readonly grants: ReadonlyArray<GrantChipView>
-    readonly countLabel: string
-    readonly overflowLabel: string
     readonly menuLabel: string
-    /** Where "Grant access" and the last menu item go. */
-    readonly grantHref: string
-    readonly knowledgeLine: string
-    readonly knowledgeNote: string
-    readonly waitingLabel: string
     readonly statusLabel: string
     readonly statusTone: "neutral" | "accent" | "success" | "warning"
     /** Where the row opens the agent. */
@@ -59,11 +48,7 @@ export type AgentKind =
     | "chatbot"
     | "lead_gen"
     | "sales"
-    | "accounting"
-    | "shifts"
     | "booking"
-    | "inventory"
-    | "loyalty"
     | "video"
     | "content"
     | "hiring"
@@ -119,7 +104,9 @@ export interface AgentCatalogBaseProps {
         readonly removeLabel: string
         /** The agent whose removal waits for the confirmation, or null. */
         readonly removing: { readonly key: string; readonly name: string; readonly title: string } | null
-        readonly removeBody: string
+        /** What removing the agent erases and keeps, read while the confirmation is open. */
+        readonly removeImpact: DataSlot<ReadonlyArray<string>>
+        readonly removeImpactLabels: SlotLabels
         readonly removeConfirm: string
         readonly removeCancel: string
         /** A pause, resume or removal is running. */
@@ -155,6 +142,7 @@ export interface AgentCatalogBaseProps {
         readonly clear: () => void
         readonly category: (value: string) => void
         readonly retry: () => void
+        readonly retryImpact: () => void
         readonly install: (key: string) => void
         readonly open: (href: string) => void
         /** Opens the create dialog for one more agent of a role. */

@@ -6,10 +6,8 @@ import type {
     PickBadgeView,
     PickSelection,
 } from "@/modules/types"
-import { documentsOfFact, keyDocumentsOf } from "./inbox"
-import type { FactKey } from "./inbox"
-import { trustLevelOf } from "./labels"
-import type { TrustLevel } from "./labels"
+import { documentsOfFact, keyDocumentsOf, type FactKey } from "./inbox"
+import { trustLevelOf, type TrustLevel } from "./labels"
 
 /** How the rows of a table of facts are grouped: by the document they come from, or by the subject they are about. */
 export type PickGrouping = "document" | "subject"
@@ -114,7 +112,7 @@ export const pickRowOf = (one: FactKey, words: FactPickWords, selected: Readonly
     factId: one.lead.id,
     title: `${one.lead.subjectLabel} · ${one.lead.attributeLabel}`,
     source: sourceOf(one, words),
-    value: one.kind === "conflict" ? words.valuesOf(one.options.map(valueOf)) : valueOf(one.lead),
+    value: one.kind === "conflict" ? words.valuesOf(one.options.map((entry) => valueOf(entry))) : valueOf(one.lead),
     badge: badgeOf(one, words),
     isConflict: one.kind === "conflict",
     isSettled: one.kind === "settled" || one.kind === "retired",

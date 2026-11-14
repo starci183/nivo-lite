@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the agent-instances capability. */
 export enum AgentInstancesErrorCode {
@@ -17,6 +16,8 @@ export enum AgentInstancesErrorCode {
     ChannelOwned = "AGENT_INSTANCES_CHANNEL_OWNED",
     /** Only the owner gives an agent channels; a manager creates the agent without them. */
     ChannelsNeedOwner = "AGENT_INSTANCES_CHANNELS_NEED_OWNER",
+    /** The agent that answers a customer channel could not be installed when the channel was connected; the channel has no owner. */
+    FrontDoorFailed = "AGENT_INSTANCES_FRONT_DOOR_FAILED",
 }
 
 /** How each agent-instances code travels. */
@@ -28,6 +29,7 @@ export const AGENT_INSTANCES_ERROR_KINDS: Record<AgentInstancesErrorCode, ErrorK
     [AgentInstancesErrorCode.ChannelUnavailable]: "invalid",
     [AgentInstancesErrorCode.ChannelOwned]: "conflict",
     [AgentInstancesErrorCode.ChannelsNeedOwner]: "forbidden",
+    [AgentInstancesErrorCode.FrontDoorFailed]: "internal",
 }
 
 /** The one error class of the agent-instances capability. */

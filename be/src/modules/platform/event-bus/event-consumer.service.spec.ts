@@ -99,7 +99,7 @@ class RecordingConsumer implements EventConsumer<ReceiptRecordedEvent> {
     failing = false
 
     handle(delivery: EventDelivery<ReceiptRecordedEvent>): Promise<void> {
-        if (this.failing) return Promise.reject(new Error("consumer down"))
+        if (this.failing) return Promise.reject(new EventBusError({ code: EventBusErrorCode.CorrelationInvalid }))
         this.deliveries.push(delivery)
         return Promise.resolve()
     }

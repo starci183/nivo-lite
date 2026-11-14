@@ -1,8 +1,7 @@
 "use client"
 
 import { useQueryAdminWorkspacesSwr } from "@/hooks/swr"
-import { adminFailureOf, type AdminFailure } from "./admin.shared"
-import type { AdminWorkspaceFilter } from "./admin.shared"
+import { adminFailureOf, type AdminFailure, type AdminWorkspaceFilter } from "./admin.shared"
 import { readError } from "@/hooks/workspaceread"
 
 /** The view `useAdminWorkspaceList` returns. */

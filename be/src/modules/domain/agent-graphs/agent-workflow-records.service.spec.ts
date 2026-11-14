@@ -1,127 +1,120 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { SCOPE, pageOf } from "@tests/fixtures/builders/agent-graph-records.builder"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
+import { SCOPE } from "@tests/fixtures/builders/agent-graph-records.builder"
+import {
+    AGENT_RUNS,
+    MemoryTables,
+    RUN_DEFAULTS,
+    memoryRunStore,
+    memoryWorkflowStore,
+} from "@tests/fixtures/builders/engine-core-tables.builder"
+import { AgentRunRecordsService } from "@modules/domain/agent-runs"
 import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
-import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
+import { AGENT_WORKFLOW_STORE } from "./agent-workflow-store.port"
+import type { WorkflowInsert, WorkflowVersionInsert } from "./agent-workflows.contracts"
+import { TestWorldError, TestWorldErrorCode } from "@tests/world/test-world.error"
 
 const build = async () => {
-    const engine = mock<EntityEngineService>()
-    const mutations = mock<EntityMutationService>()
+    const tables = new MemoryTables()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentWorkflowRecordsService,
-            { provide: EntityEngineService, useValue: engine },
-            { provide: EntityMutationService, useValue: mutations },
+            { provide: AGENT_WORKFLOW_STORE, useValue: memoryWorkflowStore(tables) },
+            { provide: AgentRunRecordsService, useValue: new AgentRunRecordsService(memoryRunStore(tables)) },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentWorkflowRecordsService), engine, mutations }
+    return { service: moduleRef.get(AgentWorkflowRecordsService), tables }
 }
 
-const rowOf = (id: string, data: RecordRow["data"]): RecordRow => ({
-    id,
-    workspaceId: "ws-1",
-    version: "2",
-    createdAt: "2026-11-01T00:00:00.000Z",
-    updatedAt: "2026-11-01T00:00:00.000Z",
-    data,
-})
-
-const WORKFLOW = rowOf("wf-1", {
+const WORKFLOW = (key: string, position: number): WorkflowInsert => ({
     agentId: "agent-1",
-    key: "reports",
-    name: "Reports",
+    key,
+    name: key,
     status: "draft",
     primary: false,
-    position: 1,
-    activeVersionId: null,
+    position,
     latestNumber: 0,
-    templateId: "accounting.reports",
+    activeVersionId: null,
+    templateId: "accounting.team-chat",
     templateVersion: 1,
     createdBy: null,
 })
 
-const PIN = rowOf("pin-1", { runId: "run-1", workflowId: "wf-1", workflowVersionId: "wfv-1", workflowVersion: 1 })
+const VERSION = (workflowId: string, number: number): WorkflowVersionInsert => ({
+    workflowId,
+    agentId: "agent-1",
+    number,
+    document: { nodes: [] },
+    documentHash: "h",
+    changeKind: "template",
+    authorKind: "system",
+    authorId: null,
+    note: "",
+    templateId: null,
+    templateVersion: null,
+    fromNumber: null,
+    graphVersionId: null,
+})
 
-const written = (row: RecordRow): EngineResult => ({ ok: true, row, version: row.version, created: true })
-
-const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
-    try {
-        await work
-        return null
-    } catch (cause) {
-        return cause instanceof AgentGraphsError ? cause.code : cause
-    }
+/** A run a wake opened (the pin is written into its row, in the transaction that opens it). */
+const opened = (tables: MemoryTables, runId: string, startedAt: string): void => {
+    tables.put(AGENT_RUNS, runId, {
+        ...RUN_DEFAULTS,
+        agentId: "agent-1",
+        wakeId: `wake-${runId}`,
+        trigger: "tag",
+        graphVersionId: null,
+        context: {},
+        startedAt,
+    })
 }
 
 describe("AgentWorkflowRecordsService: workflows", () => {
     it("reads one workflow and the workflows of an agent in list order", async () => {
-        const { service, engine } = await build()
-        engine.get.mockResolvedValue(WORKFLOW)
-        engine.list.mockResolvedValue(pageOf([WORKFLOW]))
+        const { service } = await build()
+        await service.insertWorkflow(SCOPE, WORKFLOW("second", 1))
+        const first = await service.insertWorkflow(SCOPE, WORKFLOW("reports", 0))
 
-        await expect(service.workflow(SCOPE, "wf-1")).resolves.toMatchObject({ id: "wf-1", fence: "2" })
-        await expect(service.workflowsOf(SCOPE, "agent-1", 50)).resolves.toHaveLength(1)
-        expect(engine.list.mock.calls[0]?.[1]).toMatchObject({
-            from: "agent.workflow",
-            where: { op: "eq", field: "agentId", value: "agent-1" },
-            order: [
-                ["position", "asc"],
-                ["id", "asc"],
-            ],
-        })
+        await expect(service.workflow(SCOPE, first?.id ?? "")).resolves.toMatchObject({ key: "reports", fence: "1" })
+        const listed = await service.workflowsOf(SCOPE, "agent-1", 50)
+        expect(listed.map((workflow) => workflow.key)).toEqual(["reports", "second"])
     })
 
-    it("answers null for a taken key or a moved fence, and refuses any other refusal", async () => {
-        const { service, mutations } = await build()
-        mutations.mutate.mockResolvedValueOnce({
-            ok: false,
-            reason: "taken",
-            constraint: "agent_key",
-            refusal: "workflow-exists",
-        })
-        mutations.mutate.mockResolvedValueOnce({ ok: false, reason: "stale" })
-        mutations.mutate.mockResolvedValueOnce({ ok: false, reason: "invalid" })
+    it("answers null for a taken key, a moved fence and a version number the workflow holds", async () => {
+        const { service } = await build()
+        const workflow = await service.insertWorkflow(SCOPE, WORKFLOW("reports", 0))
+        if (workflow === null) throw new TestWorldError({ code: TestWorldErrorCode.RowMissing, params: { what: "no workflow" } })
 
-        await expect(service.insertWorkflow(SCOPE, {})).resolves.toBeNull()
-        await expect(service.patchWorkflow(SCOPE, await rowRecord(), { status: "active" })).resolves.toBeNull()
-        await expect(codeOf(service.insertVersion(SCOPE, {}))).resolves.toBe(AgentGraphsErrorCode.RecordUnreadable)
+        await expect(service.insertWorkflow(SCOPE, WORKFLOW("reports", 1))).resolves.toBeNull()
+        await expect(service.patchWorkflow(SCOPE, workflow, { status: "active" })).resolves.toMatchObject({ status: "active" })
+        await expect(service.patchWorkflow(SCOPE, workflow, { status: "paused" })).resolves.toBeNull()
+        await expect(service.insertVersion(SCOPE, VERSION(workflow.id, 1))).resolves.toMatchObject({ number: 1 })
+        await expect(service.insertVersion(SCOPE, VERSION(workflow.id, 1))).resolves.toBeNull()
     })
 })
 
-/** The record of the workflow row, read through the service's own mapper. */
-const rowRecord = async () => {
-    const { service, engine } = await build()
-    engine.get.mockResolvedValue(WORKFLOW)
-    const record = await service.workflow(SCOPE, "wf-1")
-    if (record === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.WorkflowNotFound })
-    return record
-}
-
 describe("AgentWorkflowRecordsService: pins", () => {
-    it("pins a run under its match key and reads the pins of runs", async () => {
-        const { service, engine, mutations } = await build()
-        mutations.mutate.mockResolvedValue(written(PIN))
-        engine.list.mockResolvedValue(pageOf([PIN]))
+    it("pins a run once and reads the pins of runs", async () => {
+        const { service, tables } = await build()
+        opened(tables, "run-1", "2026-11-01T00:00:00.000Z")
+        const pin = { runId: "run-1", agentId: "agent-1", workflowId: "wf-1", workflowVersionId: "wfv-1", workflowVersion: 1 }
 
-        await service.pinRun(SCOPE, { runId: "run-1" })
+        await service.pinRun(SCOPE, pin)
+        await service.pinRun(SCOPE, { ...pin, workflowVersionId: "wfv-2", workflowVersion: 2 })
         const pins = await service.pinsOf(SCOPE, ["run-1"])
 
-        expect(mutations.mutate).toHaveBeenCalledWith(
-            SCOPE,
-            { op: "ensure", entity: "agent.run-workflow", match: "run", values: { runId: "run-1" } },
-            "job",
-        )
         expect(pins).toEqual([{ runId: "run-1", workflowId: "wf-1", workflowVersionId: "wfv-1", workflowVersion: 1 }])
         await expect(service.pinsOf(SCOPE, [])).resolves.toEqual([])
     })
 
     it("reads the newest runs of one workflow", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValue(pageOf([PIN]))
+        const { service, tables } = await build()
+        opened(tables, "run-1", "2026-11-01T00:00:00.000Z")
+        opened(tables, "run-2", "2026-11-02T00:00:00.000Z")
+        const pin = { agentId: "agent-1", workflowId: "wf-1", workflowVersionId: "wfv-1", workflowVersion: 1 }
+        await service.pinRun(SCOPE, { ...pin, runId: "run-1" })
+        await service.pinRun(SCOPE, { ...pin, runId: "run-2" })
 
-        await expect(service.runsOfWorkflow(SCOPE, "agent-1", "wf-1", 20)).resolves.toHaveLength(1)
-        expect(engine.list.mock.calls[0]?.[1]).toMatchObject({ from: "agent.run-workflow" })
+        const runs = await service.runsOfWorkflow(SCOPE, "agent-1", "wf-1", 20)
+        expect(runs.map((run) => run.runId)).toEqual(["run-2", "run-1"])
     })
 })

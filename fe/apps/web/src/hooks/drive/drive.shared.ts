@@ -5,9 +5,6 @@ export const DRIVE_ORIGIN = "google_drive"
 /** How often the progress pane asks for the state of the sources being read. */
 export const DRIVE_PROGRESS_POLL_MS = 5000
 
-/** Where Google sends the owner back after the page asked for the grant. */
-export const DRIVE_PAGE_PATH = "/connections/google"
-
 /** Where Google sends the owner back after the hub wizard asked for the grant. */
 export const DRIVE_WIZARD_PATH = "/connections"
 
@@ -88,7 +85,7 @@ export interface DriveListing {
 
 /** The files of a listing NIVO can read: the ones that can be ticked. */
 export const readableFilesOf = (listing: DriveListing): ReadonlyArray<DriveFileRow> =>
-    listing.files.filter(isReadableDriveFile)
+    listing.files.filter((entry) => isReadableDriveFile(entry))
 
 /** The line under a file in the choose step: where it is, how big and when it changed, or why it cannot be read. */
 export const driveFileNoteOf = (

@@ -21,6 +21,40 @@ const build = async () => {
     return { client: moduleRef.get(TelegramClient), http }
 }
 
+describe("TelegramClient fileUrl", () => {
+    it("asks getFile for the file id and answers the download address under the bot of the token", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 200,
+            body: { ok: true, result: { file_id: "f-1", file_unique_id: "u-1", file_path: "photos/file_3.jpg" } },
+        })
+
+        await expect(client.fileUrl("123:abc", "f-1")).resolves.toBe(
+            "https://telegram.test/file/bot123:abc/photos/file_3.jpg",
+        )
+        expect(http.request).toHaveBeenCalledWith({
+            method: "POST",
+            url: "https://telegram.test/bot123:abc/getFile",
+            body: { file_id: "f-1" },
+            timeoutMs: 4000,
+        })
+    })
+
+    it("answers an empty text when Telegram gives no file_path", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { ok: true, result: { file_id: "f-1", file_unique_id: "u-1" } } })
+
+        await expect(client.fileUrl("123:abc", "f-1")).resolves.toBe("")
+    })
+
+    it("rejects as the call does when Telegram refuses the file", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 400, body: { ok: false, description: "Bad Request: file is too big" } })
+
+        await expect(client.fileUrl("123:abc", "f-1")).rejects.toMatchObject({ code: TelegramErrorCode.Rejected })
+    })
+})
+
 describe("TelegramClient call", () => {
     it("posts the method to the bot of the token and returns the result", async () => {
         const { client, http } = await build()

@@ -1,8 +1,9 @@
 import type { GraphSpec, WorkflowCallPin } from "@nivo-lite/agent-sdk/graph"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
-import type { WorkflowTemplate } from "@nivo-lite/blocks-core/modules"
+import type { WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
 import type { GraphVersionView } from "./agent-graphs.contracts"
+import type { NodeRightsDiff } from "./agent-workflow-rights.contracts"
+import type { RightsSettlement } from "./policies/node-rights-gate.policy"
 
 /** Where a workflow stands: `active` takes wakes, `draft` is kept but never runs, `paused` was active and is stopped. */
 export type WorkflowStatus = "active" | "draft" | "paused"
@@ -90,6 +91,80 @@ export interface WorkflowVersionRecord {
     readonly publishedAt: Date
 }
 
+/** A workflow as `insertWorkflow` writes it, with no version yet. */
+export interface WorkflowInsert {
+    /** The agent. */
+    readonly agentId: string
+    /** The stable key within the agent. */
+    readonly key: string
+    /** The name. */
+    readonly name: string
+    /** Where it stands. */
+    readonly status: WorkflowStatus
+    /** Whether every wake of the agent goes to it unless a narrower active workflow takes it. */
+    readonly primary: boolean
+    /** The place in the agent's list. */
+    readonly position: number
+    /** The newest version number: 0. */
+    readonly latestNumber: number
+    /** The version that runs: none yet. */
+    readonly activeVersionId: string | null
+    /** The template it came from, or null. */
+    readonly templateId: string | null
+    /** The version of that template, or null. */
+    readonly templateVersion: number | null
+    /** The member who made it, or null. */
+    readonly createdBy: string | null
+}
+
+/** The members of a workflow a write changes; an absent member is left as it is. */
+export interface WorkflowPatch {
+    /** Where it stands. */
+    readonly status?: WorkflowStatus
+    /** The place in the agent's list. */
+    readonly position?: number
+    /** The version that runs. */
+    readonly activeVersionId?: string | null
+    /** The newest version number. */
+    readonly latestNumber?: number
+    /** The template it came from. */
+    readonly templateId?: string | null
+    /** The version of that template. */
+    readonly templateVersion?: number | null
+}
+
+/** A workflow version as `insertVersion` writes it; `publishedAt` absent is the moment of the write. */
+export interface WorkflowVersionInsert {
+    /** The workflow. */
+    readonly workflowId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The number within the workflow. */
+    readonly number: number
+    /** The full graph snapshot. */
+    readonly document: Readonly<Record<string, JsonValue>>
+    /** The hash of the snapshot. */
+    readonly documentHash: string
+    /** How it came to be. */
+    readonly changeKind: WorkflowChangeKind
+    /** Who made it. */
+    readonly authorKind: WorkflowAuthorKind
+    /** The member who made it, or null. */
+    readonly authorId: string | null
+    /** The reason or summary. */
+    readonly note: string
+    /** The template it came from, or null. */
+    readonly templateId: string | null
+    /** The version of that template, or null. */
+    readonly templateVersion: number | null
+    /** The version a rollback copied, or null. */
+    readonly fromNumber: number | null
+    /** The agent graph version it mirrors, or null. */
+    readonly graphVersionId: string | null
+    /** When it was published (ISO text). */
+    readonly publishedAt?: string
+}
+
 /** The pin of one run to the workflow version it executes. */
 export interface RunWorkflowPin {
     /** The run. */
@@ -102,11 +177,18 @@ export interface RunWorkflowPin {
     readonly workflowVersion: number
 }
 
+/** The pin of a run as the run open writes it: the run, its agent and the workflow version it executes. */
+export interface RunWorkflowPinWrite extends RunWorkflowPin {
+    /** The agent of the run. */
+    readonly agentId: string
+}
+
 /** How a step differs between two graphs. */
 export type StepChange = "added" | "removed" | "changed"
 
 /** A part of a node a change can touch. */
-export type StepPart = "kind" | "step" | "params" | "input" | "next" | "routes" | "blocking" | "group" | "wait"
+export type StepPart =
+    "kind" | "step" | "params" | "input" | "next" | "routes" | "blocking" | "group" | "wait" | "accounts"
 
 /** One setting of a step that changed, with its value before and after (null when absent). */
 export interface ParamChange {
@@ -132,12 +214,8 @@ export interface StepDiff {
     readonly params: ReadonlyArray<ParamChange>
 }
 
-/** What the grant gained and lost. */
+/** What the grant gained and lost: tools and effects by name (there is no data right, `nivo-frame.rights`). */
 export interface GrantDiff {
-    /** The rights gained, as `kind:access.field`. */
-    readonly rightsAdded: ReadonlyArray<string>
-    /** The rights lost. */
-    readonly rightsRemoved: ReadonlyArray<string>
     /** The tools gained. */
     readonly toolsAdded: ReadonlyArray<string>
     /** The tools lost. */
@@ -156,6 +234,8 @@ export interface WorkflowDiff {
     readonly triggerChanged: boolean
     /** What the grant gained and lost. */
     readonly grant: GrantDiff
+    /** What the nodes ask for on connected accounts that they did not, no longer do, or now ask to do by themselves; absent = nothing. */
+    readonly nodeRights?: NodeRightsDiff | undefined
 }
 
 /** A step both the owner and the template changed differently since the version the workflow came from. */
@@ -287,15 +367,21 @@ export interface WorkflowGraphCall {
 
 /** One workflow of an agent as its Graph page draws it. */
 export interface WorkflowGraphEntry {
+    /** The workflow row id. */
     readonly id: string
+    /** The workflow key inside its agent. */
     readonly key: string
+    /** The name the owner knows it by. */
     readonly name: string
+    /** Whether it is a draft, running or retired. */
     readonly status: WorkflowStatus
+    /** True for the workflow the agent starts with when no other is named. */
     readonly primary: boolean
     /** The number of the version that runs, or null. */
     readonly activeNumber: number | null
     /** Who may call it. */
     readonly entry: "any" | "agent"
+    /** The words the page shows for `entry`. */
     readonly entryLabel: string
     /** Its input contract. */
     readonly inputs: ReadonlyArray<{ readonly name: string; readonly type: string; readonly required: boolean }>
@@ -318,7 +404,9 @@ export interface WorkflowGraphEntry {
 
 /** The agent Graph page: every workflow of one agent. */
 export interface AgentWorkflowGraph {
+    /** The agent whose workflows these are. */
     readonly agentId: string
+    /** Its workflows, as the page draws them. */
     readonly workflows: ReadonlyArray<WorkflowGraphEntry>
 }
 
@@ -332,6 +420,7 @@ export interface RouteWake {
     readonly pin: WorkflowCallPin | null
 }
 
+/** One workflow of an agent as routing reads it: where it stands and the sources its graph wakes on. */
 export interface RoutableWorkflow {
     /** The workflow id. */
     readonly id: string
@@ -353,6 +442,8 @@ export interface WorkflowAuthor {
     readonly kind: WorkflowAuthorKind
     /** The member, or null for NIVO and the system. */
     readonly memberId: string | null
+    /** The role of the member in the workspace, when a person makes the version through a door that read their seat. */
+    readonly role?: "owner" | "manager" | undefined
 }
 
 /** A seat that may change workflows: the member and the role. */
@@ -434,6 +525,8 @@ export interface VersionWrite {
     readonly expected: ExpectedLatest
     /** When it was published, for an adopted version; now when absent. */
     readonly publishedAt?: string | undefined
+    /** What the rights gate settled for exactly this graph (`AgentGraphRightsService.decide`); a write of another graph is refused. */
+    readonly rights: RightsSettlement
 }
 
 /** What making a workflow takes. */
@@ -530,5 +623,14 @@ export type OptionalWorkflowRecord = WorkflowRecord | null
 /** A workflow version record, or null when there is none. */
 export type OptionalWorkflowVersionRecord = WorkflowVersionRecord | null
 
-/** The declared fields a store write sets, by field name. */
-export type RecordValues = MutationValues
+/** The graph a workflow runs now: the snapshot of its active version, with the ids a right or an audit names it by. */
+export interface ActiveWorkflowGraph {
+    /** The workflow. */
+    readonly workflowId: string
+    /** The agent it belongs to. */
+    readonly agentId: string
+    /** The active workflow version. */
+    readonly versionId: string
+    /** The graph of that version. */
+    readonly graph: GraphSpec
+}

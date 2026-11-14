@@ -66,7 +66,7 @@ export interface CsvPreview {
     readonly sheet: string
     /** The detected delimiter. */
     readonly delimiter: string
-    /** The suggested (or, for a re-upload, the saved) mapping. */
+    /** The blank (or, for a re-upload, the saved) mapping. */
     readonly mapping: CsvMapping
     /** Mapped columns of the saved setup that this data no longer has. */
     readonly missing: ReadonlyArray<string>

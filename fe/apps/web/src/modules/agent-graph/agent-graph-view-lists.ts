@@ -10,8 +10,7 @@ import type {
     AgentGraphVersionsView,
 } from "@/modules/types"
 import { branchHitsOf } from "./agent-graph-flow"
-import { sourceWordOf } from "./agent-graph-words"
-import type { AgentGraphContext, AgentGraphT } from "./agent-graph-words"
+import { sourceWordOf, type AgentGraphContext, type AgentGraphT } from "./agent-graph-words"
 
 /** How many rows of evidence show before "See all". */
 export const EVIDENCE_PREVIEW = 3

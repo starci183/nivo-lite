@@ -105,6 +105,106 @@ export class ChatStopApprovalType {
 }
 
 @ObjectType()
+/** A package's preview: the kind it registered and its payload as JSON text; the kind's own renderer draws it. */
+export class ChatPreviewType {
+    /** The kind a package registered. */
+    @Field(() => String)
+    kind!: string
+
+    /** The payload, as JSON text. */
+    @Field(() => String)
+    payloadJson!: string
+}
+
+@ObjectType()
+/** A text in both product languages. */
+export class ChatBilingualType {
+    /** The Vietnamese text. */
+    @Field(() => String)
+    vi!: string
+
+    /** The English text. */
+    @Field(() => String)
+    en!: string
+}
+
+@ObjectType()
+/** The step a permission request comes from. */
+export class ChatApprovalStepType {
+    /** The node. */
+    @Field(() => String)
+    nodeId!: string
+
+    /** The step in the team's words. */
+    @Field(() => String)
+    title!: string
+
+    /** What the step does. */
+    @Field(() => String)
+    description!: string
+}
+
+@ObjectType()
+/** The call a permission request asks to make. */
+export class ChatApprovalCallType {
+    /** The tool. */
+    @Field(() => String)
+    tool!: string
+
+    /** The connected account it would use; null when none was picked. */
+    @Field(() => String, { nullable: true })
+    account!: string | null
+
+    /** The tool's worded title in both languages, for the action row; null when the tool declares none (draw the tool id). */
+    @Field(() => ChatBilingualType, { nullable: true })
+    label!: ChatBilingualType | null
+}
+
+@ObjectType()
+/** One piece of what a person approves, in full: words, or the address of a picture or file the call sends. */
+export class ChatApprovalContentType {
+    /** The argument member it comes from. */
+    @Field(() => String)
+    name!: string
+
+    /** `text` (words) or `address` (where a picture or file is). */
+    @Field(() => String)
+    kind!: string
+
+    /** The words, or the address, whole. */
+    @Field(() => String)
+    value!: string
+}
+
+@ObjectType()
+/** The approval card the engine built before the write (step, call, facts from the real arguments, brief, preview), stored on the line. */
+export class ChatApprovalCardType {
+    /** The step that asks. */
+    @Field(() => ChatApprovalStepType)
+    step!: ChatApprovalStepType
+
+    /** The call. */
+    @Field(() => ChatApprovalCallType)
+    call!: ChatApprovalCallType
+
+    /** The facts, worded by code from the real arguments. */
+    @Field(() => [ChatStopFactType])
+    facts!: ReadonlyArray<ChatStopFactType>
+
+    /** The brief in words. */
+    @Field(() => String)
+    text!: string
+
+    /** A package's preview of the call; null when none was given. */
+    @Field(() => ChatPreviewType, { nullable: true })
+    preview!: ChatPreviewType | null
+
+    /** What the person approves, IN FULL (the send's words and each image's address); empty when the tool declares none. */
+    @Field(() => [ChatApprovalContentType])
+    content!: ReadonlyArray<ChatApprovalContentType>
+}
+
+@ObjectType()
 /** The stop a `workflow.stopped` card is about: one card per stop, rewritten in place when its state changes. */
 export class ChatStopCardType {
     /** The stop record; null on a card the old engine posted. */
@@ -198,6 +298,14 @@ export class ChatStopCardType {
     /** What a permission request asks to do; null for any other stop. */
     @Field(() => ChatStopApprovalType, { nullable: true })
     approval!: ChatStopApprovalType | null
+
+    /** The approval card of a permission request, as stored on the line; null for any other stop. */
+    @Field(() => ChatApprovalCardType, { nullable: true })
+    decision!: ChatApprovalCardType | null
+
+    /** A package's preview of what the step was doing; null when none was given. */
+    @Field(() => ChatPreviewType, { nullable: true })
+    preview!: ChatPreviewType | null
 
     /** How many times the card was written; it grows on every rewrite (0 on an old-engine card). */
     @Field(() => Int)

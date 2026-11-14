@@ -4,8 +4,9 @@ import { useTranslations } from "next-intl"
 import { useTransition } from "react"
 import { authActionsOf } from "@/hooks/auth"
 import { useAcceptInvite, useInviteView } from "@/hooks/invite"
+import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, loginPath, workspaceHref } from "@/modules/routes"
+import { APP_ROUTES, invitePath, loginPath, workspaceHref } from "@/modules/routes"
 import { InviteOverviewBase } from "./component"
 
 /** The invitation the page is about. */
@@ -19,15 +20,16 @@ export const InviteOverview = (props: InviteOverviewProps) => {
     const t = useTranslations("invite")
     const router = navigation.useRouter()
     const auth = authActionsOf()
-    const view = useInviteView(props.token)
+    const read = useInviteView(props.token)
+    const slotLabels = useSlotLabels()
     const { accept, isAccepting } = useAcceptInvite()
     const [isSwitching, startSwitch] = useTransition()
     return (
         <InviteOverviewBase
-            shape={view.state === "loading" ? "ready" : view.state}
             props={{
-                view,
-                isLoading: view.state === "loading",
+                slot: read.slot,
+                placeholder: read.placeholder,
+                slotLabels: slotLabels(t("invalidTitle")),
                 acceptLabel: t("accept"),
                 switchLabel: t("switchAccount"),
                 isAccepting,
@@ -41,10 +43,11 @@ export const InviteOverview = (props: InviteOverviewProps) => {
                         router.refresh()
                     })
                 },
+                retry: read.retry,
                 switchAccount: () => {
                     startSwitch(async () => {
                         await auth.endSession()
-                        router.push(loginPath(view.next))
+                        router.push(loginPath(invitePath(props.token)))
                         router.refresh()
                     })
                 },

@@ -16,5 +16,5 @@ export const useConnectionsRole = (): ConnectionsRoleView => {
     const workspaceId = useOpenWorkspaceId()
     const workspaces = useWorkspaceCards()
     const role = workspaces.cards.find((card) => card.id === workspaceId)?.role
-    return { read: workspaces.read, retry: workspaces.reload, role, isLoading: workspaces.status === "loading" }
+    return { read: workspaces.read, retry: workspaces.reload, role, isLoading: "isLoading" in workspaces.slot }
 }

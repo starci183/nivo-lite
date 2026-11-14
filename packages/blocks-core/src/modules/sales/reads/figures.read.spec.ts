@@ -10,7 +10,7 @@ const dataOf = async (state = sampleState([])): Promise<unknown> => {
     return result?.ok === true ? result.data : result
 }
 
-describe("sales.figures", () => {
+describe("blocks-core.sales.api.order.figures", () => {
     it("adds up the open customers, the draft value, the closed orders and the won share", async () => {
         expect(await dataOf()).toEqual({
             openCount: 4,

@@ -11,7 +11,7 @@ const end = async (outcome: string, outputs: Record<string, unknown>) => {
             params: { outcome },
             input: { outputs },
             turn: EXAMPLE_TURN,
-            grant: { rights: [] },
+            grant: {},
             effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
             tools: new Map(),
             key: "k",
@@ -25,7 +25,6 @@ describe("core.outcome", () => {
     it("is the outcome step of the contract and touches nothing", () => {
         expect(coreOutcomeNode.id).toBe(OUTCOME_STEP)
         expect(coreOutcomeNode.effects).toEqual([])
-        expect(coreOutcomeNode.rights).toEqual([])
     })
 
     it.each(coreOutcomeNode.examples.map((each) => [each.name, each] as const))("example: %s", async (_name, each) => {

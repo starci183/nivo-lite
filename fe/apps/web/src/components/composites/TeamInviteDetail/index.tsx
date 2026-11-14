@@ -1,5 +1,4 @@
-import { Button, Cluster, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, Cluster, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { InviteLink } from "@/components/branches/InviteLink"
 import type { InviteRowView, TeamPanesBaseProps } from "@/modules/types"
 

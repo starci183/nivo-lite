@@ -1,5 +1,4 @@
-import { agentHref, isSetupPending } from "@/modules/installations"
-import type { Installation, InstallationLifecycle } from "@/modules/installations"
+import { agentHref, isSetupPending, type Installation, type InstallationLifecycle } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 
 /** The shortest name of an agent. */
@@ -27,9 +26,6 @@ export const workingHoursOf = (settings: unknown): string | null => {
     return isRecord(saved) ? JSON.stringify(saved) : null
 }
 
-/** How an agent runs: it proposes everything (assist) or follows the authority rules alone (autopilot). */
-export type AgentMode = "assist" | "autopilot"
-
 /** The facts of one installed agent the settings cards draw. */
 export interface AgentInstallationView {
     readonly id: string
@@ -45,7 +41,6 @@ export interface AgentInstallationView {
     readonly moduleKey: string
     /** The type allows several instances. */
     readonly isMulti: boolean
-    readonly mode: AgentMode
     readonly isLive: boolean
     /** The one state of the agent, as the back end names it. */
     readonly lifecycle: InstallationLifecycle
@@ -70,7 +65,6 @@ export const toAgentInstallationView = (installation: Installation, workspaceId:
     agentAvatarPreset: installation.agentAvatarPreset,
     moduleKey: installation.moduleKey,
     isMulti: installation.isMulti,
-    mode: installation.operatingMode,
     isLive: installation.lifecycle === "running",
     lifecycle: installation.lifecycle,
     isSetupPending: isSetupPending(installation.lifecycle),

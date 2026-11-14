@@ -23,7 +23,7 @@ export type InstallationLifecycle =
 export type OperatingMode = "assist" | "autopilot"
 
 /**
- * One installed agent of a workspace: an INSTANCE of a module type. Single-instance types (accounting, inventory...) have one per
+ * One installed agent of a workspace: an INSTANCE of a module type. Single-instance types (accounting...) have one per
  * workspace; multi-instance types (chatbot, booking, lead_gen) may have several, each with its own name, agent, connections and setup.
  */
 export type Installation = {

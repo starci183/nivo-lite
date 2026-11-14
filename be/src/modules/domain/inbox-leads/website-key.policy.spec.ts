@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { customerKeyOf, isAnswerable, newSiteKey, presented } from "./website-key.policy"
+import { customerKeyOf, isAnswerable, newSiteKey, presented, visitorIdOf } from "./website-key.policy"
 
 const POLICY = Symbol("./website-key.policy")
 type PolicySubject = {
@@ -7,11 +7,12 @@ type PolicySubject = {
     isAnswerable: typeof isAnswerable
     newSiteKey: typeof newSiteKey
     presented: typeof presented
+    visitorIdOf: typeof visitorIdOf
 }
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: POLICY, useValue: { customerKeyOf, isAnswerable, newSiteKey, presented } }],
+        providers: [{ provide: POLICY, useValue: { customerKeyOf, isAnswerable, newSiteKey, presented, visitorIdOf } }],
     }).compile()
     const subject = moduleRef.get<PolicySubject>(POLICY)
     return { subject }
@@ -54,5 +55,16 @@ describe("website intake policy", () => {
         expect(subject.customerKeyOf(base, "v1", "e1")).toBe("web:v1")
         expect(subject.customerKeyOf(base, " ", "e1")).toBe("web:e1")
         expect(subject.customerKeyOf(base, null, "e1")).toBe("web:e1")
+    })
+
+    it("takes only a UUID as the visitor id, lower-cased, and reads anything else as none", async () => {
+        const { subject } = await buildSubject()
+        const id = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+        expect(subject.visitorIdOf(` ${id.toUpperCase()} `)).toBe(id)
+        expect(subject.visitorIdOf(null)).toBeNull()
+        expect(subject.visitorIdOf("")).toBeNull()
+        expect(subject.visitorIdOf("v-1")).toBeNull()
+        expect(subject.visitorIdOf(`${id}${id}`)).toBeNull()
     })
 })

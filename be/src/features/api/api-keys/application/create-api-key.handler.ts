@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { CreateApiKeyResult } from "./create-api-key.contracts"
 import { CreateApiKeyCommand } from "./create-api-key.command"
 
@@ -21,6 +20,7 @@ export class CreateApiKeyHandler extends ICQRSHandler<CreateApiKeyCommand, Creat
             command.params.principal.id,
             command.params.request.workspaceId,
             command.params.request.name,
+            command.params.request.kind,
             command.params.request.agentId,
         )
     }

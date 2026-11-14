@@ -18,7 +18,7 @@ Luật: `grammar-core-heroui.md`.
 Grammar: `Mascot`, `node_modules/@starci/grammar/dist/core/leaf/Mascot/index.d.ts`.
 
 ## Chip "Workspace đã sẵn sàng", tiêu đề "NIVO đã sẵn sàng", câu mô tả
-Vì sao: success state = soft badge, one heading naming the workspace, one muted sentence with the first thing to do; centred as the entry flow.
+Vì sao: success state = soft badge without a dot (a result label), one heading naming the workspace, one muted sentence with the first thing to do; centred as the entry flow.
 Luật: `type-scale-14-12.md`.
 Grammar: `Badge`, `Heading`, `Text`, `node_modules/@starci/grammar/dist/core/leaf/Badge/index.d.ts`.
 
@@ -28,6 +28,6 @@ Luật: `table-heroui-native-section-head.md` (links: section-head "→", inline
 Grammar: `SurfaceCard` + `ListRow` (`ListRowData`), `IconTile`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`.
 
 ## Nút "Vào workspace"
-Vì sao: SAI — the primary commit is the only action but carries no end arrow here, while the same button after payment does; one rule needed.
+Vì sao: the primary commit is the only action and carries the end arrow here and after payment alike (fixed 2026-11-13, PL-6: `CelebrationPanel` draws the arrow for a command as for a link). The "Kết nối thêm kênh" row says "Để AI đọc tin khách từ Zalo OA, Telegram, SePay" (it no longer promises one shared inbox: /inbox is retired), and the line under the heading points at connecting channels or inviting teammates, not at approving drafts.
 Luật: `page-header-left-sublabel-xs.md`.
 Grammar: `Button intent="commit" width="fill"`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`.

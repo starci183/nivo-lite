@@ -1,6 +1,5 @@
 import type { EntityManager } from "typeorm"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { JobsOptions } from "./jobs.options"
 import type { JobClaims, JobProcessorRegistry, JobTickScheduler } from "./jobs.port"
 import type { JobFenceService } from "./job-fence.service"

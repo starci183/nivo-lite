@@ -1,8 +1,16 @@
 import type { AgentWorkGoalView, AgentWorkPreset, AgentWorkTaskView, AgentWorkTriggerView } from "@/modules/types"
 import { maskPhones } from "@/modules/utils"
-import { presetOf, relative, workItemHrefOf } from "./agentWork.wire"
+import {
+    presetOf,
+    relative,
+    workItemHrefOf,
+    type AgentWorkContext,
+    type AgentWorkTranslator,
+    type GoalWire,
+    type TaskWire,
+    type TriggerWire,
+} from "./agentWork.wire"
 import { eventWord, goalSourceWord, goalStatusWord, plainText, taskStatusWord, waitingOnWord } from "./agentWork.words"
-import type { AgentWorkContext, AgentWorkTranslator, GoalWire, TaskWire, TriggerWire } from "./agentWork.wire"
 
 /** The sentence a preset reads as. */
 const presetSentence = (t: AgentWorkTranslator, preset: AgentWorkPreset | null, atTime: string): string => {

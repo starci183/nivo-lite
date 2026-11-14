@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { AiUsageOverviewService } from "@modules/domain/ai-usage-events"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetCreditRecentCostUsdQuery } from "./get-credit-recent-cost-usd.query"
 
 @QueryHandler(GetCreditRecentCostUsdQuery)

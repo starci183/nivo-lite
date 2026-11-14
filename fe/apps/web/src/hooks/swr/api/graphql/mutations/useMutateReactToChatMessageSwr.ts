@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateReactToChatMessage,
     type mutateReactToChatMessage as ReactToChatMessageOperation,
 } from "@/modules/api/graphql/mutations/mutation-react-to-chat-message"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ReactToChatMessageMutation } from "@/modules/api"
 
 /** What the ReactToChatMessage mutation is triggered with. */

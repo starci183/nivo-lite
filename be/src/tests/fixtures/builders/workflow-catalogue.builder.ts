@@ -1,4 +1,4 @@
-import type { WorkflowTemplate, WorkflowTemplateVersion } from "@nivo-lite/blocks-core/modules"
+import type { WorkflowTemplate, WorkflowTemplateVersion } from "@nivo-lite/agent-sdk/template"
 
 /** The group the first step of a template's older version sits in: the one thing its newest version changed. */
 const OLDER_GROUP = "before"

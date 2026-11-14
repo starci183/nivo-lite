@@ -1,4 +1,4 @@
-import { McpAgentAuthenticatorService } from "@modules/domain/api-credentials"
+import { McpKeyAuthenticatorService } from "@modules/domain/api-credentials"
 import { AgentsModule } from "@modules/domain/agents"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import {
@@ -8,24 +8,24 @@ import {
 } from "@modules/domain/connection-secrets"
 import { EventsModule } from "@modules/domain/events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
-import { McpCallLogModule } from "@modules/domain/mcp-call-log"
-import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
-import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
+import { ToolCallLogModule } from "@modules/domain/tool-call-log"
+import { TOOLS_ERROR_KINDS, TOOLS_MESSAGES, ToolsModule } from "@modules/domain/tools"
+import { TOOL_RECEIPTS_ERROR_KINDS, TOOL_RECEIPTS_MESSAGES } from "@modules/domain/tool-receipts"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
-import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { JobsModule } from "@modules/platform/jobs"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
-import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
+import { MCP_ENDPOINT_ERROR_KINDS, MCP_ENDPOINT_MESSAGES, McpEndpointModule } from "@modules/domain/mcp-endpoint"
+import { NoDataOpsExecutor } from "../fixtures/builders/mcp-endpoint.builder"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { Secret } from "@modules/platform/config"
 import { I18nModule } from "@modules/platform/i18n"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 import type { DynamicModule } from "@nestjs/common"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 
 /** The connection key of the mcp proofs: a local test key of their own, never a deployed one. */
 export const MCP_PROOF_TOKEN_KEY: Secret = new Secret(Buffer.alloc(32, 11).toString("base64"))
@@ -39,9 +39,9 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
             CONNECTION_SECRETS_MESSAGES,
             ERRORS_MESSAGES,
             IDENTITY_MESSAGES,
-            MCP_GATEWAY_MESSAGES,
-            MCP_GATEWAY_RECEIPTS_MESSAGES,
-            MCP_MESSAGES,
+            TOOLS_MESSAGES,
+            TOOL_RECEIPTS_MESSAGES,
+            MCP_ENDPOINT_MESSAGES,
         ],
     }),
     ErrorsModule.register({
@@ -50,9 +50,9 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
             API_KEYS_ERROR_KINDS,
             CONNECTION_SECRETS_ERROR_KINDS,
             IDENTITY_ERROR_KINDS,
-            MCP_GATEWAY_ERROR_KINDS,
-            MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
-            MCP_ERROR_KINDS,
+            TOOLS_ERROR_KINDS,
+            TOOL_RECEIPTS_ERROR_KINDS,
+            MCP_ENDPOINT_ERROR_KINDS,
         ],
     }),
     ...QUEUE_MODULES,
@@ -61,7 +61,7 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
     IdentityModule.register({
         isGlobal: true,
         verifyAccessToken: refuseSessions,
-        credentialAuthenticator: McpAgentAuthenticatorService,
+        credentialAuthenticator: McpKeyAuthenticatorService,
     }),
     DataRecordsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
@@ -77,13 +77,13 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
     EntityEngineModule.register({
         isGlobal: true,
         alerts: ReadOnlyEngineAlertsService,
-        entities: FLOW_F_ENTITIES,
+        entities: INSTALLED.entities(),
         jobs: [],
         cursorKey: MCP_PROOF_TOKEN_KEY,
     }),
-    PaymentTransactionsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: MCP_PROOF_TOKEN_KEY }),
-    McpCallLogModule.register({ isGlobal: true }),
-    McpGatewayModule.register({ isGlobal: true, remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 }),
+    ToolCallLogModule.register({ isGlobal: true }),
+    ToolsModule.register({ isGlobal: true, defaultTimeoutMs: 4000 }),
+    McpEndpointModule.register({ executor: NoDataOpsExecutor }),
 ]

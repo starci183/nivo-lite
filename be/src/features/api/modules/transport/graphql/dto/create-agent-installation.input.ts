@@ -13,23 +13,7 @@ import {
 } from "class-validator"
 
 @InputType()
-/** One ability of a new agent on a provider, as the owner left the proposal. */
-export class AgentProviderAbilityInput {
-    /** The ability id. */
-    @Field(() => String)
-    @IsString()
-    @MaxLength(41)
-    @Matches(/^[a-z][a-z0-9.-]{1,40}$/u)
-    id!: string
-
-    /** off (not ticked), auto or ask. */
-    @Field(() => String)
-    @IsIn(["off", "auto", "ask"])
-    mode!: "off" | "auto" | "ask"
-}
-
-@InputType()
-/** One connected account a new agent is attached to, with its abilities. */
+/** One connected account a new agent is attached to (an attachment holds no tick and no mode). */
 export class AgentProviderRightInput {
     /** The connected account: the connection id. */
     @Field(() => ID)
@@ -37,14 +21,6 @@ export class AgentProviderRightInput {
     @MaxLength(36)
     @IsUUID()
     connectionId!: string
-
-    /** The abilities wanted; an ability left out is off. */
-    @Field(() => [AgentProviderAbilityInput])
-    @IsArray()
-    @ArrayMaxSize(20)
-    @ValidateNested({ each: true })
-    @Type(() => AgentProviderAbilityInput)
-    abilities!: Array<AgentProviderAbilityInput>
 }
 
 @InputType()
@@ -107,8 +83,8 @@ export class CreateAgentInstallationInput {
     copyFrom: string | null = null
 
     /**
-     * The rights of the new agent on connected providers, as the owner left the proposal of agentAbilityProposal; null or absent
-     * takes the proposal as it is, an empty list attaches nothing.
+     * The accounts the new agent is attached to, as the owner left the proposal of agentAbilityProposal; null or absent takes the
+     * proposal as it is, an empty list attaches nothing.
      */
     @Field(() => [AgentProviderRightInput], { nullable: true })
     @IsOptional()

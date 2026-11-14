@@ -1,4 +1,4 @@
-import { Button, Cluster, DescriptionList, Heading, Quote, Stack, Text } from "@starci/grammar/common"
+import { Button, Cluster, DescriptionList, Heading, Quote, Stack, Text, SurfaceCard } from "@starci/grammar/common"
 import type { LessonActionView, LessonDetailView } from "@/modules/types"
 
 /** What the opened lesson draws. */
@@ -72,11 +72,13 @@ export const LessonDetail = (props: LessonDetailProps) => {
     const detail = props.detail
     return (
         <Stack gap="section">
-            <DescriptionList
-                density="compact"
-                items={detail.terms.map((term) => ({ id: term.id, term: term.term, description: term.text }))}
-                isLoading={props.isLoading}
-            />
+            <SurfaceCard>
+                <DescriptionList
+                    density="compact"
+                    items={detail.terms.map((term) => ({ id: term.id, term: term.term, description: term.text }))}
+                    isLoading={props.isLoading}
+                />
+            </SurfaceCard>
             {detail.evidence.length === 0 ? null : (
                 <Evidence title={detail.evidenceTitle} evidence={detail.evidence} isLoading={props.isLoading} />
             )}

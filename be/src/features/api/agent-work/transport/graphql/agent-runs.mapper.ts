@@ -1,9 +1,6 @@
-import type {
-    AgentRunDetail,
-    AgentRunsBoard,
-    ReadAgentRunRequest,
-    ReadAgentRunsRequest,
-} from "../../application/read-agent-runs.contracts"
+import type { Locale } from "@modules/platform/i18n"
+import type { AgentRunDetail, AgentRunsBoard } from "@modules/domain/agent-work"
+import type { ReadAgentRunRequest, ReadAgentRunsRequest } from "../../application/read-agent-runs.contracts"
 import type { AgentRunDetailType } from "./dto/agent-run-detail.type"
 import type { AgentRunInput } from "./dto/agent-run.input"
 import type { AgentRunsType } from "./dto/agent-run.type"
@@ -16,10 +13,11 @@ export const toReadAgentRunsRequest = (workspaceId: string, input: AgentWorkInst
 })
 
 /** Maps the run of the GraphQL input, with the workspace it names, to the request that reads it. */
-export const toReadAgentRunRequest = (workspaceId: string, input: AgentRunInput): ReadAgentRunRequest => ({
+export const toReadAgentRunRequest = (workspaceId: string, input: AgentRunInput, locale?: Locale): ReadAgentRunRequest => ({
     workspaceId,
     installationId: input.installationId,
     runId: input.runId,
+    locale,
 })
 
 /** Maps the runs of an agent to the GraphQL type. */
@@ -32,35 +30,5 @@ export const toAgentRunsType = (board: AgentRunsBoard): AgentRunsType => ({
     activeCount: board.activeCount,
 })
 
-/** Maps one run with its steps to the GraphQL type; null when the agent has no such run. */
-export const toAgentRunDetailType = (detail: AgentRunDetail | null): AgentRunDetailType | null =>
-    detail === null
-        ? null
-        : {
-              row: { ...detail.row },
-              steps: detail.steps.map((step) => ({
-                  ...step,
-                  input: step.input.map((fact) => ({ ...fact })),
-                  output: step.output.map((fact) => ({ ...fact })),
-                  calls: step.calls.map((call) => ({ ...call })),
-              })),
-              item:
-                  detail.item === null
-                      ? null
-                      : { ...detail.item, evidence: detail.item.evidence.map((fact) => ({ ...fact })) },
-              canResume: detail.canResume,
-              canCancel: detail.canCancel,
-              decision: detail.decision === null ? null : { ...detail.decision, options: [...detail.decision.options] },
-              aiCalls: detail.aiCalls.map((call) => ({
-                  ...call,
-                  upstreams: [...call.upstreams],
-                  finishReasons: [...call.finishReasons],
-                  models: [...call.models],
-                  declaredModels: [...call.declaredModels],
-                  modelProviders: [...call.modelProviders],
-                  modelReasons: [...call.modelReasons],
-                  failures: [...call.failures],
-                  workKinds: [...call.workKinds],
-              })),
-              aiTotals: { ...detail.aiTotals },
-          }
+/** Maps one run with its steps to the GraphQL type (its shape already is the type's); null when the agent has no such run. */
+export const toAgentRunDetailType = (detail: AgentRunDetail | null): AgentRunDetailType | null => detail

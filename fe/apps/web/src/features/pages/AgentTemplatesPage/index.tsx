@@ -7,10 +7,15 @@ import { AgentTemplatesPageBase, type AgentTemplatesView } from "./component"
 
 /** What the route hands the page: the view, and for the packaging view the installation. */
 interface AgentTemplatesPageProps {
-    readonly workspaceId: string
+    /** The workspace of the address; none while the page only draws its loading state. */
+    readonly workspaceId?: string | undefined
     readonly view: AgentTemplatesView
     readonly installationId?: string | undefined
 }
+
+/** The link of a crumb inside the workspace, or none while the page only draws its loading state. */
+const linkOf = (workspaceId: string | undefined, path: string): { readonly href?: string } =>
+    workspaceId === undefined ? {} : { href: workspaceHref(workspaceId, path) }
 
 /** The message namespace and the key of the title of each view. */
 const WORDS = {
@@ -54,7 +59,7 @@ export const AgentTemplatesPage = async (props: AgentTemplatesPageProps): Promis
                           {
                               id: "home",
                               label: ts("crumbHome"),
-                              href: workspaceHref(props.workspaceId, APP_ROUTES.workspaceHome),
+                              ...linkOf(props.workspaceId, APP_ROUTES.workspaceHome),
                           },
                           { id: "modules", label: title },
                       ]
@@ -63,7 +68,7 @@ export const AgentTemplatesPage = async (props: AgentTemplatesPageProps): Promis
                           home: ts("crumbHome"),
                           agents: t("crumbAgents"),
                           current: title,
-                          parent: { label: tt("title"), href: workspaceHref(props.workspaceId, `${AGENTS_ROUTE}/templates`) },
+                          parent: { label: tt("title"), ...linkOf(props.workspaceId, `${AGENTS_ROUTE}/templates`) },
                       }),
                 title,
                 description: tabbed ? tc("description") : t("description"),
@@ -81,3 +86,13 @@ export const AgentTemplatesPage = async (props: AgentTemplatesPageProps): Promis
         />
     )
 }
+
+/** What a loading route hands the page: the view only (a loading boundary knows no params). */
+interface AgentTemplatesLoadingPageProps {
+    readonly view: AgentTemplatesView
+}
+
+/** The same page while the route loads: the trail, heading and tabs stay real, the body blocks draw their own skeletons. */
+export const AgentTemplatesLoadingPage = (props: AgentTemplatesLoadingPageProps): ReactElement => (
+    <AgentTemplatesPage view={props.view} />
+)

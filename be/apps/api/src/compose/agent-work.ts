@@ -1,5 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
-import { OfficeInboundStopReporterService } from "@modules/domain/messages"
+import { TeamChatChainStopReporterService } from "@modules/domain/team-chat"
 import {
     AGENT_SCHEDULES_ERROR_KINDS,
     AGENT_SCHEDULES_MESSAGES,
@@ -14,19 +14,20 @@ import {
     AgentRunsModule,
 } from "@modules/domain/agent-runs"
 import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@modules/domain/agent-work"
-import { GRAPH_NODES_ERROR_KINDS, GRAPH_NODES_MESSAGES, GraphNodesModule } from "@modules/domain/graph-nodes"
-import type { NodeInstall } from "@modules/domain/graph-nodes"
+import {
+    GRAPH_NODES_ERROR_KINDS,
+    GRAPH_NODES_MESSAGES,
+    GraphNodesModule,
+    type NodeInstall,
+} from "@modules/domain/graph-nodes"
 import { AiTasksService } from "@modules/domain/ai-tasks"
-import { NodeToolDoorService } from "@modules/domain/mcp-gateway"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
-import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
-import { coreDataKinds, coreEffects, coreNodes, coreTools, modelWordsOf } from "@nivo-lite/blocks-core"
+import { NodeToolDoorService } from "@modules/domain/tools"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import {
     CHAT_NODE_PORTS_ERROR_KINDS,
     CHAT_NODE_PORTS_MESSAGES,
     ChatNodePortsModule,
 } from "@modules/domain/chat-node-ports"
-import { SALES_EFFECTS_ERROR_KINDS, SALES_EFFECTS_MESSAGES, SalesEffectsModule } from "@modules/domain/sales-effects"
 import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
 import { AgentCheckpointsModule } from "@modules/domain/agent-checkpoints"
 import { AgentDoorsModule } from "@modules/domain/agent-doors"
@@ -37,37 +38,32 @@ import {
     LANGGRAPH_MESSAGES,
     LanggraphModule,
 } from "@modules/integrations/langgraph"
-import { AGENT_PLUGINS_ERROR_KINDS, AGENT_PLUGINS_MESSAGES, AgentPluginsModule } from "@modules/domain/agent-plugins"
 import {
-    INTENT_CONTRACTS_ERROR_KINDS,
     INTENT_CONTRACTS_MESSAGES,
-    IntentContractsModule,
 } from "@modules/domain/intent-contracts"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { ApiOptions } from "../api.options"
 import type { MessageBundle } from "@modules/platform/i18n"
+import { AvatarsService } from "@modules/domain/avatars"
+import { WorkspaceSettingsModule } from "@modules/domain/workspace-settings"
 
-/** The nodes this app installs: the core library's nodes and the effects, tools and data kinds they may use. */
-const installedNodes: NodeInstall = {
-    nodes: coreNodes,
-    effects: coreEffects,
-    tools: coreTools,
-    dataKinds: coreDataKinds,
-    words: modelWordsOf,
-}
+/** The nodes this app installs: the nodes of every installed plugin (the core package and each plugin package) and the effects, tools and data kinds they may use. */
+const installedNodes: NodeInstall = INSTALLED.nodeInstall()
 
 /** The agent work area of the API: the store that lets an agent be woken by an event or a clock and run one turn at a time per scope, the durable run of each wake, and the clock that wakes it. */
 export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
-    AgentWorkModule.register({ isGlobal: true, ...options.agentWork }),
+    AgentWorkModule.register({ isGlobal: true }),
     AgentRunsModule.register({ isGlobal: true, ...options.agentRuns }),
     EntityEngineModule.register({
         isGlobal: true,
-        entities: FLOW_F_ENTITIES,
-        jobs: MODULE_JOBS,
+        entities: INSTALLED.entities(),
+        jobs: INSTALLED.jobs(),
         alerts: AgentRunEngineAlertsService,
         cursorKey: options.entityEngine.cursorKey,
         buildId: options.entityEngine.buildId,
     }),
+    // The workspace's own settings (name, time zone, logo) and, in this app, the door people change them through.
+    WorkspaceSettingsModule.register({ isGlobal: true, logos: AvatarsService }),
     GraphNodesModule.register({
         isGlobal: true,
         install: installedNodes,
@@ -77,10 +73,7 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
         agentLoop: { nodes: options.agentLoop?.nodes ?? [], loops: AGENT_LOOPS },
     }),
     ChatNodePortsModule.register({ isGlobal: true }),
-    SalesEffectsModule.register({ isGlobal: true }),
-    IntentContractsModule.register({ isGlobal: true }),
-    AgentPluginsModule.register({ isGlobal: true }),
-    AgentInboundModule.register({ isGlobal: true, stopReporter: OfficeInboundStopReporterService }),
+    AgentInboundModule.register({ isGlobal: true, stopReporter: TeamChatChainStopReporterService }),
     AgentSchedulesModule.register({ isGlobal: true, reactive: true }),
     // The engine on LangGraph threads: the store of the checkpoints, the one integration that owns the library, and the thread
     // runs (every workflow's runs).
@@ -104,9 +97,6 @@ export const agentWorkErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     ENTITY_ENGINE_ERROR_KINDS,
     GRAPH_NODES_ERROR_KINDS,
     CHAT_NODE_PORTS_ERROR_KINDS,
-    SALES_EFFECTS_ERROR_KINDS,
-    INTENT_CONTRACTS_ERROR_KINDS,
-    AGENT_PLUGINS_ERROR_KINDS,
     AGENT_INBOUND_ERROR_KINDS,
     AGENT_SCHEDULES_ERROR_KINDS,
     AGENT_GRAPHS_ERROR_KINDS,
@@ -122,11 +112,9 @@ export const agentWorkMessages: ReadonlyArray<MessageBundle> = [
     ENTITY_ENGINE_MESSAGES,
     GRAPH_NODES_MESSAGES,
     CHAT_NODE_PORTS_MESSAGES,
-    SALES_EFFECTS_MESSAGES,
     AGENT_INBOUND_MESSAGES,
     AGENT_SCHEDULES_MESSAGES,
     AGENT_GRAPHS_MESSAGES,
     INTENT_CONTRACTS_MESSAGES,
-    AGENT_PLUGINS_MESSAGES,
     LANGGRAPH_MESSAGES,
 ]

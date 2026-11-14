@@ -1,46 +1,68 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import { agentRunStopEntity } from "@nivo-lite/blocks-core/entities"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { MemoryRunStopStore } from "@tests/fixtures/builders/engine-core-stores.builder"
+import { RunStopEntity } from "../persistence/entities"
 import { RunStopsErrorCode } from "./errors/run-stops.error"
-import { RunStopRecordsService, runStopOf } from "./run-stop-records.service"
-import type { StopOpen } from "./run-stop.contracts"
+import { RunStopRecordsService } from "./run-stop-records.service"
+import { RUN_STOP_STORE } from "./run-stop-store.port"
+import { runStopOfRow } from "./run-stop-store.typeorm"
+import type { RunStop, StopOpen } from "./run-stop.contracts"
 
 const NOW = "2026-11-10T10:00:00.000Z"
 const LATER = "2026-11-10T11:00:00.000Z"
 
-const DATA = {
+const STOP: RunStop = {
+    id: "stop-1",
+    version: "1",
     runId: "11111111-1111-4111-8111-111111111111",
     stepKey: "match",
     agentId: "22222222-2222-4222-8222-222222222222",
     workflowId: null,
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_report",
     state: "open",
     reason: "why",
     question: null,
-    detail: { suggestions: [], facts: [{ name: "amount", value: "1.000đ" }] },
+    detail: { suggestions: [], facts: [{ name: "amount", value: "1.000\u0111" }] },
     cardMessageId: null,
-    customerLines: { lines: [] },
-    answers: { answers: [] },
+    customerLines: [],
+    answers: [],
     decision: null,
     repeats: 1,
     stoppedAt: NOW,
     resolvedAt: null,
 }
 
-const rowOf = (data: Readonly<Record<string, unknown>> = DATA, version = "1"): RecordRow => ({
-    id: "stop-1",
-    workspaceId: "ws-1",
-    version,
-    createdAt: NOW,
-    updatedAt: NOW,
-    data: data as RecordRow["data"],
-})
+/** A row of the stops table as Postgres hands it back, with the members a case sets. */
+const rowOf = (values: Partial<Record<keyof RunStopEntity, unknown>> = {}): RunStopEntity =>
+    Object.assign(new RunStopEntity(), {
+        id: "stop-1",
+        workspaceId: "ws-1",
+        runId: STOP.runId,
+        stepKey: "match",
+        agentId: STOP.agentId,
+        workflowId: null,
+        contactId: null,
+        conversationId: null,
+        kind: "ai_report",
+        state: "open",
+        reason: "why",
+        question: null,
+        detail: STOP.detail,
+        cardMessageId: null,
+        customerLines: { lines: [] },
+        answers: { answers: [] },
+        decision: null,
+        repeats: 1,
+        stoppedAt: new Date(NOW),
+        resolvedAt: null,
+        version: 1,
+        createdAt: new Date(NOW),
+        updatedAt: new Date(NOW),
+        ...values,
+    })
+
+const DATA = STOP
 
 const OPEN: StopOpen = {
     workspaceId: "ws-1",
@@ -48,10 +70,10 @@ const OPEN: StopOpen = {
     stepKey: "match",
     agentId: DATA.agentId,
     workflowId: null,
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_error",
-    reason: "AI lỗi",
+    reason: "AI l\u1ed7i",
     question: null,
     suggestions: [],
     facts: [],
@@ -63,104 +85,83 @@ const OPEN: StopOpen = {
     },
 }
 
-const build = async () => {
-    const engine = mock<EntityEngineService>()
-    const mutations = mock<EntityMutationService>()
-    engine.scoped.mockImplementation((_ws, work) => work(mock<ScopedTx>()))
+const build = async (rows: ReadonlyArray<RunStop> = []) => {
+    const store = new MemoryRunStopStore(rows)
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            RunStopRecordsService,
-            { provide: EntityEngineService, useValue: engine },
-            { provide: EntityMutationService, useValue: mutations },
-        ],
+        providers: [RunStopRecordsService, { provide: RUN_STOP_STORE, useValue: store }],
     }).compile()
-    return { records: moduleRef.get(RunStopRecordsService), engine, mutations }
+    return { records: moduleRef.get(RunStopRecordsService), store }
 }
 
-describe("runStopOf", () => {
+describe("runStopOfRow", () => {
     it("reads a stop, its lists unwrapped", () => {
-        expect(runStopOf(rowOf())).toMatchObject({
+        expect(runStopOfRow(rowOf())).toMatchObject({
             id: "stop-1",
             runId: DATA.runId,
             kind: "ai_report",
             state: "open",
-            detail: { facts: [{ name: "amount", value: "1.000đ" }] },
+            detail: { facts: [{ name: "amount", value: "1.000\u0111" }] },
             customerLines: [],
             answers: [],
             decision: null,
         })
     })
 
-    it("refuses a record that is not the shape of a stop", () => {
-        expect(() => runStopOf(rowOf({ ...DATA, kind: "mystery" }))).toThrow(
+    it("refuses a row that is not the shape of a stop", () => {
+        expect(() => runStopOfRow(rowOf({ kind: "mystery" }))).toThrow(
             expect.objectContaining({ code: RunStopsErrorCode.RecordUnreadable }),
         )
-        expect(() => runStopOf(rowOf({ ...DATA, answers: [] }))).toThrow(
+        expect(() => runStopOfRow(rowOf({ answers: [] }))).toThrow(
             expect.objectContaining({ code: RunStopsErrorCode.RecordUnreadable }),
         )
     })
 })
 
-describe("RunStopRecordsService.open: one record per run and step", () => {
+describe("RunStopRecordsService.open: one stop per run and step", () => {
     it("writes a new stop by its run and step key, open, with no lines, answers or decision", async () => {
-        const { records, mutations } = await build()
-        mutations.mutate.mockResolvedValue({ ok: true, row: rowOf(), version: "1", created: true })
+        const { records, store } = await build()
 
         await records.open(OPEN, NOW)
 
-        const [, mutation] = mutations.mutate.mock.calls[0] ?? []
-        expect(mutation).toMatchObject({
-            op: "ensure",
-            entity: "agent.run-stop",
-            match: "run_step",
+        expect(store.writes).toHaveLength(1)
+        expect(store.writes[0]).toMatchObject({
+            op: "insert",
             values: {
                 runId: DATA.runId,
                 stepKey: "match",
                 kind: "ai_error",
                 state: "open",
-                customerLines: { lines: [] },
-                answers: { answers: [] },
+                customerLines: [],
+                answers: [],
                 decision: null,
                 repeats: 1,
             },
         })
-        expect(mutations.mutate).toHaveBeenCalledTimes(1)
     })
 
-    it("opens the same record again when the step stops again after a decision: one more repeat, the new words, its lines and answers kept", async () => {
-        const { records, engine, mutations } = await build()
-        const answered = {
-            ...DATA,
+    it("opens the same stop again when the step stops again after a decision: one more repeat, the new words, its lines and answers kept", async () => {
+        const answered: RunStop = {
+            ...STOP,
+            version: "4",
             state: "resolved",
-            answers: { answers: [{ kind: "answer", text: "ghi nhận", by: "u1", at: NOW }] },
-            customerLines: { lines: [{ conversationId: "c-1", text: "x", at: NOW }] },
-            decision: { kind: "answer", text: "ghi nhận", by: "u1", at: NOW },
+            answers: [{ kind: "answer", text: "ghi nh\u1eadn", by: "u1", at: NOW }],
+            customerLines: [{ conversationId: "c-1", text: "x", at: NOW }],
+            decision: { kind: "answer", text: "ghi nh\u1eadn", by: "u1", at: NOW },
             cardMessageId: "33333333-3333-4333-8333-333333333333",
         }
-        mutations.mutate
-            .mockResolvedValueOnce({ ok: true, row: rowOf(answered), version: "4", created: false })
-            .mockImplementationOnce((_tx, mutation) =>
-                Promise.resolve({
-                    ok: true,
-                    row: rowOf({ ...answered, ...Reflect.get(mutation, "values") }, "5"),
-                    version: "5",
-                    created: false,
-                }),
-            )
-        engine.get.mockResolvedValue(rowOf(answered, "4"))
+        const { records, store } = await build([answered])
 
         const stop = await records.open(OPEN, LATER)
 
-        const [, update] = mutations.mutate.mock.calls[1] ?? []
+        const update = store.writes.find((write) => write.op === "update")
         expect(update).toMatchObject({
-            op: "update",
             values: { state: "open", decision: null, repeats: 2, stoppedAt: LATER, resolvedAt: null, kind: "ai_error" },
         })
-        expect(Reflect.get(Reflect.get(update ?? {}, "values"), "answers")).toBeUndefined()
+        expect(update?.values.answers).toBeUndefined()
         expect(stop).toMatchObject({
             state: "open",
             repeats: 2,
-            answers: [{ text: "ghi nhận" }],
+            answers: [{ text: "ghi nh\u1eadn" }],
             customerLines: [{ conversationId: "c-1" }],
             cardMessageId: "33333333-3333-4333-8333-333333333333",
         })
@@ -168,21 +169,19 @@ describe("RunStopRecordsService.open: one record per run and step", () => {
 })
 
 describe("RunStopRecordsService.newest: the open stops of a workspace, for the schedule list", () => {
-    it("lists one page of the newest stops of a state, served by the entity's index on state and moment (real query validator)", async () => {
-        const { records, engine } = await build()
-        engine.list.mockResolvedValue({ rows: [{ row: rowOf() }], next: null } as never)
+    it("lists one bounded page of the newest stops of a state", async () => {
+        const many = Array.from({ length: 120 }, (_, at) => ({
+            ...STOP,
+            id: `stop-${String(at).padStart(3, "0")}`,
+            stepKey: `s${at}`,
+            stoppedAt: new Date(Date.parse(NOW) + at * 1000).toISOString(),
+        }))
+        const { records } = await build([...many, { ...STOP, id: "closed", stepKey: "closed", state: "resolved" }])
 
         const stops = await records.newest("ws-1", "open", 500)
 
-        expect(stops.map((stop) => [stop.runId, stop.state])).toEqual([[DATA.runId, "open"]])
-        expect(engine.scoped).toHaveBeenCalledWith("ws-1", expect.any(Function))
-        const queries = engine.list.mock.calls.map(([, query]) => query)
-        expect(queries.map((query) => query.page)).toEqual([{ size: 50 }])
-        const catalog = new Map([[agentRunStopEntity.name, agentRunStopEntity]])
-        expect(queries.flatMap((query) => queryProblems(query, catalog))).toEqual([])
-        // The validator has teeth: the same list ordered by a field no index serves is refused.
-        const [first] = queries
-        if (first === undefined) throw new Error("no query")
-        expect(queryProblems({ ...first, order: [["reason", "asc"]] }, catalog)).not.toEqual([])
+        expect(stops).toHaveLength(100)
+        expect(stops.every((stop) => stop.state === "open")).toBe(true)
+        expect(stops[0]?.id).toBe("stop-119")
     })
 })

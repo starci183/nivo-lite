@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { ZaloReconcileService } from "@modules/domain/zalo-provider"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { ZaloReconcileService } from "@modules/domain/zalo-inbox"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: every Zalo connection that holds a token is read back for the customer messages its webhook never delivered, then its new customers are named. */

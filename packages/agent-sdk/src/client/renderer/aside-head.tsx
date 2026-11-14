@@ -1,5 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from "react"
-import type { ReactNode } from "react"
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react"
 
 /** The sticky head of the aside pane that a block inside it asks for: the record it shows, what kind it is and how to close it. */
 export interface AsideHead {

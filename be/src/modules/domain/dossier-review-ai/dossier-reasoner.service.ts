@@ -1,71 +1,64 @@
 import { Injectable } from "@nestjs/common"
-import type { CritiqueBundle, CritiqueTry, DocumentCriticModel, DossierBundle, DossierReasoner } from "@modules/domain/dossier-review"
+import type { CritiqueBundle, CritiqueTry, DocumentCriticModel } from "@modules/domain/dossier-review"
 import { UsageMeterService } from "@modules/domain/knowledge"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiBudget, AiService } from "@modules/integrations/ai"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { CRITIC_SYSTEM_PROMPT, criticUserPrompt } from "./document-critic-prompt.policy"
+import { CRITIC_EFFORT, InjectAi, type AiBudget, type AiService } from "@modules/integrations/ai"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { DOCUMENT_CRITIQUE_OUTPUT_SCHEMA, readCritique } from "./document-critic-answer.policy"
+import { CRITIC_POINTS_MAX, CRITIC_SYSTEM_PROMPT, criticUserPrompt } from "./document-critic-prompt.policy"
 import { DOCUMENT_CRITIQUE_SCHEMA } from "./document-critic.schema"
-import { SYSTEM_PROMPT, userPrompt } from "./dossier-review-prompt.policy"
-import { DOSSIER_REVIEW_SCHEMA } from "./dossier-review.schema"
-import type { OptionalReview } from "./dossier-review-ai.contracts"
 import { ModelCallPolicy } from "./model-call.policy"
-import { toReasonedReview } from "./reasoned.mapper"
 
-/** How long the model may take to review one dossier: with reasoning off it answers in about five seconds. */
-const REVIEW_TIMEOUT_MS = 60_000
+/** How long one critique of a shop document may take: the cheap chat profile with reasoning off answers a slice in seconds. */
+const CRITIQUE_TIMEOUT_MS = 90_000
 
-/** What one review may spend: reasoning off (the default reasoning writes about 10,000 tokens and takes about a minute) and at most this many completion tokens (eight findings are about 3,000). */
-const REVIEW_BUDGET: AiBudget = { effort: "off", maxTokens: 8000 }
+/** The completion tokens one point of a critique answer is sized at: a short line, why and question, and one quote of 300 characters. */
+const CRITIQUE_POINT_TOKENS = 200
 
-/** How long one critique of a shop document may take, and what it may spend: like the relation pass, no reasoning, a bounded JSON answer. */
-const CRITIQUE_TIMEOUT_MS = 60_000
-const CRITIQUE_BUDGET: AiBudget = { effort: "off", maxTokens: 4000 }
+/**
+ * What one critique may spend: reasoning off (it only looks for text addressed to an AI, a reading, not a judgement) and a cap
+ * sized from the answer's shape, the most points the prompt allows. An answer that still reaches the cap is told by its finish
+ * reason and asked again over half the passages (`DocumentCriticService`), never parsed.
+ */
+const CRITIQUE_BUDGET: AiBudget = { effort: CRITIC_EFFORT, maxTokens: CRITIC_POINTS_MAX * CRITIQUE_POINT_TOKENS }
 
 @Injectable()
-/**
- * The dossier review's model: reads one bundle critically and answers the findings it cites and its verdict on the AI findings still open.
- * It answers null when the model is unavailable or its answer did not parse after the one retry; the core then keeps the rule findings.
- */
-export class DossierReasonerService extends ModelCallPolicy implements DossierReasoner, DocumentCriticModel {
+/** The critic's model: reads one shop document critically and answers the points it cites, one call per try the critic counts. */
+export class DossierReasonerService extends ModelCallPolicy implements DocumentCriticModel {
     constructor(@InjectAi() ai: AiService, usage: UsageMeterService, @InjectLogger() logger: Logger) {
         super(ai, usage, logger)
     }
 
-    /** One review of a bundle; the answer is not yet checked against the bundle, the core's evidence guard does that. */
-    async review(bundle: DossierBundle): Promise<OptionalReview> {
-        const call = await this.ask({
-            workspaceId: bundle.workspaceId,
-            system: SYSTEM_PROMPT,
-            user: userPrompt(bundle),
-            schema: DOSSIER_REVIEW_SCHEMA,
-            timeoutMs: REVIEW_TIMEOUT_MS,
-            purpose: "review",
-            budget: REVIEW_BUDGET,
-        })
-        return call === null ? null : toReasonedReview(call.value, call)
-    }
-
-    /** ONE critique call of a shop document (the critic counts its three tries); recorded under kind `brain`, module `dossier_review`. */
-    async critique(bundle: CritiqueBundle): Promise<CritiqueTry> {
-        const call = await this.askOnce({
-            workspaceId: bundle.workspaceId,
-            system: CRITIC_SYSTEM_PROMPT,
-            user: criticUserPrompt(bundle),
-            schema: DOCUMENT_CRITIQUE_SCHEMA,
-            timeoutMs: CRITIQUE_TIMEOUT_MS,
-            purpose: "critique",
-            budget: CRITIQUE_BUDGET,
-        })
-        if (call === "unavailable" || call === "unreadable") return { ok: false, reason: call }
+    /**
+     * ONE critique call of a shop document (the critic counts its three tries), on the endpoint's chat profile (no target: the cheap
+     * tier); recorded under kind `brain`, module `dossier_review`.
+     * The answer is asked as the API's structured output and read point by point: a point that does not fit is left out and
+     * reported in `refused`, the others stand. `attempt` is the try the critic counts (absent: 2 after an unreadable answer, else 1).
+     */
+    async critique(bundle: CritiqueBundle, after?: "unreadable", attempt?: number): Promise<CritiqueTry> {
+        const call = await this.askOnce(
+            {
+                workspaceId: bundle.workspaceId,
+                system: CRITIC_SYSTEM_PROMPT,
+                user: criticUserPrompt(bundle, after),
+                schema: DOCUMENT_CRITIQUE_SCHEMA,
+                outputSchema: DOCUMENT_CRITIQUE_OUTPUT_SCHEMA,
+                timeoutMs: CRITIQUE_TIMEOUT_MS,
+                purpose: "critique",
+                budget: CRITIQUE_BUDGET,
+                cached: true,
+            },
+            attempt ?? (after === "unreadable" ? 2 : 1),
+        )
+        if (call === "unavailable" || call === "unreadable" || call === "cut") return { ok: false, reason: call }
+        const read = readCritique(call.value)
         return {
             ok: true,
             answer: {
-                findings: call.value.findings,
+                findings: read.findings,
                 model: call.model,
                 promptTokens: call.promptTokens,
                 completionTokens: call.completionTokens,
+                ...(read.refused.length === 0 ? {} : { refused: read.refused }),
             },
         }
     }

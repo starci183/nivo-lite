@@ -73,7 +73,7 @@ export const STEP_ICONS: Readonly<Record<NodeIcon, IconSource>> = {
     hand: HandRaisedIcon,
 }
 
-/** The card kind of each graph node kind: the first drawing's kinds map on (trigger → event, step → action, output → end). */
+/** The card kind of each graph node kind: the first drawing's kinds map on (trigger -> event, step -> action, output -> end). */
 const STEP_KINDS: Readonly<Record<GraphNodeKind, FlowGraphStepKind>> = {
     trigger: "event",
     step: "action",
@@ -194,12 +194,11 @@ const stepNodeOf = (node: GraphNodeView, place: NodePlace, locale: NodeLocale): 
     const tag = tagOf(kind, isStart, locale)
     const base = choiceOf(node) ?? node.subtitle ?? node.description ?? ""
     const chips = kind === "end" ? [] : chipsOf(node)
-    const line = base
     return {
         id: node.id,
         label: kind === "end" ? (node.outcome?.label ?? wordOf(locale, "graphStepEnd")) : (node.title ?? node.label),
         ...(kind === "end" && place.isMainOutcome ? { tone: "accent" as const } : {}),
-        ...(kind === "end" || line === "" ? {} : { description: line }),
+        ...(kind === "end" || base === "" ? {} : { description: base }),
         kind,
         ...(icon === undefined ? {} : { icon }),
         ...(tag === undefined ? {} : { tag }),

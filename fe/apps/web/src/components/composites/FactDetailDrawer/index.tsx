@@ -12,6 +12,7 @@ import {
     Quote,
     Stack,
     Text,
+    SurfaceCard,
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { FactDrawerDetailView } from "@/modules/types"
@@ -51,7 +52,7 @@ const Footer = (props: FooterProps) => {
     const { view, on } = props
     return (
         <Cluster gap="inline" justify="between" align="center">
-            <Cluster gap="inline">
+            <Cluster gap="identity">
                 <DropdownMenu
                     placement="top start"
                     entries={view.menu.entries.map((entry) => ({ id: entry.id, label: entry.label, tone: entry.tone }))}
@@ -70,7 +71,7 @@ const Footer = (props: FooterProps) => {
                     </Button>
                 )}
             </Cluster>
-            <Cluster gap="inline">
+            <Cluster gap="identity">
                 {view.edit === null ? null : (
                     <Button intent="neutral" onPress={on.edit}>
                         {view.edit.label}
@@ -149,10 +150,12 @@ export const FactDetailDrawer = (props: FactDetailDrawerProps): ReactElement | n
                         <Quote text={view.quote.text} byline={view.quote.source} />
                     </Stack>
                 )}
-                <DescriptionList
-                    density="compact"
-                    items={view.terms.map((term) => ({ id: term.id, term: term.term, description: term.text }))}
-                />
+                <SurfaceCard>
+                    <DescriptionList
+                        density="compact"
+                        items={view.terms.map((term) => ({ id: term.id, term: term.term, description: term.text }))}
+                    />
+                </SurfaceCard>
                 <History view={view} />
             </Stack>
             {view.retire === null ? null : (

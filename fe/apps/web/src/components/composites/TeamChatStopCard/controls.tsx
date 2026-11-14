@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import { Button, Cluster, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import type { TeamChatStopAction, TeamChatStopCardView } from "@/modules/types"
 import { STOP_ANSWER_CLASS_NAME } from "./classNames"
@@ -27,7 +27,7 @@ export const StopAnswerBox = (props: StopAnswerBoxProps) => {
                 <SurfaceCard
                     kind="list"
                     layout="suggestions"
-                    ariaLabel={card.labels.suggestionsLabel}
+                    label={card.labels.suggestionsLabel}
                     empty={null}
                     items={card.suggestions.map((suggestion) => ({
                         id: suggestion,
@@ -63,28 +63,79 @@ const decisionLabelOf = (card: TeamChatStopCardView, decision: TeamChatStopCardV
     return decision === "take_over" ? card.labels.takeOver : card.labels.skip
 }
 
-/** The decisions row and what stands at its end. */
-export interface StopDecisionsRowProps extends StopAnswerBoxProps {
-    readonly details: ReactNode
+/** The decisions row takes the same controls as the answer box. */
+export type StopDecisionsRowProps = Pick<StopAnswerBoxProps, "card" | "isPending" | "act">
+
+/** The neutral decisions the engine accepts now (retry, take over, skip). */
+export const StopDecisionsRow = (props: StopDecisionsRowProps) => (
+    <Cluster gap="inline" label={props.card.labels.decisionsLabel}>
+        {props.card.decisions.map((decision) => (
+            <Button
+                key={decision}
+                intent="neutral"
+                size="sm"
+                isDisabled={props.isPending}
+                onPress={() => props.act({ kind: "decision", decision })}
+            >
+                {decisionLabelOf(props.card, decision)}
+            </Button>
+        ))}
+    </Cluster>
+)
+
+/** What a person is asked to approve, whole: the message as the customer will get it and the files it sends, each in one bordered row. */
+const StopApprovalContent = (props: { readonly card: TeamChatStopCardView }) => {
+    const { card } = props
+    const approval = card.approval
+    if (approval === null) return null
+    const rows = [
+        ...(approval.messageLines.length === 0
+            ? []
+            : [
+                  {
+                      id: "message",
+                      title: card.labels.messageLabel,
+                      value: (
+                          <Stack gap="row">
+                              {approval.messageLines.map((line, index) => (
+                                  <Text key={`${String(index)}-${line}`}>{line}</Text>
+                              ))}
+                          </Stack>
+                      ),
+                  },
+              ]),
+        ...(approval.files.length === 0
+            ? []
+            : [
+                  {
+                      id: "files",
+                      title: card.labels.filesLabel,
+                      value: (
+                          <Stack gap="row">
+                              {approval.files.map((address, index) => (
+                                  <Text key={`${String(index)}-${address}`}>{address}</Text>
+                              ))}
+                          </Stack>
+                      ),
+                  },
+              ]),
+    ]
+    return rows.length === 0 ? null : (
+        <SurfaceCard kind="list" layout="keyValue" ariaLabel={card.labels.messageLabel} empty={null} items={rows} />
+    )
 }
 
-/** The neutral decisions the engine accepts now (retry, take over, skip), and "Details" at the row end. */
-export const StopDecisionsRow = (props: StopDecisionsRowProps) => (
-    <Cluster gap="row" justify="between">
-        <Cluster gap="inline" label={props.card.labels.decisionsLabel}>
-            {props.card.decisions.map((decision) => (
-                <Button
-                    key={decision}
-                    intent="neutral"
-                    size="sm"
-                    isDisabled={props.isPending}
-                    onPress={() => props.act({ kind: "decision", decision })}
-                >
-                    {decisionLabelOf(props.card, decision)}
-                </Button>
-            ))}
-        </Cluster>
-        {props.details}
+/** The way back after a take-over: hands the customer to the agent again (one neutral small button). */
+export const StopHandBack = (props: StopAnswerBoxProps & { readonly conversationId: string }) => (
+    <Cluster gap="inline">
+        <Button
+            intent="neutral"
+            size="sm"
+            isPending={props.isPending}
+            onPress={() => props.act({ kind: "hand_back", conversationId: props.conversationId })}
+        >
+            {props.card.labels.handBack}
+        </Button>
     </Cluster>
 )
 
@@ -101,6 +152,7 @@ export const StopApproval = (props: StopApprovalProps) => {
     const { card, controls } = props
     return (
         <Stack gap="row">
+            <StopApprovalContent card={card} />
             <StopLinesList label={card.labels.approvalLabel} lines={props.lines} />
             {controls === null || card.verdicts.length === 0 ? null : (
                 <Cluster gap="inline">

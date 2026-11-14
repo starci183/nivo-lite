@@ -20,7 +20,7 @@ export class WebsiteSiteEntity extends UuidAbstractEntity {
     @Column({ name: "chat_enabled", type: "boolean", default: () => "true" })
     chatEnabled!: boolean
 
-    /** The site shows the order form. */
+    /** The site shows the hosted form; off refuses every submission. */
     @Column({ name: "form_enabled", type: "boolean", default: () => "true" })
     formEnabled!: boolean
 

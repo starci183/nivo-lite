@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { ChannelSetupError, ChannelSetupErrorCode } from "./errors/channel-setup.error"
 import { InjectChannelSetupOptions } from "./channel-setup.decorators"
-import type { OptionalZaloUrl, PayosCredential, TelegramBot, TelegramWebhookInfo } from "./channel-setup.contracts"
+import type { OptionalZaloUrl, PayosConfirmCredential, TelegramBot, TelegramWebhookInfo } from "./channel-setup.contracts"
 import type { ChannelSetupOptions } from "./channel-setup.options"
 import { zaloAuthorizeUrl, zaloCallbackUrl } from "./zalo-oauth.policy"
 
@@ -62,7 +61,7 @@ export class ChannelSetupClient {
     }
 
     /** Asks payOS to confirm the webhook address with the channel's Client ID and API Key; rejects unless payOS answers code 00. */
-    async payosConfirmWebhook(credential: PayosCredential, webhookUrl: string): Promise<void> {
+    async payosConfirmWebhook(credential: PayosConfirmCredential, webhookUrl: string): Promise<void> {
         const response = await this.send({
             method: "POST",
             url: PAYOS_CONFIRM_WEBHOOK,

@@ -4,7 +4,7 @@ export interface SendMessageRequest {
     readonly authorization: string | undefined
     /** The text to send. */
     readonly text: string
-    /** The customer conversation to message. */
+    /** The customer conversation to message: the ROUTE id. */
     readonly conversationId: string
     /** True forces a waiting decision whatever the owner's rule says. */
     readonly requireApproval?: boolean | undefined
@@ -16,6 +16,6 @@ export interface SendMessageRequest {
 export interface SendMessageResult {
     /** The conversation the message goes to. */
     readonly conversationId: string
-    /** The message is queued; the owner's authority rule decides whether it is sent or waits for a decision. */
+    /** The message is stored and queued; it is delivered after the request commits, or held and told to the founder when it asks for approval. */
     readonly status: "queued"
 }

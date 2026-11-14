@@ -2,845 +2,740 @@
   "version": 1,
   "entities": [
     {
-      "entity": "accounting.adjustment",
-      "partition": "records_accounting_adjustment",
+      "entity": "blocks-core.booking.booking",
+      "partition": "records_blocks_core_booking_booking",
       "checks": [
-        "records_accounting_adjustment_corrected_amount_chk",
-        "records_accounting_adjustment_corrected_amount_vnd_chk",
-        "records_accounting_adjustment_created_by_chk",
-        "records_accounting_adjustment_created_by_user_chk",
-        "records_accounting_adjustment_note_chk",
-        "records_accounting_adjustment_target_id_chk",
-        "records_accounting_adjustment_target_type_chk"
-      ],
-      "indexes": ["records_accounting_adjustment_recent", "records_accounting_adjustment_target"]
-    },
-    {
-      "entity": "accounting.book-entry",
-      "partition": "records_accounting_book_entry",
-      "view": "v_records_accounting_book_entry",
-      "checks": [
-        "records_accounting_book_entry_amount_vnd_chk",
-        "records_accounting_book_entry_counterparty_chk",
-        "records_accounting_book_entry_entry_date_chk",
-        "records_accounting_book_entry_kind_chk",
-        "records_accounting_book_entry_note_chk",
-        "records_accounting_book_entry_source_entity_chk",
-        "records_accounting_book_entry_source_id_chk",
-        "records_accounting_book_entry_status_chk"
+        "records_blocks_core_booking_booking_agent_scope_chk",
+        "records_blocks_core_booking_booking_block_end_at_chk",
+        "records_blocks_core_booking_booking_contact_id_chk",
+        "records_blocks_core_booking_booking_conversation_id_chk",
+        "records_blocks_core_booking_booking_customer_email_chk",
+        "records_blocks_core_booking_booking_customer_name_chk",
+        "records_blocks_core_booking_booking_customer_phone_chk",
+        "records_blocks_core_booking_booking_end_at_chk",
+        "records_blocks_core_booking_booking_note_chk",
+        "records_blocks_core_booking_booking_party_size_chk",
+        "records_blocks_core_booking_booking_reminded_at_chk",
+        "records_blocks_core_booking_booking_resource_id_chk",
+        "records_blocks_core_booking_booking_service_id_chk",
+        "records_blocks_core_booking_booking_start_at_chk",
+        "records_blocks_core_booking_booking_status_chk"
       ],
       "indexes": [
-        "records_accounting_book_entry_amount",
-        "records_accounting_book_entry_date",
-        "records_accounting_book_entry_kind_amount",
-        "records_accounting_book_entry_kind_date",
-        "records_accounting_book_entry_kind_day",
-        "records_accounting_book_entry_note_trgm_idx",
-        "records_accounting_book_entry_source_key",
-        "records_accounting_book_entry_status_amount",
-        "records_accounting_book_entry_status_date"
+        "records_blocks_core_booking_booking_contact_id_contact_idx",
+        "records_blocks_core_booking_booking_contact_start",
+        "records_blocks_core_booking_booking_customer_name_trgm_idx",
+        "records_blocks_core_booking_booking_start",
+        "records_blocks_core_booking_booking_status_start"
       ]
     },
     {
-      "entity": "accounting.invoice",
-      "partition": "records_accounting_invoice",
+      "entity": "blocks-core.booking.hours",
+      "partition": "records_blocks_core_booking_hours",
       "checks": [
-        "records_accounting_invoice_amount_chk",
-        "records_accounting_invoice_amount_vnd_chk",
-        "records_accounting_invoice_contract_id_chk",
-        "records_accounting_invoice_contract_period_chk",
-        "records_accounting_invoice_due_at_chk",
-        "records_accounting_invoice_invoice_no_chk",
-        "records_accounting_invoice_issued_at_chk",
-        "records_accounting_invoice_issued_by_chk",
-        "records_accounting_invoice_order_id_chk",
-        "records_accounting_invoice_paid_at_chk",
-        "records_accounting_invoice_period_ends_on_chk",
-        "records_accounting_invoice_status_chk"
+        "records_blocks_core_booking_hours_agent_scope_chk",
+        "records_blocks_core_booking_hours_calendar_chk",
+        "records_blocks_core_booking_hours_resource_id_chk",
+        "records_blocks_core_booking_hours_scope_chk"
       ],
       "indexes": [
-        "records_accounting_invoice_contract_period_key",
-        "records_accounting_invoice_invoice_no_key",
-        "records_accounting_invoice_key",
-        "records_accounting_invoice_order_key",
-        "records_accounting_invoice_recent",
-        "records_accounting_invoice_status_recent"
+        "records_blocks_core_booking_hours_scope",
+        "records_blocks_core_booking_hours_scope_key"
       ]
     },
     {
-      "entity": "accounting.question",
-      "partition": "records_accounting_question",
+      "entity": "blocks-core.booking.resource",
+      "partition": "records_blocks_core_booking_resource",
       "checks": [
-        "records_accounting_question_answer_chk",
-        "records_accounting_question_answered_by_chk",
-        "records_accounting_question_source_chk",
-        "records_accounting_question_status_chk",
-        "records_accounting_question_text_chk"
-      ],
-      "indexes": ["records_accounting_question_source", "records_accounting_question_status_created"]
-    },
-    {
-      "entity": "accounting.settings",
-      "partition": "records_accounting_settings",
-      "checks": [
-        "records_accounting_settings_post_expenses_chk",
-        "records_accounting_settings_post_outgoing_chk",
-        "records_accounting_settings_post_unmatched_chk",
-        "records_accounting_settings_rematch_days_chk",
-        "records_accounting_settings_scope_chk",
-        "records_accounting_settings_vat_period_chk",
-        "records_accounting_settings_void_mode_chk"
-      ],
-      "indexes": ["records_accounting_settings_scope", "records_accounting_settings_scope_key"]
-    },
-    {
-      "entity": "agent.conversation-hold",
-      "partition": "records_agent_conversation_hold",
-      "view": "v_records_agent_conversation_hold",
-      "checks": [
-        "records_agent_conversation_hold_agent_id_chk",
-        "records_agent_conversation_hold_conversation_id_chk",
-        "records_agent_conversation_hold_held_at_chk",
-        "records_agent_conversation_hold_run_id_chk",
-        "records_agent_conversation_hold_workflow_id_chk"
+        "records_blocks_core_booking_resource_active_chk",
+        "records_blocks_core_booking_resource_agent_scope_chk",
+        "records_blocks_core_booking_resource_capacity_chk",
+        "records_blocks_core_booking_resource_kind_chk",
+        "records_blocks_core_booking_resource_name_chk",
+        "records_blocks_core_booking_resource_sort_chk",
+        "records_blocks_core_booking_resource_staff_id_chk"
       ],
       "indexes": [
-        "records_agent_conversation_hold_conversation_key",
-        "records_agent_conversation_hold_conversation_lookup"
+        "records_blocks_core_booking_resource_active_sort",
+        "records_blocks_core_booking_resource_name_trgm_idx",
+        "records_blocks_core_booking_resource_sort"
       ]
     },
     {
-      "entity": "agent.graph",
-      "partition": "records_agent_graph",
-      "view": "v_records_agent_graph",
+      "entity": "blocks-core.booking.service",
+      "partition": "records_blocks_core_booking_service",
       "checks": [
-        "records_agent_graph_active_version_id_chk",
-        "records_agent_graph_agent_id_chk",
-        "records_agent_graph_draft_chk",
-        "records_agent_graph_draft_rev_chk",
-        "records_agent_graph_installation_id_chk",
-        "records_agent_graph_mode_chk",
-        "records_agent_graph_mode_set_at_chk",
-        "records_agent_graph_mode_set_by_chk"
-      ],
-      "indexes": ["records_agent_graph_agent", "records_agent_graph_agent_key", "records_agent_graph_installation"]
-    },
-    {
-      "entity": "agent.graph-decision",
-      "partition": "records_agent_graph_decision",
-      "view": "v_records_agent_graph_decision",
-      "checks": [
-        "records_agent_graph_decision_action_chk",
-        "records_agent_graph_decision_agent_id_chk",
-        "records_agent_graph_decision_approval_request_id_chk",
-        "records_agent_graph_decision_branch_key_chk",
-        "records_agent_graph_decision_closed_as_chk",
-        "records_agent_graph_decision_dedupe_key_chk",
-        "records_agent_graph_decision_facts_chk",
-        "records_agent_graph_decision_gate_verdict_chk",
-        "records_agent_graph_decision_mode_chk",
-        "records_agent_graph_decision_once_check",
-        "records_agent_graph_decision_outcome_chk",
-        "records_agent_graph_decision_path_chk",
-        "records_agent_graph_decision_road_chk",
-        "records_agent_graph_decision_shadow_diff_chk",
-        "records_agent_graph_decision_subject_id_chk",
-        "records_agent_graph_decision_subject_type_chk",
-        "records_agent_graph_decision_turn_id_chk",
-        "records_agent_graph_decision_unjudged_chk",
-        "records_agent_graph_decision_unread_chk",
-        "records_agent_graph_decision_version_id_chk",
-        "records_agent_graph_decision_wake_id_chk",
-        "records_agent_graph_decision_work_item_id_chk"
+        "records_blocks_core_booking_service_active_chk",
+        "records_blocks_core_booking_service_agent_scope_chk",
+        "records_blocks_core_booking_service_buffer_min_chk",
+        "records_blocks_core_booking_service_duration_min_chk",
+        "records_blocks_core_booking_service_name_chk",
+        "records_blocks_core_booking_service_note_chk",
+        "records_blocks_core_booking_service_price_vnd_chk",
+        "records_blocks_core_booking_service_resource_kind_chk"
       ],
       "indexes": [
-        "records_agent_graph_decision_agent_recent",
-        "records_agent_graph_decision_dedupe_key_key",
-        "records_agent_graph_decision_recent",
-        "records_agent_graph_decision_request",
-        "records_agent_graph_decision_work_item",
-        "records_agent_graph_decision_work_item_key"
+        "records_blocks_core_booking_service_active_name",
+        "records_blocks_core_booking_service_name",
+        "records_blocks_core_booking_service_name_trgm_idx"
       ]
     },
     {
-      "entity": "agent.graph-proposal",
-      "partition": "records_agent_graph_proposal",
-      "view": "v_records_agent_graph_proposal",
+      "entity": "blocks-core.booking.settings",
+      "partition": "records_blocks_core_booking_settings",
       "checks": [
-        "records_agent_graph_proposal_agent_id_chk",
-        "records_agent_graph_proposal_base_version_id_chk",
-        "records_agent_graph_proposal_branch_key_chk",
-        "records_agent_graph_proposal_decided_at_chk",
-        "records_agent_graph_proposal_decided_by_chk",
-        "records_agent_graph_proposal_dedupe_key_chk",
-        "records_agent_graph_proposal_evidence_chk",
-        "records_agent_graph_proposal_kind_chk",
-        "records_agent_graph_proposal_node_key_chk",
-        "records_agent_graph_proposal_patch_chk",
-        "records_agent_graph_proposal_result_version_id_chk",
-        "records_agent_graph_proposal_status_chk",
-        "records_agent_graph_proposal_widens_chk"
+        "records_blocks_core_booking_settings_agent_scope_chk",
+        "records_blocks_core_booking_settings_key_chk",
+        "records_blocks_core_booking_settings_max_advance_days_chk",
+        "records_blocks_core_booking_settings_min_lead_min_chk",
+        "records_blocks_core_booking_settings_remind_hours_before_chk",
+        "records_blocks_core_booking_settings_slot_step_min_chk"
       ],
       "indexes": [
-        "records_agent_graph_proposal_agent_dedupe_key",
-        "records_agent_graph_proposal_agent_kind_status",
-        "records_agent_graph_proposal_agent_status"
+        "records_blocks_core_booking_settings_booking_key",
+        "records_blocks_core_booking_settings_key"
       ]
     },
     {
-      "entity": "agent.graph-source",
-      "partition": "records_agent_graph_source",
+      "entity": "blocks-core.chatbot.chat",
+      "partition": "records_blocks_core_chatbot_chat",
       "checks": [
-        "records_agent_graph_source_agent_id_chk",
-        "records_agent_graph_source_branch_key_chk",
-        "records_agent_graph_source_kind_chk",
-        "records_agent_graph_source_node_key_chk",
-        "records_agent_graph_source_ref_chk",
-        "records_agent_graph_source_value_hash_chk",
-        "records_agent_graph_source_version_id_chk"
-      ],
-      "indexes": ["records_agent_graph_source_kind_version", "records_agent_graph_source_source_key"]
-    },
-    {
-      "entity": "agent.graph-version",
-      "partition": "records_agent_graph_version",
-      "view": "v_records_agent_graph_version",
-      "checks": [
-        "records_agent_graph_version_agent_id_chk",
-        "records_agent_graph_version_change_kind_chk",
-        "records_agent_graph_version_context_version_id_chk",
-        "records_agent_graph_version_document_chk",
-        "records_agent_graph_version_document_hash_chk",
-        "records_agent_graph_version_note_chk",
-        "records_agent_graph_version_number_chk",
-        "records_agent_graph_version_published_at_chk",
-        "records_agent_graph_version_published_by_chk"
-      ],
-      "indexes": ["records_agent_graph_version_agent_version", "records_agent_graph_version_agent_version_key"]
-    },
-    {
-      "entity": "agent.lead-freeze",
-      "partition": "records_agent_lead_freeze",
-      "view": "v_records_agent_lead_freeze",
-      "checks": [
-        "records_agent_lead_freeze_agent_id_chk",
-        "records_agent_lead_freeze_conversation_id_chk",
-        "records_agent_lead_freeze_customer_name_chk",
-        "records_agent_lead_freeze_episode_chk",
-        "records_agent_lead_freeze_failures_chk",
-        "records_agent_lead_freeze_frozen_at_chk",
-        "records_agent_lead_freeze_frozen_reason_chk",
-        "records_agent_lead_freeze_frozen_run_id_chk",
-        "records_agent_lead_freeze_held_by_chk",
-        "records_agent_lead_freeze_key_chk",
-        "records_agent_lead_freeze_lead_id_chk",
-        "records_agent_lead_freeze_pending_chk",
-        "records_agent_lead_freeze_release_reason_chk",
-        "records_agent_lead_freeze_released_at_chk",
-        "records_agent_lead_freeze_released_by_chk",
-        "records_agent_lead_freeze_status_chk",
-        "records_agent_lead_freeze_step_key_chk",
-        "records_agent_lead_freeze_step_title_chk",
-        "records_agent_lead_freeze_work_item_id_chk"
+        "records_blocks_core_chatbot_chat_agent_scope_chk",
+        "records_blocks_core_chatbot_chat_archived_at_chk",
+        "records_blocks_core_chatbot_chat_avatar_url_chk",
+        "records_blocks_core_chatbot_chat_channel_chk",
+        "records_blocks_core_chatbot_chat_contact_id_chk",
+        "records_blocks_core_chatbot_chat_last_at_chk",
+        "records_blocks_core_chatbot_chat_name_chk",
+        "records_blocks_core_chatbot_chat_profile_at_chk",
+        "records_blocks_core_chatbot_chat_profile_tried_at_chk",
+        "records_blocks_core_chatbot_chat_route_id_chk",
+        "records_blocks_core_chatbot_chat_started_at_chk",
+        "records_blocks_core_chatbot_chat_status_chk",
+        "records_blocks_core_chatbot_chat_unanswered_chk",
+        "records_blocks_core_chatbot_chat_waiting_chk"
       ],
       "indexes": [
-        "records_agent_lead_freeze_freeze_key",
-        "records_agent_lead_freeze_key_lookup",
-        "records_agent_lead_freeze_lead",
-        "records_agent_lead_freeze_run",
-        "records_agent_lead_freeze_status_frozen"
+        "records_blocks_core_chatbot_chat_channel_recent",
+        "records_blocks_core_chatbot_chat_contact_created",
+        "records_blocks_core_chatbot_chat_contact_id_contact_idx",
+        "records_blocks_core_chatbot_chat_contact_recent",
+        "records_blocks_core_chatbot_chat_key",
+        "records_blocks_core_chatbot_chat_name_trgm_idx",
+        "records_blocks_core_chatbot_chat_recent",
+        "records_blocks_core_chatbot_chat_route",
+        "records_blocks_core_chatbot_chat_route_key",
+        "records_blocks_core_chatbot_chat_status_channel_recent",
+        "records_blocks_core_chatbot_chat_status_recent"
       ]
     },
     {
-      "entity": "agent.lead-memory",
-      "partition": "records_agent_lead_memory",
-      "view": "v_records_agent_lead_memory",
+      "entity": "blocks-core.chatbot.note",
+      "partition": "records_blocks_core_chatbot_note",
       "checks": [
-        "records_agent_lead_memory_agent_id_chk",
-        "records_agent_lead_memory_closed_at_chk",
-        "records_agent_lead_memory_conversation_id_chk",
-        "records_agent_lead_memory_entry_key_chk",
-        "records_agent_lead_memory_error_chk",
-        "records_agent_lead_memory_expires_at_chk",
-        "records_agent_lead_memory_kind_chk",
-        "records_agent_lead_memory_lead_id_chk",
-        "records_agent_lead_memory_namespace_chk",
-        "records_agent_lead_memory_node_key_chk",
-        "records_agent_lead_memory_output_chk",
-        "records_agent_lead_memory_run_id_chk",
-        "records_agent_lead_memory_step_chk",
-        "records_agent_lead_memory_subject_key_chk",
-        "records_agent_lead_memory_version_id_chk",
-        "records_agent_lead_memory_workflow_id_chk",
-        "records_agent_lead_memory_written_at_chk"
+        "records_blocks_core_chatbot_note_agent_scope_chk",
+        "records_blocks_core_chatbot_note_at_chk",
+        "records_blocks_core_chatbot_note_conversation_id_chk",
+        "records_blocks_core_chatbot_note_kind_chk",
+        "records_blocks_core_chatbot_note_member_id_chk",
+        "records_blocks_core_chatbot_note_text_chk"
       ],
       "indexes": [
-        "records_agent_lead_memory_conversation",
-        "records_agent_lead_memory_entry_key",
-        "records_agent_lead_memory_entry_recent",
-        "records_agent_lead_memory_expires",
-        "records_agent_lead_memory_lead",
-        "records_agent_lead_memory_run_node",
-        "records_agent_lead_memory_subject"
+        "records_blocks_core_chatbot_note_conversation_at"
       ]
     },
     {
-      "entity": "agent.node-effect",
-      "partition": "records_agent_node_effect",
+      "entity": "blocks-core.chatbot.reply",
+      "partition": "records_blocks_core_chatbot_reply",
       "checks": [
-        "records_agent_node_effect_args_chk",
-        "records_agent_node_effect_effect_id_chk",
-        "records_agent_node_effect_effect_key_chk",
-        "records_agent_node_effect_facts_chk",
-        "records_agent_node_effect_run_id_chk",
-        "records_agent_node_effect_step_key_chk",
-        "records_agent_node_effect_subject_entity_chk",
-        "records_agent_node_effect_subject_id_chk",
-        "records_agent_node_effect_undone_at_chk"
-      ],
-      "indexes": ["records_agent_node_effect_effect_key_key", "records_agent_node_effect_run_step"]
-    },
-    {
-      "entity": "agent.run",
-      "partition": "records_agent_run",
-      "view": "v_records_agent_run",
-      "checks": [
-        "records_agent_run_agent_id_chk",
-        "records_agent_run_cancelled_at_chk",
-        "records_agent_run_cancelled_by_chk",
-        "records_agent_run_context_chk",
-        "records_agent_run_dead_lettered_at_chk",
-        "records_agent_run_ended_at_chk",
-        "records_agent_run_engine_chk",
-        "records_agent_run_error_chk",
-        "records_agent_run_graph_version_id_chk",
-        "records_agent_run_park_reason_chk",
-        "records_agent_run_parked_build_chk",
-        "records_agent_run_planning_chk",
-        "records_agent_run_resume_attempts_chk",
-        "records_agent_run_resume_not_before_chk",
-        "records_agent_run_resume_reason_chk",
-        "records_agent_run_resumed_at_chk",
-        "records_agent_run_resumed_by_chk",
-        "records_agent_run_started_at_chk",
-        "records_agent_run_status_chk",
-        "records_agent_run_step_seq_chk",
-        "records_agent_run_trigger_chk",
-        "records_agent_run_wait_deadline_at_chk",
-        "records_agent_run_wait_work_item_id_chk",
-        "records_agent_run_wake_id_chk"
+        "records_blocks_core_chatbot_reply_agent_scope_chk",
+        "records_blocks_core_chatbot_reply_conversation_id_chk",
+        "records_blocks_core_chatbot_reply_handed_at_chk",
+        "records_blocks_core_chatbot_reply_key_chk",
+        "records_blocks_core_chatbot_reply_member_id_chk",
+        "records_blocks_core_chatbot_reply_text_chk"
       ],
       "indexes": [
-        "records_agent_run_agent_started",
-        "records_agent_run_agent_status_ended",
-        "records_agent_run_status_resume",
-        "records_agent_run_wake",
-        "records_agent_run_wake_planning_key"
+        "records_blocks_core_chatbot_reply_conversation",
+        "records_blocks_core_chatbot_reply_send_key"
       ]
     },
     {
-      "entity": "agent.run-step",
-      "partition": "records_agent_run_step",
-      "view": "v_records_agent_run_step",
+      "entity": "blocks-core.chatbot.settings",
+      "partition": "records_blocks_core_chatbot_settings",
       "checks": [
-        "records_agent_run_step_attempt_chk",
-        "records_agent_run_step_claimed_until_chk",
-        "records_agent_run_step_comp_attempts_chk",
-        "records_agent_run_step_deadline_ms_chk",
-        "records_agent_run_step_door_calls_chk",
-        "records_agent_run_step_duration_ms_chk",
-        "records_agent_run_step_effect_chk",
-        "records_agent_run_step_effect_key_chk",
-        "records_agent_run_step_ended_at_chk",
-        "records_agent_run_step_error_chk",
-        "records_agent_run_step_error_code_chk",
-        "records_agent_run_step_input_chk",
-        "records_agent_run_step_kind_chk",
-        "records_agent_run_step_max_attempts_chk",
-        "records_agent_run_step_node_key_chk",
-        "records_agent_run_step_not_before_chk",
-        "records_agent_run_step_ordinal_chk",
-        "records_agent_run_step_result_chk",
-        "records_agent_run_step_run_id_chk",
-        "records_agent_run_step_started_at_chk",
-        "records_agent_run_step_status_chk",
-        "records_agent_run_step_step_key_chk",
-        "records_agent_run_step_wait_item_id_chk",
-        "records_agent_run_step_work_item_id_chk"
+        "records_blocks_core_chatbot_settings_agent_scope_chk",
+        "records_blocks_core_chatbot_settings_holding_message_chk",
+        "records_blocks_core_chatbot_settings_scope_chk",
+        "records_blocks_core_chatbot_settings_updated_by_chk"
       ],
       "indexes": [
-        "records_agent_run_step_kind_work_item",
-        "records_agent_run_step_run_ordinal",
-        "records_agent_run_step_run_step_key"
+        "records_blocks_core_chatbot_settings_key",
+        "records_blocks_core_chatbot_settings_scope",
+        "records_blocks_core_chatbot_settings_scope_key"
       ]
     },
     {
-      "entity": "agent.run-stop",
-      "partition": "records_agent_run_stop",
-      "view": "v_records_agent_run_stop",
+      "entity": "blocks-core.content.brand",
+      "partition": "records_blocks_core_content_brand",
       "checks": [
-        "records_agent_run_stop_agent_id_chk",
-        "records_agent_run_stop_answers_chk",
-        "records_agent_run_stop_card_message_id_chk",
-        "records_agent_run_stop_conversation_id_chk",
-        "records_agent_run_stop_customer_lines_chk",
-        "records_agent_run_stop_decision_chk",
-        "records_agent_run_stop_detail_chk",
-        "records_agent_run_stop_kind_chk",
-        "records_agent_run_stop_lead_id_chk",
-        "records_agent_run_stop_question_chk",
-        "records_agent_run_stop_reason_chk",
-        "records_agent_run_stop_repeats_chk",
-        "records_agent_run_stop_resolved_at_chk",
-        "records_agent_run_stop_run_id_chk",
-        "records_agent_run_stop_state_chk",
-        "records_agent_run_stop_step_key_chk",
-        "records_agent_run_stop_stopped_at_chk",
-        "records_agent_run_stop_workflow_id_chk"
+        "records_blocks_core_content_brand_agent_scope_chk",
+        "records_blocks_core_content_brand_audience_chk",
+        "records_blocks_core_content_brand_avoid_chk",
+        "records_blocks_core_content_brand_cadence_chk",
+        "records_blocks_core_content_brand_cta_chk",
+        "records_blocks_core_content_brand_hashtags_chk",
+        "records_blocks_core_content_brand_key_chk",
+        "records_blocks_core_content_brand_pillars_chk",
+        "records_blocks_core_content_brand_voice_chk"
       ],
       "indexes": [
-        "records_agent_run_stop_lead_state",
-        "records_agent_run_stop_run",
-        "records_agent_run_stop_run_step_key",
-        "records_agent_run_stop_state_stopped"
+        "records_blocks_core_content_brand_brand_key",
+        "records_blocks_core_content_brand_key_id"
       ]
     },
     {
-      "entity": "agent.run-workflow",
-      "partition": "records_agent_run_workflow",
-      "view": "v_records_agent_run_workflow",
+      "entity": "blocks-core.content.post",
+      "partition": "records_blocks_core_content_post",
       "checks": [
-        "records_agent_run_workflow_agent_id_chk",
-        "records_agent_run_workflow_run_id_chk",
-        "records_agent_run_workflow_started_at_chk",
-        "records_agent_run_workflow_workflow_id_chk",
-        "records_agent_run_workflow_workflow_version_chk",
-        "records_agent_run_workflow_workflow_version_id_chk"
+        "records_blocks_core_content_post_agent_scope_chk",
+        "records_blocks_core_content_post_brief_chk",
+        "records_blocks_core_content_post_channel_chk",
+        "records_blocks_core_content_post_day_chk",
+        "records_blocks_core_content_post_media_chk",
+        "records_blocks_core_content_post_note_chk",
+        "records_blocks_core_content_post_pillar_chk",
+        "records_blocks_core_content_post_publish_result_chk",
+        "records_blocks_core_content_post_published_at_chk",
+        "records_blocks_core_content_post_status_chk",
+        "records_blocks_core_content_post_text_chk",
+        "records_blocks_core_content_post_time_chk",
+        "records_blocks_core_content_post_title_chk"
       ],
       "indexes": [
-        "records_agent_run_workflow_agent_workflow_started",
-        "records_agent_run_workflow_key",
-        "records_agent_run_workflow_run_key"
+        "records_blocks_core_content_post_channel_day",
+        "records_blocks_core_content_post_day",
+        "records_blocks_core_content_post_status_day",
+        "records_blocks_core_content_post_title_trgm_idx"
       ]
     },
     {
-      "entity": "agent.workflow",
-      "partition": "records_agent_workflow",
-      "view": "v_records_agent_workflow",
+      "entity": "blocks-core.hiring.candidate",
+      "partition": "records_blocks_core_hiring_candidate",
       "checks": [
-        "records_agent_workflow_active_version_id_chk",
-        "records_agent_workflow_agent_id_chk",
-        "records_agent_workflow_created_by_chk",
-        "records_agent_workflow_key_chk",
-        "records_agent_workflow_latest_number_chk",
-        "records_agent_workflow_name_chk",
-        "records_agent_workflow_position_chk",
-        "records_agent_workflow_primary_chk",
-        "records_agent_workflow_status_chk",
-        "records_agent_workflow_template_id_chk",
-        "records_agent_workflow_template_version_chk"
-      ],
-      "indexes": ["records_agent_workflow_agent_key", "records_agent_workflow_agent_position"]
-    },
-    {
-      "entity": "agent.workflow-version",
-      "partition": "records_agent_workflow_version",
-      "view": "v_records_agent_workflow_version",
-      "checks": [
-        "records_agent_workflow_version_agent_id_chk",
-        "records_agent_workflow_version_author_id_chk",
-        "records_agent_workflow_version_author_kind_chk",
-        "records_agent_workflow_version_change_kind_chk",
-        "records_agent_workflow_version_document_chk",
-        "records_agent_workflow_version_document_hash_chk",
-        "records_agent_workflow_version_from_number_chk",
-        "records_agent_workflow_version_graph_version_id_chk",
-        "records_agent_workflow_version_note_chk",
-        "records_agent_workflow_version_number_chk",
-        "records_agent_workflow_version_published_at_chk",
-        "records_agent_workflow_version_template_id_chk",
-        "records_agent_workflow_version_template_version_chk",
-        "records_agent_workflow_version_workflow_id_chk"
+        "records_blocks_core_hiring_candidate_agent_scope_chk",
+        "records_blocks_core_hiring_candidate_contact_chk",
+        "records_blocks_core_hiring_candidate_contact_id_chk",
+        "records_blocks_core_hiring_candidate_cv_chk",
+        "records_blocks_core_hiring_candidate_job_id_chk",
+        "records_blocks_core_hiring_candidate_name_chk",
+        "records_blocks_core_hiring_candidate_notes_chk",
+        "records_blocks_core_hiring_candidate_profile_chk",
+        "records_blocks_core_hiring_candidate_screening_summary_chk",
+        "records_blocks_core_hiring_candidate_stage_chk"
       ],
       "indexes": [
-        "records_agent_workflow_version_agent_graph_version",
-        "records_agent_workflow_version_workflow_number",
-        "records_agent_workflow_version_workflow_number_key"
+        "records_blocks_core_hiring_candidate_contact_id_contact_idx",
+        "records_blocks_core_hiring_candidate_contact_recent",
+        "records_blocks_core_hiring_candidate_contact_trgm_idx",
+        "records_blocks_core_hiring_candidate_job_recent",
+        "records_blocks_core_hiring_candidate_name_trgm_idx",
+        "records_blocks_core_hiring_candidate_recent",
+        "records_blocks_core_hiring_candidate_stage_recent"
       ]
     },
     {
-      "entity": "chat.conversation",
-      "partition": "records_chat_conversation",
+      "entity": "blocks-core.hiring.job",
+      "partition": "records_blocks_core_hiring_job",
       "checks": [
-        "records_chat_conversation_agent_id_chk",
-        "records_chat_conversation_avatar_url_chk",
-        "records_chat_conversation_channel_chk",
-        "records_chat_conversation_connection_id_chk",
-        "records_chat_conversation_connector_party_id_chk",
-        "records_chat_conversation_connector_party_name_chk",
-        "records_chat_conversation_external_id_chk",
-        "records_chat_conversation_front_agent_id_chk",
-        "records_chat_conversation_handled_at_chk",
-        "records_chat_conversation_handled_by_chk",
-        "records_chat_conversation_last_at_chk",
-        "records_chat_conversation_last_role_chk",
-        "records_chat_conversation_last_text_chk",
-        "records_chat_conversation_lead_id_chk",
-        "records_chat_conversation_message_count_chk",
-        "records_chat_conversation_name_chk",
-        "records_chat_conversation_profile_at_chk",
-        "records_chat_conversation_profile_tried_at_chk",
-        "records_chat_conversation_status_chk",
-        "records_chat_conversation_unanswered_chk",
-        "records_chat_conversation_waiting_chk"
+        "records_blocks_core_hiring_job_agent_scope_chk",
+        "records_blocks_core_hiring_job_description_chk",
+        "records_blocks_core_hiring_job_requirements_chk",
+        "records_blocks_core_hiring_job_status_chk",
+        "records_blocks_core_hiring_job_title_chk"
       ],
       "indexes": [
-        "records_chat_conversation_channel_external_key",
-        "records_chat_conversation_channel_recent",
-        "records_chat_conversation_connection_recent",
-        "records_chat_conversation_customer",
-        "records_chat_conversation_key",
-        "records_chat_conversation_last_text_trgm_idx",
-        "records_chat_conversation_lead_created",
-        "records_chat_conversation_lead_recent",
-        "records_chat_conversation_name_trgm_idx",
-        "records_chat_conversation_recent",
-        "records_chat_conversation_status_channel_recent",
-        "records_chat_conversation_status_recent"
+        "records_blocks_core_hiring_job_recent",
+        "records_blocks_core_hiring_job_status_recent",
+        "records_blocks_core_hiring_job_title_trgm_idx"
       ]
     },
     {
-      "entity": "chat.message",
-      "partition": "records_chat_message",
+      "entity": "blocks-core.sales.claim",
+      "partition": "records_blocks_core_sales_claim",
       "checks": [
-        "records_chat_message_author_kind_chk",
-        "records_chat_message_author_name_chk",
-        "records_chat_message_author_user_id_chk",
-        "records_chat_message_channel_ref_chk",
-        "records_chat_message_conversation_id_chk",
-        "records_chat_message_delivery_error_chk",
-        "records_chat_message_delivery_status_chk",
-        "records_chat_message_files_chk",
-        "records_chat_message_in_reply_to_chk",
-        "records_chat_message_order_card_chk",
-        "records_chat_message_role_chk",
-        "records_chat_message_sent_at_chk",
-        "records_chat_message_sent_by_chk",
-        "records_chat_message_status_chk",
-        "records_chat_message_text_chk"
+        "records_blocks_core_sales_claim_agent_scope_chk",
+        "records_blocks_core_sales_claim_amount_chk",
+        "records_blocks_core_sales_claim_amount_vnd_chk",
+        "records_blocks_core_sales_claim_body_chk",
+        "records_blocks_core_sales_claim_claimed_at_chk",
+        "records_blocks_core_sales_claim_code_chk",
+        "records_blocks_core_sales_claim_contact_id_chk",
+        "records_blocks_core_sales_claim_conversation_id_chk",
+        "records_blocks_core_sales_claim_dedupe_key_chk",
+        "records_blocks_core_sales_claim_names_chk",
+        "records_blocks_core_sales_claim_settled_transaction_id_chk",
+        "records_blocks_core_sales_claim_status_chk"
       ],
       "indexes": [
-        "records_chat_message_channel_ref",
-        "records_chat_message_channel_ref_key",
-        "records_chat_message_conversation_role_sent",
-        "records_chat_message_conversation_sent",
-        "records_chat_message_conversation_status_created",
-        "records_chat_message_conversation_status_sent",
-        "records_chat_message_one_proposal_key",
-        "records_chat_message_reply_of",
-        "records_chat_message_reply_once_key",
-        "records_chat_message_role_recent"
+        "records_blocks_core_sales_claim_contact_claimed",
+        "records_blocks_core_sales_claim_contact_id_contact_idx",
+        "records_blocks_core_sales_claim_conversation_claimed",
+        "records_blocks_core_sales_claim_dedupe_key",
+        "records_blocks_core_sales_claim_key",
+        "records_blocks_core_sales_claim_settled_transaction_key",
+        "records_blocks_core_sales_claim_status_claimed",
+        "records_blocks_core_sales_claim_status_recent"
       ]
     },
     {
-      "entity": "chat.settings",
-      "partition": "records_chat_settings",
+      "entity": "blocks-core.sales.invoice",
+      "partition": "records_blocks_core_sales_invoice",
       "checks": [
-        "records_chat_settings_holding_message_chk",
-        "records_chat_settings_scope_chk",
-        "records_chat_settings_updated_by_chk"
-      ],
-      "indexes": ["records_chat_settings_key", "records_chat_settings_scope", "records_chat_settings_scope_key"]
-    },
-    {
-      "entity": "loyalty.campaign",
-      "partition": "records_loyalty_campaign",
-      "checks": [
-        "records_loyalty_campaign_created_by_chk",
-        "records_loyalty_campaign_draft_chk",
-        "records_loyalty_campaign_failed_chk",
-        "records_loyalty_campaign_name_chk",
-        "records_loyalty_campaign_recipients_chk",
-        "records_loyalty_campaign_segment_chk",
-        "records_loyalty_campaign_sent_chk",
-        "records_loyalty_campaign_status_chk",
-        "records_loyalty_campaign_work_item_id_chk"
-      ],
-      "indexes": ["records_loyalty_campaign_recent", "records_loyalty_campaign_status_recent"]
-    },
-    {
-      "entity": "loyalty.decision",
-      "partition": "records_loyalty_decision",
-      "checks": [
-        "records_loyalty_decision_action_chk",
-        "records_loyalty_decision_amount_vnd_chk",
-        "records_loyalty_decision_customer_chk",
-        "records_loyalty_decision_draft_chk",
-        "records_loyalty_decision_reason_chk",
-        "records_loyalty_decision_status_chk",
-        "records_loyalty_decision_summary_chk"
-      ],
-      "indexes": ["records_loyalty_decision_status_created"]
-    },
-    {
-      "entity": "loyalty.ledger-entry",
-      "partition": "records_loyalty_ledger_entry",
-      "checks": [
-        "records_loyalty_ledger_entry_amount_vnd_chk",
-        "records_loyalty_ledger_entry_by_chk",
-        "records_loyalty_ledger_entry_evidence_chk",
-        "records_loyalty_ledger_entry_expires_at_chk",
-        "records_loyalty_ledger_entry_kind_chk",
-        "records_loyalty_ledger_entry_member_id_chk",
-        "records_loyalty_ledger_entry_occurred_at_chk",
-        "records_loyalty_ledger_entry_points_chk",
-        "records_loyalty_ledger_entry_ref_chk",
-        "records_loyalty_ledger_entry_reward_id_chk"
+        "records_blocks_core_sales_invoice_agent_scope_chk",
+        "records_blocks_core_sales_invoice_amount_chk",
+        "records_blocks_core_sales_invoice_amount_vnd_chk",
+        "records_blocks_core_sales_invoice_contact_id_chk",
+        "records_blocks_core_sales_invoice_contract_id_chk",
+        "records_blocks_core_sales_invoice_contract_period_chk",
+        "records_blocks_core_sales_invoice_due_at_chk",
+        "records_blocks_core_sales_invoice_invoice_no_chk",
+        "records_blocks_core_sales_invoice_issued_at_chk",
+        "records_blocks_core_sales_invoice_issued_by_chk",
+        "records_blocks_core_sales_invoice_order_id_chk",
+        "records_blocks_core_sales_invoice_paid_at_chk",
+        "records_blocks_core_sales_invoice_period_ends_on_chk",
+        "records_blocks_core_sales_invoice_status_chk"
       ],
       "indexes": [
-        "records_loyalty_ledger_entry_kind_occurred",
-        "records_loyalty_ledger_entry_member_kind",
-        "records_loyalty_ledger_entry_member_occurred",
-        "records_loyalty_ledger_entry_occurred",
-        "records_loyalty_ledger_entry_ref",
-        "records_loyalty_ledger_entry_ref_key",
-        "records_loyalty_ledger_entry_reward"
+        "records_blocks_core_sales_invoice_contact_id_contact_idx",
+        "records_blocks_core_sales_invoice_contract_period_key",
+        "records_blocks_core_sales_invoice_invoice_no_key",
+        "records_blocks_core_sales_invoice_key",
+        "records_blocks_core_sales_invoice_order_key",
+        "records_blocks_core_sales_invoice_recent",
+        "records_blocks_core_sales_invoice_status_recent"
       ]
     },
     {
-      "entity": "loyalty.member",
-      "partition": "records_loyalty_member",
+      "entity": "blocks-core.sales.lead",
+      "partition": "records_blocks_core_sales_lead",
       "checks": [
-        "records_loyalty_member_activity_chk",
-        "records_loyalty_member_birthday_chk",
-        "records_loyalty_member_contact_chk",
-        "records_loyalty_member_email_chk",
-        "records_loyalty_member_joined_at_chk",
-        "records_loyalty_member_last_activity_at_chk",
-        "records_loyalty_member_last_visit_at_chk",
-        "records_loyalty_member_lead_id_chk",
-        "records_loyalty_member_lifetime_spend_vnd_chk",
-        "records_loyalty_member_name_chk",
-        "records_loyalty_member_note_chk",
-        "records_loyalty_member_phone_chk",
-        "records_loyalty_member_points_chk",
-        "records_loyalty_member_tier_chk",
-        "records_loyalty_member_tier_key_chk",
-        "records_loyalty_member_visits_chk"
+        "records_blocks_core_sales_lead_agent_scope_chk",
+        "records_blocks_core_sales_lead_awaiting_since_chk",
+        "records_blocks_core_sales_lead_channel_chk",
+        "records_blocks_core_sales_lead_closed_reason_chk",
+        "records_blocks_core_sales_lead_company_chk",
+        "records_blocks_core_sales_lead_consult_stage_chk",
+        "records_blocks_core_sales_lead_contact_id_chk",
+        "records_blocks_core_sales_lead_contact_name_chk",
+        "records_blocks_core_sales_lead_context_summary_chk",
+        "records_blocks_core_sales_lead_email_chk",
+        "records_blocks_core_sales_lead_need_chk",
+        "records_blocks_core_sales_lead_needs_chk",
+        "records_blocks_core_sales_lead_next_due_at_chk",
+        "records_blocks_core_sales_lead_next_step_chk",
+        "records_blocks_core_sales_lead_note_chk",
+        "records_blocks_core_sales_lead_order_vnd_chk",
+        "records_blocks_core_sales_lead_owner_chk",
+        "records_blocks_core_sales_lead_phone_chk",
+        "records_blocks_core_sales_lead_quote_vnd_chk",
+        "records_blocks_core_sales_lead_stage_chk"
       ],
       "indexes": [
-        "records_loyalty_member_activity_name",
-        "records_loyalty_member_activity_points",
-        "records_loyalty_member_activity_recent",
-        "records_loyalty_member_activity_spend",
-        "records_loyalty_member_contact_trgm_idx",
-        "records_loyalty_member_email",
-        "records_loyalty_member_email_key",
-        "records_loyalty_member_lead",
-        "records_loyalty_member_name",
-        "records_loyalty_member_name_trgm_idx",
-        "records_loyalty_member_phone",
-        "records_loyalty_member_phone_key",
-        "records_loyalty_member_points",
-        "records_loyalty_member_recent",
-        "records_loyalty_member_spend",
-        "records_loyalty_member_tier_name",
-        "records_loyalty_member_tier_points",
-        "records_loyalty_member_tier_recent",
-        "records_loyalty_member_tier_spend"
+        "records_blocks_core_sales_lead_awaiting",
+        "records_blocks_core_sales_lead_company_trgm_idx",
+        "records_blocks_core_sales_lead_contact_id_contact_idx",
+        "records_blocks_core_sales_lead_contact_key",
+        "records_blocks_core_sales_lead_contact_name_trgm_idx",
+        "records_blocks_core_sales_lead_due",
+        "records_blocks_core_sales_lead_email_key",
+        "records_blocks_core_sales_lead_email_trgm_idx",
+        "records_blocks_core_sales_lead_key",
+        "records_blocks_core_sales_lead_name",
+        "records_blocks_core_sales_lead_need_trgm_idx",
+        "records_blocks_core_sales_lead_needs",
+        "records_blocks_core_sales_lead_phone_key",
+        "records_blocks_core_sales_lead_phone_trgm_idx",
+        "records_blocks_core_sales_lead_recent",
+        "records_blocks_core_sales_lead_stage_name",
+        "records_blocks_core_sales_lead_stage_recent"
       ]
     },
     {
-      "entity": "loyalty.program",
-      "partition": "records_loyalty_program",
+      "entity": "blocks-core.sales.ledger-adjustment",
+      "partition": "records_blocks_core_sales_ledger_adjustment",
       "checks": [
-        "records_loyalty_program_config_chk",
-        "records_loyalty_program_enabled_chk",
-        "records_loyalty_program_name_chk",
-        "records_loyalty_program_scope_chk",
-        "records_loyalty_program_slug_chk"
-      ],
-      "indexes": ["records_loyalty_program_scope", "records_loyalty_program_scope_key"]
-    },
-    {
-      "entity": "loyalty.reward",
-      "partition": "records_loyalty_reward",
-      "checks": [
-        "records_loyalty_reward_active_chk",
-        "records_loyalty_reward_key_chk",
-        "records_loyalty_reward_kind_chk",
-        "records_loyalty_reward_min_tier_key_chk",
-        "records_loyalty_reward_name_chk",
-        "records_loyalty_reward_note_chk",
-        "records_loyalty_reward_per_customer_limit_chk",
-        "records_loyalty_reward_percent_chk",
-        "records_loyalty_reward_points_cost_chk",
-        "records_loyalty_reward_stock_chk",
-        "records_loyalty_reward_value_vnd_chk"
+        "records_blocks_core_sales_ledger_adjustment_agent_scope_chk",
+        "records_blocks_core_sales_ledger_adjustment_corrected_amount_ch",
+        "records_blocks_core_sales_ledger_adjustment_corrected_amount_vn",
+        "records_blocks_core_sales_ledger_adjustment_created_by_chk",
+        "records_blocks_core_sales_ledger_adjustment_created_by_user_chk",
+        "records_blocks_core_sales_ledger_adjustment_note_chk",
+        "records_blocks_core_sales_ledger_adjustment_target_id_chk",
+        "records_blocks_core_sales_ledger_adjustment_target_type_chk"
       ],
       "indexes": [
-        "records_loyalty_reward_active_recent",
-        "records_loyalty_reward_key",
-        "records_loyalty_reward_key_key",
-        "records_loyalty_reward_name_trgm_idx",
-        "records_loyalty_reward_recent"
+        "records_blocks_core_sales_ledger_adjustment_recent",
+        "records_blocks_core_sales_ledger_adjustment_target"
       ]
     },
     {
-      "entity": "payment.claim",
-      "partition": "records_payment_claim",
+      "entity": "blocks-core.sales.ledger-entry",
+      "partition": "records_blocks_core_sales_ledger_entry",
+      "view": "v_records_blocks_core_sales_ledger_entry",
       "checks": [
-        "records_payment_claim_amount_chk",
-        "records_payment_claim_amount_vnd_chk",
-        "records_payment_claim_body_chk",
-        "records_payment_claim_claimed_at_chk",
-        "records_payment_claim_code_chk",
-        "records_payment_claim_conversation_id_chk",
-        "records_payment_claim_dedupe_key_chk",
-        "records_payment_claim_lead_id_chk",
-        "records_payment_claim_names_chk",
-        "records_payment_claim_settled_transaction_id_chk",
-        "records_payment_claim_status_chk"
+        "records_blocks_core_sales_ledger_entry_agent_scope_chk",
+        "records_blocks_core_sales_ledger_entry_amount_vnd_chk",
+        "records_blocks_core_sales_ledger_entry_counterparty_chk",
+        "records_blocks_core_sales_ledger_entry_entry_date_chk",
+        "records_blocks_core_sales_ledger_entry_kind_chk",
+        "records_blocks_core_sales_ledger_entry_note_chk",
+        "records_blocks_core_sales_ledger_entry_source_entity_chk",
+        "records_blocks_core_sales_ledger_entry_source_id_chk",
+        "records_blocks_core_sales_ledger_entry_status_chk"
       ],
       "indexes": [
-        "records_payment_claim_conversation_claimed",
-        "records_payment_claim_dedupe_key",
-        "records_payment_claim_key",
-        "records_payment_claim_lead_claimed",
-        "records_payment_claim_settled_transaction_key",
-        "records_payment_claim_status_claimed",
-        "records_payment_claim_status_recent"
+        "records_blocks_core_sales_ledger_entry_amount",
+        "records_blocks_core_sales_ledger_entry_date",
+        "records_blocks_core_sales_ledger_entry_kind_amount",
+        "records_blocks_core_sales_ledger_entry_kind_date",
+        "records_blocks_core_sales_ledger_entry_kind_day",
+        "records_blocks_core_sales_ledger_entry_note_trgm_idx",
+        "records_blocks_core_sales_ledger_entry_source_key",
+        "records_blocks_core_sales_ledger_entry_status_amount",
+        "records_blocks_core_sales_ledger_entry_status_date"
       ]
     },
     {
-      "entity": "payment.transaction",
-      "partition": "records_payment_transaction",
+      "entity": "blocks-core.sales.ledger-question",
+      "partition": "records_blocks_core_sales_ledger_question",
       "checks": [
-        "records_payment_transaction_account_chk",
-        "records_payment_transaction_amount_chk",
-        "records_payment_transaction_amount_vnd_chk",
-        "records_payment_transaction_channel_chk",
-        "records_payment_transaction_connection_id_chk",
-        "records_payment_transaction_direction_chk",
-        "records_payment_transaction_external_ref_chk",
-        "records_payment_transaction_invoice_id_chk",
-        "records_payment_transaction_occurred_at_chk",
-        "records_payment_transaction_order_id_chk",
-        "records_payment_transaction_payer_chk",
-        "records_payment_transaction_reference_chk",
-        "records_payment_transaction_status_chk"
+        "records_blocks_core_sales_ledger_question_agent_scope_chk",
+        "records_blocks_core_sales_ledger_question_answer_chk",
+        "records_blocks_core_sales_ledger_question_answered_by_chk",
+        "records_blocks_core_sales_ledger_question_source_chk",
+        "records_blocks_core_sales_ledger_question_status_chk",
+        "records_blocks_core_sales_ledger_question_text_chk"
       ],
       "indexes": [
-        "records_payment_transaction_amount_recent",
-        "records_payment_transaction_direction_occurred",
-        "records_payment_transaction_direction_status_occurred",
-        "records_payment_transaction_external_ref_key",
-        "records_payment_transaction_invoice",
-        "records_payment_transaction_key",
-        "records_payment_transaction_occurred",
-        "records_payment_transaction_order_key",
-        "records_payment_transaction_status_occurred",
-        "records_payment_transaction_status_recent"
+        "records_blocks_core_sales_ledger_question_source",
+        "records_blocks_core_sales_ledger_question_status_created"
       ]
     },
     {
-      "entity": "sales.lead",
-      "partition": "records_sales_lead",
+      "entity": "blocks-core.sales.ledger-settings",
+      "partition": "records_blocks_core_sales_ledger_settings",
       "checks": [
-        "records_sales_lead_awaiting_since_chk",
-        "records_sales_lead_channel_chk",
-        "records_sales_lead_closed_reason_chk",
-        "records_sales_lead_company_chk",
-        "records_sales_lead_consult_stage_chk",
-        "records_sales_lead_contact_name_chk",
-        "records_sales_lead_context_summary_chk",
-        "records_sales_lead_email_chk",
-        "records_sales_lead_need_chk",
-        "records_sales_lead_needs_chk",
-        "records_sales_lead_next_due_at_chk",
-        "records_sales_lead_next_step_chk",
-        "records_sales_lead_note_chk",
-        "records_sales_lead_order_vnd_chk",
-        "records_sales_lead_owner_chk",
-        "records_sales_lead_phone_chk",
-        "records_sales_lead_quote_vnd_chk",
-        "records_sales_lead_stage_chk"
+        "records_blocks_core_sales_ledger_settings_agent_scope_chk",
+        "records_blocks_core_sales_ledger_settings_post_expenses_chk",
+        "records_blocks_core_sales_ledger_settings_post_outgoing_chk",
+        "records_blocks_core_sales_ledger_settings_post_unmatched_chk",
+        "records_blocks_core_sales_ledger_settings_rematch_days_chk",
+        "records_blocks_core_sales_ledger_settings_scope_chk",
+        "records_blocks_core_sales_ledger_settings_vat_period_chk",
+        "records_blocks_core_sales_ledger_settings_void_mode_chk"
       ],
       "indexes": [
-        "records_sales_lead_awaiting",
-        "records_sales_lead_company_trgm_idx",
-        "records_sales_lead_contact_name_trgm_idx",
-        "records_sales_lead_due",
-        "records_sales_lead_email_key",
-        "records_sales_lead_email_trgm_idx",
-        "records_sales_lead_key",
-        "records_sales_lead_name",
-        "records_sales_lead_need_trgm_idx",
-        "records_sales_lead_needs",
-        "records_sales_lead_phone_key",
-        "records_sales_lead_phone_trgm_idx",
-        "records_sales_lead_recent",
-        "records_sales_lead_stage_name",
-        "records_sales_lead_stage_recent"
+        "records_blocks_core_sales_ledger_settings_scope",
+        "records_blocks_core_sales_ledger_settings_scope_key"
       ]
     },
     {
-      "entity": "sales.order",
-      "partition": "records_sales_order",
+      "entity": "blocks-core.sales.loyalty-campaign",
+      "partition": "records_blocks_core_sales_loyalty_campaign",
       "checks": [
-        "records_sales_order_amount_chk",
-        "records_sales_order_amount_vnd_chk",
-        "records_sales_order_carrier_chk",
-        "records_sales_order_confirmed_at_chk",
-        "records_sales_order_confirmed_by_chk",
-        "records_sales_order_delivery_address_chk",
-        "records_sales_order_delivery_at_chk",
-        "records_sales_order_items_chk",
-        "records_sales_order_items_text_chk",
-        "records_sales_order_lead_id_chk",
-        "records_sales_order_note_chk",
-        "records_sales_order_order_no_chk",
-        "records_sales_order_paid_connection_id_chk",
-        "records_sales_order_qr_connection_id_chk",
-        "records_sales_order_recipient_name_chk",
-        "records_sales_order_recipient_phone_chk",
-        "records_sales_order_shipped_at_chk",
-        "records_sales_order_status_chk",
-        "records_sales_order_tracking_code_chk"
+        "records_blocks_core_sales_loyalty_campaign_agent_scope_chk",
+        "records_blocks_core_sales_loyalty_campaign_created_by_chk",
+        "records_blocks_core_sales_loyalty_campaign_draft_chk",
+        "records_blocks_core_sales_loyalty_campaign_failed_chk",
+        "records_blocks_core_sales_loyalty_campaign_name_chk",
+        "records_blocks_core_sales_loyalty_campaign_recipients_chk",
+        "records_blocks_core_sales_loyalty_campaign_segment_chk",
+        "records_blocks_core_sales_loyalty_campaign_sent_chk",
+        "records_blocks_core_sales_loyalty_campaign_status_chk",
+        "records_blocks_core_sales_loyalty_campaign_work_item_id_chk"
       ],
       "indexes": [
-        "records_sales_order_amount",
-        "records_sales_order_items_text_trgm_idx",
-        "records_sales_order_key",
-        "records_sales_order_lead_recent",
-        "records_sales_order_note_trgm_idx",
-        "records_sales_order_order_no_key",
-        "records_sales_order_recent",
-        "records_sales_order_status_amount",
-        "records_sales_order_status_recent"
+        "records_blocks_core_sales_loyalty_campaign_recent",
+        "records_blocks_core_sales_loyalty_campaign_status_recent"
       ]
     },
     {
-      "entity": "sales.settings",
-      "partition": "records_sales_settings",
+      "entity": "blocks-core.sales.loyalty-decision",
+      "partition": "records_blocks_core_sales_loyalty_decision",
       "checks": [
-        "records_sales_settings_approval_threshold_vnd_chk",
-        "records_sales_settings_auto_won_chk",
-        "records_sales_settings_closed_deals_can_flip_chk",
-        "records_sales_settings_draft_without_total_needs_approval_chk",
-        "records_sales_settings_key_chk",
-        "records_sales_settings_max_discount_pct_chk",
-        "records_sales_settings_notify_accounting_chk",
-        "records_sales_settings_remind_after_days_chk",
-        "records_sales_settings_reopen_needs_approval_chk"
+        "records_blocks_core_sales_loyalty_decision_action_chk",
+        "records_blocks_core_sales_loyalty_decision_agent_scope_chk",
+        "records_blocks_core_sales_loyalty_decision_amount_vnd_chk",
+        "records_blocks_core_sales_loyalty_decision_customer_chk",
+        "records_blocks_core_sales_loyalty_decision_draft_chk",
+        "records_blocks_core_sales_loyalty_decision_reason_chk",
+        "records_blocks_core_sales_loyalty_decision_status_chk",
+        "records_blocks_core_sales_loyalty_decision_summary_chk"
       ],
-      "indexes": ["records_sales_settings_key", "records_sales_settings_key_key"]
+      "indexes": [
+        "records_blocks_core_sales_loyalty_decision_status_created"
+      ]
     },
     {
-      "entity": "workspace.settings",
-      "partition": "records_workspace_settings",
-      "checks": ["records_workspace_settings_key_chk", "records_workspace_settings_time_zone_chk"],
-      "indexes": ["records_workspace_settings_key_id", "records_workspace_settings_workspace_key"]
+      "entity": "blocks-core.sales.loyalty-ledger-entry",
+      "partition": "records_blocks_core_sales_loyalty_ledger_entry",
+      "checks": [
+        "records_blocks_core_sales_loyalty_ledger_entry_agent_scope_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_amount_vnd_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_by_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_evidence_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_expires_at_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_kind_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_member_id_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_occurred_at_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_points_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_ref_chk",
+        "records_blocks_core_sales_loyalty_ledger_entry_reward_id_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_sales_loyalty_ledger_entry_kind_occurred",
+        "records_blocks_core_sales_loyalty_ledger_entry_member_kind",
+        "records_blocks_core_sales_loyalty_ledger_entry_member_occurred",
+        "records_blocks_core_sales_loyalty_ledger_entry_occurred",
+        "records_blocks_core_sales_loyalty_ledger_entry_ref",
+        "records_blocks_core_sales_loyalty_ledger_entry_ref_key",
+        "records_blocks_core_sales_loyalty_ledger_entry_reward"
+      ]
+    },
+    {
+      "entity": "blocks-core.sales.loyalty-member",
+      "partition": "records_blocks_core_sales_loyalty_member",
+      "checks": [
+        "records_blocks_core_sales_loyalty_member_activity_chk",
+        "records_blocks_core_sales_loyalty_member_agent_scope_chk",
+        "records_blocks_core_sales_loyalty_member_birthday_chk",
+        "records_blocks_core_sales_loyalty_member_contact_chk",
+        "records_blocks_core_sales_loyalty_member_contact_id_chk",
+        "records_blocks_core_sales_loyalty_member_email_chk",
+        "records_blocks_core_sales_loyalty_member_joined_at_chk",
+        "records_blocks_core_sales_loyalty_member_last_activity_at_chk",
+        "records_blocks_core_sales_loyalty_member_last_visit_at_chk",
+        "records_blocks_core_sales_loyalty_member_lifetime_spend_vnd_chk",
+        "records_blocks_core_sales_loyalty_member_name_chk",
+        "records_blocks_core_sales_loyalty_member_note_chk",
+        "records_blocks_core_sales_loyalty_member_phone_chk",
+        "records_blocks_core_sales_loyalty_member_points_chk",
+        "records_blocks_core_sales_loyalty_member_tier_chk",
+        "records_blocks_core_sales_loyalty_member_tier_key_chk",
+        "records_blocks_core_sales_loyalty_member_visits_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_sales_loyalty_member_activity_name",
+        "records_blocks_core_sales_loyalty_member_activity_points",
+        "records_blocks_core_sales_loyalty_member_activity_recent",
+        "records_blocks_core_sales_loyalty_member_activity_spend",
+        "records_blocks_core_sales_loyalty_member_contact",
+        "records_blocks_core_sales_loyalty_member_contact_id_contact_idx",
+        "records_blocks_core_sales_loyalty_member_contact_trgm_idx",
+        "records_blocks_core_sales_loyalty_member_email",
+        "records_blocks_core_sales_loyalty_member_email_key",
+        "records_blocks_core_sales_loyalty_member_name",
+        "records_blocks_core_sales_loyalty_member_name_trgm_idx",
+        "records_blocks_core_sales_loyalty_member_phone",
+        "records_blocks_core_sales_loyalty_member_phone_key",
+        "records_blocks_core_sales_loyalty_member_points",
+        "records_blocks_core_sales_loyalty_member_recent",
+        "records_blocks_core_sales_loyalty_member_spend",
+        "records_blocks_core_sales_loyalty_member_tier_name",
+        "records_blocks_core_sales_loyalty_member_tier_points",
+        "records_blocks_core_sales_loyalty_member_tier_recent",
+        "records_blocks_core_sales_loyalty_member_tier_spend"
+      ]
+    },
+    {
+      "entity": "blocks-core.sales.loyalty-program",
+      "partition": "records_blocks_core_sales_loyalty_program",
+      "checks": [
+        "records_blocks_core_sales_loyalty_program_agent_scope_chk",
+        "records_blocks_core_sales_loyalty_program_config_chk",
+        "records_blocks_core_sales_loyalty_program_enabled_chk",
+        "records_blocks_core_sales_loyalty_program_name_chk",
+        "records_blocks_core_sales_loyalty_program_scope_chk",
+        "records_blocks_core_sales_loyalty_program_slug_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_sales_loyalty_program_scope",
+        "records_blocks_core_sales_loyalty_program_scope_key"
+      ]
+    },
+    {
+      "entity": "blocks-core.sales.loyalty-reward",
+      "partition": "records_blocks_core_sales_loyalty_reward",
+      "checks": [
+        "records_blocks_core_sales_loyalty_reward_active_chk",
+        "records_blocks_core_sales_loyalty_reward_agent_scope_chk",
+        "records_blocks_core_sales_loyalty_reward_key_chk",
+        "records_blocks_core_sales_loyalty_reward_kind_chk",
+        "records_blocks_core_sales_loyalty_reward_min_tier_key_chk",
+        "records_blocks_core_sales_loyalty_reward_name_chk",
+        "records_blocks_core_sales_loyalty_reward_note_chk",
+        "records_blocks_core_sales_loyalty_reward_per_customer_limit_chk",
+        "records_blocks_core_sales_loyalty_reward_percent_chk",
+        "records_blocks_core_sales_loyalty_reward_points_cost_chk",
+        "records_blocks_core_sales_loyalty_reward_stock_chk",
+        "records_blocks_core_sales_loyalty_reward_value_vnd_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_sales_loyalty_reward_active_recent",
+        "records_blocks_core_sales_loyalty_reward_key",
+        "records_blocks_core_sales_loyalty_reward_key_key",
+        "records_blocks_core_sales_loyalty_reward_name_trgm_idx",
+        "records_blocks_core_sales_loyalty_reward_recent"
+      ]
+    },
+    {
+      "entity": "blocks-core.sales.order",
+      "partition": "records_blocks_core_sales_order",
+      "checks": [
+        "records_blocks_core_sales_order_agent_scope_chk",
+        "records_blocks_core_sales_order_amount_chk",
+        "records_blocks_core_sales_order_amount_vnd_chk",
+        "records_blocks_core_sales_order_carrier_chk",
+        "records_blocks_core_sales_order_confirmed_at_chk",
+        "records_blocks_core_sales_order_confirmed_by_chk",
+        "records_blocks_core_sales_order_contact_id_chk",
+        "records_blocks_core_sales_order_delivery_address_chk",
+        "records_blocks_core_sales_order_delivery_at_chk",
+        "records_blocks_core_sales_order_items_chk",
+        "records_blocks_core_sales_order_items_text_chk",
+        "records_blocks_core_sales_order_note_chk",
+        "records_blocks_core_sales_order_order_no_chk",
+        "records_blocks_core_sales_order_paid_connection_id_chk",
+        "records_blocks_core_sales_order_qr_connection_id_chk",
+        "records_blocks_core_sales_order_recipient_name_chk",
+        "records_blocks_core_sales_order_recipient_phone_chk",
+        "records_blocks_core_sales_order_shipped_at_chk",
+        "records_blocks_core_sales_order_status_chk",
+        "records_blocks_core_sales_order_tracking_code_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_sales_order_amount",
+        "records_blocks_core_sales_order_contact_id_contact_idx",
+        "records_blocks_core_sales_order_contact_recent",
+        "records_blocks_core_sales_order_contact_status_recent",
+        "records_blocks_core_sales_order_items_text_trgm_idx",
+        "records_blocks_core_sales_order_key",
+        "records_blocks_core_sales_order_note_trgm_idx",
+        "records_blocks_core_sales_order_order_no_key",
+        "records_blocks_core_sales_order_recent",
+        "records_blocks_core_sales_order_status_amount",
+        "records_blocks_core_sales_order_status_recent"
+      ]
+    },
+    {
+      "entity": "blocks-core.sales.settings",
+      "partition": "records_blocks_core_sales_settings",
+      "checks": [
+        "records_blocks_core_sales_settings_agent_scope_chk",
+        "records_blocks_core_sales_settings_approval_threshold_vnd_chk",
+        "records_blocks_core_sales_settings_auto_won_chk",
+        "records_blocks_core_sales_settings_closed_deals_can_flip_chk",
+        "records_blocks_core_sales_settings_draft_without_total_needs_ap",
+        "records_blocks_core_sales_settings_key_chk",
+        "records_blocks_core_sales_settings_max_discount_pct_chk",
+        "records_blocks_core_sales_settings_notify_accounting_chk",
+        "records_blocks_core_sales_settings_remind_after_days_chk",
+        "records_blocks_core_sales_settings_reopen_needs_approval_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_sales_settings_key",
+        "records_blocks_core_sales_settings_key_key"
+      ]
+    },
+    {
+      "entity": "blocks-core.sales.transaction",
+      "partition": "records_blocks_core_sales_transaction",
+      "checks": [
+        "records_blocks_core_sales_transaction_account_chk",
+        "records_blocks_core_sales_transaction_agent_scope_chk",
+        "records_blocks_core_sales_transaction_amount_chk",
+        "records_blocks_core_sales_transaction_amount_vnd_chk",
+        "records_blocks_core_sales_transaction_channel_chk",
+        "records_blocks_core_sales_transaction_connection_id_chk",
+        "records_blocks_core_sales_transaction_direction_chk",
+        "records_blocks_core_sales_transaction_external_ref_chk",
+        "records_blocks_core_sales_transaction_invoice_id_chk",
+        "records_blocks_core_sales_transaction_occurred_at_chk",
+        "records_blocks_core_sales_transaction_order_id_chk",
+        "records_blocks_core_sales_transaction_payer_chk",
+        "records_blocks_core_sales_transaction_reference_chk",
+        "records_blocks_core_sales_transaction_status_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_sales_transaction_amount_recent",
+        "records_blocks_core_sales_transaction_direction_occurred",
+        "records_blocks_core_sales_transaction_direction_status_occurred",
+        "records_blocks_core_sales_transaction_external_ref_key",
+        "records_blocks_core_sales_transaction_invoice",
+        "records_blocks_core_sales_transaction_key",
+        "records_blocks_core_sales_transaction_occurred",
+        "records_blocks_core_sales_transaction_order",
+        "records_blocks_core_sales_transaction_status_occurred",
+        "records_blocks_core_sales_transaction_status_recent"
+      ]
+    },
+    {
+      "entity": "blocks-core.video.brand-kit",
+      "partition": "records_blocks_core_video_brand_kit",
+      "checks": [
+        "records_blocks_core_video_brand_kit_agent_scope_chk",
+        "records_blocks_core_video_brand_kit_key_chk",
+        "records_blocks_core_video_brand_kit_primary_color_chk",
+        "records_blocks_core_video_brand_kit_secondary_color_chk",
+        "records_blocks_core_video_brand_kit_shop_name_chk",
+        "records_blocks_core_video_brand_kit_voice_id_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_video_brand_kit_brand_key",
+        "records_blocks_core_video_brand_kit_key_id"
+      ]
+    },
+    {
+      "entity": "blocks-core.video.project",
+      "partition": "records_blocks_core_video_project",
+      "checks": [
+        "records_blocks_core_video_project_agent_scope_chk",
+        "records_blocks_core_video_project_aspect_chk",
+        "records_blocks_core_video_project_brief_chk",
+        "records_blocks_core_video_project_goal_chk",
+        "records_blocks_core_video_project_last_error_chk",
+        "records_blocks_core_video_project_published_at_chk",
+        "records_blocks_core_video_project_script_chk",
+        "records_blocks_core_video_project_status_chk",
+        "records_blocks_core_video_project_target_seconds_chk",
+        "records_blocks_core_video_project_title_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_video_project_recent",
+        "records_blocks_core_video_project_status_recent"
+      ]
+    },
+    {
+      "entity": "blocks-core.video.render",
+      "partition": "records_blocks_core_video_render",
+      "checks": [
+        "records_blocks_core_video_render_agent_scope_chk",
+        "records_blocks_core_video_render_clips_chk",
+        "records_blocks_core_video_render_error_chk",
+        "records_blocks_core_video_render_jobs_chk",
+        "records_blocks_core_video_render_output_chk",
+        "records_blocks_core_video_render_project_id_chk",
+        "records_blocks_core_video_render_provider_chk",
+        "records_blocks_core_video_render_render_id_chk",
+        "records_blocks_core_video_render_state_chk",
+        "records_blocks_core_video_render_voice_chk"
+      ],
+      "indexes": [
+        "records_blocks_core_video_render_project_recent",
+        "records_blocks_core_video_render_state_recent"
+      ]
     }
   ]
 }

@@ -2,10 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InstallationChangedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectEventBus } from "@modules/platform/event-bus"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import type { EventBus } from "@modules/platform/event-bus"
+import { InjectEventBus, type EventBus } from "@modules/platform/event-bus"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 
 /** What changed: one installation, or the whole workspace when `installationId` is null. */
 export interface InstallationChange {

@@ -22,7 +22,6 @@ describe("defaults", () => {
             workspaceId: "ws-1",
             workEnabled: true,
             road: "core",
-            backgroundDailyCap: 200,
         })
         expect(defaultState("agent-1")).toMatchObject({ agentId: "agent-1", workEnabled: true, failures: 0 })
     })

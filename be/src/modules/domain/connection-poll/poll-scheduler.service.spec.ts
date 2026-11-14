@@ -227,6 +227,16 @@ describe("PollSchedulerService a poll that read", () => {
         expect(schedule.settle).toHaveBeenCalledWith("c-1", expect.objectContaining({ succeeded: false }))
     })
 
+    it("clears the degraded mark when the probe of an open breaker reads", async () => {
+        const built = await build({ kind: "fatal" })
+        built.schedule.claimDue.mockResolvedValue([dueOf({ breakerState: "open", failures: 5 })])
+        built.poller.fetch.mockResolvedValue({ kind: "page", items: [], fetched: 0, oldestAt: undefined, newestAt: undefined })
+        await built.scheduler.tick()
+
+        expect(built.connections.markHealth).toHaveBeenCalledWith("c-1", expect.objectContaining({ state: "ok" }))
+        expect(built.connections.markRecovered).not.toHaveBeenCalled()
+    })
+
     it("lets an open breaker's due poll through as its probe and closes it on success", async () => {
         const { scheduler, schedule } = await build()
         schedule.claimDue.mockResolvedValue([
@@ -431,6 +441,15 @@ describe("PollSchedulerService failures of the provider's side", () => {
         )
 
         expect(notice.unavailable).not.toHaveBeenCalled()
+    })
+
+    it("marks a connection degraded when the breaker opens for a reason that is no refused credential, and never for a refused one", async () => {
+        const fatal = await failing({ kind: "fatal" })
+        expect(fatal.connections.markHealth).toHaveBeenCalledWith("c-1", expect.objectContaining({ state: "degraded" }))
+        const refused = await failing({ kind: "auth_failed" })
+        expect(refused.connections.markHealth).not.toHaveBeenCalled()
+        const slow = await failing({ kind: "transient" }, { failures: 0 })
+        expect(slow.connections.markHealth).not.toHaveBeenCalled()
     })
 
     it("opens the breaker for a fatal failure without the owner", async () => {

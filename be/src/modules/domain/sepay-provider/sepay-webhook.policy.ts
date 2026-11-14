@@ -5,6 +5,12 @@ import type { OptionalApiKey, OptionalSepayPayload } from "./sepay-payload.contr
 const APIKEY_HEADER = /^Apikey\s/iu
 const LINE_BREAK = /[\r\n\u2028\u2029]/u
 
+/** A text member with its spaces trimmed; undefined when it is not text or nothing is left. */
+const presentTextOf = (value: unknown): string | undefined => {
+    const text = fieldTextOf(value)?.trim()
+    return text === undefined || text === "" ? undefined : text
+}
+
 /** A parsed webhook body whose values are not yet trusted. */
 export interface SepayBody {
     readonly [field: string]: unknown
@@ -47,6 +53,7 @@ export const readSepayPayload = (body: SepayBody): OptionalSepayPayload => {
         description: fieldTextOrNullOf(body.description),
         accountNumber: fieldTextOf(body.accountNumber),
         transactionDate: fieldTextOf(body.transactionDate),
+        referenceCode: presentTextOf(body.referenceCode),
     }
 }
 

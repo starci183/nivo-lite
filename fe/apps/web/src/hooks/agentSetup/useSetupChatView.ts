@@ -1,7 +1,6 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
-import type { useSetupBrandCards } from "./useSetupBrandCards"
+import { useFormatter, useLocale, useTranslations } from "next-intl"
 import type { useSetupChat } from "./useSetupChat"
 import type { useSetupState } from "./useSetupState"
 import { messagesCopyOf } from "@/hooks/teamChat"
@@ -13,13 +12,10 @@ import type { AgentSetupChatContent, AgentSetupCopy, SetupSideGate, TeamChatMess
 /** How many of the next missing items the composer offers as starts of a message. */
 const SUGGESTIONS = 3
 
-/** What the attach control of the composer offers: the brand guideline PDF. */
-const PDF = ".pdf,application/pdf"
-
 /** The translator of the setup copy. */
 type SetupCopy = ReturnType<typeof useTranslations<"moduleSetup">>
 
-/** What the chat content is made of: the state of the setup, its versions, the typing, the gates and the brand flow. */
+/** What the chat content is made of: the state of the setup, its versions, the typing and the gates. */
 interface ChatInput {
     readonly state: Extract<ReturnType<typeof useSetupState>["slot"], { readonly items: unknown }>["items"] | undefined
     readonly versions: ReadonlyArray<ContextVersion>
@@ -27,7 +23,6 @@ interface ChatInput {
     readonly gates: ReadonlyArray<SetupSideGate>
     readonly words: ReturnType<typeof useSetupWriteWords>
     readonly typeName: string
-    readonly brand: ReturnType<typeof useSetupBrandCards>
 }
 
 /** The proposals of NIVO (items it filled and the owner did not confirm) in the words of the chat. */
@@ -47,7 +42,6 @@ const proposalsOf = (t: SetupCopy, gates: ReadonlyArray<SetupSideGate>): AgentSe
 /** What the thread and the composer draw, every word resolved. */
 const chatContentOf = (t: SetupCopy, input: ChatInput, thread: ReturnType<typeof setupRowsOf>): AgentSetupChatContent => {
     const { state, chat } = input
-    const kit = input.brand.content
     return {
         emptyTitle: t("emptyTitle"),
         emptyBody: t("emptyBody"),
@@ -72,10 +66,7 @@ const chatContentOf = (t: SetupCopy, input: ChatInput, thread: ReturnType<typeof
             sendLabel: t("send"),
             draft: chat.text,
             typing: null,
-            file:
-                kit === null
-                    ? null
-                    : { label: kit.attachLabel, removeLabel: kit.attachLabel, accept: PDF, name: null, canPick: !kit.isReading },
+            file: null,
             isSending: chat.isSending,
             isLoading: false,
             canSend: !chat.isSending && chat.text.trim().length > 0,
@@ -95,7 +86,6 @@ const copyOf = (t: SetupCopy): AgentSetupCopy => ({
     chatTitle: t("chatTitle"),
     sideTitle: t("sideTitle"),
     understandingTitle: t("understandingTitle"),
-    groupLabels: { auto: t("groupAuto"), ask: t("groupAsk"), never: t("groupNever") },
     understandingEmpty: t("understandingEmpty"),
     versionNone: t("versionNone"),
     mapTitle: t("mapTitle"),
@@ -129,6 +119,7 @@ export const useSetupChatView = (
 ): { readonly copy: AgentSetupCopy; readonly messagesCopy: TeamChatMessagesCopy; readonly content: AgentSetupChatContent } => {
     const t = useTranslations("moduleSetup")
     const chatWords = useTranslations("teamChat")
+    const locale = useLocale()
     const format = useFormatter()
     const { state } = input
     const groups = setupThreadOf(
@@ -152,6 +143,6 @@ export const useSetupChatView = (
         nivo: t("nivo"),
         timeOf: (iso) => format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit" }),
     })
-    return { copy: copyOf(t), messagesCopy: messagesCopyOf(chatWords), content: chatContentOf(t, input, thread) }
+    return { copy: copyOf(t), messagesCopy: messagesCopyOf(chatWords, locale), content: chatContentOf(t, input, thread) }
 }
 

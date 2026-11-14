@@ -1,5 +1,14 @@
-import { Alert, Button, Dialog, EmptyNotice, Form, Input, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import {
+    Alert,
+    Button,
+    Dialog,
+    EmptyNotice,
+    Form,
+    Input,
+    Stack,
+    SurfaceCard,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { AccountSignInView, DataSlot, SlotLabels } from "@/modules/types"
@@ -103,7 +112,7 @@ const PasswordDialog = (props: AccountSignInBaseProps) => {
                 onSubmit={props.on.submitPassword}
                 isPending={view.isPending}
             >
-                <Stack gap="section">
+                <Stack gap="row">
                     <Input
                         id="account-current-password"
                         name="current"

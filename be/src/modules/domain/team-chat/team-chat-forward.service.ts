@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import type { ChatRoomMessageEntity } from "./persistence/entities"
-import { BODY_MAX } from "./team-chat.contracts"
-import type { MessageRef, MessageView, TeamChatResult } from "./team-chat.contracts"
-import { chatDone, chatRefusal } from "./team-chat.policy"
+import { BODY_MAX, type MessageRef, type MessageView, type TeamChatResult } from "./team-chat.contracts"
+import { chatDone, chatRefusal, isReadOnlyRoom } from "./team-chat.policy"
 import { TeamChatAccessService } from "./team-chat-access.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
 import { TeamChatViewsService } from "./team-chat-views.service"
@@ -43,8 +42,10 @@ export class TeamChatForwardService {
         if (source === undefined || !isForwardable(source)) return chatRefusal(TeamChatErrorCode.NotFound)
         if ((await this.access.visibleRoom(workspaceId, viewerId, source.roomId)) === null)
             return chatRefusal(TeamChatErrorCode.NotFound)
-        if ((await this.access.visibleRoom(workspaceId, viewerId, toRoomId)) === null)
-            return chatRefusal(TeamChatErrorCode.NotFound)
+        const target = await this.access.visibleRoom(workspaceId, viewerId, toRoomId)
+        if (target === null) return chatRefusal(TeamChatErrorCode.NotFound)
+        // A forward is a new line of the viewer: a read-only room (the founder's NIVO room) takes none.
+        if (isReadOnlyRoom(target)) return chatRefusal(TeamChatErrorCode.Forbidden)
         if ((await this.store.memberOf(toRoomId, { memberKind: "user", memberId: viewerId })) === null)
             return chatRefusal(TeamChatErrorCode.NotMember)
         const body = source.body.slice(0, BODY_MAX)

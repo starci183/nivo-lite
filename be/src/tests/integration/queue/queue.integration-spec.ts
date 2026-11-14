@@ -1,8 +1,7 @@
-import type { QueueOutbox } from "@modules/platform/queue"
+import { type QueueOutbox, QUEUE_OUTBOX } from "@modules/platform/queue"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import assert from "node:assert/strict"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
+import { CONNECTION_HEALTH_QUEUE } from "@modules/queues/connection-health"
 import { queueBuilder } from "../../fixtures/builders/queue.builder"
 import { useTestWorld } from "../../world/use-test-world"
 import { QUEUE_MODULES } from "../../world/test-capabilities.options"
@@ -37,7 +36,7 @@ describe("NIVO queue (local PostgreSQL integration)", () => {
     })
     it("queue/relay-job-id-is-outbox-id: duplicate writes retain one outbox identity the relay publishes", async () => {
         const proofId = world.key("identity")
-        const dedupeKey = `${CONTENT_TICK_QUEUE}:${proofId}`
+        const dedupeKey = `${CONNECTION_HEALTH_QUEUE}:${proofId}`
         cleanupQueue(world, proofId)
         const builder = queueBuilder(world.resolve<QueueOutbox>(QUEUE_OUTBOX), proofId)
         const enqueue = () => world.db.primary.transaction((tx) => builder.build(tx, dedupeKey))
@@ -51,7 +50,7 @@ describe("NIVO queue (local PostgreSQL integration)", () => {
         assert(row !== undefined && message !== undefined)
         expect(row.sent_at).toBeNull()
         expect(message.message).toEqual({
-            name: CONTENT_TICK_QUEUE,
+            name: CONNECTION_HEALTH_QUEUE,
             payload: { proofId },
             dedupe: dedupeKey,
             outbox_id: row.id,

@@ -4,15 +4,11 @@ import type {
     AgentGenerationStatusQuery,
     AgentKnowledgeLensesQuery,
     CreditPacksBoughtQuery,
-    VideoProjectQuery,
     AskKnowledgeQuery,
     BillingPlanQuery,
     BillingWorkspaceQuery,
-    BookingBoardQuery,
     BrainQuery,
     PublicDocumentsQuery,
-    BrandProposalsQuery,
-    MarketingWeeklyReportQuery,
     CheckConnectionMutation,
     CheckMetaMutation,
     ChooseMetaPageMutation,
@@ -23,33 +19,17 @@ import type {
     CreditQuotaStatusQuery,
     CreditTopupLotsQuery,
     CreditUsageSummaryQuery,
-    HiringCandidateDetailQuery,
-    HiringWorkbenchQuery,
     KnowledgeSourceQuery,
     KnowledgeSourcesQuery,
     KnowledgeSuggestionsQuery,
     LessonMiningStatusQuery,
     ModuleInstallationsQuery,
     NivoKnowledgeQuery,
-    PublicBookingPageQuery,
-    PublicHiringInterviewQuery,
-    PublicHiringJobQuery,
-    PublicHiringOfferQuery,
     RequestDataSyncMutation,
     ReturnZaloAuthorizationMutation,
-    SaveHiringSettingsMutation,
-    SaveVideoBrandMutation,
     StartMoneyConnectionMutation,
     StartWebhookConnectionMutation,
-    TestOpenApiOperationQuery,
     TestWebhookConnectionMutation,
-    VideoMediaQuery,
-    VideoRenderStatusQuery,
-    VideoScriptStatusQuery,
-    HiringAvailabilityWindowInput,
-    HiringJobQuestionInput,
-    SaveHiringJobInput,
-    SaveHiringSettingsInput,
     MyAgentTemplatesQuery,
     MarketplaceListingsQuery,
     TemplateUpdateOffersQuery,
@@ -61,7 +41,6 @@ import type {
     AcceptTemplateUpdateMutation,
     SubmitTemplateListingMutation,
 } from "./__generated__/graphql"
-import type { WireInput } from "./types"
 
 /** The `AgentGenerationStatusType` object of the back end contract, as the operations of this app select it. */
 export type AgentGenerationStatusType = AgentGenerationStatusQuery["agentGenerationStatus"]
@@ -71,8 +50,6 @@ export type CreditPackPurchaseType = CreditPacksBoughtQuery["creditPacksBought"]
 export type BillingPlanType = NonNullable<BillingPlanQuery["billingPlan"]>
 /** The `BillingWorkspaceType` object of the back end contract, as the operations of this app select it. */
 export type BillingWorkspaceType = BillingWorkspaceQuery["billingWorkspace"]
-/** The `BookingBoardType` object of the back end contract, as the operations of this app select it. */
-export type BookingBoardType = BookingBoardQuery["bookingBoard"]
 /** The `BrainEvidenceType` object of the back end contract, as the operations of this app select it. */
 export type BrainEvidenceType = BrainQuery["brain"]["facts"][number]["evidence"][number]
 /** The `BrainExtractionType` object of the back end contract, as the operations of this app select it. */
@@ -94,10 +71,6 @@ export type ConnectionAgentType = ConnectionAgentsQuery["connectionAgents"][numb
 export type ConnectionCheckType = CheckConnectionMutation["checkConnection"]
 /** The `ConnectionType` object of the back end contract, as the operations of this app select it. */
 export type ConnectionType = ConnectionsQuery["connections"][number]
-/** The `BrandProposalType` object of the back end contract, as the operations of this app select it. */
-export type BrandProposalType = BrandProposalsQuery["brandProposals"][number]
-/** The `WeeklyReportType` object of the back end contract, as the operations of this app select it. */
-export type WeeklyReportType = MarketingWeeklyReportQuery["marketingWeeklyReport"]
 /** The `CreditPackType` object of the back end contract, as the operations of this app select it. */
 export type CreditPackType = CreditPacksQuery["creditPacks"][number]
 /** The `CreditQuotaStatusType` object of the back end contract, as the operations of this app select it. */
@@ -114,43 +87,6 @@ export type DocumentPassageType = KnowledgeSourceQuery["knowledgeSource"]["chunk
 export type FirstEventStateType = ConnectionFirstEventQuery["connectionFirstEvent"]
 /** The `FirstEventType` object of the back end contract, as the operations of this app select it. */
 export type FirstEventType = NonNullable<ChooseMetaPageMutation["chooseMetaPage"]["firstEvent"]>
-/** The `HiringAnswerType` object of the back end contract, as the operations of this app select it. */
-export type HiringAnswerType = HiringWorkbenchQuery["hiringWorkbench"]["candidates"][number]["answers"][number]
-/** The `HiringBenchType` object of the back end contract, as the operations of this app select it. */
-export type HiringBenchType = HiringWorkbenchQuery["hiringWorkbench"]
-/** The `HiringCandidateDetailType` object of the back end contract, as the operations of this app select it. */
-export type HiringCandidateDetailType = HiringCandidateDetailQuery["hiringCandidateDetail"]
-/** The `HiringCandidateType` object of the back end contract, as the operations of this app select it. */
-export type HiringCandidateType = HiringWorkbenchQuery["hiringWorkbench"]["candidates"][number]
-/** The `HiringCvType` object of the back end contract, as the operations of this app select it. */
-export type HiringCvType = NonNullable<HiringCandidateDetailQuery["hiringCandidateDetail"]["cv"]>
-/** The `HiringEventType` object of the back end contract, as the operations of this app select it. */
-export type HiringEventType = HiringCandidateDetailQuery["hiringCandidateDetail"]["events"][number]
-/** The `HiringFiguresType` object of the back end contract, as the operations of this app select it. */
-export type HiringFiguresType = HiringWorkbenchQuery["hiringWorkbench"]["figures"]
-/** The `HiringInterviewType` object of the back end contract, as the operations of this app select it. */
-export type HiringInterviewType = HiringWorkbenchQuery["hiringWorkbench"]["interviews"][number]
-/** The `HiringJobQuestionType` object of the back end contract, as the operations of this app select it. */
-export type HiringJobQuestionType = HiringWorkbenchQuery["hiringWorkbench"]["jobs"][number]["questions"][number]
-/** The `HiringJobRequirementsType` object of the back end contract, as the operations of this app select it. */
-export type HiringJobRequirementsType = HiringWorkbenchQuery["hiringWorkbench"]["jobs"][number]["requirements"]
-/** The `HiringJobType` object of the back end contract, as the operations of this app select it. */
-export type HiringJobType = HiringWorkbenchQuery["hiringWorkbench"]["jobs"][number]
-/** The `HiringMemberType` object of the back end contract, as the operations of this app select it. */
-export type HiringMemberType = HiringWorkbenchQuery["hiringWorkbench"]["members"][number]
-/** The `HiringOfferType` object of the back end contract, as the operations of this app select it. */
-export type HiringOfferType = HiringWorkbenchQuery["hiringWorkbench"]["offers"][number]
-/** The `HiringOnboardingType` object of the back end contract, as the operations of this app select it. */
-export type HiringOnboardingType = HiringWorkbenchQuery["hiringWorkbench"]["onboarding"][number]
-/** The `HiringScoreReasonType` object of the back end contract, as the operations of this app select it. */
-export type HiringScoreReasonType =
-    HiringWorkbenchQuery["hiringWorkbench"]["candidates"][number]["scoreReasons"][number]
-/** The `HiringSettingsType` object of the back end contract, as the operations of this app select it. */
-export type HiringSettingsType = SaveHiringSettingsMutation["saveHiringSettings"]
-/** The `HiringSlotType` object of the back end contract, as the operations of this app select it. */
-export type HiringSlotType = HiringWorkbenchQuery["hiringWorkbench"]["interviews"][number]["proposedSlots"][number]
-/** The `HiringWindowType` object of the back end contract, as the operations of this app select it. */
-export type HiringWindowType = HiringWorkbenchQuery["hiringWorkbench"]["members"][number]["windows"][number]
 /** The `KnowledgeSourceTextType` object of the back end contract, as the operations of this app select it. */
 export type KnowledgeSourceTextType = KnowledgeSourceQuery["knowledgeSource"]["source"]
 /** The `KnowledgeSourceType` object of the back end contract, as the operations of this app select it. */
@@ -169,34 +105,8 @@ export type MetaWizardConnectionType = ChooseMetaPageMutation["chooseMetaPage"]
 export type ModuleInstallationType = ModuleInstallationsQuery["moduleInstallations"][number]
 /** The `NivoEntryType` object of the back end contract, as the operations of this app select it. */
 export type NivoEntryType = NivoKnowledgeQuery["nivoKnowledge"][number]
-/** The `OpenApiTestType` object of the back end contract, as the operations of this app select it. */
-export type OpenApiTestType = TestOpenApiOperationQuery["testOpenApiOperation"]
-/** The `PublicBookingPageType` object of the back end contract, as the operations of this app select it. */
-export type PublicBookingPageType = PublicBookingPageQuery["publicBookingPage"]
-/** The `PublicInterviewType` object of the back end contract, as the operations of this app select it. */
-export type PublicInterviewType = PublicHiringInterviewQuery["publicHiringInterview"]
-/** The `PublicJobType` object of the back end contract, as the operations of this app select it. */
-export type PublicJobType = PublicHiringJobQuery["publicHiringJob"]
-/** The `PublicOfferType` object of the back end contract, as the operations of this app select it. */
-export type PublicOfferType = PublicHiringOfferQuery["publicHiringOffer"]
-/** The `PublicQuestionType` object of the back end contract, as the operations of this app select it. */
-export type PublicQuestionType = PublicHiringJobQuery["publicHiringJob"]["questions"][number]
-/** The `PublicRequirementsType` object of the back end contract, as the operations of this app select it. */
-export type PublicRequirementsType = PublicHiringJobQuery["publicHiringJob"]["requirements"]
-/** The `PublicSlotType` object of the back end contract, as the operations of this app select it. */
-export type PublicSlotType = PublicHiringInterviewQuery["publicHiringInterview"]["proposedSlots"][number]
 /** The `RetrievedPassageType` object of the back end contract, as the operations of this app select it. */
 export type RetrievedPassageType = AskKnowledgeQuery["askKnowledge"][number]
-/** The `VideoBrandType` object of the back end contract, as the operations of this app select it. */
-export type VideoBrandType = SaveVideoBrandMutation["saveVideoBrand"]
-/** The `VideoMediaType` object of the back end contract, as the operations of this app select it. */
-export type VideoMediaType = VideoMediaQuery["videoMedia"][number]
-/** The `VideoProjectType` object of the back end contract, as the operations of this app select it. */
-export type VideoProjectType = VideoProjectQuery["videoProject"]
-/** The `VideoRenderStatusType` object of the back end contract, as the operations of this app select it. */
-export type VideoRenderStatusType = VideoRenderStatusQuery["videoRenderStatus"]
-/** The `VideoScriptStatusType` object of the back end contract, as the operations of this app select it. */
-export type VideoScriptStatusType = VideoScriptStatusQuery["videoScriptStatus"]
 /** The `WebhookTestResultType` object of the back end contract, as the operations of this app select it. */
 export type WebhookTestResultType = TestWebhookConnectionMutation["testWebhookConnection"]
 /** The `WebhookViewType` object of the back end contract, as the operations of this app select it. */
@@ -205,14 +115,6 @@ export type WebhookViewType = StartWebhookConnectionMutation["startWebhookConnec
 export type WizardConnectionType = StartMoneyConnectionMutation["startMoneyConnection"]
 /** The `ZaloWizardConnectionType` object of the back end contract, as the operations of this app select it. */
 export type ZaloWizardConnectionType = ReturnZaloAuthorizationMutation["returnZaloAuthorization"]
-/** The `HiringAvailabilityWindowInput` of the back end contract as callers build it, optional keys optional. */
-export type HiringAvailabilityWindowRequest = WireInput<HiringAvailabilityWindowInput>
-/** The `HiringJobQuestionInput` of the back end contract as callers build it, optional keys optional. */
-export type HiringJobQuestionRequest = WireInput<HiringJobQuestionInput>
-/** The `SaveHiringJobInput` of the back end contract as callers build it, optional keys optional. */
-export type SaveHiringJobRequest = WireInput<SaveHiringJobInput>
-/** The `SaveHiringSettingsInput` of the back end contract as callers build it, optional keys optional. */
-export type SaveHiringSettingsRequest = WireInput<SaveHiringSettingsInput>
 /** The `PublicDocumentType` object of the back end contract, as the operations of this app select it. */
 export type PublicDocumentType = PublicDocumentsQuery["publicDocuments"][number]
 

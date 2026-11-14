@@ -1,16 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectTimer } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
+import { InjectTimer, type Timer } from "@modules/platform/retry"
 import { ConnectionPollRunService, emptyPollSummary } from "./connection-poll-run.service"
-import { InjectConnectionPollOptions, InjectPollRandom } from "./connection-poll.decorators"
-import type { PollRandom } from "./connection-poll.decorators"
+import { InjectConnectionPollOptions, InjectPollRandom, type PollRandom } from "./connection-poll.decorators"
 import { ConnectionPollLogEvent } from "./connection-poll.log-events"
 import { cursorOf } from "./connection-poll.policy"
 import { ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
@@ -23,11 +18,10 @@ import {
     planAfterFailure,
     planAfterRead,
     probeOf,
+    type PollPlan,
 } from "./poll-schedule.policy"
 import type { PollFailure } from "./connection-poll.contracts"
-import type { PollPlan } from "./poll-schedule.policy"
-import { PollScheduleService } from "./poll-schedule.service"
-import type { DueConnection } from "./poll-schedule.service"
+import { PollScheduleService, type DueConnection } from "./poll-schedule.service"
 import { PollSourceRegistryService } from "./poll-source-registry.service"
 import type { ConnectionPollOptions } from "./connection-poll.options"
 import type { PollOutcome, PollWalkOptions, ScheduledPollSource } from "./poll-schedule.contracts"
@@ -71,6 +65,15 @@ const emptyTally = (): ProviderTally => ({
     deferred: 0,
     maxLagMs: 0,
 })
+
+/** Counts one failed poll under the kind it ended as. */
+const countFailure = (tally: ProviderTally, kind: PollFailure["kind"]): void => {
+    tally.rateLimited += kind === "rate_limited" ? 1 : 0
+    tally.authFailed += kind === "auth_failed" ? 1 : 0
+    tally.transient += kind === "transient" ? 1 : 0
+    tally.unavailable += kind === "unavailable" ? 1 : 0
+    tally.fatal += kind === "fatal" ? 1 : 0
+}
 
 @Injectable()
 /**
@@ -171,6 +174,7 @@ export class PollSchedulerService {
             tally.found += outcome.kind === "skipped" ? 0 : outcome.fetched
             tally.missedByWebhook += outcome.kind === "skipped" ? 0 : outcome.recorded
             await this.schedule.settle(row.connectionId, planAfterRead(row, outcome, now, this.options.schedule, unit))
+            if (outcome.kind !== "skipped") await this.recoverConnection(record, row)
             return
         }
         if (outcome.cause instanceof ConnectionPollError && outcome.cause.code === ConnectionPollErrorCode.Deferred) {
@@ -184,14 +188,21 @@ export class PollSchedulerService {
             return
         }
         const failure = source.classify(outcome.cause)
-        tally.rateLimited += failure.kind === "rate_limited" ? 1 : 0
-        tally.authFailed += failure.kind === "auth_failed" ? 1 : 0
-        tally.transient += failure.kind === "transient" ? 1 : 0
-        tally.unavailable += failure.kind === "unavailable" ? 1 : 0
-        tally.fatal += failure.kind === "fatal" ? 1 : 0
+        countFailure(tally, failure.kind)
         const plan = planAfterFailure(row, failure, now, this.options.schedule, unit)
         await this.schedule.settle(row.connectionId, plan)
         await this.report(record, failure, plan, now)
+    }
+
+    /**
+     * A poll read the provider again: whatever the earlier failures told the owner is no longer true. A refused credential that works again
+     * clears the error status, and a degraded mark clears; nothing happens for a connection that never failed.
+     */
+    private async recoverConnection(record: ConnectionRecord, row: ReturnType<typeof probeOf>): Promise<void> {
+        if (row.needsReauth) await this.connections.markRecovered(record.id)
+        if (row.needsReauth || row.breakerState !== "closed" || row.failures > 0) {
+            await this.connections.markHealth(record.id, { state: "ok", reason: "", checkedAt: this.clock.now().toISOString() })
+        }
     }
 
     private async report(record: ConnectionRecord, failure: PollFailure, plan: PollPlan, now: number): Promise<void> {
@@ -201,6 +212,15 @@ export class PollSchedulerService {
                 provider: record.provider,
                 kind: failure.kind,
             })
+            // The breaker is open for a reason that is not a refused credential: the connection is connected yet cannot be read. It says so
+            // (a refused credential is the status error and the owner's work item below, never this mark).
+            if (failure.kind !== "auth_failed") {
+                await this.connections.markHealth(record.id, {
+                    state: "degraded",
+                    reason: "the provider cannot be read at the moment",
+                    checkedAt: this.clock.now().toISOString(),
+                })
+            }
         }
         if (!plan.raiseOwnerNotice) return
         if (failure.kind === "unavailable") {

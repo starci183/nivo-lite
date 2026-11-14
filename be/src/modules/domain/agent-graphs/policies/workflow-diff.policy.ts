@@ -1,5 +1,6 @@
-import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
+import { nodeAccountRequestsOf, type GraphSpec, type GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
+import type { NodeRightAsk, NodeRightsDiff } from "../agent-workflow-rights.contracts"
 import type { GrantDiff, ParamChange, StepDiff, StepPart, WorkflowDiff } from "../agent-workflows.contracts"
 
 /** The parts of a node compared, in the order a diff lists them. */
@@ -13,11 +14,12 @@ const PARTS: ReadonlyArray<StepPart> = [
     "blocking",
     "group",
     "wait",
+    "accounts",
 ]
 
 /** A JSON value with its object keys sorted, so two equal values always print the same text. */
 const canonical = (value: unknown): unknown => {
-    if (Array.isArray(value)) return value.map(canonical)
+    if (Array.isArray(value)) return value.map((item) => canonical(item))
     if (value !== null && typeof value === "object") {
         return Object.fromEntries(
             Object.entries(value)
@@ -55,9 +57,6 @@ const partsChanged = (before: GraphSpecNode, after: GraphSpecNode): ReadonlyArra
 export const sameStep = (before: GraphSpecNode | undefined, after: GraphSpecNode | undefined): boolean =>
     sameJson(before, after)
 
-const rightKeys = (spec: GraphSpec | null): ReadonlyArray<string> =>
-    (spec?.grant.rights ?? []).flatMap((right) => right.fields.map((field) => `${right.kind}:${right.access}.${field}`))
-
 const gained = (before: ReadonlyArray<string>, after: ReadonlyArray<string>): ReadonlyArray<string> =>
     [...new Set(after)].filter((item) => !before.includes(item)).sort((left, right) => left.localeCompare(right))
 
@@ -66,12 +65,35 @@ const grantDiff = (before: GraphSpec | null, after: GraphSpec): GrantDiff => {
     const tools = before?.grant.tools ?? []
     const effects = before?.grant.effects ?? []
     return {
-        rightsAdded: gained(rightKeys(before), rightKeys(after)),
-        rightsRemoved: gained(rightKeys(after), rightKeys(before)),
         toolsAdded: gained(tools, after.grant.tools),
         toolsRemoved: gained(after.grant.tools, tools),
         effectsAdded: gained(effects, after.grant.effects),
         effectsRemoved: gained(after.grant.effects, effects),
+    }
+}
+
+const askKeyOf = (ask: NodeRightAsk): string =>
+    JSON.stringify([ask.nodeKey, ask.kind, ask.provider, ask.connectionId, ask.operation])
+
+/**
+ * How what the nodes ask for on accounts differs between two graphs. A node that states its accounts in both is compared entry by
+ * entry; a node only one graph holds gives all its entries as added or removed. A node that stated none before (a node from before
+ * node rights asked for exactly what its workflow had granted it, which a graph does not say) is not compared: stating them is no
+ * change of what it asks.
+ */
+export const nodeRightsDiffOf = (before: GraphSpec | null, after: GraphSpec): NodeRightsDiff => {
+    const was = new Map((before?.nodes ?? []).map((node) => [node.key, node]))
+    const is = new Map(after.nodes.map((node) => [node.key, node]))
+    const compared = (node: GraphSpecNode, other: GraphSpecNode | undefined): boolean =>
+        node.accounts !== undefined && (other === undefined || other.accounts !== undefined)
+    const asked = nodeAccountRequestsOf(after.nodes.filter((node) => compared(node, was.get(node.key))))
+    const held = nodeAccountRequestsOf((before?.nodes ?? []).filter((node) => compared(node, is.get(node.key))))
+    const heldByKey = new Map(held.map((ask) => [askKeyOf(ask), ask]))
+    const askedKeys = new Set(asked.map((ask) => askKeyOf(ask)))
+    return {
+        added: asked.filter((ask) => !heldByKey.has(askKeyOf(ask))),
+        removed: held.filter((ask) => !askedKeys.has(askKeyOf(ask))),
+        loosened: asked.filter((ask) => ask.mode === "auto" && heldByKey.get(askKeyOf(ask))?.mode === "ask"),
     }
 }
 
@@ -105,6 +127,7 @@ export const workflowDiffOf = (before: GraphSpec | null, after: GraphSpec): Work
         steps: [...present, ...removed],
         triggerChanged: before !== null && !sameJson(before.trigger, after.trigger),
         grant: grantDiff(before, after),
+        nodeRights: nodeRightsDiffOf(before, after),
     }
 }
 

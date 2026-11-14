@@ -61,10 +61,9 @@ export const useAgentCreateSubmit = (
                     handle: form.typedHandle,
                     avatarPreset: choice.kind === "preset" ? storedPresetOf(choice.preset) : null,
                     avatarPath: choice.kind === "upload" ? choice.path : null,
-                    connectionIds: form.canGrantChannels ? [...form.chosenChannels] : [],
                     startFrom: copyFrom === null ? "default" : "copy",
                     copyFrom,
-                    providerRights: providerRights().map((one) => ({ connectionId: one.connectionId, abilities: [...one.abilities] })),
+                    providerRights: providerRights().map((one) => ({ connectionId: one.connectionId })),
                 }),
             { successMessage: t("created", { name }) },
         )

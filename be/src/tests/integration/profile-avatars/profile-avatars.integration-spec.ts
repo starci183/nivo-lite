@@ -1,11 +1,10 @@
 import { eachInOrder } from "@modules/platform/primitives"
 import {
-    OFFICE_MEMBER_AVATAR,
-    officeRoomMembersIdentity,
-    persistOfficeRoomMembers,
-} from "../../fixtures/builders/office-room-members.builder"
+    MEMBER_PROVIDER_AVATAR,
+    memberAvatarsIdentity,
+    persistMemberAvatars,
+} from "../../fixtures/builders/member-avatars.builder"
 import { withBackendRole } from "../../world/backend-role-proof.service"
-import { OfficeRoomMembersProofModule } from "../../world/office-room-members-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 import {
     roomMemberAvatars,
@@ -16,8 +15,8 @@ import {
 } from "../../world/avatars-database.service"
 import { removeAuthUsers, removeWorkspace, storeUploadedAvatar } from "../../world/proof-accounts.service"
 
-const world = useTestWorld({ modules: [OfficeRoomMembersProofModule.register()] })
-const identity = officeRoomMembersIdentity(() => world.id())
+const world = useTestWorld({ modules: [] })
+const identity = memberAvatarsIdentity(() => world.id())
 const UPLOADED = "https://cdn.example.test/storage/v1/object/public/avatars_public/people/one.png"
 
 beforeAll(async () => {
@@ -27,12 +26,11 @@ beforeAll(async () => {
         })
         await removeAuthUsers(world.db.primary, [
             identity.ownerId,
-            identity.managerId,
             ...identity.userIds,
             identity.foreignUserId,
         ])
     })
-    await persistOfficeRoomMembers(world.db.primary, identity)
+    await persistMemberAvatars(world.db.primary, identity)
     await storeUploadedAvatar(world.db.primary, identity.userIds[0], UPLOADED)
     await storeUploadedAvatar(world.db.primary, identity.userIds[1], UPLOADED)
     await storeUploadedAvatar(world.db.primary, identity.userIds[2], "http://cdn.example.test/plain.png")
@@ -62,7 +60,7 @@ describe("uploaded member pictures over PostgreSQL", () => {
         await withBackendRole(world, async (tx) => {
             const rows = await roomMemberAvatars(tx, identity.workspaceId, [identity.userIds[0]])
 
-            expect(rows).toEqual([{ id: identity.userIds[0], avatar_url: OFFICE_MEMBER_AVATAR }])
+            expect(rows).toEqual([{ id: identity.userIds[0], avatar_url: MEMBER_PROVIDER_AVATAR }])
         })
     })
 })

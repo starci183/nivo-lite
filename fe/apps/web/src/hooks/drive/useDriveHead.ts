@@ -1,76 +1,47 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useSearchParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { useCallback, useState } from "react"
-import { useConnectionsRole } from "@/hooks/connections"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import { mapSlot } from "@/hooks/slot"
-import { useMutateAuthorizeDriveSwr, useMutateDisconnectDriveSwr } from "@/hooks/swr"
-import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import type { ConnectionHeadView, ConnectionNotice, ConnectionTone, DataSlot } from "@/modules/types"
-import { DRIVE_PAGE_PATH, driveFailureKeyOf } from "./drive.shared"
-import type { DriveGrantStanding } from "./drive.shared"
-import { useDrivePage } from "./useDrivePage"
+import { useMutateAuthorizeDriveSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
-
-const CHIP_KEYS = { none: "chipNone", connected: "chipOk", lost: "chipCheck" } as const
-const CHIP_TONES: Readonly<Record<DriveGrantStanding, ConnectionTone>> = {
-    none: "neutral",
-    connected: "success",
-    lost: "danger",
-}
+import { providerPagePath } from "@/modules/connection-page"
+import { workspaceHref } from "@/modules/routes"
+import type { ConnectionNotice } from "@/modules/types"
+import { DRIVE_WIZARD_PATH, driveFailureKeyOf, type DriveGrantStanding } from "./drive.shared"
+import { useDrivePage } from "./useDrivePage"
 
 /** The view `useDriveHead` returns. */
 export interface DriveHeadView {
-    head: DataSlot<ConnectionHeadView>
     notices: readonly ConnectionNotice[]
     grant: () => undefined
     isGranting: boolean
-    disconnect: () => Promise<void>
-    isDisconnecting: boolean
-    isOwner: boolean
     standing: DriveGrantStanding | undefined
 }
 
 /**
- * The header of the Google Drive page, its standing, its notices, and its two commands: grant (or grant again) through Google, and the
- * owner's disconnect, which forgets the stored tokens and leaves the page for the hub. Nothing is read while `enabled` is false.
+ * The notices of the Google Drive account page, its standing, and its command: grant (or grant again) through Google, which sends
+ * the owner back to this page. Disconnecting is the account row's command in the page band. Nothing is read while `enabled` is false.
  */
 export const useDriveHead = (enabled = true): DriveHeadView => {
     const t = useTranslations("driveConnection")
     const tw = useTranslations("driveWizard")
     const settle = useSettledGraphQL()
-    const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
     const params = useSearchParams()
-    const { trigger: forget, isMutating: isDisconnecting } = useMutateDisconnectDriveSwr()
+    const route = useParams<{ id?: string }>()
     const { trigger: authorize, isMutating: isGranting } = useMutateAuthorizeDriveSwr()
     const { slot } = useDrivePage(enabled)
-    const { role } = useConnectionsRole()
     const [notice, setNotice] = useState("")
-
-    const head: DataSlot<ConnectionHeadView> = mapSlot(slot, (page) => ({
-        name: t("title"),
-        chipLabel: t(CHIP_KEYS[page.standing]),
-        chipTone: CHIP_TONES[page.standing],
-        facts: page.email === "" ? t("factsNone") : page.email,
-    }))
+    const returnTo = workspaceHref(workspaceId, typeof route.id === "string" ? providerPagePath(route.id) : DRIVE_WIZARD_PATH)
 
     const grant = useCallback(async (): Promise<void> => {
         setNotice("")
-        const result = await settle(() => authorize({ returnTo: workspaceHref(workspaceId, DRIVE_PAGE_PATH) }))
+        const result = await settle(() => authorize({ returnTo }))
         if (result.kind !== "ok") return setNotice(result.message)
         window.location.assign(result.value.url)
-    }, [settle, authorize, workspaceId])
-
-    const disconnect = useCallback(async (): Promise<void> => {
-        setNotice("")
-        const result = await settle(() => forget(), t("toastDisconnected"))
-        if (result.kind !== "ok") return setNotice(result.message)
-        router.replace(workspaceHref(workspaceId, CONSOLE_ROUTES.connections))
-    }, [settle, forget, t, router, workspaceId])
+    }, [settle, authorize, returnTo])
 
     const standing = ("items" in slot ? slot.items : undefined)?.standing
     const returned = params.get("drive") === "error" ? tw(driveFailureKeyOf(params.get("reason") ?? "")) : ""
@@ -83,13 +54,9 @@ export const useDriveHead = (enabled = true): DriveHeadView => {
     ]
 
     return {
-        head,
         notices,
         grant: () => void grant(),
         isGranting,
-        disconnect,
-        isDisconnecting,
-        isOwner: role === "owner",
         standing,
     }
 }

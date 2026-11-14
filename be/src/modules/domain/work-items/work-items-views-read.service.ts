@@ -55,16 +55,6 @@ export class WorkItemsViewsReadService {
         return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
     }
 
-    /** The accounting work waiting for a decision, oldest first, at most `limit`. */
-    async waitingAccounting(workspaceId: string, limit: number): Promise<Array<WorkItem>> {
-        const rows = await this.entityManager.find(WorkItemEntity, {
-            where: { workspaceId, department: "accounting", status: "waiting_decision" },
-            order: { createdAt: "ASC", id: "ASC" },
-            take: limit,
-        })
-        return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
-    }
-
     /** Runs the select and pairs each item with its cursor, which a second read of the same rows gives at full precision. */
     private async withCursors(select: SelectQueryBuilder<WorkItemEntity>): Promise<Array<WorkItemWithCursor>> {
         const entities = await select.getMany()

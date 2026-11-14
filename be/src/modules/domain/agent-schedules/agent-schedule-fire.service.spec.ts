@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { QUEUE_SCHEDULES } from "@modules/platform/queue"
-import { AgentTriggersService, AgentWakeService } from "@modules/domain/agent-work"
+import { AgentTriggersService } from "@modules/domain/agent-work"
 import type { AgentTriggerRecord } from "@modules/domain/agent-work"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -11,6 +11,7 @@ import { AgentScheduleFireService } from "./agent-schedule-fire.service"
 import { AgentSchedulesErrorCode } from "./errors/agent-schedules.error"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
+import { ClockTickDeliveryService } from "./clock-tick-delivery.service"
 
 const SLOT = "1794283200000"
 const PAYLOAD = { workspaceId: "ws-1", agentId: "agent-1", triggerId: "trigger-1", slot: SLOT }
@@ -38,7 +39,7 @@ const build = async (trigger: AgentTriggerRecord | null = record(), workOn = tru
         byId: jest.fn().mockResolvedValue(trigger),
         recordFire: jest.fn().mockResolvedValue(undefined),
     })
-    const wakes = mock<AgentWakeService>({ wake: jest.fn().mockResolvedValue(true) })
+    const wakes = mock<ClockTickDeliveryService>({ deliverSlot: jest.fn().mockResolvedValue("woken") })
     const sync = mock<AgentTriggerSyncService>({
         unschedule: jest.fn().mockResolvedValue(undefined),
         reconcile: jest.fn().mockResolvedValue(null),
@@ -53,7 +54,7 @@ const build = async (trigger: AgentTriggerRecord | null = record(), workOn = tru
             { provide: QUEUE_SCHEDULES, useValue: schedules },
             { provide: LOGGER, useValue: logger },
             { provide: AgentTriggersService, useValue: triggers },
-            { provide: AgentWakeService, useValue: wakes },
+            { provide: ClockTickDeliveryService, useValue: wakes },
             { provide: AgentTriggerSyncService, useValue: sync },
         ],
     }).compile()
@@ -61,32 +62,15 @@ const build = async (trigger: AgentTriggerRecord | null = record(), workOn = tru
 }
 
 describe("AgentScheduleFireService.fire", () => {
-    it("writes one schedule wake keyed by the trigger and the slot read from the job id, and records the fire in the same transaction", async () => {
+    it("delivers the slot of the row through the clock's entry for the row's agent and records the fire in the same transaction", async () => {
         const { service, wakes, triggers, tx } = await build()
 
         await expect(service.fire(PAYLOAD)).resolves.toBe(true)
 
-        expect(wakes.wake).toHaveBeenCalledWith(expect.anything(), {
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            source: "schedule",
-            eventKey: `trigger-1:${SLOT}`,
-            context: { triggerId: "trigger-1", slot: SLOT, probeKey: "invoices_due" },
-            actorMemberId: null,
-        })
+        expect(wakes.deliverSlot).toHaveBeenCalledWith(expect.anything(), "ws-1", record(), SLOT, null)
+        expect(wakes.deliverSlot.mock.calls[0]?.[0]).toBe(triggers.recordFire.mock.calls[0]?.[0])
         expect(triggers.recordFire).toHaveBeenCalledWith(expect.anything(), "trigger-1", new Date(Number(SLOT)), NEXT)
         expect(tx.commits).toBe(1)
-    })
-
-    it("carries no probe key when the trigger names none", async () => {
-        const { service, wakes } = await build(record({ probeKey: null }))
-
-        await service.fire(PAYLOAD)
-
-        expect(wakes.wake).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({ context: { triggerId: "trigger-1", slot: SLOT } }),
-        )
     })
 
     it.each([
@@ -99,7 +83,7 @@ describe("AgentScheduleFireService.fire", () => {
         await expect(service.fire(PAYLOAD)).resolves.toBe(false)
 
         expect(sync.unschedule).toHaveBeenCalledWith("trigger-1")
-        expect(wakes.wake).not.toHaveBeenCalled()
+        expect(wakes.deliverSlot).not.toHaveBeenCalled()
         expect(logger.warn).toHaveBeenCalledWith(AgentSchedulesLogEvent.OrphanUnscheduled, { triggerId: "trigger-1" })
     })
 
@@ -109,7 +93,7 @@ describe("AgentScheduleFireService.fire", () => {
         await expect(service.fire(PAYLOAD)).resolves.toBe(false)
 
         expect(sync.reconcile).toHaveBeenCalledWith("ws-1", record())
-        expect(wakes.wake).not.toHaveBeenCalled()
+        expect(wakes.deliverSlot).not.toHaveBeenCalled()
     })
 
     it("ends the job for a payload that holds no trigger or no slot", async () => {
@@ -120,7 +104,7 @@ describe("AgentScheduleFireService.fire", () => {
             params: { unrecoverable: 1 },
         })
 
-        expect(wakes.wake).not.toHaveBeenCalled()
+        expect(wakes.deliverSlot).not.toHaveBeenCalled()
     })
 })
 
@@ -132,23 +116,23 @@ describe("AgentScheduleFireService.fireNow (the schedule list's \"run now\")", (
 
         await expect(service.fireNow("ws-1", "trigger-1", SLOT_AT, "member-owner")).resolves.toBe("woken")
 
-        expect(wakes.wake).toHaveBeenCalledWith(expect.anything(), {
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            source: "schedule",
-            eventKey: `trigger-1:${SLOT}`,
-            context: { triggerId: "trigger-1", slot: SLOT, probeKey: "invoices_due" },
-            actorMemberId: "member-owner",
-        })
+        expect(wakes.deliverSlot).toHaveBeenCalledWith(expect.anything(), "ws-1", record({ nextRunAt: SLOT_AT }), SLOT, "member-owner")
         expect(triggers.recordFire).not.toHaveBeenCalled()
         expect(sync.unschedule).not.toHaveBeenCalled()
     })
 
     it("answers already_ran when that slot's wake exists (the slot came or someone pressed first): the cron's fire adds nothing either", async () => {
         const { service, wakes } = await build(record({ nextRunAt: SLOT_AT }))
-        wakes.wake.mockResolvedValue(false)
+        wakes.deliverSlot.mockResolvedValue("already_ran")
 
         await expect(service.fireNow("ws-1", "trigger-1", SLOT_AT, "member-owner")).resolves.toBe("already_ran")
+    })
+
+    it("answers not_scheduled when no registered graph of the agent takes the slot", async () => {
+        const { service, wakes } = await build(record({ nextRunAt: SLOT_AT }))
+        wakes.deliverSlot.mockResolvedValue("untaken")
+
+        await expect(service.fireNow("ws-1", "trigger-1", SLOT_AT, "member-owner")).resolves.toBe("not_scheduled")
     })
 
     it("runs nothing for a trigger gone, off, not a clock, whose next slot moved, or whose work is switched off", async () => {
@@ -163,6 +147,6 @@ describe("AgentScheduleFireService.fireNow (the schedule list's \"run now\")", (
         const answers = await Promise.all(worlds.map((world) => world.service.fireNow("ws-1", "trigger-1", SLOT_AT, "m")))
 
         expect(answers).toEqual(["not_scheduled", "not_scheduled", "not_scheduled", "not_scheduled", "not_scheduled"])
-        expect(worlds.map((world) => world.wakes.wake.mock.calls.length)).toEqual([0, 0, 0, 0, 0])
+        expect(worlds.map((world) => world.wakes.deliverSlot.mock.calls.length)).toEqual([0, 0, 0, 0, 0])
     })
 })

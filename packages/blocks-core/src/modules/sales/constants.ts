@@ -8,7 +8,11 @@ export const SALES_MANAGE = "sales.manage"
 export const SALES_APPROVE = "sales.approve"
 
 /** The permissions the Sales module declares. */
-export const SALES_PERMISSIONS: ReadonlyArray<string> = [SALES_VIEW, SALES_MANAGE, SALES_APPROVE]
+/** The permission to decide the loyalty decisions that wait for a person. */
+export const SALES_LOYALTY_DECIDE = "sales.loyalty-decide"
+
+/** The permissions the Sales module declares (its loyalty area's decide included). */
+export const SALES_PERMISSIONS: ReadonlyArray<string> = [SALES_VIEW, SALES_MANAGE, SALES_APPROVE, SALES_LOYALTY_DECIDE]
 
 /** The most orders of one customer a detail looks through. */
 export const ORDERS_OF_LEAD_LIMIT = 100

@@ -1,11 +1,16 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import type { StepSpec } from "@modules/domain/agent-runs"
-import type { EngineResult, ListPage, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import type { Mutation } from "@nivo-lite/agent-sdk/mutation"
-import type { Query } from "@nivo-lite/agent-sdk/query"
+import { EntityEngineService } from "@modules/domain/entity-engine"
+import { AgentRunRecordsService, type AgentRunTableStore, type StepSpec, type StoredRun, type StoredStep } from "@modules/domain/agent-runs"
+import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import type { Mutation, MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import { wireScope } from "@tests/fixtures/builders/agent-graph-records.builder"
+import {
+    AGENT_RUNS,
+    AGENT_RUN_STEPS,
+    RUN_DEFAULTS,
+    STEP_DEFAULTS,
+} from "@tests/fixtures/builders/engine-core-tables.builder"
 import { ThreadProjectionService } from "./thread-projection.service"
 import type {
     ThreadRunRefParams,
@@ -16,13 +21,13 @@ import type {
     ThreadStepStopParams,
 } from "./thread-projection.contracts"
 
-const RUN = "agent.run"
-const STEP = "agent.run-step"
+const RUN = AGENT_RUNS
+const STEP = AGENT_RUN_STEPS
 const REF: ThreadRunRefParams = { workspaceId: "ws-1", runId: "run-1" }
 const T0 = new Date("2026-11-10T10:00:00.000Z")
 const at = (seconds: number): Date => new Date(T0.getTime() + seconds * 1000)
 
-/** A records table as the engine keeps it: rows by id, every row a copy, a version that moves on each write. */
+/** The runs and steps tables as the run store keeps them: rows by id, every row a copy, a version that moves on each write. */
 class Store {
     readonly rows = new Map<string, { entity: string; row: RecordRow }>()
     writes = 0
@@ -81,6 +86,7 @@ class Store {
 
 const openRun = (store: Store, over: Record<string, unknown> = {}): void =>
     store.put(RUN, "run-1", {
+        engine: "legacy",
         agentId: "agent-1",
         wakeId: "wake-1",
         trigger: "tag",
@@ -96,23 +102,62 @@ const openRun = (store: Store, over: Record<string, unknown> = {}): void =>
         ...over,
     })
 
+/** A run row as the run store hands it out: a column the row does not hold reads its default. */
+const runOf = (row: RecordRow): StoredRun => ({
+    ...RUN_DEFAULTS,
+    startedAt: row.createdAt,
+    ...(structuredClone(row.data) as Partial<StoredRun>),
+    id: row.id,
+    workspaceId: row.workspaceId,
+    version: row.version,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+} as StoredRun)
+
+/** A step row as the run store hands it out. */
+const stepOf = (row: RecordRow): StoredStep => ({
+    ...STEP_DEFAULTS,
+    ...(structuredClone(row.data) as Partial<StoredStep>),
+    id: row.id,
+    workspaceId: row.workspaceId,
+    version: row.version,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+} as StoredStep)
+
+/** A write of the run store as the tables keep it: a JSON copy. */
+const jsonValues = (values: object): MutationValues => structuredClone({ ...values }) as MutationValues
+
+const writtenOf = <T>(result: EngineResult, read: (row: RecordRow) => T): T | null => (result.ok ? read(result.row) : null)
+
+/** The run store over the tables, as far as the projection reads and writes it. */
+const tableOf = (store: Store): AgentRunTableStore => {
+    const table = mock<AgentRunTableStore>()
+    table.run.mockImplementation((_tx, id) => {
+        const row = store.get(RUN, id)
+        return Promise.resolve(row === null ? null : runOf(row))
+    })
+    table.steps.mockImplementation((_tx, runId) => Promise.resolve(store.stepsOf(runId).map(stepOf)))
+    table.insertStep.mockImplementation((_tx, values) =>
+        Promise.resolve(writtenOf(store.mutate({ op: "insert", entity: STEP, values: jsonValues(values) }), stepOf)),
+    )
+    table.patchRun.mockImplementation((_tx, id, fence, values) =>
+        Promise.resolve(writtenOf(store.mutate({ op: "update", entity: RUN, key: id, expected: fence, values: jsonValues(values) }), runOf)),
+    )
+    table.patchStep.mockImplementation((_tx, id, fence, values) =>
+        Promise.resolve(writtenOf(store.mutate({ op: "update", entity: STEP, key: id, expected: fence, values: jsonValues(values) }), stepOf)),
+    )
+    return table
+}
+
 const build = async (store: Store): Promise<ThreadProjectionService> => {
     const engine = mock<EntityEngineService>()
     wireScope(engine)
-    engine.get.mockImplementation((_tx, entity, id) => Promise.resolve(store.get(entity, id)))
-    engine.list.mockImplementation((_tx, query: Query): Promise<ListPage> => {
-        const where = query.where
-        const runId = where !== undefined && where.op === "eq" ? where.value : null
-        const rows = store.stepsOf(runId).map((row) => ({ row, joined: {}, position: [], included: {} }))
-        return Promise.resolve({ rows, next: null })
-    })
-    const mutations = mock<EntityMutationService>()
-    mutations.mutate.mockImplementation((_tx, mutation) => Promise.resolve(store.mutate(mutation)))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadProjectionService,
             { provide: EntityEngineService, useValue: engine },
-            { provide: EntityMutationService, useValue: mutations },
+            { provide: AgentRunRecordsService, useValue: new AgentRunRecordsService(tableOf(store)) },
         ],
     }).compile()
     return moduleRef.get(ThreadProjectionService)
@@ -134,7 +179,7 @@ const step = (key: string, ordinal: number, attempt: number, seconds: number): T
 })
 
 const CALLS: ReadonlyArray<ThreadStepCallParams> = [
-    { tool: "nivo.lead.message.send", ok: true, failure: null, effectKey: "call:run-1:reply:abc" },
+    { tool: "nivo.tool.customer.message.send", ok: true, failure: null, effectKey: "call:run-1:reply:abc" },
 ]
 
 const ended = (key: string, ordinal: number, attempt: number, seconds: number): ThreadStepEndParams => ({
@@ -201,7 +246,7 @@ describe("ThreadProjectionService", () => {
             errorCode: null,
             claimedUntil: null,
             notBefore: null,
-            doorCalls: { calls: [{ tool: "nivo.lead.message.send", ok: true, effectKey: "call:run-1:reply:abc" }] },
+            doorCalls: { calls: [{ tool: "nivo.tool.customer.message.send", ok: true, effectKey: "call:run-1:reply:abc" }] },
             input: { versionId: "v-1", nodeKey: "greet", trigger: { text: "hi" } },
         })
         expect(store.get(RUN, "run-1")?.data).toMatchObject({ status: "running", stepSeq: 1 })

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { adminApiTransport } from "@/modules/api-transport"
 import type { AdminSessionQuery } from "../__generated__/graphql"
 
 /** The response of the `adminSession` query: the typed payload straight from the back end contract. */
@@ -34,7 +33,7 @@ export const queryAdminSession = async ({
     query = QueryAdminSession.Query1,
     signal,
 }: QueryAdminSessionParams = {}): Promise<ApolloClient.QueryResult<QueryAdminSessionResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(adminApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
     })

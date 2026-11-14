@@ -1,9 +1,12 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { safeEqual } from "@modules/domain/connection-secrets"
 import { ConnectionSecretReadsService } from "@modules/domain/connections"
-import { InjectWebhookProofRegistry } from "@modules/platform/http-security"
-import type { WebhookProof, WebhookProofRegistry, WebhookProofRequest } from "@modules/platform/http-security"
+import {
+    InjectWebhookProofRegistry,
+    type WebhookProof,
+    type WebhookProofRegistry,
+    type WebhookProofRequest,
+} from "@modules/platform/http-security"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 

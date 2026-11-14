@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager, type MockEntityManager } from "@starci/jest-preset"
 import { AgentTemplateVersionsService } from "@modules/domain/agent-templates"
 import { AdminAccessService } from "@modules/domain/platform-admin"
 import type { Principal } from "@modules/platform/cqrs"

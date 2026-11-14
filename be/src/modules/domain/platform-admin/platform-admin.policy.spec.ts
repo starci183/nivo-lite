@@ -354,7 +354,7 @@ describe("platform-admin policy", () => {
                         { credits_limit: null },
                     ),
                 ).toEqual({
-                    used: 36,
+                    used: 35.39823,
                     limit: null,
                     costUsd: 0.04,
                     ownLimit: null,

@@ -1,5 +1,12 @@
-import { Button, EmptyNotice, Section, Select, SurfaceCard } from "@starci/grammar/common"
-import type { ItemLeading, ListRowData } from "@starci/grammar/common"
+import {
+    Button,
+    EmptyNotice,
+    Section,
+    Select,
+    SurfaceCard,
+    type ItemLeading,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** One binding of an agent and a connection: who or what the row names. */
@@ -60,8 +67,8 @@ const rowsOf = (rows: ReadonlyArray<ConnectionGrantRowData>, input: RemoveInput)
     }))
 
 /**
- * The agents bound to a connection as rows, and the one control that binds another. A binding has no level: what an agent may do
- * through the account is ticked on the agent's rights tab.
+ * The agents bound to a connection as rows, and the one control that binds another. A binding has no level: the node's mode
+ * (`auto | ask`) is chosen in the step, and detaching is the kill switch.
  */
 export const ConnectionGrantRows = (props: ConnectionGrantRowsProps) => {
     const assign =

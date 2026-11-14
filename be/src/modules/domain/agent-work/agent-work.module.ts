@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentTurnQueueModule } from "@modules/queues/agent-turn"
 import { AgentDrainService } from "./agent-drain.service"
 import { AgentEndedWakesService } from "./agent-ended-wakes.service"
@@ -9,14 +8,11 @@ import { AgentTasksService } from "./agent-tasks.service"
 import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWakeRetentionService } from "./agent-wake-retention.service"
 import { AgentWakeService } from "./agent-wake.service"
-import { AgentSpeakerQueueService } from "./agent-speaker-queue.service"
-import { AgentTagService } from "./agent-tag.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
 import { AgentWorkDoorsService } from "./agent-work-doors.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
-import { AGENT_WORK_OPTIONS } from "./agent-work.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-work.module-definition"
 
 @Module({})
@@ -34,16 +30,10 @@ export class AgentWorkModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), AgentTurnQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
-                {
-                    provide: AGENT_WORK_OPTIONS,
-                    useValue: { debounceMs: options.debounceMs, debounceMaxMs: options.debounceMaxMs },
-                },
                 AgentWorkAccessService,
                 AgentTurnsService,
                 AgentWorkHandlersService,
                 AgentWakeService,
-                AgentSpeakerQueueService,
-                AgentTagService,
                 AgentWakeRetentionService,
                 AgentEndedWakesService,
                 AgentDrainService,
@@ -58,7 +48,6 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentTurnQueueModule,
                 AgentWorkAccessService,
                 AgentWakeService,
-                AgentTagService,
                 AgentWakeRetentionService,
                 AgentDrainService,
                 AgentTurnsService,

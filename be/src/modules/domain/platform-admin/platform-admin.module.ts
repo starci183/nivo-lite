@@ -1,9 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AdminAccessService } from "./admin-access.service"
 import { AdminDirectoryReadsService } from "./admin-directory-reads.service"
 import { AdminDirectoryService } from "./admin-directory.service"
 import { AdminSupportService } from "./admin-support.service"
+import { AdminEnterpriseService } from "./admin-enterprise.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./platform-admin.module-definition"
 
 @Module({})
@@ -20,8 +20,9 @@ export class PlatformAdminModule extends ConfigurableModuleClass {
                 AdminDirectoryReadsService,
                 AdminDirectoryService,
                 AdminSupportService,
+                AdminEnterpriseService,
             ],
-            exports: [AdminAccessService, AdminDirectoryService, AdminSupportService],
+            exports: [AdminAccessService, AdminDirectoryService, AdminSupportService, AdminEnterpriseService],
         }
     }
 }

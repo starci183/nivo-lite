@@ -10,6 +10,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ok, refused } from "@modules/platform/primitives"
+import { BANG_GIA_PAGES_VI, BANG_GIA_VI, HONG_35_000_VI } from "@tests/fixtures/i18n/knowledge-spec.messages"
 import { DocumentTranscriptionService } from "./document-transcription.service"
 import { DRIVE_ACCESS_SOURCE } from "./knowledge.decorators"
 import type { DriveAccessSource } from "./knowledge.contracts"
@@ -96,206 +97,209 @@ describe("SourceReaderService", () => {
     })
 })
 
-describe("SourceReaderService", () => {
-    describe("files", () => {
-        const file = (patch: Partial<SourceRecord> = {}) =>
-            sourceOf({ kind: "file", storagePath: `${WS}/a/bang-gia.pdf`, content: "", ...patch })
+/** A file source with its object in storage. */
+const file = (patch: Partial<SourceRecord> = {}) =>
+    sourceOf({ kind: "file", storagePath: `${WS}/a/bang-gia.pdf`, content: "", ...patch })
 
-        it("reads the object through the document readers with the workspace's transcriber, keeps its pages and records the reading", async () => {
-            const { reader, sources, readers, readings, transcription, transcriber } = await build()
-            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
-            readers.read.mockResolvedValue(
-                ok({
-                    reader: "pdf",
-                    text: "Bảng giá\n\nHồng | 35.000",
-                    pages: [
-                        { kind: "page", label: "1", text: "Bảng giá", transcribed: false },
-                        { kind: "page", label: "2", text: "Hồng | 35.000", transcribed: true },
-                    ],
-                    pageCount: 2,
-                    sheetCount: null,
-                    transcribed: true,
-                    warnings: [{ code: DocumentWarningCode.PageTranscribed, place: "2", count: null }],
-                }),
-            )
-
-            await expect(reader.read(file())).resolves.toEqual({
-                kind: "ok",
-                value: {
-                    text: "Bảng giá\n\nHồng | 35.000",
-                    title: null,
-                    parts: [
-                        { place: { kind: "page", label: "1" }, text: "Bảng giá" },
-                        { place: { kind: "page", label: "2" }, text: "Hồng | 35.000" },
-                    ],
-                },
-            })
-
-            expect(sources.readUpload).toHaveBeenCalledWith(`${WS}/a/bang-gia.pdf`)
-            expect(transcription.transcriberFor).toHaveBeenCalledWith(WS)
-            expect(readers.read).toHaveBeenCalledWith(
-                { name: "bang-gia.pdf", mime: "application/pdf", bytes: new Uint8Array([1, 2]) },
-                { transcriber },
-            )
-            expect(readings.record).toHaveBeenCalledWith(WS, "s1", {
+describe("SourceReaderService: files and their pages", () => {
+    it("reads the object through the document readers with the workspace's transcriber, keeps its pages and records the reading", async () => {
+        const { reader, sources, readers, readings, transcription, transcriber } = await build()
+        sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" })
+        readers.read.mockResolvedValue(
+            ok({
                 reader: "pdf",
+                text: BANG_GIA_PAGES_VI,
+                pages: [
+                    { kind: "page", label: "1", text: BANG_GIA_VI, transcribed: false },
+                    { kind: "page", label: "2", text: HONG_35_000_VI, transcribed: true },
+                ],
                 pageCount: 2,
                 sheetCount: null,
                 transcribed: true,
-                warnings: [
-                    {
-                        code: DocumentWarningCode.PageTranscribed,
-                        place: "2",
-                        count: null,
-                        message: 'reading.warning.DOCUMENT_PAGE_TRANSCRIBED{"place":"2","count":0}',
-                    },
+                warnings: [{ code: DocumentWarningCode.PageTranscribed, place: "2", count: null }],
+            }),
+        )
+
+        await expect(reader.read(file())).resolves.toEqual({
+            kind: "ok",
+            value: {
+                text: BANG_GIA_PAGES_VI,
+                title: null,
+                parts: [
+                    { place: { kind: "page", label: "1" }, text: BANG_GIA_VI },
+                    { place: { kind: "page", label: "2" }, text: HONG_35_000_VI },
                 ],
-                refusal: null,
-                reason: null,
-                readAt: NOW,
-                path: `${WS}/a/bang-gia.pdf`,
-            })
+            },
         })
 
-        it("keeps a document without places as one stretch with none", async () => {
-            const { reader, sources, readers } = await build()
-            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "text/plain" })
-            readers.read.mockResolvedValue(
-                ok({
-                    reader: "text",
-                    text: "Menu",
-                    pageCount: null,
-                    sheetCount: null,
-                    transcribed: false,
-                    warnings: [],
-                }),
-            )
-
-            await expect(reader.read(file({ storagePath: `${WS}/a/menu.txt` }))).resolves.toEqual({
-                kind: "ok",
-                value: { text: "Menu", title: null },
-            })
+        expect(sources.readUpload).toHaveBeenCalledWith(`${WS}/a/bang-gia.pdf`)
+        expect(transcription.transcriberFor).toHaveBeenCalledWith(WS)
+        expect(readers.read).toHaveBeenCalledWith(
+            { name: "bang-gia.pdf", mime: "application/pdf", bytes: new Uint8Array([1, 2]) },
+            { transcriber },
+        )
+        expect(readings.record).toHaveBeenCalledWith(WS, "s1", {
+            reader: "pdf",
+            pageCount: 2,
+            sheetCount: null,
+            transcribed: true,
+            warnings: [
+                {
+                    code: DocumentWarningCode.PageTranscribed,
+                    place: "2",
+                    count: null,
+                    message: 'reading.warning.DOCUMENT_PAGE_TRANSCRIBED{"place":"2","count":0,"left":0}',
+                },
+            ],
+            refusal: null,
+            reason: null,
+            readAt: NOW,
+            path: `${WS}/a/bang-gia.pdf`,
         })
+    })
 
-        it("closes a refused file with its stored note and records the plain reason for the owner", async () => {
-            const { reader, sources, readers, readings } = await build()
-            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "application/pdf" })
-            readers.read.mockResolvedValue(refused(DocumentRefusalCode.PasswordProtected))
-
-            await expect(reader.read(file())).resolves.toEqual({
-                kind: "refused",
-                code: StoredNote.PasswordProtected,
-                params: undefined,
-            })
-            expect(recorded(readings)).toEqual({
-                reader: "file",
+    it("keeps a document without places as one stretch with none", async () => {
+        const { reader, sources, readers } = await build()
+        sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "text/plain" })
+        readers.read.mockResolvedValue(
+            ok({
+                reader: "text",
+                text: "Menu",
                 pageCount: null,
                 sheetCount: null,
                 transcribed: false,
                 warnings: [],
-                refusal: StoredNote.PasswordProtected,
-                reason: "reading.refusal.DOCUMENT_PASSWORD_PROTECTED{}",
-                readAt: NOW,
-                path: `${WS}/a/bang-gia.pdf`,
-            })
+            }),
+        )
+
+        await expect(reader.read(file({ storagePath: `${WS}/a/menu.txt` }))).resolves.toEqual({
+            kind: "ok",
+            value: { text: "Menu", title: null },
+        })
+    })
+})
+
+describe("SourceReaderService: refused and reused files", () => {
+    it("closes a refused file with its stored note and records the plain reason for the owner", async () => {
+        const { reader, sources, readers, readings } = await build()
+        sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "application/pdf" })
+        readers.read.mockResolvedValue(refused(DocumentRefusalCode.PasswordProtected))
+
+        await expect(reader.read(file())).resolves.toEqual({
+            kind: "refused",
+            code: StoredNote.PasswordProtected,
+            params: undefined,
+        })
+        expect(recorded(readings)).toEqual({
+            reader: "file",
+            pageCount: null,
+            sheetCount: null,
+            transcribed: false,
+            warnings: [],
+            refusal: StoredNote.PasswordProtected,
+            reason: "reading.refusal.DOCUMENT_PASSWORD_PROTECTED{}",
+            readAt: NOW,
+            path: `${WS}/a/bang-gia.pdf`,
+        })
+    })
+
+    it("refuses a file whose type no reader takes, before downloading it", async () => {
+        const { reader, sources, readers, readings } = await build()
+        readers.acceptsName.mockReturnValue(false)
+
+        await expect(reader.read(file({ storagePath: `${WS}/a/tool.exe` }))).resolves.toMatchObject({
+            kind: "refused",
+            code: DocumentsErrorCode.TypeUnsupported,
+        })
+        expect(sources.readUpload).not.toHaveBeenCalled()
+        expect(recorded(readings)?.reason).toBe("reading.refusal.DOCUMENT_TYPE_UNSUPPORTED{}")
+    })
+
+    it("reuses the transcribed text of the same object when the job runs again before it finished, paying nothing twice", async () => {
+        const { reader, sources, readers, readings } = await build()
+        const path = `${WS}/a/bang-gia.pdf`
+        readings.reading.mockResolvedValue({
+            reader: "pdf",
+            pageCount: 1,
+            sheetCount: null,
+            transcribed: true,
+            warnings: [],
+            refusal: null,
+            reason: null,
+            readAt: NOW,
+            path,
         })
 
-        it("refuses a file whose type no reader takes, before downloading it", async () => {
-            const { reader, sources, readers, readings } = await build()
-            readers.acceptsName.mockReturnValue(false)
+        await expect(reader.read(file({ content: HONG_35_000_VI }))).resolves.toEqual({
+            kind: "ok",
+            value: { text: HONG_35_000_VI, title: null },
+        })
+        expect(readers.read).not.toHaveBeenCalled()
+        expect(sources.readUpload).not.toHaveBeenCalled()
+    })
+})
 
-            await expect(reader.read(file({ storagePath: `${WS}/a/tool.exe` }))).resolves.toMatchObject({
-                kind: "refused",
-                code: DocumentsErrorCode.TypeUnsupported,
-            })
-            expect(sources.readUpload).not.toHaveBeenCalled()
-            expect(recorded(readings)?.reason).toBe("reading.refusal.DOCUMENT_TYPE_UNSUPPORTED{}")
+describe("SourceReaderService: new uploads and files without an object", () => {
+    it("reads a new upload again even when the old one was transcribed", async () => {
+        const { reader, sources, readers, readings } = await build()
+        readings.reading.mockResolvedValue({
+            reader: "image",
+            pageCount: 1,
+            sheetCount: null,
+            transcribed: true,
+            warnings: [],
+            refusal: null,
+            reason: null,
+            readAt: NOW,
+            path: `${WS}/old/bang-gia.jpg`,
+        })
+        sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "image/jpeg" })
+        readers.read.mockResolvedValue(refused(DocumentRefusalCode.NoText))
+
+        await expect(
+            reader.read(file({ storagePath: `${WS}/new/bang-gia.jpg`, content: "old" })),
+        ).resolves.toMatchObject({
+            code: StoredNote.Empty,
+        })
+        expect(readers.read).toHaveBeenCalled()
+    })
+
+    it("does not look for an earlier reading of a fresh file or of a finished text", async () => {
+        const { reader, sources, readers, readings } = await build()
+        sources.readUpload.mockResolvedValue(null)
+
+        await reader.read(file())
+        await reader.read(file({ content: "done", contentHash: "abc" }))
+
+        expect(readings.reading).not.toHaveBeenCalled()
+        expect(readers.read).not.toHaveBeenCalled()
+    })
+
+    it("takes the text of a file source that has no object", async () => {
+        const { reader, sources } = await build()
+
+        await expect(reader.read(file({ storagePath: null, content: "Old text" }))).resolves.toEqual({
+            kind: "ok",
+            value: { text: "Old text", title: null },
         })
 
-        it("reuses the transcribed text of the same object when the job runs again before it finished, paying nothing twice", async () => {
-            const { reader, sources, readers, readings } = await build()
-            const path = `${WS}/a/bang-gia.pdf`
-            readings.reading.mockResolvedValue({
-                reader: "pdf",
-                pageCount: 1,
-                sheetCount: null,
-                transcribed: true,
-                warnings: [],
-                refusal: null,
-                reason: null,
-                readAt: NOW,
-                path,
-            })
+        expect(sources.readUpload).not.toHaveBeenCalled()
+    })
 
-            await expect(reader.read(file({ content: "Hồng | 35.000" }))).resolves.toEqual({
-                kind: "ok",
-                value: { text: "Hồng | 35.000", title: null },
-            })
-            expect(readers.read).not.toHaveBeenCalled()
-            expect(sources.readUpload).not.toHaveBeenCalled()
+    it("refuses a file source with neither object nor text", async () => {
+        const { reader } = await build()
+
+        await expect(reader.read(file({ storagePath: "" }))).resolves.toEqual({
+            kind: "refused",
+            code: StoredNote.FileMissing,
         })
+    })
 
-        it("reads a new upload again even when the old one was transcribed", async () => {
-            const { reader, sources, readers, readings } = await build()
-            readings.reading.mockResolvedValue({
-                reader: "image",
-                pageCount: 1,
-                sheetCount: null,
-                transcribed: true,
-                warnings: [],
-                refusal: null,
-                reason: null,
-                readAt: NOW,
-                path: `${WS}/old/bang-gia.jpg`,
-            })
-            sources.readUpload.mockResolvedValue({ bytes: new Uint8Array([1]), contentType: "image/jpeg" })
-            readers.read.mockResolvedValue(refused(DocumentRefusalCode.NoText))
+    it("refuses a file that is not in storage", async () => {
+        const { reader, sources } = await build()
+        sources.readUpload.mockResolvedValue(null)
 
-            await expect(
-                reader.read(file({ storagePath: `${WS}/new/bang-gia.jpg`, content: "old" })),
-            ).resolves.toMatchObject({
-                code: StoredNote.Empty,
-            })
-            expect(readers.read).toHaveBeenCalled()
-        })
-
-        it("does not look for an earlier reading of a fresh file or of a finished text", async () => {
-            const { reader, sources, readers, readings } = await build()
-            sources.readUpload.mockResolvedValue(null)
-
-            await reader.read(file())
-            await reader.read(file({ content: "done", contentHash: "abc" }))
-
-            expect(readings.reading).not.toHaveBeenCalled()
-            expect(readers.read).not.toHaveBeenCalled()
-        })
-
-        it("takes the text of a file source that has no object", async () => {
-            const { reader, sources } = await build()
-
-            await expect(reader.read(file({ storagePath: null, content: "Old text" }))).resolves.toEqual({
-                kind: "ok",
-                value: { text: "Old text", title: null },
-            })
-
-            expect(sources.readUpload).not.toHaveBeenCalled()
-        })
-
-        it("refuses a file source with neither object nor text", async () => {
-            const { reader } = await build()
-
-            await expect(reader.read(file({ storagePath: "" }))).resolves.toEqual({
-                kind: "refused",
-                code: StoredNote.FileMissing,
-            })
-        })
-
-        it("refuses a file that is not in storage", async () => {
-            const { reader, sources } = await build()
-            sources.readUpload.mockResolvedValue(null)
-
-            await expect(reader.read(file())).resolves.toEqual({ kind: "refused", code: StoredNote.FileMissing })
-        })
+        await expect(reader.read(file())).resolves.toEqual({ kind: "refused", code: StoredNote.FileMissing })
     })
 })
 

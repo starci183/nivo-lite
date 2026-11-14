@@ -12,7 +12,7 @@ const ownerLabel = (owner: { readonly name: string; readonly isMe: boolean } | u
     return owner.isMe ? you : owner.name
 }
 
-/** The connected handover step: who holds new customers (the workspace owner) and whether the AI asks before it sends (the `reply_customer` rule), both read live; the approval can be switched here. */
+/** The connected handover step: who holds new customers (the workspace owner) and whether the chatbot's steps ask before they send (the mode each step declares), both read live. */
 export const OnboardingHandover = () => {
     const t = useTranslations("onboarding")
     const handover = useOnboardingHandover()
@@ -21,7 +21,7 @@ export const OnboardingHandover = () => {
     const approvalValue = {
         ask: t("ruleApprovalValue"),
         auto: t("ruleApprovalOff"),
-        never: t("ruleApprovalNever"),
+        none: t("ruleApprovalNone"),
         unknown: "…",
     }[handover.approval]
     return (
@@ -37,10 +37,6 @@ export const OnboardingHandover = () => {
                         name: t("ruleApproval"),
                         description: t("ruleApprovalText"),
                         value: approvalValue,
-                        toggle: {
-                            isOn: handover.approval === "ask",
-                            isDisabled: handover.isLocked || handover.isSaving,
-                        },
                     },
                 ],
                 emptyRules: t("handoverEmpty"),
@@ -49,7 +45,6 @@ export const OnboardingHandover = () => {
                 finishLabel: t("continue"),
                 finishHref: workspacePlanPath(workspaceId),
             }}
-            on={{ toggle: (_ruleId, on) => handover.setApproval(on) }}
         />
     )
 }

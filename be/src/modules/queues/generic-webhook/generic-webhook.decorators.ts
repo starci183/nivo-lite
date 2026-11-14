@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { GenericWebhookQueue } from "./generic-webhook.queue"
 
 /** Token of the producer that durably queues a verified generic webhook receipt. */

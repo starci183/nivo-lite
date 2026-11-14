@@ -1,18 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
-import { eachInOrder } from "@modules/platform/primitives"
-import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
-import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
+import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { runRecordOf, runViewOf } from "./agent-runs.mapper"
 import type { RunRecord } from "./agent-runs-records.contracts"
 import { RUN_CANCELLED, SETTLE_TRIES } from "./policies/agent-runs.policy"
 import { jsonValueOf } from "./policies/json-value.policy"
+import type { RunValues, RunWaiterFilter, StoredWaiter } from "./agent-runs-rows.contracts"
 import type { RunCancelResult, RunView } from "./agent-runs-engine.contracts"
 import type { RunOpen } from "./agent-runs.contracts"
 
@@ -23,11 +20,40 @@ const rejected = (): AgentRunsError => new AgentRunsError({ code: AgentRunsError
 
 const iso = (at: Date): string => at.toISOString()
 
-const jsonOr = (value: unknown): JsonValue => {
+const contextOf = (value: unknown): Readonly<Record<string, unknown>> => {
     const read = jsonValueOf(value)
-    if (!read.valid) throw rejected()
+    if (!read.valid || !isRecord(read.json)) throw rejected()
     return read.json
 }
+
+/** The statuses of a run still in flight: it holds its subject. */
+const IN_FLIGHT_STATUSES: ReadonlyArray<string> = ["running", "waiting", "parked"]
+
+/**
+ * The statuses of a run parked between steps by its status: at a stop (`waiting`) or parked. A run parked at a `wait` keeps the status
+ * `running` and carries its wait mark (`wait_match`); the erasure of a subject ends both kinds.
+ */
+const PARKED_STATUSES: ReadonlyArray<string> = ["waiting", "parked"]
+
+/**
+ * The statuses of a run whose wait an event is asked of: `waiting`, and `running` for the moment between the park's mark and the status
+ * the projection writes (the run's own park decides; a resumed run has cleared its mark).
+ */
+const WAITER_STATUSES: ReadonlyArray<string> = ["running", "waiting"]
+
+/** The engine of thread runs. */
+const THREAD_ENGINE = "langgraph"
+
+/** The subject of a run: the kind (its correlation key's scope path) and the id. */
+export interface RunSubject {
+    /** The kind of the subject: the scope path of its correlation key. */
+    readonly kind: string
+    /** The id of the subject within its kind. */
+    readonly id: string
+}
+
+/** The most parked runs of ONE subject read (one per workflow of the agent in practice; a bound, never a page of the agent's runs). */
+const SUBJECT_RUNS_MAX = 20
 
 @Injectable()
 /**
@@ -47,6 +73,64 @@ export class AgentRunStoreService {
     open(tx: EntityManager, input: RunOpen): Promise<RunView> {
         return this.at(input.workspaceId, tx, async (scoped) =>
             runViewOf((await this.records.runOfWake(scoped, input.wakeId)) ?? (await this.insertRun(scoped, input))),
+        )
+    }
+
+    /**
+     * The thread run of a workflow still IN FLIGHT for one subject (running, waiting at a `wait` or a stop, parked), or null: EXACT, by
+     * (workspace, workflow, subject) through the partial unique index, however old the run is (no page decides who is found).
+     */
+    inFlightOf(workspaceId: string, workflowId: string, subject: RunSubject): Promise<RunView | null> {
+        return this.at(workspaceId, undefined, async (scoped) => {
+            const [row] = await this.records.runRows(
+                scoped,
+                { workflowId, subject, statuses: IN_FLIGHT_STATUSES, engine: THREAD_ENGINE, order: "started" },
+                1,
+            )
+            const run = row === undefined ? null : await this.records.run(scoped, row.id)
+            return run === null ? null : runViewOf(run)
+        })
+    }
+
+    /**
+     * The thread runs of an agent PARKED (waiting) for one subject, whatever the workflow, oldest first: where a wait of the subject is
+     * looked for first (exact, through the subject columns; no page of the agent's runs decides who is found).
+     */
+    parkedOfSubject(workspaceId: string, agentId: string, subject: RunSubject): Promise<ReadonlyArray<RunView>> {
+        return this.at(workspaceId, undefined, async (scoped) => {
+            const rows = await this.records.runRows(
+                scoped,
+                { agentId, subject, statuses: ["waiting"], engine: THREAD_ENGINE, order: "started" },
+                SUBJECT_RUNS_MAX,
+            )
+            const views: Array<RunView> = []
+            await eachInOrder([...rows].reverse(), async (row) => {
+                const run = await this.records.run(scoped, row.id)
+                if (run !== null) views.push(runViewOf(run))
+            })
+            return views
+        })
+    }
+
+    /**
+     * Marks the wait a run parks on with the keys an event finds it by (written now, as the run's own index), or clears the mark once
+     * the wait has what came (`match` empty). The fence is left as it is.
+     */
+    markWait(workspaceId: string, runId: string, match: ReadonlyArray<string>): Promise<void> {
+        const mark = match.length === 0 ? null : { match, since: iso(this.clock.now()) }
+        return this.at(workspaceId, undefined, (scoped) => this.records.markWait(scoped, runId, mark))
+    }
+
+    /**
+     * The thread runs of the agents, running or waiting, whose parked wait's keys the event's probe names: EVERY such run (exact, through
+     * the GIN index on `wait_match`; no page of the agent's runs decides who is found). Unordered: the waits order them.
+     */
+    waitersOf(
+        workspaceId: string,
+        filter: Omit<RunWaiterFilter, "statuses" | "engine">,
+    ): Promise<ReadonlyArray<StoredWaiter>> {
+        return this.at(workspaceId, undefined, (scoped) =>
+            this.records.waiters(scoped, { ...filter, statuses: WAITER_STATUSES, engine: THREAD_ENGINE }),
         )
     }
 
@@ -104,6 +188,56 @@ export class AgentRunStoreService {
         })
     }
 
+    /**
+     * ENDS, in `tx`, every thread run of any agent PARKED on one of these subjects, once: at a stop (`waiting`), parked, or at a `wait`
+     * (status `running` WITH a wait mark: the same runs `waitersOf` offers events to). The run is marked cancelled with the typed reason
+     * `code` and the moment, its deadline and its wait mark are cleared (no event finds it, no deadline fires it), so the
+     * one-run-per-subject slot is free. A run running a step now (`running`, no wait mark) is left to end on its own. What the erasure of
+     * a subject (a contact and its routes, owner ruling R31 / coordinator ruling R37) calls; answers the runs it ended.
+     */
+    endParkedOfSubjects(
+        tx: EntityManager,
+        workspaceId: string,
+        subjects: ReadonlyArray<RunSubject>,
+        code: string,
+    ): Promise<ReadonlyArray<RunView>> {
+        return this.at(workspaceId, tx, async (scoped) => {
+            const at = iso(this.clock.now())
+            const ended: Array<RunView> = []
+            await eachInOrder(subjects, async (subject) => {
+                const parked = await this.records.runRows(
+                    scoped,
+                    { subject, statuses: PARKED_STATUSES, engine: THREAD_ENGINE, order: "started" },
+                    SUBJECT_RUNS_MAX,
+                )
+                const waiting = await this.records.runRows(
+                    scoped,
+                    { subject, statuses: ["running"], waitMarked: true, engine: THREAD_ENGINE, order: "started" },
+                    SUBJECT_RUNS_MAX,
+                )
+                const atWait = new Set(waiting.map((row) => row.id))
+                const rows = [...parked, ...waiting.filter((row) => !parked.some((other) => other.id === row.id))]
+                await eachInOrder(rows, async (row) => {
+                    const moved = await this.patchRunWith(scoped, row.id, (run) =>
+                        PARKED_STATUSES.includes(run.status) || (atWait.has(run.id) && run.status === "running")
+                            ? {
+                                  status: "cancelled",
+                                  error: { code },
+                                  endedAt: at,
+                                  waitWorkItemId: null,
+                                  waitDeadlineAt: null,
+                              }
+                            : null,
+                    )
+                    if (moved === null) return
+                    await this.records.markWait(scoped, row.id, null)
+                    ended.push(runViewOf(moved))
+                })
+            })
+            return ended
+        })
+    }
+
     /** Runs `work` in the scope of the workspace: on `manager` when the caller holds a transaction, else in one of its own. */
     private at<T>(workspaceId: string, manager: EntityManager | undefined, work: ScopedUse<T>): Promise<T> {
         return manager === undefined
@@ -119,13 +253,15 @@ export class AgentRunStoreService {
             graphVersionId: input.versionId,
             planning: false,
             status: "running",
-            context: jsonOr(input.context),
+            context: contextOf(input.context),
             resumeAttempts: 0,
             stepSeq: 0,
             startedAt: iso(this.clock.now()),
+            ...(input.subject === undefined || input.subject === null
+                ? {}
+                : { subjectKind: input.subject.kind, subjectId: input.subject.id }),
         })
-        if (inserted.ok) return runRecordOf(inserted.row)
-        if (inserted.reason !== "taken") throw rejected()
+        if (inserted !== null) return runRecordOf(inserted)
         const raced = await this.records.runOfWake(scoped, input.wakeId)
         if (raced === null) throw rejected()
         return raced
@@ -138,7 +274,7 @@ export class AgentRunStoreService {
     private async patchRunWith(
         scoped: ScopedTx,
         runId: string,
-        build: (run: RunRecord) => MutationValues | null,
+        build: (run: RunRecord) => RunValues | null,
         left: number = SETTLE_TRIES,
     ): Promise<RunRecord | null> {
         if (left <= 0) throw new AgentRunsError({ code: AgentRunsErrorCode.RunContended })
@@ -147,6 +283,6 @@ export class AgentRunStoreService {
         const values = build(run)
         if (values === null) return null
         const written = await this.records.patchRun(scoped, run, values)
-        return written === null ? this.patchRunWith(scoped, runId, build, left - 1) : written
+        return written ?? this.patchRunWith(scoped, runId, build, left - 1)
     }
 }

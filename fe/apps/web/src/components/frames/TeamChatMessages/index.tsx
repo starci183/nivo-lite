@@ -1,12 +1,14 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react"
 import { Alert, Button, Cluster, Divider, MessageBubble, Stack } from "@starci/grammar/common"
 import { ChatNoticeGroup } from "@/components/composites/ChatNoticeGroup"
-import { ChatSystemLine } from "@/components/composites/ChatSystemLine"
-import { TeamChatAgentCard } from "@/components/composites/TeamChatAgentCard"
-import { TeamChatBubble } from "@/components/composites/TeamChatBubble"
-import { TeamChatStopCard } from "@/components/composites/TeamChatStopCard"
-import type { TeamChatMessageRow, TeamChatMessagesCopy, TeamChatStopHandlers } from "@/modules/types"
+import type {
+    TeamChatBrainChangeHandlers,
+    TeamChatMessageRow,
+    TeamChatMessagesCopy,
+    TeamChatStopHandlers,
+} from "@/modules/types"
 import { itemsOf } from "./items"
+import { MessageRow, type MessageRowProps } from "./row"
 
 /** The messages of the open room and what a person may do with them. */
 interface TeamChatMessagesProps {
@@ -29,6 +31,8 @@ interface TeamChatMessagesProps {
     readonly onDecide: (decisionId: string, verdict: "approved" | "refused") => void
     /** The typed stop cards of runs and what is done with them; a thread that has none (the setup chat) passes none and draws them inert. */
     readonly stops?: TeamChatStopHandlers
+    /** The truth-change cards and their decision; a thread that has none (the setup chat) draws them without buttons. */
+    readonly changes?: TeamChatBrainChangeHandlers
     /** React to, reply to and forward a message; a thread that cannot (the setup chat) passes none and draws no toolbar. */
     readonly onReact?: (messageId: string, emoji: string) => void
     readonly onReply?: (messageId: string) => void
@@ -37,64 +41,6 @@ interface TeamChatMessagesProps {
     readonly under?: Readonly<Record<string, ReactNode>>
     /** What stands after the last message (a line about a turn in flight). */
     readonly trailing?: ReactNode
-}
-
-/** One message of the thread and what a person may do with it. */
-interface MessageRowProps {
-    readonly row: TeamChatMessageRow
-    readonly copy: TeamChatMessagesCopy
-    readonly decidingId: string | null
-    readonly onPin: TeamChatMessagesProps["onPin"]
-    readonly onDecide: TeamChatMessagesProps["onDecide"]
-    readonly stops: TeamChatMessagesProps["stops"]
-    readonly onReact: TeamChatMessagesProps["onReact"]
-    readonly onReply: TeamChatMessagesProps["onReply"]
-    readonly onShare: TeamChatMessagesProps["onShare"]
-}
-
-/** One message: a centred system line, a card of an agent, or a bubble of a person. */
-const MessageRow = (props: MessageRowProps) => {
-    const { row } = props
-    if (row.kind === "system") {
-        return <ChatSystemLine text={row.body} />
-    }
-    if (row.stop != null) {
-        return (
-            <TeamChatStopCard
-                row={row}
-                card={row.stop}
-                copy={props.copy}
-                stops={props.stops}
-                onReact={props.onReact}
-                onReply={props.onReply}
-                onShare={props.onShare}
-            />
-        )
-    }
-    if (row.card !== null) {
-        return (
-            <TeamChatAgentCard
-                row={row}
-                copy={props.copy}
-                isDeciding={row.approval !== null && props.decidingId === row.approval.decisionId}
-                onPin={props.onPin}
-                onDecide={props.onDecide}
-                onReact={props.onReact}
-                onReply={props.onReply}
-                onShare={props.onShare}
-            />
-        )
-    }
-    return (
-        <TeamChatBubble
-            row={row}
-            copy={props.copy}
-            onPin={props.onPin}
-            onReact={props.onReact}
-            onReply={props.onReply}
-            onShare={props.onShare}
-        />
-    )
 }
 
 const NOTICE_SEPARATOR = " \u00b7 "
@@ -143,6 +89,7 @@ export const TeamChatMessages = (props: TeamChatMessagesProps) => {
         onPin: props.onPin,
         onDecide: props.onDecide,
         stops: props.stops,
+        changes: props.changes,
         onReact: props.onReact,
         onReply: props.onReply,
         onShare: props.onShare,

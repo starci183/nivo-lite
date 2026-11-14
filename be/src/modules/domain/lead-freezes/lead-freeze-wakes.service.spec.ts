@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentWakeService } from "@modules/domain/agent-work"
+import { DeliveredWakesService } from "@modules/domain/provider-triggers/delivered-wakes.service"
 import { frozenFreezeOf, pendingLineOf, pendingPaymentOf } from "@tests/fixtures/builders/lead-freezes.builder"
 import { LeadFreezeWakesService } from "./lead-freeze-wakes.service"
 
@@ -9,11 +9,11 @@ const FREEZE = frozenFreezeOf({ episode: 2 })
 const EVENT = pendingLineOf({ context: { conversationId: "c-1", messageId: "m-2", lookupName: false, locale: "vi" } })
 
 const build = async () => {
-    const wakes = mock<AgentWakeService>({ write: jest.fn().mockResolvedValue("wake-new") })
+    const wakes = mock<DeliveredWakesService>({ rewrite: jest.fn().mockResolvedValue("wake-new") })
     const moduleRef = await Test.createTestingModule({
         providers: [
             LeadFreezeWakesService,
-            { provide: AgentWakeService, useValue: wakes },
+            { provide: DeliveredWakesService, useValue: wakes },
         ],
     }).compile()
     return { service: moduleRef.get(LeadFreezeWakesService), wakes }
@@ -24,17 +24,17 @@ describe("LeadFreezeWakesService", () => {
         const { service, wakes } = await build()
         const tx = mockEntityManager()
         const payment = pendingPaymentOf({ actorMemberId: "member-1" })
-        wakes.write.mockResolvedValueOnce("w-1").mockResolvedValueOnce(null)
+        wakes.rewrite.mockResolvedValueOnce("w-1").mockResolvedValueOnce(null)
 
         await expect(service.replay(tx, "ws-1", FREEZE, [EVENT, payment])).resolves.toBe(1)
 
-        expect(wakes.write.mock.calls).toEqual([
+        expect(wakes.rewrite.mock.calls).toEqual([
             [
                 tx,
                 {
                     workspaceId: "ws-1",
                     agentId: "chatbot",
-                    source: "customer",
+                    source: "trigger",
                     eventKey: "msg-2~after-freeze-freeze-1-2",
                     context: { conversationId: "c-1", messageId: "m-2", lookupName: false, locale: "vi" },
                     actorMemberId: null,
@@ -60,7 +60,7 @@ describe("LeadFreezeWakesService", () => {
         const { service, wakes } = await build()
         const tx = mockEntityManager()
         const payment = pendingPaymentOf()
-        wakes.write.mockResolvedValueOnce("w-1").mockResolvedValueOnce(null)
+        wakes.rewrite.mockResolvedValueOnce("w-1").mockResolvedValueOnce(null)
 
         await service.replay(tx, "ws-1", FREEZE, [EVENT, payment])
 
@@ -73,6 +73,6 @@ describe("LeadFreezeWakesService", () => {
 
         await service.replay(mockEntityManager(), "ws-1", FREEZE, [odd])
 
-        expect(wakes.write.mock.calls[0]?.[1].context).toEqual({ conversationId: "c-1", lookupName: true })
+        expect(wakes.rewrite.mock.calls[0]?.[1].context).toEqual({ conversationId: "c-1", lookupName: true })
     })
 })

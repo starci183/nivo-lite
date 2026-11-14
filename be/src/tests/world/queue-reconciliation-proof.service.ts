@@ -1,8 +1,7 @@
 import type { EntityManager } from "typeorm"
 import { jobsEntities } from "@modules/platform/jobs"
 import { callDbFunction } from "@modules/platform/database"
-import { seedDueJobs } from "../fixtures/builders/queue-reconciliation.builder"
-import type { SeededJob } from "../fixtures/builders/queue-reconciliation.builder"
+import { seedDueJobs, type SeededJob } from "../fixtures/builders/queue-reconciliation.builder"
 import type { AdmittedQueueRun, ClaimedReconcileJob } from "../fixtures/persistence/queue-reconciliation.rows"
 import type { LiteWorld } from "./lite-world.service"
 

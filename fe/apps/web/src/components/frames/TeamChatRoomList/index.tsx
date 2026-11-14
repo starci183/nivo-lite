@@ -1,10 +1,9 @@
-import { EmptyNotice, ListBox, Stack } from "@starci/grammar/common"
-import type { ListBoxItem, ListBoxSection } from "@starci/grammar/common"
+import { EmptyNotice, ListBox, Stack, type ListBoxItem, type ListBoxSection } from "@starci/grammar/common"
 import { FilterGroup } from "@/components/composites/FilterGroup"
 import { RowTrailing } from "@/components/composites/RowTrailing"
 import { ChatPartyMark } from "@/components/branches/ChatPartyMark"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { TeamChatMarkView, TeamChatRoomRow, TeamChatRoomsCopy } from "@/modules/types"
+import type { TeamChatRoomRow, TeamChatRoomsCopy } from "@/modules/types"
 
 /** What the room list draws and what it asks of its owner. */
 interface TeamChatRoomListProps {
@@ -16,12 +15,6 @@ interface TeamChatRoomListProps {
     readonly onQuery: (value: string) => void
     readonly onSelect: (roomId: string) => void
 }
-
-/** The mark of a room: the person or the agent it is with, else the group glyph. */
-const markOf = (room: TeamChatRoomRow): TeamChatMarkView =>
-    room.other === null
-        ? { kind: "group", id: room.id, name: room.title, picture: null }
-        : { kind: room.other.kind, id: room.other.id, name: room.title, picture: room.other.picture ?? null }
 
 /** The unread count at the end of a row: danger when it holds a mention of the viewer. */
 const unreadBadgeOf = (row: TeamChatRoomRow) =>
@@ -35,7 +28,7 @@ const itemOf = (row: TeamChatRoomRow, groupLine: string): ListBoxItem => ({
     label: row.title,
     description: row.kind === "group" && row.preview === "" ? groupLine : row.preview,
     descriptionLines: 1 as const,
-    leading: <ChatPartyMark mark={markOf(row)} />,
+    leading: <ChatPartyMark mark={row.mark} />,
     trailing: <RowTrailing meta={row.when} {...unreadBadgeOf(row)} />,
 })
 
@@ -48,8 +41,9 @@ const matchingOf = (rows: ReadonlyArray<TeamChatRoomRow>, query: string): Readon
 /** The rooms under the muted labels of their kind: groups, agents, people; a kind with no room draws no label. */
 const sectionsOf = (rows: ReadonlyArray<TeamChatRoomRow>, copy: TeamChatRoomsCopy): ReadonlyArray<ListBoxSection> =>
     [
-        { id: "group", label: copy.sectionGroup, rooms: rows.filter((row) => row.kind === "group") },
-        { id: "agent", label: copy.sectionAgent, rooms: rows.filter((row) => row.other?.kind === "agent") },
+        { id: "nivo", label: copy.sectionNivo, rooms: rows.filter((row) => row.isNivo) },
+        { id: "group", label: copy.sectionGroup, rooms: rows.filter((row) => row.kind === "group" && !row.isNivo) },
+        { id: "agent", label: copy.sectionAgent, rooms: rows.filter((row) => !row.isNivo && row.other?.kind === "agent") },
         { id: "person", label: copy.sectionPerson, rooms: rows.filter((row) => row.other?.kind === "user") },
     ]
         .filter((section) => section.rooms.length > 0)

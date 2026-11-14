@@ -1,13 +1,17 @@
-import { SdkError } from "../sdk-error"
+import { DomainError } from "@starci/common"
 import type { JsonValue } from "../schema/schema.types"
 import type { DoorCallResult, DoorTool } from "./door-port"
 import { retryJob } from "./job-retry"
 
 /**
  * Thrown by the run of a declared job whose door call was refused for good (no such tool, input invalid, not allowed, the provider
- * failed): the job processor does not retry it, it parks the job with one alert to the owner. `at` names the tool and the refusal.
+ * failed): the job processor does not retry it, it parks the job with one alert to the owner. `params.at` names the tool and the refusal.
  */
-export class JobRefused extends SdkError<"JOB_REFUSED"> {}
+export class JobRefused extends DomainError<"JOB_REFUSED"> {
+    constructor(code: "JOB_REFUSED", at: string, options?: ErrorOptions) {
+        super({ code, params: { at }, cause: options?.cause })
+    }
+}
 
 /**
  * Ends a job that called a door tool the way the call went: nothing to do when it returned output, the queue delivers the job again

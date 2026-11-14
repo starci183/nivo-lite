@@ -1,3 +1,4 @@
+import { aiCallLabelOf as aiCallLabelWith, namePartOf } from "@nivo-lite/agent-sdk/graph"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { messageNamed } from "../messages/catalog"
@@ -115,6 +116,25 @@ export const NODE_HEROICONS: Readonly<Record<NodeIcon, string>> = {
     hand: "HandRaisedIcon",
 }
 
+/**
+ * A step as the editor and the graph views read it: a package node (`defineNode`, the control steps) or a template node
+ * (`defineTemplateNode`), by what both carry. A template node that routes names its routes.
+ */
+export interface ViewNode {
+    /** The node id. */
+    readonly id: string
+    /** The words the editor shows. */
+    readonly title: NodeDefinition["title"]
+    /** The schema of the input. */
+    readonly input: z.ZodType
+    /** The schema of the output. */
+    readonly output: z.ZodType
+    /** The schema of the settings; absent: none. */
+    readonly params?: z.ZodType | undefined
+    /** The output member that names the route and the route names, of a template node that routes. */
+    readonly routes?: { readonly by: string; readonly names: ReadonlyArray<string> } | undefined
+}
+
 /** The kind and icon of one step. */
 export interface NodeUiEntry {
     /** What the step is to its owner. */
@@ -131,44 +151,91 @@ export const STOP_STEP_ID = "stop"
 
 /**
  * The kind and icon of every step of the Chatbot, Sales, Accounting and Nivo graphs, by node id, plus the trigger and the built-in `stop`.
- * The SDK's node definition has no field for them, so they live here, once; the spec of this file fails when a core node has no entry.
+ * The SDK's node definitions have no field for them, so they live here, once; the spec of this file fails when an installed step (a
+ * control node or a template node) has no entry.
  */
 export const NODE_UI: Readonly<Record<string, NodeUiEntry>> = {
-    "trigger": { kind: "event", icon: "bolt" },
-    "stop": { kind: "end", icon: "flag" },
-    "chatbot.understand": { kind: "condition", icon: "sparkles" },
-    "chatbot.answer": { kind: "action", icon: "message" },
-    "chatbot.complaint": { kind: "action", icon: "warning" },
+    trigger: { kind: "event", icon: "bolt" },
+    stop: { kind: "end", icon: "flag" },
     "core.call-workflow": { kind: "event", icon: "send" },
     "core.for-each": { kind: "action", icon: "git-branch" },
     "core.outcome": { kind: "end", icon: "flag" },
     "core.if": { kind: "condition", icon: "git-branch" },
-    "sales.consult-turn": { kind: "action", icon: "message" },
-    "sales.create-order": { kind: "action", icon: "bag" },
-    "payment.request": { kind: "action", icon: "qr" },
-    "sales.order-notice": { kind: "event", icon: "bell" },
-    "sales.web-order": { kind: "action", icon: "bag" },
-    "sales.after-sale": { kind: "action", icon: "heart" },
-    "sales.care-plan": { kind: "wait", icon: "clock" },
-    "sales.care-delivery-check": { kind: "action", icon: "truck" },
-    "sales.care-occasion": { kind: "action", icon: "gift" },
-    "sales.payment-reminder": { kind: "action", icon: "clock" },
-    "sales.unpaid-notice": { kind: "event", icon: "bell" },
-    "payment.received-notice": { kind: "event", icon: "bell" },
-    "accounting.match-payment": { kind: "action", icon: "sparkles" },
-    "payment.settle": { kind: "action", icon: "receipt" },
-    "accounting.post-payment": { kind: "action", icon: "table" },
-    "accounting.report": { kind: "action", icon: "chart" },
+    "chatbot.hear": { kind: "condition", icon: "message" },
+    "chatbot.understand": { kind: "condition", icon: "sparkles" },
+    "chatbot.answer": { kind: "action", icon: "message" },
+    "chatbot.complaint-reply": { kind: "action", icon: "warning" },
+    "chatbot.complaint-notify": { kind: "event", icon: "bell" },
     "team.chat": { kind: "action", icon: "message" },
+    "team.truth-propose": { kind: "action", icon: "book" },
+    "team.answer-post": { kind: "action", icon: "send" },
+    "team.declined-notice": { kind: "event", icon: "bell" },
+    "team.unsent-notice": { kind: "event", icon: "bell" },
+    "sales.consult-turn": { kind: "action", icon: "message" },
+    "sales.occasion-keep": { kind: "action", icon: "gift" },
+    "sales.order-cancel": { kind: "action", icon: "warning" },
+    "sales.order-cancel-tell": { kind: "action", icon: "send" },
+    "sales.cancel-paid-notice": { kind: "event", icon: "bell" },
+    "sales.order-create": { kind: "action", icon: "bag" },
+    "sales.order-tell": { kind: "action", icon: "send" },
+    "sales.request-qr": { kind: "action", icon: "qr" },
+    "sales.order-talk": { kind: "condition", icon: "message" },
+    "sales.order-read": { kind: "action", icon: "bag" },
+    "sales.payment-remind": { kind: "action", icon: "send" },
+    "sales.credit-read": { kind: "action", icon: "bag" },
+    "sales.credit-notice": { kind: "event", icon: "bell" },
+    "sales.not-sale-notice": { kind: "event", icon: "bell" },
+    "sales.unpaid-notice": { kind: "event", icon: "bell" },
+    "sales.paid-claim-reply": { kind: "action", icon: "send" },
+    "sales.paid-claim-notice": { kind: "event", icon: "bell" },
+    "sales.awaiting-orders": { kind: "action", icon: "bag" },
+    "sales.order-paid": { kind: "action", icon: "check" },
+    "sales.payment-short": { kind: "action", icon: "send" },
+    "sales.credit-tally": { kind: "action", icon: "check" },
+    "sales.after-sale": { kind: "action", icon: "heart" },
+    "sales.consult-stage": { kind: "action", icon: "heart" },
+    "sales.care-plan-delivery": { kind: "wait", icon: "truck" },
+    "sales.care-plan-occasions": { kind: "wait", icon: "gift" },
+    "sales.care-delivery-wait": { kind: "wait", icon: "clock" },
+    "sales.care-delivery-check": { kind: "action", icon: "truck" },
+    "sales.care-occasion-wait": { kind: "wait", icon: "clock" },
+    "sales.care-occasion": { kind: "action", icon: "gift" },
+    "sales.care-occasion-rearm": { kind: "wait", icon: "gift" },
+    "sales.web-order-lead": { kind: "action", icon: "user" },
+    "sales.web-order-keep": { kind: "action", icon: "bag" },
+    "sales.web-order-notice": { kind: "event", icon: "bell" },
+    "booking.find-slots": { kind: "action", icon: "clock" },
+    "booking.book": { kind: "condition", icon: "message" },
+    "booking.confirm": { kind: "condition", icon: "flag" },
+    "booking.confirm-tell": { kind: "condition", icon: "send" },
+    "booking.confirm-notify": { kind: "action", icon: "bell" },
+    "booking.remind": { kind: "action", icon: "bell" },
+    "hiring.screen": { kind: "action", icon: "sparkles" },
+    "hiring.notify": { kind: "event", icon: "bell" },
+    "hiring.invite": { kind: "action", icon: "send" },
+    "hiring.invite-move": { kind: "action", icon: "user" },
+    "hiring.digest": { kind: "action", icon: "chart" },
+    "video.script": { kind: "action", icon: "pencil" },
+    "video.voice": { kind: "action", icon: "message" },
+    "video.scenes": { kind: "action", icon: "sparkles" },
+    "video.result": { kind: "wait", icon: "clock" },
+    "video.keep": { kind: "action", icon: "photo" },
+    "video.links": { kind: "action", icon: "git-branch" },
+    "video.compose": { kind: "action", icon: "sparkles" },
+    "video.render-check": { kind: "wait", icon: "clock" },
+    "video.output": { kind: "action", icon: "photo" },
+    "video.review": { kind: "event", icon: "bell" },
+    "video.publish": { kind: "action", icon: "check" },
+    "video.stuck": { kind: "event", icon: "warning" },
+    "content.plan": { kind: "action", icon: "sparkles" },
+    "content.draft": { kind: "action", icon: "pencil" },
+    "content.review": { kind: "action", icon: "check" },
+    "content.approved-notice": { kind: "event", icon: "bell" },
+    "content.report": { kind: "action", icon: "chart" },
 }
 
-/** The words of a node id as a name part: `payment.match-code` is `PaymentMatchCode`, `no_match` is `NoMatch`. */
-export const namePartOf = (id: string): string =>
-    id
-        .split(/[.\-_]/u)
-        .filter((part) => part !== "")
-        .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-        .join("")
+/** The words of a node id as a name part: NIVO core (`@nivo-lite/agent-sdk/graph`), re-exported for this package. */
+export { namePartOf }
 
 /** The kind and icon of a step; an unlisted step is a plain action. */
 export const nodeUiOf = (id: string): NodeUiEntry => NODE_UI[id] ?? { kind: "action", icon: "sparkles" }
@@ -178,7 +245,7 @@ export const specTextOf = (text: NodeDefinition["title"], locale: NodeLocale): s
     "key" in text ? (messageNamed(locale, text.key) ?? text.key) : text[locale]
 
 /** The short name of a step in one language. */
-export const nodeTitleOf = (node: NodeDefinition | { readonly id: string }, locale: NodeLocale): string =>
+export const nodeTitleOf = (node: ViewNode | { readonly id: string }, locale: NodeLocale): string =>
     "title" in node
         ? specTextOf(node.title, locale)
         : (messageNamed(locale, `node${namePartOf(node.id)}Title`) ?? node.id)
@@ -191,10 +258,15 @@ export const nodeSubtitleOf = (id: string, locale: NodeLocale): string =>
  * What a step is for, in one sentence, in one language: the goal the agent runs with and the engine wrapper hands to the AI core when the
  * step cannot complete (`node<Id>Goal` in the catalog); empty when the catalog has none.
  */
-export const nodeGoalOf = (id: string, locale: NodeLocale): string => messageNamed(locale, `node${namePartOf(id)}Goal`) ?? ""
+export const nodeGoalOf = (id: string, locale: NodeLocale): string =>
+    messageNamed(locale, `node${namePartOf(id)}Goal`) ?? ""
 
-/** The branch ids of a node's output, in the order its schema lists them; none when the output has no `branch` of fixed words. */
-export const branchesOf = (node: NodeDefinition): ReadonlyArray<string> => {
+/**
+ * The branch ids of a step: a template node's route names, in the order it declares them; else the `branch` of a node's output, in the
+ * order its schema lists them; none when the step neither routes nor has a `branch` of fixed words.
+ */
+export const branchesOf = (node: ViewNode): ReadonlyArray<string> => {
+    if (node.routes !== undefined) return [...node.routes.names]
     const schema = z.toJSONSchema(node.output, { io: "output", unrepresentable: "any" })
     const branch: unknown = schema["properties"]?.["branch"]
     const values: unknown = typeof branch === "object" && branch !== null ? Reflect.get(branch, "enum") : undefined
@@ -206,3 +278,10 @@ export const branchLabelOf = (id: string, branch: string, locale: NodeLocale): s
     messageNamed(locale, `node${namePartOf(id)}Output${namePartOf(branch)}`) ??
     messageNamed(locale, `nodeOutput${namePartOf(branch)}`) ??
     branch
+
+/**
+ * The words of one kind of AI call of a run, for the run page's "AI calls" table, in one language: the structure is NIVO core
+ * (`aiCallLabelOf` in `@nivo-lite/agent-sdk/graph`), the words are this package's catalog; null when the catalog has none.
+ */
+export const aiCallLabelOf = (purpose: string, locale: NodeLocale): string | null =>
+    aiCallLabelWith(purpose, (key) => messageNamed(locale, key))

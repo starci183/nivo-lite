@@ -8,8 +8,13 @@ import type {
     RetrievedPassageType,
 } from "@/modules/api"
 import { isModuleKey } from "@/modules/catalog"
-import type { Installation, InstallationStatus, OperatingMode } from "@/modules/installations"
-import { displayNameOf, installationLifecycleOf } from "@/modules/installations"
+import {
+    type Installation,
+    type InstallationStatus,
+    type OperatingMode,
+    displayNameOf,
+    installationLifecycleOf,
+} from "@/modules/installations"
 import type {
     DocumentKind,
     DocumentPassage,
@@ -60,7 +65,7 @@ export const toSourceKind = (value: string): DocumentKind => KINDS.find((kind) =
 const moduleOf = (value: string | null): string | null => (value !== null && isModuleKey(value) ? value : null)
 
 /** The document a `knowledgeSources` item stands for. */
-export const toKnowledgeDocument = (row: KnowledgeSourceType): KnowledgeDocument => ({
+export const toKnowledgeDocument = (row: Omit<KnowledgeSourceType, "truths">): KnowledgeDocument => ({
     id: row.id,
     workspaceId: row.workspaceId,
     module: moduleOf(row.module ?? null),

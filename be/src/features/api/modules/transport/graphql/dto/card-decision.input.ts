@@ -49,7 +49,7 @@ export class CardDecisionInput {
     @IsIn(["public", "internal", "restricted"])
     scope?: "public" | "internal" | "restricted"
 
-    /** Rule edit: the limit, VND; null for none. */
+    /** Ignored: rule cards are gone with the authority rules (2026-11-13); the web still sends the key. */
     @Field(() => Int, { nullable: true })
     @IsOptional()
     @IsInt()
@@ -57,7 +57,7 @@ export class CardDecisionInput {
     @Max(1000000000000)
     limitVnd?: number | null
 
-    /** Rule edit: the mode. */
+    /** Ignored: rule cards are gone with the authority rules (2026-11-13); the web still sends the key. */
     @Field(() => String, { nullable: true })
     @IsOptional()
     @NullAsAbsent()
@@ -77,19 +77,4 @@ export class CardDecisionInput {
     @NullAsAbsent()
     @IsBoolean()
     onlyThisAgent?: boolean
-
-    /** Branch edit: the band the exact boundary amount belongs to, lower or higher. */
-    @Field(() => String, { nullable: true })
-    @IsOptional()
-    @NullAsAbsent()
-    @IsIn(["lower", "higher"])
-    belongsTo?: "lower" | "higher"
-
-    /** Branch edit: the seat asked above the line. */
-    @Field(() => String, { nullable: true })
-    @IsOptional()
-    @NullAsAbsent()
-    @IsString()
-    @MaxLength(36)
-    approverMemberId?: string
 }

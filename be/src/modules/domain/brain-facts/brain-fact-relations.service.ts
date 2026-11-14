@@ -1,11 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { FactRelation, FactStatus, RelationInput } from "./brain-facts.contracts"
 import { BrainFactsError, BrainFactsErrorCode } from "./errors/brain-facts.error"
-import { RELATION_READ_MAX, carriedRelationsOf, checkRelation, toFactRelation } from "./fact-relation.policy"
-import type { CheckedRelation } from "./fact-relation.policy"
+import {
+    RELATION_READ_MAX,
+    carriedRelationsOf,
+    checkRelation,
+    toFactRelation,
+    type CheckedRelation,
+} from "./fact-relation.policy"
 import { BrainFactEntity, BrainFactRelationEntity } from "./persistence/entities"
 
 @Injectable()
@@ -41,7 +45,7 @@ export class BrainFactRelationsService {
      * Joins many pairs at once for the reading of one document, as edges the model PROPOSES: an edge that does not hold (unknown kind, a
      * fact to itself, a fact of another workspace) is left out, an edge already stored is kept, and an edge between two facts that are
      * BOTH already in force is left out too. So every edge of a reading touches at least one waiting proposal and stands (is served by
-     * `nivo.brain.fact.related`, which reads only facts in force at both ends) only once the founder has put that proposal in force; nothing
+     * `nivo.tool.brain.fact.related`, which reads only facts in force at both ends) only once the founder has put that proposal in force; nothing
      * the model links ever stands without a person. Answers how many edges were asked for after the check.
      */
     async linkMany(workspaceId: string, inputs: ReadonlyArray<RelationInput>): Promise<number> {

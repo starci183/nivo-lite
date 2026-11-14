@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
+import { TRIGGER } from "@nivo-lite/agent-sdk/names"
 import { AgentWorkflowRunsService } from "@modules/domain/agent-graphs"
 import { AgentScheduleFireService, AgentWorkSweepService } from "@modules/domain/agent-schedules"
 import { ThreadDeadlinesService } from "@modules/domain/agent-threads"
@@ -11,7 +12,6 @@ import type { InstallationRecord } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
-import { DecisionsError, DecisionsErrorCode } from "@modules/domain/decisions"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { DoorPress } from "./agent-doors.contracts"
@@ -28,19 +28,20 @@ const task = (over: Partial<AgentTaskRecord>): AgentTaskRecord => ({
     id: "task-1",
     agentId: "agent-sales",
     goalId: null,
-    dedupeKey: "care:payment-reminder:order-1",
-    title: `care due ${REMIND_AT.toISOString()}`,
+    dedupeKey: "remind:order-1",
+    title: "Remind order-1",
     detail: "",
     status: "open",
     waitingOn: null,
     nextActionAt: REMIND_AT,
     workItemId: null,
+    data: null,
     ...over,
 })
 
 const TASKS: ReadonlyArray<AgentTaskRecord> = [
     task({}),
-    // An occasion timer wakes at most seven days ahead: it fires early and re-arms until its real moment.
+    // A leftover row of the retired care family is listed as the plain task it is (its key and title are no one's business here).
     task({
         id: "task-2",
         dedupeKey: "care:occasion:lead-1:sinhnhat-11-25",
@@ -76,7 +77,7 @@ const stop = (over: Partial<RunStop>): RunStop => ({
     stepKey: "match",
     agentId: "agent-accounting",
     workflowId: "wf-reconcile",
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_report",
     state: "open",
@@ -196,9 +197,9 @@ describe("ScheduledItemsService.list (the schedule list)", () => {
 
         expect(items.map((item) => [item.kind, item.what, item.subject, item.dueAt.toISOString(), item.agentName])).toEqual([
             ["deadline", "ai_report", { kind: "run", id: "run-1" }, DEADLINE_AT.toISOString(), "Accounting"],
-            ["care", "payment-reminder", { kind: "order", id: "order-1" }, REMIND_AT.toISOString(), "Sales"],
+            ["task", "Remind order-1", { kind: "task", id: "task-1" }, REMIND_AT.toISOString(), "Sales"],
             ["schedule", "accounting_close", { kind: "trigger", id: "trigger-1" }, SLOT.toISOString(), "Accounting"],
-            ["care", "occasion", { kind: "lead", id: "lead-1" }, OCCASION_AT.toISOString(), "Sales"],
+            ["task", "care due 2026-11-24T17:00:00.000Z", { kind: "task", id: "task-2" }, OCCASION_AT.toISOString(), "Sales"],
         ])
         const [deadline, reminder, slot, occasion] = items
         expect(deadline).toMatchObject({
@@ -212,11 +213,11 @@ describe("ScheduledItemsService.list (the schedule list)", () => {
             installationId: "inst-sales",
             workflow: { workflowId: "wf-remind", name: "Payment reminder" },
             stepKey: null,
-            realDueAt: REMIND_AT,
+            realDueAt: null,
             lastPress: { memberName: "Owner Lan", outcome: "already_ran" },
         })
         expect(slot).toMatchObject({ id: `schedule:trigger-1:${String(SLOT.getTime())}`, workflow: null, realDueAt: null })
-        expect(occasion?.realDueAt?.toISOString()).toBe("2026-11-24T17:00:00.000Z")
+        expect(occasion).toMatchObject({ kind: "task", realDueAt: null })
     })
 
     it("asks the workflows which one each wake goes to, once per agent, with the very wakes the timers write", async () => {
@@ -225,17 +226,24 @@ describe("ScheduledItemsService.list (the schedule list)", () => {
         await service.list("user-1", "ws-1")
 
         const calls = workflows.takersOf.mock.calls.map(([, agentId, wakes]) => [agentId, wakes.map((wake) => wake.source)])
+        // Ledger (ROAD Opus-1d, 2026-11-14): a clock slot is delivered as the `clock.tick` event of the one pipeline
+        // (`ClockTickDeliveryService.deliverSlot`), so its wake is of source `trigger` (it was the retired `schedule` road).
         expect(calls).toEqual([
-            ["agent-sales", ["tag", "tag"]],
-            ["agent-accounting", ["schedule"]],
+            ["agent-sales", ["internal", "internal"]],
+            ["agent-accounting", ["trigger"]],
         ])
-        const careWake = workflows.takersOf.mock.calls[0]?.[2]?.[0]
-        expect(careWake?.context).toMatchObject({ tagSource: "care-timer", subject: "order:order-1" })
+        expect(workflows.takersOf.mock.calls[1]?.[2]?.[0]?.context).toMatchObject({ verb: TRIGGER.clockTick })
+        // A task's wake names the task alone (the internal wake the minute sweep writes), whatever its key says: a leftover care-keyed row too.
+        const wakes = workflows.takersOf.mock.calls[0]?.[2] ?? []
+        expect(wakes.map((wake) => wake.context)).toEqual([
+            { taskId: "task-1", subjectId: "task-1" },
+            { taskId: "task-2", subjectId: "task-2" },
+        ])
     })
 
     it("lists no deadline in an app with no thread runs, and refuses a seat that is not an owner or manager before it reads anything", async () => {
         const quiet = await build({ threads: false })
-        const denied = new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
+        const denied = new Error("seat refused")
         const staff = await build({ manager: () => Promise.reject(denied) })
 
         expect((await quiet.service.list("user-1", "ws-1")).map((item) => item.kind)).not.toContain("deadline")
@@ -306,7 +314,7 @@ describe("ScheduledItemsService.runNow (\"run now\")", () => {
     })
 
     it("refuses a seat that is not an owner or manager, and touches nothing", async () => {
-        const denied = new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
+        const denied = new Error("seat refused")
         const { service, sweep, presses } = await build({ manager: () => Promise.reject(denied) })
 
         await expect(service.runNow("user-2", "ws-1", `task:task-1:${String(REMIND_AT.getTime())}`)).rejects.toBe(denied)

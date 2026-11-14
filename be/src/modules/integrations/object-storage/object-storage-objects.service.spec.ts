@@ -104,17 +104,17 @@ describe("StorageObjectsService / signed reads", () => {
         const { storage, service } = await build()
         storage.head.mockImplementation((_bucket, key) => Promise.resolve(key === "cv/there.pdf" ? headOf(1) : null))
         storage.presignGet.mockResolvedValueOnce(
-            signedBy("https://minio.example.org/nivo-hiring/cv/there.pdf?sig=2", "GET"),
+            signedBy("https://minio.example.org/nivo-media/cv/there.pdf?sig=2", "GET"),
         )
 
-        const signed = await service.signedUrls("hiring", ["cv/there.pdf", "cv/gone.pdf"], MAX_PRESIGN_SECONDS * 3)
+        const signed = await service.signedUrls("media", ["cv/there.pdf", "cv/gone.pdf"], MAX_PRESIGN_SECONDS * 3)
 
         expect(signed).toEqual({
             kind: "ok",
-            value: [{ path: "cv/there.pdf", signedUrl: "https://minio.example.org/nivo-hiring/cv/there.pdf?sig=2" }],
+            value: [{ path: "cv/there.pdf", signedUrl: "https://minio.example.org/nivo-media/cv/there.pdf?sig=2" }],
         })
         expect(storage.presignGet).toHaveBeenCalledTimes(1)
-        expect(storage.presignGet).toHaveBeenCalledWith("nivo-hiring", "cv/there.pdf", {
+        expect(storage.presignGet).toHaveBeenCalledWith("nivo-media", "cv/there.pdf", {
             expiresIn: MAX_PRESIGN_SECONDS,
         })
     })

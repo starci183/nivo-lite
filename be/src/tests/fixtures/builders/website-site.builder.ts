@@ -1,7 +1,7 @@
 import { builder } from "@starci/jest-preset"
-import { inboxLeadsEntities } from "@modules/domain/inbox-leads"
+import { websiteIntakeEntities } from "@modules/domain/inbox-leads"
 
-const WebsiteSiteEntity: (typeof inboxLeadsEntities)[0] = inboxLeadsEntities[0]
+const WebsiteSiteEntity: (typeof websiteIntakeEntities)[0] = websiteIntakeEntities[0]
 
 /** The workspace a website site of a spec belongs to. */
 export const WEBSITE_WORKSPACE = "11111111-1111-4111-8111-111111111111"

@@ -1,10 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { BrainSeedService } from "./brain-seed.service"
 import { ManagementSeedService } from "./management-seed.service"
+import { EnterpriseSeedService } from "./enterprise-seed.service"
 import { ChatSeedService } from "./chat-seed.service"
 import { RecordsSeedService } from "./records-seed.service"
-import { CatalogueSeedService } from "./catalogue-seed.service"
 import { TestAccountsSeedService } from "./test-accounts-seed.service"
 import { ChannelProvisioningService } from "./channel-provisioning.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channel-provisioning.module-definition"
@@ -22,19 +21,19 @@ export class ChannelProvisioningModule extends ConfigurableModuleClass {
                 ChannelProvisioningService,
                 ManagementSeedService,
                 TestAccountsSeedService,
-                CatalogueSeedService,
                 BrainSeedService,
                 RecordsSeedService,
                 ChatSeedService,
+                EnterpriseSeedService,
             ],
             exports: [
                 ChannelProvisioningService,
                 ManagementSeedService,
                 TestAccountsSeedService,
-                CatalogueSeedService,
                 BrainSeedService,
                 RecordsSeedService,
                 ChatSeedService,
+                EnterpriseSeedService,
             ],
         }
     }

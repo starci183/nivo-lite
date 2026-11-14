@@ -1,5 +1,4 @@
-import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
-import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
+import { countsRead, listRead, type ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { LEAD_STAGES } from "../../../rules/sales/stage"
 import { SALES_VIEW } from "../constants"
@@ -34,9 +33,9 @@ export const LEAD_ROW_FIELDS: ReadonlyArray<keyof LeadRow> = [
     "updatedAt",
 ]
 
-/** `sales.leads`: the leads of the workspace, searched, narrowed by stage and sorted. */
+/** `blocks-core.sales.api.lead.list`: the leads of the workspace, searched, narrowed by stage and sorted. */
 export const leadsRead: ListReadDefinition = listRead({
-    id: "sales.leads",
+    id: "blocks-core.sales.api.lead.list",
     dataKind: "sales-lead",
     permission: SALES_VIEW,
     fields: LEAD_ROW_FIELDS,
@@ -44,5 +43,5 @@ export const leadsRead: ListReadDefinition = listRead({
     source: salesLeadsList,
 })
 
-/** `sales.lead-counts`: how many leads each stage holds, under the same search. */
-export const leadCountsRead: ReadDefinition = countsRead({ id: "sales.lead-counts", of: leadsRead, by: "stage" })
+/** `blocks-core.sales.api.lead.counts`: how many leads each stage holds, under the same search. */
+export const leadCountsRead: ReadDefinition = countsRead({ id: "blocks-core.sales.api.lead.counts", of: leadsRead, by: "stage" })

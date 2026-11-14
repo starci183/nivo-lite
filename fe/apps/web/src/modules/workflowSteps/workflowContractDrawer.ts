@@ -1,22 +1,28 @@
-import { CALL_WORKFLOW_STEP, TRIGGER_SOURCE_KINDS } from "@nivo-lite/agent-sdk/graph"
-import type { ContractProblem, GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
+import {
+    CALL_WORKFLOW_STEP,
+    TRIGGER_SOURCE_KINDS,
+    type ContractProblem,
+    type GraphSpec,
+    type GraphSpecNode,
+} from "@nivo-lite/agent-sdk/graph"
 import {
     AGENT_LABELS,
-    CONTRACT_TYPE_LABELS,
-    TRIGGER_SOURCE_LABELS,
     bindableFieldsOf,
     bindingViewOf,
     callViewOf,
+    CONTRACT_TYPE_LABELS,
     contractProblemText,
+    installed,
     nodeCardsOf,
     outputFieldsOf,
     paramLabelOf,
+    type PickType,
     refChipTextOf,
     refOptionsOf,
+    TRIGGER_SOURCE_LABELS,
     triggerViewsOf,
-} from "@nivo-lite/blocks-core/graph"
-import type { PickType } from "@nivo-lite/blocks-core/graph"
-import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
+} from "@/modules/plugin-registry"
+import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
 import type {
     StepBindingView,
     StepCallView,
@@ -27,7 +33,7 @@ import { TRIGGER_KEY } from "./workflowEdits"
 
 /*
  * The contract parts of the step drawer, in words: the data params of a step with their bindings and the output picker, what the step
- * answers, the workflow's inputs on the trigger step, the target of a hand-off, the "Lỗi" branch and the picker of a new step's kind.
+ * answers, the workflow's inputs on the trigger step, the target of a hand-off, the "Loi" branch and the picker of a new step's kind.
  * The words come from blocks-core; this only lays them out for the drawer.
  */
 
@@ -54,15 +60,37 @@ const problemsAt = (problems: ReadonlyArray<ContractProblem>, at: string, locale
 
 /** The contract of the workflow a hand-off calls, from the template of that module and key; null when NIVO ships none. */
 const targetContractOf = (agent: string, workflow: string): GraphSpec["contract"] | null => {
-    const template = WORKFLOW_TEMPLATES.find((one) => one.id === `${agent}.${workflow}`)
+    const template = installed.templates.find((one) => one.id === `${agent}.${workflow}`)
     return template === undefined ? null : (latestTemplateVersion(template).graph.contract ?? null)
+}
+
+/** One data param a step binds: its name, label, type and whether it must be bound. */
+interface BindingField {
+    readonly name: string
+    readonly label: string
+    readonly type: PickType
+    readonly required: boolean
+}
+
+/** The text of a bound param: a ref in words, a fixed null as a dash, any other value as it reads. */
+const bindingTextOf = (
+    spec: GraphSpec,
+    node: GraphSpecNode,
+    view: ReturnType<typeof bindingViewOf> | null,
+    bound: unknown,
+    locale: DrawerLocale,
+): string => {
+    if (view === null) return ""
+    if (view.kind === "ref" && view.ref !== null) return refChipTextOf(spec, node.key, view.ref, locale)
+    if (view.kind === "fixed" && bound === null) return "—"
+    return view.text
 }
 
 /** One param as a row: its binding (ref chip, fixed, or empty), the refs that fit its type, and why it cannot be saved. */
 const bindingRowOf = (
     spec: GraphSpec,
     node: GraphSpecNode,
-    field: { readonly name: string; readonly label: string; readonly type: PickType; readonly required: boolean },
+    field: BindingField,
     bound: unknown,
     problems: ReadonlyArray<ContractProblem>,
     locale: DrawerLocale,
@@ -77,15 +105,8 @@ const bindingRowOf = (
         typeLabel: typeLabelOf(field.type, locale),
         required: field.required,
         kind: view === null ? "empty" : view.kind,
-        // A ref reads in words ("= Khách · Đầu vào"), its path only on hover; a fixed null reads as a dash, never as "null".
-        text:
-            view === null
-                ? ""
-                : view.kind === "ref" && view.ref !== null
-                  ? refChipTextOf(spec, node.key, view.ref, locale)
-                  : view.kind === "fixed" && bound === null
-                    ? "—"
-                    : view.text,
+        // A ref reads in words ("= Khach · Dau vao"), its path only on hover; a fixed null reads as a dash, never as "null".
+        text: bindingTextOf(spec, node, view, bound, locale),
         ref: view?.ref ?? null,
         options: refOptionsOf(spec, node.key, locale, field.type).map((option) => ({
             id: option.ref,
@@ -115,7 +136,7 @@ export const bindingRowsOf = (
         return isRecord(inner) ? inner : {}
     }
     const row = (
-        field: { readonly name: string; readonly label: string; readonly type: PickType; readonly required: boolean },
+        field: BindingField,
         bound: unknown,
     ) => bindingRowOf(spec, node, field, bound, problems, locale, words)
     if (node.step === CALL_WORKFLOW_STEP) {
@@ -168,7 +189,7 @@ export const outputRowsOf = (
     }))
 }
 
-/** The inputs of the workflow, on the trigger step: each with the "Nguồn" select, its conditions and the params it supplies. */
+/** The inputs of the workflow, on the trigger step: each with the "Nguon" select, its conditions and the params it supplies. */
 export const triggerRowsOf = (
     spec: GraphSpec,
     nodeKey: string,
@@ -198,7 +219,7 @@ export const callRowOf = (
     const node = spec.nodes.find((entry) => entry.key === nodeKey)
     const call = node === undefined ? null : callViewOf(node, locale)
     if (node === undefined || call === null) return null
-    const options = WORKFLOW_TEMPLATES.map((template) => ({
+    const options = installed.templates.map((template) => ({
         id: template.id,
         label: `${AGENT_LABELS[template.moduleKey]?.[locale] ?? template.moduleKey} · ${template.name[locale]}`,
     }))

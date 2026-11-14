@@ -1,6 +1,7 @@
 "use client"
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
+import { useParams } from "next/navigation"
 import { useBankName } from "@/hooks/banks"
 import { providerKey, PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { boardSlotOf, useConnectionsData, useConnectionsRole } from "@/hooks/connections"
@@ -13,6 +14,7 @@ import type { ConnectionProviderHead, ConnectionProviderView, DataSlot } from "@
 import {
     aboutOf,
     agentUsesOf,
+    type ConnectionAgentGrantWire,
     connectionsOfPage,
     figuresOf,
     latestEventOf,
@@ -33,9 +35,12 @@ export interface ConnectionProviderRead {
 /**
  * The provider page `/connections/<segment>`: the band (title, mark, group and count, the unit-specific add command that opens the
  * wizard on the hub), and the body (the figures, one row per connection, what the library says about the provider). A staff member
- * reads nothing; only the owner may add.
+ * reads nothing; only the owner may add. The `[provider]` loading route hands no segment (a loading boundary knows no params): the
+ * address names it.
  */
-export const useConnectionProvider = (segment: string): ConnectionProviderRead => {
+export const useConnectionProvider = (given?: string): ConnectionProviderRead => {
+    const params = useParams<{ provider?: string }>()
+    const segment = given ?? params.provider ?? ""
     const t = useTranslations("connections")
     const tGrant = useTranslations("agentConnections")
     const format = useFormatter()
@@ -45,7 +50,6 @@ export const useConnectionProvider = (segment: string): ConnectionProviderRead =
     const access = useConnectionsRole()
     const data = useConnectionsData()
     const grantsRead = useQueryConnectionAgentGrantsSwr()
-    const grants = grantsRead.data ?? []
     const providers = providersOfPage(segment)
     const provider = providers[0] ?? "webhook"
     const hubHref = workspaceHref(workspaceId, CONSOLE_ROUTES.connections)
@@ -60,7 +64,8 @@ export const useConnectionProvider = (segment: string): ConnectionProviderRead =
         addHref: providerAddHref(hubHref, provider),
     }
     const lastEvent = latestEventOf(connections)
-    const view: ConnectionProviderView = {
+    /** The view needs the grants, so it is only built once that read has answered (a read in flight is the slot's loading, never an empty list). */
+    const viewOf = (grants: ReadonlyArray<ConnectionAgentGrantWire>): ConnectionProviderView => ({
         canAdd: access.role === "owner",
         figures: figuresOf(
             connections,
@@ -74,8 +79,11 @@ export const useConnectionProvider = (segment: string): ConnectionProviderRead =
         ),
         count: String(connections.length),
         about: aboutOf(provider, t),
-    }
-    const read = slotOfReads([access.read, ...data.reads, grantsRead], () => view)
+    })
+    const grants = grantsRead.data
+    const read = slotOfReads([access.read, ...data.reads, grantsRead], () =>
+        grants === undefined ? undefined : viewOf(grants),
+    )
     const manager = access.role === "owner" || access.role === "manager"
     return {
         head,

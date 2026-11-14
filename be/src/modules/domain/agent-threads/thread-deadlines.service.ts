@@ -1,16 +1,12 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentGraphsService } from "@modules/domain/agent-graphs"
-import { InjectGraphThreads } from "@modules/integrations/langgraph"
-import type { GraphThreads, ThreadRef } from "@modules/integrations/langgraph"
+import { InjectGraphThreads, type GraphThreads, type ThreadRef } from "@modules/integrations/langgraph"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { ThreadDeadlineQueue } from "@modules/queues/thread-deadline"
-import type { ThreadDeadlinePayload } from "@modules/queues/thread-deadline"
+import { ThreadDeadlineQueue, type DeadlineJobArming, type ThreadDeadlinePayload } from "@modules/queues/thread-deadline"
 import { InjectAgentThreadsOptions } from "./agent-threads.decorators"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import type { AgentThreadsOptions } from "./agent-threads.options"
@@ -19,10 +15,18 @@ import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
 import { deadlineAtOf, deadlineWindowOf } from "./thread-deadline.policy"
+import { ThreadResumeRequestsService } from "./thread-resume-requests.service"
 import { ThreadRunsService } from "./thread-runs.service"
+import { UntilRoundWakesService } from "./until-round-wakes.service"
+import { isParkPayload } from "./until-rounds.policy"
+import { isWaitPayload } from "./thread-waits.policy"
+import { ThreadWaitsService } from "./thread-waits.service"
 
-/** What arming the deadline of a stop did: a job was written (or already stood), no deadline applies, or this app has no queue. */
-export type DeadlineArming = "armed" | "none" | "unqueued"
+/**
+ * What arming the deadline of a stop did: a job was written (`armed`), the job of the stop as it stands already stood (`standing`:
+ * nothing written, nothing logged), no deadline applies, or this app has no queue.
+ */
+export type DeadlineArming = "armed" | "standing" | "none" | "unqueued"
 
 /**
  * What a deadline that came did: it answered the stop `timeout` (admitted as a wake of the run), the stop no longer stands as it was
@@ -52,7 +56,8 @@ export interface PendingDeadline {
  * The deadlines of the stops of thread runs, as NIVO jobs, never a timer inside LangGraph. When a drive leaves a thread stopped, a
  * delayed job is written for its stop (24 hours for an approval, 3 days for a stop that waits for the founder, or the wait the template
  * declares for the step; none for an engine stop, and one deadline per stop at most). When the job comes, the stop is answered `timeout`
- * through `ThreadRunsService.resume`, the same door a founder's decision takes, so it queues behind the run's lease; an approval's
+ * through the resume request (`ThreadResumeRequestsService.resume`), the same door a founder's decision takes, so it queues behind the
+ * run's lease; an approval's
  * deadline goes through `ThreadApprovalsService.expired`, which also closes the owner's item as refused by the engine. A deadline is keyed
  * by the stop as it stood (its repeat and its count of answers): a deadline that comes for a stop already closed, answered or stopped
  * again since does nothing. The thread sweep arms the deadlines a crash missed and fires the ones whose job was lost (`dueOf`).
@@ -65,11 +70,14 @@ export class ThreadDeadlinesService implements OnModuleInit {
         @InjectLogger() private readonly logger: Logger,
         private readonly stops: RunStopsService,
         private readonly runs: ThreadRunsService,
+        private readonly requests: ThreadResumeRequestsService,
         @Optional() private readonly queue?: ThreadDeadlineQueue,
         @Optional() private readonly graphs?: AgentGraphsService,
         @Optional() @InjectGraphThreads() private readonly port?: GraphThreads,
         @Optional() private readonly approvals?: ThreadApprovalsService,
         @Optional() private readonly records?: RunStopRecordsService,
+        @Optional() private readonly rounds?: UntilRoundWakesService,
+        @Optional() private readonly waits?: ThreadWaitsService,
     ) {}
 
     /** Arms the deadline of every stop a drive leaves behind. */
@@ -79,14 +87,17 @@ export class ThreadDeadlinesService implements OnModuleInit {
         })
     }
 
-    /** Writes the deadline job of the open stop of a step; arming the same stop again writes nothing new (the job is keyed by the stop). */
+    /**
+     * Writes the deadline job of the open stop of a step; arming the same stop again writes and logs nothing (`standing`: the job is
+     * keyed by the stop as it stands), so the minute sweep's re-arm of every open stop only writes the job a crash missed.
+     */
     async armed(ref: ThreadRef, stepKey: string): Promise<DeadlineArming> {
         const stop = await this.stops.stopOf(ref, stepKey)
         const deadline = stop?.state === "open" ? await this.dueOf(ref, stop) : null
         if (deadline === null) return "none"
         const delayMs = deadline.at.getTime() - this.clock.now().getTime()
         const queued = await this.entityManager.transaction((tx) => this.armIn(tx, deadline.payload, delayMs))
-        if (!queued) return "unqueued"
+        if (queued !== "written") return queued
         this.logger.info(AgentThreadsLogEvent.DeadlineArmed, {
             runId: ref.runId,
             stepKey,
@@ -147,6 +158,10 @@ export class ThreadDeadlinesService implements OnModuleInit {
     }
 
     private async fireAs(payload: ThreadDeadlinePayload, now: boolean): Promise<DeadlineFiring> {
+        // The same job also carries the timer of a `loop({ until, every })` parked between two rounds: its next round's wake.
+        if (isParkPayload(payload)) return this.rounds === undefined ? this.skipped(payload, "closed") : this.rounds.fired(payload, now)
+        // And the deadline of a `wait` parked on its run: its timeout, unless an event took the park first.
+        if (isWaitPayload(payload)) return this.waits === undefined ? this.skipped(payload, "closed") : this.waits.timedOut(payload, now)
         const ref: ThreadRef = { workspaceId: payload.workspaceId, runId: payload.runId }
         const stop = await this.stops.stopOf(ref, payload.stepKey)
         if (stop?.state !== "open") return this.skipped(payload, "closed")
@@ -159,16 +174,16 @@ export class ThreadDeadlinesService implements OnModuleInit {
         // An approval's deadline also closes the owner's item as refused by the engine (package 1-3); its verdict hands the timeout on.
         const admission =
             stop.kind === "approval" && this.approvals !== undefined
-                ? await this.approvals.expired(ref, stop.stepKey, this.runs)
-                : await this.runs.resume(ref, { kind: "timeout", at: at.toISOString() })
+                ? await this.approvals.expired(ref, stop.stepKey, this.requests)
+                : await this.requests.resume({ ...ref, stepKey: stop.stepKey }, { kind: "timeout", at: at.toISOString() })
         if (admission === null) return this.skipped(payload, "closed")
         if (admission.kind === "refused") return this.skipped(payload, "refused")
         this.logger.info(AgentThreadsLogEvent.DeadlineFired, { runId: payload.runId, stepKey: payload.stepKey, early: now })
         return "admitted"
     }
 
-    private armIn(tx: EntityManager, payload: ThreadDeadlinePayload, delayMs: number): Promise<boolean> {
-        return this.queue === undefined ? Promise.resolve(false) : this.queue.arm(payload, delayMs, tx)
+    private armIn(tx: EntityManager, payload: ThreadDeadlinePayload, delayMs: number): Promise<DeadlineJobArming> {
+        return this.queue === undefined ? Promise.resolve("unqueued") : this.queue.arm(payload, delayMs, tx)
     }
 
     private skipped(payload: ThreadDeadlinePayload, code: Exclude<DeadlineFiring, "admitted">): DeadlineFiring {

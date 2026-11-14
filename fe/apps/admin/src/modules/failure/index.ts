@@ -1,1 +1,1 @@
-export { isForbiddenFailure, isNotFoundFailure, isUnauthenticatedFailure } from "./graphql"
+export { isNotFoundFailure, isUnauthenticatedFailure } from "./graphql"

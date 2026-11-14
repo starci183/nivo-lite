@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { TOOL, reportFactsKind, type MessageFact } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { reportFactsKind, type MessageFact } from "@nivo-lite/agent-sdk/team-chat"
 import type { AgentWakeView } from "@modules/domain/agent-work"
 import { bankDisplayNameOf } from "@modules/domain/channel-connections"
 import { channelFactOf, codeFactsOf, factWordsOf, wordOr, type FactWords } from "@modules/domain/team-chat"
@@ -11,8 +12,14 @@ import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 /** The effect a notice reaches the team through. */
 const TEAM_POST: string = TOOL.teamMessagePost
 
-/** Why no workflow took a wake: the agent has none yet, none of its workflows runs, or none of the running ones has a trigger for it. */
-export type UntakenReason = "no_workflow" | "no_workflow_running" | "no_trigger_takes_wake"
+/** The code of a wake that names no trigger verb. */
+const UNROUTABLE_CODE = "no_trigger_verb"
+
+/**
+ * Why no workflow took a wake: the agent's setup was never applied (it does not answer customers until it is), the agent has no
+ * workflow yet, none of its workflows runs, or none of the running ones has a trigger for it.
+ */
+export type UntakenReason = "setup_not_applied" | "no_workflow" | "no_workflow_running" | "no_trigger_takes_wake"
 
 /** The plain facts of a wake no workflow took. */
 export interface UntakenWake {
@@ -22,6 +29,16 @@ export interface UntakenWake {
     readonly running: ReadonlyArray<string>
     /** The sources the running workflows are triggered by. */
     readonly sources: ReadonlyArray<string>
+}
+
+/** The plain facts of a hand-off the engine refused: the code, the workflow it named and the providers that workflow waits for. */
+export interface RefusedWake {
+    /** The refusal code (`call_target_hidden`). */
+    readonly code: string
+    /** The name of the workflow the hand-off named. */
+    readonly workflow: string
+    /** The providers that workflow waits for, distinct. */
+    readonly waitingFor: ReadonlyArray<string>
 }
 
 /** The language a wake names; Vietnamese when it names none the product speaks. */
@@ -90,7 +107,9 @@ export class AgentGraphWakeNoticesService {
 
     /**
      * Tells the founder that a customer wake was taken by no workflow of the agent: one readable sentence, then the facts (the channel,
-     * why, the sources the running workflows take; the running workflow keys and the conversation id as technical facts).
+     * why, the sources the running workflows take; the running workflow keys and the conversation id as technical facts). A wake that
+     * names its conversation is told ONCE PER CONVERSATION and reason, however many lines the customer writes: every later line ends
+     * the same way and adds no report. A wake of no conversation is told once per wake.
      */
     async untaken(wake: AgentWakeView, facts: UntakenWake): Promise<void> {
         const locale = localeOfWake(wake)
@@ -106,9 +125,35 @@ export class AgentGraphWakeNoticesService {
             ...(sources === null ? [] : [sources]),
             ...(facts.running.length === 0 ? [] : [technicalOf(words, "running", facts.running.join(", "))]),
         ]
-        await this.tell(wake, "untaken", {
+        const conversation = memberOf(wake, "conversationId")
+        const report = {
             title: this.catalog.get("agentGraphs.wake.untaken.title", {}, locale),
             text: this.catalog.get("agentGraphs.wake.untaken.sentence", {}, locale),
+            facts: wakeFactsOf(wake, words, middle),
+        }
+        const once = conversation === null ? null : `wake-notice:conversation:${conversation}:untaken:${facts.reason}`
+        await this.tell(wake, "untaken", report, once)
+    }
+
+    /**
+     * Tells the founder, once per wake, that a wake named no event any workflow listens for (its producer wrote no trigger verb), so
+     * nothing ran: one readable sentence, then the facts (the channel when it names one, why in words; the code and the conversation id
+     * as technical facts).
+     */
+    async unroutable(wake: AgentWakeView): Promise<void> {
+        const locale = localeOfWake(wake)
+        const words = factWordsOf({ catalog: this.catalog, locale, bankName: bankDisplayNameOf })
+        const middle: ReadonlyArray<MessageFact> = [
+            {
+                name: wordOr(words, "teamChat.fact.why", "why"),
+                value: this.catalog.get(`agentGraphs.wake.reason.${UNROUTABLE_CODE}`, {}, locale),
+                technical: false,
+            },
+            technicalOf(words, "code", UNROUTABLE_CODE),
+        ]
+        await this.tell(wake, "unroutable", {
+            title: this.catalog.get("agentGraphs.wake.unroutable.title", {}, locale),
+            text: this.catalog.get("agentGraphs.wake.unroutable.sentence", {}, locale),
             facts: wakeFactsOf(wake, words, middle),
         })
     }
@@ -127,12 +172,52 @@ export class AgentGraphWakeNoticesService {
         })
     }
 
-    /** One typed report (`report.facts`) to the founder, once per wake and kind; a team chat that cannot take it is logged, never thrown. */
-    private async tell(wake: AgentWakeView, kind: string, report: WakeReport): Promise<void> {
+    /**
+     * Tells the founder that a hand-off was refused before any step ran (its target workflow is switched on but not ready): one readable
+     * sentence, then the facts (the workflow it named, why, the providers it waits for; the code as a technical fact). Told once per wake.
+     */
+    async refused(wake: AgentWakeView, facts: RefusedWake): Promise<void> {
+        const locale = localeOfWake(wake)
+        const words = factWordsOf({ catalog: this.catalog, locale, bankName: bankDisplayNameOf })
+        const middle: ReadonlyArray<MessageFact> = [
+            { name: wordOr(words, "teamChat.fact.workflow", "workflow"), value: facts.workflow, technical: false },
+            {
+                name: wordOr(words, "teamChat.fact.why", "why"),
+                value: this.catalog.get(`agentGraphs.wake.reason.${facts.code}`, {}, locale),
+                technical: false,
+            },
+            {
+                name: wordOr(words, "agentGraphs.wake.fact.waitingFor", "waitingFor"),
+                value: facts.waitingFor.join(", "),
+                technical: false,
+            },
+            technicalOf(words, "code", facts.code),
+        ]
+        await this.tell(wake, `refused:${facts.code}`, {
+            title: this.catalog.get("agentGraphs.wake.refused.title", {}, locale),
+            text: this.catalog.get("agentGraphs.wake.refused.sentence", {}, locale),
+            facts: wakeFactsOf(wake, words, middle),
+        })
+    }
+
+    /**
+     * One typed report (`report.facts`) to the founder, once per `once` when the caller names what it is told once for, else once per
+     * wake and kind; a team chat that cannot take it is logged, never thrown.
+     */
+    private async tell(
+        wake: AgentWakeView,
+        kind: string,
+        report: WakeReport,
+        once: string | null = null,
+    ): Promise<void> {
         const post = this.nodes.optionalExecutorOf(TEAM_POST)
-        const key = `wake-notice:${wake.wakeId}:${kind}`
+        const key = once ?? `wake-notice:${wake.wakeId}:${kind}`
         if (post === undefined) {
-            this.logger.warn(AgentGraphsLogEvent.WakeNoticeSkipped, { agentId: wake.agentId, wakeId: wake.wakeId, kind })
+            this.logger.warn(AgentGraphsLogEvent.WakeNoticeSkipped, {
+                agentId: wake.agentId,
+                wakeId: wake.wakeId,
+                kind,
+            })
             return
         }
         const turn: NodeTurn = {
@@ -157,7 +242,11 @@ export class AgentGraphWakeNoticesService {
                 { key, dedupeKey: key },
             )
         } catch (cause) {
-            this.logger.error(AgentGraphsLogEvent.WakeNoticeSkipped, cause, { agentId: wake.agentId, wakeId: wake.wakeId, kind })
+            this.logger.error(AgentGraphsLogEvent.WakeNoticeSkipped, cause, {
+                agentId: wake.agentId,
+                wakeId: wake.wakeId,
+                kind,
+            })
         }
     }
 }

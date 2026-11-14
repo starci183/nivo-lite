@@ -1,122 +1,91 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import type { JsonObject } from "@nivo-lite/agent-sdk/schema"
+import { defineTemplateNode, type TemplateNode } from "@nivo-lite/agent-sdk/template"
 import { z } from "zod"
 import { MAX_ID } from "../../bounds"
-import { bilingualOf } from "../../messages/catalog"
-import { TOOL } from "../../vocabulary/tool-ids"
-import { itemsTextOf, orderLinesOf } from "../payment/payment-request.policy"
-import { nodeGoalOf } from "../node-ui"
+import { bilingualOf, messageOf } from "../../messages/catalog"
 import type { NodeLocale, NodeSchema } from "../node-schema.types"
-import { CARE_RIGHTS, careLeadOf, careOrderOf } from "./care.data"
-import { paymentStateOf } from "./care.policy"
-import { agentAnswer } from "./care.steps"
+import { answered, refused } from "../tool-answers"
 
-const ID = "sales.unpaid-notice"
-
-/** What the notice is given: the order the 24-hour timer woke for, and the language of the team chat. */
+/** The order the sale stopped waiting for, for the team to follow up. */
 export interface UnpaidNoticeInput {
-    /** The order still unpaid (`= trigger.ref`). */
-    readonly orderId: string
+    /** The order's code. */
+    readonly orderNo: string
+    /** The order's total, VND. */
+    readonly amountVnd: number
     /** The language the team reads. */
     readonly locale: NodeLocale
 }
 
-/** What the notice did. */
+/** Whether the team was told. */
 export interface UnpaidNoticeOutput {
-    /** The order, echoed. */
-    readonly orderId: string
-    /** `told` the team was told; `settled` nothing to tell (the order was paid, cancelled or is gone). */
-    readonly result: "told" | "settled"
+    /** True once the notice was posted. */
+    readonly posted: boolean
+    /** The post's refusal when it was refused, else null. */
+    readonly refusal: string | null
 }
 
-const params: z.ZodObject<Record<string, never>> = z.object({})
-
 const input: NodeSchema<UnpaidNoticeInput> = z.object({
-    orderId: z.string().max(MAX_ID).min(1),
+    orderNo: z.string().min(1).max(MAX_ID),
+    amountVnd: z.number().int().min(0),
     locale: z.enum(["vi", "en"]),
 })
 
 const output: NodeSchema<UnpaidNoticeOutput> = z.object({
-    orderId: z.string().max(MAX_ID).describe("The id of the order, as given."),
-    result: z.enum(["told", "settled"]).describe("`told` when the team was told (the agent answers only this)."),
+    posted: z.boolean().describe("True once the notice was posted to the team."),
+    refusal: z.string().max(MAX_ID).nullable().describe("The post tool's refusal when it refused, else null."),
 })
 
-const GUIDANCE =
-    "Tell the team on the team chat, in one short `message.text` with intent `ask`, in the team's language (`locale`), that the order is " +
-    "still unpaid a day after its QR and one reminder: name the order number and the customer, and ask whether to keep or cancel it. " +
-    "Do not write to the customer."
-
-const EXAMPLE_GRANT: RightsGrant = { rights: CARE_RIGHTS }
-
-const ORDER = {
-    id: "o1",
-    orderNo: "DH-1",
-    amountVnd: 300_000,
-    status: "confirmed",
-    items: { lines: [] },
-    leadId: "l1",
-    shippedAt: null,
-}
-
-const NOTICE = {
+/** The post as `nivo.tool.team.message.post` takes it: one catalogue line telling (`notify`) the founder the order and its total. */
+const noticeOf = (given: UnpaidNoticeInput): JsonObject => ({
     kind: "message.text",
-    intent: "ask",
-    title: "Đơn DH-1 chưa thanh toán",
-    text: "Chị An chưa chuyển khoản đơn DH-1 sau một ngày và một lần nhắc. Giữ đơn hay huỷ ạ?",
-}
+    intent: "notify",
+    audience: "founder",
+    title: messageOf(given.locale, "nodeSalesUnpaidNoticeHeading"),
+    text: messageOf(given.locale, "nodeSalesUnpaidNoticeLine")
+        .replaceAll("{order}", given.orderNo)
+        .replaceAll("{amount}", String(given.amountVnd)),
+})
+
+/** The order of the examples. */
+const UNPAID: UnpaidNoticeInput = { orderNo: "DH-20261113-0001", amountVnd: 4500, locale: "en" }
 
 /**
- * `sales.unpaid-notice` (Báo đội đơn chưa trả): a day after the QR, an order still unpaid is told to the team on /chat by the agent, in its
- * own words (`agent-message.post`); the team decides to keep or cancel it. No work item, nothing to the customer. A side step
- * (`blocking: false`). An order paid or cancelled in the meantime is not told: a guard in code.
+ * `sales.unpaid-notice` (Bao doi don chua tra): the sale's payment wait ran out of rounds (every reminder sent, no credit paid the order).
+ * The run ends `unpaid`, never silently (ruling R45): the founder is told on /chat which order and its total, for a person to follow up.
+ * One catalogue line, no AI call, no customer text. A side step (`blocking: false`): a notice that cannot be posted is said in the output.
  */
-export const salesUnpaidNoticeNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
-    id: ID,
-    role: "output",
+export const salesUnpaidNoticeNode: TemplateNode<typeof input, typeof output> = defineTemplateNode({
+    id: "sales.unpaid-notice",
     title: bilingualOf("nodeSalesUnpaidNoticeTitle"),
-    params,
+    description: {
+        vi: "Báo đội một đơn đã nhắc hết lượt mà vẫn chưa được trả tiền, kèm mã đơn và tổng tiền, để một người theo dõi.",
+        en: "Tells the team about an order still unpaid after every reminder, with its code and total, for a person to follow up.",
+    },
+    tools: [TOOL.teamMessagePost],
+    mode: "auto",
+    accounts: [],
     input,
     output,
-    rights: CARE_RIGHTS,
-    effects: [TOOL.teamMessagePost],
-    requires: [TOOL.teamMessagePost],
     blocking: false,
     run: async (given, context) => {
-        const order = await careOrderOf(context, given.orderId)
-        if (order === undefined || paymentStateOf(order.status) !== "open") return { orderId: given.orderId, result: "settled" }
-        const lead = await careLeadOf(context, order.leadId)
-        return agentAnswer(context, {
-            goal: `${nodeGoalOf(ID, "en")} ${GUIDANCE}`,
-            input: {
-                locale: given.locale,
-                order: { orderId: order.id, orderNo: order.orderNo, items: itemsTextOf(orderLinesOf(order.items)) },
-                customer: lead === undefined ? null : { name: lead.contactName },
-            },
-            output,
-            maxTurns: 3,
-            purpose: "unpaid-notice",
-        })
+        const posted = await context.tools.call(TOOL.teamMessagePost, noticeOf(given))
+        return posted.ok ? { posted: true, refusal: null } : { posted: false, refusal: posted.declined === true ? "declined" : posted.refusal }
     },
     examples: [
         {
-            name: "an order unpaid a day after its QR is told to the team, who decide",
+            name: "the founder is told the code and the total of the order the sale stopped waiting for",
             params: {},
-            input: { orderId: "o1", locale: "vi" },
-            output: { orderId: "o1", result: "told" },
-            grant: EXAMPLE_GRANT,
-            model: [{ call: { tool: TOOL.teamMessagePost, args: NOTICE } }, { done: { orderId: "o1", result: "told" } }],
-            effects: [{ kind: TOOL.teamMessagePost, payload: NOTICE }],
-            store: { order: [ORDER], "sales-lead": [{ id: "l1", contactName: "An" }] },
+            input: UNPAID,
+            tools: [{ id: TOOL.teamMessagePost, args: noticeOf(UNPAID), answer: answered({ messageId: "team-message-1" }) }],
+            output: { posted: true, refusal: null },
         },
         {
-            name: "an order paid in the meantime is not told",
+            name: "a refused post is said in the output; the run still ends unpaid",
             params: {},
-            input: { orderId: "o1", locale: "vi" },
-            output: { orderId: "o1", result: "settled" },
-            grant: EXAMPLE_GRANT,
-            effects: [],
-            store: { order: [{ ...ORDER, status: "paid" }] },
+            input: UNPAID,
+            tools: [{ id: TOOL.teamMessagePost, args: noticeOf(UNPAID), answer: refused("not_granted") }],
+            output: { posted: false, refusal: "not_granted" },
         },
     ],
 })

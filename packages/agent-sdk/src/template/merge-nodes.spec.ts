@@ -37,7 +37,7 @@ const restyle = (graph: GraphDocument, key: string): GraphDocument =>
                   decide: {
                       ...node.decide,
                       branches: node.decide.branches.map((branch) =>
-                          branch.key === key ? { ...branch, then: "stop" as const } : branch,
+                          branch.key === key ? { ...branch, mode: "stop" as const } : branch,
                       ),
                   },
               },
@@ -145,7 +145,7 @@ describe("applyUnits: nodes and removals", () => {
 
         const decide = result.nodes.find((node) => node.key === "decide")
         expect(decide?.title).toBe("New check")
-        expect(decide?.decide?.branches.find((branch) => branch.key === "small")?.then).toBe("stop")
+        expect(decide?.decide?.branches.find((branch) => branch.key === "small")?.mode).toBe("stop")
     })
 
     it("takes the whole node when it has no branches of the buyer to keep", () => {

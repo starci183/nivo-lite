@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { MyInvitesService } from "@modules/domain/workspace-invites"
-import type { InviteForMe } from "@modules/domain/workspace-invites"
+import { MyInvitesService, type InviteForMe } from "@modules/domain/workspace-invites"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListMyInvitesQuery } from "./list-my-invites.query"
 
 @QueryHandler(ListMyInvitesQuery)

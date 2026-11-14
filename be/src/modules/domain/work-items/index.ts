@@ -1,25 +1,21 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
-export { WorkItemsChainReadService } from "./work-items-chain-read.service"
 export { WorkItemsViewsReadService } from "./work-items-views-read.service"
-export type { WorkItemWithCursor } from "./work-items-views-read.contracts"
+
 export { WorkItemsActivityService } from "./work-items-activity.service"
 export { workItemsEntities } from "./persistence/entities"
 export { WORK_ITEMS_ERROR_KINDS } from "./errors/work-items.error"
 export { WORK_ITEMS_MESSAGES } from "./messages/work-items.messages"
-export { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
 export type {
     DecidedPath,
     EvidenceState,
     NewWorkItem,
-    OptionalWorkItem,
     Proposal,
-    ProposalCandidate,
-    ProposalFieldValue,
     ReasonCode,
     SubjectType,
     WorkItem,
     WorkStatus,
 } from "./work-items.contracts"
+
 export { WorkItemsModule } from "./work-items.module"
 export { WorkItemsService } from "./work-items.service"
 export { WorkInHandService } from "./work-in-hand.service"
@@ -30,12 +26,10 @@ export type {
     AgentWaiting,
     DashboardRange,
     WaitingApproval,
-    WaitingApprovals,
 } from "./work-items-dashboard-read.contracts"
-export { WorkItemsDecisionsReadService } from "./work-items-decisions-read.service"
+
 export { toProposal } from "./work-items.mapper"
 export type { WorkItemRecord } from "./work-items.contracts"
-export { WORK_ITEM_CLOSED } from "./work-items.decorators"
-export { AMOUNT_EVIDENCE } from "./work-items.contracts"
-export type { GraphEvidence } from "./work-items.contracts"
-export type { WorkExecutionOptions, WorkResult } from "./work-items.contracts"
+
+
+export type { WorkResult } from "./work-items.contracts"

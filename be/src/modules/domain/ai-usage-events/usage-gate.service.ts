@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { OptionalQuotaBlock, UsageGate, GenerationUsageRecord } from "@modules/domain/ai-generations"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import type { UsageCallFacts, UsageWork } from "./ai-usage-events.contracts"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { usageKindOf } from "./usage-kind.policy"

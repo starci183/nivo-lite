@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { AgentWorkflowInstallService } from "@modules/domain/agent-graphs"
+import { mock, type MockOf } from "@starci/jest-preset"
 import { ChannelOwnersService } from "@modules/domain/agent-connections"
 import { AgentIdentityService } from "@modules/domain/agents"
 import { AvatarsService } from "@modules/domain/avatars"
@@ -15,10 +16,10 @@ import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-m
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { CreateAgentInstanceRequest } from "./agent-instances.contracts"
-import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
+import { AgentAccountsService } from "@modules/domain/tools"
 import { AgentInstanceCreationService } from "./agent-instance-creation.service"
 import { AgentSetupCopyService } from "./agent-setup-copy.service"
-import { AgentInstancesErrorCode } from "./errors/agent-instances.error"
+import { AgentInstancesError, AgentInstancesErrorCode } from "./errors/agent-instances.error"
 
 const SALES = mock<ModuleDefinition>({ key: "sales", multiInstance: true })
 
@@ -66,6 +67,37 @@ const REQUEST: CreateAgentInstanceRequest = {
     copyFrom: null,
 }
 
+/** Teaches the channel owners double: the one Telegram connection another agent of the role answers. */
+const teachOwners = (owners: MockOf<ChannelOwnersService>): void => {
+    owners.ownersOf.mockResolvedValue([
+        {
+            connectionId: "tg1",
+            agentId: "agent-lan",
+            agentName: "Lan",
+            module: "sales",
+            purpose: "outbound_chat",
+            grantedAt: new Date("2026-11-01T00:00:00.000Z"),
+        },
+    ])
+}
+
+/** Teaches the setup copy double: a copied sibling setup with one free channel granted. */
+const teachSetupCopy = (setupCopy: MockOf<AgentSetupCopyService>): void => {
+    setupCopy.copy.mockResolvedValue({
+        copied: {
+            fromInstallationId: "inst-lan",
+            settings: true,
+            contextVersion: true,
+            graph: "copied",
+            knowledgeFacts: 3,
+            knowledgeDocuments: 1,
+            knowledgeWaiting: 2,
+            knowledgeSkipped: 0,
+        },
+        grants: [{ connectionId: "db1" }],
+    })
+}
+
 const build = async (role: WorkspaceRole = "owner") => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(memberOf(role))
@@ -87,36 +119,15 @@ const build = async (role: WorkspaceRole = "owner") => {
     ])
     const grants = mock<ConnectionGrantsService>()
     const owners = mock<ChannelOwnersService>()
-    owners.ownersOf.mockResolvedValue([
-        {
-            connectionId: "tg1",
-            agentId: "agent-lan",
-            agentName: "Lan",
-            module: "sales",
-            purpose: "outbound_chat",
-            grantedAt: new Date("2026-11-01T00:00:00.000Z"),
-        },
-    ])
+    teachOwners(owners)
     const setupCopy = mock<AgentSetupCopyService>()
-    setupCopy.copy.mockResolvedValue({
-        copied: {
-            fromInstallationId: "inst-lan",
-            settings: true,
-            contextVersion: true,
-            rules: 1,
-            graph: "copied",
-            knowledgeFacts: 3,
-            knowledgeDocuments: 1,
-            knowledgeWaiting: 2,
-            knowledgeSkipped: 0,
-        },
-        grants: [{ connectionId: "db1" }],
-    })
+    teachSetupCopy(setupCopy)
     const logger = mock<Logger>()
     const removal = mock<AgentRemovalService>()
-    const abilities = mock<ProviderAbilitiesService>()
+    const abilities = mock<AgentAccountsService>()
     abilities.wishProblem.mockResolvedValue(null)
     abilities.attachDefaults.mockResolvedValue({ ok: true, attached: [] })
+    const workflows = mock<AgentWorkflowInstallService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentInstanceCreationService,
@@ -130,9 +141,10 @@ const build = async (role: WorkspaceRole = "owner") => {
             { provide: ConnectionGrantsService, useValue: grants },
             { provide: ChannelOwnersService, useValue: owners },
             { provide: AgentSetupCopyService, useValue: setupCopy },
-            { provide: ProviderAbilitiesService, useValue: abilities },
+            { provide: AgentAccountsService, useValue: abilities },
             { provide: AgentRemovalService, useValue: removal },
             { provide: LOGGER, useValue: logger },
+            { provide: AgentWorkflowInstallService, useValue: workflows },
         ],
     }).compile()
     return {
@@ -147,6 +159,7 @@ const build = async (role: WorkspaceRole = "owner") => {
         logger,
         abilities,
         removal,
+        workflows,
     }
 }
 
@@ -228,7 +241,6 @@ describe("AgentInstanceCreationService > create", () => {
             fromInstallationId: "inst-lan",
             settings: true,
             contextVersion: true,
-            rules: 1,
             graph: "copied",
             knowledgeFacts: 3,
             knowledgeDocuments: 1,
@@ -251,27 +263,25 @@ describe("AgentInstanceCreationService > create, provider rights", () => {
             { workspaceId: "w1", agentId: "agent-minh", moduleKey: "sales" },
             null,
             "u1",
-            "owner",
         )
     })
 
     it("attaches exactly what the owner left of the proposal, checked before anything is written", async () => {
         const { service, abilities, install } = await build()
-        const providerRights = [{ connectionId: "conn-zalo", abilities: { "customer.send": "ask" } }]
+        const providerRights = [{ connectionId: "conn-zalo" }]
 
         await service.create("u1", { ...REQUEST, providerRights })
-        expect(abilities.wishProblem).toHaveBeenCalledWith("w1", providerRights, "owner")
+        expect(abilities.wishProblem).toHaveBeenCalledWith("w1", providerRights)
         expect(abilities.attachDefaults).toHaveBeenCalledWith(
             { workspaceId: "w1", agentId: "agent-minh", moduleKey: "sales" },
             providerRights,
             "u1",
-            "owner",
         )
 
         install.install.mockClear()
         abilities.wishProblem.mockResolvedValue("not_connected")
         await expect(service.create("u1", { ...REQUEST, providerRights })).rejects.toMatchObject({
-            code: "MCP_GATEWAY_ATTACHMENT_REFUSED",
+            code: "TOOLS_ATTACHMENT_REFUSED",
             params: { reason: "not_connected" },
         })
         expect(install.install).not.toHaveBeenCalled()
@@ -279,18 +289,17 @@ describe("AgentInstanceCreationService > create, provider rights", () => {
 })
 
 describe("AgentInstanceCreationService > create, a manager's provider rights", () => {
-    it("gives the proposal and checks an edit as a manager, who may not let an agent act by itself", async () => {
+    it("attaches a manager's edit as an owner's: an attachment carries no mode, so there is nothing to cap", async () => {
         const { service, abilities } = await build("manager")
-        const providerRights = [{ connectionId: "conn-zalo", abilities: { "customer.send": "ask" } }]
+        const providerRights = [{ connectionId: "conn-zalo" }]
 
         await service.create("u1", { ...REQUEST, providerRights })
 
-        expect(abilities.wishProblem).toHaveBeenCalledWith("w1", providerRights, "manager")
+        expect(abilities.wishProblem).toHaveBeenCalledWith("w1", providerRights)
         expect(abilities.attachDefaults).toHaveBeenCalledWith(
             { workspaceId: "w1", agentId: "agent-minh", moduleKey: "sales" },
             providerRights,
             "u1",
-            "manager",
         )
     })
 })
@@ -334,7 +343,11 @@ describe("AgentInstanceCreationService > create is all or nothing", () => {
 
     it("never removes an installation it did not make, removes nothing on success, and keeps the first failure when the removal fails", async () => {
         const raced = await build()
-        raced.install.install.mockResolvedValue({ installationId: "inst-other", agentId: "agent-other", created: false })
+        raced.install.install.mockResolvedValue({
+            installationId: "inst-other",
+            agentId: "agent-other",
+            created: false,
+        })
         raced.abilities.attachDefaults.mockRejectedValue(new Error("late"))
         await expect(raced.service.create("u1", REQUEST)).rejects.toThrow("late")
         expect(raced.removal.remove).not.toHaveBeenCalled()
@@ -417,5 +430,32 @@ describe("AgentInstanceCreationService > create, refusals", () => {
             code: AgentInstancesErrorCode.HandleInvalid,
         })
         expect(install.install).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentInstanceCreationService > create, the workflows of the module's plugin", () => {
+    it("gives the new agent its plugin's workflows after its rights, through the path the stack seed takes", async () => {
+        const { service, abilities, workflows } = await build()
+
+        const made = await service.create("u1", REQUEST)
+
+        expect(workflows.install).toHaveBeenCalledWith({
+            workspaceId: "w1",
+            agentId: "agent-minh",
+            installationId: made.installationId,
+            moduleKey: "sales",
+        })
+        const attached = abilities.attachDefaults.mock.invocationCallOrder[0] ?? 0
+        expect(workflows.install.mock.invocationCallOrder[0]).toBeGreaterThan(attached)
+    })
+
+    it("takes the installation back when the workflows cannot be made: a creation is all or nothing", async () => {
+        const { service, workflows, removal } = await build()
+        const failure = new AgentInstancesError({ code: AgentInstancesErrorCode.CopySourceInvalid })
+        workflows.install.mockRejectedValue(failure)
+
+        await expect(service.create("u1", REQUEST)).rejects.toBe(failure)
+
+        expect(removal.remove).toHaveBeenCalledTimes(1)
     })
 })

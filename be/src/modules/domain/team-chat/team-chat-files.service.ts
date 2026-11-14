@@ -1,9 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import {
     TEAM_CHAT_FILE_BUCKET,

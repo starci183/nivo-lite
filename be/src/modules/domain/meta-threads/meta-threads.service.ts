@@ -5,7 +5,7 @@ import type { OptionalLastMessageAt, ThreadPerson, ThreadTouch } from "./meta-th
 import { MetaThreadEntity } from "./persistence/entities"
 
 /** The window only ever moves forward: a late or replayed message never shortens it. */
-const ONLY_FORWARD = "meta_threads.last_user_at < EXCLUDED.last_user_at"
+const ONLY_FORWARD = "mt.last_user_at < EXCLUDED.last_user_at"
 
 @Injectable()
 /** Owns the messaging windows: the one writer of meta_threads. */

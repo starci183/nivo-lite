@@ -1,112 +1,47 @@
 import type { Table } from "@modules/integrations/data-sources"
-import type { CsvColumnKind, CsvConfig, CsvEntity, CsvMapping } from "./csv-import.contracts"
-import { fold, parseDateLoose, parseNumberLoose } from "./csv-import-values.policy"
+import type { CsvColumnKind, CsvConfig, CsvMapping } from "./csv-import.contracts"
+import { looksLikeDate, parseNumberLoose } from "./csv-import-values.policy"
 
-const PHONE = ["sdt", "so dien thoai", "dien thoai", "phone", "mobile", "tel", "zalo", "hotline", "di dong"]
-const EMAIL = ["email", "mail", "thu dien tu"]
-const NAME = [
-    "ho ten",
-    "ho va ten",
-    "ten khach hang",
-    "ten khach",
-    "khach hang",
-    "ten",
-    "name",
-    "full name",
-    "customer",
-    "customer name",
-    "fullname",
-]
-const CODE = [
-    "ma",
-    "id",
-    "code",
-    "sku",
-    "ma so",
-    "stt",
-    "barcode",
-    "mst",
-    "cccd",
-    "ma khach hang",
-    "ma kh",
-    "ma don",
-    "ma don hang",
-    "ma san pham",
-    "order id",
-    "ma giao dich",
-]
-const DATE = ["ngay", "date", "thoi gian", "time", "created", "ngay tao", "ngay sinh", "created at"]
-const PRODUCT_NAME = ["ten san pham", "ten hang", "san pham", "product", "product name", "ten hang hoa", "ten"]
-const ORDER_TITLE = ["ma don", "ma don hang", "order", "order id", "ten khach hang", "khach hang"]
+/** The most cells of a column read to tell how its values are written. */
+const SAMPLE_CELLS = 200
 
-const hasWord = (folded: string, words: ReadonlyArray<string>): boolean =>
-    words.some((word) => ` ${folded} `.includes(` ${word} `))
+/** The share of cells that must read as dates for the column to be read as a date. */
+const DATE_SHARE = 0.8
 
-const find = (headers: ReadonlyArray<string>, words: ReadonlyArray<string>, exact = false): string | null => {
-    for (const word of words) {
-        const header = headers.find((candidate) =>
-            exact ? fold(candidate) === word : hasWord(fold(candidate), [word]),
-        )
-        if (header !== undefined) return header
-    }
-    return null
-}
-
-const detectKind = (header: string, values: ReadonlyArray<string>): CsvColumnKind => {
-    const folded = fold(header)
-    if (hasWord(folded, PHONE)) return "phone"
-    if (hasWord(folded, EMAIL)) return "email"
-    const filled = values.filter(Boolean).slice(0, 200)
+/** How a column's cells are written, by the shape of the values alone (never by what the heading says): date, number, or text. */
+const kindOf = (values: ReadonlyArray<string>): CsvColumnKind => {
+    const filled = values.filter(Boolean).slice(0, SAMPLE_CELLS)
     if (filled.length === 0) return "text"
-    const isCode = hasWord(folded, CODE) || (/^(ma|so)\b/u.test(folded) && !/(luong|tien|gia)/u.test(folded))
-    const dates = filled.filter((value) => parseDateLoose(value) !== null).length
-    if (dates / filled.length >= 0.8) return "date"
-    if (hasWord(folded, DATE) && dates / filled.length >= 0.5) return "date"
-    if (!isCode) {
-        const numbers = filled.filter((value) => parseNumberLoose(value) !== null && !/^0\d/u.test(value.trim())).length
-        if (numbers === filled.length) return "number"
-    }
-    return "text"
+    const dates = filled.filter((value) => looksLikeDate(value)).length
+    if (dates / filled.length >= DATE_SHARE) return "date"
+    const numbers = filled.filter((value) => parseNumberLoose(value) !== null && !/^0\d/u.test(value.trim())).length
+    return numbers === filled.length ? "number" : "text"
 }
 
-/** A first guess at which columns are the id, the title and the date, and how each column should be read. */
-export const suggestMapping = (table: Pick<Table, "headers" | "rows">, entity: CsvEntity): CsvMapping => {
+/**
+ * The mapping a table starts with: no id, title or date column (the person maps each one in the wizard; no id column means the row
+ * number), and every column read by the shape of its values.
+ */
+export const blankMapping = (table: Pick<Table, "headers" | "rows">): CsvMapping => {
     const { headers, rows } = table
     const kinds: Record<string, CsvColumnKind> = {}
     headers.forEach((header, index) => {
-        kinds[header] = detectKind(
-            header,
-            rows.slice(0, 200).map((row) => row[index] ?? ""),
-        )
+        kinds[header] = kindOf(rows.slice(0, SAMPLE_CELLS).map((row) => row[index] ?? ""))
     })
-    const phone = headers.find((header) => kinds[header] === "phone") ?? null
-    const email = headers.find((header) => kinds[header] === "email") ?? null
-    const code = find(headers, CODE, true) ?? headers.find((header) => /^(ma|id|sku)\b/u.test(fold(header))) ?? null
-    const idColumn = entity === "customer" ? (code ?? email ?? phone) : code
-    let titleWords = NAME
-    if (entity === "product") titleWords = PRODUCT_NAME
-    else if (entity === "order") titleWords = ORDER_TITLE
-    const titleColumn =
-        find(headers, titleWords) ??
-        headers.find((header) => kinds[header] === "text" && header !== idColumn) ??
-        headers[0] ??
-        null
-    const dates = headers.filter((header) => kinds[header] === "date")
-    const dateColumn = find(dates, DATE) ?? dates[0] ?? null
-    return { idColumn, titleColumn, dateColumn, kinds, columns: headers }
+    return { idColumn: null, titleColumn: null, dateColumn: null, kinds, columns: headers }
 }
 
-/** The saved mapping carried over to new data: columns the data still has are kept, the others fall back to a fresh guess. */
+/** The saved mapping carried over to new data: columns the data still has are kept, the others become unmapped. */
 export const carryMapping = (saved: CsvConfig, table: Pick<Table, "headers" | "rows">): CsvMapping => {
-    const fresh = suggestMapping(table, saved.entity)
+    const blank = blankMapping(table)
     const keep = (column: string | null): string | null =>
         column !== null && table.headers.includes(column) ? column : null
     return {
-        idColumn: keep(saved.idColumn) ?? (saved.idColumn === null ? null : fresh.idColumn),
-        titleColumn: keep(saved.titleColumn) ?? fresh.titleColumn,
-        dateColumn: keep(saved.dateColumn) ?? (saved.dateColumn === null ? null : fresh.dateColumn),
+        idColumn: keep(saved.idColumn),
+        titleColumn: keep(saved.titleColumn),
+        dateColumn: keep(saved.dateColumn),
         kinds: Object.fromEntries(
-            table.headers.map((header) => [header, saved.kinds[header] ?? fresh.kinds[header] ?? "text"]),
+            table.headers.map((header) => [header, saved.kinds[header] ?? blank.kinds[header] ?? "text"]),
         ),
         columns: table.headers,
     }

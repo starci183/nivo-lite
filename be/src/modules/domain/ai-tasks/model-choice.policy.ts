@@ -10,11 +10,11 @@ import {
     isModelId,
     isRetiredModel,
     modelEntryOf,
-} from "@nivo-lite/blocks-core"
-import type { ModelId, ModelProvider } from "@nivo-lite/blocks-core"
+    type ModelId,
+    type ModelProvider,
+} from "@nivo-lite/agent-sdk/models"
 import type { AiTarget } from "@modules/integrations/ai"
-import { MODEL_PROFILES, profileWireOf } from "@modules/integrations/ai-gateway"
-import type { ModelProfile } from "@modules/integrations/ai-gateway"
+import { MODEL_PROFILES, profileWireOf, type ModelProfile } from "@modules/integrations/ai-gateway"
 import type { ConfiguredProviders, DeclaredModel } from "./ai-tasks.contracts"
 
 /**

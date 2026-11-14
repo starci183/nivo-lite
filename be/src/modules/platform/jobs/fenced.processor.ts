@@ -18,6 +18,12 @@ export abstract class FencedProcessor {
     /** The most deliveries of this processor's queue that run at once; the app default when absent. */
     readonly concurrency?: number | undefined
 
+    /** How many jobs of the workspace beyond the app's limit may already run when this processor's job starts (`QueueHandler.workspaceHeadroom`); 0 when absent. */
+    readonly workspaceHeadroom?: number | undefined
+
+    /** The fair group of one of this processor's jobs, by its payload (`QueueHandler.fairGroupOf`); none when absent. */
+    readonly fairGroupOf?: ((payload: object) => Promise<string | null>) | undefined
+
     /** Runs the job; a throw fails this delivery and the queue retries it, unless it is a `QueueError` that ends or delays the job. */
     abstract process(job: ClaimedJob): Promise<void>
 

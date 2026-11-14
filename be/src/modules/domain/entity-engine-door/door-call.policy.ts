@@ -1,4 +1,4 @@
-import type { GatewayApprovalReason, GatewayCallResult } from "@modules/domain/mcp-gateway-receipts"
+import type { ToolApprovalReason, ToolCallResult } from "@modules/domain/tool-receipts"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type { DoorCallResult, DoorFailure, DoorTool } from "@nivo-lite/agent-sdk/mutation"
 
@@ -9,7 +9,7 @@ const JSON_DEPTH_MAX = 32
 const INVALID = new Set(["invalid_arguments", "invalid_name", "idempotency_key_required"])
 
 /** The gateway failures that mean the call is not allowed for this caller or this connection. */
-const FORBIDDEN = new Set(["connector_disabled", "schema_unapproved", "not_granted", "internal_only"])
+const FORBIDDEN = new Set(["not_granted", "internal_only"])
 
 /** The gateway failures a retry may cure: the provider was unreachable or its outcome is unknown. */
 const TRANSIENT = new Set(["unavailable", "unknown_outcome"])
@@ -30,7 +30,7 @@ const failureOf = (code: string): DoorFailure => {
 }
 
 /** What a person must still approve before the call runs, as the message of a refusal. */
-const approvalMessageOf = (reason: GatewayApprovalReason): string => `approval_required:${reason}`
+const approvalMessageOf = (reason: ToolApprovalReason): string => `approval_required:${reason}`
 
 /** Whether a value is JSON: a connector answers JSON, and a value that is not (a function, a symbol, a cycle) is a failure of the provider. */
 const isJson = (value: unknown, depth = 0): value is JsonValue => {
@@ -41,7 +41,7 @@ const isJson = (value: unknown, depth = 0): value is JsonValue => {
 }
 
 /** The door answer of a gateway answer: the output of an ok call, otherwise the failure kind and the gateway's own words. */
-export const doorResultOf = (result: GatewayCallResult): DoorCallResult => {
+export const doorResultOf = (result: ToolCallResult): DoorCallResult => {
     if (result.ok) {
         return isJson(result.value)
             ? { ok: true, output: result.value }

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AiRouterGatewayModule, AiRouterModule, AiRouterService } from "@starci/ai-router"
 import { openSqliteKeyStore } from "@starci/ai-router/gateway"
 import { AI_GATEWAY_ROUTER } from "./ai-gateway.decorators"

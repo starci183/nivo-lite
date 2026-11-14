@@ -32,3 +32,14 @@ export const AgentChatTabPage = async (props: AgentChatTabPageProps): Promise<Re
         />
     )
 }
+
+/** The same chat tab while the route loads: the pane words stay real, the room reads the agent from the address and draws its skeleton. */
+export const AgentChatTabLoadingPage = async (): Promise<ReactElement> => {
+    const t = await getTranslations("agentChat")
+    const room = await getTranslations("teamChat")
+    return (
+        <AgentChatTabPageBase
+            props={{ installationId: undefined, gridLabel: t("gridLabel"), roomLabel: room("threadLabel") }}
+        />
+    )
+}

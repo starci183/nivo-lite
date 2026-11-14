@@ -1,5 +1,14 @@
-import { Badge, Button, Heading, Mascot, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import {
+    Badge,
+    Button,
+    Heading,
+    Mascot,
+    Section,
+    Stack,
+    SurfaceCard,
+    Text,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { EffectOnMount } from "@starci/visual-effects/react"
 import { CELEBRATION_CLASS_NAME, CELEBRATION_HERO_CLASS_NAME } from "./classNames"
 
@@ -85,7 +94,7 @@ export const CelebrationPanel = (props: CelebrationPanelProps) => (
             <div className={CELEBRATION_HERO_CLASS_NAME}>
                 <Stack gap="row" align="center">
                     <CelebrationMascot art={props.art} />
-                    <Badge tone="success" isDot>
+                    <Badge tone="success">
                         {props.badge}
                     </Badge>
                     <Heading level={1} scale="title" isLoading={props.isLoading}>
@@ -97,7 +106,7 @@ export const CelebrationPanel = (props: CelebrationPanelProps) => (
             <FactsCard factsLabel={props.factsLabel} facts={props.facts} isLoading={props.isLoading} />
             <NextCard nextLabel={props.nextLabel} next={props.next} />
             {props.primary.href === undefined ? (
-                <Button intent="commit" width="fill" onPress={props.primary.press}>
+                <Button endArrow intent="commit" width="fill" onPress={props.primary.press}>
                     {props.primary.label}
                 </Button>
             ) : (

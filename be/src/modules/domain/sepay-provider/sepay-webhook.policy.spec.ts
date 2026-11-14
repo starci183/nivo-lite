@@ -134,6 +134,15 @@ describe("sepay webhook policy > readSepayPayload", () => {
         })
     })
 
+    it("reads the bank's reference of the transfer, trimmed, and nothing from an empty or mistyped one", async () => {
+        const subject = await build()
+
+        expect(subject.readSepayPayload({ id: 42, referenceCode: " FT25309ABCD " })?.referenceCode).toBe("FT25309ABCD")
+        expect(subject.readSepayPayload({ id: 42, referenceCode: "" })?.referenceCode).toBeUndefined()
+        expect(subject.readSepayPayload({ id: 42, referenceCode: 5 })?.referenceCode).toBeUndefined()
+        expect(subject.readSepayPayload({ id: 42 })).not.toHaveProperty("referenceCode", expect.anything())
+    })
+
     it("keeps an unreadable amount undefined so nothing is settled with it", async () => {
         const subject = await build()
 

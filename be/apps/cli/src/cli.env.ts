@@ -2,8 +2,7 @@ import { parseAiConfig } from "@modules/integrations/ai"
 import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
 import { parseChannelProvisioningConfig } from "@modules/domain/channel-provisioning"
 import { parseWorkspaceSeedConfig } from "@modules/domain/workspace-seed"
-import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
-import { parseMcpConfig } from "@modules/integrations/mcp"
+import { parseToolsConfig } from "@modules/domain/tools"
 import { parseConnectionsConfig } from "@modules/domain/connections"
 import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
 import { parseObjectStorageConfig } from "@modules/integrations/object-storage"
@@ -17,8 +16,8 @@ import type { EnvSource } from "@modules/platform/config"
 export interface CliAppOptions {
     /** Private target-runner input for explicit account and membership operations. */
     readonly workspaceSeed: ReturnType<typeof parseWorkspaceSeedConfig>
-    /** The gateway console a workspace profile registers its remote connectors through (its time limit). */
-    readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
+    /** The engine tools settings of the console (the per-call time limit). */
+    readonly toolsConfig: ReturnType<typeof parseToolsConfig>
     /** The connections the built-in migrate and seed groups operate on. */
     readonly connections: ReadonlyArray<ReturnType<typeof parsePrimaryDatabaseConfig>>
     /** Our own access-token keys: the accounts the demo-workspace seed proves a password or a token against. */
@@ -47,7 +46,7 @@ export interface CliAppOptions {
  */
 export const readCliEnv = (env: EnvSource): CliAppOptions => ({
     workspaceSeed: parseWorkspaceSeedConfig(env),
-    mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
+    toolsConfig: parseToolsConfig(env),
     connections: [parsePrimaryDatabaseConfig(env)],
     passport: parsePassportConfig(env),
     identityAuth: parseIdentityAuthConfig(env),

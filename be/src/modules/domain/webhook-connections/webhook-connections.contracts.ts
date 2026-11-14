@@ -1,24 +1,3 @@
-/** The outgoing events a webhook connection can receive. */
-export const WEBHOOK_EVENTS: readonly [
-    "lead.created",
-    "deal.won",
-    "order.confirmed",
-    "payment.received",
-    "handoff.requested",
-    "decision.made",
-] = [
-    "lead.created",
-    "deal.won",
-    "order.confirmed",
-    "payment.received",
-    "handoff.requested",
-    "decision.made",
-] as const satisfies ReadonlyArray<WebhookEvent>
-
-/** One of the outgoing events: the name a subscriber filters on and the delivery carries. */
-export type WebhookEvent =
-    "lead.created" | "deal.won" | "order.confirmed" | "payment.received" | "handoff.requested" | "decision.made"
-
 /** What starting a webhook connection takes. */
 export interface StartWebhookInput {
     /** The name the owner gives the connection. */
@@ -38,7 +17,7 @@ export interface WebhookView {
     /** The host of the receiver. */
     readonly host: string
     /** The events it receives. */
-    readonly events: ReadonlyArray<WebhookEvent>
+    readonly events: ReadonlyArray<string>
     /** The last four characters of the per-workspace signing secret; the whole secret is shown once, at creation. */
     readonly signingSecretLast4: string
 }
@@ -72,7 +51,7 @@ export interface WebhookPublication {
     /** The workspace the event happened in. */
     readonly workspaceId: string
     /** The event. */
-    readonly event: WebhookEvent
+    readonly event: string
     /** What it carries. */
     readonly data: WebhookEventData
     /** Names the occurrence: publishing it twice queues nothing twice. */

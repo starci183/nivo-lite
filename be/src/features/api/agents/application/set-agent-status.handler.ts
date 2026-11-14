@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AgentActivationService } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetAgentStatusCommand } from "./set-agent-status.command"
 
 @CommandHandler(SetAgentStatusCommand)

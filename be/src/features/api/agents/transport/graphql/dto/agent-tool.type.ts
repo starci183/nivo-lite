@@ -23,17 +23,9 @@ export class AgentToolAccountType {
     @Field()
     provider!: string
 
-    /** The account as people read it ("Tiệm hoa NIVO", "MB Bank •••• 5252"). */
+    /** The account as people read it ("Tiem hoa NIVO", "MB Bank **** 5252"). */
     @Field()
     accountLabel!: string
-
-    /** The ability ticked on it that holds the tool. */
-    @Field()
-    ability!: string
-
-    /** `auto` runs by itself, `ask` waits for a person each time. */
-    @Field()
-    mode!: string
 }
 
 @ObjectType()
@@ -55,7 +47,7 @@ export class AgentToolType {
     @Field()
     kind!: string
 
-    /** `declared` by the agent's module, `ability` from a ticked ability on an attached account, or `default-read`. */
+    /** `declared` by the agent's module, `attached` from an attached account, or `default-read`. */
     @Field()
     origin!: string
 
@@ -63,7 +55,7 @@ export class AgentToolType {
     @Field(() => String, { nullable: true })
     grant!: string | null
 
-    /** For a provider tool, the attached accounts whose ticked ability holds it; empty otherwise. */
+    /** For a provider tool, the attached accounts of a provider that serves it; empty otherwise. */
     @Field(() => [AgentToolAccountType])
     accounts!: Array<AgentToolAccountType>
 

@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { InjectInstallations } from "@modules/domain/agents"
-import type { InstallationDirectory } from "@modules/domain/agents"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import { MemberGrantsService } from "@modules/domain/member-grants"
+import { installedStepIn } from "@modules/domain/installed-plugins"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphContextService } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
@@ -14,10 +12,12 @@ import { AgentGraphsService } from "./agent-graphs.service"
 import type { AgentGraphView, GraphDocument, GraphProposalView } from "./agent-graphs.contracts"
 import { graphGapsOf } from "./policies/graph-gaps.policy"
 import { contractWarnings } from "./policies/contract-problems.policy"
-import { unheldRulesOf } from "./policies/unheld-rules.policy"
-import type { UnheldRule } from "./policies/unheld-rules.policy"
+import { notHeldBy, type UnheldRule } from "./policies/unheld-rules.policy"
 import { graphProblems } from "./policies/graph-problems.policy"
 import { flowNodeCardOf, nodeCardOf } from "./policies/node-card.policy"
+
+/** The most people one graph view reads to name an approver. */
+const MEMBER_MAX = 500
 
 /** The passage a graph cites for a Brain fact: what the owner confirmed, or null when no node cites it. */
 const citedPassageOf = (graph: GraphDocument, factId: string): string | null => {
@@ -41,9 +41,8 @@ export class AgentGraphViewService {
         private readonly context: AgentGraphContextService,
         private readonly proposals: AgentGraphProposalsService,
         private readonly installations: InstallationRecordsService,
-        private readonly members: MemberGrantsService,
+        private readonly members: WorkspaceMembersReadService,
         private readonly brain: BrainFactsService,
-        @InjectInstallations() private readonly directory: InstallationDirectory,
         private readonly nodes: GraphNodeRegistryService,
     ) {}
 
@@ -54,14 +53,14 @@ export class AgentGraphViewService {
         if (state === null || installation === null)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         const [context, directory, proposals] = await Promise.all([
-            this.context.contextOf({ ...state, moduleKey: installation.moduleKey }, state.draft),
-            this.members.directory(workspaceId),
+            this.context.contextOf({ ...state, moduleKey: installation.moduleKey }),
+            this.members.directory(workspaceId, MEMBER_MAX),
             this.proposals.openOf(workspaceId, agentId),
         ])
         const say = (key: string, params?: Readonly<Record<string, string | number>>): string =>
             this.catalog.get(key, params ?? {}, locale)
         const nameOf = (memberId: string | undefined): string | null =>
-            directory.find((member) => member.memberId === memberId)?.name ?? null
+            directory.find((member) => member.id === memberId)?.display_name ?? null
         return {
             agentId,
             installationId: state.installationId,
@@ -73,7 +72,7 @@ export class AgentGraphViewService {
             gaps: graphGapsOf(state.draft, context),
             problems: graphProblems(state.draft, context),
             warnings: contractWarnings(state.draft),
-            unheldRules: await this.unheldRulesOf(state.draft, installation.activeContextVersionId),
+            unheldRules: await this.unheldRulesOf(workspaceId, agentId, state.draft),
             cards: [
                 ...state.draft.nodes.map((node) => nodeCardOf(node, nameOf(node.approver?.group.members[0]), say)),
                 ...(state.draft.flow?.nodes ?? []).map((node) => flowNodeCardOf(node, this.titleOf(node.step, locale))),
@@ -93,7 +92,7 @@ export class AgentGraphViewService {
 
     /** The title of an installed node in the owner's language, or null for a step no installed node is (the stop). */
     private titleOf(step: string, locale: Locale): string | null {
-        const title = this.nodes.installed().nodes.get(step)?.title
+        const title = installedStepIn(this.nodes.installed().nodes, step)?.title
         if (title === undefined) return null
         return "key" in title ? this.catalog.get(title.key, {}, locale) : locale === "en" ? title.en : title.vi
     }
@@ -113,10 +112,11 @@ export class AgentGraphViewService {
         return { ...proposal, before: citedPassageOf(graph, oldId) ?? old?.value ?? "", after: current?.value ?? "" }
     }
 
-    /** What the published setup says as a rule and the graph does not hold. */
-    private async unheldRulesOf(graph: GraphDocument, versionId: string | null): Promise<ReadonlyArray<UnheldRule>> {
-        const version = versionId === null ? null : await this.directory.contextVersionOf(versionId)
-        if (version === null) return []
-        return unheldRulesOf([version.summary, ...version.facts, ...version.gates.map((gate) => gate.evidence)], graph)
+    /**
+     * What the setup says as a rule and the draft does not hold: the open gaps the setup raised with their sum, less every sum a
+     * condition of the draft now holds. A comparison of numbers on stored proposals: no model call, no reading of words.
+     */
+    private async unheldRulesOf(workspaceId: string, agentId: string, graph: GraphDocument): Promise<ReadonlyArray<UnheldRule>> {
+        return notHeldBy(await this.proposals.unheldOf(workspaceId, agentId), graph)
     }
 }

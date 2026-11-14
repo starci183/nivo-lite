@@ -1,7 +1,5 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { AgentTurnView } from "@modules/domain/agent-work"
-import { InjectFlowTriggerMessages } from "./agent-graphs.decorators"
-import type { FlowTriggerMessage, FlowTriggerMessages } from "./agent-graphs.port"
 import type { FlowTriggerScope } from "./agent-graphs.contracts"
 import { GRAPH_NODE_STEP_KIND } from "./policies/graph-flow.policy"
 
@@ -16,6 +14,16 @@ export interface FlowFreezePort {
     frozen(workspaceId: string, trigger: FlowTriggerScope): Promise<boolean>
     /** What waits for the founder for the customer of the trigger, whatever the workflow. */
     waitingOf(workspaceId: string, trigger: FlowTriggerScope): Promise<ReadonlyArray<FlowWaiting>>
+    /** The events held for a run while it waited at a stop that no step of it took yet, oldest first (the run's queue, ROAD-API 4). */
+    untakenOfRun(workspaceId: string, runId: string): Promise<ReadonlyArray<FlowHeldEvent>>
+    /** Records that a step visit of the run (`<run>:<step>:<visit>`) took these held events: they are never replayed as runs of their own. */
+    markTaken(workspaceId: string, runId: string, wakeIds: ReadonlyArray<string>, visit: string): Promise<void>
+}
+
+/** One event the freeze gate held for a run: the wake it came on, and the trigger scope it was held with (when one was kept). */
+export interface FlowHeldEvent {
+    readonly wakeId: string
+    readonly trigger?: Readonly<Record<string, unknown>> | undefined
 }
 
 /** One thing of a customer that waits for the founder: the step its workflow stopped on, and since when. */
@@ -26,22 +34,15 @@ export interface FlowWaiting {
     readonly since: string
 }
 
-/** The customer lines a conversation holds, as the flows read them; none while the app binds no store of the lines. */
-export type FlowLines = ReadonlyArray<FlowTriggerMessage>
-
 @Injectable()
 /**
  * The one door between the graph flows and the freezes of customers. Inward: the start of a wake's run asks `hold` before the run opens
  * (a customer with an open stop holds new wakes of the same workflow); with nothing registered (an app that keeps no freezes) it holds
- * nothing, so the flows behave exactly as before. Outward: what the freezes read of the flows, the kind of
- * a node step and the lines of a conversation, so the freezes need no other entry of the flows.
+ * nothing, so the flows behave exactly as before. Outward: what the freezes read of the flows (the kind of
+ * a node step), so the freezes need no other entry of the flows.
  */
 export class AgentGraphFreezeGateService {
     private port: FlowFreezePort | undefined = undefined
-
-    constructor(
-        @Optional() @InjectFlowTriggerMessages() private readonly messages: FlowTriggerMessages | null = null,
-    ) {}
 
     /** Registers the freezes of the app: one capability keeps them, so the last registration is the one asked. */
     set(port: FlowFreezePort): void {
@@ -63,15 +64,18 @@ export class AgentGraphFreezeGateService {
         return this.port === undefined ? Promise.resolve([]) : this.port.waitingOf(workspaceId, trigger)
     }
 
+    /** The held events of a run no step took yet; none with no freezes registered. */
+    untakenOfRun(workspaceId: string, runId: string): Promise<ReadonlyArray<FlowHeldEvent>> {
+        return this.port === undefined ? Promise.resolve([]) : this.port.untakenOfRun(workspaceId, runId)
+    }
+
+    /** Records held events of a run as taken by a step visit; nothing with no freezes registered. */
+    markTaken(workspaceId: string, runId: string, wakeIds: ReadonlyArray<string>, visit: string): Promise<void> {
+        return this.port === undefined ? Promise.resolve() : this.port.markTaken(workspaceId, runId, wakeIds, visit)
+    }
+
     /** Whether a step of a run is a node step of a graph: only a graph run freezes its customer. */
     isNodeStep(kind: string): boolean {
         return kind === GRAPH_NODE_STEP_KIND
-    }
-
-    /** The customer's lines among the ids (and those not answered yet), in the order they were said; none with no store bound. */
-    linesOf(workspaceId: string, conversationId: string, messageIds: ReadonlyArray<string>): Promise<FlowLines> {
-        return this.messages === null
-            ? Promise.resolve([])
-            : this.messages.messagesOf(workspaceId, conversationId, messageIds)
     }
 }

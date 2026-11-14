@@ -1,11 +1,14 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { AccountDataIntakeService } from "@modules/domain/account-data"
 import type { ImapClient } from "@modules/integrations/data-sources"
 import { DataSourcesError, DataSourcesErrorCode, IMAP } from "@modules/integrations/data-sources"
 import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { DataSyncContext } from "./data-hub.contracts"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { ImapSyncService } from "./imap-sync.service"
+import { DataSyncTriggerService } from "./data-sync-trigger.service"
 import { IMAP_CONNECTION_TEXT, imapMoreNote } from "./messages/imap-connection.messages"
 
 const credential = {
@@ -50,10 +53,22 @@ const build = async (
     context.isExpired.mockReturnValue(false)
     context.upsert.mockResolvedValue(1)
     imap.pull.mockResolvedValue({ folders: [idle], expired: false })
+    const em = mockEntityManager()
+    const tx = fakeTransaction(em)
+    const intake = mock<AccountDataIntakeService>()
+    const mails = mock<DataSyncTriggerService>()
+    mails.deliverMails.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
-        providers: [ImapSyncService, { provide: IMAP, useValue: imap }, { provide: CLOCK, useValue: clock }],
+        providers: [
+            ImapSyncService,
+            { provide: IMAP, useValue: imap },
+            { provide: CLOCK, useValue: clock },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: AccountDataIntakeService, useValue: intake },
+            { provide: DataSyncTriggerService, useValue: mails },
+        ],
     }).compile()
-    return { service: moduleRef.get(ImapSyncService), imap, clock, context }
+    return { service: moduleRef.get(ImapSyncService), imap, clock, context, intake, tx, mails }
 }
 
 describe("ImapSyncService", () => {
@@ -284,5 +299,69 @@ describe("ImapSyncService", () => {
 
         await expect(service.sync(context)).rejects.toBe(cause)
         expect(context.upsert).toHaveBeenCalledWith("message", [row])
+    })
+})
+
+/** The `imap.mail` value of the mail of the keep cases. */
+const IMAP_VALUE = {
+    externalId: "INBOX:123:8",
+    folder: "INBOX",
+    uid: 8,
+    date: "2026-10-13T09:00:00.000Z",
+    subject: "A message",
+    text: "Hi",
+    attachments: [],
+}
+
+describe("ImapSyncService.keep", () => {
+    const OWNER = { provider: "imap", connectionId: "connection-1", workspaceId: "workspace-1" }
+    const mail = {
+        externalId: "INBOX:123:8",
+        title: "A message",
+        occurredAt: new Date("2026-10-13T09:00:00.000Z"),
+        data: { folder: "INBOX", uid: 8, subject: "A message", text: "Hi", attachments: [] },
+    }
+
+    it("writes each mail as one imap.mail row of the account in one transaction and counts the new ones", async () => {
+        const { service, intake, tx } = await build()
+        intake.write.mockResolvedValue({
+            owner: OWNER,
+            rows: [
+                { type: "imap.mail", key: "INBOX:123:8", id: "row-1", isNew: true },
+                { type: "imap.mail", key: "INBOX:123:9", id: "row-2", isNew: false },
+            ],
+        })
+
+        await expect(service.keep("connection-1", [mail, { ...mail, externalId: "INBOX:123:9" }])).resolves.toBe(1)
+
+        expect(intake.write).toHaveBeenCalledWith(expect.anything(), "connection-1", [
+            {
+                type: "imap.mail",
+                value: IMAP_VALUE,
+            },
+            { type: "imap.mail", value: { ...IMAP_VALUE, externalId: "INBOX:123:9" } },
+        ])
+        expect(tx.outcomes).toEqual(["commit"])
+    })
+
+    it("hands the written mails and what the intake answered to the mailbox's trigger in the same transaction", async () => {
+        const { service, intake, mails } = await build()
+        const answer = { owner: OWNER, rows: [{ type: "imap.mail", key: "INBOX:123:8", id: "row-1", isNew: true }] }
+        intake.write.mockResolvedValue(answer)
+
+        await service.keep("connection-1", [mail])
+
+        expect(mails.deliverMails).toHaveBeenCalledWith(intake.write.mock.calls[0]?.[0], [{ type: "imap.mail", value: IMAP_VALUE }], answer)
+    })
+
+    it("keeps nothing for a redelivered mail, a connection nobody holds, or a batch with no usable id", async () => {
+        const { service, intake } = await build()
+        intake.write.mockResolvedValueOnce({ owner: OWNER, rows: [{ type: "imap.mail", key: "INBOX:123:8", id: "row-1", isNew: false }] })
+        intake.write.mockResolvedValueOnce({ owner: null, rows: [] })
+
+        await expect(service.keep("connection-1", [mail])).resolves.toBe(0)
+        await expect(service.keep("connection-9", [mail])).resolves.toBe(0)
+        await expect(service.keep("connection-1", [{ ...mail, externalId: "" }])).resolves.toBe(0)
+        expect(intake.write).toHaveBeenCalledTimes(2)
     })
 })

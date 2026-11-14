@@ -63,7 +63,7 @@ const dataOf = async (read: ReadDefinition, raw: unknown, state?: MemoryState): 
 const idsOf = async (read: ReadDefinition, raw: unknown): Promise<ReadonlyArray<string>> =>
     page.parse(await dataOf(read, raw)).rows.map((row) => row.id)
 
-describe("sales.leads", () => {
+describe("blocks-core.sales.api.lead.list", () => {
     it("lists a page of leads", async () => {
         expect(page.parse(await dataOf(leadsRead, {}))).toMatchObject({ cursor: null })
         expect(await idsOf(leadsRead, {})).toHaveLength(5)
@@ -91,7 +91,7 @@ describe("sales.leads", () => {
     })
 })
 
-describe("sales.lead-counts", () => {
+describe("blocks-core.sales.api.lead.counts", () => {
     it("counts the leads of each stage with their sum, under the same search", async () => {
         expect(await dataOf(leadCountsRead, {})).toEqual({
             counts: { new: 2, qualified: 1, proposal: 1, won: 1, lost: 0 },
@@ -101,7 +101,7 @@ describe("sales.lead-counts", () => {
     })
 })
 
-describe("sales.lead", () => {
+describe("blocks-core.sales.api.lead.get", () => {
     it("gives one lead with what its orders add up to", async () => {
         expect(await dataOf(leadRead, { id: "lead-4" })).toMatchObject({
             id: "lead-4",
@@ -133,14 +133,14 @@ describe("sales.lead", () => {
     })
 
     it("leaves out a record of its orders that is no order", async () => {
-        const provider = overriding(sampleState([]), "engine.entity.sales.order", {
+        const provider = overriding(sampleState([]), "engine.entity.blocks-core.sales.order", {
             list: () => Promise.resolve({ rows: [NOT_AN_ORDER], next: null }),
         })
         expect(await dataFrom(leadRead, provider, { id: "lead-4" })).toMatchObject({ orderCount: 0 })
     })
 })
 
-describe("sales.orders", () => {
+describe("blocks-core.sales.api.order.list", () => {
     it("lists the orders narrowed by status and searched by items", async () => {
         expect([...(await idsOf(ordersRead, { status: "draft" }))].sort()).toEqual(["order-1", "order-2"])
         expect(await idsOf(ordersRead, { q: "tr\u00e0" })).toEqual(["order-2", "order-7"])
@@ -154,7 +154,7 @@ describe("sales.orders", () => {
     })
 })
 
-describe("sales.order", () => {
+describe("blocks-core.sales.api.order.get", () => {
     it("gives an order with its customer and says the owner decides a big draft", async () => {
         expect(await dataOf(orderRead, { id: "order-1" })).toMatchObject({
             orderNo: "DH-20261104-0001",
@@ -187,7 +187,7 @@ describe("sales.order", () => {
 
     it("has no customer name for an order with no customer or whose customer is gone", async () => {
         expect(await dataOf(orderRead, { id: "order-6" })).toMatchObject({ customer: null, leadId: null })
-        expect(await dataOf(orderRead, { id: "order-5" })).toMatchObject({ customer: null, leadId: "lead-9" })
+        expect(await dataOf(orderRead, { id: "order-5" })).toMatchObject({ customer: null, leadId: null })
     })
 
     it("gives null for an order the workspace does not have", async () => {
@@ -195,7 +195,7 @@ describe("sales.order", () => {
     })
 })
 
-describe("sales.orders-waiting", () => {
+describe("blocks-core.sales.api.order.waiting", () => {
     it("lists the draft orders at the owner threshold, with the customer and a link to the order", async () => {
         expect(await dataOf(ordersWaitingRead, {})).toEqual({
             count: "1",
@@ -215,7 +215,7 @@ describe("sales.orders-waiting", () => {
 
     it("lists an order that has no customer without asking for any name", async () => {
         const state = sampleState([])
-        state.orders.splice(0, state.orders.length, { ...ORDER_WAITING, leadId: null })
+        state.orders.splice(0, state.orders.length, { ...ORDER_WAITING, contactId: null })
         expect(await dataOf(ordersWaitingRead, {}, state)).toMatchObject({
             count: "1",
             rows: [{ id: "order-1", title: "DH-20261104-0001" }],
@@ -224,7 +224,7 @@ describe("sales.orders-waiting", () => {
 
     it("lists an order whose customer is gone without a name", async () => {
         const state = sampleState([])
-        state.orders.splice(0, state.orders.length, { ...ORDER_WAITING, leadId: "lead-9" })
+        state.orders.splice(0, state.orders.length, { ...ORDER_WAITING, contactId: "contact-lead-9" })
         expect(await dataOf(ordersWaitingRead, {}, state)).toMatchObject({
             rows: [{ id: "order-1", title: "DH-20261104-0001" }],
         })
@@ -243,7 +243,7 @@ describe("sales.orders-waiting", () => {
     })
 
     it("leaves out a record that is no order and counts the rows it listed when the engine answers no count", async () => {
-        const provider = overriding(sampleState([]), "engine.entity.sales.order", {
+        const provider = overriding(sampleState([]), "engine.entity.blocks-core.sales.order", {
             list: () => Promise.resolve({ rows: [NOT_AN_ORDER], next: null }),
             aggregate: () => Promise.resolve([]),
         })

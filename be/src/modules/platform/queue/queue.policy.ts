@@ -140,3 +140,38 @@ export const slotOf = (jobId: string): string | null => /^repeat:.+:(\d+)$/u.exe
 /** The handler a delivery goes to: the one of its job, else the one of the whole queue, else none. */
 export const routeOf = (handlers: ReadonlyArray<QueueHandler>, delivery: QueueDelivery): QueueHandler | undefined =>
     handlers.find((handler) => handler.job === delivery.job) ?? handlers.find((handler) => handler.job === undefined)
+
+/** The longest fair group key the admission keeps (`job_slots.group_key`). */
+export const FAIR_GROUP_MAX = 200
+
+/** A fair group as the admission takes it: a non-blank text of at most `FAIR_GROUP_MAX` characters, else none. */
+export const fairGroupKeyOf = (group: unknown): string | null =>
+    typeof group === "string" && group.trim() !== "" ? group.slice(0, FAIR_GROUP_MAX) : null
+
+/** The fair group of a job by its name: asked of the handler it goes to (`routeOf`); none when it declares none. */
+export const fairGroupOf = async (
+    handlers: ReadonlyArray<QueueHandler>,
+    job: string,
+    payload: object,
+): Promise<string | null> => {
+    const handler = handlers.find((own) => own.job === job) ?? handlers.find((own) => own.job === undefined)
+    return typeof handler?.fairGroupOf === "function" ? fairGroupKeyOf(await handler.fairGroupOf(job, payload)) : null
+}
+
+/** A declared headroom as a count of jobs: a whole number of zero or more, 0 for anything else. */
+const headroomCount = (value: unknown): number =>
+    typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0
+
+/** The workspace headroom of a job by its name: that of the handler it goes to (`routeOf`), 0 when it declares none. */
+export const headroomOf = (handlers: ReadonlyArray<QueueHandler>, job: string): number => {
+    const handler = handlers.find((own) => own.job === job) ?? handlers.find((own) => own.job === undefined)
+    return headroomCount(handler?.workspaceHeadroom)
+}
+
+/**
+ * How many jobs of one workspace may run when a job starts: the app's limit, plus the headroom of the job (its router names it by job,
+ * a single handler declares it). A job with headroom starts while the workspace's other work fills the app's limit; their slots and
+ * its own are counted together, so the other work waits for it.
+ */
+export const workspaceLimitOf = (limit: number, handler: QueueHandler, job: string): number =>
+    limit + headroomCount(typeof handler.headroomOf === "function" ? handler.headroomOf(job) : handler.workspaceHeadroom)

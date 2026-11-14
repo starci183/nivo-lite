@@ -1,5 +1,6 @@
 "use client"
 
+import { notFound } from "next/navigation"
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
 import { IDENTITY_QUERY } from "@/hooks/installations"
@@ -26,20 +27,20 @@ type AgentProfileHeadProps = {
     readonly children: ReactNode
 }
 
-/** The connected heading of an agent profile: the identity and the identity menu. */
+/** The connected heading of an agent profile: the identity and the identity menu. An id that is no agent of the workspace is `notFound()`. */
 export const AgentProfileHead = (props: AgentProfileHeadProps) => {
     const t = useTranslations("agentProfile")
-    const { slot } = useAgentProfile(props.agentId)
+    const { slot, isMissing } = useAgentProfile(props.agentId)
     const pane = usePaneCopy()
     const pathname = navigation.usePathname()
     const workspaceId = useWorkspaceId()
     const agent = "items" in slot ? slot.items : undefined
     const moduleName = useProfileModuleName(agent?.module)
     const pages = useAgentPages(props.agentId)
+    if (isMissing) notFound()
 
     return (
         <AgentProfileHeadBase
-            children={props.children}
             props={{
                 crumbLabel: t("crumbLabel"),
                 menu: {
@@ -54,7 +55,9 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                         ? loadingHeadOf({ t, moduleName, agentId: props.agentId, workspaceId })
                         : profileHeadOf(agent, { t, moduleName, agentId: props.agentId, workspaceId }),
             }}
-        />
+        >
+            {props.children}
+        </AgentProfileHeadBase>
     )
 }
 

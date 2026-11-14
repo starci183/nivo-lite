@@ -1,11 +1,10 @@
-import { Alert, Stack } from "@starci/grammar/common"
-import type { PresentationState } from "@starci/grammar/common"
+import { Alert, Stack, type PresentationState } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ConnectionBandRefusal } from "@/components/frames/ConnectionBand"
 import type { ConnectionRefusalView, DataSlot, SlotLabels, ZaloHeadView } from "@/modules/types"
 
 /** The head read, used only to say it failed in place. */
-const ZALO_HEAD_PLACEHOLDER: ZaloHeadView = { name: "-", chipLabel: "-", chipTone: "neutral", facts: "-", banner: "" }
+const ZALO_HEAD_PLACEHOLDER: ZaloHeadView = { name: "-", chipLabel: "-", chipTone: "neutral", facts: "-", banner: "", attention: null }
 
 /** One notice of the page: why the OA cannot send, a refused command, or the one step left. */
 interface ZaloPageNotice {
@@ -13,6 +12,8 @@ interface ZaloPageNotice {
     readonly tone: PresentationState
     readonly title: string
     readonly description?: string
+    /** A command beside the notice: the provider's reconnect action. */
+    readonly action?: { readonly label: string; readonly run: () => void }
 }
 
 /** The notices that open the main pane of a Zalo OA page. */
@@ -52,6 +53,7 @@ export const ZaloConnectionNoticesBase = (props: ZaloConnectionNoticesBaseProps)
                             tone={notice.tone}
                             title={notice.title}
                             {...(notice.description === undefined ? {} : { description: notice.description })}
+                            {...(notice.action === undefined ? {} : { action: { label: notice.action.label, onAction: notice.action.run } })}
                         />
                     ))}
                 </Stack>

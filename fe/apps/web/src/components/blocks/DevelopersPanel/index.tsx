@@ -1,12 +1,13 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import type { ReactNode } from "react"
 import { PROVIDER_LOGO, providerKey } from "@/hooks/connection-providers"
 import { sortRows, statusKey, statusTone, useConnectionOverlays } from "@/hooks/connections"
 import { useDeveloperWebhooks } from "@/hooks/developers"
 import { isManager, useMember } from "@/hooks/member"
 import { useSlotLabels } from "@/hooks/slot"
+import { useQueryWebhookEventsSwr } from "@/hooks/swr"
 import { DevelopersPanelBase } from "./component"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { APP_ROUTES, workspaceHref } from "@/modules/routes"
@@ -19,7 +20,7 @@ const webhookLineOf = (meta: Readonly<Record<string, string>>, eventLabel: (even
             .split(",")
             .map((event) => event.trim())
             .filter((event) => event !== "")
-            .map(eventLabel)
+            .map((event) => eventLabel(event))
             .join(", "),
     ]
         .filter((part) => part !== "")
@@ -30,27 +31,29 @@ type DevelopersPanelProps = {
     readonly children: ReactNode
 }
 
-/** The connected "Advanced" page: the member's role decides page or 403, the outgoing webhooks come from the back end GraphQL API. */
+/** The connected "Developers" page: the member's role decides page or notice (owner and manager see the page, staff the in-place "no access" notice), the outgoing webhooks come from the back end GraphQL API. */
 export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const t = useTranslations("developers")
     const member = useMember()
     const tc = useTranslations("connections")
-    const tw = useTranslations("webhookWizard")
+    const locale = useLocale()
+    // An event is named by the declaration the back end offers (the installed plugins' events and the engine's own), the wizard's source.
+    const available = useQueryWebhookEventsSwr()
+    const labelOf = new Map(
+        (available.data ?? []).map((event) => [event.id, locale === "en" ? event.label.en : event.label.vi] as const),
+    )
     const { webhooks, canManage, read, retry } = useDeveloperWebhooks()
     const slotLabels = useSlotLabels()
     const overlays = useConnectionOverlays()
     const workspaceId = useWorkspaceId()
     return (
         <DevelopersPanelBase
-            children={props.children}
             props={{
                 access: isManager(member) ? { items: true } : { isForbidden: true },
                 webhooks: sortRows(webhooks).map((connection) => ({
                     id: connection.id,
                     name: connection.name,
-                    description: webhookLineOf(connection.meta, (event) =>
-                        tw.has(`event_${event.replace(".", "_")}`) ? tw(`event_${event.replace(".", "_")}`) : event,
-                    ),
+                    description: webhookLineOf(connection.meta, (event) => labelOf.get(event) ?? event),
                     isIncomplete: connection.status === "pending",
                     statusLabel: tc(statusKey(connection.status)),
                     tone: statusTone(connection.status),
@@ -82,6 +85,8 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                 add: () => overlays.openWizard("webhook"),
                 edit: (connectionId) => overlays.openWizard("webhook", connectionId),
             }}
-        />
+        >
+            {props.children}
+        </DevelopersPanelBase>
     )
 }

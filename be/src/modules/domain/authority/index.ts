@@ -1,6 +1,0 @@
-export { AUTHORITY_ERROR_KINDS } from "./errors/authority.error"
-export { AUTHORITY_MESSAGES } from "./messages/authority.messages"
-export type { Authority, AuthorityPatch, AuthorityProfile, OptionalAuthorityProfile } from "./authority.contracts"
-export { AuthorityModule } from "./authority.module"
-export { AuthorityService } from "./authority.service"
-export { authorityEntities } from "./persistence/entities"

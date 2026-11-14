@@ -75,6 +75,7 @@ describe("PollScheduleService claimDue", () => {
         expect(fake?.callsOf("limit")).toEqual([[20]])
         expect(fake?.callsOf("orderBy")).toEqual([["s.next_poll_at"]])
         expect(fake?.callsOf("where")[0]?.[1]).toEqual({ providers: ["sepay"] })
+        expect(fake?.callsOf("where")[0]?.[0]).toContain("c.id = s.connection_id AND c.deleted_at IS NULL")
         const [, criteria, set] = tx.em.update.mock.calls[0] ?? []
         expect(criteria).toEqual({ connectionId: In(["c-1", "c-2"]) })
         expect(evaluatedValues(set)).toEqual({ nextPollAt: "now() + make_interval(secs => 600)" })

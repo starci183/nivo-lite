@@ -1,4 +1,5 @@
 import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
+import { RECORD_FILES_BUCKET } from "./object-storage-files.policy"
 
 /** The longest a SigV4 presigned address lives (seven days). */
 export const MAX_PRESIGN_SECONDS = 604_800
@@ -30,13 +31,15 @@ export interface StorageBucket {
     readonly publicRead: boolean
 }
 
-/** Every purpose bucket: pictures are public, everything else is private and read through presigned addresses. */
+/**
+ * Every purpose bucket: pictures are public, everything else is private and read through presigned addresses. The records bucket is
+ * the ONE store of every file a declared record type keeps; the others belong to the features that still hold their own.
+ */
 export const STORAGE_BUCKETS: ReadonlyArray<StorageBucket> = [
     { purpose: "avatars_public", publicRead: true },
     { purpose: "media", publicRead: false },
-    { purpose: "videos", publicRead: false },
-    { purpose: "hiring", publicRead: false },
     { purpose: "knowledge-uploads", publicRead: false },
+    { purpose: RECORD_FILES_BUCKET, publicRead: false },
 ]
 
 /** The content type an upload is signed with, or null when the kind admits none. */

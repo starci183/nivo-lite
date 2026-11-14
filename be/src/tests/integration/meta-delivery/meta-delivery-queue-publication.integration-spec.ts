@@ -3,8 +3,8 @@ import {
     META_DELIVERY_QUEUE as DOMAIN_QUEUE,
     META_DELIVERY_QUEUE,
     isMetaDeliveryRecorded,
+    type MetaDeliveryRecorded,
 } from "@modules/queues/meta-delivery"
-import type { MetaDeliveryRecorded } from "@modules/queues/meta-delivery"
 import { buildMetaDelivery } from "@tests/fixtures/builders/meta-delivery.builder"
 import { useTestWorld } from "../../world/use-test-world"
 import { QUEUE_MODULES } from "../../world/test-capabilities.options"

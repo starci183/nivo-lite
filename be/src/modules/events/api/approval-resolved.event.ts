@@ -1,6 +1,5 @@
-import { BaseEvent } from "@modules/platform/event-bus"
-import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isText, isTextOrAbsent, listedValue, whenPresent, openEnvelope } from "./money-event.policy"
+import { BaseEvent, type EventPayload, type ParsedEvent } from "@modules/platform/event-bus"
+import { isKey, isText, isTextOrAbsent, listedValue, whenPresent, openEnvelope } from "./event-payload.policy"
 
 /**
  * The payload of the `approval_resolved` event: an approval request reached its end (a member's verdict, or the deadline). The outcome

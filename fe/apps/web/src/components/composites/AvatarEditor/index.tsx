@@ -26,6 +26,10 @@ type AvatarEditorProps = {
     readonly onRemove: () => void
 }
 
+/** The look of the remove pill: compact when the card is, so it stands as a small neutral one. */
+const removeLookOf = (isCompact: boolean | undefined) =>
+    isCompact === true ? { intent: "neutral" as const, size: "sm" as const } : { intent: "alternative" as const }
+
 /**
  * A profile picture editor: the live preview, the picker pill that uploads at once, the pill that removes the picture and the
  * line of what is accepted (the refusal replaces it). The pills are geometry while the account loads.
@@ -34,7 +38,7 @@ export const AvatarEditor = (props: AvatarEditorProps) => (
     <Cluster gap="row" align="start">
         {props.preview}
         <Stack gap="inline">
-            <Cluster gap="inline">
+            <Cluster gap="identity">
                 <FileButton
                     label={props.label}
                     source={nivoIconSource("upload", "leading")}
@@ -47,8 +51,7 @@ export const AvatarEditor = (props: AvatarEditorProps) => (
                 />
                 {props.canRemove || props.isLoading ? (
                     <Button
-                        intent={props.isRemoveCompact === true ? "neutral" : "alternative"}
-                        {...(props.isRemoveCompact === true ? { size: "sm" as const } : {})}
+                        {...removeLookOf(props.isRemoveCompact)}
                         isDisabled={props.isBusy}
                         isLoading={props.isLoading}
                         onPress={props.onRemove}

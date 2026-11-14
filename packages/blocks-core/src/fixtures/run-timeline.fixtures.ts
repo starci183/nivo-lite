@@ -1,4 +1,5 @@
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import type { z } from "zod"
 import type { runTimelineBlock } from "../blocks/run-timeline.block"
 import type { RunView } from "../rows/run-timeline-view"
@@ -66,8 +67,8 @@ export const RUN_DONE: RunView = {
             at: "2026-11-05T08:00:05.000Z",
             outputSummary: "Da gui",
             durationMs: 65_000,
-            calls: [{ tool: "nivo.chat.send", ok: true, summary: "Zalo OA, da gui" }],
-            effectKey: "nivo.chat.send:run-1:s3",
+            calls: [{ tool: TOOL.customerMessageSend, ok: true, summary: "Zalo OA, da gui" }],
+            effectKey: `${TOOL.customerMessageSend}:run-1:s3`,
         },
     ],
 }
@@ -130,8 +131,8 @@ export const RUN_PARKED: RunView = {
             at: "2026-11-05T08:00:05.000Z",
             inputSummary: "Bao gia 4.800.000 d",
             durationMs: 30_000,
-            calls: [{ tool: "nivo.chat.send", ok: false, summary: "Zalo OA het han ket noi" }],
-            effectKey: "nivo.chat.send:run-3:p2",
+            calls: [{ tool: TOOL.customerMessageSend, ok: false, summary: "Zalo OA het han ket noi" }],
+            effectKey: `${TOOL.customerMessageSend}:run-3:p2`,
             reason: "Zalo OA het han ket noi, ket noi lai roi chay lai",
         },
     ],

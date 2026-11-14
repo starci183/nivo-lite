@@ -1,6 +1,5 @@
 import type { Writable } from "node:stream"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectLogErr, InjectLogOut } from "./logging.decorators"
 import type { LogFields, Logger } from "./logging.port"
 import { redactFields } from "./redact.policy"

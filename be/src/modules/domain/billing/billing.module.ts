@@ -1,13 +1,12 @@
 import { BankFeedDeliveryService } from "./bank-feed-delivery.service"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
-import { BankFeedFlowService } from "./bank-feed-flow.service"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { BankFeedIntakeService } from "./bank-feed-intake.service"
 import { BankFeedPollSourcesService } from "./bank-feed-poll-sources.service"
 import { BankFeedPollService } from "./bank-feed-poll.service"
 import { BankFeedPollTriggerService } from "./bank-feed-poll-trigger.service"
 import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 import { BankFeedService } from "./bank-feed.service"
+import { BankFeedTriggerService } from "./bank-feed-trigger.service"
 import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
 import { LobbyMembershipsService } from "./lobby-memberships.service"
@@ -39,7 +38,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 PaymentSecretsService,
                 BankFeedService,
                 BankFeedReceiptsService,
-                BankFeedFlowService,
+                BankFeedTriggerService,
                 BankFeedIntakeService,
                 BankFeedDeliveryService,
                 BankFeedPollService,
@@ -61,6 +60,19 @@ export class BillingModule extends ConfigurableModuleClass {
                 BankFeedPollService,
                 BankFeedPollTriggerService,
             ],
+        }
+    }
+
+    /**
+     * The entitlements read alone (the mcp app: the plan a holder's call is judged against). A method of its own, so the static emitter
+     * reads each shape without deciding an option.
+     */
+    static registerEntitlements(options: typeof OPTIONS_TYPE): DynamicModule {
+        const base = super.register(options)
+        return {
+            ...base,
+            providers: [...(base.providers ?? []), BillingService, EntitlementsService],
+            exports: [EntitlementsService],
         }
     }
 }

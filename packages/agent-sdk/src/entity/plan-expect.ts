@@ -2,6 +2,8 @@ import type { EntityDefinition, FieldDef, IndexPart } from "./entity.types"
 import {
     type EngineCommand,
     PG_TYPE,
+    agentCheckNameOf,
+    agentForeignKeyNameOf,
     POLICY_COMMANDS,
     identOf,
     normalizeSql,
@@ -88,12 +90,24 @@ const partOf = (part: IndexPart): string => {
 
 const WORKSPACE = "workspace_id"
 
+/** The stamped agent column of `records`: never a declared field, the engine's own fact. */
+const AGENT = "agent_id"
+
+/**
+ * The leading parts of a declared KEY (a unique constraint or a unique index): the workspace, then the agent, so a key is unique per
+ * workspace AND agent (agents never see, nor collide with, each other's values). Every record type is agent-scoped.
+ */
+export const KEY_LEAD: ReadonlyArray<string> = [WORKSPACE, AGENT]
+
+/** The name suffix of the index a contact field gets: the contact erase and a filter on the contact read by it. */
+export const CONTACT_INDEX_SUFFIX = "contact_idx"
+
 /** The normalized text of the workspace predicate every engine policy uses. */
 export const WORKSPACE_PREDICATE: string = normalizeSql(`${WORKSPACE} = public.engine_workspace()`)
 
 const generated = (partition: string, name: string, parts: ReadonlyArray<string>, method: string): ExpectedIndex => ({
     name: identOf(`${partition}_${name}`),
-    parts: parts.map(normalizeSql),
+    parts: parts.map((entry) => normalizeSql(entry)),
     unique: false,
     method,
     partial: false,
@@ -115,18 +129,25 @@ const fieldIndexes = (partition: string, name: string, field: FieldDef): Readonl
             ),
         ),
     ...(field.freeKeys === true ? [generated(partition, `${snakeOf(name)}_gin_idx`, [`data->'${name}'`], "gin")] : []),
+    ...(field.kind === "contact"
+        ? [generated(partition, `${snakeOf(name)}_${CONTACT_INDEX_SUFFIX}`, [WORKSPACE, exprOf(name)], "btree")]
+        : []),
 ]
 
-/** Every index the declaration implies: workspace-first declared indexes and uniques, trigram for searchable text, expression indexes for nested keys, GIN for free keys. */
+/**
+ * Every index the declaration implies: workspace-first declared indexes and uniques (a unique one keyed by the agent too, `KEY_LEAD`),
+ * trigram for searchable text, expression indexes for nested keys, GIN for free keys, one per contact field.
+ */
 export const expectedIndexes = (entity: EntityDefinition): ReadonlyArray<ExpectedIndex> => {
     const partition = partitionNameOf(entity.name)
+    const keyLead = KEY_LEAD.map((entry) => normalizeSql(entry))
     return [
         ...(entity.indexes ?? []).map((index) => ({
             name: identOf(`${partition}_${index.name}`),
-            parts: [normalizeSql(WORKSPACE), ...index.on.map(partOf)],
+            parts: [...(index.unique === true ? keyLead : [normalizeSql(WORKSPACE)]), ...index.on.map((entry) => partOf(entry))],
             unique: index.unique === true,
             method: index.using ?? "btree",
-            partial: index.where !== undefined,
+            partial: index.where !== undefined || index.unique === true,
             constraint: false,
         })),
         ...(entity.constraints ?? []).flatMap((constraint) =>
@@ -134,10 +155,10 @@ export const expectedIndexes = (entity: EntityDefinition): ReadonlyArray<Expecte
                 ? [
                       {
                           name: identOf(`${partition}_${constraint.name}`),
-                          parts: [normalizeSql(WORKSPACE), ...constraint.on.map((field) => partOf(field))],
+                          parts: [...keyLead, ...constraint.on.map((field) => partOf(field))],
                           unique: true,
                           method: "btree",
-                          partial: constraint.where !== undefined,
+                          partial: true,
                           constraint: true,
                       },
                   ]
@@ -147,7 +168,14 @@ export const expectedIndexes = (entity: EntityDefinition): ReadonlyArray<Expecte
     ]
 }
 
-/** The CHECKs of a partition: one per field (kind cast, enum values, text length, presence) and every declared check. */
+/** The length bound a field's CHECK carries: a text's `maxLength`, a list file field's `max`; null when it has none. */
+const limitOfField = (field: FieldDef): number | null => {
+    if (field.kind === "text") return field.maxLength ?? null
+    if (field.kind === "file" && field.many === true) return field.max ?? null
+    return null
+}
+
+/** The CHECKs of a partition: one per field (kind cast, enum values, text length, presence), every declared check, and the agent scope. */
 export const expectedChecks = (entity: EntityDefinition): ReadonlyArray<ExpectedCheck> => {
     const partition = partitionNameOf(entity.name)
     return [
@@ -155,15 +183,30 @@ export const expectedChecks = (entity: EntityDefinition): ReadonlyArray<Expected
             name: identOf(`${partition}_${snakeOf(name)}_chk`),
             key: name,
             values: field.kind === "enum" && field.of !== undefined ? field.of : null,
-            limit: field.kind === "text" && field.maxLength !== undefined ? field.maxLength : null,
+            limit: limitOfField(field),
         })),
         ...(entity.constraints ?? []).flatMap((constraint) =>
             constraint.kind === "check"
                 ? [{ name: identOf(`${partition}_${constraint.name}`), key: null, values: null, limit: null }]
                 : [],
         ),
+        { name: agentCheckNameOf(partition), key: null, values: null, limit: null },
     ]
 }
+
+/** The foreign key of a partition: `agent_id` references the agents, and an agent's deletion deletes its records. */
+export interface ExpectedForeignKey {
+    /** The constraint name. */
+    readonly name: string
+    /** The normalized `pg_get_constraintdef` text it must read as (schema, quoting and blanks ignored). */
+    readonly definition: string
+}
+
+/** The foreign key every record partition has: `agent_id` to `agents(id)`, `ON DELETE CASCADE`. */
+export const expectedForeignKey = (entity: EntityDefinition): ExpectedForeignKey => ({
+    name: agentForeignKeyNameOf(partitionNameOf(entity.name)),
+    definition: normalizeSql(`FOREIGN KEY (${AGENT}) REFERENCES public.agents(id) ON DELETE CASCADE`),
+})
 
 /** The EXCLUDE constraint names of a partition. */
 export const expectedExcludes = (entity: EntityDefinition): ReadonlyArray<string> => {

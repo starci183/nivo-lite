@@ -25,3 +25,6 @@ export const AgentWorkflowVersionPage = (props: AgentWorkflowVersionPageProps) =
     if (!isModuleKey(props.module) || !Number.isInteger(number) || number < 1) notFound()
     return <AgentWorkflowVersion installationId={props.installationId} workflowKey={props.workflowKey} number={number} />
 }
+
+/** The same version page while the route loads: the block reads the agent, the workflow and the version from the address. */
+export const AgentWorkflowVersionLoadingPage = () => <AgentWorkflowVersion />

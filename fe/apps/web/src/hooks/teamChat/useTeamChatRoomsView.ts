@@ -67,6 +67,7 @@ const roomsViewPropsOf = (context: RoomsViewContext): TeamChatRoomsViewProps => 
             sectionGroup: t("sectionGroup"),
             sectionAgent: t("sectionAgent"),
             sectionPerson: t("sectionPerson"),
+            sectionNivo: t("nivoRoom.section"),
             roomsEmpty: t("roomsEmpty"),
             roomsEmptyAction: t("roomsEmptyAction"),
             errorBody: t("errorBody"),

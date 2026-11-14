@@ -1,27 +1,25 @@
 import { Injectable } from "@nestjs/common"
-import { Brackets, In, IsNull, MoreThanOrEqual, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, MoreThanOrEqual, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { customerReadySelect, customerTrustWhere, isUnreviewed } from "./customer-trust.policy"
-import { hybridHit, hybridScore } from "./hybrid-score.policy"
 import type {
     ChunkArrangement,
     ChunkBatchWrite,
-    ChunkHit,
     ChunkDraft,
-    ChunkQuery,
     ChunkWrite,
     EmbeddedChunk,
     ModelInUse,
     PassagePlace,
     PassageView,
+    PassageVerdict,
     PlaceWrite,
     SourcePassage,
     StaleChunk,
+    StoredAt,
+    TruthPassage,
     VectorWrite,
 } from "./knowledge-chunks.contracts"
-import { passageHashOf } from "./passage-hash.policy"
+import { passageHashOf, passageTextHashOf } from "./passage-hash.policy"
 import { placeOfRow } from "./passage-place.policy"
 import { KnowledgeChunkEntity } from "./persistence/entities"
 
@@ -52,20 +50,15 @@ const KIND_OF_ORD =
 const LABEL_OF_ORD =
     '(SELECT t.label FROM unnest(CAST(:orders AS integer[]), CAST(:kinds AS text[]), CAST(:labels AS text[])) AS t(ord, kind, label) WHERE t.ord = "knowledge_chunks"."ord")'
 
-/** The most passages one search answers. */
-const SEARCH_MAX = 40
+/** The database's own clock, for the time a vector is stored. */
+const NOW = (): string => "now()"
 
-/** A passage row as the search names its columns. */
-interface ChunkHitRow {
-    readonly id: string
-    readonly sourceId: string
-    readonly module: string | null
-    readonly content: string
-    readonly score: number
-    readonly visibility: string
-    readonly ord: number
-    readonly customerReady: unknown
-}
+/** The verdict of each id, picked from the two arrays the write carries. */
+const TRIAGE_OF_ID =
+    '(SELECT t.verdict FROM unnest(CAST(:ids AS uuid[]), CAST(:verdicts AS text[])) AS t(id, verdict) WHERE t.id = "knowledge_chunks"."id")'
+
+/** The most passages the truths work of one document reads: a document holds at most 120,000 characters, a few hundred passages. */
+const TRUTH_PASSAGE_LIMIT = 2000
 
 /** The row of a passage at its order, with the vector it was given. */
 const rowOf = (write: Omit<ChunkWrite, "drafts">, draft: ChunkDraft, order: number) => ({
@@ -76,12 +69,21 @@ const rowOf = (write: Omit<ChunkWrite, "drafts">, draft: ChunkDraft, order: numb
     installationId: write.installationId,
     ord: order,
     content: draft.text,
-    embedding: draft.vector,
+    embedding: write.vectorsInIndex === true ? null : draft.vector,
     embeddingModel: draft.vector === null ? null : write.model,
     contentHash: draft.vector === null ? null : passageHashOf(draft.text, write.model),
+    textHash: passageTextHashOf(draft.text),
+    indexedAt: draft.vector === null || write.vectorsInIndex === true ? null : NOW,
     placeKind: draft.place?.kind ?? null,
     placeLabel: draft.place?.label ?? null,
 })
+
+/** The ids an insert answered, in the order of its rows; nothing when the driver answered none. */
+const storedIdsOf = (inserted: unknown): ReadonlyArray<unknown> => {
+    const identifiers: unknown = typeof inserted === "object" && inserted !== null ? Reflect.get(inserted, "identifiers") : undefined
+    const idOf = (one: unknown): unknown => (typeof one === "object" && one !== null ? Reflect.get(one, "id") : undefined)
+    return Array.isArray(identifiers) ? identifiers.map((one: unknown) => idOf(one)) : []
+}
 
 /** How many passages one insert statement stores. */
 const INSERT_BATCH = 50
@@ -109,19 +111,28 @@ export class KnowledgeChunksService {
         })
     }
 
-    /** Stores these passages in place of the passages at the same orders in one transaction; the passages of other orders stay, so a retry keeps what is already stored. */
-    async keep(write: ChunkBatchWrite): Promise<void> {
-        if (write.drafts.length === 0) return
-        await this.entityManager.transaction(async (tx) => {
+    /**
+     * Stores these passages in place of the passages at the same orders in one transaction; the passages of other orders stay, so a
+     * retry keeps what is already stored. Answers the id each order was stored under: with `vectorsInIndex` the caller hands the
+     * vectors to the vector index under those ids (the point id is the row id) and Postgres keeps no vector.
+     */
+    keep(write: ChunkBatchWrite): Promise<ReadonlyArray<StoredAt>> {
+        if (write.drafts.length === 0) return Promise.resolve([])
+        return this.entityManager.transaction(async (tx) => {
             await tx.delete(KnowledgeChunkEntity, {
                 sourceId: write.sourceId,
                 workspaceId: write.workspaceId,
                 ord: In(write.drafts.map((draft) => draft.order)),
             })
-            await tx.insert(
+            const inserted = await tx.insert(
                 KnowledgeChunkEntity,
                 write.drafts.map((draft) => rowOf(write, draft, draft.order)),
             )
+            const stored = storedIdsOf(inserted)
+            return write.drafts.flatMap((draft, at): ReadonlyArray<StoredAt> => {
+                const id = stored[at]
+                return typeof id === "string" ? [{ order: draft.order, id }] : []
+            })
         })
     }
 
@@ -189,58 +200,6 @@ export class KnowledgeChunksService {
         return places
     }
 
-    /**
-     * The best passages of a workspace for a query, filtered by the lens (module, instance, audience) in SQL: the vector half scores
-     * only passages of the query model, the word half every passage; a passage must be close or match a word to count.
-     */
-    async search(query: ChunkQuery): Promise<ReadonlyArray<ChunkHit>> {
-        const terms = { vector: query.vector !== null && query.model !== null, text: query.tsquery !== null }
-        if (!terms.vector && !terms.text) return []
-        const found = this.entityManager
-            .createQueryBuilder(KnowledgeChunkEntity, "c")
-            .select("c.id", "id")
-            .addSelect("c.sourceId", "sourceId")
-            .addSelect("c.module", "module")
-            .addSelect("c.content", "content")
-            .addSelect(hybridScore("c", terms), "score")
-            .addSelect("c.visibility", "visibility")
-            .addSelect("c.ord", "ord")
-            .addSelect(customerReadySelect("c"), "customerReady")
-            .where({ workspaceId: query.workspaceId })
-            .andWhere(
-                new Brackets((own) =>
-                    own.where("c.module IS NULL").orWhere("c.module = :module", { module: query.module }),
-                ),
-            )
-            .andWhere(
-                new Brackets((own) =>
-                    own
-                        .where("c.installationId IS NULL")
-                        .orWhere("c.installationId = :installationId", { installationId: query.installationId }),
-                ),
-            )
-            .andWhere(hybridHit("c", terms))
-            .setParameters({ vector: query.vector, model: query.model, tsquery: query.tsquery })
-        const rows = await (
-            query.audience === "customer"
-                ? found.andWhere({ visibility: "public" }).andWhere(customerTrustWhere("c", "customer") ?? "TRUE")
-                : found
-        )
-            .orderBy("score", "DESC")
-            .limit(Math.max(1, Math.min(query.limit, SEARCH_MAX)))
-            .getRawMany<ChunkHitRow>()
-        return rows.map((row) => ({
-            id: row.id,
-            sourceId: row.sourceId,
-            module: row.module,
-            content: row.content,
-            score: row.score,
-            visibility: row.visibility,
-            order: row.ord,
-            unreviewed: isUnreviewed(row.customerReady),
-        }))
-    }
-
     /** The stored passages of a source in order, for the Knowledge page; the caller has proven the workspace. */
     async passagesOf(workspaceId: string, sourceId: string): Promise<ReadonlyArray<PassageView>> {
         const rows = await this.entityManager
@@ -248,7 +207,7 @@ export class KnowledgeChunksService {
             .select("c.id", "id")
             .addSelect("c.ord", "ord")
             .addSelect("c.content", "content")
-            .addSelect("(c.embedding IS NOT NULL)", "hasEmbedding")
+            .addSelect("(c.embedding IS NOT NULL OR c.indexedAt IS NOT NULL)", "hasEmbedding")
             .where("c.workspaceId = :workspaceId AND c.sourceId = :sourceId", { workspaceId, sourceId })
             .orderBy("c.ord", "ASC")
             .limit(PASSAGE_LIMIT)
@@ -288,7 +247,7 @@ export class KnowledgeChunksService {
         const rows = await this.entityManager
             .createQueryBuilder(KnowledgeChunkEntity, "c")
             .select(["c.id", "c.ord", "c.content", "c.contentHash", "c.embeddingModel"])
-            .where("c.sourceId = :sourceId AND c.workspaceId = :workspaceId AND c.embedding IS NOT NULL", {
+            .where("c.sourceId = :sourceId AND c.workspaceId = :workspaceId AND (c.embedding IS NOT NULL OR c.indexedAt IS NOT NULL)", {
                 sourceId,
                 workspaceId,
             })
@@ -324,7 +283,7 @@ export class KnowledgeChunksService {
             .createQueryBuilder(KnowledgeChunkEntity, "c")
             .select(["c.id", "c.content"])
             .where(
-                "c.workspaceId = :workspaceId AND (c.embedding IS NULL OR c.embeddingModel IS NULL OR c.embeddingModel <> :model)",
+                "c.workspaceId = :workspaceId AND ((c.embedding IS NULL AND c.indexedAt IS NULL) OR c.embeddingModel IS NULL OR c.embeddingModel <> :model)",
                 { workspaceId, model },
             )
             .orderBy("c.createdAt", "ASC")
@@ -338,7 +297,7 @@ export class KnowledgeChunksService {
         await this.entityManager
             .createQueryBuilder(KnowledgeChunkEntity, "kc")
             .update()
-            .set({ embedding: () => VECTOR_OF_ID, embeddingModel: write.model, contentHash: () => HASH_OF_ID })
+            .set({ embedding: () => VECTOR_OF_ID, embeddingModel: write.model, contentHash: () => HASH_OF_ID, indexedAt: NOW })
             .where("workspace_id = :workspaceId AND id = ANY(CAST(:ids AS uuid[]))")
             .setParameters({
                 workspaceId: write.workspaceId,
@@ -347,5 +306,73 @@ export class KnowledgeChunksService {
                 hashes: [...write.hashes],
             })
             .execute()
+    }
+
+    /**
+     * The passages of a document in order, as the truths work reads them: the text, its model-free hash, and where triage and the truth
+     * reading stand for each. One bounded read on `knowledge_chunks_source (source_id, ord)`.
+     */
+    async truthPassagesOf(workspaceId: string, sourceId: string): Promise<ReadonlyArray<TruthPassage>> {
+        const rows = await this.entityManager.find(KnowledgeChunkEntity, {
+            select: {
+                id: true,
+                ord: true,
+                content: true,
+                textHash: true,
+                triage: true,
+                triageVersion: true,
+                truthsVersion: true,
+            },
+            where: { sourceId, workspaceId },
+            order: { ord: "ASC" },
+            take: TRUTH_PASSAGE_LIMIT,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            order: row.ord,
+            text: row.content,
+            hash: row.textHash ?? passageTextHashOf(row.content),
+            triage: row.triage,
+            triageVersion: row.triageVersion,
+            truthsVersion: row.truthsVersion,
+        }))
+    }
+
+    /**
+     * Writes the triage verdicts of some passages in ONE statement, with the prompt version that judged them. A passage whose verdict is
+     * no longer `rule` forgets that its truths were read, so a later verdict `rule` reads it again.
+     */
+    async setTriage(workspaceId: string, verdicts: ReadonlyArray<PassageVerdict>, version: number): Promise<void> {
+        if (verdicts.length === 0) return
+        await this.entityManager
+            .createQueryBuilder(KnowledgeChunkEntity, "kc")
+            .update()
+            .set({
+                triage: () => TRIAGE_OF_ID,
+                triageVersion: version,
+                truthsVersion: () => `CASE WHEN ${TRIAGE_OF_ID} = 'rule' THEN "truths_version" ELSE NULL END`,
+            })
+            .where("workspace_id = :workspaceId AND id = ANY(CAST(:ids AS uuid[]))")
+            .setParameters({
+                workspaceId,
+                ids: verdicts.map((one) => one.id),
+                verdicts: verdicts.map((one) => one.verdict),
+            })
+            .execute()
+    }
+
+    /**
+     * Records that the truths of these passages were read with this extraction prompt version (a negative version: skipped by it), in
+     * one statement.
+     */
+    async markTruthsRead(workspaceId: string, ids: ReadonlyArray<string>, version: number): Promise<void> {
+        if (ids.length === 0) return
+        await this.entityManager.update(KnowledgeChunkEntity, { workspaceId, id: In([...ids]) }, { truthsVersion: version })
+    }
+
+    /** Forgets the truth reading of these passages, so the next reading reads them again (a window the last one skipped). */
+    async forgetTruthsRead(workspaceId: string, ids: ReadonlyArray<string>): Promise<void> {
+        if (ids.length === 0) return
+        await this.entityManager.update(KnowledgeChunkEntity, { workspaceId, id: In([...ids]) }, { truthsVersion: null })
     }
 }

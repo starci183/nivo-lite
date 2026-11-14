@@ -1,5 +1,4 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { AgentSchedulesModule } from "../../modules/domain/agent-schedules"
 import { AgentProbesService } from "../../modules/domain/agent-schedules/agent-probes.service"
 import { AgentWorkModule } from "../../modules/domain/agent-work"
@@ -13,7 +12,6 @@ import type {
     AgentTurnRun,
     AgentWorkHandler,
 } from "../../modules/domain/agent-work/agent-work.port"
-import { InvoicesModule } from "@modules/domain/invoices"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { IdsModule } from "@modules/platform/ids"
 import { OFFICE_CHAIN_MODULES } from "./office-chain-capabilities.options"
@@ -25,7 +23,7 @@ const DONE: AgentHandlerEnding = { status: "done", reason: null, outcome: { sett
 @Injectable()
 /** The background handler as the road expects it: ask the probes first, call the model only when they found work. */
 export class RoadWork implements AgentWorkHandler, AgentTurnExecutor {
-    readonly sources: ReadonlyArray<AgentWakeSource> = ["customer", "tag", "internal", "schedule"]
+    readonly sources: ReadonlyArray<AgentWakeSource> = ["trigger", "tag", "internal", "schedule"]
 
     /** The wakes whose model call began. */
     readonly ran: Array<string> = []
@@ -96,7 +94,6 @@ export const agentRoadModules = (prefix: string): Array<DynamicModule> => [
     ...OFFICE_CHAIN_MODULES,
     ...redisQueueModules(prefix),
     IdsModule.register({ isGlobal: true }),
-    InvoicesModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     KnowledgeReadModule.register(),
     AgentWorkModule.register({ isGlobal: true, debounceMs: 0 }),

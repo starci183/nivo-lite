@@ -22,11 +22,10 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentCreationService } from "./agent-creation.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
-import { AGENTS_CONNECTIONS, AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_WORK } from "./agents.decorators"
+import { AGENTS_INSTALLATIONS, AGENTS_KNOWLEDGE, AGENTS_WORK } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import { summaryOf } from "./agents.mapper"
 import type {
-    AgentConnectionsDirectory,
     InstallationDirectory,
     KnowledgeLens,
     WorkDashboardDirectory,
@@ -100,7 +99,6 @@ const buildSetupMode = async () => {
                 provide: WorkspaceMembersService,
                 useValue: mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf())) }),
             },
-            { provide: AGENTS_CONNECTIONS, useValue: mock<AgentConnectionsDirectory>() },
             { provide: AgentOwnershipService, useValue: mock<AgentOwnershipService>() },
             { provide: AgentCreationService, useValue: mock<AgentCreationService>() },
             { provide: AGENTS_WORK, useValue: work },
@@ -434,25 +432,13 @@ describe("AgentsService", () => {
 })
 
 describe("AgentsService ownership questions", () => {
-    it("answers who owns, who may be tagged and who may assign through the ownership service", async () => {
+    it("answers who owns and who may assign through the ownership service", async () => {
         const { service, ownership } = await build(mockEntityManager({}))
         ownership.ownerOf.mockResolvedValue({ ownerMemberId: "m1", fallbackMemberId: null })
-        ownership.canTag.mockResolvedValue(true)
         ownership.canAssign.mockResolvedValue(false)
 
         await expect(service.ownerOf("a1")).resolves.toEqual({ ownerMemberId: "m1", fallbackMemberId: null })
-        await expect(service.canTag("a1", "a2")).resolves.toBe(true)
         await expect(service.canAssign("m1", "a1")).resolves.toBe(false)
-        expect(ownership.canTag).toHaveBeenCalledWith("a1", "a2")
         expect(ownership.canAssign).toHaveBeenCalledWith("m1", "a1")
-    })
-
-    it("delegates the tag grants to the ownership service", async () => {
-        const { service, ownership } = await build(mockEntityManager({}))
-        ownership.grantTags.mockResolvedValue(undefined)
-
-        await service.grantTags("w1", [{ from: "a1", to: "a2" }])
-
-        expect(ownership.grantTags).toHaveBeenCalledWith("w1", [{ from: "a1", to: "a2" }])
     })
 })

@@ -38,7 +38,10 @@ describe("InstallationFactsService > requirementFacts", () => {
             members: 9,
         })
         expect(connections.connectedProviders).toHaveBeenCalledWith("ws-1", 200)
-        expect(agents.activeCountOfModules).toHaveBeenCalledWith("ws-1", ["chatbot", "booking"])
+        // The chat agents are the template agents a customer writes to, read from the installation: the front doors, not booking.
+        const [, modules] = agents.activeCountOfModules.mock.calls[0] ?? []
+        expect(modules).toEqual(expect.arrayContaining(["chatbot", "webdesk"]))
+        expect(modules).not.toContain("booking")
         expect(staff.activeCount).toHaveBeenCalledWith("ws-1")
         expect(members.activeCount).toHaveBeenCalledWith("ws-1")
     })

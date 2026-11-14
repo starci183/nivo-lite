@@ -92,3 +92,9 @@ export interface StepRecord {
     /** Why it last failed, or null. */
     readonly errorCode: string | null
 }
+
+/** A run record, or null when there is none (or, under a fence, when the row moved on). */
+export type OptionalRunRecord = RunRecord | null
+
+/** A step record, or null when there is none (or, under a fence, when the row moved on). */
+export type OptionalStepRecord = StepRecord | null

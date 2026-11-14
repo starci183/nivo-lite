@@ -1,50 +1,15 @@
 import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
-import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
-import { EntityEngineService } from "@modules/domain/entity-engine"
 import { TeamChatRoomsService, lineKeyOf, type AgentLineReplied } from "@modules/domain/team-chat"
 import { DomainError } from "@modules/platform/errors"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentThreadsLogEvent } from "../agent-threads.log-events"
-import { runStopOf } from "./run-stop-records.service"
+import { RunStopRecordsService } from "./run-stop-records.service"
 import type { RunStop, StopState } from "./run-stop.contracts"
 import { stopCardKeyOf } from "./stop-cards.service"
 import { StopDoorService, type StopDoorOutcome } from "./stop-door.service"
 
-const STOP = "agent.run-stop"
-
-/** Binds the cursor of the lists of this reader: none is paged past one bounded page. */
-const LIST_SCOPE = "run-stop-answers"
-
-/** The most stops of one state of a workspace a reply is matched against: the newest, by the index `state_stopped`. */
+/** The most stops of one state of a workspace a reply is matched against: the newest, by state and moment. */
 const STOPS_LOOKED = 50
-
-const SELECT: ReadonlyArray<string> = [
-    "runId",
-    "stepKey",
-    "agentId",
-    "workflowId",
-    "leadId",
-    "conversationId",
-    "kind",
-    "state",
-    "reason",
-    "question",
-    "detail",
-    "cardMessageId",
-    "customerLines",
-    "answers",
-    "decision",
-    "repeats",
-    "stoppedAt",
-    "resolvedAt",
-]
-
-const NEWEST: OrderBy = [
-    ["stoppedAt", "desc"],
-    ["id", "desc"],
-]
-
-const stateIs = (state: StopState): FilterExpr => ({ op: "eq", field: "state", value: state })
 
 /** A person's reply to an engine line in the team chat, with its words and moment as the team chat hands them. */
 export type StopReply = AgentLineReplied
@@ -80,7 +45,7 @@ export const stopOfLine = (stops: ReadonlyArray<RunStop>, lineKey: string): RunS
  */
 export class StopAnswersService implements OnModuleInit {
     constructor(
-        private readonly engine: EntityEngineService,
+        private readonly stops: RunStopRecordsService,
         private readonly door: StopDoorService,
         @InjectLogger() private readonly logger: Logger,
         @Optional() private readonly chat?: TeamChatRoomsService,
@@ -128,15 +93,8 @@ export class StopAnswersService implements OnModuleInit {
         }
     }
 
-    /** The newest stops of a state of the workspace, by the entity's index on state and moment. */
+    /** The newest stops of a state of the workspace, by the index on state and moment. */
     private newest(workspaceId: string, state: StopState): Promise<ReadonlyArray<RunStop>> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const page = await this.engine.list(
-                tx,
-                { from: STOP, select: SELECT, where: stateIs(state), order: NEWEST, page: { size: STOPS_LOOKED } },
-                LIST_SCOPE,
-            )
-            return page.rows.map((listed) => runStopOf(listed.row))
-        })
+        return this.stops.newest(workspaceId, state, STOPS_LOOKED)
     }
 }

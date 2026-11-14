@@ -9,7 +9,7 @@
     },
     "sort": {
       "type": "enum",
-      "of": "sales.leads.sort",
+      "of": "blocks-core.sales.api.lead.list.sort",
       "url": "sort",
       "default": "recent"
     },
@@ -24,13 +24,13 @@
     },
     "status": {
       "type": "enum",
-      "of": "sales.orders.status",
+      "of": "blocks-core.sales.api.order.list.status",
       "url": "status",
       "default": "all"
     },
     "orderSort": {
       "type": "enum",
-      "of": "sales.orders.sort",
+      "of": "blocks-core.sales.api.order.list.sort",
       "url": "osort",
       "default": "recent"
     },
@@ -40,9 +40,101 @@
     },
     "pane": {
       "type": "enum",
-      "of": ["list", "queue"],
+      "of": [
+        "list",
+        "queue"
+      ],
       "url": "pane",
       "default": "list"
+    },
+    "ledgerQ": {
+      "type": "string",
+      "url": "lq",
+      "default": ""
+    },
+    "ledgerSort": {
+      "type": "enum",
+      "of": "blocks-core.sales.api.entry.list.sort",
+      "url": "lsort",
+      "default": "recent"
+    },
+    "entry": {
+      "type": "string",
+      "url": "entry"
+    },
+    "period": {
+      "type": "enum",
+      "of": [
+        "this",
+        "last"
+      ],
+      "url": "period",
+      "default": "this"
+    },
+    "ledgerStatus": {
+      "type": "enum",
+      "of": "blocks-core.sales.api.entry.list.status",
+      "url": "lstatus",
+      "default": "all"
+    },
+    "ledgerPane": {
+      "type": "enum",
+      "of": [
+        "list",
+        "queue",
+        "detail"
+      ],
+      "url": "lpane",
+      "default": "list"
+    },
+    "loyaltyQ": {
+      "type": "string",
+      "url": "yq",
+      "default": ""
+    },
+    "activity": {
+      "type": "enum",
+      "of": "blocks-core.sales.api.loyalty-member.list.activity",
+      "url": "activity",
+      "default": "all"
+    },
+    "loyaltySort": {
+      "type": "enum",
+      "of": "blocks-core.sales.api.loyalty-member.list.sort",
+      "url": "ysort",
+      "default": "points"
+    },
+    "member": {
+      "type": "string",
+      "url": "member"
+    },
+    "memberTab": {
+      "type": "enum",
+      "of": [
+        "redeem",
+        "history",
+        "adjust",
+        "profile"
+      ],
+      "url": "mt",
+      "default": "redeem"
+    },
+    "reward": {
+      "type": "string",
+      "url": "reward"
+    },
+    "loyaltyPane": {
+      "type": "enum",
+      "of": [
+        "list",
+        "queue"
+      ],
+      "url": "ypane",
+      "default": "list"
+    },
+    "tier": {
+      "type": "string",
+      "url": "tier"
     }
   },
   "views": [
@@ -72,11 +164,11 @@
             },
             "bind": {
               "attention": {
-                "read": "sales.attention",
+                "read": "blocks-core.sales.api.lead.attention",
                 "path": "rows"
               },
               "awaitingReply": {
-                "read": "sales.awaiting-reply",
+                "read": "blocks-core.sales.api.lead.awaiting-reply",
                 "path": "rows"
               },
               "review": {
@@ -196,7 +288,7 @@
             },
             "bind": {
               "rows": {
-                "read": "sales.orders",
+                "read": "blocks-core.sales.api.order.list",
                 "variables": {
                   "sort": "recent"
                 }
@@ -242,14 +334,14 @@
             },
             "bind": {
               "rows": {
-                "read": "sales.leads",
+                "read": "blocks-core.sales.api.lead.list",
                 "variables": {
                   "q": "$q",
                   "sort": "$sort"
                 }
               },
               "counts": {
-                "read": "sales.lead-counts",
+                "read": "blocks-core.sales.api.lead.counts",
                 "variables": {
                   "q": "$q"
                 }
@@ -285,7 +377,7 @@
             },
             "bind": {
               "region": {
-                "read": "sales.orders-waiting"
+                "read": "blocks-core.sales.api.order.waiting"
               }
             }
           },
@@ -441,7 +533,7 @@
             },
             "bind": {
               "rows": {
-                "read": "sales.orders",
+                "read": "blocks-core.sales.api.order.list",
                 "variables": {
                   "q": "$orderQ",
                   "status": "$status",
@@ -449,7 +541,7 @@
                 }
               },
               "counts": {
-                "read": "sales.order-counts",
+                "read": "blocks-core.sales.api.order.counts",
                 "variables": {
                   "q": "$orderQ"
                 }
@@ -564,10 +656,2084 @@
         },
         "bind": {
           "record": {
-            "read": "sales.settings"
+            "read": "blocks-core.sales.api.settings.get"
           },
           "submit": {
             "action": "sales.save-settings"
+          }
+        },
+        "when": {
+          "permission": "sales.manage"
+        }
+      }
+    },
+    {
+      "id": "today",
+      "label": {
+        "key": "tab_today"
+      },
+      "root": {
+        "id": "today-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "today-figures",
+            "block": "core.figures",
+            "props": {
+              "label": {
+                "key": "today_label"
+              },
+              "variant": "ribbon",
+              "currency": "VND",
+              "items": [
+                {
+                  "term": {
+                    "key": "today_received"
+                  },
+                  "path": "receivedVnd",
+                  "format": "money",
+                  "hintPath": "receivedHint"
+                },
+                {
+                  "term": {
+                    "key": "today_matched"
+                  },
+                  "path": "matchedCount",
+                  "format": "count",
+                  "hintPath": "matchedHint"
+                },
+                {
+                  "term": {
+                    "key": "today_unmatched"
+                  },
+                  "path": "unmatchedCount",
+                  "format": "count",
+                  "hintPath": "unmatchedHint"
+                },
+                {
+                  "term": {
+                    "key": "today_waiting"
+                  },
+                  "path": "waitingCount",
+                  "format": "count",
+                  "hintPath": "waitingHint"
+                }
+              ]
+            },
+            "bind": {
+              "data": {
+                "read": "blocks-core.sales.api.entry.today"
+              }
+            },
+            "when": {
+              "permission": "sales.view"
+            }
+          },
+          {
+            "id": "today-queue",
+            "block": "core.decision-queue",
+            "props": {
+              "surface": "card",
+              "label": {
+                "key": "queue_label"
+              },
+              "emptyTitle": {
+                "key": "queue_empty_title"
+              },
+              "emptyBody": {
+                "key": "queue_empty_body"
+              },
+              "seeWhy": {
+                "key": "decisions_see_why"
+              },
+              "moreMenu": {
+                "key": "decisions_more"
+              },
+              "currency": "VND",
+              "commands": [
+                {
+                  "id": "assign-order",
+                  "label": {
+                    "key": "queue_assign"
+                  },
+                  "intent": "commit"
+                },
+                {
+                  "id": "other-income",
+                  "label": {
+                    "key": "action_other_income"
+                  },
+                  "intent": "alternative"
+                }
+              ],
+              "edit": {
+                "label": {
+                  "key": "answer_label"
+                },
+                "submitLabel": {
+                  "key": "answer_submit"
+                },
+                "cancelLabel": {
+                  "key": "answer_cancel"
+                },
+                "fields": [
+                  {
+                    "name": "answer",
+                    "label": {
+                      "key": "answer_field"
+                    },
+                    "kind": "text",
+                    "required": true
+                  }
+                ]
+              },
+              "choices": [
+                {
+                  "command": "assign-order",
+                  "sends": "sales.resolve-unmatched-payment",
+                  "pick": {
+                    "valueName": "order",
+                    "title": {
+                      "key": "picker_title"
+                    },
+                    "searchLabel": {
+                      "key": "picker_search"
+                    },
+                    "emptyBody": {
+                      "key": "picker_empty"
+                    }
+                  }
+                },
+                {
+                  "command": "other-income",
+                  "sends": "sales.resolve-unmatched-payment",
+                  "confirm": {
+                    "title": {
+                      "key": "other_income_title"
+                    },
+                    "body": {
+                      "key": "other_income_body"
+                    },
+                    "confirmLabel": {
+                      "key": "action_other_income"
+                    },
+                    "cancelLabel": {
+                      "key": "picker_cancel"
+                    },
+                    "values": {
+                      "kind": "other-income"
+                    }
+                  }
+                }
+              ]
+            },
+            "bind": {
+              "queue": {
+                "read": "blocks-core.sales.api.question.owner-queue",
+                "variables": {
+                  "installation": "$installationId"
+                }
+              },
+              "command": {
+                "action": "sales.decide-owner-item"
+              },
+              "options": {
+                "read": "blocks-core.sales.api.order.open"
+              }
+            }
+          },
+          {
+            "id": "today-recent",
+            "block": "core.record-list",
+            "props": {
+              "label": {
+                "key": "recent_label"
+              },
+              "empty": {
+                "key": "recent_empty"
+              },
+              "surface": "card",
+              "idPath": "id",
+              "titlePath": "title",
+              "descriptionPath": "connection",
+              "metaPath": "time",
+              "badgePath": "status",
+              "chipPaths": [
+                "level"
+              ],
+              "logoPath": "logo",
+              "badgeTones": {
+                "done": "success",
+                "waiting": "warning"
+              },
+              "labels": {
+                "status": {
+                  "done": {
+                    "key": "recent_done"
+                  },
+                  "waiting": {
+                    "key": "recent_waiting"
+                  }
+                },
+                "level": {
+                  "auto": {
+                    "key": "level_auto"
+                  },
+                  "ask": {
+                    "key": "level_ask"
+                  },
+                  "read": {
+                    "key": "level_read"
+                  }
+                }
+              },
+              "footerLink": {
+                "label": {
+                  "key": "recent_all"
+                },
+                "path": "./work"
+              }
+            },
+            "bind": {
+              "rows": {
+                "read": "blocks-core.sales.api.entry.recent",
+                "variables": {
+                  "installation": "$installationId"
+                },
+                "path": "rows"
+              }
+            },
+            "when": {
+              "permission": "sales.view"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "overview",
+      "label": {
+        "key": "tab_overview"
+      },
+      "root": {
+        "id": "overview-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "figures",
+            "block": "sales.period-figures",
+            "props": {
+              "label": {
+                "key": "figures"
+              }
+            },
+            "bind": {
+              "figures": {
+                "read": "blocks-core.sales.api.entry.figures",
+                "variables": {
+                  "period": "$period"
+                }
+              }
+            },
+            "when": {
+              "permission": "sales.view"
+            }
+          },
+          {
+            "id": "due",
+            "block": "sales.due-soon",
+            "props": {
+              "title": {
+                "key": "due_title"
+              },
+              "horizon": {
+                "key": "due_horizon"
+              },
+              "empty": {
+                "key": "due_empty"
+              },
+              "notice": {
+                "key": "due_notice"
+              },
+              "linkLabel": {
+                "key": "due_link"
+              },
+              "linkPath": "/connections"
+            },
+            "bind": {
+              "due": {
+                "read": "blocks-core.sales.api.tax.due-soon"
+              }
+            },
+            "when": {
+              "permission": "sales.view"
+            }
+          },
+          {
+            "id": "weekly",
+            "block": "sales.weekly",
+            "props": {
+              "title": {
+                "key": "weekly_label"
+              },
+              "caption": {
+                "key": "weekly_caption"
+              },
+              "empty": {
+                "key": "weekly_empty"
+              },
+              "periodParam": "period"
+            },
+            "bind": {
+              "weekly": {
+                "read": "blocks-core.sales.api.entry.weekly",
+                "variables": {
+                  "period": "$period"
+                }
+              }
+            }
+          },
+          {
+            "id": "ageing",
+            "block": "sales.ageing",
+            "props": {
+              "title": {
+                "key": "ageing_label"
+              },
+              "empty": {
+                "key": "ageing_empty"
+              }
+            },
+            "bind": {
+              "figures": {
+                "read": "blocks-core.sales.api.entry.figures",
+                "variables": {
+                  "period": "$period"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "book",
+      "label": {
+        "key": "tab_book"
+      },
+      "root": {
+        "id": "book-book",
+        "block": "sales.book",
+        "props": {
+          "title": {
+            "key": "tab_book"
+          },
+          "searchLabel": {
+            "key": "search"
+          },
+          "empty": {
+            "key": "entries_empty"
+          },
+          "emptySearch": {
+            "key": "entries_empty_search"
+          },
+          "searchParam": "ledgerQ",
+          "filterParam": "ledgerStatus",
+          "selectParam": "entry",
+          "periodParam": "period",
+          "paneParam": "ledgerPane"
+        },
+        "bind": {
+          "rows": {
+            "read": "blocks-core.sales.api.entry.list",
+            "variables": {
+              "q": "$ledgerQ",
+              "status": "$ledgerStatus",
+              "sort": "$ledgerSort"
+            }
+          },
+          "counts": {
+            "read": "blocks-core.sales.api.entry.status-counts",
+            "variables": {
+              "q": "$ledgerQ"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "questions",
+      "label": {
+        "key": "tab_questions"
+      },
+      "count": {
+        "read": "blocks-core.sales.api.question.count",
+        "path": "count",
+        "isAttention": true
+      },
+      "root": {
+        "id": "questions-root",
+        "block": "sales.questions",
+        "props": {
+          "label": {
+            "key": "questions_title"
+          },
+          "empty": {
+            "key": "questions_empty_title"
+          }
+        },
+        "bind": {
+          "questions": {
+            "read": "blocks-core.sales.api.question.list"
+          },
+          "answer": {
+            "action": "sales.answer-question"
+          }
+        }
+      },
+      "hidden": true,
+      "openBy": "questions"
+    },
+    {
+      "id": "ledger",
+      "label": {
+        "key": "tab_ledger"
+      },
+      "root": {
+        "id": "ledger-root",
+        "block": "sales.ledger",
+        "props": {
+          "title": {
+            "key": "ledger_title"
+          },
+          "empty": {
+            "key": "ledger_empty"
+          },
+          "periodParam": "period"
+        },
+        "bind": {
+          "ledger": {
+            "read": "blocks-core.sales.api.entry.ledger",
+            "variables": {
+              "period": "$period"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ledger-settings",
+      "label": {
+        "key": "tab_settings"
+      },
+      "root": {
+        "id": "ledger-settings-root",
+        "block": "core.form",
+        "props": {
+          "label": {
+            "key": "ledger_settings_title"
+          },
+          "submitLabel": {
+            "key": "settings_submit"
+          },
+          "successNotice": {
+            "key": "ledger_settings_done"
+          },
+          "fields": [
+            {
+              "name": "postExpenses",
+              "label": {
+                "key": "settings_post_expenses"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "postOutgoing",
+              "label": {
+                "key": "settings_post_outgoing"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "postUnmatched",
+              "label": {
+                "key": "settings_post_unmatched"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "voidMode",
+              "label": {
+                "key": "settings_void_mode"
+              },
+              "kind": "choice",
+              "options": [
+                {
+                  "value": "reversal",
+                  "label": {
+                    "key": "void_reversal"
+                  }
+                },
+                {
+                  "value": "none",
+                  "label": {
+                    "key": "void_none"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "vatPeriod",
+              "label": {
+                "key": "settings_vat_period"
+              },
+              "kind": "choice",
+              "options": [
+                {
+                  "value": "monthly",
+                  "label": {
+                    "key": "vat_monthly"
+                  }
+                },
+                {
+                  "value": "quarterly",
+                  "label": {
+                    "key": "vat_quarterly"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "rematchDays",
+              "label": {
+                "key": "settings_rematch"
+              },
+              "hint": {
+                "key": "settings_rematch_hint"
+              },
+              "kind": "number"
+            }
+          ],
+          "surface": "plain"
+        },
+        "bind": {
+          "record": {
+            "read": "blocks-core.sales.api.ledger-settings.get"
+          },
+          "submit": {
+            "action": "sales.save-ledger-settings"
+          }
+        },
+        "when": {
+          "permission": "sales.manage"
+        }
+      },
+      "openBy": "rules"
+    },
+    {
+      "id": "loyalty-overview",
+      "label": {
+        "key": "loyalty_tab_overview"
+      },
+      "root": {
+        "id": "loyalty-overview-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "overview-figures",
+            "block": "core.figures",
+            "props": {
+              "label": {
+                "key": "figures_label"
+              },
+              "items": [
+                {
+                  "term": {
+                    "key": "fig_active"
+                  },
+                  "path": "activeMembers",
+                  "format": "number"
+                },
+                {
+                  "term": {
+                    "key": "fig_issued"
+                  },
+                  "path": "pointsIssued30d",
+                  "format": "number"
+                },
+                {
+                  "term": {
+                    "key": "fig_redemptions"
+                  },
+                  "path": "redemptions30d",
+                  "format": "number"
+                },
+                {
+                  "term": {
+                    "key": "fig_at_risk"
+                  },
+                  "path": "atRisk",
+                  "format": "number"
+                }
+              ],
+              "currency": "VND",
+              "variant": "ribbon"
+            },
+            "bind": {
+              "data": {
+                "read": "blocks-core.sales.api.loyalty-program.figures"
+              }
+            }
+          },
+          {
+            "id": "overview-waiting",
+            "block": "core.waiting",
+            "props": {
+              "label": {
+                "key": "loyalty_waiting_owner"
+              }
+            },
+            "bind": {
+              "region": {
+                "read": "blocks-core.sales.api.loyalty-decision.waiting"
+              }
+            },
+            "forbidden": "hide"
+          },
+          {
+            "id": "overview-grid",
+            "block": "core.card-grid",
+            "children": [
+              {
+                "id": "overview-stats",
+                "block": "core.detail",
+                "props": {
+                  "label": {
+                    "key": "stats_title"
+                  },
+                  "currency": "VND",
+                  "items": [
+                    {
+                      "term": {
+                        "key": "stat_points_outstanding"
+                      },
+                      "path": "pointsOutstanding",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "stat_earned"
+                      },
+                      "path": "earned30d",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "stat_redeemed"
+                      },
+                      "path": "redeemed30d",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "stat_expired"
+                      },
+                      "path": "expired30d",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "stat_spend"
+                      },
+                      "path": "spend30d",
+                      "format": "money"
+                    },
+                    {
+                      "term": {
+                        "key": "stat_reward_value"
+                      },
+                      "path": "rewardValue30d",
+                      "format": "money"
+                    },
+                    {
+                      "term": {
+                        "key": "stat_promos"
+                      },
+                      "path": "promosSent30d",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "stat_birthdays"
+                      },
+                      "path": "birthdaysThisMonth",
+                      "format": "number"
+                    }
+                  ]
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.sales.api.loyalty-member.stats"
+                  }
+                }
+              },
+              {
+                "id": "overview-link",
+                "block": "core.detail",
+                "props": {
+                  "label": {
+                    "key": "link_title"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_program"
+                      },
+                      "path": "name"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_enabled"
+                      },
+                      "path": "state",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_link"
+                      },
+                      "path": "publicPath"
+                    }
+                  ],
+                  "labels": {
+                    "state": {
+                      "active": {
+                        "key": "state_on"
+                      },
+                      "paused": {
+                        "key": "state_off"
+                      }
+                    }
+                  }
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.sales.api.loyalty-program.get"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "overview-tiers",
+            "block": "core.table",
+            "props": {
+              "label": {
+                "key": "tiers_label"
+              },
+              "empty": {
+                "key": "tiers_empty"
+              },
+              "idPath": "key",
+              "currency": "VND",
+              "columns": [
+                {
+                  "term": {
+                    "key": "col_tier"
+                  },
+                  "path": "name"
+                },
+                {
+                  "term": {
+                    "key": "col_members"
+                  },
+                  "path": "count",
+                  "format": "number",
+                  "align": "end"
+                },
+                {
+                  "term": {
+                    "key": "col_min_spend"
+                  },
+                  "path": "minSpendVnd",
+                  "format": "money",
+                  "align": "end"
+                },
+                {
+                  "term": {
+                    "key": "col_multiplier"
+                  },
+                  "path": "multiplier",
+                  "format": "number",
+                  "align": "end"
+                },
+                {
+                  "term": {
+                    "key": "col_benefit"
+                  },
+                  "path": "benefit",
+                  "priority": "low"
+                }
+              ]
+            },
+            "bind": {
+              "rows": {
+                "read": "blocks-core.sales.api.loyalty-program.tiers",
+                "path": "rows"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "members",
+      "label": {
+        "key": "tab_members"
+      },
+      "root": {
+        "id": "members-root",
+        "block": "core.master-detail",
+        "props": {
+          "emptyTitle": {
+            "key": "member_idle_title"
+          },
+          "emptyBody": {
+            "key": "member_idle_body"
+          }
+        },
+        "children": [
+          {
+            "id": "member-list",
+            "block": "sales.loyalty-members",
+            "props": {
+              "label": {
+                "key": "members_label"
+              },
+              "searchLabel": {
+                "key": "search_members"
+              },
+              "all": {
+                "key": "filter_all"
+              },
+              "atRisk": {
+                "key": "activity_at_risk"
+              },
+              "sortLabel": {
+                "key": "members_sort_label"
+              },
+              "empty": {
+                "key": "members_empty"
+              },
+              "emptySearch": {
+                "key": "members_empty_search"
+              },
+              "searchParam": "loyaltyQ",
+              "tierParam": "tier",
+              "activityParam": "activity",
+              "sortParam": "loyaltySort",
+              "selectParam": "member"
+            },
+            "bind": {
+              "rows": {
+                "read": "blocks-core.sales.api.loyalty-member.list",
+                "variables": {
+                  "q": "$loyaltyQ",
+                  "activity": "$activity",
+                  "tier": "$tier",
+                  "sort": "$loyaltySort"
+                }
+              },
+              "tiers": {
+                "read": "blocks-core.sales.api.loyalty-program.tiers",
+                "path": "rows"
+              },
+              "tierCounts": {
+                "read": "blocks-core.sales.api.loyalty-member.tier-counts",
+                "variables": {
+                  "q": "$loyaltyQ"
+                }
+              },
+              "activityCounts": {
+                "read": "blocks-core.sales.api.loyalty-member.counts",
+                "variables": {
+                  "q": "$loyaltyQ"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "id": "member-side",
+            "block": "core.stack",
+            "props": {
+              "gap": "region"
+            },
+            "children": [
+              {
+                "id": "member-detail",
+                "block": "core.detail",
+                "props": {
+                  "label": {
+                    "key": "member_detail"
+                  },
+                  "idle": {
+                    "key": "member_idle_body"
+                  },
+                  "currency": "VND",
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_name"
+                      },
+                      "path": "name"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_tier"
+                      },
+                      "path": "tier",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_points"
+                      },
+                      "path": "points",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_next_tier"
+                      },
+                      "path": "nextTier"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_missing"
+                      },
+                      "path": "missingVnd",
+                      "format": "money"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "title": {
+                        "key": "section_contact"
+                      },
+                      "items": [
+                        {
+                          "term": {
+                            "key": "fact_phone"
+                          },
+                          "path": "phone"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_email"
+                          },
+                          "path": "email"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_birthday"
+                          },
+                          "path": "birthday",
+                          "format": "date"
+                        }
+                      ]
+                    },
+                    {
+                      "title": {
+                        "key": "section_activity"
+                      },
+                      "items": [
+                        {
+                          "term": {
+                            "key": "fact_spent"
+                          },
+                          "path": "lifetimeSpendVnd",
+                          "format": "money"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_visits"
+                          },
+                          "path": "visits",
+                          "format": "number"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_last_visit"
+                          },
+                          "path": "lastVisitAt",
+                          "format": "dateTime"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_joined"
+                          },
+                          "path": "joinedAt",
+                          "format": "dateTime"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_expiring"
+                          },
+                          "path": "expiringPoints",
+                          "format": "number"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_expiring_at"
+                          },
+                          "path": "expiringAt",
+                          "format": "dateTime"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.sales.api.loyalty-member.get",
+                    "variables": {
+                      "id": "$member"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "member-panel",
+                "block": "core.tabbed-panel",
+                "props": {
+                  "label": {
+                    "key": "panel_label"
+                  },
+                  "param": "memberTab",
+                  "tabs": [
+                    {
+                      "id": "redeem",
+                      "label": {
+                        "key": "tab_redeem"
+                      }
+                    },
+                    {
+                      "id": "history",
+                      "label": {
+                        "key": "tab_history"
+                      }
+                    },
+                    {
+                      "id": "adjust",
+                      "label": {
+                        "key": "tab_adjust"
+                      }
+                    },
+                    {
+                      "id": "profile",
+                      "label": {
+                        "key": "tab_profile"
+                      }
+                    }
+                  ]
+                },
+                "children": [
+                  {
+                    "id": "member-redeem",
+                    "block": "core.table",
+                    "props": {
+                      "label": {
+                        "key": "redeem_label"
+                      },
+                      "empty": {
+                        "key": "redeem_empty"
+                      },
+                      "idPath": "id",
+                      "currency": "VND",
+                      "columns": [
+                        {
+                          "term": {
+                            "key": "col_reward"
+                          },
+                          "path": "name"
+                        },
+                        {
+                          "term": {
+                            "key": "col_cost"
+                          },
+                          "path": "pointsCost",
+                          "format": "number",
+                          "align": "end"
+                        },
+                        {
+                          "term": {
+                            "key": "col_value"
+                          },
+                          "path": "valueVnd",
+                          "format": "money",
+                          "align": "end"
+                        }
+                      ]
+                    },
+                    "bind": {
+                      "rows": {
+                        "read": "blocks-core.sales.api.loyalty-member.rewards",
+                        "path": "rows",
+                        "variables": {
+                          "id": "$member"
+                        }
+                      },
+                      "open": {
+                        "action": "sales.loyalty-redeem-reward"
+                      }
+                    }
+                  },
+                  {
+                    "id": "member-ledger",
+                    "block": "core.table",
+                    "props": {
+                      "label": {
+                        "key": "ledger_label"
+                      },
+                      "empty": {
+                        "key": "loyalty_ledger_empty"
+                      },
+                      "idPath": "id",
+                      "currency": "VND",
+                      "columns": [
+                        {
+                          "term": {
+                            "key": "col_when"
+                          },
+                          "path": "occurredAt",
+                          "format": "dateTime"
+                        },
+                        {
+                          "term": {
+                            "key": "col_kind"
+                          },
+                          "path": "kind",
+                          "format": "badge"
+                        },
+                        {
+                          "term": {
+                            "key": "col_points"
+                          },
+                          "path": "points",
+                          "format": "number",
+                          "align": "end"
+                        },
+                        {
+                          "term": {
+                            "key": "col_amount"
+                          },
+                          "path": "amountVnd",
+                          "format": "money",
+                          "align": "end",
+                          "priority": "low"
+                        },
+                        {
+                          "term": {
+                            "key": "col_evidence"
+                          },
+                          "path": "evidence",
+                          "priority": "low"
+                        },
+                        {
+                          "term": {
+                            "key": "col_by"
+                          },
+                          "path": "by",
+                          "priority": "low"
+                        }
+                      ],
+                      "labels": {
+                        "kind": {
+                          "earn": {
+                            "key": "ledger_earn"
+                          },
+                          "redeem": {
+                            "key": "ledger_redeem"
+                          },
+                          "expire": {
+                            "key": "ledger_expire"
+                          },
+                          "adjust": {
+                            "key": "ledger_adjust"
+                          }
+                        }
+                      }
+                    },
+                    "bind": {
+                      "rows": {
+                        "read": "blocks-core.sales.api.loyalty-ledger-entry.list",
+                        "path": "rows",
+                        "variables": {
+                          "id": "$member"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "id": "member-adjust",
+                    "block": "core.form",
+                    "props": {
+                      "label": {
+                        "key": "loyalty_adjust_title"
+                      },
+                      "submitLabel": {
+                        "key": "adjust_submit"
+                      },
+                      "successNotice": {
+                        "key": "loyalty_adjust_done"
+                      },
+                      "fields": [
+                        {
+                          "name": "points",
+                          "label": {
+                            "key": "adjust_points"
+                          },
+                          "hint": {
+                            "key": "adjust_points_hint"
+                          },
+                          "kind": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "reason",
+                          "label": {
+                            "key": "adjust_reason"
+                          },
+                          "kind": "textarea",
+                          "required": true,
+                          "max": 300
+                        }
+                      ]
+                    },
+                    "bind": {
+                      "record": {
+                        "read": "blocks-core.sales.api.loyalty-member.get",
+                        "variables": {
+                          "id": "$member"
+                        }
+                      },
+                      "submit": {
+                        "action": "sales.loyalty-adjust-points"
+                      }
+                    },
+                    "when": {
+                      "permission": "sales.manage"
+                    }
+                  },
+                  {
+                    "id": "member-profile",
+                    "block": "core.form",
+                    "props": {
+                      "label": {
+                        "key": "profile_title"
+                      },
+                      "submitLabel": {
+                        "key": "profile_submit"
+                      },
+                      "successNotice": {
+                        "key": "profile_done"
+                      },
+                      "fields": [
+                        {
+                          "name": "name",
+                          "label": {
+                            "key": "profile_name"
+                          },
+                          "kind": "text",
+                          "required": true,
+                          "max": 500
+                        },
+                        {
+                          "name": "birthday",
+                          "label": {
+                            "key": "profile_birthday"
+                          },
+                          "hint": {
+                            "key": "profile_birthday_hint"
+                          },
+                          "kind": "date"
+                        },
+                        {
+                          "name": "note",
+                          "label": {
+                            "key": "profile_note"
+                          },
+                          "kind": "textarea",
+                          "max": 500
+                        }
+                      ]
+                    },
+                    "bind": {
+                      "record": {
+                        "read": "blocks-core.sales.api.loyalty-member.get",
+                        "variables": {
+                          "id": "$member"
+                        }
+                      },
+                      "submit": {
+                        "action": "sales.loyalty-update-member"
+                      }
+                    },
+                    "when": {
+                      "permission": "sales.manage"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rewards",
+      "label": {
+        "key": "tab_rewards"
+      },
+      "command": {
+        "action": "sales.loyalty-add-preset-rewards"
+      },
+      "root": {
+        "id": "rewards-root",
+        "block": "core.master-detail",
+        "props": {
+          "emptyTitle": {
+            "key": "reward_idle_title"
+          },
+          "emptyBody": {
+            "key": "reward_idle_body"
+          }
+        },
+        "children": [
+          {
+            "id": "reward-rows",
+            "block": "core.record-list",
+            "props": {
+              "label": {
+                "key": "rewards_label"
+              },
+              "empty": {
+                "key": "rewards_empty"
+              },
+              "idPath": "id",
+              "titlePath": "name",
+              "descriptionPath": "note",
+              "badgePath": "state",
+              "selectParam": "reward",
+              "labels": {
+                "state": {
+                  "active": {
+                    "key": "state_active"
+                  },
+                  "paused": {
+                    "key": "state_paused"
+                  }
+                },
+                "kind": {
+                  "voucher": {
+                    "key": "kind_voucher"
+                  },
+                  "item": {
+                    "key": "kind_item"
+                  },
+                  "percent": {
+                    "key": "kind_percent"
+                  }
+                }
+              },
+              "surface": "card"
+            },
+            "bind": {
+              "rows": {
+                "read": "blocks-core.sales.api.loyalty-reward.list",
+                "path": "rows"
+              }
+            }
+          },
+          {
+            "id": "reward-side",
+            "block": "core.stack",
+            "props": {
+              "gap": "region"
+            },
+            "children": [
+              {
+                "id": "reward-detail",
+                "block": "core.detail",
+                "props": {
+                  "label": {
+                    "key": "reward_detail"
+                  },
+                  "idle": {
+                    "key": "reward_idle_body"
+                  },
+                  "currency": "VND",
+                  "items": [
+                    {
+                      "term": {
+                        "key": "reward_name"
+                      },
+                      "path": "name"
+                    },
+                    {
+                      "term": {
+                        "key": "reward_kind"
+                      },
+                      "path": "kind",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "reward_cost"
+                      },
+                      "path": "pointsCost",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "reward_value"
+                      },
+                      "path": "valueVnd",
+                      "format": "money"
+                    },
+                    {
+                      "term": {
+                        "key": "reward_stock"
+                      },
+                      "path": "stock",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "reward_limit"
+                      },
+                      "path": "perCustomerLimit",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "reward_state"
+                      },
+                      "path": "state",
+                      "format": "badge"
+                    }
+                  ],
+                  "labels": {
+                    "state": {
+                      "active": {
+                        "key": "state_active"
+                      },
+                      "paused": {
+                        "key": "state_paused"
+                      }
+                    },
+                    "kind": {
+                      "voucher": {
+                        "key": "kind_voucher"
+                      },
+                      "item": {
+                        "key": "kind_item"
+                      },
+                      "percent": {
+                        "key": "kind_percent"
+                      }
+                    }
+                  }
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.sales.api.loyalty-reward.get",
+                    "variables": {
+                      "id": "$reward"
+                    }
+                  },
+                  "secondary": {
+                    "action": "sales.loyalty-remove-reward"
+                  }
+                }
+              },
+              {
+                "id": "reward-form",
+                "block": "core.form",
+                "props": {
+                  "label": {
+                    "key": "reward_form_title"
+                  },
+                  "submitLabel": {
+                    "key": "reward_submit"
+                  },
+                  "successNotice": {
+                    "key": "reward_done"
+                  },
+                  "currency": "VND",
+                  "fields": [
+                    {
+                      "name": "name",
+                      "label": {
+                        "key": "reward_name"
+                      },
+                      "kind": "text",
+                      "required": true,
+                      "max": 200
+                    },
+                    {
+                      "name": "kind",
+                      "label": {
+                        "key": "reward_kind"
+                      },
+                      "kind": "choice",
+                      "required": true,
+                      "options": [
+                        {
+                          "value": "voucher",
+                          "label": {
+                            "key": "kind_voucher"
+                          }
+                        },
+                        {
+                          "value": "item",
+                          "label": {
+                            "key": "kind_item"
+                          }
+                        },
+                        {
+                          "value": "percent",
+                          "label": {
+                            "key": "kind_percent"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "pointsCost",
+                      "label": {
+                        "key": "reward_cost"
+                      },
+                      "kind": "number",
+                      "required": true
+                    },
+                    {
+                      "name": "valueVnd",
+                      "label": {
+                        "key": "reward_value"
+                      },
+                      "kind": "money"
+                    },
+                    {
+                      "name": "percent",
+                      "label": {
+                        "key": "reward_percent"
+                      },
+                      "kind": "number",
+                      "max": 100
+                    },
+                    {
+                      "name": "stock",
+                      "label": {
+                        "key": "reward_stock"
+                      },
+                      "hint": {
+                        "key": "reward_stock_hint"
+                      },
+                      "kind": "number"
+                    },
+                    {
+                      "name": "perCustomerLimit",
+                      "label": {
+                        "key": "reward_limit"
+                      },
+                      "hint": {
+                        "key": "reward_limit_hint"
+                      },
+                      "kind": "number"
+                    },
+                    {
+                      "name": "minTierKey",
+                      "label": {
+                        "key": "reward_tier"
+                      },
+                      "hint": {
+                        "key": "reward_tier_hint"
+                      },
+                      "kind": "text",
+                      "max": 80
+                    },
+                    {
+                      "name": "note",
+                      "label": {
+                        "key": "reward_note"
+                      },
+                      "kind": "textarea",
+                      "max": 200
+                    },
+                    {
+                      "name": "active",
+                      "label": {
+                        "key": "reward_active"
+                      },
+                      "kind": "switch"
+                    }
+                  ]
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.sales.api.loyalty-reward.get",
+                    "variables": {
+                      "id": "$reward"
+                    }
+                  },
+                  "submit": {
+                    "action": "sales.loyalty-save-reward"
+                  }
+                },
+                "when": {
+                  "permission": "sales.manage"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "promo",
+      "label": {
+        "key": "tab_promo"
+      },
+      "root": {
+        "id": "promo-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "promo-form",
+            "block": "core.form",
+            "props": {
+              "label": {
+                "key": "promo_title"
+              },
+              "submitLabel": {
+                "key": "promo_submit"
+              },
+              "successNotice": {
+                "key": "promo_done"
+              },
+              "currency": "VND",
+              "fields": [
+                {
+                  "name": "name",
+                  "label": {
+                    "key": "promo_name"
+                  },
+                  "hint": {
+                    "key": "promo_name_hint"
+                  },
+                  "kind": "text",
+                  "max": 500
+                },
+                {
+                  "name": "brief",
+                  "label": {
+                    "key": "promo_brief"
+                  },
+                  "hint": {
+                    "key": "promo_brief_hint"
+                  },
+                  "kind": "textarea",
+                  "max": 500
+                },
+                {
+                  "name": "inactiveDays",
+                  "label": {
+                    "key": "promo_inactive"
+                  },
+                  "hint": {
+                    "key": "promo_inactive_hint"
+                  },
+                  "kind": "number"
+                },
+                {
+                  "name": "minSpendVnd",
+                  "label": {
+                    "key": "promo_spend"
+                  },
+                  "hint": {
+                    "key": "promo_spend_hint"
+                  },
+                  "kind": "money"
+                },
+                {
+                  "name": "birthdayThisMonth",
+                  "label": {
+                    "key": "promo_birthday"
+                  },
+                  "kind": "switch"
+                }
+              ]
+            },
+            "bind": {
+              "submit": {
+                "action": "sales.loyalty-draft-campaign"
+              }
+            },
+            "when": {
+              "permission": "sales.manage"
+            }
+          },
+          {
+            "id": "promo-campaigns",
+            "block": "core.table",
+            "props": {
+              "label": {
+                "key": "campaigns_label"
+              },
+              "empty": {
+                "key": "campaigns_empty"
+              },
+              "idPath": "id",
+              "columns": [
+                {
+                  "term": {
+                    "key": "col_campaign"
+                  },
+                  "path": "name"
+                },
+                {
+                  "term": {
+                    "key": "col_status"
+                  },
+                  "path": "status",
+                  "format": "badge"
+                },
+                {
+                  "term": {
+                    "key": "col_recipients"
+                  },
+                  "path": "recipients",
+                  "format": "number",
+                  "align": "end"
+                },
+                {
+                  "term": {
+                    "key": "col_sent"
+                  },
+                  "path": "sent",
+                  "format": "number",
+                  "align": "end",
+                  "priority": "low"
+                },
+                {
+                  "term": {
+                    "key": "col_failed"
+                  },
+                  "path": "failed",
+                  "format": "number",
+                  "align": "end",
+                  "priority": "low"
+                },
+                {
+                  "term": {
+                    "key": "col_created"
+                  },
+                  "path": "createdAt",
+                  "format": "dateTime",
+                  "priority": "low"
+                }
+              ],
+              "labels": {
+                "status": {
+                  "waiting": {
+                    "key": "campaign_waiting"
+                  },
+                  "draft": {
+                    "key": "campaign_draft"
+                  },
+                  "waiting_decision": {
+                    "key": "campaign_waiting_decision"
+                  },
+                  "sending": {
+                    "key": "campaign_sending"
+                  },
+                  "done": {
+                    "key": "campaign_done"
+                  },
+                  "failed": {
+                    "key": "campaign_failed"
+                  }
+                }
+              }
+            },
+            "bind": {
+              "rows": {
+                "read": "blocks-core.sales.api.loyalty-campaign.list",
+                "path": "rows"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "pending",
+      "label": {
+        "key": "tab_pending"
+      },
+      "count": {
+        "read": "blocks-core.sales.api.loyalty-decision.count",
+        "path": "count",
+        "isAttention": true
+      },
+      "root": {
+        "id": "pending-root",
+        "block": "core.decision-queue",
+        "props": {
+          "surface": "section",
+          "label": {
+            "key": "pending_label"
+          },
+          "emptyTitle": {
+            "key": "pending_empty_title"
+          },
+          "emptyBody": {
+            "key": "pending_empty_body"
+          },
+          "seeWhy": {
+            "key": "pending_see_why"
+          },
+          "moreMenu": {
+            "key": "pending_more"
+          },
+          "commands": [
+            {
+              "id": "loyalty-approve",
+              "label": {
+                "key": "command_approve"
+              }
+            },
+            {
+              "id": "loyalty-reject",
+              "label": {
+                "key": "command_reject"
+              },
+              "intent": "danger"
+            }
+          ]
+        },
+        "bind": {
+          "queue": {
+            "read": "blocks-core.sales.api.loyalty-decision.list"
+          },
+          "command": {
+            "action": "sales.loyalty-decide"
+          }
+        }
+      }
+    },
+    {
+      "id": "program",
+      "label": {
+        "key": "tab_program"
+      },
+      "root": {
+        "id": "program-root",
+        "block": "core.form",
+        "props": {
+          "label": {
+            "key": "program_title"
+          },
+          "submitLabel": {
+            "key": "program_submit"
+          },
+          "successNotice": {
+            "key": "program_done"
+          },
+          "currency": "VND",
+          "fields": [
+            {
+              "name": "name",
+              "label": {
+                "key": "program_name"
+              },
+              "kind": "text",
+              "required": true,
+              "max": 500
+            },
+            {
+              "name": "enabled",
+              "label": {
+                "key": "program_enabled"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "perThousandVnd",
+              "label": {
+                "key": "program_per_thousand"
+              },
+              "hint": {
+                "key": "program_per_thousand_hint"
+              },
+              "kind": "number",
+              "max": 1000
+            },
+            {
+              "name": "perVisit",
+              "label": {
+                "key": "program_per_visit"
+              },
+              "kind": "number",
+              "max": 100000
+            },
+            {
+              "name": "minOrderVnd",
+              "label": {
+                "key": "program_min_order"
+              },
+              "hint": {
+                "key": "program_min_order_hint"
+              },
+              "kind": "money"
+            },
+            {
+              "name": "trigger",
+              "label": {
+                "key": "program_trigger"
+              },
+              "hint": {
+                "key": "program_trigger_hint"
+              },
+              "kind": "choice",
+              "options": [
+                {
+                  "value": "payment",
+                  "label": {
+                    "key": "trigger_payment"
+                  }
+                },
+                {
+                  "value": "order",
+                  "label": {
+                    "key": "trigger_order"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "expiryMonths",
+              "label": {
+                "key": "program_expiry_months"
+              },
+              "hint": {
+                "key": "program_expiry_months_hint"
+              },
+              "kind": "number",
+              "max": 120
+            },
+            {
+              "name": "warnDays",
+              "label": {
+                "key": "program_warn_days"
+              },
+              "hint": {
+                "key": "program_warn_days_hint"
+              },
+              "kind": "number",
+              "max": 180
+            },
+            {
+              "name": "birthdayOn",
+              "label": {
+                "key": "program_birthday_on"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "birthdayPoints",
+              "label": {
+                "key": "program_birthday_points"
+              },
+              "kind": "number",
+              "max": 1000000
+            },
+            {
+              "name": "birthdayReward",
+              "label": {
+                "key": "program_birthday_reward"
+              },
+              "kind": "text",
+              "max": 40
+            },
+            {
+              "name": "birthdayNote",
+              "label": {
+                "key": "program_birthday_note"
+              },
+              "kind": "textarea",
+              "max": 200
+            },
+            {
+              "name": "maxPerMonth",
+              "label": {
+                "key": "program_max_per_month"
+              },
+              "hint": {
+                "key": "program_max_per_month_hint"
+              },
+              "kind": "number",
+              "max": 60
+            },
+            {
+              "name": "hourFrom",
+              "label": {
+                "key": "program_hour_from"
+              },
+              "kind": "text",
+              "max": 5
+            },
+            {
+              "name": "hourTo",
+              "label": {
+                "key": "program_hour_to"
+              },
+              "kind": "text",
+              "max": 5
+            },
+            {
+              "name": "batch",
+              "label": {
+                "key": "program_batch"
+              },
+              "hint": {
+                "key": "program_batch_hint"
+              },
+              "kind": "number",
+              "max": 200
+            }
+          ]
+        },
+        "bind": {
+          "record": {
+            "read": "blocks-core.sales.api.loyalty-program.get"
+          },
+          "submit": {
+            "action": "sales.loyalty-save-program"
           }
         },
         "when": {
@@ -591,7 +2757,9 @@
         },
         "showWhen": {
           "param": "selected",
-          "is": [""]
+          "is": [
+            ""
+          ]
         },
         "children": [
           {
@@ -602,7 +2770,9 @@
             },
             "showWhen": {
               "param": "order",
-              "is": [""]
+              "is": [
+                ""
+              ]
             },
             "children": [
               {
@@ -645,7 +2815,7 @@
                 },
                 "bind": {
                   "queue": {
-                    "read": "sales.decisions"
+                    "read": "blocks-core.sales.api.order.decisions"
                   },
                   "command": {
                     "action": "sales.decide"
@@ -667,7 +2837,9 @@
         },
         "showWhen": {
           "param": "selected",
-          "is": ["*"]
+          "is": [
+            "*"
+          ]
         },
         "children": [
           {
@@ -814,7 +2986,7 @@
             },
             "bind": {
               "record": {
-                "read": "sales.lead",
+                "read": "blocks-core.sales.api.lead.get",
                 "variables": {
                   "id": "$selected"
                 }
@@ -895,7 +3067,7 @@
             },
             "bind": {
               "record": {
-                "read": "sales.lead",
+                "read": "blocks-core.sales.api.lead.get",
                 "variables": {
                   "id": "$selected"
                 }
@@ -918,7 +3090,9 @@
         },
         "showWhen": {
           "param": "order",
-          "is": ["*"]
+          "is": [
+            "*"
+          ]
         },
         "children": [
           {
@@ -1073,7 +3247,7 @@
             },
             "bind": {
               "record": {
-                "read": "sales.order",
+                "read": "blocks-core.sales.api.order.get",
                 "variables": {
                   "id": "$order"
                 }
@@ -1087,11 +3261,140 @@
             }
           }
         ]
+      },
+      {
+        "id": "rail",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "showWhen": {
+          "param": "ledgerPane",
+          "is": [
+            "list",
+            "queue"
+          ]
+        },
+        "children": [
+          {
+            "id": "rail-cards",
+            "block": "core.dashboard-cards",
+            "props": {
+              "layout": "stack",
+              "connectionsLabel": {
+                "key": "rail_connections"
+              },
+              "knowledgeLabel": {
+                "key": "rail_knowledge"
+              },
+              "surface": "section"
+            },
+            "bind": {
+              "connections": {
+                "read": "platform.installation-connections",
+                "variables": {
+                  "installation": "$installationId",
+                  "module": "sales"
+                }
+              },
+              "knowledge": {
+                "read": "platform.installation-knowledge",
+                "variables": {
+                  "installation": "$installationId",
+                  "module": "sales"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "entry",
+        "block": "sales.entry-detail",
+        "props": {
+          "label": {
+            "key": "entry"
+          },
+          "idle": {
+            "key": "entry_idle"
+          },
+          "kind": {
+            "key": "entry_kind"
+          },
+          "closeParam": "entry",
+          "paneParam": "ledgerPane"
+        },
+        "bind": {
+          "record": {
+            "read": "blocks-core.sales.api.entry.get",
+            "variables": {
+              "id": "$entry"
+            }
+          },
+          "adjust": {
+            "action": "sales.adjust"
+          },
+          "repost": {
+            "action": "sales.repost-ledger"
+          }
+        },
+        "showWhen": {
+          "param": "ledgerPane",
+          "is": [
+            "detail"
+          ]
+        }
+      },
+      {
+        "id": "aside-pending",
+        "block": "core.decision-queue",
+        "props": {
+          "surface": "section",
+          "label": {
+            "key": "pending_label"
+          },
+          "emptyTitle": {
+            "key": "pending_empty_title"
+          },
+          "emptyBody": {
+            "key": "pending_empty_body"
+          },
+          "seeWhy": {
+            "key": "pending_see_why"
+          },
+          "moreMenu": {
+            "key": "pending_more"
+          },
+          "commands": [
+            {
+              "id": "loyalty-approve",
+              "label": {
+                "key": "command_approve"
+              }
+            },
+            {
+              "id": "loyalty-reject",
+              "label": {
+                "key": "command_reject"
+              },
+              "intent": "danger"
+            }
+          ],
+          "isHeadless": true
+        },
+        "bind": {
+          "queue": {
+            "read": "blocks-core.sales.api.loyalty-decision.list"
+          },
+          "command": {
+            "action": "sales.loyalty-decide"
+          }
+        }
       }
     ]
   },
   "asideSummary": {
-    "read": "sales.decisions",
+    "read": "blocks-core.sales.api.order.decisions",
     "path": "count",
     "previewPath": "rows.0.title",
     "label": {

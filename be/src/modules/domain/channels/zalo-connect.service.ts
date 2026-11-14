@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import type { StartZaloInput, ZaloWizardConnection } from "@modules/domain/channel-connections"
 import { ConnectionSecretsService, randomSecret } from "@modules/domain/connection-secrets"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { InjectZalo, isZaloRefusal } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type ConnectionRecord,
+} from "@modules/domain/connections"
+import { InjectZalo, isZaloRefusal, type ZaloClient } from "@modules/integrations/zalo"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { OptionalZnsRenewal, ZaloAuthorization, ZaloReturn, ZnsRenewalSettings } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError } from "./errors/channels.error"
@@ -132,7 +135,7 @@ export class ZaloConnectService {
 
     /**
      * Reads the OA's display name from Zalo once (one `getoa` call with the connection's token) and keeps it among the public facts,
-     * so the account reads "Tiệm hoa NIVO" instead of the connection name with the OA id. Best effort, and it never rejects: an answer
+     * so the account reads "Tiem hoa NIVO" instead of the connection name with the OA id. Best effort, and it never rejects: an answer
      * with no name (a missing or renamed field) stores nothing and logs `ZaloOaNameUnread` with reason `no_name`; an error answer, a
      * time-out or a failed store logs the same event with its cause; never the token. The next view of an authorized connection
      * without a name tries again.

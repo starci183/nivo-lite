@@ -1,6 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    connectionAttentionOf,
+    type ConnectionActor,
+    type ConnectionRecord,
+} from "@modules/domain/connections"
 import type { TelegramPageView } from "./telegram-page.contracts"
 
 const MANAGER = ["owner", "manager"] as const
@@ -24,6 +30,7 @@ export class TelegramPageService {
             name: connection.name,
             status: connection.status,
             healthy: connection.status === "connected" && connection.lastError === null,
+            attention: connectionAttentionOf(connection),
             botUsername: connection.meta.bot_username ?? "",
             webhookUrl: this.connections.webhookUrl(PROVIDER, connection.id),
             lastError: connection.lastError,

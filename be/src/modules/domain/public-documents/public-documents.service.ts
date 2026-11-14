@@ -1,31 +1,32 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { KnowledgeSourcesReadService, PublishedSourcesService } from "@modules/domain/knowledge-sources"
-import type { SourceState } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+  KnowledgeSourcesReadService,
+  PublishedSourcesService,
+  type SourceState,
+} from "@modules/domain/knowledge-sources"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectKnowledgeQueue } from "@modules/queues/knowledge"
-import type { KnowledgeQueue } from "@modules/queues/knowledge"
+import { InjectKnowledgeQueue, type KnowledgeQueue } from "@modules/queues/knowledge"
 import { PublicDocumentsError, PublicDocumentsErrorCode } from "./errors/public-documents.error"
 import { PublicDocumentEntity, PublicDocumentSourceEntity, PublicDocumentApprovalEntity } from "./persistence/entities"
 import { toPublicDocumentView } from "./public-document.mapper"
-import { MAX_BODY_CHARS, MAX_DRAFT_SOURCES, MAX_TITLE_CHARS } from "./public-documents.contracts"
-import type {
-    ApproveRequest,
-    PublicDocumentDraftRequest,
-    PublicDocumentView,
-    SourceRecordRef,
-    UpdateRequest,
-    WriteRequest,
+import {
+  MAX_BODY_CHARS,
+  MAX_DRAFT_SOURCES,
+  MAX_TITLE_CHARS,
+  type ApproveRequest,
+  type PublicDocumentDraftRequest,
+  type PublicDocumentView,
+  type SourceRecordRef,
+  type UpdateRequest,
+  type WriteRequest,
 } from "./public-documents.contracts"
 import { changedSourceIds, changedReviewSourceIds, reviewedSourcesOf } from "./staleness.policy"
 
-/** An internal source whose completed content hash was checked for a draft request. */
+/** A public-area source whose completed content hash was checked for a draft request. */
 interface ReadySource extends SourceState {
     readonly contentHash: string
 }
@@ -38,6 +39,12 @@ const LIST_MAX = 200
 
 /** The longest note an owner may give NIVO for a draft. */
 const INSTRUCTIONS_CHARS = 1_000
+
+/** The owner's drafting instructions, trimmed and cut to the bound; null when none or only blanks. */
+const instructionsOf = (instructions: string | undefined): string | null => {
+    const trimmed = instructions?.trim().slice(0, INSTRUCTIONS_CHARS)
+    return trimmed === undefined || trimmed === "" ? null : trimmed
+}
 
 /** The statuses in which the owner may change the text. */
 const EDITABLE: ReadonlySet<PublicDocumentEntity["status"]> = new Set<PublicDocumentEntity["status"]>([
@@ -88,8 +95,8 @@ const bodyOf = (body: string): string => {
 @Injectable()
 /**
  * What customers may read, written apart from what the team knows. An owner or a manager writes a public document or asks NIVO to
- * draft one from internal documents; NIVO shows what it left out; a person approves; only then does a public source exist for it,
- * with the approver, the time and the internal sources on record. No internal document is turned into a public one.
+ * draft one from documents of the public area; a person approves; only then does a public source exist for it, with the approver,
+ * the time and the sources on record. Drafting never reads the internal area.
  */
 export class PublicDocumentsService {
     constructor(
@@ -120,6 +127,18 @@ export class PublicDocumentsService {
         })
     }
 
+    /**
+     * Who approved the text a public document serves now (its source carries the document's id), or null when the id is no published
+     * public document: that person answers for what the document states. The caller has proven the workspace.
+     */
+    async approverOf(workspaceId: string, documentId: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(PublicDocumentEntity, {
+            select: { id: true, status: true, approvedBy: true },
+            where: { id: documentId, workspaceId },
+        })
+        return row?.status === "published" ? row.approvedBy : null
+    }
+
     /** Writes a public document by hand: a draft the owner can approve when it is ready. */
     async write(userId: string, workspaceId: string, request: WriteRequest): Promise<PublicDocumentView> {
         await this.members.require(userId, workspaceId, MANAGERS)
@@ -135,8 +154,9 @@ export class PublicDocumentsService {
     }
 
     /**
-     * Asks NIVO to draft a public document from internal documents. The row exists at once as `drafting` and a job writes it: the job
-     * reads each internal document through NIVO MCP while no customer is present. Every source must be internal and fully read.
+     * Asks NIVO to draft a public document from documents of the PUBLIC area (the area is the audience). The row exists at once as
+     * `drafting` and a job writes it. Every source must be of the public area and fully read; an internal one is refused
+     * (`SourceInternal`): the founder moves it to the public area first.
      */
     async requestDraft(
         userId: string,
@@ -152,7 +172,7 @@ export class PublicDocumentsService {
                 title,
                 kind: "drafted",
                 status: "drafting",
-                instructions: request.instructions?.trim().slice(0, INSTRUCTIONS_CHARS) || null,
+                instructions: instructionsOf(request.instructions),
                 createdBy: userId,
             })
             const documentId = this.idOf(inserted.identifiers)
@@ -166,13 +186,13 @@ export class PublicDocumentsService {
                     contentHash: state.contentHash,
                 })),
             )
-            await this.queue.enqueuePublicDraft({ documentId, workspaceId, draftRevision: 0 }, tx)
+            await this.queue.enqueuePublicDraft({ documentId, workspaceId, draftRevision: 0, requestedBy: userId }, tx)
             return documentId
         })
         return this.viewOf(workspaceId, id)
     }
 
-    /** Asks NIVO to draft the document again from the internal documents it was drafted from, as they are now. */
+    /** Asks NIVO to draft the document again from the documents it was drafted from, as they are now (the job checks their area again). */
     async redraft(userId: string, workspaceId: string, id: string): Promise<PublicDocumentView> {
         await this.members.require(userId, workspaceId, MANAGERS)
         const row = await this.rowOf(workspaceId, id)
@@ -189,7 +209,7 @@ export class PublicDocumentsService {
             )
             if ((changed.affected ?? 0) !== 1)
                 throw new PublicDocumentsError({ code: PublicDocumentsErrorCode.NotEditable })
-            await this.queue.enqueuePublicDraft({ documentId: id, workspaceId, draftRevision }, tx)
+            await this.queue.enqueuePublicDraft({ documentId: id, workspaceId, draftRevision, requestedBy: userId }, tx)
         })
         return this.viewOf(workspaceId, id)
     }
@@ -341,7 +361,7 @@ export class PublicDocumentsService {
         return row
     }
 
-    /** The internal documents of a draft request, each internal and fully read; any other is refused. */
+    /** The documents of a draft request, each of the PUBLIC area and fully read; any other is refused. */
     private async readySources(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyArray<ReadySource>> {
         const unique = [...new Set(ids)]
         if (unique.length === 0) throw new PublicDocumentsError({ code: PublicDocumentsErrorCode.SourcesRequired })
@@ -352,9 +372,12 @@ export class PublicDocumentsService {
             })
         }
         const states = await this.sources.statesOf(workspaceId, unique)
+        // The area is the audience: a source whose area is not exactly the public one (internal, or unreadable) is refused as internal.
+        if (states.some((state) => state.visibility !== "public")) {
+            throw new PublicDocumentsError({ code: PublicDocumentsErrorCode.SourceInternal })
+        }
         const ready = states.filter(
-            (state): state is ReadySource =>
-                state.visibility === "internal" && state.status === "ready" && state.contentHash !== null,
+            (state): state is ReadySource => state.status === "ready" && state.contentHash !== null,
         )
         if (ready.length !== unique.length) {
             throw new PublicDocumentsError({ code: PublicDocumentsErrorCode.SourceNotReady })

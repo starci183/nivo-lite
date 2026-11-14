@@ -149,7 +149,7 @@ describe("EntityEngineService within", () => {
         const { engine, em } = await build(mockEntityManager({ query: [SCOPE_SQL, []] }))
         em.query.mockResolvedValue([])
 
-        await expect(engine.within(em, WS, () => Promise.reject(new Error("boom")))).rejects.toThrow("boom")
+        await expect(engine.within(em, WS, jest.fn().mockRejectedValue(new Error("boom")))).rejects.toThrow("boom")
 
         expect(em.query.mock.calls.map((call) => call[0])).toEqual([SCOPE_SQL, LEAVE_SQL])
     })
@@ -293,5 +293,55 @@ describe("EntityEngineService aggregate", () => {
         await expect(engine.aggregate(txOf(em), { ...COUNT, groupBy: ["nothing"] })).rejects.toMatchObject({
             code: EntityEngineErrorCode.QueryInvalid,
         })
+    })
+})
+
+describe("EntityEngineService footprintOf: what dies with an agent", () => {
+    const AGENT = "22222222-2222-4222-8222-222222222222"
+    const INVOICE: EntityDefinition = {
+        entry: "entity",
+        name: "sales.invoice",
+        dataKind: "sales-invoice",
+        fields: { pdf: { kind: "file", nullable: true, accept: ["application/pdf"], maxBytes: 1000 } },
+    }
+    const pdf = (key: string) => ({ key, mime: "application/pdf", size: 10, name: "a.pdf" })
+
+    it("counts the agent's records per type in the agent's own scope, and the files they hold; a type with none is left out", async () => {
+        const em = mockEntityManager({ query: [SCOPE_SQL, []] })
+        const { engine } = await build(em, { entities: [LEAD, TASK, INVOICE] })
+        const [lead, task, invoice] = queueQueryBuilders(em, [
+            { getRawMany: [{ m0: "4" }] },
+            { getRawMany: [{ m0: "0" }] },
+            { getRawMany: [{ m0: "2" }] },
+        ])
+        em.find.mockResolvedValue([
+            Object.assign(new RecordEntity(), { entity: INVOICE.name, id: "i-1", workspaceId: WS, data: { pdf: pdf("k-1") } }),
+            Object.assign(new RecordEntity(), { entity: INVOICE.name, id: "i-2", workspaceId: WS, data: { pdf: pdf("k-2") } }),
+        ])
+
+        await expect(engine.footprintOf(WS, AGENT)).resolves.toEqual({
+            types: [
+                { type: "sales.lead", count: 4 },
+                { type: "sales.invoice", count: 2 },
+            ],
+            records: 6,
+            files: 2,
+        })
+        for (const builderOfType of [lead, task, invoice]) {
+            expect(builderOfType?.callsOf("andWhere")[0]).toEqual(["r.agentId = :agent", { agent: AGENT }])
+        }
+        expect(em.find).toHaveBeenCalledTimes(1)
+        expect(em.find).toHaveBeenCalledWith(RecordEntity, {
+            select: { id: true, data: true },
+            where: { entity: INVOICE.name, workspaceId: WS, agentId: AGENT },
+        })
+    })
+
+    it("answers nothing for an agent that owns no record", async () => {
+        const em = mockEntityManager({ query: [SCOPE_SQL, []] })
+        const { engine } = await build(em)
+        queueQueryBuilders(em, [{ getRawMany: [{ m0: "0" }] }, { getRawMany: [{ m0: "0" }] }])
+
+        await expect(engine.footprintOf(WS, AGENT)).resolves.toEqual({ types: [], records: 0, files: 0 })
     })
 })

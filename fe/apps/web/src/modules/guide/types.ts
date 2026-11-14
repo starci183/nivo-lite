@@ -48,8 +48,6 @@ export type GuideKind =
     | "guide"
     | "agent"
     | "connection"
-    | "lead"
-    | "order"
     | "document"
     | "fact"
 

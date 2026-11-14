@@ -94,6 +94,12 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: The BullMQ broker of the job queue (owner ruling 2026-11-05, the queue is BullMQ on Redis in both editions). Internal only on the private agents network as nivo-redis:6379, no published port. AOF with appendfsync everysec on the persisted named volume nivo-engine_redis-data; the PostgreSQL outbox relay republishes any committed row the broker loses, so no admitted job is lost on a Redis restart.
     required: true
+  nivo-qdrant:
+    role: stateful
+    image: qdrant/qdrant:v1.19.2@sha256:b7b0444c4c351c970b98e90a6f89c2ee4287c65b44e52b4cb503fa5b2aa927ad
+    compose: infra/swarm/stack.yaml
+    purpose: The vector index (owner ruling 2026-11-11, vectors live in Qdrant mapped one to one to Postgres rows; Postgres stays the system of record). Internal only on the private agents network as nivo-qdrant:6333, no published port; every call carries the sealed QDRANT_API_KEY. Collections nivo_passages and nivo_truths on the persisted named volume nivo-engine_qdrant-data. A projection, not a record, so it has no backup; a lost volume is rebuilt from Postgres by the reconcile job (tick vector-reconcile).
+    required: true
   db:
     role: stateful
     image: ghcr.io/starci183/nivo-lite-db:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
@@ -117,9 +123,6 @@ jobs:
   agent-work-sweep:
     schedule: "*/1 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick agent-work-sweep
-  accounting-desk-morning:
-    schedule: "30 23 * * *"
-    command: node be/dist/apps/cli/src/main.js jobs tick accounting-desk-morning
   agent-graph-watch:
     schedule: "*/15 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick agent-graph-watch
@@ -132,9 +135,6 @@ jobs:
   connection-health-tick:
     schedule: "*/15 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick connection-health-tick
-  content-tick:
-    schedule: "*/15 * * * *"
-    command: node be/dist/apps/cli/src/main.js jobs tick content-tick
   data-sync-tick:
     schedule: "*/1 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick data-sync-tick
@@ -144,15 +144,9 @@ jobs:
   decisions-expire-approvals:
     schedule: "*/1 * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick decisions-expire-approvals
-  marketing-tick:
-    schedule: "*/15 * * * *"
-    command: node be/dist/apps/cli/src/main.js jobs tick marketing-tick
   realtime-retention-tick:
     schedule: "* * * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick realtime-retention-tick
-  shifts-tick:
-    schedule: "*/1 * * * *"
-    command: node be/dist/apps/cli/src/main.js jobs tick shifts-tick
   zalo-refresh-tick:
     schedule: "0 */6 * * *"
     command: node be/dist/apps/cli/src/main.js jobs tick zalo-refresh-tick
@@ -167,6 +161,8 @@ environments:
         port: 54332
       nivo-redis:
         port: 56379
+      nivo-qdrant:
+        port: 56333
       nivo-minio:
         port: 59000
       nivo-api:
@@ -187,15 +183,15 @@ environments:
         where: "secrets/db"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
-      - name: "dev-db-owner-password"
+      - name: "db-owner-password"
         member: "db"
-        key: "DEV_DB_OWNER_PASSWORD"
+        key: "DB_OWNER_PASSWORD"
         where: "secrets/db"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
-      - name: "dev-db-app-password"
+      - name: "db-app-password"
         member: "db"
-        key: "DEV_DB_APP_PASSWORD"
+        key: "DB_APP_PASSWORD"
         where: "secrets/db"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
@@ -469,12 +465,37 @@ environments:
         where: "secrets/ai"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "qdrant-api-key"
+        member: "qdrant"
+        key: "QDRANT_API_KEY"
+        where: "secrets/qdrant"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "workspace-telegram-webhook-secret"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_TELEGRAM_WEBHOOK_SECRET"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "workspace-crm-service-key"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_CRM_SERVICE_KEY"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "nivo-web-sepay-api-key"
+        member: "matrix-test"
+        key: "NIVO_WEB_SEPAY_API_KEY"
+        where: "secrets/matrix-test"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
     # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
     # Redis and MinIO in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
     local:
       ports:
         db: 54332
         redis: 56379
+        qdrant: 56333
         minio: 59000
         api: 18787
         gateway: 18788
@@ -485,6 +506,7 @@ environments:
       services:
         - {name: db, wait: healthy}
         - {name: nivo-redis, wait: healthy}
+        - {name: nivo-qdrant, wait: healthy}
         - {name: nivo-minio, wait: tcp, port: minio}
       dirs: [ai-router, mail-outbox]
       database:
@@ -492,16 +514,17 @@ environments:
         port: db
         urlEnv: PRIMARY_DB_URL
         appRole: app_be
-        password: {member: db, key: DEV_DB_OWNER_PASSWORD}
+        password: {member: db, key: DB_OWNER_PASSWORD}
         adminPassword: {member: db, key: POSTGRES_PASSWORD}
-        appPassword: {member: db, key: DEV_DB_APP_PASSWORD}
+        appPassword: {member: db, key: DB_APP_PASSWORD}
       grants:
         - {name: db, keys: [POSTGRES_PASSWORD]}
         - {name: minio, keys: [STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY]}
+        - {name: qdrant, keys: [QDRANT_API_KEY]}
       custody:
         - {member: db, key: POSTGRES_PASSWORD, kind: password}
-        - {member: db, key: DEV_DB_OWNER_PASSWORD, kind: password}
-        - {member: db, key: DEV_DB_APP_PASSWORD, kind: password}
+        - {member: db, key: DB_OWNER_PASSWORD, kind: password}
+        - {member: db, key: DB_APP_PASSWORD, kind: password}
         - {member: storage, key: STORAGE_ACCESS_KEY, kind: hex, bytes: 12}
         - {member: storage, key: STORAGE_SECRET_KEY, kind: hex, bytes: 24}
         - {member: platform, key: CHANNEL_TOKEN_KEY, kind: base64, bytes: 32}
@@ -529,8 +552,8 @@ environments:
             NEXT_PUBLIC_ADMIN_URL: "https://nivo-local-admin.starci.org"
             NEXT_PUBLIC_LOCAL_ADMIN_URL: "http://localhost:${port.admin}"
       seed:
-        # The module/action catalogue, as the production deploy runs it (verify exec "catalogue synced"): without it public.authority_actions
-        # lacks the actions the default rules grant, and installing an agent fails on authority_rules_action_fk. It upserts, so a rerun is safe.
+        # The module catalogue, as the production deploy runs it (verify exec "catalogue synced"): without it public.modules lacks the rows
+        # the installations name. It upserts, so a rerun is safe.
         - name: catalogue
           argv: [node, dist/apps/cli/src/main.js, seed-modules, ensure]
           cwd: be
@@ -574,7 +597,7 @@ environments:
           argv: [node, dist/apps/api/src/main.js]
           cwd: be
           port: api
-          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, NIVO_PLATFORM_ADMINS, STARCI_AI_KEY, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM, TELEGRAM_API_ID, TELEGRAM_API_HASH, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET]
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, NIVO_PLATFORM_ADMINS, STARCI_AI_KEY, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM, TELEGRAM_API_ID, TELEGRAM_API_HASH, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, QDRANT_API_KEY]
           env:
             PORT: "${port.api}"
             PRIMARY_DB_SCHEMA: public
@@ -590,9 +613,11 @@ environments:
             HTTP_SECURITY_RATE_STRICT_LIMIT: "300"
             # SITE_URL is the public tunnel origin, so the private-target guards of a workspace SMTP account and a data source no longer see a development site.
             DATA_ALLOW_PRIVATE_HOSTS: "true"
-            # The burst window of a conversation (agent-work): quiet for 6s before the agent answers, never more than 20s of waiting.
-            AGENT_BURST_WINDOW: "6s"
-            AGENT_BURST_MAX_WAIT: "20s"
+            # How many agent runs execute at once (the drains this api runs; a run parked at a wait or a stop holds none), default 100.
+            # AGENT_RUNS_WORKSPACE_CONCURRENCY (unset = the same 100) is how many of them ONE workspace may hold: a self-hosted install
+            # has one workspace and reaches all of them; only a shared multi-tenant deployment sets it lower (agent-runs-limit.service.ts).
+            AGENT_RUNS_CONCURRENCY: "100"
+            AGENT_RUNS_WORKSPACE_CONCURRENCY: "100"
             # The running build's name (the jobs and the entity engine read it).
             APP_BUILD_ID: dev
             SMTP_ALLOW_PRIVATE_HOSTS: "true"
@@ -611,27 +636,39 @@ environments:
             QUEUE_REDIS_HOST: 127.0.0.1
             QUEUE_REDIS_PORT: "${port.redis}"
             QUEUE_REDIS_PREFIX: nivo
+            # Jobs of one workspace that may run at once ON EACH QUEUE (default 2; per queue from migration 20261114000400, before it
+            # across all queues): dev runs 6 (coordinator, build EIGHT). The agent-turn drains add AGENT_RUNS_WORKSPACE_CONCURRENCY to it.
+            QUEUE_WORKSPACE_CONCURRENCY: "6"
             REALTIME_HUB: redis
             REALTIME_REDIS_URL: "redis://127.0.0.1:${port.redis}"
             REALTIME_REDIS_PREFIX: nivo-realtime
             AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
             AI_ROUTER_KEYS_PATH: "${data}/ai-router/keys.db"
+            # The vector index (Qdrant). This address is the one switch: with it vectors live in Qdrant, without it in Postgres (pgvector).
+            QDRANT_URL: "http://127.0.0.1:${port.qdrant}"
             WORKSPACE_SIGNUP_ENABLED: "true"
           health: {url: "http://localhost:${port.api}/healthz"}
         - name: mcp
           argv: [node, dist/apps/mcp/src/main.js]
           cwd: be
           port: mcp
-          files: [CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, STARCI_AI_KEY]
+          files: [CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, STARCI_AI_KEY, QDRANT_API_KEY, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY]
           env:
             PORT: "${port.mcp}"
+            # TEN (RESTART-R, rehearsal 2026-11-13): the mcp env reader requires the object store and the site origin; drop with H1 if the narrowed mcp no longer reads them.
+            SITE_URL: "https://nivo-local-app.starci.org"
+            STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
+            STORAGE_BUCKET_PREFIX: nivo-dev
             PRIMARY_DB_SCHEMA: public
             HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},https://nivo-local-app.starci.org"
             QUEUE_ENABLED: "true"
             QUEUE_REDIS_HOST: 127.0.0.1
             QUEUE_REDIS_PORT: "${port.redis}"
             QUEUE_REDIS_PREFIX: nivo
+            QUEUE_WORKSPACE_CONCURRENCY: "6"
             AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
+            # The same vector index as the api: a truth this process puts in force hands its vector over, and the tools search it.
+            QDRANT_URL: "http://127.0.0.1:${port.qdrant}"
           health: {url: "http://localhost:${port.mcp}/healthz"}
         - name: web
           # The build of the setup step build-web, served by next start in the app folder (turbo strips undeclared env such as PORT from
@@ -712,6 +749,9 @@ environments:
       nivo-redis:
         replicas: 1
         port: 6379
+      nivo-qdrant:
+        replicas: 1
+        port: 6333
       db:
         replicas: 1
         port: 5432
@@ -827,6 +867,12 @@ environments:
         version: 1
         where: secrets/redis
         recipientPolicy: SOPS/age, one member per provider (redis.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys QUEUE_REDIS_PASSWORD.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: qdrant
+        runtimeName: nivo-custody-qdrant-v1
+        version: 1
+        where: secrets/qdrant
+        recipientPolicy: SOPS/age, one member per provider (qdrant.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys QDRANT_API_KEY.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: auth
         runtimeName: nivo-custody-auth-v1
@@ -1023,7 +1069,7 @@ environments:
           app: landing
           buildArgs:
             values: {NEXT_PUBLIC_SITE_URL: "https://nivo.vn", NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"}
-      volumes: [nivo-engine_video-cache, nivo-engine_n8n-data, nivo-engine_redis-data, nivo-engine_ai-router-data, nivo-engine_postgres-data, nivo-engine_postgres-backups, nivo-edge_acme]
+      volumes: [nivo-engine_video-cache, nivo-engine_n8n-data, nivo-engine_redis-data, nivo-engine_qdrant-data, nivo-engine_ai-router-data, nivo-engine_postgres-data, nivo-engine_postgres-backups, nivo-edge_acme]
       secrets:
         grants:
           - service: nivo-api
@@ -1035,6 +1081,7 @@ environments:
               - {member: sepay}
               - {member: postgres}
               - {member: redis}
+              - {member: qdrant}
               - {member: auth}
               - {member: google}
               - {member: storage}
@@ -1045,12 +1092,17 @@ environments:
           - service: nivo-redis
             from:
               - {member: redis, keys: [QUEUE_REDIS_PASSWORD], required: true}
+          # Qdrant starts with its API key read from /run/secrets/QDRANT_API_KEY, so a boot without it fails instead of serving an open index.
+          - service: nivo-qdrant
+            from:
+              - {member: qdrant, keys: [QDRANT_API_KEY], required: true}
           # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts): the database connection, CHANNEL_TOKEN_KEY and ENTITY_ENGINE_CURSOR_KEY.
           - service: nivo-mcp
             filePointers: true
             from:
               - {member: postgres, keys: [PRIMARY_DB_URL], required: true}
               - {member: nivo, keys: [CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY], required: true}
+              - {member: qdrant, keys: [QDRANT_API_KEY], required: true}
           # APP_BE_DB_PASSWORD reaches db too: its init script gives the app_be login role that password when the cluster is first created.
           - service: db
             filePointers: true
@@ -1075,6 +1127,9 @@ environments:
             QUEUE_REDIS_PREFIX: nivo
             REALTIME_HUB: redis
             REALTIME_REDIS_PREFIX: nivo-realtime
+            # The vector index (Qdrant) on the private agents network; QDRANT_API_KEY comes from the sealed qdrant member. This address is
+            # the one switch: with it vectors live in Qdrant, without it in Postgres (pgvector).
+            QDRANT_URL: "http://nivo-qdrant:6333"
             # the in-process AI gateway (declared port above); ANTHROPIC_API_KEY (chat), OPENAI_API_KEY (embeddings) and STARCI_AI_KEY come
             # from the sealed ai member; OPENROUTER_API_KEY stays sealed there but the pool no longer reads it (owner 2026-11-11)
             AI_ROUTER_PORT: "8788"
@@ -1092,6 +1147,7 @@ environments:
             PRIMARY_DB_SCHEMA: public
             # The OriginGuard and CORS allowlist of the gateway; it has no browser caller, so only the console origin is listed.
             HTTP_SECURITY_ALLOWED_ORIGINS: "https://app.nivo.vn"
+            QDRANT_URL: "http://nivo-qdrant:6333"
       configs:
         - {name: postgres-backup, file: infra/swarm/postgres/backup.sh, env: NIVO_CFG_POSTGRES_BACKUP}
       verify:
@@ -1108,17 +1164,13 @@ environments:
             service: nivo-api
             command: [node, be/dist/apps/cli/src/main.js, jobs, watchdog]
             stdout: '^\d+ \d+\r?\n?$'
-          # The stack has no post-deploy task hook, so the deploy syncs the module/action catalogue here: `ensure` upserts it, then fails the
-          # deploy when a default rule names an action public.authority_actions lacks (that broke workspace creation on 2026-10-24).
-          - name: catalogue synced and every default rule resolves
+          # The stack has no post-deploy task hook, so the deploy syncs the module catalogue here: `ensure` upserts it and prints the count.
+          - name: catalogue synced
             service: nivo-api
             command: [node, be/dist/apps/cli/src/main.js, seed-modules, ensure]
-            stdout: '^catalogue ok \d+ \d+\r?\n?$'
+            stdout: '^catalogue ok \d+\r?\n?$'
       jobs: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, jobs]}
       tasks:
-        # The music tracks live in the media bucket (already uploaded); their source files are outside the repository and the image. To seed again,
-        # place the files in /media-seed of the api task (the stack does not mount it) before running this task.
-        seed-media: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-media, upload, --dir, /media-seed]}
         seed-modules: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-modules, run]}
         ensure-workspace: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-workspace, ensure]}
         verify-workspace: {service: nivo-api, command: [node, be/dist/apps/cli/src/main.js, seed-workspace, verify]}

@@ -44,7 +44,7 @@ interface TermProps extends RowProps {
 
 /** What a closing "else" may do: ask or stop, never run alone. */
 const thenOptionsOf = (props: RowProps) =>
-    props.view.thenOptions.filter((option) => !props.row.isElse || option.value !== "auto")
+    props.view.modeOptions.filter((option) => !props.row.isElse || option.value !== "auto")
 
 /** One comparison of a row: the fact, how it is compared, the value, and the command that takes it away. */
 const TermRow = (props: TermProps) => {
@@ -116,14 +116,14 @@ const RowCard = (props: RowProps) => {
                     </Cluster>
                 ) : null}
                 <ChoiceChips
-                    label={view.labels.then}
-                    empty={view.labels.then}
+                    label={view.labels.mode}
+                    empty={view.labels.mode}
                     options={thenOptionsOf(props)}
-                    value={row.then}
+                    value={row.mode}
                     isLoading={props.isLoading}
-                    onValueChange={(value) => props.onChange({ kind: "setRow", row: row.index, field: "then", value })}
+                    onValueChange={(value) => props.onChange({ kind: "setRow", row: row.index, field: "mode", value })}
                 />
-                {row.then === "ask" ? (
+                {row.mode === "ask" ? (
                     <AgentGraphAskFields
                         row={row}
                         labels={view.labels}
@@ -155,9 +155,9 @@ const RowCard = (props: RowProps) => {
 export const AgentGraphDecideEditor = (props: AgentGraphDecideEditorProps) => {
     const { view } = props
     return (
-        <Section title={view.title} description={view.hint} isLoading={props.isLoading} headingLevel={3}>
+        <Section title={view.title} caption={view.hint} isLoading={props.isLoading} headingLevel={3}>
             <Form label={view.title} onSubmit={props.onSave}>
-                <Stack gap="section">
+                <Stack gap="row">
                     {view.rows.map((row) => (
                         <RowCard
                             key={row.id}

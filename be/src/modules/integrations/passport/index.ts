@@ -1,7 +1,19 @@
-export { AuthError, digestOf, isAcceptablePassword, isPresentablePassword, normalizeEmail } from "@starci/auth/server"
+export {
+    ApiKeyVerifier,
+    apiKeySecretSha256,
+    AuthError,
+    digestOf,
+    isAcceptablePassword,
+    isPresentablePassword,
+    issueApiKey,
+    normalizeEmail,
+    parseApiKey,
+} from "@starci/auth/server"
 export type {
     AccountDirectory,
     AccountStanding,
+    ApiKeyRecord,
+    ApiKeyStore,
     AuthAuthenticator,
     AuthDoors,
     AuthPasswords,

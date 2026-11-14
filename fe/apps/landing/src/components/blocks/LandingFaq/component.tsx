@@ -26,7 +26,7 @@ interface LandingFaqBaseProps {
 /** Two-column FAQ with honest answers. */
 export const LandingFaqBase = (props: LandingFaqBaseProps) => (
     <div id="faq" className={ANCHOR}>
-        <Section title={props.props.title} description={props.props.eyebrow}>
+        <Section title={props.props.title} caption={props.props.eyebrow}>
             <Grid kind="cards" columns={2}>
                 <LandingFaqColumn
                     label={props.props.leftLabel}

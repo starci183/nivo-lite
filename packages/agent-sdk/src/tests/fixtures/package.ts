@@ -87,10 +87,8 @@ export const leakyGraph = (): GraphDocument => {
             },
         }
     })
-    const withEnv = Object.assign({}, nodes[0], { env: { API_KEY: SECRET_IN_ENV } })
     return {
-        nodes: [withEnv, ...nodes.slice(1)],
-        rights: [{ kind: "customers", scope: "workspace", hide: ["cost"], mask: ["phone"] }],
+        nodes: nodes.map((node, index) => (index === 0 ? { ...node, env: { API_KEY: SECRET_IN_ENV } } : node)),
         contracts: [
             {
                 intent: "pay_supplier",
@@ -155,7 +153,7 @@ export const withExtraBranch = (graph: GraphDocument): GraphDocument => ({
                   decide: {
                       ...node.decide,
                       branches: [
-                          branchOf({ key: "tiny", when: amountIs("lt", 100_000), then: "auto", next: "act" }),
+                          branchOf({ key: "tiny", when: amountIs("lt", 100_000), mode: "auto", next: "act" }),
                           ...node.decide.branches,
                       ],
                   },

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ModuleInstallDoorService } from "@modules/domain/agent-pages"
 import { AgentChannelChoicesHandler } from "./application/agent-channel-choices.handler"
 import { ApplySetupHandler } from "./application/apply-setup.handler"
 import { CreateAgentInstallationHandler } from "./application/create-agent-installation.handler"
@@ -6,6 +7,7 @@ import { ContextNotesHandler } from "./application/context-notes.handler"
 import { DismissContextNoteHandler } from "./application/dismiss-context-note.handler"
 import { DecideSetupCardHandler } from "./application/decide-setup-card.handler"
 import { GetCatalogHandler } from "./application/get-catalog.handler"
+import { AgentDeletionImpactHandler } from "./application/agent-deletion-impact.handler"
 import { GetInstallationHandler } from "./application/get-installation.handler"
 import { GetModuleHandler } from "./application/get-module.handler"
 import { GetRequirementFactsHandler } from "./application/get-requirement-facts.handler"
@@ -26,7 +28,9 @@ import { ConfigurableModuleClass } from "./modules.module-definition"
 
 @Module({
     providers: [
+        ModuleInstallDoorService,
         AgentChannelChoicesHandler,
+        AgentDeletionImpactHandler,
         ApplySetupHandler,
         CreateAgentInstallationHandler,
         ContextNotesHandler,

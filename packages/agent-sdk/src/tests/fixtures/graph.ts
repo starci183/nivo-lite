@@ -23,7 +23,7 @@ export const approverOf = (over: Partial<BranchApprover> = {}): BranchApprover =
 export const branchOf = (over: Partial<GraphBranch> = {}): GraphBranch => ({
     key: "small",
     when: amountIs("lt", 5_000_000),
-    then: "auto",
+    mode: "auto",
     next: "act",
     approver: null,
     sources: [],
@@ -55,14 +55,14 @@ export const OWNER_BRANCHES: ReadonlyArray<GraphBranch> = [
     branchOf({
         key: "middle",
         when: { all: [amountIs("gte", 5_000_000), amountIs("lt", 20_000_000)] },
-        then: "ask",
+        mode: "ask",
         next: "ask",
         approver: approverOf(),
     }),
     branchOf({
         key: "else",
         when: "else",
-        then: "ask",
+        mode: "ask",
         next: "ask",
         approver: approverOf({ group: { roles: [], rooms: [], members: ["nam"] } }),
     }),
@@ -97,5 +97,4 @@ export const graphOf = (branches: ReadonlyArray<GraphBranch> = OWNER_BRANCHES): 
         }),
         nodeOf({ key: "end", kind: "output", step: "stop", title: "Done", next: [] }),
     ],
-    rights: [],
 })

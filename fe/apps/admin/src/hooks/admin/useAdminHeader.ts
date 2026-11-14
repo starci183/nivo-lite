@@ -3,7 +3,7 @@
 import { notFound } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useSignOut } from "@/hooks/auth"
+import { useAdminSignOut } from "@/hooks/auth"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useThemeSwitch } from "@/hooks/theme"
 import { navigation } from "@/modules/i18n"
@@ -56,8 +56,8 @@ export const useAdminHeader = (): AdminHeaderView => {
     const pathname = navigation.usePathname()
     const language = useLocaleSwitch()
     const theme = useThemeSwitch()
-    const signOut = useSignOut()
-    const [isMenuOpen, setMenuOpen] = useState(false)
+    const signOut = useAdminSignOut()
+    const [isMenuOpen, setIsMenuOpen] = useState(false)
     if (session.isMissing) notFound()
     return {
         props: {
@@ -94,7 +94,7 @@ export const useAdminHeader = (): AdminHeaderView => {
             chooseLocale: language.choose,
             chooseDark: theme.choose,
             signOut: signOut.signOut,
-            setMenuOpen,
+            setMenuOpen: setIsMenuOpen,
         },
     }
 }

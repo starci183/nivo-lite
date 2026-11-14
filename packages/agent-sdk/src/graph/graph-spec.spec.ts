@@ -1,24 +1,19 @@
 import { z } from "zod"
 import { defineEffect, defineNode, defineTool, nodeIndexOf } from "../node"
 import type { NodeDefinition } from "../node"
-import type { DataRight } from "../rights/rights.types"
 import { edgesOf, graphSpecJsonSchema, graphSpecProblems, nextKeyOf } from "./graph-spec"
 import { graphSpecSchema } from "./graph-spec.schema"
 import type { GraphSpec } from "./graph-spec.types"
 import { trusted } from "../schema/trusted"
 import { present } from "../schema/present"
 
-const READ: DataRight = { kind: "order", access: "read", scope: "turn", fields: ["id"] }
-const SEND: DataRight = { kind: "message", access: "write", scope: "turn", fields: ["body"] }
-
-const send = defineEffect({ id: "channel.send", title: { key: "s" }, payload: z.object({}), rights: [SEND] })
+const send = defineEffect({ id: "channel.send", title: { key: "s" }, payload: z.object({}) })
 const look = defineTool({
     id: "order.look",
     title: { key: "l" },
     args: z.object({}),
     result: z.object({}),
     mutates: false,
-    rights: [],
 })
 
 const base = {
@@ -35,7 +30,6 @@ const check = trusted<NodeDefinition>(
         id: "order.check",
         role: "condition",
         output: z.object({ branch: z.enum(["yes", "no"]) }),
-        rights: [READ],
         effects: [],
         tools: ["order.look"],
         examples: [example],
@@ -48,7 +42,6 @@ const reply = trusted<NodeDefinition>(
         id: "core.reply",
         role: "output",
         output: z.object({}),
-        rights: [],
         effects: ["channel.send"],
         examples: [example],
     }),
@@ -60,7 +53,7 @@ const SPEC: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["channel"] },
-    grant: { rights: [READ, SEND], tools: ["order.look"], effects: ["channel.send"] },
+    grant: { tools: ["order.look"], effects: ["channel.send"] },
     nodes: [
         { key: "check", kind: "condition", step: "order.check", routes: { yes: "say", no: "say-no" } },
         {
@@ -82,6 +75,16 @@ describe("graphSpecSchema", () => {
         }
         expect(graphSpecSchema.safeParse(nested).success).toBe(true)
         expect(graphSpecSchema.safeParse({ ...SPEC, extra: 1 }).success).toBe(false)
+    })
+
+    it("drops the data rights of a grant stored before they were deleted, and still parses it", () => {
+        const stored = {
+            ...SPEC,
+            grant: { ...SPEC.grant, rights: [{ kind: "order", access: "read", scope: "turn", fields: ["id"] }] },
+        }
+
+        expect(graphSpecSchema.parse(stored)).toEqual(SPEC)
+        expect(graphSpecSchema.safeParse({ ...SPEC, grant: { ...SPEC.grant, extra: 1 } }).success).toBe(false)
     })
 })
 
@@ -135,14 +138,12 @@ describe("graphSpecProblems", () => {
         const spec: GraphSpec = {
             ...SPEC,
             grant: {
-                rights: [{ ...READ, fields: ["id", "secret"] }, SEND],
                 tools: ["order.spare"],
                 effects: ["order.spare"],
             },
         }
         expect(graphSpecProblems(spec, index)).toEqual([
-            { code: "NODE_RIGHTS_UNGRANTED", at: "check" },
-            { code: "GRAPH_GRANT_EXCESS", at: "order:read.secret" },
+            { code: "NODE_TOOLS_UNGRANTED", at: "check" },
             { code: "GRAPH_GRANT_EXCESS", at: "order.spare" },
             { code: "GRAPH_GRANT_EXCESS", at: "order.spare" },
             { code: "GRAPH_EFFECTS_MISMATCH", at: "channel.send" },
@@ -150,9 +151,9 @@ describe("graphSpecProblems", () => {
         ])
     })
 
-    it("needs no right for an effect or tool the app did not install", () => {
+    it("judges the grant by name only, for an effect or tool the app did not install too", () => {
         const bare = nodeIndexOf({ nodes: [check, reply], effects: [], tools: [], dataKinds: [] })
-        const spec: GraphSpec = { ...SPEC, grant: { rights: [READ], tools: ["order.look"], effects: ["channel.send"] } }
+        const spec: GraphSpec = { ...SPEC, grant: { tools: ["order.look"], effects: ["channel.send"] } }
         expect(graphSpecProblems(spec, bare)).toEqual([])
     })
 
@@ -161,7 +162,6 @@ describe("graphSpecProblems", () => {
             id: "order.void",
             title: { key: "v" },
             payload: z.object({ id: z.string().max(200) }),
-            rights: [],
         })
         const record = defineEffect({ ...undo, id: "order.record", compensation: "order.void" })
         const keep = trusted<NodeDefinition>(
@@ -170,7 +170,6 @@ describe("graphSpecProblems", () => {
                 id: "order.keep",
                 role: "output",
                 output: z.object({}),
-                rights: [],
                 effects: ["order.record"],
                 examples: [example],
             }),
@@ -178,7 +177,7 @@ describe("graphSpecProblems", () => {
         const saga = nodeIndexOf({ nodes: [keep, reply], effects: [send, undo, record], tools: [], dataKinds: [] })
         const spec: GraphSpec = {
             ...SPEC,
-            grant: { rights: [SEND], tools: [], effects: ["order.record", "channel.send"] },
+            grant: { tools: [], effects: ["order.record", "channel.send"] },
             nodes: [
                 { key: "keep", kind: "output", step: "order.keep", next: "say" },
                 { key: "say", kind: "output", step: "core.reply", next: "again" },
@@ -197,52 +196,20 @@ describe("graphSpecProblems", () => {
 
     it("judges nothing reachable in an empty spec", () => {
         expect(graphSpecProblems({ ...SPEC, nodes: [] }, index)).toEqual([
-            { code: "GRAPH_GRANT_EXCESS", at: "order:read.id" },
-            { code: "GRAPH_GRANT_EXCESS", at: "message:write.body" },
             { code: "GRAPH_GRANT_EXCESS", at: "channel.send" },
             { code: "GRAPH_GRANT_EXCESS", at: "order.look" },
         ])
     })
 })
 
+// Design change (R27/R28): the @1 envelope's `trigger.burst` and `graph-burst.ts` are deleted: the engine settles a burst from the
+// trigger declaration only (Opus-1c); the schema refuses the old member.
 describe("graph spec burst", () => {
-    const withBurst = (burst: unknown, sources: ReadonlyArray<string> = ["channel", "agent", "schedule"]) => ({
-        ...SPEC,
-        trigger: { kind: "tag", sources, burst },
-    })
-
-    it("takes sound durations per source, zero to turn one off, and a spec with none", () => {
-        const sound = withBurst({
-            channel: { window: "6s", maxWait: "20s" },
-            agent: { window: "0s" },
-            schedule: undefined,
-        })
-
-        expect(graphSpecSchema.safeParse(sound).success).toBe(true)
-        expect(graphSpecSchema.safeParse(SPEC).success).toBe(true)
-        expect(graphSpecProblems(trusted<GraphSpec>(sound), index)).toEqual([])
-    })
-
-    it.each([
-        ["a duration that is not one", { channel: { window: "soon" } }],
-        ["a window past a minute", { channel: { window: "61s" } }],
-        ["a longest wait past two minutes", { channel: { window: "6s", maxWait: "3m" } }],
-        ["a longest wait below the window", { channel: { window: "6s", maxWait: "5s" } }],
-        ["a longest wait that is not a duration", { channel: { window: "6s", maxWait: "later" } }],
-        ["a source the schema does not know", { fax: { window: "6s" } }],
-    ])("refuses %s in the schema", (_case, burst) => {
-        expect(graphSpecSchema.safeParse(withBurst(burst)).success).toBe(false)
-    })
-
-    it("names a bad entry, and one for a source the trigger does not list, as problems", () => {
-        const bad = trusted<GraphSpec>(
-            withBurst({ channel: { window: "soon" }, schedule: { window: "6s" } }, ["channel", "agent"]),
-        )
-
-        expect(graphSpecProblems(bad, index)).toEqual([
-            { code: "GRAPH_BURST_INVALID", at: "burst.channel" },
-            { code: "GRAPH_BURST_INVALID", at: "burst.schedule" },
-        ])
+    it("refuses the deleted trigger.burst member", () => {
+        const spec = { ...trusted<Record<string, unknown>>(SPEC) }
+        const trigger = { kind: "tag", sources: ["channel"], burst: { channel: { window: "6s" } } }
+        expect(graphSpecSchema.safeParse({ ...spec, trigger }).success).toBe(false)
+        expect(graphSpecSchema.safeParse({ ...spec, trigger: { kind: "tag", sources: ["channel"] } }).success).toBe(true)
     })
 })
 

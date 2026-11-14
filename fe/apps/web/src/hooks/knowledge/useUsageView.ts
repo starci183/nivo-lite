@@ -1,6 +1,5 @@
 import { useFormatter, useTranslations } from "next-intl"
-import { usageMeterOf } from "@/modules/documents"
-import type { UsageView } from "@/modules/documents"
+import { usageMeterOf, type UsageView } from "@/modules/documents"
 
 /** The meter of the raw document allowance worded in the viewer's language and number format; nothing until the usage is known. */
 export const useUsageView = (

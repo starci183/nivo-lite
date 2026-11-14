@@ -14,11 +14,10 @@ import type {
     WorkflowVersionRecord,
     WrittenVersion,
 } from "./agent-workflows.contracts"
-import { contractProblemText } from "@nivo-lite/blocks-core/graph"
+import { CONTRACT_VIEWS } from "./policies/contract-views.policy"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { requireSoundFlow } from "./policies/flow.policy"
-import { brokenCallersOf, callContractProblems } from "./policies/workflow-calls.policy"
-import type { CallableWorkflow } from "./policies/workflow-calls.policy"
+import { brokenCallersOf, callContractProblems, type CallableWorkflow } from "./policies/workflow-calls.policy"
 import { minimumGrantOf } from "./policies/workflow-merge.policy"
 import { nextVersionNumber } from "./policies/workflow-version.policy"
 import {
@@ -39,7 +38,7 @@ export const VERSION_LIMIT = 100
 const WORKSPACE_WORKFLOW_LIMIT = 500
 
 /** The document of an agent graph before it has any version. */
-const EMPTY: GraphDocument = { nodes: [], rights: [] }
+const EMPTY: GraphDocument = { nodes: [] }
 
 @Injectable()
 /**
@@ -47,7 +46,8 @@ const EMPTY: GraphDocument = { nodes: [], rights: [] }
  * so history only grows and two writers never take one number), reading what runs, and judging a graph against the installed nodes.
  * A primary workflow's version publishes its snapshot as the agent graph's next version first, so the rest of the engine reads the same
  * graph, in the SAME `ScopedTx`: the workflow version and the agent graph version commit together or not at all. Every method runs in
- * the `ScopedTx` it is given.
+ * the `ScopedTx` it is given. EVERY version write passes here or through `AgentGraphsService.publish`, and each carries the settlement
+ * of the rights gate for exactly the graph it writes (`VersionWrite.rights`): a version the gate did not decide is not written.
  */
 export class AgentWorkflowStoreService {
     constructor(
@@ -105,6 +105,8 @@ export class AgentWorkflowStoreService {
     async writeVersion(tx: ScopedTx, write: VersionWrite): Promise<WrittenVersion> {
         const number = nextVersionNumber(write.workflow.latestNumber, write.expected)
         if (number === null) throw workflowConflict()
+        // The gate decided one graph; another graph (a version that changed between the decision and the write) is not it.
+        if (write.rights.graphHash !== snapshotHashOf(write.graph)) throw workflowConflict()
         const graphVersionId = write.graphVersionId ?? (await this.mirrorOf(tx, write))
         const version = await this.records.insertVersion(tx, {
             workflowId: write.workflow.id,
@@ -163,8 +165,8 @@ export class AgentWorkflowStoreService {
                 count: String(problems.length),
                 first:
                     own.length > 0 || named === undefined
-                        ? contractProblemText(first, "vi")
-                        : `Quy trình "${named.name}" đang gọi quy trình này sẽ hỏng: ${contractProblemText(first, "vi")}`,
+                        ? CONTRACT_VIEWS.contractProblemText(first, "vi")
+                        : `Quy trình "${named.name}" đang gọi quy trình này sẽ hỏng: ${CONTRACT_VIEWS.contractProblemText(first, "vi")}`,
                 problems: JSON.stringify(problems),
             },
         })

@@ -37,6 +37,8 @@ export interface AgentInstanceFrameBaseProps {
         readonly packageLabel: string
         /** A short soft notice carried by a redirect to this tab (staff sent from Setup); empty when none. */
         readonly notice: string
+        /** The notice of an agent whose setup is not applied (connected block); null when the page shows none. */
+        readonly setupNotice: ReactNode
         readonly moreLabel: string
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
@@ -196,6 +198,7 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
                     <PaneGrid label={copy.ariaLabel} areas={["tab"]}>
                         <Pane area="tab" inset="flush">
                             <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+                            {copy.setupNotice === null ? null : <PaneSection>{copy.setupNotice}</PaneSection>}
                             {copy.notice === "" ? null : (
                                 <PaneSection>
                                     <Alert tone="informative" title={copy.notice} />
@@ -208,6 +211,7 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
             ) : (
                 <Page measure="product" isLoading={copy.isLoading} header={header}>
                     <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+                    {copy.setupNotice}
                     {copy.notice === "" ? null : <Alert tone="informative" title={copy.notice} />}
                     {props.content}
                 </Page>

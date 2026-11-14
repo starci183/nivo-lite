@@ -11,7 +11,7 @@ import type {
     AgentGraphOnTimeout,
     AgentGraphPhoneView,
     AgentGraphSideTab,
-    AgentGraphThen,
+    AgentGraphBranchMode,
 } from "./agentGraph"
 
 /** The tone of a badge or an alert in the panes. */
@@ -137,7 +137,7 @@ export interface AgentGraphRowView {
     readonly sentence: string
     readonly terms: ReadonlyArray<AgentGraphTermView>
     readonly canAddTerm: boolean
-    readonly then: AgentGraphThen
+    readonly mode: AgentGraphBranchMode
     readonly approverId: string
     /** The people who may be asked; a row that keeps the group of roles it had offers that group first. */
     readonly approverOptions: ReadonlyArray<AgentGraphOptionView>
@@ -163,7 +163,7 @@ export interface AgentGraphDecideEditorView {
         readonly op: string
         readonly value: string
         readonly amount: string
-        readonly then: string
+        readonly mode: string
         readonly approver: string
         readonly hours: string
         readonly onTimeout: string
@@ -178,7 +178,7 @@ export interface AgentGraphDecideEditorView {
         readonly allTerms: string
     }
     readonly factOptions: ReadonlyArray<AgentGraphOptionView>
-    readonly thenOptions: ReadonlyArray<AgentGraphOptionView>
+    readonly modeOptions: ReadonlyArray<AgentGraphOptionView>
     /** Everyone who may take over, for the person who steps in after the wait. */
     readonly memberOptions: ReadonlyArray<AgentGraphOptionView>
     readonly timeoutOptions: ReadonlyArray<AgentGraphOptionView>

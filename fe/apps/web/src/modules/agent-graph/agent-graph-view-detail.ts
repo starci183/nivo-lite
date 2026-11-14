@@ -9,8 +9,14 @@ import type {
 } from "@/modules/types"
 import { branchHitOf } from "./agent-graph-flow"
 import { problemLinesOf } from "./agent-graph-problems"
-import { kindWordOf, sourceWordOf, thenWordOf, timeoutLineOf } from "./agent-graph-words"
-import type { AgentGraphContext, AgentGraphT } from "./agent-graph-words"
+import {
+    kindWordOf,
+    sourceWordOf,
+    branchModeWordOf,
+    timeoutLineOf,
+    type AgentGraphContext,
+    type AgentGraphT,
+} from "./agent-graph-words"
 
 /** What a list answer says when the node has nothing to list: "None" is an answer, a blank is not. */
 const linesAnswerOf = (
@@ -69,7 +75,7 @@ const branchesAnswerOf = (
                   kind: "lines",
                   lines: node.branches.map((branch) => ({
                       label: branch.when,
-                      note: `${thenWordOf(t, branch.then)} · ${nodes.find((entry) => entry.key === branch.next)?.title ?? ""}`,
+                      note: `${branchModeWordOf(t, branch.mode)} · ${nodes.find((entry) => entry.key === branch.next)?.title ?? ""}`,
                   })),
               },
           ]

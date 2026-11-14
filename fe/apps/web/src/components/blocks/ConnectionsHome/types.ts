@@ -54,38 +54,10 @@ export interface PendingAttachmentView {
     readonly attachLabel: string
 }
 
-/** The shop's default receiving account (owner only): its one row, the "Change" pill, and the picker of the accounts that can receive. */
-export interface DefaultAccountView {
-    readonly title: string
-    readonly row: {
-        readonly id: string
-        readonly title: string
-        readonly description: string
-        /** The provider mark; absent on the "none chosen" row. */
-        readonly name: string | undefined
-        readonly logo: string | undefined
-    }
-    readonly changeLabel: string
-    readonly picker: {
-        readonly isOpen: boolean
-        readonly title: string
-        readonly closeLabel: string
-        readonly items: ReadonlyArray<{ readonly id: string; readonly title: string; readonly subtitle?: string }>
-        readonly value: string | null
-        readonly isSaving: boolean
-        readonly cancelLabel: string
-        readonly saveLabel: string
-    }
-}
-
 /** The commands of the Connected tab. */
 export interface ConnectionsHomeCommands {
     readonly later: (id: string) => void
     readonly attachByTemplate: (id: string) => void
-    readonly openDefaultPicker: () => void
-    readonly closeDefaultPicker: () => void
-    readonly pickDefault: (connectionId: string) => void
-    readonly saveDefault: () => void
     readonly goTo: (href: string) => void
     readonly openLibrary: () => void
     readonly retry: () => void
@@ -107,8 +79,6 @@ export interface ConnectionsHomeBaseProps {
         readonly text: string
         /** The accounts waiting for "attach by template?". */
         readonly pending: ReadonlyArray<PendingAttachmentView>
-        /** The default receiving account section; null when the viewer is not the owner or no account can receive. */
-        readonly defaultAccount: DefaultAccountView | null
     }
     readonly on: ConnectionsHomeCommands
 }

@@ -150,6 +150,22 @@ describe("registryOf at boot", () => {
         expect(refusal).toMatchObject({ code: WorkbenchDoorErrorCode.RegistryIdInvalid, params: { id: MALFORMED } })
     })
 
+    it("serves a package-qualified read <package>.<agent>.api.<domain>.<query> and action <package>.<agent>.<action> beside a module.name one", () => {
+        const qualified = "blocks-core.sales.lead-move"
+        const registry = registryOf([moduleOf("sales", [], [actionOf(qualified), actionOf("sales.move-stage")])], [LEAD])
+
+        expect([...registry.actions.keys()]).toEqual([qualified, "sales.move-stage"])
+    })
+
+    it("refuses an id of four parts, which is neither an old-form id nor a qualified one", () => {
+        const refusal = thrown(() => registryOf([moduleOf("sales", [], [actionOf("blocks-core.sales.lead.move")])], [LEAD]))
+
+        expect(refusal).toMatchObject({
+            code: WorkbenchDoorErrorCode.RegistryIdInvalid,
+            params: { id: "blocks-core.sales.lead.move" },
+        })
+    })
+
     it("refuses a port nothing provides", () => {
         const action = actionOf("sales.price", { ports: { pricing: { entry: "port", id: "sales.pricing" } } })
 

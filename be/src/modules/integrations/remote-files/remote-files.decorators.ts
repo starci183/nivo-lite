@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { RemoteFilesOptions } from "./remote-files.options"
 import type { RemoteFiles } from "./remote-files.port"
 

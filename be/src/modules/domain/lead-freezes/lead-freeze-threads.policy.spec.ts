@@ -23,7 +23,7 @@ const STOP: HeldStop = {
     stepKey: "consult",
     agentId: "chatbot",
     workflowId: "wf-front-desk",
-    leadId: "lead-1",
+    contactId: "lead-1",
     conversationId: "c-1",
     toldConversationIds: [],
     stoppedAt: "2026-11-10T10:00:00.000Z",
@@ -47,19 +47,19 @@ describe("lead-freeze-threads.policy: which open stop holds a wake", () => {
 
     it("is about the customer by the same lead or the same conversation; a stop with neither holds nobody", async () => {
         const { stopIsAbout } = await buildPolicy()
-        const lead = { key: "lead:lead-1", leadId: "lead-1", conversationId: null }
-        const conversation = { key: "conversation:c-1", leadId: null, conversationId: "c-1" }
+        const lead = { key: "contact:lead-1", contactId: "lead-1", conversationId: null }
+        const conversation = { key: "conversation:c-1", contactId: null, conversationId: "c-1" }
         expect(stopIsAbout(STOP, lead)).toBe(true)
-        expect(stopIsAbout({ leadId: null, conversationId: "c-1" }, conversation)).toBe(true)
-        expect(stopIsAbout({ leadId: "lead-2", conversationId: "c-2" }, { ...lead, conversationId: "c-1" })).toBe(false)
-        expect(stopIsAbout({ leadId: null, conversationId: null }, { ...lead, conversationId: "c-1" })).toBe(false)
+        expect(stopIsAbout({ contactId: null, conversationId: "c-1" }, conversation)).toBe(true)
+        expect(stopIsAbout({ contactId: "lead-2", conversationId: "c-2" }, { ...lead, conversationId: "c-1" })).toBe(false)
+        expect(stopIsAbout({ contactId: null, conversationId: null }, { ...lead, conversationId: "c-1" })).toBe(false)
     })
 
     it("D-P11-4: a stop whose step TOLD a conversation is about it and holds its wakes whatever the workflow; a lead-only wake keeps the workflow rule", async () => {
         const { stopIsAbout, stopHoldsWake } = await buildPolicy()
-        const bankFed = { workflowId: "wf-reconcile", leadId: null, conversationId: null, toldConversationIds: ["c-1"] }
-        const line = { key: "lead:lead-1|wf:wf-front-desk", leadId: "lead-1", conversationId: "c-1" }
-        const timer = { key: "lead:lead-1|wf:wf-care", leadId: "lead-1", conversationId: null }
+        const bankFed = { workflowId: "wf-reconcile", contactId: null, conversationId: null, toldConversationIds: ["c-1"] }
+        const line = { key: "contact:lead-1|wf:wf-front-desk", contactId: "lead-1", conversationId: "c-1" }
+        const timer = { key: "contact:lead-1|wf:wf-care", contactId: "lead-1", conversationId: null }
 
         expect(stopIsAbout(bankFed, line)).toBe(true)
         expect(stopIsAbout(bankFed, { ...line, conversationId: "c-2" })).toBe(false)
@@ -91,18 +91,18 @@ describe("lead-freeze-threads.policy: which open stop holds a wake", () => {
 describe("lead-freeze-threads.policy: the freeze a stop writes", () => {
     it("keys the hold by the customer's lead, else the conversation, in the stop's workflow", async () => {
         const { stopSubjectOf } = await buildPolicy()
-        expect(stopSubjectOf({ key: "lead:lead-1", leadId: "lead-1", conversationId: "c-1" }, STOP)).toEqual({
-            key: "lead:lead-1|wf:wf-front-desk",
-            leadId: "lead-1",
+        expect(stopSubjectOf({ key: "contact:lead-1", contactId: "lead-1", conversationId: "c-1" }, STOP)).toEqual({
+            key: "contact:lead-1|wf:wf-front-desk",
+            contactId: "lead-1",
             conversationId: "c-1",
         })
-        expect(stopSubjectOf({ key: "conversation:c-1", leadId: null, conversationId: "c-1" }, STOP)).toEqual({
+        expect(stopSubjectOf({ key: "conversation:c-1", contactId: null, conversationId: "c-1" }, STOP)).toEqual({
             key: "conversation:c-1|wf:wf-front-desk",
-            leadId: null,
+            contactId: null,
             conversationId: "c-1",
         })
-        expect(stopSubjectOf({ key: "lead:lead-1", leadId: "lead-1", conversationId: null }, { workflowId: null }).key).toBe(
-            "lead:lead-1",
+        expect(stopSubjectOf({ key: "contact:lead-1", contactId: "lead-1", conversationId: null }, { workflowId: null }).key).toBe(
+            "contact:lead-1",
         )
     })
 

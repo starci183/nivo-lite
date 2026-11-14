@@ -1,15 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 import {
     AGENT_TURN_QUEUE,
     AgentTurnJob,
     agentTurnNextKey,
     agentTurnSweepKey,
     agentTurnWakeKey,
+    type AgentTurnDrainPayload,
 } from "./agent-turn.contracts"
-import type { AgentTurnDrainPayload } from "./agent-turn.contracts"
 
 @Injectable()
 /** The typed producer of the agent-turn queue: the one way a drain job starts. */

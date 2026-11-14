@@ -1,0 +1,77 @@
+"use client"
+
+import { useTranslations } from "next-intl"
+import type { ContactsPanesCopy } from "@/modules/types"
+
+/** Every word the contacts page draws, resolved once from the `contacts` catalog. */
+export const useContactsCopy = (): ContactsPanesCopy => {
+    const t = useTranslations("contacts")
+    return {
+        title: t("title"),
+        description: t("description"),
+        searchLabel: t("searchLabel"),
+        searchPlaceholder: t("searchPlaceholder"),
+        clearSearch: t("clearSearch"),
+        listTitle: t("listTitle"),
+        listLabel: t("listLabel"),
+        moreLabel: t("moreLabel"),
+        emptyBody: t("emptyBody"),
+        noMatchTitle: t("noMatchTitle"),
+        noMatchBody: t("noMatchBody"),
+        pickTitle: t("pickTitle"),
+        pickBody: t("pickBody"),
+        forbiddenTitle: t("forbiddenTitle"),
+        forbiddenBody: t("forbiddenBody"),
+        forbiddenAction: t("forbiddenAction"),
+        goneTitle: t("goneTitle"),
+        goneBody: t("goneBody"),
+        goneAction: t("goneAction"),
+        errorBody: t("errorBody"),
+        cancelLabel: t("cancel"),
+        editLabel: t("editLabel"),
+        rowMenuLabel: t("rowMenuLabel"),
+        unlinkLabel: t("unlinkLabel"),
+        linkIdentityLabel: t("linkIdentityLabel"),
+        mergeLabel: t("mergeLabel"),
+        deleteLabel: t("deleteLabel"),
+        memoryTitle: t("memoryTitle"),
+        memoryEmpty: t("memoryEmpty"),
+        forgetLabel: t("forgetLabel"),
+        notesTitle: t("notesTitle"),
+        modulesTitle: t("modulesTitle"),
+        modulesNote: t("modulesNote"),
+        modulesEmptyTitle: t("modulesEmptyTitle"),
+        modulesEmptyBody: t("modulesEmptyBody"),
+        modulesMore: t("modulesMore"),
+        suggestionsTitle: t("suggestionsTitle"),
+        suggestionViewLabel: t("suggestionViewLabel"),
+        suggestionMergeLabel: t("suggestionMergeLabel"),
+        suggestionDismissLabel: t("suggestionDismissLabel"),
+        edit: {
+            title: t("editTitle"),
+            nameLabel: t("editNameLabel"),
+            tagsLabel: t("editTagsLabel"),
+            tagsHint: t("editTagsHint"),
+            submitLabel: t("editSubmit"),
+            failTitle: t("editFail"),
+        },
+        link: {
+            title: t("linkTitle"),
+            kindLabel: t("linkKindLabel"),
+            kindPhone: t("linkKindPhone"),
+            kindEmail: t("linkKindEmail"),
+            valueLabel: t("linkValueLabel"),
+            hint: t("linkHint"),
+            submitLabel: t("linkSubmit"),
+            failTitle: t("linkFail"),
+        },
+        merge: {
+            title: t("mergeTitle"),
+            searchLabel: t("mergeSearchLabel"),
+            searchPlaceholder: t("searchPlaceholder"),
+            clearSearch: t("clearSearch"),
+            emptyTitle: t("mergeEmpty"),
+            submitLabel: t("mergeSubmit"),
+        },
+    }
+}

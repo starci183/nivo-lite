@@ -1,12 +1,16 @@
 import { Alert, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/common"
-import { DatabaseConnectFields } from "@/components/composites/DatabaseConnectFields"
-import type { DatabaseConnectFieldsProps } from "@/components/composites/DatabaseConnectFields"
-import { DatabaseTableMapper } from "@/components/composites/DatabaseTableMapper"
-import type { DatabaseTableMapperProps } from "@/components/composites/DatabaseTableMapper"
+import { DatabaseConnectFields, type DatabaseConnectFieldsProps } from "@/components/composites/DatabaseConnectFields"
+import { DatabaseTableMapper, type DatabaseTableMapperProps } from "@/components/composites/DatabaseTableMapper"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { WizardFooter, backAction, closeAction, forwardAction, nextAction } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import {
+    WizardFooter,
+    backAction,
+    closeAction,
+    forwardAction,
+    nextAction,
+    type WizardAction,
+} from "@/components/branches/WizardFooter"
 import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
 import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume, WizardPhases } from "@/modules/types"
 

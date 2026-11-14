@@ -13,7 +13,7 @@ Luật: `page-header-left-sublabel-xs` (second tab layer), `surfacecard-zones-ap
 Grammar: `Page` `header` `subTabs`, `node_modules/@starci/grammar/dist/core/frame/Page/index.d.ts`; `Tabs`, `node_modules/@starci/grammar/dist/core/branch/Tabs/index.d.ts`.
 
 ## Dòng trạng thái ("Sẵn sàng" + câu phụ)
-Vì sao: một chip trạng thái có vòng rỗng (Badge isDot, đúng luật chấm rỗng) và tối đa hai dữ kiện (lượt chạy kế tiếp, hàng đợi) cạnh nó; khi agent dừng thì có Alert nêu lý do. Nó đứng trực tiếp trên nền hồng không thẻ vì là một dòng, không phải một khối nội dung ("một câu không thành thẻ"). Chi tiết cần đo: dữ kiện dùng `Text size="sm"`, phải kiểm `sm` có đúng 14 theo thang 14/12 hay không.
+Vì sao: một chip trạng thái có vòng rỗng (Badge isDot, đúng luật chấm rỗng) và tối đa hai dữ kiện (lượt chạy kế tiếp, hàng đợi) cạnh nó; khi agent dừng thì có Alert nêu lý do. Nó đứng trực tiếp trên nền hồng không thẻ vì là một dòng, không phải một khối nội dung ("một câu không thành thẻ"). Dữ kiện dùng `Text size="sm"`: `sm` bằng `md` = 14 theo `contexts/ui/components/text.md` (chỉ tên nhỏ, giờ, số đếm mới 12).
 Luật: `verify-against-visualize` (status dot = vòng rỗng), `table-heroui-native-section-head` (lone sentence), `type-scale-14-12`.
 Grammar: `Badge isDot`, `node_modules/@starci/grammar/dist/core/leaf/Badge/index.d.ts`; `Alert`, `node_modules/@starci/grammar/dist/core/composite/Alert/index.d.ts`; `Text`, `node_modules/@starci/grammar/dist/core/leaf/Text/index.d.ts`.
 

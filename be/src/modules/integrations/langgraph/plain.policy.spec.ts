@@ -7,6 +7,18 @@ interface Subject {
     readonly requirePlain: typeof requirePlain
 }
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("plain.policy")
 
 /** The policy functions, read through the Nest testing module. */
@@ -20,9 +32,10 @@ const build = async (): Promise<Subject> => {
 describe("plain.policy", () => {
     it("lets plain JSON through, an undefined field included", async () => {
         const subject = await build()
+        const bare: unknown = Object.create(null)
 
         expect(() =>
-            subject.requirePlain({ a: 1, b: "x", c: [true, null, { d: undefined }], e: Object.create(null) }, "state"),
+            subject.requirePlain({ a: 1, b: "x", c: [true, null, { d: undefined }], e: bare }, "state"),
         ).not.toThrow()
     })
 
@@ -37,9 +50,7 @@ describe("plain.policy", () => {
     ])("refuses %s and names where it is, never what it holds", async (_name, value, at) => {
         const subject = await build()
 
-        expect(() => subject.requirePlain(value, "state")).toThrow(
-            expect.objectContaining({ code: LanggraphErrorCode.NotPlain, params: { at } }),
-        )
+        expect(thrownBy(() => subject.requirePlain(value, "state"))).toEqual(objectLike({ code: LanggraphErrorCode.NotPlain, params: { at } }))
     })
 
     it("refuses a cycle instead of walking it for ever", async () => {
@@ -47,8 +58,6 @@ describe("plain.policy", () => {
         const loop: Record<string, unknown> = {}
         loop.self = loop
 
-        expect(() => subject.requirePlain(loop, "state")).toThrow(
-            expect.objectContaining({ code: LanggraphErrorCode.NotPlain, params: { at: "state.self" } }),
-        )
+        expect(thrownBy(() => subject.requirePlain(loop, "state"))).toEqual(objectLike({ code: LanggraphErrorCode.NotPlain, params: { at: "state.self" } }))
     })
 })

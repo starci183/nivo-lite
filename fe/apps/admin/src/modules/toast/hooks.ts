@@ -3,8 +3,7 @@
 // React hooks that wrap the pure toast helpers (./api) and inject localized copy through next-intl.
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
-import { runGraphQLWithToast } from "./api"
-import type { RunGraphQLWithToastOptions, ToastMessages } from "./api"
+import { runGraphQLWithToast, type RunGraphQLWithToastOptions, type ToastMessages } from "./api"
 
 /** Resolves the localized {@link ToastMessages} from the `toast` namespace. */
 const useToastMessages = (): ToastMessages => {

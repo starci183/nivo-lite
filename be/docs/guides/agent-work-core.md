@@ -173,10 +173,8 @@ New reactor `be/src/features/reactors/agent-wakes`. Consumers on existing topics
 | -------------- | -------------------------- | -------------------------------------------------------------------------- |
 | Money in       | `bank_credit_booked`       | Agents with an enabled `agent_triggers` row of `kind: event` for that name |
 | A new document | `knowledge_source_indexed` | Same                                                                       |
-| Paid           | `payment_reconciled`       | Same                                                                       |
 
-`eventKey` is `<eventName>:<payload.dedupeKey>`, so a replay is one wake. An invoice being due is a fact about time, with no event: it is a
-daily schedule with the probe `invoices_due`. An event trigger takes the same probe check as a schedule, so a credit with no work behind it
+`eventKey` is `<eventName>:<payload.dedupeKey>`, so a replay is one wake. An event trigger takes the same probe check as a schedule, so a credit with no work behind it
 costs no model call. A new event needs its consumer here and a row, nothing else.
 
 ## 5. Scheduling
@@ -224,7 +222,7 @@ type ProbeAnswer =
   { readonly work: false } | { readonly work: true; readonly brief: string; readonly subjectIds: ReadonlyArray<string> }
 ```
 
-First probes: `tasks_due` (open tasks and active goals past `reviewed_at`), `invoices_due`, `new_documents`, `money_in`. A probe only reads, with a
+First probes: `tasks_due` (open tasks and active goals past `reviewed_at`), `new_documents`, `accounting_close`. A probe only reads, with a
 statement budget of 2 s. A failed probe skips the wake with reason `probe_failed` and spends no model call. `work: false` finishes the wake as
 `skipped`, reason `no_work`. The `brief` goes into the turn's message as data, so the model starts from what was found. A due task is itself work, so a
 wake with a `taskId` needs no probe.
@@ -337,7 +335,7 @@ OpenClaw keeps the session, its transcript and the workspace files, all rebuilda
 
 1. A member sends "@ke-toan how much is due?". `PostOfficeMessageHandler` calls `OfficeTagService.post`: in one transaction `TeamChatService.postHuman`, then a `tag` wake per allowed
    agent, key `<messageId>`, context `{ messageId, room, authorUserId, locale }`.
-2. Only `author_kind = 'human'` lines wake, so an agent's line can never start a loop. Agent to agent stays with `can_tag_agent_ids` and chain limits in threads.
+2. Only `author_kind = 'human'` lines wake, so an agent's line can never start a loop. Agent to agent is a delivered workflow call, which the call guard refuses on a cycle, too deep a chain or a duplicate.
 3. The office shows the agent typing from `begin` to `finish`. `ChatTypingService.set` proves a member, so it gains `setAgent(workspaceId, target, agent, typing)` beside it, on the same realtime topic.
 4. `OfficeTagHandler.prepare`, in the worker: when the author is an owner or manager and the agent `accepts` commands, it calls `OfficeCommandService.propose`, which is already
    idempotent per message. `card` or `reply` ends the wake as `done` with no OpenClaw turn. Only `chat` continues.
@@ -428,9 +426,7 @@ The kill switch is in Settings per agent and on the agents list per workspace. T
 **Automation.** The engine is deterministic and stays on its minute tick (R335). `onBusinessEvent`, scans, `AutomationGateService` and `AutomationTextService`, which calls the model directly for wording, do not change.
 One thing joins: a new executor `wake_agent`, so a pipeline hands a case to an agent by `wake(internal, "<runId>:<step>")` when it needs judgement.
 
-**Global ticks.** `accounting_desk.morning`, `marketing_tick`, `content_tick` and hiring ticks keep running. Each becomes a seeded trigger with a probe when its module is ready, one module at a time, and its entry in the tick list goes when the last workspace has moved. No brief here moves one; that keeps W4 reviewable.
-
-**Hiring.** `HiringPublicService.chatBrief` stays a context block.
+**Global ticks.** `marketing_tick` and `content_tick` keep running. Each becomes a seeded trigger with a probe when its module is ready, one module at a time, and its entry in the tick list goes when the last workspace has moved. No brief here moves one; that keeps W4 reviewable.
 
 ## 12. Test plan
 
@@ -648,7 +644,7 @@ interface DataUse {
 | -------------- | ---------- | ------------------------------------------------------------------------- |
 | What it knows  | `knows`    | Spending policy section 4 (Brain), supplier contract on Drive             |
 | What it does   | `does`     | Confirms the expense, then records it in the ledger                       |
-| What it uses   | `uses`     | SePay, with the tool name `sepay.debit.list` on a secondary line |
+| What it uses   | `uses`     | SePay, with the tool name `nivo.tool.payment.debit.list` on a secondary line |
 | What it reads  | `reads`    | Amount and supplier name, from the SePay statement                        |
 | What it writes | `writes`   | An expense line, into the payables ledger                                 |
 | Who approves   | `approver` | Dinh, and Mr Nam after 4 hours without an answer                          |
@@ -776,7 +772,7 @@ A fact declares type, unit and allowed values in the registry, and `op` and `val
 | `authority.alwaysAsk`                | An `approve` node that cannot become `auto`                                                                                        |
 | `executor`, `n8n.audience`           | An `act` node with `pipeline`, `doneBy: "nivo"`                                                                                    |
 
-An `act` node with `pipeline` is a map entry: `AutomationEngineService` keeps running it on its tick, and `automation_pipelines.enabled` stays its switch. Its customer message reaches `runWork` through `AutomationGateService`, so the graph's branch decides there like any other. A template whose `version` rises raises a proposal of kind `template_update`, and no graph changes by itself.
+An `act` node with `pipeline` is a map entry: `AutomationEngineService` keeps running it on its tick. Its customer message reaches `runWork` through `AutomationGateService`, so the graph's branch decides there like any other. A template whose `version` rises raises a proposal of kind `template_update`, and no graph changes by itself.
 
 ### 15.8 Versions, conflicts, learning
 
@@ -910,7 +906,6 @@ A `tool` run has no work item to hand on, so a branch that leads to another acti
 | `outgoing.has_link`                             | Whether the text holds a link                                                     |
 | `outgoing.has_phone`                            | Whether the text holds a phone number                                             |
 | `outgoing.length`                               | The number of characters                                                          |
-| `outgoing.says_received`                        | Whether the text tells the customer money arrived, by a fixed list of phrases     |
 | `customer.known`                                | Whether the work names a lead                                                     |
 | `money.amount_vnd`, `money.source`, `money.via` | The money of the turn, below                                                      |
 | `tool.name`, `tool.connector`, `handover.to`    | The call the road is about to make                                                |
@@ -933,7 +928,7 @@ No text means the `outgoing.*` facts are absent. **A fact that cannot be compute
 - `shadow` is one thing only: the owner chose, for one agent, to watch a graph before it decides. Every road then walks and records, `shadow_diff` marks a difference from what ran, and the verdict stays the gate's. It holds through later publishes until the owner turns it back. Only the owner role sets the mode, in either direction, because turning a graph off widens the agent; `mode_set_by` and `mode_set_at` keep who and when.
 - **Data rights start at the first publish.** A seed holds `rights: []`, no person chose that, and `graphProblems` never read it. Default deny on a seed would cut every agent off from its own Brain, so `AgentDataRightsService` governs from the first version a person published. Actions are enforced from the seed.
 
-**Rules the graph does not hold.** Prose decides nothing. A sentence of the published setup that names a figure and an approval, with no condition of the graph on that figure, is listed as `unheldRules` on the graph the owner opens. It warns and does not block a publish, and it reads figures, so a rule in words alone raises nothing.
+**Rules the graph does not hold.** Prose decides nothing. At setup the model reads the setup text and returns the sums from which the text makes a person decide, each with the sentence that states it; code keeps one only when the sentence is in the text word for word and no condition of the graph holds the sum, and raises it as a gap that stores the sum. The open gaps whose sum the draft still does not hold are listed as `unheldRules` on the graph the owner opens (no model call on a view). It warns and does not block a publish; no word list decides what a rule is, and a rule that names no sum raises nothing.
 
 **What the owner sees.** Each walk writes one row of `agent_graph_decisions`: road, mode, version, path, facts as read, what was `unread`, why it was `unjudged`, the gate's answer, the outcome, and the `work_item_id` when there is one. A reply or tool run keys on `dedupe_key`, which holds the digest of the text or the step, so a redelivery writes no second row while a different draft for the same message is judged again. A reply that asks is recorded once, on its work item. `agentGraphRuns(installationId)` lists them newest first, with what the graph did and whether it differed from the gate. An action no node holds is listed too, as `not_in_graph`.
 

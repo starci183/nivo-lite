@@ -1,12 +1,11 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { HoldReleaseDoorService, releaseHoldOf } from "@modules/domain/agent-doors"
-import type { ConversationRelease } from "@modules/domain/agent-graphs"
+import { HoldReleaseDoorService, type ConversationRelease } from "@modules/domain/agent-doors"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ReleaseConversationCommand } from "./release-conversation.command"
 
 @CommandHandler(ReleaseConversationCommand)
-/** Hands a held conversation back, for an owner or a manager; a press that released something is recorded. */
+/** Hands a conversation back to the agents (one resume event for its route), for an owner or a manager; a press that woke one is recorded. */
 export class ReleaseConversationHandler extends ICQRSHandler<ReleaseConversationCommand, ConversationRelease> {
     constructor(
         @InjectLogger() logger: Logger,
@@ -16,7 +15,10 @@ export class ReleaseConversationHandler extends ICQRSHandler<ReleaseConversation
     }
 
     protected override process(command: ReleaseConversationCommand): Promise<ConversationRelease> {
-        const { principal, request } = command.params
-        return this.door.hand(principal.id, request.workspaceId, request.conversationId, releaseHoldOf(request.hold))
+        return this.door.hand(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.conversationId,
+        )
     }
 }

@@ -94,12 +94,13 @@ describe("evidenceAfterChange: a changed chunk touches only the facts born from 
     })
 
     it("judges evidence read before chunk hashes by its quote in the unchanged text", () => {
-        expect(evidenceAfterChange({ value: "x", evidence: [piece(undefined, "Pay by transfer")] }, SOURCE, unchanged).touched).toBe(
-            false,
-        )
-        expect(evidenceAfterChange({ value: "x", evidence: [piece(undefined, "Ship 20.000")] }, SOURCE, unchanged).touched).toBe(
-            true,
-        )
+        expect(
+            evidenceAfterChange({ value: "x", evidence: [piece(undefined, "Pay by transfer")] }, SOURCE, unchanged)
+                .touched,
+        ).toBe(false)
+        expect(
+            evidenceAfterChange({ value: "x", evidence: [piece(undefined, "Ship 20.000")] }, SOURCE, unchanged).touched,
+        ).toBe(true)
     })
 
     it("never touches the evidence of another document", () => {

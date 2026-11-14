@@ -1,22 +1,16 @@
-import { defineJob, doorPort, retryJob } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
+import { defineJob, doorPort, retryJob, type DoorApi, type JobDefinition } from "@nivo-lite/agent-sdk/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
+import { TOOL, type ToolId } from "../../../vocabulary/tool-ids"
 
 /** The name of the job that posts the report of a finished run to the chat. */
 export const POST_REPORT_JOB = "platform.post-report"
 
-/** The name of the job that posts the approval card of a decision to the chat. */
-export const POST_APPROVAL_JOB = "platform.post-approval"
+/** The door tool of the chat the report job calls. */
+export const CHAT_POST_REPORT_TOOL: ToolId = TOOL.teamChatReportPost
 
-/** The door tool of the chat the two jobs call. */
-export const CHAT_POST_REPORT_TOOL = "nivo.team-chat.report.post"
-
-/** The door tool of the chat that writes the approval cards. */
-export const CHAT_POST_APPROVAL_TOOL = "nivo.team-chat.approval.post"
-
-/** How many times the queue delivers either job before it is parked. */
+/** How many times the queue delivers the job before it is parked. */
 const POST_ATTEMPTS = 6
 
 const id = z.string().min(1).max(MAX_ID)
@@ -25,10 +19,7 @@ const id = z.string().min(1).max(MAX_ID)
 export const POST_REPORT_INPUT: z.ZodObject<{ runId: z.ZodString; agentId: z.ZodString; trigger: z.ZodString }> =
     z.object({ runId: id, agentId: id, trigger: id })
 
-/** The input of the approval job: the decision whose card is posted; the chat reads the request and its rule itself. */
-export const POST_APPROVAL_INPUT: z.ZodObject<{ decisionId: z.ZodString }> = z.object({ decisionId: id })
-
-/** The ports both jobs run on: the door out of the system. */
+/** The ports the job runs on: the door out of the system. */
 export interface PostPorts {
     /** The door. */
     readonly door: DoorApi
@@ -54,14 +45,5 @@ export const POST_REPORT: JobDefinition<typeof POST_REPORT_INPUT, { readonly doo
     run: (ports, input) => postThrough(ports, POST_REPORT_JOB, CHAT_POST_REPORT_TOOL, input),
 })
 
-/** The declared job: posts the approval card of one decision to the rooms its rule names; one card per decision per room. */
-export const POST_APPROVAL: JobDefinition<typeof POST_APPROVAL_INPUT, { readonly door: typeof doorPort }> = defineJob({
-    name: POST_APPROVAL_JOB,
-    input: POST_APPROVAL_INPUT,
-    ports: { door: doorPort },
-    attempts: POST_ATTEMPTS,
-    run: (ports, input) => postThrough(ports, POST_APPROVAL_JOB, CHAT_POST_APPROVAL_TOOL, input),
-})
-
 /** The jobs of the platform module. */
-export const PLATFORM_JOBS: ReadonlyArray<JobDefinition> = [POST_REPORT, POST_APPROVAL]
+export const PLATFORM_JOBS: ReadonlyArray<JobDefinition> = [POST_REPORT]

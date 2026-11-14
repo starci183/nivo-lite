@@ -1,2 +1,5 @@
 export { NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "./native-tools.module"
-export { BankNativeService } from "./bank-native.service"
+export { RECORD_MANIFEST } from "./record-native.service"
+export { FILE_MANIFEST } from "./file-native.service"
+export { BRAIN_PROBE_TOOLS, BrainProbeService } from "./brain-probe.service"
+export type { BrainProbe, BrainProbeAnswer } from "./brain-probe.service"

@@ -1,40 +1,19 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
-import { BrainFactsService, factSlugOf, sameValue } from "@modules/domain/brain-facts"
-import type { Evidence, Scope } from "@modules/domain/brain-facts"
-import { EventsService } from "@modules/domain/events"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import { Injectable } from "@nestjs/common"
+import { BrainFactsService, factSlugOf, sameValue, type Evidence, type Scope } from "@modules/domain/brain-facts"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
-import { SetupWritesService } from "@modules/domain/module-setup-writes"
-import type {
-    CardRecord,
-    BranchCardPayload,
-    FactCardPayload,
-    ProposedCardRecord,
-    RuleCardPayload,
-} from "@modules/domain/module-setup-writes"
+import { SetupWritesService, type CardRecord, type FactCardPayload } from "@modules/domain/module-setup-writes"
 import { InstallationChangesService } from "./installation-changes.service"
-import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { Locale } from "@modules/platform/i18n"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
-import { InjectSetupGraph } from "./modules.decorators"
-import type { SetupGraphPort } from "./modules.port"
-import type { CardDecision, CurrentFact, CurrentRule, SetupCardView } from "./module-setup.contracts"
+import type { CardDecision, CurrentFact, SetupCardView } from "./module-setup.contracts"
 import type { ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
-import { cardOf } from "./policies/setup-writes.policy"
-import type { OpenGap, ProposedWrite } from "./policies/setup-writes.policy"
+import { cardOf, type OpenGap, type ProposedFact } from "./policies/setup-writes.policy"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 const SCOPES: ReadonlySet<Scope> = new Set(["public", "internal", "restricted"])
@@ -43,17 +22,10 @@ const GAPS_PER_TURN = 5
 const factScopeOf = (scope: Scope | undefined, fallback: Scope): Scope =>
     scope !== undefined && SCOPES.has(scope) ? scope : fallback
 
-/** The rule of an action as it stands: the stored row, else what installing the module grants. */
-interface RuleInForce {
-    readonly mode: RuleCardPayload["mode"]
-    readonly limitVnd: number | null
-    readonly requiredFields: ReadonlyArray<string>
-}
-
 /** Closes a decided setup card with its resulting payload. */
 type CardCloser = (
     status: "applied" | "rejected",
-    payload: FactCardPayload | RuleCardPayload | BranchCardPayload,
+    payload: FactCardPayload,
     result: NonNullable<CardRecord["result"]>,
 ) => Promise<CardRecord>
 
@@ -69,27 +41,14 @@ interface ConfirmFactParams {
     readonly close: CardCloser
 }
 
-/** The authority and selected rule card for confirmation. */
-interface ConfirmRuleParams {
-    readonly workspaceId: string
-    readonly actor: string
-    readonly module: ModuleDefinition
-    readonly installation: InstallationRecord
-    readonly base: RuleCardPayload
-    readonly change: CardDecision
-    readonly locale: Locale
-    readonly close: CardCloser
-}
-
 @Injectable()
 /**
- * The confirm cards of the setup chat: the owner answers become cards (a Second Brain fact or an authority rule) that are written only
- * when the owner confirms them, with their edits, on the card.
+ * The confirm cards of the setup chat: the owner answers become Second Brain fact cards that are written only when the owner confirms
+ * them, with their edits, on the card (rule and branch cards are gone with the authority rules, 2026-11-13).
  */
 export class SetupCardsService {
     constructor(
         @InjectClock() private readonly clock: Clock,
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly writes: SetupWritesService,
         private readonly sessions: SetupSessionsService,
         private readonly messages: SetupMessagesService,
@@ -97,28 +56,17 @@ export class SetupCardsService {
         private readonly members: WorkspaceMembersService,
         private readonly modules: ModulesService,
         private readonly facts: BrainFactsService,
-        private readonly rules: AuthorityRulesService,
-        private readonly actions: AuthorityActionsService,
         private readonly gaps: KnowledgeGapsService,
-        private readonly events: EventsService,
         private readonly changes: InstallationChangesService,
-        private readonly branches: SetupBranchCardsService,
-        @Optional() @InjectSetupGraph() private readonly graph: SetupGraphPort | null = null,
     ) {}
 
     /** The cards of the given sessions, each waiting one with the value it would replace. */
     async viewsOf(workspaceId: string, sessionIds: ReadonlyArray<string>): Promise<ReadonlyArray<SetupCardView>> {
         const cards = await this.writes.ofSessions(sessionIds)
-        if (cards.length === 0) return []
-        const stored = await this.rules.list(workspaceId)
-        const catalog = await this.modules.catalog()
         return Promise.all(
             cards.map(async (card) => ({
                 card,
-                current:
-                    card.status === "proposed"
-                        ? await this.currentOf(workspaceId, card, stored, catalog.modules)
-                        : null,
+                current: card.status === "proposed" ? await this.currentOf(workspaceId, card) : null,
             })),
         )
     }
@@ -138,45 +86,25 @@ export class SetupCardsService {
             }))
     }
 
-    /**
-     * Stores the writes a turn proposed as confirm cards. A rule card is completed with the half the owner did not change (mode or
-     * limit) from the rule in force; a rule that would change nothing is dropped. A waiting card for the same target is replaced.
-     */
+    /** Stores the fact writes a turn proposed as confirm cards; a waiting card for the same target is replaced. */
     async propose(
         workspaceId: string,
         sessionId: string,
         sourceMessageId: string,
-        proposed: ReadonlyArray<ProposedWrite>,
+        proposed: ReadonlyArray<ProposedFact>,
     ): Promise<void> {
-        const stored = await this.rules.list(workspaceId)
-        const catalog = await this.modules.catalog()
-        const cards: Array<ProposedCardRecord> = []
-        const branchCards = await Promise.all(
-            proposed.map((write) => (write.kind === "branch" ? this.branches.cardOf(workspaceId, write) : null)),
+        await this.writes.propose(
+            workspaceId,
+            sessionId,
+            sourceMessageId,
+            proposed.map((write) => cardOf(write, write.payload)),
         )
-        for (const [index, write] of proposed.entries()) {
-            if (write.kind === "fact") {
-                cards.push(cardOf(write, write.payload))
-                continue
-            }
-            if (write.kind === "branch") {
-                const made = branchCards[index]
-                if (made) cards.push(made)
-                continue
-            }
-            const have = this.ruleInForce(write.payload.action, stored, catalog.modules)
-            const mode = write.payload.mode ?? have.mode
-            const limitVnd = write.payload.limitVnd === undefined ? have.limitVnd : write.payload.limitVnd
-            if (mode === have.mode && limitVnd === have.limitVnd) continue
-            cards.push(cardOf(write, { action: write.payload.action, field: write.payload.field, mode, limitVnd }))
-        }
-        await this.writes.propose(workspaceId, sessionId, sourceMessageId, cards)
     }
 
     /**
      * The owner decides one card. Reject: nothing is written. Confirm (with the edits of the owner, if any): a fact goes to the Second
      * Brain as a statement of the owner, restricted facts limited to this module; if a different value is in force the owner must have
-     * chosen to replace it (history kept), keep it, or keep both for a named situation. A rule is saved like the Authority page does.
+     * chosen to replace it (history kept), keep it, or keep both for a named situation.
      */
     async decide(
         principalId: string,
@@ -196,7 +124,7 @@ export class SetupCardsService {
         const module = await this.modules.find(installation.moduleKey)
         const close = async (
             status: "applied" | "rejected",
-            payload: FactCardPayload | RuleCardPayload | BranchCardPayload,
+            payload: FactCardPayload,
             result: CardRecord["result"] & object,
         ): Promise<CardRecord> => {
             const closed = await this.writes.close(workspaceId, cardId, {
@@ -209,28 +137,6 @@ export class SetupCardsService {
             return closed
         }
         if (change.decision === "reject") return close("rejected", card.payload, { outcome: "rejected" })
-        if (card.kind === "branch") {
-            return this.branches.confirm({
-                workspaceId,
-                installationId: installation.id,
-                messageId: card.sourceMessageId,
-                base: card.payload,
-                change,
-                close,
-            })
-        }
-        if (card.kind === "rule") {
-            return this.confirmRule({
-                workspaceId,
-                actor: member.displayName,
-                module,
-                installation,
-                base: card.payload,
-                change,
-                locale,
-                close,
-            })
-        }
         return this.confirmFact({
             workspaceId,
             actor: member.displayName,
@@ -241,50 +147,6 @@ export class SetupCardsService {
             locale,
             close,
         })
-    }
-
-    /**
-     * Saves a confirmed rule the way the Authority page does, then brings the graph of the installation along: a seed follows the rule
-     * it came from at once, so the draft the setup offers to publish never sits above the limit the owner has just confirmed.
-     */
-    private async confirmRule(params: ConfirmRuleParams): Promise<CardRecord> {
-        const { workspaceId, actor, module, installation, base, change, locale, close } = params
-        const mode = change.mode ?? base.mode
-        const limitVnd = change.limitVnd === undefined ? base.limitVnd : change.limitVnd
-        const have = this.ruleInForce(
-            base.action,
-            await this.rules.list(workspaceId),
-            (await this.modules.catalog()).modules,
-        )
-        const definition = module.authorityActions.find((candidate) => candidate.action === base.action)
-        const ruleChange = {
-            action: base.action,
-            department: module.key,
-            mode,
-            limit_vnd: definition?.amountLimit === true ? limitVnd : null,
-            required_fields: have.requiredFields,
-            note: null,
-        }
-        // The same catalogue check as the Authority page's save: a registered action of this module, and no "auto" past its cap.
-        const record = (await this.actions.list(this.entityManager)).find((entry) => entry.action === base.action)
-        const refusal = ruleRefusalOf(record, ruleChange)
-        if (refusal !== null) {
-            const code =
-                refusal === "unknown_action"
-                    ? ModulesErrorCode.CardRuleUnknownAction
-                    : ModulesErrorCode.CardRuleModeCapped
-            throw new ModulesError({ code, params: { action: base.action } })
-        }
-        const saved = await this.rules.save(workspaceId, ruleChange)
-        const limit = saved.limit_vnd === null ? "" : ` < ${saved.limit_vnd}`
-        await this.events.record({
-            workspaceId,
-            kind: "authority.rule_updated",
-            actor,
-            summary: `${module.key}.${base.action} -> ${mode}${limit} (${module.name[locale]} setup chat)`,
-        })
-        await this.graph?.followRules(workspaceId, installation.id)
-        return close("applied", { ...base, mode, limitVnd: saved.limit_vnd }, { outcome: "applied", ruleId: saved.id })
     }
 
     private async confirmFact(params: ConfirmFactParams): Promise<CardRecord> {
@@ -357,17 +219,7 @@ export class SetupCardsService {
         }
     }
 
-    private async currentOf(
-        workspaceId: string,
-        card: CardRecord,
-        stored: ReadonlyArray<AuthorityRuleRecord>,
-        catalog: ReadonlyArray<ModuleDefinition>,
-    ): Promise<CurrentFact | CurrentRule | null> {
-        if (card.kind === "branch") return null
-        if (card.kind === "rule") {
-            const have = this.ruleInForce(card.payload.action, stored, catalog)
-            return { kind: "rule", mode: have.mode, limitVnd: have.limitVnd }
-        }
+    private async currentOf(workspaceId: string, card: CardRecord): Promise<CurrentFact | null> {
         const { subjectLabel, attributeLabel } = card.payload
         const [active] = await this.facts.byKey(
             workspaceId,
@@ -379,24 +231,5 @@ export class SetupCardsService {
         return active === undefined
             ? null
             : { kind: "fact", value: active.value, scope: active.scope, modules: active.modules }
-    }
-
-    private ruleInForce(
-        action: string,
-        stored: ReadonlyArray<AuthorityRuleRecord>,
-        catalog: ReadonlyArray<ModuleDefinition>,
-    ): RuleInForce {
-        const rule = stored.find((candidate) => candidate.action === action)
-        if (rule !== undefined) {
-            return { mode: rule.mode, limitVnd: rule.limit_vnd, requiredFields: rule.required_fields }
-        }
-        const definition = catalog
-            .flatMap((module) => module.authorityActions)
-            .find((candidate) => candidate.action === action)
-        return {
-            mode: definition?.mode ?? "ask",
-            limitVnd: definition?.limitVnd ?? null,
-            requiredFields: definition?.requiredFields ?? [],
-        }
     }
 }

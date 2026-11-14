@@ -40,6 +40,7 @@ export const isBulkSafe = (fact: FactRecord, nowMs: number): boolean =>
     fact.sourceKind === "document" &&
     fact.scope === "internal" &&
     fact.conflictWith === null &&
-    (fact.flags ?? []).length === 0 &&
+    // `period_unclear` is a mark for the page, not a reason to hold the value (owner 2026-11-12).
+    (fact.flags ?? []).every((flag) => flag === "period_unclear") &&
     (fact.validFrom === null || Date.parse(fact.validFrom) <= nowMs) &&
     quotesDocument(fact)

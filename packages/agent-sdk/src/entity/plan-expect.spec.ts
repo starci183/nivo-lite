@@ -60,7 +60,7 @@ describe("expectedIndexes", () => {
             method: "gin",
         })
         expect(all[2]).toMatchObject({
-            parts: ["workspace_id", "data->'custom'->>'tier'"],
+            parts: ["workspace_id", "agent_id", "data->'custom'->>'tier'"],
             unique: true,
             partial: true,
         })
@@ -69,12 +69,12 @@ describe("expectedIndexes", () => {
     it("turns unique constraints into unique indexes, partial or not", () => {
         expect(all[3]).toMatchObject({
             name: `${P}_name_key`,
-            parts: ["workspace_id", "data->>'name'"],
+            parts: ["workspace_id", "agent_id", "data->>'name'"],
             unique: true,
             partial: true,
             constraint: true,
         })
-        expect(all[4]).toMatchObject({ name: `${P}_plain_key`, partial: false, constraint: true })
+        expect(all[4]).toMatchObject({ name: `${P}_plain_key`, partial: true, constraint: true })
     })
 
     it("adds trigram, nested key and free key indexes", () => {
@@ -93,7 +93,7 @@ describe("expectedIndexes", () => {
 })
 
 describe("expectedChecks, expectedExcludes", () => {
-    it("lists one check per field and each declared check", () => {
+    it("lists one check per field, each declared check, and the agent scope (agent_id NOT NULL) last", () => {
         expect(expectedChecks(lead)).toEqual([
             { name: `${P}_name_chk`, key: "name", values: null, limit: 200 },
             { name: `${P}_stage_chk`, key: "stage", values: ["new", "won"], limit: null },
@@ -101,9 +101,10 @@ describe("expectedChecks, expectedExcludes", () => {
             { name: `${P}_free_chk`, key: "free", values: null, limit: null },
             { name: `${P}_custom_chk`, key: "custom", values: null, limit: null },
             { name: `${P}_free_set`, key: null, values: null, limit: null },
+            { name: `${P}_agent_scope_chk`, key: null, values: null, limit: null },
         ])
         expect(expectedExcludes(lead)).toEqual([`${P}_no_overlap`])
-        expect(expectedChecks(bare)).toEqual([])
+        expect(expectedChecks(bare)).toEqual([{ name: `records_x_y_agent_scope_chk`, key: null, values: null, limit: null }])
         expect(expectedExcludes(bare)).toEqual([])
     })
 })

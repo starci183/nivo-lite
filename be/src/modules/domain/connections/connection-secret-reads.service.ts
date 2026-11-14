@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { ConnectionSecretsErrorCode, ConnectionSecretsService } from "@modules/domain/connection-secrets"
-import type { ConnectionSecret } from "@modules/domain/connection-secrets"
+import { In, Not, type EntityManager } from "typeorm"
+import {
+    ConnectionSecretsErrorCode,
+    ConnectionSecretsService,
+    type ConnectionSecret,
+} from "@modules/domain/connection-secrets"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { ConnectionEntity } from "./persistence/entities"
 
 /** The most Zalo connections one renewal pass reads. */

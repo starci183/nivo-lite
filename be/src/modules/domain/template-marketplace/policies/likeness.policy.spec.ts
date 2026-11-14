@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
 import type { LikenessClaim } from "@nivo-lite/agent-sdk/template"
-import { consentCovers } from "./likeness.policy"
-import type { ConsentRecord } from "./likeness.policy"
+import { consentCovers, type ConsentRecord } from "./likeness.policy"
 
 const NOW = new Date("2026-11-03T00:00:00.000Z")
 const CLAIM: LikenessClaim = {

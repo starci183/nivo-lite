@@ -7,6 +7,9 @@ import type { AiSchema } from "./ai.schema"
  */
 export type AiChatModel = BaseChatModel
 
+/** The chat client of one try, or null when no endpoint is configured. */
+export type OptionalAiChatModel = AiChatModel | null
+
 /**
  * Which model a call asks the gateway for, and what its body may carry there. `name` is a gateway profile (`sonnet`, `deepseek`,
  * `auto-light`, `auto-heavy`) or model; the router owns which provider and key serve it. The three flags are what every provider the
@@ -24,6 +27,17 @@ export interface AiTarget {
     /** True when the upstream's own fields are worth sending. */
     readonly upstreamFields: boolean
 }
+
+/** One model a gateway profile may be served by, and the profile that serves that model and nothing else. */
+export interface AiChatRoute {
+    /** The model id. */
+    readonly model: string
+    /** The single-model profile (or the model id) that asks for exactly this model. */
+    readonly profile: string
+}
+
+/** Each gateway chat profile with the models that may serve it, in the pool's order. */
+export type ProfileRoutes = Readonly<Record<string, ReadonlyArray<AiChatRoute>>>
 
 /** What the client of one try of an agent turn carries: its deadline, what a reasoning model may spend, whose calls these are. */
 export interface AiTurnRequest {
@@ -80,6 +94,9 @@ export type AiTurnRead =
       }
     | { readonly ok: false; readonly failure: AiFailure; readonly spent?: AiCutSpend | undefined }
 
+/** One try of an agent turn: the model call made with the client of that try. */
+export type AiAgentAttempt<M> = (model: AiChatModel, tryNumber: number) => Promise<M>
+
 /**
  * The model side of one run of an agent loop, as the loop is handed it. The loop asks for one agent turn at a time and gets the
  * message of the try that succeeded: the tries, their deadlines, the pauses and the metering are all behind `turn`.
@@ -92,7 +109,7 @@ export interface AiAgentTurns {
      * message it answered (or throws what the call threw). `turn` resolves with the message of the first try that is an answer, and
      * throws once every try failed (`AI_TASKS_UNAVAILABLE` with the tries made and the failure of each).
      */
-    turn<M>(attempt: (model: AiChatModel, tryNumber: number) => Promise<M>): Promise<M>
+    turn<M>(attempt: AiAgentAttempt<M>): Promise<M>
     /**
      * A client to BUILD the agent over, for a library that refuses to construct one without a model: the client a first try of
      * this step would get (its deadline, reasoning, affinity and upstream routing). It is never to be asked: every model call goes
@@ -193,7 +210,17 @@ export interface AiChatRequest {
     readonly target?: AiTarget | undefined
     /** True on a retry after a provider failure or a timeout (see `AiTurnRequest.fallback`). */
     readonly fallback?: boolean
+    /**
+     * The JSON Schema the answer must follow, sent as the API's structured output where the serving protocol has it (Anthropic
+     * Messages: `output_config.format` of type `json_schema`, with the call's effort beside it). Every object of it must say
+     * `additionalProperties: false` and no length or number bound (the API refuses them). A protocol without structured output (the
+     * OpenAI-compatible route) sends nothing of it: the caller still reads the answer's text with its own parser. Absent: free text.
+     */
+    readonly outputSchema?: AiOutputSchema
 }
+
+/** A JSON Schema for structured output (see `AiChatRequest.outputSchema`). */
+export type AiOutputSchema = Readonly<Record<string, unknown>>
 
 /** The spend a call caps: how hard a reasoning model thinks and how many tokens it may write (reasoning included). */
 export interface AiBudget {
@@ -352,6 +379,12 @@ export interface RoutedChatOptions {
     readonly fields?: Readonly<Partial<Record<RoutedKind, Readonly<Record<string, unknown>>>>> | undefined
 }
 
+/** The one call made on an embeddings client: the vectors of a batch of texts. */
+export interface RoutedEmbeddingsCall {
+    /** The vector of each text, in order. */
+    embedDocuments(input: Array<string>): Promise<Array<Array<number>>>
+}
+
 /** An embeddings client the router hands out (0.7.0's `RoutedEmbeddings`, its `OpenAIEmbeddings` reduced to the one call made). */
 export interface RoutedEmbeddings {
     /** Always `openai`: Anthropic has no embeddings API. */
@@ -359,7 +392,7 @@ export interface RoutedEmbeddings {
     /** The profile or model it names. */
     readonly name: string
     /** The client. */
-    readonly embeddings: { embedDocuments(input: Array<string>): Promise<Array<Array<number>>> }
+    readonly embeddings: RoutedEmbeddingsCall
     /** The vector length the pool declares for it; undefined when the pool declares none. */
     readonly dimensions: number | undefined
 }

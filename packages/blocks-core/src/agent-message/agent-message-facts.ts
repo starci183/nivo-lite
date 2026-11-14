@@ -1,4 +1,4 @@
-import type { MessageFact } from "./agent-message-kinds"
+import type { MessageFact } from "@nivo-lite/agent-sdk/team-chat"
 import type { AgentMessageIntent, AgentMessageRecord } from "./agent-message-item"
 
 /** The facts of a message as a card shows them: the worded ones a person reads, and the raw ones folded under the technical details. */

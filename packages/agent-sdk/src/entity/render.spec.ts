@@ -82,6 +82,20 @@ describe("renderOp", () => {
             `ALTER TABLE public."${P}" VALIDATE CONSTRAINT "${P}_named"`,
         ])
         expect(render(op("add_exclude", `public.${P}:constraint:${P}_no_overlap`))[0]).toContain("EXCLUDE USING gist")
+        expect(render(op("add_check", `public.${P}:constraint:${P}_agent_scope_chk`))).toEqual([
+            `ALTER TABLE public."${P}" ADD CONSTRAINT "${P}_agent_scope_chk" CHECK (agent_id IS NOT NULL) NOT VALID`,
+            `ALTER TABLE public."${P}" VALIDATE CONSTRAINT "${P}_agent_scope_chk"`,
+        ])
+        const agentFk = [
+            `ALTER TABLE public."${P}" ADD CONSTRAINT "${P}_agent_fk" FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE NOT VALID`,
+            `ALTER TABLE public."${P}" VALIDATE CONSTRAINT "${P}_agent_fk"`,
+        ]
+        expect(render(op("add_foreign_key", `public.${P}:constraint:${P}_agent_fk`))).toEqual(agentFk)
+        expect(render(op("alter_foreign_key", `public.${P}:constraint:${P}_agent_fk`, false))).toEqual([
+            `ALTER TABLE public."${P}" DROP CONSTRAINT "${P}_agent_fk"`,
+            ...agentFk,
+        ])
+        expect(refusal(op("add_foreign_key", `public.${P}:constraint:ghost`))).toBe("ENTITY_RENDER_OP_UNSUPPORTED")
         expect(render(op("create_index", `public.${P}:index:${P}_recent_idx`))[0]).toContain("CREATE INDEX")
         expect(render(op("add_unique", `public.${P}:index:${P}_name_key`))[0]).toContain("CREATE UNIQUE INDEX")
         expect(render(op("alter_index", `public.${P}:index:${P}_recent_idx`, false))[0]).toBe(

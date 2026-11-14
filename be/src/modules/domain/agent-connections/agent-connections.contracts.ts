@@ -4,12 +4,6 @@ export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_sou
 /** One purpose or several. */
 export type PurposeSelector = Purpose | ReadonlyArray<Purpose>
 
-/** Anything that belongs to a module: an agent, an installation. */
-export interface ModuleRef {
-    /** The module key. */
-    readonly module: string
-}
-
 /** An active agent bound to a connection. */
 export interface BoundAgent {
     /** The agent. */
@@ -40,12 +34,6 @@ export interface BoundConnection {
     readonly purpose: Purpose
 }
 
-/** Which bindings of a connection count. */
-export interface AgentsForOptions {
-    /** Only agents of these modules count. */
-    readonly modules?: ReadonlyArray<string>
-}
-
 /** Which bindings of an agent count. */
 export interface ConnectionsForOptions {
     /** Only connections whose status is "connected" count. */
@@ -54,11 +42,11 @@ export interface ConnectionsForOptions {
     readonly providers?: ReadonlyArray<string>
 }
 
-/** The inbound chat of a connection: the front door agent and the agents it hands over to. */
+/** The inbound chat of a connection: its one front door agent. */
 export interface InboundRoute {
     /** The agent that answers first, or null when none is bound. */
     readonly front: BoundAgent | null
-    /** One agent per other module, reached by intent. */
+    /** Always empty: a channel has one front door and no second binding to hand over to (the readers of `front` ignore it). */
     readonly handovers: ReadonlyArray<BoundAgent>
 }
 
@@ -83,9 +71,6 @@ export interface BindingTarget {
     /** The connection. */
     readonly connectionId: string
 }
-
-/** A connection id, or null for a conversation that came in on no connection (website chat). */
-export type OptionalConnectionId = string | null
 
 /** A binding joined to its active agent, as the binding policy reads it. */
 export interface BoundAgentFacts {

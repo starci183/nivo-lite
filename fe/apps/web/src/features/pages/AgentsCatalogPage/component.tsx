@@ -1,5 +1,4 @@
-import { Page } from "@starci/grammar/common"
-import type { BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
+import { Page, type BreadcrumbItem, type PageHeaderContent } from "@starci/grammar/common"
 import { AgentCatalog } from "@/components/blocks/AgentCatalog"
 import { AgentCreateAction } from "@/components/blocks/AgentCreateAction"
 import { AgentCreateDialog } from "@/components/blocks/AgentCreateDialog"

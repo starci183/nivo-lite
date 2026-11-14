@@ -6,6 +6,9 @@ import type { ReactNode } from "react"
 import type { Connection, ConnectorGlyph, Provider } from "@/modules/types"
 import { connectorDetailClassNames as classNames } from "./classNames"
 
+/** The logo address of a connector, only when it has one. */
+const logoOf = (logo: string | undefined) => (logo === undefined ? {} : { src: logo })
+
 /** One connection of the connector with the names of the agents bound to it. */
 export interface DetailRow {
     readonly connection: Connection
@@ -63,7 +66,6 @@ export interface ConnectorDetailOverlayBaseProps {
         readonly words: DetailWords
         readonly rows: ReadonlyArray<DetailRow>
         readonly localOnly: boolean
-        readonly ownerEmail: string
         readonly canManage: boolean
         /** The viewer may start a connection of this connector. */
         readonly canConnect: boolean
@@ -103,7 +105,6 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
                             connection={row.connection}
                             agentNames={row.agentNames}
                             localOnly={detail.localOnly}
-                            ownerEmail={detail.ownerEmail}
                             canManage={detail.canManage}
                         />
                     ),
@@ -128,6 +129,7 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
  */
 export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProps) => {
     const entry = props.props.entry
+    const statusTone = entry?.isOfficial === true ? "success" : "neutral"
     return (
         <Drawer
             isOpen={entry !== null}
@@ -141,14 +143,14 @@ export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProp
             {entry === null ? null : (
                 <Stack gap="section">
                     <Cluster gap="inline" align="start">
-                        <ProviderLogo glyph={entry.glyph} {...(entry.logo === undefined ? {} : { src: entry.logo })} />
+                        <ProviderLogo glyph={entry.glyph} {...logoOf(entry.logo)} />
                         <div className={classNames.lead}>
                             <Stack gap="identity">
                                 <Cluster gap="inline" align="center" justify="between">
                                     <Text size="sm" isStrong>
                                         {entry.category}
                                     </Text>
-                                    <Badge tone={entry.isOfficial ? "success" : "neutral"}>{entry.statusLabel}</Badge>
+                                    <Badge tone={statusTone}>{entry.statusLabel}</Badge>
                                 </Cluster>
                                 <Text size="sm" tone="muted">
                                     {entry.blurb}
@@ -182,4 +184,4 @@ interface OverlayHostProps {
 }
 
 /** A pure host for the connection drawers; the feature owns their registration and lifecycle. */
-export const OverlayHost = (props: OverlayHostProps) => <>{props.active ? props.candidate : null}</>
+export const OverlayHost = (props: OverlayHostProps): ReactNode => (props.active ? props.candidate : null)

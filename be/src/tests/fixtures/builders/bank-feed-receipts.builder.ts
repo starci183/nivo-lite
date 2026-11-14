@@ -1,3 +1,4 @@
+import type { PendingBankFeedInboxReceipt } from "@modules/domain/bank-feed-inbox"
 import { createHash } from "node:crypto"
 
 const raw = (body: object): Buffer => Buffer.from(JSON.stringify(body))
@@ -11,19 +12,20 @@ type ReceiptPayloadCreditsShape = {
     eventId: string
     fallbackBankName: string
 }
+const receiptOwner = { provider: "casso", connectionId: "c-1", workspaceId: "ws-1" }
 
-type ReceiptPayloadShape = {
-    connection: string
-    credits: Array<ReceiptPayloadCreditsShape>
+/** A committed provider receipt with one credit ready for booking: the locked delivery row of the connection's account. */
+export const receipt: PendingBankFeedInboxReceipt = {
+    payload: { connection: "c-1", credits: [deferredCredit] },
+    owner: receiptOwner,
+    row: {
+        id: "receipt-1",
+        type: "casso.delivery",
+        key: "7",
+        owner: receiptOwner,
+        value: { deliveryId: "7", credits: [deferredCredit] },
+    },
 }
-
-type ReceiptShape = {
-    id: string
-    payload: ReceiptPayloadShape
-}
-
-/** A committed provider receipt with one credit ready for booking. */
-export const receipt: ReceiptShape = { id: "receipt-1", payload: { connection: "c-1", credits: [deferredCredit] } }
 /** The provider kinds whose receipts share the deferred booking workflow. */
 export const providers = ["casso", "payos", "sepay-feed"] as const
 

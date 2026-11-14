@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { ChatMessagesQuery, ChatMessagesQueryVariables } from "../__generated__/graphql"
 
 /** Generated variables of the ChatMessages query. */
@@ -48,6 +48,66 @@ const query1: Document = gql`
                     canDecide
                 }
                 agentMessage
+                brainChange {
+                    changeId
+                    kind
+                    state
+                    origin
+                    reason
+                    revision
+                    newValue
+                    oldValue
+                    unit
+                    validFrom
+                    validTo
+                    canApprove
+                    canReject
+                    canKeepBoth
+                    supersededBy
+                    factKey {
+                        subjectLabel
+                        attributeLabel
+                    }
+                    current {
+                        value
+                        source
+                        version
+                        match
+                        startsAt
+                        factKey {
+                            subjectLabel
+                            attributeLabel
+                        }
+                    }
+                    evidence {
+                        kind
+                        quote
+                        ref
+                        at
+                        by {
+                            memberId
+                            name
+                        }
+                    }
+                    decidedBy {
+                        memberId
+                        name
+                        at
+                    }
+                    cost {
+                        credits
+                        usd
+                    }
+                }
+                backgroundStopped {
+                    work
+                    reason
+                    since
+                    episode
+                    target {
+                        kind
+                    }
+                }
                 stop {
                     stopId
                     runId
@@ -70,6 +130,7 @@ const query1: Document = gql`
                     facts {
                         name
                         value
+                        technical
                     }
                     needs {
                         answer
@@ -94,6 +155,17 @@ const query1: Document = gql`
                         ability
                         args {
                             name
+                            value
+                        }
+                    }
+                    preview {
+                        kind
+                        payloadJson
+                    }
+                    decision {
+                        content {
+                            name
+                            kind
                             value
                         }
                     }
@@ -138,7 +210,7 @@ export const queryChatMessages = async ({
     signal,
     headers,
 }: QueryChatMessagesParams): Promise<ApolloClient.QueryResult<QueryChatMessagesResponse>> => {
-    const apollo = createAuthApolloClient({ signal, headers })
+    const apollo = createAuthApolloClient(webApiTransport, { signal, headers })
     return apollo.query({
         query: queryMap[query],
         variables: { input: request },

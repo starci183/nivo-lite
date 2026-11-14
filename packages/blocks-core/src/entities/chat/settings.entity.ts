@@ -1,7 +1,7 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 import { MAX_ID, MAX_LINE } from "../../bounds"
+import { CHATBOT_SETTINGS_ENTITY } from "./chatbot-entity-names"
 
 /** The key of the one settings record of a workspace's Chatbot: the record is found, and written, by it. */
 export const CHATBOT_SETTINGS_SCOPE = "chatbot"
@@ -23,10 +23,10 @@ const settingsFields: SettingsFields = {
 
 /**
  * The rules of a workspace's Chatbot: what it tells a customer while the AI is still working (up to 400 characters). One record per
- * workspace, found by its `scope` (the module settings pattern: `<module>.settings`).
+ * workspace, found by its `scope` (the module settings pattern: `<package>.<agent>.settings`).
  */
 export const chatSettingsEntity: EntityDefinition<SettingsFields> = defineEntity({
-    name: "chat.settings",
+    name: CHATBOT_SETTINGS_ENTITY,
     dataKind: "chatbot-settings",
     fields: settingsFields,
     indexes: [

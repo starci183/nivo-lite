@@ -1,23 +1,32 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { LeadMemorySnapshot } from "@nivo-lite/agent-sdk/node"
-import { AgentGraphConversationReleaseService } from "@modules/domain/agent-graphs"
+import { StopHandBackService } from "@modules/domain/agent-threads"
 import { AgentWorkAccessService } from "@modules/domain/agent-work"
+import { HeldLinesService } from "@modules/domain/conversations"
+import { CustomerRoutesService } from "@modules/domain/customer-routes"
 import { LeadMemoryService } from "@modules/domain/lead-memory"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { DecisionsError, DecisionsErrorCode } from "@modules/domain/decisions"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { DoorPress } from "./agent-doors.contracts"
 import { CareOptOutService } from "./care-opt-out.service"
 import { DoorPressesService } from "./door-presses.service"
-import { HoldReleaseDoorService, releaseHoldOf } from "./hold-release-door.service"
+import { HoldReleaseDoorService } from "./hold-release-door.service"
 
-const SUBJECT = { key: "lead:lead-1", leadId: "lead-1", conversationId: null }
+const SUBJECT = { key: "lead:lead-1", contactId: null, conversationId: null }
+
+/** The one transaction a hand-back runs in. */
+const TX = { tx: "hand-back" }
 
 const snapshotOf = (careOptOut: boolean | undefined): LeadMemorySnapshot =>
-    ({ subject: SUBJECT, lead: careOptOut === undefined ? { name: "Lan" } : { name: "Lan", careOptOut }, workflows: {} }) as LeadMemorySnapshot
+    ({
+        subject: SUBJECT,
+        lead: careOptOut === undefined ? { name: "Lan" } : { name: "Lan", careOptOut },
+        workflows: {},
+    }) as LeadMemorySnapshot
 
 const PRESS: DoorPress = {
     door: "care.opt_out",
@@ -41,9 +50,16 @@ const build = async (snapshots: ReadonlyArray<LeadMemorySnapshot | null>, manage
         record: jest.fn().mockResolvedValue(undefined),
         latest: jest.fn().mockResolvedValue(PRESS),
     })
-    const release = mock<AgentGraphConversationReleaseService>({
-        release: jest.fn().mockResolvedValue({ outcome: "released", person: "Owner Lan", agentId: null }),
-    })
+    const routes = mock<CustomerRoutesService>()
+    routes.get.mockResolvedValue(
+        mock<NonNullable<Awaited<ReturnType<CustomerRoutesService["get"]>>>>({ id: "route-1" }),
+    )
+    const heldLines = mock<HeldLinesService>({ answerHeld: jest.fn().mockResolvedValue(1) })
+    const takeOvers = mock<StopHandBackService>({ handedBack: jest.fn().mockResolvedValue(0) })
+    const seats = mock<MemberLookupService>()
+    seats.activeSeatById.mockImplementation((_workspaceId, memberId) =>
+        Promise.resolve(memberId === "m-staff" ? { displayName: "Staff Hoa", isManager: false } : null),
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             CareOptOutService,
@@ -53,7 +69,15 @@ const build = async (snapshots: ReadonlyArray<LeadMemorySnapshot | null>, manage
             { provide: WorkspaceMembersService, useValue: members },
             { provide: LeadMemoryService, useValue: memory },
             { provide: DoorPressesService, useValue: presses },
-            { provide: AgentGraphConversationReleaseService, useValue: release },
+            { provide: CustomerRoutesService, useValue: routes },
+            { provide: HeldLinesService, useValue: heldLines },
+            { provide: MemberLookupService, useValue: seats },
+            { provide: StopHandBackService, useValue: takeOvers },
+            // The hand-back runs in ONE transaction (R51 item 3): every part is handed the same `TX`.
+            {
+                provide: PRIMARY_ENTITY_MANAGER,
+                useValue: { transaction: (work: (tx: unknown) => unknown) => work(TX) },
+            },
         ],
     }).compile()
     return {
@@ -61,7 +85,10 @@ const build = async (snapshots: ReadonlyArray<LeadMemorySnapshot | null>, manage
         door: moduleRef.get(HoldReleaseDoorService),
         memory,
         presses,
-        release,
+        routes,
+        heldLines,
+        seats,
+        takeOvers,
     }
 }
 
@@ -98,41 +125,193 @@ describe("CareOptOutService (the shop's door to a customer's care opt-out)", () 
         const same = await build([snapshotOf(true), snapshotOf(true)])
         const missing = await build([null])
 
-        await expect(same.optOuts.set("user-1", "ws-1", "lead-1", true)).resolves.toMatchObject({ outcome: "unchanged" })
-        await expect(missing.optOuts.set("user-1", "ws-1", "lead-x", true)).resolves.toEqual({ outcome: "not_found", view: null })
+        await expect(same.optOuts.set("user-1", "ws-1", "lead-1", true)).resolves.toMatchObject({
+            outcome: "unchanged",
+        })
+        await expect(missing.optOuts.set("user-1", "ws-1", "lead-x", true)).resolves.toEqual({
+            outcome: "not_found",
+            view: null,
+        })
         expect(same.presses.record).toHaveBeenCalledTimes(1)
         expect(missing.memory.remember).not.toHaveBeenCalled()
     })
 
     it("reads the fact and the last press, and refuses a seat that is not an owner or manager", async () => {
         const { optOuts } = await build([snapshotOf(true)])
-        const denied = new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
+        const denied = new Error("seat refused")
         const staff = await build([], () => Promise.reject(denied))
 
-        await expect(optOuts.read("user-1", "ws-1", "lead-1")).resolves.toEqual({ leadId: "lead-1", optedOut: true, lastPress: PRESS })
+        await expect(optOuts.read("user-1", "ws-1", "lead-1")).resolves.toEqual({
+            leadId: "lead-1",
+            optedOut: true,
+            lastPress: PRESS,
+        })
         await expect(staff.optOuts.set("user-2", "ws-1", "lead-1", false)).rejects.toBe(denied)
         expect(staff.memory.remember).not.toHaveBeenCalled()
     })
 })
 
+// Ledger (ROAD Opus-1d, 2026-11-14): ruling R35 deleted the engine's agent conversation hold; "hand back" keeps only its generic half (ONE
+// resume event delivered for the route), so the cases about which hold is cleared (`person` / `agent` / `both`) are gone with it.
 describe("HoldReleaseDoorService (hand back to the agent)", () => {
-    it("hands the conversation back through the engine's own release, as an owner or manager, and records who and when", async () => {
-        const { door, release, presses } = await build([])
+    it("delivers exactly one resume event for the route, as an owner or manager, and records who and when", async () => {
+        const { door, heldLines, presses } = await build([])
 
-        await expect(door.hand("user-1", "ws-1", "conv-1", "both")).resolves.toMatchObject({ outcome: "released" })
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "released", answered: 1 })
 
-        expect(release.release).toHaveBeenCalledWith("ws-1", "conv-1", "both")
+        expect(heldLines.answerHeld).toHaveBeenCalledTimes(1)
+        expect(heldLines.answerHeld).toHaveBeenCalledWith("ws-1", "route-1", TX)
         expect(presses.record).toHaveBeenCalledWith(
-            expect.objectContaining({ door: "conversation.release", subject: "conv-1", memberId: "member-owner", outcome: "released" }),
+            expect.objectContaining({
+                door: "conversation.release",
+                subject: "route-1",
+                memberId: "member-owner",
+                outcome: "released",
+            }),
         )
     })
 
-    it("records nothing when nothing was held, and reads the hold a caller names (unknown or absent: both)", async () => {
-        const { door, release, presses } = await build([])
-        release.release.mockResolvedValue({ outcome: "nothing_held", person: null, agentId: null })
+    it("records nothing when no graph took the resume event, and answers not_found for a route the workspace does not hold", async () => {
+        const { door, heldLines, presses, routes } = await build([])
+        heldLines.answerHeld.mockResolvedValue(0)
 
-        await expect(door.hand("user-1", "ws-1", "conv-1", "person")).resolves.toMatchObject({ outcome: "nothing_held" })
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "nothing_held", answered: 0 })
+        routes.get.mockResolvedValue(null)
+        await expect(door.hand("user-1", "ws-1", "route-x")).resolves.toEqual({ outcome: "not_found", answered: 0 })
+        expect(heldLines.answerHeld).toHaveBeenCalledTimes(1)
         expect(presses.record).not.toHaveBeenCalled()
-        expect([releaseHoldOf("agent"), releaseHoldOf(null), releaseHoldOf("x")]).toEqual(["agent", "both", "both"])
+    })
+
+    it("refuses a seat that is not an owner or manager before it delivers anything", async () => {
+        const denied = new Error("seat refused")
+        const { door, heldLines, routes } = await build([], () => Promise.reject(denied))
+
+        await expect(door.hand("user-2", "ws-1", "route-1")).rejects.toBe(denied)
+        expect(heldLines.answerHeld).not.toHaveBeenCalled()
+        expect(routes.release).not.toHaveBeenCalled()
+    })
+
+    it("clears the staff hold of the route BEFORE the resume event is delivered (ruling R43), and records who held it", async () => {
+        const { door, heldLines, presses, routes } = await build([])
+        const order: Array<string> = []
+        routes.release.mockImplementation(() => {
+            order.push("release")
+            return Promise.resolve({ memberId: "m-staff", at: "2026-11-14T08:00:00.000Z" })
+        })
+        heldLines.answerHeld.mockImplementation(() => {
+            order.push("resume")
+            return Promise.resolve(1)
+        })
+
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "released", answered: 1 })
+
+        expect(order).toEqual(["release", "resume"])
+        expect(routes.release).toHaveBeenCalledWith("ws-1", "route-1", TX)
+        expect(presses.record).toHaveBeenCalledWith(
+            expect.objectContaining({ detail: { answered: 1, heldBy: "m-staff", takeOversEnded: 0 } }),
+        )
+    })
+
+    // Ruling R51 item 3 (dev 2026-11-14: the hold cleared, but the stop a person took over stayed open, its freeze held the resume event and
+    // the card kept "Hand back"): the hand-back ENDS every take-over on the route as the person, in the same transaction, between the hold
+    // and the resume event.
+    it("ends the stops a person took over on the route as the person, in the same transaction, after the hold and before the resume event", async () => {
+        const { door, heldLines, presses, routes, takeOvers } = await build([])
+        routes.get.mockResolvedValue(
+            mock<NonNullable<Awaited<ReturnType<CustomerRoutesService["get"]>>>>({
+                id: "route-1",
+                contactId: "contact-1",
+            }),
+        )
+        const order: Array<string> = []
+        routes.release.mockImplementation(() => {
+            order.push("release")
+            return Promise.resolve({ memberId: "member-owner", at: "2026-11-14T08:00:00.000Z" })
+        })
+        takeOvers.handedBack.mockImplementation(() => {
+            order.push("take-overs")
+            return Promise.resolve(1)
+        })
+        heldLines.answerHeld.mockImplementation(() => {
+            order.push("resume")
+            return Promise.resolve(1)
+        })
+
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "released", answered: 1 })
+
+        expect(order).toEqual(["release", "take-overs", "resume"])
+        expect(takeOvers.handedBack).toHaveBeenCalledWith(TX, "ws-1", "route-1", "contact-1", "member-owner")
+        expect(presses.record).toHaveBeenCalledWith(
+            expect.objectContaining({ detail: { answered: 1, heldBy: "member-owner", takeOversEnded: 1 } }),
+        )
+    })
+
+    it("answers released when only a take-over was ended (no hold left, nothing woken yet), never nothing_held", async () => {
+        const { door, heldLines, takeOvers } = await build([])
+        takeOvers.handedBack.mockResolvedValue(1)
+        heldLines.answerHeld.mockResolvedValue(0)
+
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "released", answered: 0 })
+    })
+
+    it("answers released when a hold was cleared although no graph took the resume event", async () => {
+        const { door, heldLines, presses, routes } = await build([])
+        routes.release.mockResolvedValue({ memberId: "m-staff", at: "2026-11-14T08:00:00.000Z" })
+        heldLines.answerHeld.mockResolvedValue(0)
+
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "released", answered: 0 })
+        expect(presses.record).toHaveBeenCalledTimes(1)
+    })
+})
+
+// The `platform.route-holds` port's hand-back (ruling R43): the same act as the GraphQL door, as the seat a workbench action runs as.
+describe("HoldReleaseDoorService.handAs (the hand-back of a workbench action, as its seat)", () => {
+    it("clears the hold, THEN delivers the one resume event, and records the acting seat by its name", async () => {
+        const { door, heldLines, presses, routes } = await build([])
+        const order: Array<string> = []
+        routes.release.mockImplementation(() => {
+            order.push("release")
+            return Promise.resolve({ memberId: "m-staff", at: "2026-11-14T08:00:00.000Z" })
+        })
+        heldLines.answerHeld.mockImplementation(() => {
+            order.push("resume")
+            return Promise.resolve(1)
+        })
+
+        await expect(door.handAs("ws-1", "m-staff", "route-1")).resolves.toEqual({ outcome: "released", answered: 1 })
+
+        expect(order).toEqual(["release", "resume"])
+        expect(presses.record).toHaveBeenCalledWith(
+            expect.objectContaining({
+                door: "conversation.release",
+                subject: "route-1",
+                memberId: "m-staff",
+                memberName: "Staff Hoa",
+            }),
+        )
+    })
+
+    it("refuses a member with no active seat with a typed error before it touches the route", async () => {
+        const { door, heldLines, routes } = await build([])
+
+        await expect(door.handAs("ws-1", "m-gone", "route-1")).rejects.toMatchObject({
+            code: "WORKSPACE_MEMBERS_MEMBER_NOT_FOUND",
+            params: { memberId: "m-gone" },
+        })
+        expect(routes.release).not.toHaveBeenCalled()
+        expect(heldLines.answerHeld).not.toHaveBeenCalled()
+    })
+
+    it("answers not_found for a route the workspace does not hold, and nothing_held when there was nothing to give back", async () => {
+        const { door, heldLines, presses, routes } = await build([])
+        heldLines.answerHeld.mockResolvedValue(0)
+
+        await expect(door.handAs("ws-1", "m-staff", "route-1")).resolves.toEqual({
+            outcome: "nothing_held",
+            answered: 0,
+        })
+        routes.get.mockResolvedValue(null)
+        await expect(door.handAs("ws-1", "m-staff", "route-x")).resolves.toEqual({ outcome: "not_found", answered: 0 })
+        expect(presses.record).not.toHaveBeenCalled()
     })
 })

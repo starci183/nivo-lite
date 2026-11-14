@@ -11,11 +11,15 @@ import { cardLineWithChannels } from "./agent-graph-channels"
 import { flowEdgesOf, flowNodesOf, layerHeadersOf } from "./agent-graph-flow"
 import { problemLinesOf } from "./agent-graph-problems"
 import { detailViewOf } from "./agent-graph-view-detail"
-import { adderPickOf, adderViewOf, decideEditorViewOf, problemsViewOf } from "./agent-graph-view-decide"
-import type { AgentGraphAdderPick } from "./agent-graph-view-decide"
+import {
+    adderPickOf,
+    adderViewOf,
+    decideEditorViewOf,
+    problemsViewOf,
+    type AgentGraphAdderPick,
+} from "./agent-graph-view-decide"
 import { branchesViewOf, modeViewOf, proposalsViewOf, runViewOf, versionsViewOf } from "./agent-graph-view-lists"
-import { groupWordOf, legendOf, kindWordOf, waitWordOf } from "./agent-graph-words"
-import type { AgentGraphContext } from "./agent-graph-words"
+import { groupWordOf, legendOf, kindWordOf, waitWordOf, type AgentGraphContext } from "./agent-graph-words"
 
 /** What the person is doing on the panes: the choices that are not data. */
 export interface AgentGraphUi {
@@ -104,6 +108,7 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
     const run = data.runs.find((entry) => entry.id === ui.runId) ?? null
     const editor = ui.form === null ? null : decideEditorViewOf(data, ui.form, ui.formStart, ctx)
     const proposals = data.proposals.length
+    const proposalsLabel = proposals === 0 ? t("tabProposals") : t("tabProposalsN", { count: proposals })
     const inspector = (() => {
         if (editor !== null) return "editor"
         return run === null ? "detail" : "run"
@@ -151,10 +156,7 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
         tabs: [
             { value: "chat", label: t("tabChat") },
             { value: "detail", label: t("tabDetail") },
-            {
-                value: "proposals",
-                label: proposals === 0 ? t("tabProposals") : t("tabProposalsN", { count: proposals }),
-            },
+            { value: "proposals", label: proposalsLabel },
             { value: "versions", label: t("tabVersions") },
         ],
         phoneView: ui.phoneView,
@@ -163,10 +165,7 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
             { value: "checklist", label: t("phoneChecklist") },
             { value: "graph", label: t("phoneGraph") },
             { value: "chat", label: t("tabChat") },
-            {
-                value: "proposals",
-                label: proposals === 0 ? t("tabProposals") : t("tabProposalsN", { count: proposals }),
-            },
+            { value: "proposals", label: proposalsLabel },
             { value: "versions", label: t("tabVersions") },
         ],
         inspector,

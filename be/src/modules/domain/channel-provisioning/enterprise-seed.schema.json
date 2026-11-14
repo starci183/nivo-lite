@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Enterprise workspace seed (foundation only)",
+  "type": "object",
+  "required": ["schema", "identifier", "target", "workspaceName", "ownerWorkspace"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "nivo/enterprise-seed@1"
+    },
+    "identifier": {
+      "type": "string",
+      "maxLength": 63,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "target": {
+      "enum": ["off", "local", "prod", "both"]
+    },
+    "workspaceName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "ownerWorkspace": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    }
+  }
+}

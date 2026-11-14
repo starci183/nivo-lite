@@ -2,11 +2,14 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AiUsageEventEntity } from "./persistence/entities"
-import { toDailyWorkUsage } from "./usage-summary.mapper"
-import type { DailyWorkAggregate } from "./usage-summary.mapper"
-import { byRef, toAgentStepUsage, toWorkKindUsage } from "./work-usage.mapper"
-import type { AgentStepAggregate, WorkKindAggregate } from "./work-usage.mapper"
-import type { AgentStepUsage, DailyWorkUsage, WorkKindUsage } from "./work-usage.contracts"
+import {
+    byRef,
+    toAgentStepUsage,
+    toWorkKindUsage,
+    type AgentStepAggregate,
+    type WorkKindAggregate,
+} from "./work-usage.mapper"
+import type { AgentStepUsage, WorkKindUsage } from "./work-usage.contracts"
 
 /** An answered call (a failed try is counted apart and never summed as an answer). */
 const ANSWERED = "u.failure IS NULL"
@@ -17,10 +20,6 @@ const FAILED = "u.failure IS NOT NULL"
 const STEP_LIMIT = 200
 /** The most records one read takes at once (a page of documents, the lessons of one card). */
 export const WORK_REF_LIMIT = 100
-/** The most rows of the workspace summary: days x modules x work kinds. */
-const DAILY_LIMIT = 3000
-/** The longest window of the summary, in days. */
-const MAX_DAYS = 90
 
 /** The answered and failed figures every work read sums, as SQL expression and alias. */
 const WORK_SUMS: ReadonlyArray<readonly [string, string]> = [
@@ -33,9 +32,9 @@ const WORK_SUMS: ReadonlyArray<readonly [string, string]> = [
 
 @Injectable()
 /**
- * The model use of the work a workspace's AI did, read for the owner and managers: per step of an agent's graph, per record (a
- * document, a lesson), and per day, module and kind of work. Every figure is exact: credits are fractions of the exact cost, never
- * rounded per call. The guide counts in the record reads (a learning card shows what its proposal cost NIVO) and never in the summary.
+ * The model use of the work a workspace's AI did, read for the owner and managers: per step of an agent's graph and per record (a
+ * document, a lesson). Every figure is exact: credits are fractions of the exact cost, never rounded per call. The guide counts in the
+ * record reads (a learning card shows what its proposal cost NIVO).
  */
 export class AiWorkUsageService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
@@ -63,7 +62,7 @@ export class AiWorkUsageService {
             .orderBy("u.step_key", "ASC")
             .limit(STEP_LIMIT)
             .getRawMany<AgentStepAggregate>()
-        return rows.map(toAgentStepUsage)
+        return rows.map((item) => toAgentStepUsage(item))
     }
 
     /**
@@ -92,34 +91,6 @@ export class AiWorkUsageService {
             .addOrderBy("2", "ASC")
             .limit(wanted.length * 10)
             .getRawMany<WorkKindAggregate>()
-        return byRef(rows.map(toWorkKindUsage))
-    }
-
-    /**
-     * The workspace's use of the last `days` days (at most 90) per day (Vietnam time), module and kind of work (a call booked without
-     * one under its usage kind); the guide never counts. Served by `ai_usage_events_ws_time` (workspace, time).
-     */
-    async daily(workspaceId: string, days: number): Promise<ReadonlyArray<DailyWorkUsage>> {
-        const window = Math.min(Math.max(1, Math.round(days)), MAX_DAYS)
-        const grouped = WORK_SUMS.reduce(
-            (query, [expression, alias]) => query.addSelect(expression, alias),
-            this.entityManager
-                .createQueryBuilder(AiUsageEventEntity, "u")
-                .select("to_char(u.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')", "day")
-                .addSelect("COALESCE(u.module, 'other')", "module")
-                .addSelect("COALESCE(u.work_kind, u.kind)", "work_kind"),
-        )
-        const rows = await grouped
-            .where("u.workspace_id = :workspaceId AND u.kind <> 'guide'", { workspaceId })
-            .andWhere("u.created_at >= now() - CAST(:days AS integer) * interval '1 day'", { days: window })
-            .groupBy("1")
-            .addGroupBy("2")
-            .addGroupBy("3")
-            .orderBy("1", "ASC")
-            .addOrderBy("2", "ASC")
-            .addOrderBy("3", "ASC")
-            .limit(DAILY_LIMIT)
-            .getRawMany<DailyWorkAggregate>()
-        return rows.map(toDailyWorkUsage)
+        return byRef(rows.map((item) => toWorkKindUsage(item)))
     }
 }

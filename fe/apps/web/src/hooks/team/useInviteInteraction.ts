@@ -1,14 +1,12 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, type SetStateAction, type Dispatch } from "react"
 import { toast } from "@/modules/toast"
 import type { InviteAction } from "@/modules/types"
 import type { InviteShown } from "@/modules/team"
 import { useCopyInviteLink } from "./useCopyInviteLink"
-import { useInviteCommands } from "./useInviteCommands"
-import type { SetStateAction, Dispatch } from "react"
-import type { InviteCommands } from "./useInviteCommands"
+import { useInviteCommands, type InviteCommands } from "./useInviteCommands"
 
 type UseInviteInteractionResult = {
     commands: InviteCommands

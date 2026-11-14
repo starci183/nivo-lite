@@ -18,6 +18,7 @@ import { RenameInstallationAgentResolver } from "./rename-installation-agent.res
 import { RenameModuleInstallationResolver } from "./rename-module-installation.resolver"
 import { SaveHoldingMessageResolver } from "./save-holding-message.resolver"
 import { SaveWorkingHoursResolver } from "./save-working-hours.resolver"
+import { AgentDeletionImpactResolver } from "./agent-deletion-impact.resolver"
 import { RemoveAgentResolver } from "./remove-agent.resolver"
 import { SetModuleLiveResolver } from "./set-module-live.resolver"
 import { SetOperatingModeResolver } from "./set-operating-mode.resolver"
@@ -40,6 +41,7 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         RenameInstallationAgentResolver,
         SetOperatingModeResolver,
         SetModuleLiveResolver,
+        AgentDeletionImpactResolver,
         RemoveAgentResolver,
         SaveHoldingMessageResolver,
         SaveWorkingHoursResolver,

@@ -1,27 +1,34 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { AgentTagService } from "@modules/domain/agent-work"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { ModuleJobRunnerService } from "@modules/domain/entity-engine"
-import type { EngineWorkflowProvider, JobWorkflowBinding } from "@modules/domain/entity-engine"
-import { WORKFLOW_CALL_MEMBER, WORKFLOW_PARAMS_MEMBER } from "@nivo-lite/agent-sdk/graph"
+import { callDeliveryOf } from "@modules/domain/agent-schedules/workflow-call-delivery.policy"
+import { WORKFLOW_CALL_TRIGGER } from "@modules/domain/agent-schedules/workflow-call.trigger"
+import {
+    ModuleJobRunnerService,
+    type EngineWorkflowProvider,
+    type JobWorkflowBinding,
+} from "@modules/domain/entity-engine"
+import { ProviderTriggersService } from "@modules/domain/provider-triggers"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { WorkflowApi } from "@nivo-lite/agent-sdk/mutation"
 import { EntityEngineDoorError, EntityEngineDoorErrorCode } from "./errors/entity-engine-door.error"
 
-/** What started the wake: the engine, for a declared job. */
-const SOURCE = "engine.workflow"
+/** The once-key of a declared job's start: the job's own dedupe key, so the same key starts the workflow once. */
+const startKeyOf = (dedupeKey: string): string => `workflow-start:${dedupeKey}`
 
 @Injectable()
 /**
- * The provider of the `engine.workflow` port: a declared job starts a workflow of a module. It wakes the module's agent the way a
- * hand-off does (a tag pinned to the workflow and version, carrying the inputs as the data the workflow's trigger reads), so the run
- * is opened by the same wake path as any other. The wake is keyed by the job's `dedupeKey`: the same key starts the workflow once.
- * It is never called while an engine scope is open (no transaction spans the wake of a run).
+ * The provider of the `engine.workflow` port: a declared job starts a workflow of a module. It is one call of the one event pipeline
+ * (concept triggers rule 13): the workflow-call trigger's pure translate gives the event (its data the job's inputs, the data the
+ * workflow's trigger reads as `trigger.data.*`) and the ONE delivery function writes the wake for the module's agent, pinned to the
+ * workflow and version, so the run is opened by the same path as any other. The event's once-key is the job's `dedupeKey`: the same key
+ * starts the workflow once. It is never called while an engine scope is open (no transaction spans the wake of a run).
  */
 export class EngineWorkflowService implements EngineWorkflowProvider, OnModuleInit {
     constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly agents: AgentDirectoryService,
-        private readonly tags: AgentTagService,
+        private readonly triggers: ProviderTriggersService,
         private readonly runner: ModuleJobRunnerService,
     ) {}
 
@@ -41,19 +48,26 @@ export class EngineWorkflowService implements EngineWorkflowProvider, OnModuleIn
                     })
                 const [agentId] = await this.agents.idsOfModule(binding.workspaceId, request.moduleKey, 1)
                 if (agentId === undefined) return { started: false, reason: "no_agent" }
-                const tagged = await this.tags.tagAgent({
-                    source: SOURCE,
-                    workspaceId: binding.workspaceId,
-                    toAgentId: agentId,
-                    text: `${request.moduleKey}.${request.workflow}`,
-                    context: {
-                        [WORKFLOW_CALL_MEMBER]: { workflow: request.workflow, version: request.version },
-                        [WORKFLOW_PARAMS_MEMBER]: { ...request.inputs },
-                    },
-                    eventKey: `workflow-start:${request.dedupeKey}`,
-                })
-                if (tagged.tagged) return { started: true }
-                return { started: false, reason: tagged.reason === "duplicate" ? "duplicate" : "refused" }
+                const event = WORKFLOW_CALL_TRIGGER.translate(
+                    { key: startKeyOf(request.dedupeKey), params: request.inputs },
+                    { connectionId: null },
+                )
+                if (event === null) return { started: false, reason: "refused" }
+                const result = await this.entityManager.transaction((tx) =>
+                    this.triggers.deliver(
+                        {
+                            workspaceId: binding.workspaceId,
+                            declaration: WORKFLOW_CALL_TRIGGER,
+                            connectionId: null,
+                            agentId,
+                            events: [{ event, pin: { workflow: request.workflow, version: request.version } }],
+                        },
+                        tx,
+                    ),
+                )
+                const delivery = callDeliveryOf(result)
+                if (delivery === "started") return { started: true }
+                return { started: false, reason: delivery === "duplicate" ? "duplicate" : "refused" }
             },
         }
     }

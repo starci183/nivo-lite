@@ -1,6 +1,5 @@
-import type { ReactElement, ReactNode } from "react"
-import { Alert, EmptyNotice } from "@starci/grammar/common"
-import type { IconSource } from "@starci/grammar/common"
+import type { ReactNode } from "react"
+import { Alert, EmptyNotice, type IconSource } from "@starci/grammar/common"
 import type { DataSlot, SlotLabels } from "../slot/slot.types"
 
 /** Props for SlotView. */
@@ -46,8 +45,8 @@ const forbiddenNotice = (
     message: string,
     description: string | undefined,
     action: ReactNode,
-) => {
-    if (mode === "hide") return <></>
+): ReactNode => {
+    if (mode === "hide") return null
     return (
         <>
             <EmptyNotice message={message} {...(description === undefined ? {} : { description })} />
@@ -63,15 +62,18 @@ const errorNotice = (
     retryLabel: string,
     retry: (() => void) | undefined,
     layout: "auto" | "band" | undefined,
-) =>
-    layout === "band" ? (
-        <Alert
-            tone="negative"
-            title={message}
-            {...(description === undefined ? {} : { description })}
-            {...(retry === undefined ? {} : { action: { label: retryLabel, onAction: retry } })}
-        />
-    ) : (
+): ReactNode => {
+    if (layout === "band") {
+        return (
+            <Alert
+                tone="negative"
+                title={message}
+                {...(description === undefined ? {} : { description })}
+                {...(retry === undefined ? {} : { action: { label: retryLabel, onAction: retry } })}
+            />
+        )
+    }
+    return (
         <EmptyNotice
             isError
             message={message}
@@ -80,53 +82,38 @@ const errorNotice = (
             {...(retry === undefined ? {} : { onAction: retry })}
         />
     )
+}
 
 /**
  * Composite: the ONE recipe for a slot's data status. No block writes its own
  * loading / forbidden / error / empty branch; each one renders through here.
  */
-export const SlotView = <T,>(props: SlotViewProps<T>): ReactElement => {
+export const SlotView = <T,>(props: SlotViewProps<T>): ReactNode => {
     const { slot, labels } = props
-    const framed = (notice: ReactNode): ReactElement => <>{props.frame === undefined ? notice : props.frame(notice)}</>
-    if ("isLoading" in slot) return <>{props.render(props.placeholder, true)}</>
-    if ("isForbidden" in slot)
-        return (
-            <>
-                {framed(
-                    forbiddenNotice(
-                        props.forbidden,
-                        labels.forbidden,
-                        props.forbiddenDescription,
-                        props.forbiddenAction,
-                    ),
-                )}
-            </>
-        )
-    if ("isError" in slot)
-        return (
-            <>
-                {framed(
-                    errorNotice(labels.error, props.errorDescription, labels.retry, props.onRetry, props.errorLayout),
-                )}
-            </>
-        )
-    if ("isEmpty" in slot) {
-        return props.empty === "collapse" ? (
-            <></>
-        ) : (
-            <>
-                {framed(
-                    <EmptyNotice
-                        message={labels.empty}
-                        {...(props.emptyDescription === undefined ? {} : { description: props.emptyDescription })}
-                        {...(props.emptyIconSource === undefined ? {} : { iconSource: props.emptyIconSource })}
-                        {...(props.emptyAction === undefined
-                            ? {}
-                            : { actionLabel: props.emptyAction.label, onAction: props.emptyAction.onAction })}
-                    />,
-                )}
-            </>
+    const framed = (notice: ReactNode): ReactNode => (props.frame === undefined ? notice : props.frame(notice))
+    if ("isLoading" in slot) return props.render(props.placeholder, true)
+    if ("isForbidden" in slot) {
+        return framed(
+            forbiddenNotice(props.forbidden, labels.forbidden, props.forbiddenDescription, props.forbiddenAction),
         )
     }
-    return <>{props.render(slot.items, false)}</>
+    if ("isError" in slot) {
+        return framed(
+            errorNotice(labels.error, props.errorDescription, labels.retry, props.onRetry, props.errorLayout),
+        )
+    }
+    if ("isEmpty" in slot) {
+        if (props.empty === "collapse") return null
+        return framed(
+            <EmptyNotice
+                message={labels.empty}
+                {...(props.emptyDescription === undefined ? {} : { description: props.emptyDescription })}
+                {...(props.emptyIconSource === undefined ? {} : { iconSource: props.emptyIconSource })}
+                {...(props.emptyAction === undefined
+                    ? {}
+                    : { actionLabel: props.emptyAction.label, onAction: props.emptyAction.onAction })}
+            />,
+        )
+    }
+    return props.render(slot.items, false)
 }

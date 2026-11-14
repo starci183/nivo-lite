@@ -110,8 +110,6 @@ const moduleOf = (gates: ReadonlyArray<ModuleGate>): ModuleDefinition => ({
     multiInstance: false,
     agent: { label: text, handle: "demo", summary: text, capabilities: list, role: text, instructions: text },
     gates,
-    authorityActions: [],
-    accepts: [],
 })
 
 const confirmed = (evidence: string, by = "Lan"): GateEntry => ({

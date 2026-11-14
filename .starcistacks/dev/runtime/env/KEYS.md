@@ -8,8 +8,8 @@ into private files outside the repository (`<KEY>_FILE`, which the back end read
 | Key | Member / source | Consumer |
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` | `db` | the db container's superuser (compose value) |
-| `DEV_DB_OWNER_PASSWORD` | `db` | the environment's own owner role `nivo_lite_dev`, which runs the migrations |
-| `DEV_DB_APP_PASSWORD` | `db` | the `app_be` role of this environment; composed into `PRIMARY_DB_URL` (read through `PRIMARY_DB_URL_FILE`) |
+| `DB_OWNER_PASSWORD` | `db` | the environment's own owner role `nivo_lite_dev`, which runs the migrations |
+| `DB_APP_PASSWORD` | `db` | the `app_be` role of this environment; composed into `PRIMARY_DB_URL` (read through `PRIMARY_DB_URL_FILE`) |
 | `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | `storage` | MinIO's root user and password (compose values) and the api's S3 credentials |
 | `CHANNEL_TOKEN_KEY` | `platform` | base64 of 32 bytes: seals the connection credentials; preserve it for existing encrypted data |
 | `ENTITY_ENGINE_CURSOR_KEY` | `platform` | base64 of 32 bytes: signs the list cursors of the entity engine (api, mcp and cli read it); changing it only invalidates open cursors |
@@ -32,13 +32,3 @@ into private files outside the repository (`<KEY>_FILE`, which the back end read
 | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_LANDING_URL`, `NEXT_PUBLIC_APP_URL` | the console `http://localhost:3000` and the landing `http://localhost:3002` |
 | `NEXT_PUBLIC_ADMIN_URL`, `NEXT_PUBLIC_LOCAL_ADMIN_URL` | the console (`/admin` redirects there): the tunnel admin `https://nivo-local-admin.starci.org`, and `http://localhost:3105` when the console is opened on localhost. The admin app itself takes `NEXT_PUBLIC_SITE_URL` (its own origin), `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_LOCAL_API_URL` and `NEXT_PUBLIC_APP_URL` (the console, where a person signs in). |
 
-## api: optional executable paths
-
-These nonsecret keys select operator-installed executables. Omission retains the platform installation defaults. Paths must be absolute and local;
-the executable and every parent directory must be unwritable by other users.
-
-| Key | Semantics |
-| --- | --- |
-| `VIDEO_FFMPEG_PATH` | Optional trusted FFmpeg executable path. |
-| `VIDEO_FFPROBE_PATH` | Optional trusted FFprobe executable path. |
-| `VIDEO_NICE_PATH` | Optional trusted priority-lowering executable path, used when priority lowering is enabled. |

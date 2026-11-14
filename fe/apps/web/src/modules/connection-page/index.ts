@@ -1,11 +1,17 @@
-import type { ConnectionPageTabId } from "@/modules/types"
+import type { ProviderPageTab } from "@/modules/types"
 
-/** The query parameter that names the open tab of a connection page. */
-export const CONNECTION_PAGE_VIEW_PARAM = "view"
+/** The tabs of the one provider page template a connected account opens on, in order; `config` is the first and opens by default. */
+export const PROVIDER_PAGE_TABS: ReadonlyArray<ProviderPageTab> = ["config", "rights", "api", "mcp", "trigger"]
 
-/** The tabs of every connection page, in order. */
-export const CONNECTION_PAGE_TABS: ReadonlyArray<ConnectionPageTabId> = ["overview", "events", "agents", "settings"]
+/** The address of one connected account's page under the console (`/connections/open/<id>`), without the workspace prefix. */
+export const providerPagePath = (connectionId: string): string => `/connections/open/${encodeURIComponent(connectionId)}`
 
-/** The tab an address asks for; the overview when it names none or an unknown one. */
-export const connectionPageTabOf = (value: string | string[] | null | undefined): ConnectionPageTabId =>
-    CONNECTION_PAGE_TABS.find((id) => id === value) ?? "overview"
+/** The address of one tab of a connected account's page: `config` is the page itself, every other tab one segment below it. */
+export const providerPageTabPath = (connectionId: string, tab: ProviderPageTab): string =>
+    tab === "config" ? providerPagePath(connectionId) : `${providerPagePath(connectionId)}/${tab}`
+
+/** The tab an address names by its last segment; `config` when the address is the page itself or names no tab. */
+export const providerPageTabOfPath = (pathname: string): ProviderPageTab => {
+    const last = pathname.split("/").findLast(Boolean)
+    return PROVIDER_PAGE_TABS.find((id) => id !== "config" && id === last) ?? "config"
+}

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentWorkflowQuery, AgentWorkflowQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `agentWorkflow` query. */
@@ -11,7 +10,7 @@ type AgentWorkflowQueryResponse = AgentWorkflowQuery
 
 const query1: TypedDocumentNode<AgentWorkflowQueryResponse, InputVariables<QueryAgentWorkflowRequest>> = gql`
     query AgentWorkflow($input: AgentWorkflowInput!) {
-        agentWorkflow(input: $input) { workflow { id key name status primary activeNumber latestNumber templateId templateVersion templateName templateLatest templateChangedSteps stepCount updatedAt } graphJson versions { id number changeKind authorKind authorId note templateId templateVersion fromNumber publishedAt stepCount changedSteps active } templateDiff { steps { key change step parts params { name beforeJson afterJson } } triggerChanged rightsAdded rightsRemoved toolsAdded toolsRemoved effectsAdded effectsRemoved beforeJson afterJson } }
+        agentWorkflow(input: $input) { workflow { id key name status primary activeNumber latestNumber templateId templateVersion templateName templateLatest templateChangedSteps stepCount updatedAt } graphJson versions { id number changeKind authorKind authorId note templateId templateVersion fromNumber publishedAt stepCount changedSteps active } templateDiff { steps { key change step parts params { name beforeJson afterJson } } triggerChanged toolsAdded toolsRemoved effectsAdded effectsRemoved beforeJson afterJson } }
     }
 `
 
@@ -33,6 +32,6 @@ export const queryAgentWorkflow = async ({
     request,
     signal,
 }: QueryAgentWorkflowParams): Promise<ApolloClient.QueryResult<AgentWorkflowQueryResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

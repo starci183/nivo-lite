@@ -1,13 +1,13 @@
 import { Inject, Injectable, Optional } from "@nestjs/common"
-import { BrainFactsService } from "@modules/domain/brain-facts"
-import type { Evidence, FactStatus } from "@modules/domain/brain-facts"
-import { STOP_LEARNING_CARDS } from "./stop-learning.contracts"
-import type {
-    ChangeCardPoster,
-    LearningChange,
-    LearningChangeDoor,
-    LearningChangePosted,
-    LearningChangeState,
+import { AgentViewScopeService } from "@modules/domain/agents"
+import { BrainChangeRequestsService, BrainFactsService, type Evidence, type FactStatus, type MaybeFact } from "@modules/domain/brain-facts"
+import {
+    STOP_LEARNING_CARDS,
+    type ChangeCardPoster,
+    type LearningChange,
+    type LearningChangeDoor,
+    type LearningChangePosted,
+    type LearningChangeState,
 } from "./stop-learning.contracts"
 
 /** The source a learned truth files under: the shop's own people's words, relayed by an agent (as a chat change request). */
@@ -17,7 +17,7 @@ const RELAYED = "staff"
 const PROPOSER = "NIVO"
 
 /** The statuses of a fact that mean the founder's yes. */
-const APPLIED: ReadonlyArray<FactStatus> = ["active", "scheduled", "superseded", "expired"]
+const APPLIED: ReadonlySet<FactStatus> = new Set<FactStatus>(["active", "scheduled", "superseded", "expired"])
 
 /** The longest quote a fact's evidence keeps. */
 const QUOTE_MAX = 500
@@ -33,12 +33,16 @@ export class StopLearningDoorService implements LearningChangeDoor {
     constructor(
         private readonly facts: BrainFactsService,
         @Optional() @Inject(STOP_LEARNING_CARDS) private readonly cards?: ChangeCardPoster,
+        @Optional() private readonly changes?: BrainChangeRequestsService,
+        @Optional() private readonly scopes?: AgentViewScopeService,
     ) {}
 
+    /** Whether the app wired a card poster: without it, answers are kept and nothing is posted. */
     available(): boolean {
         return this.cards !== undefined
     }
 
+    /** Files the drafted truth as a proposal with its evidence and posts its one `brain.change` card to the founder. */
     async post(change: LearningChange): Promise<LearningChangePosted> {
         const evidence: Array<Evidence> = change.evidence.map((one) => ({
             kind: "decision",
@@ -47,9 +51,13 @@ export class StopLearningDoorService implements LearningChangeDoor {
             quote: one.quote.slice(0, QUOTE_MAX),
             at: one.at,
         }))
+        // A learned truth is the whole shop's (FX6): filed workspace-wide, unless it changes a value kept for the asking agent's own
+        // instance, which it then replaces in that scope (the next version of THAT fact, never a second value beside it).
+        const replaced = await this.replacedOf(change)
         const { fact } = await this.facts.propose(change.workspaceId, {
-            subjectLabel: change.factKey.subjectLabel,
-            attributeLabel: change.factKey.attributeLabel,
+            subjectLabel: replaced?.subjectLabel ?? change.factKey.subjectLabel,
+            attributeLabel: replaced?.attributeLabel ?? change.factKey.attributeLabel,
+            installationId: replaced?.installationId ?? null,
             value: change.newValue,
             unit: change.unit,
             sourceKind: RELAYED,
@@ -74,10 +82,23 @@ export class StopLearningDoorService implements LearningChangeDoor {
         return { changeId: fact.id, state: posted.outcome === "not_waiting" ? "already_true" : "not_posted" }
     }
 
+    /**
+     * The fact in force the learned truth changes, when the asking agent is one instance of a multi-instance type: that instance's own
+     * value of the key, else the workspace-wide one (the change requests' rule). Undefined for a single-instance agent (the store's
+     * workspace-wide key decides) or an app without the readers: null.
+     */
+    private async replacedOf(change: LearningChange): Promise<MaybeFact> {
+        if (this.scopes === undefined || this.changes === undefined) return null
+        const installationId = (await this.scopes.lensOf(change.workspaceId, change.agentId))?.installationId ?? null
+        if (installationId === null) return null
+        return this.changes.replacedFor(change.workspaceId, change.factKey, installationId)
+    }
+
+    /** Where a posted change stands, read back from the truth store. */
     async stateOf(workspaceId: string, changeId: string): Promise<LearningChangeState> {
         const fact = await this.facts.get(workspaceId, changeId)
         if (fact === null) return "gone"
         if (fact.status === "proposed") return "open"
-        return APPLIED.includes(fact.status) ? "applied" : "rejected"
+        return APPLIED.has(fact.status) ? "applied" : "rejected"
     }
 }

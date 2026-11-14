@@ -12,15 +12,17 @@ import {
     sendAllOf,
     sendOneOf,
     withFiles,
+    type ChosenLink,
+    type QueueActions,
+    type QueueItem,
 } from "@/modules/documents"
-import type { ChosenLink, QueueActions, QueueItem } from "@/modules/documents"
 import { useRef, useState } from "react"
 import type { AddQueue, ZipSkip } from "@/hooks/knowledgeAddTypes"
 
 /** The queue of files and links of the Add documents drawer: files and archive entries are checked, then uploaded and handed to the job queue. */
 export const useAddQueue = (actions: QueueActions): AddQueue => {
     const [items, setItems] = useState<ReadonlyArray<QueueItem>>([])
-    const [isReading, setReading] = useState(false)
+    const [isReading, setIsReading] = useState(false)
     const [zipTruncated, setZipTruncated] = useState(false)
     const [zipSkips, setZipSkips] = useState<ReadonlyArray<ZipSkip>>([])
     const zipSeen = useRef<Set<string>>(new Set())
@@ -40,9 +42,9 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
     }
 
     const addZips = (zips: ReadonlyArray<File>) => {
-        setReading(true)
+        setIsReading(true)
         const opened = zips.reduce<Promise<void>>((chain, zip) => chain.then(() => addZip(zip)), Promise.resolve())
-        void opened.then(() => setReading(false))
+        void opened.then(() => setIsReading(false))
     }
 
     const addFiles = (all: ReadonlyArray<File>) => {
@@ -56,7 +58,7 @@ export const useAddQueue = (actions: QueueActions): AddQueue => {
     const addLinks = (urls: ReadonlyArray<string>): ReadonlyArray<QueueItem> => {
         const fresh = urls
             .filter((url) => !items.some((one) => one.kind === "link" && one.name === url))
-            .map(itemOfLink)
+            .map((entry) => itemOfLink(entry))
         setItems((now) => [...now, ...fresh])
         return fresh
     }

@@ -2,43 +2,73 @@ import { AIMessage, type BaseMessage } from "@langchain/core/messages"
 import type { Provider } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import type { EffectCall, EffectPayload, NodeModelRequest, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import { coreDataKinds, coreEffects, TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { fakeModel } from "langchain"
 import { AiTasksService } from "@modules/domain/ai-tasks"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { ConnectionBindingsReadService, type ConnectionStatusFacts } from "@modules/domain/connections"
+import { ConnectionBindingsReadService, type ConnectionStatusFacts, type Provider as ConnectionProvider } from "@modules/domain/connections"
 import {
     GRAPH_NODE_TOOL_DOOR,
+    GraphNodeEffectsService,
+    GraphNodeRegistryService,
     GraphNodeRunTokensService,
     GraphNodesError,
     GraphNodesErrorCode,
     toolFingerprintOf,
-    type GraphNodeRegistryService,
+    type NodeEffectExecutor,
     type NodeModelDoor,
     type NodeRow,
     type NodeRunClaims,
+    type NodeStepRef,
     type NodeToolCall,
     type NodeToolDoor,
     type NodeTurn,
 } from "@modules/domain/graph-nodes"
 import {
-    McpGatewayService,
+    ToolRegistryService,
     NodeToolDoorService,
-    ProviderAbilitiesService,
-    providerOfChannel,
-} from "@modules/domain/mcp-gateway"
-import { McpConnectorAccessService, type ProviderAttachmentView } from "@modules/domain/mcp-tool-grants"
+    AgentAccountsService,
+    ToolRunnerService,
+} from "@modules/domain/tools"
+import { AccountAttachmentsService, type ProviderAttachmentView } from "@modules/domain/tool-grants"
 import { AiService, type AiAgentTurns, type AiTurnRequest } from "@modules/integrations/ai"
-import type { Clock } from "@modules/platform/clock"
-import type { Logger } from "@modules/platform/logging"
+import { CLOCK, type Clock } from "@modules/platform/clock"
+import { LOGGER, type Logger } from "@modules/platform/logging"
 import type { Timer } from "@modules/platform/retry"
-import { WS, WorldError } from "./thread-world-records"
+import { contactOfTurn, doorAnswerOf, leadOfTurn, worldReadOf } from "./thread-world-reads"
+import type { ChatWorld } from "./thread-world-chat"
+import { connectionRecordOf, sendExecutorOf, type ChatSource } from "./thread-world-intake"
+import { WorldError } from "./thread-world-records"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 
 // The outside world of the phase-0 wave-C world (package 0-9): the clock, the scripted model, the customer channel, the team chat,
-// every act of an executor, and the rights of the agent per CONNECTED ACCOUNT through the REAL ProviderAbilitiesService and the REAL
-// door checks of NodeToolDoorService (`effectRight`, `repeatGuard`).
+// every act of an executor, and the rights of the agent per CONNECTED ACCOUNT through the REAL AgentAccountsService and the REAL
+// door checks of NodeToolDoorService (`effectRight`).
 
 const T0 = Date.parse("2026-11-10T10:00:00.000Z")
+
+/** The cancel of a pause that was taken at once: there is nothing to cancel. */
+const cancelNothing = (): void => undefined
+
+/** Whose turn an agent turn is: the workspace and the language it answers in. */
+export interface TurnScope {
+    /** The workspace of the turn. */
+    readonly workspaceId: string
+    /** The language of the turn. */
+    readonly locale: "vi" | "en"
+}
+
+/** What an agent turn is asked under. */
+export interface TurnAsk {
+    /** The purpose the model is asked under. */
+    readonly purpose: string
+}
+
+/** The tools a scripted chat was bound with. */
+interface BoundTools {
+    /** The names of the tools. */
+    tools: ReadonlyArray<string>
+}
 
 /** A clock that moves one second on every read, so "before this attempt" and "after that line" are told apart as in production. */
 export class TickingClock implements Clock {
@@ -48,6 +78,11 @@ export class TickingClock implements Clock {
     now(): Date {
         this.ticks += 1
         return new Date(T0 + this.ticks * 1000)
+    }
+
+    /** Moves the clock on by `ms` (whole seconds), as time passing between two processes. */
+    advance(ms: number): void {
+        this.ticks += Math.ceil(ms / 1000)
     }
 }
 
@@ -225,7 +260,7 @@ export class ScriptedModel {
      * `{ done }` and `{ confused }` become one tool call, a text a turn with words only, `{ cut: true }` a turn cut at the length
      * limit, an Error a call that threw (name it `TimeoutError` for a deadline). A turn held with `hold` waits before its first try.
      */
-    agentTurns(scope: { readonly workspaceId: string; readonly locale: "vi" | "en" }, ask: { readonly purpose: string }): AiAgentTurns {
+    agentTurns(scope: TurnScope, ask: TurnAsk): AiAgentTurns {
         const runner: ConstructorParameters<typeof AiService>[1] = {
             turnModel: (request) => Promise.resolve(this.chatOf(ask.purpose, request)),
             chat: () => Promise.reject(new WorldError({ code: "WORLD_CHAT_UNUSED", params: {} })),
@@ -246,14 +281,13 @@ export class ScriptedModel {
             schedule: (callback: () => void, delayMs: number) => {
                 this.pauses.push(delayMs)
                 callback()
-                return () => undefined
+                return cancelNothing
             },
         })
         const tasks = new AiTasksService(
             { timeoutMs: 30_000, nodeTimeoutMs: AGENT_FIRST_TRY_MS, nodeRetryTimeoutMs: AGENT_RETRY_MS, endpoint: mock() },
             ai,
             meter,
-            mock(),
             mock<Logger>(),
             timer,
             mock(),
@@ -278,7 +312,7 @@ export class ScriptedModel {
      */
     private chatOf(purpose: string, client: AiTurnRequest): ReturnType<typeof fakeModel> {
         const chat = fakeModel()
-        const bound: { tools: ReadonlyArray<string> } = { tools: [] }
+        const bound: BoundTools = { tools: [] }
         const bind = chat.bindTools.bind(chat)
         Object.assign(chat, {
             bindTools: (tools: Parameters<typeof bind>[0]) => {
@@ -332,14 +366,14 @@ export interface Account {
     /** The connection id. */
     readonly id: string
     /** Its provider. */
-    readonly provider: string
+    readonly provider: ConnectionProvider
 }
 
 /** The rights of the shop: its connected accounts, the agent's attachments per account, the owner's named default accounts. */
 export interface Rights {
     /** The connected accounts. */
     readonly accounts: Array<Account>
-    /** Each attachment of an agent to one account, with its ticked abilities. */
+    /** Each attachment of an agent to one account (the kill switch). */
     readonly attachments: Array<ProviderAttachmentView>
     /** The owner's named default account of a kind, by kind. */
     readonly defaults: Map<string, string>
@@ -350,6 +384,26 @@ export interface Rights {
     readonly asks?: Set<string>
     /** Every tool call the door let through, once per call key (the gateway's durable receipt): who approved it, if anyone. */
     readonly toolCalls?: Array<ToolCallMade>
+    /**
+     * Scripted answers of the door's TOOL road, by tool (an engine test double such as `nivo.tool.test.note.read`): each call takes the
+     * next one, the last again once they run out; an Error is thrown as the door would throw it. Absent or empty for a tool: the world's
+     * own reads answer.
+     */
+    readonly answers?: Map<string, Array<unknown>>
+    /** Every call the door's tool road was asked, in order, each attempt with the account it was handed (null: none). */
+    readonly asked?: Array<ToolAsked>
+}
+
+/** One call the world's door was asked on the tool road. */
+export interface ToolAsked {
+    /** The tool. */
+    readonly tool: string
+    /** Its arguments as asked. */
+    readonly args: unknown
+    /** Its call key. */
+    readonly key: string
+    /** The account the runner handed the call, or null. */
+    readonly connectionId: string | null
 }
 
 /** One tool call the world's door let through. */
@@ -380,6 +434,8 @@ export interface Outside {
     readonly throwOn: Map<string, Error>
     /** The rights per connected account. */
     readonly rights: Rights
+    /** The engine's customer stores (contacts, routes, delivery ledger, raw rows) and the chatbot agent's own records. */
+    readonly chat: ChatWorld
 }
 
 const statusOf = (account: Account): ConnectionStatusFacts => ({
@@ -395,13 +451,22 @@ const statusOf = (account: Account): ConnectionStatusFacts => ({
     email: null,
 })
 
+/** The turn each run token was minted for, across every process of a spec (a token names one turn, as the real token's claims do). */
+const mintedTurns = new Map<string, NodeTurn>()
+
+/** The turn a run token was minted for, or null: what a world's door reads the run's own customer from (the connector's lock). */
+export const turnOfToken = (token: string): NodeTurn | null => mintedTurns.get(token) ?? null
+
 /** Run tokens that carry the turn's workspace and agent: what the door verifies before it judges a right. */
 const tokensOf = (): GraphNodeRunTokensService => {
     const minted = new Map<string, NodeRunClaims>()
     return mock<GraphNodeRunTokensService>({
-        mint: (turn: NodeTurn) => {
-            const token = `token-${minted.size + 1}`
-            minted.set(token, mock<NodeRunClaims>({ workspaceId: turn.workspaceId, agentId: turn.agentId }))
+        mint: (turn: NodeTurn, step?: NodeStepRef) => {
+            const token = `token-${mintedTurns.size + 1}`
+            // As the real token signs it (`GraphNodeRunTokensService.mint`): the workflow step the host ran the node in, when it gave one.
+            const claims = { workspaceId: turn.workspaceId, agentId: turn.agentId, ...(step === undefined ? {} : { step }) }
+            minted.set(token, mock<NodeRunClaims>(claims))
+            mintedTurns.set(token, turn)
             return token
         },
         verify: (token: string) => minted.get(token) ?? null,
@@ -436,9 +501,15 @@ const FILED = {
  * The world's door for tool calls: a tool the rights ask about stops for a person (the typed approval error carrying the exact call,
  * as the real door does) unless the host's approval carries exactly that call; every call let through is kept once per call key (the
  * gateway's durable receipt: the same key answers the first answer and acts nothing again). The shop's knowledge answers a search; a
- * truth change is filed.
+ * truth change is filed; the context reads answer the world's store (the conversation's lines, the customer's orders).
  */
-const toolCallOf = async (rights: Rights, call: NodeToolCall): Promise<unknown> => {
+const toolCallOf = async (rights: Rights, call: NodeToolCall, store?: Outside["store"], chat?: ChatWorld, now: () => string = () => new Date().toISOString()): Promise<unknown> => {
+    rights.asked?.push({
+        tool: call.tool,
+        args: structuredClone(call.args),
+        key: call.key,
+        connectionId: call.account?.connectionId ?? null,
+    })
     const fingerprint = toolFingerprintOf(call.tool, call.args)
     if (rights.asks?.has(call.tool) === true && call.approval?.fingerprint !== fingerprint)
         throw new GraphNodesError({
@@ -461,23 +532,34 @@ const toolCallOf = async (rights: Rights, call: NodeToolCall): Promise<unknown> 
             approvedBy: call.approval?.by ?? null,
         })
     await Promise.resolve()
+    const scripted = rights.answers?.get(call.tool) ?? []
+    if (scripted.length > 0) {
+        const next: unknown = scripted.length > 1 ? scripted.shift() : scripted[0]
+        if (next instanceof Error) throw next
+        return structuredClone(next)
+    }
+    const read =
+        store === undefined
+            ? null
+            : worldReadOf(store, call.tool, call.args, leadOfTurn(store, turnOfToken(call.token)), contactOfTurn(store, turnOfToken(call.token)), chat, turnOfToken(call.token), now())
+    if (read !== null) return doorAnswerOf(read)
     return structuredClone(call.tool === TOOL.brainChangePropose ? FILED : SEARCH)
 }
 
 /**
- * The providers of the rights of a process: the REAL judge (`ProviderAbilitiesService`) over the shop's accounts and attachments, the
+ * The providers of the rights of a process: the REAL judge (`AgentAccountsService`) over the shop's accounts and attachments, the
  * REAL door (`NodeToolDoorService`) whose right and repeat checks the node host asks, and run tokens that carry the turn's workspace
- * and agent. The door's tool calls answer the shop's knowledge for `nivo.brain.search`.
+ * and agent. The door's tool calls answer the shop's knowledge for `nivo.tool.brain.search`.
  */
-export const rightsProvidersOf = (rights: Rights): Array<Provider> => [
-    ProviderAbilitiesService,
+export const rightsProvidersOf = (rights: Rights, store?: Outside["store"], chat?: ChatWorld, now?: () => string): Array<Provider> => [
+    AgentAccountsService,
     NodeToolDoorService,
     {
-        provide: McpConnectorAccessService,
-        useValue: mock<McpConnectorAccessService>({
+        provide: AccountAttachmentsService,
+        useValue: mock<AccountAttachmentsService>({
             listOfAgent: (_ws: string, agentId: string) =>
                 Promise.resolve(rights.attachments.filter((one) => one.agentId === agentId)),
-            defaultAccountOf: (_ws: string, kind: string) => Promise.resolve(rights.defaults.get(kind) ?? null),
+            listOfWorkspace: () => Promise.resolve(rights.attachments),
         }),
     },
     { provide: AgentDirectoryService, useValue: mock<AgentDirectoryService>() },
@@ -486,18 +568,41 @@ export const rightsProvidersOf = (rights: Rights): Array<Provider> => [
         useValue: mock<ConnectionBindingsReadService>({
             ofProvider: (_ws: string, provider: string) =>
                 Promise.resolve(rights.accounts.filter((one) => one.provider === provider).map((one) => statusOf(one))),
+            // The raw message rows are read only for a connection the workspace holds (`AgentGraphRawRowsService.rowOf`).
+            recordOf: (ws: string, id: string) => {
+                const account = rights.accounts.find((one) => one.id === id)
+                return Promise.resolve(account === undefined ? null : connectionRecordOf(ws, account))
+            },
         }),
     },
-    { provide: McpGatewayService, useValue: mock<McpGatewayService>() },
+    { provide: ToolRegistryService, useValue: mock<ToolRegistryService>() },
     { provide: GraphNodeRunTokensService, useValue: tokensOf() },
     {
         provide: GRAPH_NODE_TOOL_DOOR,
-        useFactory: (door: NodeToolDoorService): NodeToolDoor => ({
-            call: (call) => toolCallOf(rights, call),
-            effectRight: (call) => door.effectRight(call),
-            repeatGuard: (call) => door.repeatGuard(call),
-        }),
-        inject: [NodeToolDoorService],
+        useFactory: (
+            door: NodeToolDoorService,
+            registry: GraphNodeRegistryService,
+            ledger: GraphNodeEffectsService,
+            accounts: AgentAccountsService,
+            clock: Clock,
+            logger: Logger,
+        ): NodeToolDoor => {
+            const parts = {
+                call: (call: NodeToolCall) => toolCallOf(rights, call, store, chat, now ?? (() => clock.now().toISOString())),
+                effectRight: door.effectRight.bind(door),
+            }
+            // The ONE runner over the world's door: both roads of a node go through it, as in the app.
+            const runner = new ToolRunnerService({ door: parts, registry, ledger, accounts, leads: null, clock, logger })
+            return { ...parts, run: (call) => runner.run(call) }
+        },
+        inject: [
+            NodeToolDoorService,
+            GraphNodeRegistryService,
+            GraphNodeEffectsService,
+            AgentAccountsService,
+            CLOCK,
+            LOGGER,
+        ],
     },
 ]
 
@@ -505,44 +610,6 @@ export const rightsProvidersOf = (rights: Rights): Array<Provider> => [
 const rowsWhere = (rows: ReadonlyArray<NodeRow>, query: NodeQuery): Array<NodeRow> => {
     const where = Object.entries(query.where ?? {})
     return rows.filter((row) => where.every(([name, value]) => row[name] === value))
-}
-
-/**
- * The send of the channel: judged on the conversation's OWN connection by the real rights judge, as the channel executor does (a
- * send on an account the agent is not attached to is refused `channel_no_access`, a fact, nothing delivered), else delivered and kept
- * under `line:<key>`.
- */
-const sendOf = async (
-    outside: Outside,
-    abilities: ProviderAbilitiesService,
-    turn: NodeTurn,
-    payload: EffectPayload,
-    key: string,
-): Promise<SubjectRef> => {
-    const conversationId = typeof payload.conversationId === "string" ? payload.conversationId : ""
-    const conversation = (outside.store.conversation ?? []).find((row) => row.id === conversationId)
-    const channel = textOf(conversation?.channel) || "zalo"
-    const connectionId = textOf(conversation?.connectionId)
-    const verdict = await abilities.judge(WS, turn.agentId, TOOL.customerMessageSend, false, {
-        provider: providerOfChannel(channel) ?? channel,
-        connectionId,
-    })
-    if (verdict?.kind === "refuse")
-        return {
-            kind: "refused",
-            id: "channel_no_access",
-            facts: { conversationId, connectionId, reason: verdict.reason },
-        }
-    const line: Line = {
-        conversationId,
-        text: String(payload.text),
-        channelRef: `line:${key}`,
-        sentAt: outside.clock.now().toISOString(),
-        agentId: turn.agentId,
-    }
-    outside.lines.push(line)
-    ;(outside.store.message ?? []).push({ id: `m-${outside.lines.length}`, role: "agent", status: "posted", ...line })
-    return { kind: "message", id: `m-${outside.lines.length}` }
 }
 
 /** The team chat: a post under a key already held rewrites that message in place. */
@@ -557,9 +624,23 @@ const postOf = (outside: Outside, payload: EffectPayload, key: string): SubjectR
     return { kind: "chat-message", id: made.id }
 }
 
+/**
+ * A hand-over armed, answered as a sample effect that writes a record and answers facts (the fixture answer the specs use; the engine
+ * holds no care executor): a task id keyed by the customer the tag is about (`tag:<leadId>`), the member a template node reads
+ * (`taskId`), with the instant the tag's context names (`dueAt`).
+ */
+const tagArmedOf = (outside: Outside, payload: EffectPayload): SubjectRef => {
+    const leadId = textOf(payload.leadId)
+    const context: unknown = payload.context
+    const dueAt = typeof context === "object" && context !== null ? textOf(Reflect.get(context, "dueAt")) : ""
+    if (leadId === "") return { kind: TOOL.agentTag, id: `${TOOL.agentTag}-${outside.acts.length}` }
+    const taskId = `tag:${leadId}`
+    return { kind: "agent-task", id: taskId, facts: { taskId, dueAt } }
+}
+
 /** One act of the outside world: recorded, then failed, sent, posted, or answered with a subject. */
 const actOf =
-    (outside: Outside, abilities: ProviderAbilitiesService, effect: string) =>
+    (outside: Outside, effect: string, send: NodeEffectExecutor) =>
     (turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> => {
         outside.acts.push({ effect, payload: structuredClone(payload), key: call.key, dedupeKey: call.dedupeKey })
         const fault = outside.throwOn.get(effect)
@@ -567,19 +648,27 @@ const actOf =
             outside.throwOn.delete(effect)
             return Promise.reject(fault)
         }
+        // The customer send is the engine's own executor (real routes, contacts, delivery ledger and rights judge), never a double.
+        if (effect === TOOL.customerMessageSend) return send.execute(turn, payload, call)
         const key = call.dedupeKey ?? call.key
-        if (effect === TOOL.customerMessageSend) return sendOf(outside, abilities, turn, payload, key)
         if (effect === TOOL.teamMessagePost) return Promise.resolve(postOf(outside, payload, key))
+        if (effect === TOOL.agentTag) return Promise.resolve(tagArmedOf(outside, payload))
         return Promise.resolve({ kind: effect, id: `${effect}-${outside.acts.length}` })
     }
 
-/** Registers the data ports and the executors of the outside world on a process's node registry. */
+/**
+ * Registers the data ports and the executors of the outside world on a process's node registry: an executor for every installed
+ * effect except the ones the caller serves itself (`served`: the executors of a fixture plugin's own effects).
+ */
 export const registerOutside = (
-    outside: Outside,
+    outside: Outside & ChatSource,
     registry: GraphNodeRegistryService,
-    abilities: ProviderAbilitiesService,
+    abilities: AgentAccountsService,
+    served: ReadonlySet<string> = new Set(),
+    logger: Logger = mock<Logger>(),
 ): void => {
-    for (const kind of coreDataKinds) {
+    const send = sendExecutorOf(outside, abilities, registry, logger)
+    for (const kind of INSTALLED.nodeInstall().dataKinds) {
         registry.addDataPort({
             kind: kind.kind,
             read: (_turn: NodeTurn, query: NodeQuery) => {
@@ -594,6 +683,10 @@ export const registerOutside = (
             },
         })
     }
-    for (const effect of coreEffects)
-        registry.addExecutor({ effect: effect.id, execute: actOf(outside, abilities, effect.id) })
+    for (const effect of INSTALLED.nodeInstall().effects) {
+        if (served.has(effect.id)) continue
+        // The customer send is the app's own executor, so the tool door also asks it what it would refuse BEFORE a person is asked to approve (`refusalFor`).
+        const refusalFor = effect.id === TOOL.customerMessageSend ? send.refusalFor?.bind(send) : undefined
+        registry.addExecutor({ effect: effect.id, execute: actOf(outside, effect.id, send), ...(refusalFor === undefined ? {} : { refusalFor }) })
+    }
 }

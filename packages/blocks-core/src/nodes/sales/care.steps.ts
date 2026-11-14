@@ -1,55 +1,158 @@
-import type { NodeAgentRequest, NodeContext } from "@nivo-lite/agent-sdk/node"
-import type { z } from "zod"
-import type { NodeLocale } from "../node-schema.types"
-import { TOOL } from "../../vocabulary/tool-ids"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import type { JsonObject } from "@nivo-lite/agent-sdk/schema"
+import type { NodeContext } from "@nivo-lite/agent-sdk/template"
+import { z } from "zod"
+import { MAX_BODY, MAX_LINE } from "../../bounds"
+import { sayToCustomer } from "../say-to-customer"
+import { valueOrCannot } from "../tool-answers"
 import type { CareKind } from "./care.policy"
 
 /**
- * How every care agent writes to a customer, appended to its goal. Guidance, not code: whether and what to say is the agent's call from
- * the facts it is given.
+ * How a care node talks: the agent WRITES (one `ctx.agent.run` with an empty tool subset, `tools: []`, `maxTurns: 1`), the node SENDS
+ * (`ctx.tools.call`), so the send, its args and its refusal are the node's and an example scripts them exactly.
+ */
+
+/**
+ * How every care agent writes to a customer, appended to its goal. Guidance, not code: what to say is the agent's call from the facts
+ * it is given. No tool shape, no channel, no holding line: the node sends, the engine reports what it cannot.
  */
 export const CARE_VOICE: string =
-    "Write as the shop, warm and short, in the customer's language (`locale`: vi = Vietnamese, en = English). Send ONE message with at most " +
-    "one question. Use only the facts you are given and what the tools answer: never promise a refund, a discount, a delivery day or anything " +
-    "the facts do not hold, and never type an amount that is not in the facts. A send that answers `refused` did not reach the customer: " +
-    "do not try another way, say so in your output."
+    "Write as the shop, warm and short, in the customer's language (`locale`: vi = Vietnamese, en = English). Write ONE message with at " +
+    "most one question. Use only the facts you are given: never promise a refund, a discount, a delivery day or anything the facts do " +
+    "not hold, and never type an amount that is not in the facts."
 
-/** The language a care agent writes in, as its input carries it. */
-export interface CareVoiceInput {
-    /** The customer's language. */
-    readonly locale: NodeLocale
+/** The message a care agent writes for the customer. */
+export interface CareMessage {
+    /** The text, as the customer reads it. */
+    readonly text: string
 }
 
-/** Runs the step's agent and answers its output; an agent that cannot complete ends the step confused, for the engine's AI core to take over. */
-export const agentAnswer = async <S extends z.ZodType>(
-    context: Pick<NodeContext, "agent" | "confused">,
-    request: NodeAgentRequest<S>,
-): Promise<z.output<S>> => {
-    const decision = await context.agent.run(request)
-    if (decision.kind === "confused") return context.confused(decision.confusion)
-    return decision.value
+/** The answer a care agent gives: the one message. */
+export const careMessageSchema: z.ZodType<CareMessage> = z.object({
+    text: z.string().min(1).max(MAX_BODY).describe("The one message to the customer, in their language."),
+})
+
+/** The note a care agent writes for the team chat. */
+export interface TeamNote {
+    /** A short title the team reads first. */
+    readonly title: string
+    /** The note, in the team's language. */
+    readonly text: string
 }
 
-/** What `rearm` names: the timer to move. */
-export interface CareTimer {
-    /** The care step. */
-    readonly kind: CareKind
-    /** The record it is about. */
-    readonly ref: string
-    /** Tells two steps of one kind on one record apart, or empty. */
-    readonly suffix: string
-    /** The moment the step is really due, an ISO instant. */
-    readonly dueAt: string
+/** The answer an agent gives that writes to the team: a title and a text. */
+export const teamNoteSchema: z.ZodType<TeamNote> = z.object({
+    title: z.string().min(1).max(MAX_LINE).describe("A short title, in the team's language."),
+    text: z.string().min(1).max(MAX_BODY).describe("The note, in the team's language."),
+})
+
+/** What a send came to: it reached the customer, or the refusal the tool answered. */
+export interface SendResult {
+    /** True when the message reached the customer. */
+    readonly sent: boolean
+    /** The tool's refusal code when it did not, else null. */
+    readonly refusal: string | null
 }
 
 /**
- * Arms (or moves) the timer of a care step: timing is logic, so the code of a care node arms it, never the agent. Arming again under the
- * same step and record moves the same task, so a timer that woke early waits for its real moment.
+ * Says the words to the person (`nivo.tool.customer.message.send` by `contactId`: the conversation picks the channel); a refusal is
+ * answered as a fact, never tried another way.
  */
-export const arm = async (context: Pick<NodeContext, "effect">, timer: CareTimer): Promise<void> => {
-    await context.effect(
-        TOOL.careSchedule,
-        { kind: timer.kind, ref: timer.ref, dueAt: timer.dueAt, ...(timer.suffix === "" ? {} : { suffix: timer.suffix }) },
-        { dedupeKey: `care-arm:${timer.kind}:${timer.ref}:${timer.suffix}:${timer.dueAt}` },
-    )
+export const sendToContact = async (
+    context: Pick<NodeContext, "tools" | "fail" | "run" | "workspace">,
+    contactId: string,
+    text: string,
+): Promise<SendResult> => {
+    const said = await sayToCustomer(context, { contactId, text })
+    return said.ok ? { sent: true, refusal: null } : { sent: false, refusal: said.refusal }
 }
+
+/** One care timer as a care step means it: the step, the record it is about, the item within it, when, and the small data it carries. */
+export interface CareTimer {
+    /** The care step: what the due timer wakes (`data.kind`, the field every timer graph of the agent keys on). */
+    readonly kind: CareKind
+    /** The record it is about (an order, a customer). */
+    readonly ref: string
+    /** The item within the record (an occasion), when there is one. */
+    readonly item?: string
+    /** The instant it is due, ISO 8601; or `afterHours` from now. */
+    readonly dueAt?: string
+    /** Hours from now until it is due. */
+    readonly afterHours?: number
+    /** Small flat data it hands back when due (the shipment looks). */
+    readonly data?: Readonly<Record<string, number>>
+}
+
+/** The key of a care timer (`nivo.tool.timer.arm` `ref`): the step, then the item, else the record: arming it again moves the same timer. */
+export const careTimerRefOf = (kind: CareKind, record: string, item?: string): string => `${kind}:${item ?? record}`
+
+/**
+ * The arguments of `nivo.tool.timer.arm` for a care timer: its key, its moment and its data, with `kind` (the field every timer graph of
+ * the agent keys on), the `record` and the `item` in the data, so the woken graph reads them back from `trigger.data`.
+ */
+export const careTimerArgsOf = (timer: CareTimer): JsonObject => ({
+    ref: careTimerRefOf(timer.kind, timer.ref, timer.item),
+    ...(timer.dueAt === undefined ? { afterMinutes: (timer.afterHours ?? 0) * 60 } : { dueAt: timer.dueAt }),
+    data: {
+        kind: timer.kind,
+        record: timer.ref,
+        ...(timer.item === undefined ? {} : { item: timer.item }),
+        ...timer.data,
+    },
+})
+
+/** What arming a care timer came to: a person declined it on its card (the timer is not armed), or it is armed. */
+export interface ArmResult {
+    /** True when a person declined arming the timer on its card: nothing was armed. */
+    readonly declined: boolean
+}
+
+/**
+ * Arms (or moves) one care timer (`nivo.tool.timer.arm`, the engine's generic timer: it wakes this agent's graph whose trigger keys on
+ * `data.kind`). A person declining the arm is a business outcome: the result says `declined: true` and the calling node returns its
+ * declined form. Any other refusal is never reported as armed: it ends the node `cannot` with the refusal and its facts, for the engine's report.
+ */
+export const armCare = async (context: Pick<NodeContext, "tools" | "fail">, timer: CareTimer): Promise<ArmResult> => {
+    const armed = await context.tools.call(TOOL.timerArm, careTimerArgsOf(timer))
+    if (!armed.ok && armed.declined === true) return { declined: true }
+    valueOrCannot(context, TOOL.timerArm, armed)
+    return { declined: false }
+}
+
+/** What cancelling a care timer came to: declined by a person, or whether one was waiting. */
+export interface CancelResult {
+    /** True when a person declined the cancel on its card: nothing was cancelled. */
+    readonly declined: boolean
+    /** True when a timer was waiting and is now cancelled; false when none was or the cancel was declined. */
+    readonly cancelled: boolean
+}
+
+/**
+ * Cancels one care timer by its key (`nivo.tool.timer.cancel`); answers whether one was waiting, or that a person declined. Any other
+ * refusal ends the node `cannot`.
+ */
+export const cancelCare = async (
+    context: Pick<NodeContext, "tools" | "fail">,
+    kind: CareKind,
+    record: string,
+): Promise<CancelResult> => {
+    const called = await context.tools.call(TOOL.timerCancel, { ref: careTimerRefOf(kind, record) })
+    if (!called.ok && called.declined === true) return { declined: true, cancelled: false }
+    const answer = valueOrCannot(context, TOOL.timerCancel, called)
+    return { declined: false, cancelled: answer["cancelled"] === true }
+}
+
+/** Posts one note to the team chat as a question for the team to decide (`intent: ask`); a refusal is answered as a fact. */
+export const askTeam = async (context: Pick<NodeContext, "tools">, note: TeamNote): Promise<SendResult> => {
+    const answered = await context.tools.call(TOOL.teamMessagePost, { kind: "message.text", intent: "ask", ...note })
+    return answered.ok
+        ? { sent: true, refusal: null }
+        : { sent: false, refusal: answered.declined === true ? "declined" : answered.refusal }
+}
+
+/** The output member a send node reports its refusal in. */
+export const refusalSchema: z.ZodNullable<z.ZodString> = z
+    .string()
+    .max(MAX_LINE)
+    .nullable()
+    .describe("The refusal code the tool answered when the message did not go out, else null.")

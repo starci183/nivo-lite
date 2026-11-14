@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition, type ActionResult } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { SALES_DECISION_COMMANDS } from "../../../rules/sales/decisions"
@@ -38,15 +37,15 @@ export const decideAction: ActionDefinition = defineAction({
             ? confirmOrderRun(stores, { id }, context)
             : cancelOrderRun(stores, { id }),
     refreshes: [
-        "sales.orders",
-        "sales.order-counts",
-        "sales.order",
-        "sales.orders-waiting",
-        "sales.attention",
-        "sales.decisions",
-        "sales.figures",
-        "sales.leads",
-        "sales.lead-counts",
-        "sales.lead",
+        "blocks-core.sales.api.order.list",
+        "blocks-core.sales.api.order.counts",
+        "blocks-core.sales.api.order.get",
+        "blocks-core.sales.api.order.waiting",
+        "blocks-core.sales.api.lead.attention",
+        "blocks-core.sales.api.order.decisions",
+        "blocks-core.sales.api.order.figures",
+        "blocks-core.sales.api.lead.list",
+        "blocks-core.sales.api.lead.counts",
+        "blocks-core.sales.api.lead.get",
     ],
 })

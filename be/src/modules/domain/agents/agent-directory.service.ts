@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
@@ -15,7 +14,6 @@ import type {
     OptionalGreeting,
     AgentHandleCard,
     AgentIdentityCard,
-    AgentSeat,
     AgentSheet,
     OptionalAgentCard,
     OptionalAgentSheet,
@@ -23,13 +21,10 @@ import type {
 import type { OptionalId } from "./agents.contracts"
 import { AgentEntity } from "./persistence/entities"
 
-/** The module of the internal agent every workspace is seeded with: it runs jobs and is no persona, so no seat, count or sheet shows it. */
+/** The module of the internal agent every workspace is seeded with: it runs jobs and is no persona, so no sheet shows it. */
 const INTERNAL_MODULE = "nivo"
 
-const CARD_COLUMNS = { id: true, name: true, module: true, canTagAgentIds: true } as const
-
-/** The sortable text of a creation instant: digits only, fixed width, microsecond exact, so text order is time order. */
-const SEAT_AT = "to_char(a.created_at AT TIME ZONE 'UTC', 'YYYYMMDDHH24MISSUS')"
+const CARD_COLUMNS = { id: true, name: true, module: true } as const
 
 const SHEET_COLUMNS = {
     id: true,
@@ -63,7 +58,6 @@ const toCard = (agent: AgentEntity): AgentCard => ({
     id: agent.id,
     name: agent.name,
     module: agent.module,
-    canTagAgentIds: agent.canTagAgentIds,
 })
 
 @Injectable()
@@ -79,7 +73,7 @@ export class AgentDirectoryService {
             order: { name: "ASC" },
             take: limit,
         })
-        return agents.map(toCard)
+        return agents.map((agent) => toCard(agent))
     }
 
     /** The active agents among the given ids, in the order the ids are given. */
@@ -170,6 +164,17 @@ export class AgentDirectoryService {
         return agents.map((agent) => ({ id: agent.id, module: agent.module }))
     }
 
+    /** The active agents of the workspace (the internal agent left out) with the module each serves, oldest first, at most `limit`. */
+    async activeModuleRefsOf(workspaceId: string, limit: number): Promise<Array<AgentModuleRef>> {
+        const agents = await this.entityManager.find(AgentEntity, {
+            select: { id: true, module: true },
+            where: { workspaceId, status: "active", module: Not(INTERNAL_MODULE) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
+        return agents.map((agent) => ({ id: agent.id, module: agent.module }))
+    }
+
     /** The facts the chat page needs of the agent in the workspace; null when the workspace has no such agent. */
     async chatFactsOf(workspaceId: string, agentId: string): Promise<OptionalAgentChatFacts> {
         const agent = await this.entityManager.findOne(AgentEntity, {
@@ -244,7 +249,7 @@ export class AgentDirectoryService {
             where: { workspaceId, id: In([...agentIds]) },
             take: agentIds.length,
         })
-        return agents.map(toCard)
+        return agents.map((agent) => toCard(agent))
     }
 
     /** The id of the oldest active agent of a module in the workspace; null when the department has none. */
@@ -265,28 +270,6 @@ export class AgentDirectoryService {
             take: limit,
         })
         return agents.map((agent) => agent.handle)
-    }
-
-    /** How many agents the workspace has, active or paused. */
-    countOf(workspaceId: string): Promise<number> {
-        return this.entityManager.count(AgentEntity, { where: { workspaceId, module: Not(INTERNAL_MODULE) } })
-    }
-
-    /** The oldest agents of the workspace as seats, oldest first (ties by id). */
-    firstSeats(workspaceId: string, limit: number): Promise<Array<AgentSeat>> {
-        return this.seatsQuery(workspaceId)
-            .orderBy("a.createdAt")
-            .addOrderBy("a.id")
-            .limit(limit)
-            .getRawMany<AgentSeat>()
-    }
-
-    /** The given agents of the workspace as seats, in no particular order (a missing id is missing from the answer). */
-    seatsOf(workspaceId: string, agentIds: ReadonlyArray<string>): Promise<Array<AgentSeat>> {
-        if (agentIds.length === 0) return Promise.resolve([])
-        return this.seatsQuery(workspaceId)
-            .andWhere("a.id IN (:...agentIds)", { agentIds: [...new Set(agentIds)] })
-            .getRawMany<AgentSeat>()
     }
 
     /** The active agents of the workspace holding one of the handles, in handle order, bounded. */
@@ -336,7 +319,7 @@ export class AgentDirectoryService {
             order: { createdAt: "ASC" },
             take: limit,
         })
-        return agents.map(toSheet)
+        return agents.map((agent) => toSheet(agent))
     }
 
     /** The oldest agent of a module in the workspace, active or paused, with its whole sheet; null when the department has none. */
@@ -385,17 +368,5 @@ export class AgentDirectoryService {
             order: { createdAt: "ASC", id: "ASC" },
         })
         return agent === null ? null : toCard(agent)
-    }
-
-    private seatsQuery(workspaceId: string): SelectQueryBuilder<AgentEntity> {
-        return this.entityManager
-            .createQueryBuilder(AgentEntity, "a")
-            .select("a.id", "id")
-            .addSelect("a.name", "name")
-            .addSelect("a.module", "module")
-            .addSelect("a.avatarUrl", "avatar_url")
-            .addSelect(SEAT_AT, "at")
-            .where("a.workspaceId = :workspaceId", { workspaceId })
-            .andWhere("a.module <> :internal", { internal: INTERNAL_MODULE })
     }
 }

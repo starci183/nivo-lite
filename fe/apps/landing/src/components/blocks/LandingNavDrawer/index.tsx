@@ -17,7 +17,7 @@ interface LandingNavDrawerProps {
 export const LandingNavDrawer = (props: LandingNavDrawerProps) => {
     const t = useTranslations("landing")
     const language = useLanguage()
-    const [isOpen, setOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
     const anchor = (target: string): string => `${props.anchorBase}${target}`
     return (
         <LandingNavDrawerBase
@@ -36,7 +36,7 @@ export const LandingNavDrawer = (props: LandingNavDrawerProps) => {
                 accountLabel: t("signIn"),
                 language: { label: language.label, locale: language.locale, options: language.options },
             }}
-            on={{ setOpen, chooseLocale: language.choose }}
+            on={{ setOpen: setIsOpen, chooseLocale: language.choose }}
         />
     )
 }

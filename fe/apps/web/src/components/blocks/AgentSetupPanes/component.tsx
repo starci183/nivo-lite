@@ -3,8 +3,7 @@ import { AgentGraphProblems } from "@/components/branches/AgentGraphProblems"
 import { AgentGraphPublish } from "@/components/composites/AgentGraphPublish"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { AgentSetupNotice } from "@/components/frames/AgentSetupNotice"
-import { Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
-import type { PaneGridProps } from "@starci/grammar/common"
+import { Pane, PaneGrid, PaneSection, type PaneGridProps } from "@starci/grammar/common"
 import type { ReactNode, Ref } from "react"
 import { ChatComposerBand } from "@/components/frames/ChatComposerBand"
 import { ChatRoomHead } from "@/components/frames/ChatRoomHead"
@@ -13,7 +12,7 @@ import { TeamChatMessages } from "@/components/frames/TeamChatMessages"
 import { AgentSetupMap, type AgentSetupSteps } from "@/components/composites/AgentSetupMap"
 import { WorkflowStepDrawer } from "@/components/composites/WorkflowStepDrawer"
 import { AgentSetupNotices } from "@/components/composites/AgentSetupNotices"
-import { AgentSetupTrailing, type AgentSetupBrandKits } from "@/components/composites/AgentSetupTrailing"
+import { AgentSetupTrailing } from "@/components/composites/AgentSetupTrailing"
 import { AgentSetupUnder, underIdsOf } from "@/components/composites/AgentSetupUnder"
 import { AgentSetupUnderstanding } from "@/components/composites/AgentSetupUnderstanding"
 import { AgentSetupVersions } from "@/components/composites/AgentSetupVersions"
@@ -31,7 +30,6 @@ import type {
     StepAction,
     TeamChatMessagesCopy,
 } from "@/modules/types"
-import type { BrandProposalCommands } from "@/components/leaves/BrandProposalView"
 
 /** The slots, the copy, the notice for anyone who may not set an agent up, and the commands of the setup panes. */
 export interface AgentSetupPanesBaseProps {
@@ -42,7 +40,6 @@ export interface AgentSetupPanesBaseProps {
         readonly chat: DataSlot<AgentSetupChatContent>
         /** The same read for the thread alone: empty while no message exists, so the greeting notice stands in the well. */
         readonly thread: DataSlot<AgentSetupChatContent>
-        readonly brandKits: AgentSetupBrandKits | null
         readonly chatPlaceholder: AgentSetupChatContent
         readonly side: DataSlot<SetupSideView>
         readonly sidePlaceholder: SetupSideView
@@ -61,11 +58,6 @@ export interface AgentSetupPanesBaseProps {
         readonly send: () => void
         readonly suggest: (id: string) => void
         readonly decide: (id: string, change: SetupWriteDecision) => void
-        readonly attach: (files: ReadonlyArray<File>) => void
-        readonly brandField: (name: Parameters<BrandProposalCommands["field"]>[0], value: string) => void
-        readonly brandConfirm: (id: string) => void
-        readonly brandToggleEdit: (id: string) => void
-        readonly brandReject: (id: string) => void
         readonly editText: (value: string) => void
         readonly gate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) => void
         readonly startEdit: (gateKey: string, evidence: string) => void
@@ -143,7 +135,7 @@ const ThreadBand = (props: AgentSetupPanesBaseProps) => (
                         <AgentSetupUnder key={id} messageId={id} content={content} copy={props.props.copy} on={props.on} />,
                     ]),
                 )}
-                trailing={<AgentSetupTrailing content={content} brand={props.props.brandKits} on={props.on} />}
+                trailing={<AgentSetupTrailing content={content} />}
             />
         )}
     />
@@ -159,7 +151,7 @@ const ComposerBand = (props: AgentSetupPanesBaseProps) =>
                 onDraft={props.on.text}
                 onMention={noop}
                 onSend={props.on.send}
-                onFile={(file) => props.on.attach([file])}
+                onFile={noop}
                 onFileClear={noop}
                 onReplyClear={noop}
             />

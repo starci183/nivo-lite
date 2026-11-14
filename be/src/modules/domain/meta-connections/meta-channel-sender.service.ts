@@ -1,15 +1,22 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { InjectChannelSenderRegistry } from "@modules/domain/channels"
-import type { ChannelSender, ChannelSenderRegistry } from "@modules/domain/channels"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import { InjectChannelSenderRegistry, type ChannelSender, type ChannelSenderRegistry } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectMetaClient } from "@modules/integrations/meta"
-import type { MetaClient } from "@modules/integrations/meta"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMetaClient, type MetaClient } from "@modules/integrations/meta"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MetaConnectionsLogEvent } from "./meta-connections.log-events"
 import { parseMetaSecret } from "./meta-secret.policy"
+
+/** Where a send goes, as this provider reads it: the person's id on the channel (with an archive suffix after a colon) and the Page connection. */
+export interface MetaSendTarget {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The channel key: facebook or instagram. */
+    readonly channel: string
+    /** The customer's id on the channel. */
+    readonly externalId: string | null
+    /** The Page connection the message goes through. */
+    readonly connectionId: string | null
+}
 
 /** The customer id on the channel is the part before the colon (archived conversations carry a suffix). */
 const personOf = (externalId: string): string => {
@@ -42,7 +49,7 @@ export class MetaChannelSender implements ChannelSender, OnModuleInit {
     }
 
     /** Pushes the text to the customer; false when the Page is gone, the credential is unreadable or Meta refused. Never throws. */
-    async send(conversation: ChatConversationTarget, text: string): Promise<boolean> {
+    async send(conversation: MetaSendTarget, text: string): Promise<boolean> {
         const platform = conversation.channel === "instagram" ? "instagram" : "facebook"
         if (conversation.connectionId === null || conversation.externalId === null) return false
         const connectionId = conversation.connectionId
@@ -50,8 +57,8 @@ export class MetaChannelSender implements ChannelSender, OnModuleInit {
             this.logger.error(MetaConnectionsLogEvent.SendUnavailable, cause, { connectionId })
             return null
         }
-        const connection = await this.connections.find(conversation.workspaceId, connectionId).catch(unavailable)
-        const sealed = connection === null ? null : await this.connections.readSecret(connection.id).catch(unavailable)
+        const connection = await this.connections.find(conversation.workspaceId, connectionId).catch((cause) => unavailable(cause))
+        const sealed = connection === null ? null : await this.connections.readSecret(connection.id).catch((cause) => unavailable(cause))
         const secret = sealed === null ? {} : parseMetaSecret(sealed.plain)
         if (connection === null || secret.pageId === undefined || secret.pageToken === undefined) return false
         const result = await this.meta.deliverMessage(

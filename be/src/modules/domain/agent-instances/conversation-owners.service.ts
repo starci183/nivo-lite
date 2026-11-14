@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { ChannelOwnersService } from "@modules/domain/agent-connections"
-import { ChatConversationsService } from "@modules/domain/chat-records"
+import { CustomerRoutesService } from "@modules/domain/customer-routes"
 import type { OptionalOwnerAgentId } from "./agent-instances.contracts"
 
 @Injectable()
@@ -11,22 +11,16 @@ import type { OptionalOwnerAgentId } from "./agent-instances.contracts"
  */
 export class ConversationOwnersService {
     constructor(
-        private readonly conversations: ChatConversationsService,
         private readonly owners: ChannelOwnersService,
+        @Optional() private readonly routes?: CustomerRoutesService,
     ) {}
 
-    /** The agent of `module` that answers the conversation's channel; null when it came in on none, or no agent of the role answers it. */
+    /**
+     * The agent of `module` that answers the conversation's channel; null when it came in on none, or no agent of the role answers it.
+     * The id is a route (the engine's id of the person on the entrance, whose account is the connection); the engine reads no chatbot record.
+     */
     async ownerAgentOf(workspaceId: string, conversationId: string, module: string): Promise<OptionalOwnerAgentId> {
-        const conversation = await this.conversations.humanOf(workspaceId, conversationId)
-        const connectionId = conversation?.connectionId ?? null
-        if (connectionId === null) return null
-        return (await this.owners.ownerOf(connectionId, module))?.agentId ?? null
-    }
-
-    /** The agent of `module` that answers the channel of the customer's newest conversation that has a connection; null when none does. */
-    async ownerAgentOfLead(workspaceId: string, leadId: string, module: string): Promise<OptionalOwnerAgentId> {
-        const conversations = await this.conversations.ofLeads(workspaceId, [leadId])
-        const connectionId = conversations.find((each) => each.connectionId !== null)?.connectionId ?? null
+        const connectionId = ((await this.routes?.get(workspaceId, conversationId)) ?? null)?.accountId ?? null
         if (connectionId === null) return null
         return (await this.owners.ownerOf(connectionId, module))?.agentId ?? null
     }

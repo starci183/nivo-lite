@@ -6,10 +6,8 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { OWNER_EXAMPLE, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphAdminService } from "./agent-graph-admin.service"
-import { AgentGraphContextService } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
-import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
@@ -82,11 +80,6 @@ const build = async (
                 options.brainValue === null ? null : { id: "fact-2", value: options.brainValue ?? "Under 10M" },
             ),
     })
-    const running = mock<AgentGraphRunService>({
-        runOf: jest.fn().mockResolvedValue({ decisionId: "decision-1" }),
-        runsOf: jest.fn().mockResolvedValue([{ id: "decision-1" }]),
-    })
-    const context = mock<AgentGraphContextService>({ coverageOf: jest.fn().mockResolvedValue([{ nodeKey: "decide" }]) })
     const installations = mock<InstallationRecordsService>({
         ofAgent: jest.fn().mockResolvedValue(options.installed === false ? null : { id: "inst-1" }),
         findById: jest
@@ -103,13 +96,11 @@ const build = async (
             { provide: AgentGraphPublishService, useValue: publishing },
             { provide: AgentGraphProposalsService, useValue: proposals },
             { provide: InstallationRecordsService, useValue: installations },
-            { provide: AgentGraphRunService, useValue: running },
-            { provide: AgentGraphContextService, useValue: context },
             { provide: BrainFactsService, useValue: brain },
         ],
     }).compile()
     const service = moduleRef.get(AgentGraphAdminService)
-    return { service, graphs, seed, view, publishing, proposals, running, context, brain }
+    return { service, graphs, seed, view, publishing, proposals, brain }
 }
 
 describe("AgentGraphAdminService access", () => {
@@ -163,12 +154,12 @@ describe("AgentGraphAdminService changes", () => {
         const { service, graphs } = await build()
 
         await expect(service.versions(ACTOR, "agent-1")).resolves.toEqual([VERSION])
-        await expect(service.saveDraft(ACTOR, "agent-1", 4, '{"nodes":[],"rights":[]}')).resolves.toBe(5)
+        await expect(service.saveDraft(ACTOR, "agent-1", 4, '{"nodes":[]}')).resolves.toBe(5)
         await expect(service.saveDraft(ACTOR, "agent-1", 4, "not json")).rejects.toEqual(
             expect.objectContaining({ code: AgentGraphsErrorCode.DocumentInvalid }),
         )
 
-        expect(graphs.saveDraft.mock.calls).toEqual([["ws-1", "agent-1", 4, { nodes: [], rights: [] }]])
+        expect(graphs.saveDraft.mock.calls).toEqual([["ws-1", "agent-1", 4, { nodes: [] }]])
     })
 
     it("publishes and restores as the seat that asked, with the role it holds", async () => {
@@ -326,50 +317,18 @@ describe("AgentGraphAdminService.confirm of a Brain conflict", () => {
 })
 
 describe("AgentGraphAdminService the run and the coverage", () => {
-    it("reads the trace of a run for a seat that may see the graph", async () => {
-        const { service, running } = await build()
+    it("answers no run trace: no engine gate walks a graph, so no graph decision exists (not found)", async () => {
+        const { service } = await build()
 
-        await expect(service.run(ACTOR, "item-9")).resolves.toEqual({ decisionId: "decision-1" })
-        expect(running.runOf).toHaveBeenCalledWith("ws-1", "item-9")
+        await expect(service.run(ACTOR, "item-9")).rejects.toMatchObject({ code: AgentGraphsErrorCode.RunNotFound })
     })
 
-    it("lists the latest runs of the agent for a seat that may see the graph, at most a hundred and at least one", async () => {
-        const { service, running } = await build()
-
-        await expect(service.runs(ACTOR, "agent-1", 30)).resolves.toEqual([{ id: "decision-1" }])
-        await service.runs(ACTOR, "agent-1", 5000)
-        await service.runs(ACTOR, "agent-1", 0)
-
-        expect(running.runsOf.mock.calls).toEqual([
-            ["ws-1", "agent-1", 30],
-            ["ws-1", "agent-1", 100],
-            ["ws-1", "agent-1", 1],
-        ])
-    })
-
-    it("refuses the list of runs to a seat that may not see the graph", async () => {
-        const { service, running } = await build({ role: "staff" })
-
-        await expect(service.runs(ACTOR, "agent-1", 30)).rejects.toBeInstanceOf(AgentGraphsError)
-        expect(running.runsOf).not.toHaveBeenCalled()
-    })
-
-    it("reads who can answer each ask of the draft graph", async () => {
-        const { service, context } = await build()
-
-        await expect(service.coverage(ACTOR, "agent-1")).resolves.toEqual([{ nodeKey: "decide" }])
-        expect(context.coverageOf).toHaveBeenCalledWith(
-            expect.objectContaining({ agentId: "agent-1", moduleKey: "accounting" }),
-            stateOf().draft,
-        )
-    })
-
-    it("answers no coverage for an agent with no graph and refuses one with no installation", async () => {
+    it("answers no coverage to an owner or a manager: approver grants are gone with the authority rules", async () => {
+        const { service } = await build()
         const none = await build({ state: null })
-        const gone = await build({ installed: false })
 
+        await expect(service.coverage(ACTOR, "agent-1")).resolves.toEqual([])
         await expect(none.service.coverage(ACTOR, "agent-1")).resolves.toEqual([])
-        await expect(gone.service.coverage(ACTOR, "agent-1")).rejects.toBeInstanceOf(AgentGraphsError)
     })
 })
 
@@ -447,8 +406,8 @@ describe("AgentGraphAdminService.contractFromGap", () => {
 })
 
 describe("AgentGraphAdminService the models a draft names", () => {
-    const draftOf = (model: unknown, step = "accounting.match-payment"): string =>
-        JSON.stringify({ nodes: [], rights: [], flow: { nodes: [{ key: "match", kind: "execute", step, model }] } })
+    const draftOf = (model: unknown, step = "webbooks.payment-settle"): string =>
+        JSON.stringify({ nodes: [], flow: { nodes: [{ key: "match", kind: "execute", step, model }] } })
 
     it("saves Auto and every selectable model", async () => {
         const { service, graphs } = await build()

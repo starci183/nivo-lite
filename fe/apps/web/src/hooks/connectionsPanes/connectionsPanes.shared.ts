@@ -112,7 +112,7 @@ export const filtersOf = (
 const plain = (text: string): string =>
     text
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
+        .replaceAll(/\p{Diacritic}/gu, "")
         .toLowerCase()
 
 /** The rows a search text and a filter leave, accents and case ignored. */
@@ -182,7 +182,6 @@ export const nextStepOf = (
             ? {
                   label: actionLabelOf(connection, t),
                   href: rowHrefOf(connection, workspaceId),
-                  isPrimary: connection.status === "error",
               }
             : null,
     }

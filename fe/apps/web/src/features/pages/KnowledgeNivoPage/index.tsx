@@ -23,7 +23,6 @@ const headingOf = async (workspaceId?: string) => {
     })
 }
 
-/** The base knowledge of NIVO per module: the connected screen reads it through GraphQL; read-only for every member. */
 /** What the route hands the page: the workspace of the address. */
 interface KnowledgeNivoPageProps {
     readonly workspaceId: string

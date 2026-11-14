@@ -11,7 +11,7 @@ export class AgentPageType {
     @Field(() => AgentPageHeadType)
     agent!: AgentPageHeadType
 
-    /** Who is in charge, who may give it work, whom it may tag. */
+    /** Who is in charge and who may give it work. */
     @Field(() => AgentOwnershipType)
     ownership!: AgentOwnershipType
 

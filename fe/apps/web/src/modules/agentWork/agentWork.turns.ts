@@ -1,8 +1,13 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { AgentWorkTurnView, AgentWorkTurnsView } from "@/modules/types"
-import { relative, workItemHrefOf } from "./agentWork.wire"
+import {
+    relative,
+    workItemHrefOf,
+    type AgentWorkContext,
+    type AgentWorkTranslator,
+    type TurnWire,
+} from "./agentWork.wire"
 import { reasonWord, sourceWord } from "./agentWork.words"
-import type { AgentWorkContext, AgentWorkTranslator, TurnWire } from "./agentWork.wire"
 
 /** What a turn did, in words, with the tone of its badge. */
 interface Outcome {
@@ -59,7 +64,7 @@ const toTurnView = (wire: TurnWire, context: AgentWorkContext): AgentWorkTurnVie
 
 /** The turn list: the wakes that found nothing to do are one count. */
 export const toTurnsView = (wires: ReadonlyArray<TurnWire>, context: AgentWorkContext): AgentWorkTurnsView => {
-    const quiet = wires.filter(isQuiet).length
+    const quiet = wires.filter((entry) => isQuiet(entry)).length
     return {
         rows: wires.filter((wire) => !isQuiet(wire)).map((wire) => toTurnView(wire, context)),
         quietLabel: quiet === 0 ? "" : context.t("quietWakes", { n: quiet }),

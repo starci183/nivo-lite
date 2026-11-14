@@ -1,5 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react"
-import type { ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react"
 import { INITIAL_GATE, gateReducer, isGated, isSettled } from "./view-gate"
 
 /** What a bound read reaches of the gate of its view. */

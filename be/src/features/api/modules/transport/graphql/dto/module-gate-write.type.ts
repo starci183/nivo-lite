@@ -1,9 +1,9 @@
 import { Field, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
-/** What a setup answer writes: a Second Brain fact or one field of an authority rule. */
+/** What a setup answer writes: a Second Brain fact. */
 export class ModuleGateWriteType {
-    /** `fact` or `rule`. */
+    /** Always `fact`. */
     @Field()
     kind!: string
 
@@ -19,11 +19,11 @@ export class ModuleGateWriteType {
     @Field(() => String, { nullable: true })
     scope?: string | null
 
-    /** For a rule: the authority action. */
+    /** Always null: rule writes are gone with the authority rules (2026-11-13); the web still selects it. */
     @Field(() => String, { nullable: true })
     action?: string | null
 
-    /** For a rule: the field the answer sets. */
+    /** Always null: rule writes are gone with the authority rules (2026-11-13); the web still selects it. */
     @Field(() => String, { nullable: true })
     field?: string | null
 }

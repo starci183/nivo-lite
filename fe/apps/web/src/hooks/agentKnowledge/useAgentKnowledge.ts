@@ -1,14 +1,12 @@
 "use client"
 
-import { useInstanceAgentId } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
+import { useInstanceAgentId, type ModuleKey } from "@/hooks/installations"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryAgentKnowledgeSwr } from "@/hooks/swr"
-import type { AgentKnowledgeQuery } from "@/modules/api"
 import type { DataSlot } from "@/modules/types"
 
 /** What one agent reads of the shared knowledge, as the back end answers it. */
-export type AgentKnowledgeData = AgentKnowledgeQuery["agentKnowledge"]
+export type AgentKnowledgeData = Exclude<ReturnType<typeof useQueryAgentKnowledgeSwr>["data"], undefined>
 
 /** The view `useAgentKnowledge` returns. */
 interface AgentKnowledgeRead {

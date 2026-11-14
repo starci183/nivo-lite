@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { PublicApiErrorCode } from "./errors/public-api.error"
 import type { RequestKind } from "./public-api.contracts"
 

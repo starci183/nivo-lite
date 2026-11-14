@@ -156,7 +156,7 @@ describe("readingOf", () => {
                 sheetCount: "x",
                 transcribed: true,
                 warnings: [
-                    { code: "DOCUMENT_PAGE_UNREADABLE", place: "3", count: 1.5, message: "Trang 3 không đọc được." },
+                    { code: "DOCUMENT_PAGE_UNREADABLE", place: "3", count: 1.5, message: "Trang 3 kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c." },
                     { code: 1 },
                     null,
                 ],
@@ -170,7 +170,7 @@ describe("readingOf", () => {
             sheetCount: null,
             transcribed: true,
             warnings: [
-                { code: "DOCUMENT_PAGE_UNREADABLE", place: "3", count: null, message: "Trang 3 không đọc được." },
+                { code: "DOCUMENT_PAGE_UNREADABLE", place: "3", count: null, message: "Trang 3 kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c." },
             ],
             refusal: null,
             reason: null,

@@ -1,35 +1,23 @@
 import type {
-    GatewayCaller,
-    GatewayJson,
+    ToolCaller,
+    ToolJson,
     CapabilityRole,
-    McpGatewayError,
+    ToolsError,
     RoleReadiness,
-} from "@modules/domain/mcp-gateway"
-import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
-import type { Secret } from "@modules/platform/config"
-import type { McpErrorCode } from "@modules/integrations/mcp"
+} from "@modules/domain/tools"
 import type { GatewaySpecSetup } from "./mcp-gateway.builder"
 
 /** The missing write identities record the builders hand out and the specs expect. */
 export type MissingWriteIdentitiesShape = {
     readonly label: string
-    readonly caller: GatewayCaller
+    readonly caller: ToolCaller
     readonly native: boolean
-}
-/** The replay schema changes record the builders hand out and the specs expect. */
-export type ReplaySchemaChangesShape = {
-    readonly label: string
-    readonly caller: GatewayCaller
-    readonly args: GatewayJson
-    readonly before: McpConnectorRow
-    readonly after: McpConnectorRow
-    readonly firstHasReplayKey: boolean
 }
 /** The timed out writes record the builders hand out and the specs expect. */
 export type TimedOutWritesShape = {
     readonly label: string
     readonly tool: string
-    readonly args: GatewayJson
+    readonly args: ToolJson
     readonly attempts: number
 }
 /** The gateway scenario expected failed read context record the builders hand out and the specs expect. */
@@ -38,14 +26,10 @@ export type GatewayScenarioExpectedFailedReadContextShape = { workspaceId: strin
 export type GatewayScenarioExpectedRevealedAuditShape = { outcome: string; errorCode: null; resultSummary: string }
 /** The gateway scenario expected reveal request args record the builders hand out and the specs expect. */
 export type GatewayScenarioExpectedRevealRequestArgsShape = { stayId: string }
-/** The gateway scenario expected reveal request endpoint record the builders hand out and the specs expect. */
-export type GatewayScenarioExpectedRevealRequestEndpointShape = { url: string; bearer: Secret }
 /** The gateway scenario expected reveal request record the builders hand out and the specs expect. */
 export type GatewayScenarioExpectedRevealRequestShape = {
-    endpoint: GatewayScenarioExpectedRevealRequestEndpointShape
     name: string
     args: GatewayScenarioExpectedRevealRequestArgsShape
-    timeoutMs: number
 }
 /** The gateway scenario expected confirmation constraints record the builders hand out and the specs expect. */
 export type GatewayScenarioExpectedConfirmationConstraintsShape = { arg: string; max: number }
@@ -94,7 +78,7 @@ export type GatewayScenarioExpectedGrantsShape = {
     constraints: Array<GatewayScenarioExpectedGrantsConstraintsShape>
 }
 /** The gateway scenario expected unknown write outcome record the builders hand out and the specs expect. */
-export type GatewayScenarioExpectedUnknownWriteOutcomeShape = { ok: boolean; code: string; detail: McpErrorCode }
+export type GatewayScenarioExpectedUnknownWriteOutcomeShape = { ok: boolean; code: string; detail: string }
 /** The gateway scenario expected retried answers value record the builders hand out and the specs expect. */
 export type GatewayScenarioExpectedRetriedAnswersValueShape = { holdId: string; code: string }
 /** The gateway scenario expected retried answers record the builders hand out and the specs expect. */
@@ -115,9 +99,9 @@ export type GatewayScenarioExpectedCircuitOpenShape = { ok: boolean; code: strin
 /** The gateway scenario expected read failure record the builders hand out and the specs expect. */
 export type GatewayScenarioExpectedReadFailureShape = { ok: boolean; code: string; detail: string }
 /** The gateway scenario expected read timeout record the builders hand out and the specs expect. */
-export type GatewayScenarioExpectedReadTimeoutShape = { ok: boolean; code: string; detail: McpErrorCode }
+export type GatewayScenarioExpectedReadTimeoutShape = { ok: boolean; code: string; detail: string }
 /** The gateway scenario expected tool refusal record the builders hand out and the specs expect. */
-export type GatewayScenarioExpectedToolRefusalShape = { ok: boolean; code: string; detail: string }
+export type GatewayScenarioExpectedToolRefusalShape = { ok: boolean; code: string; detail: string; nativeRefusal: string }
 /** The gateway scenario expected native value record the builders hand out and the specs expect. */
 export type GatewayScenarioExpectedNativeValueShape = { transactions: Array<never> }
 /** The gateway scenario expected native record the builders hand out and the specs expect. */
@@ -134,7 +118,7 @@ export type GatewayScenarioExpectedReplyShape = { ok: boolean; value: GatewaySce
 export type GatewayScenarioExpectedInvalidArgumentsShape = { ok: boolean; code: string; detail: string }
 /** The gateway scenario expected record the builders hand out and the specs expect. */
 export type GatewayScenarioExpectedShape = {
-    nativeUnknownTool: McpGatewayError
+    nativeUnknownTool: ToolsError
     invalidArguments: GatewayScenarioExpectedInvalidArgumentsShape
     connectorStates: Array<Array<string | number>>
     reply: GatewayScenarioExpectedReplyShape
@@ -159,26 +143,7 @@ export type GatewayScenarioExpectedShape = {
     revealRequest: GatewayScenarioExpectedRevealRequestShape
     revealedAudit: GatewayScenarioExpectedRevealedAuditShape
     failedReadContext: GatewayScenarioExpectedFailedReadContextShape
-    schemaRefusals: Array<Array<string>>
 }
-/** The gateway descriptions answer constraints record the builders hand out and the specs expect. */
-export type GatewayDescriptionsAnswerConstraintsShape = { arg: string; max: number }
-/** The gateway descriptions answer input schema record the builders hand out and the specs expect. */
-export type GatewayDescriptionsAnswerInputSchemaShape = { type: string }
-/** The gateway descriptions answer record the builders hand out and the specs expect. */
-export type GatewayDescriptionsAnswerShape = {
-    name: string
-    description: string
-    scope: string
-    mode: string
-    inputSchema: GatewayDescriptionsAnswerInputSchemaShape
-    constraints: Array<GatewayDescriptionsAnswerConstraintsShape>
-    limitVnd: null
-}
-/** The gateway descriptions record the builders hand out and the specs expect. */
-export type GatewayDescriptionsShape2 = { name: string; answer: GatewayDescriptionsAnswerShape }
-/** The gateway descriptions record the builders hand out and the specs expect. */
-export type GatewayDescriptionsShape = { name: string; answer: null }
 /** The gateway role resolutions record the builders hand out and the specs expect. */
 export type GatewayRoleResolutionsShape = { readonly role: CapabilityRole; readonly answer: unknown }
 /** The gateway readiness record the builders hand out and the specs expect. */
@@ -196,7 +161,6 @@ export type InvalidGatewayArgumentsShape = {
     readonly label: string
     readonly setup: GatewaySpecSetup
     readonly tool: string
-    readonly args: GatewayJson
-    readonly connectorReads: number
+    readonly args: ToolJson
     readonly audit: ReadonlyArray<ReadonlyArray<string>>
 }

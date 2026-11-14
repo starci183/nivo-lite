@@ -1,11 +1,20 @@
 "use client"
 
 import { useSmtpSenderForm } from "@/hooks/rhf"
-import { modeOf, SMTP_PRESETS } from "@/modules/mail"
-import type { Security, SmtpPreset } from "@/modules/mail"
+import { modeOf, SMTP_PRESETS, type Security, type SmtpPreset } from "@/modules/mail"
 import { useState, useTransition } from "react"
-import { choiceOf, isReadyToSave, needsPasswordOf, presetOrFirst, SMTP_STEPS, usernameOf } from "./smtp-wizard.shared"
-import type { SmtpChoice, SmtpFields, SmtpTest, SmtpView } from "./smtp-wizard.shared"
+import {
+    choiceOf,
+    isReadyToSave,
+    needsPasswordOf,
+    presetOrFirst,
+    SMTP_STEPS,
+    usernameOf,
+    type SmtpChoice,
+    type SmtpFields,
+    type SmtpTest,
+    type SmtpView,
+} from "./smtp-wizard.shared"
 import { useSmtpCommands } from "./useSmtpCommands"
 
 /** What the outgoing-email wizard needs from its drawer. */

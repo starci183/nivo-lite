@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, Link, Section, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Link, Section, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import type { KnowledgeRegionView } from "../../views/views.types"
 
 /** Copy and view of the knowledge region; `isLoading` draws the same card with blank geometry while the data is read. */

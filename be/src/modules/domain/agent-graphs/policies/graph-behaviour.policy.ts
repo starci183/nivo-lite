@@ -16,7 +16,7 @@ const behaviourOfNode = (node: GraphNode): unknown => ({
                   branches: node.decide.branches.map((branch) => ({
                       key: branch.key,
                       when: branch.when,
-                      then: branch.then,
+                      mode: branch.mode,
                       next: branch.next,
                       approver: branch.approver,
                   })),
@@ -28,9 +28,5 @@ const behaviourOfNode = (node: GraphNode): unknown => ({
  * written in another language is not a change of what the agent does.
  */
 export const sameBehaviour = (left: GraphDocument, right: GraphDocument): boolean =>
-    JSON.stringify(left.nodes.map(behaviourOfNode)) === JSON.stringify(right.nodes.map(behaviourOfNode))
-
-/** True when two graphs grant the same data rights, kind by kind. */
-export const sameRights = (left: GraphDocument, right: GraphDocument): boolean =>
-    JSON.stringify([...left.rights].sort((a, b) => a.kind.localeCompare(b.kind))) ===
-    JSON.stringify([...right.rights].sort((a, b) => a.kind.localeCompare(b.kind)))
+    JSON.stringify(left.nodes.map((item) => behaviourOfNode(item))) ===
+    JSON.stringify(right.nodes.map((item) => behaviourOfNode(item)))

@@ -27,6 +27,7 @@ describe("leadRowOf", () => {
             version: "3",
             createdAt: "2026-11-01T08:00:00.000Z",
             updatedAt: "2026-11-02T08:00:00.000Z",
+            contactId: null,
             contactName: "Lan",
             company: null,
             channel: "zalo",
@@ -81,11 +82,11 @@ describe("leadRowOf", () => {
 
 describe("orderRowOf", () => {
     it("reads an order with the shipment it has", () => {
-        expect(orderRowOf(record({ ...ORDER, leadId: "l1", amountVnd: 120_000, carrier: "GHN" }))).toMatchObject({
+        expect(orderRowOf(record({ ...ORDER, contactId: "c1", amountVnd: 120_000, carrier: "GHN" }))).toMatchObject({
             id: "r1",
             version: "3",
             orderNo: "DH-20261104-0001",
-            leadId: "l1",
+            contactId: "c1",
             amountVnd: 120_000,
             status: "draft",
             carrier: "GHN",
@@ -95,7 +96,7 @@ describe("orderRowOf", () => {
     })
 
     it("reads an order with no customer and no total yet", () => {
-        expect(orderRowOf(record(ORDER))).toMatchObject({ leadId: null, amountVnd: null, confirmedBy: null })
+        expect(orderRowOf(record(ORDER))).toMatchObject({ contactId: null, amountVnd: null, confirmedBy: null })
     })
 
     it("is null for fields that are no order's", () => {

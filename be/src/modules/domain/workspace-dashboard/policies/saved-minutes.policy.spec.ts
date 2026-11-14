@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { DEFAULT_MINUTES, SAVED_MINUTES } from "./saved-minutes.policy"
 import {
-    minutesOf as realMinutesOf,
+    DEFAULT_MINUTES,
     minutesSavedBy as realMinutesSavedBy,
     savingLinesOf as realSavingLinesOf,
 } from "./saved-minutes.policy"
@@ -14,7 +13,6 @@ const build = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
-                    minutesOf: realMinutesOf,
                     minutesSavedBy: realMinutesSavedBy,
                     savingLinesOf: realSavingLinesOf,
                 },
@@ -22,39 +20,28 @@ const build = async () => {
         ],
     }).compile()
     return moduleRef.get<{
-        minutesOf: typeof realMinutesOf
         minutesSavedBy: typeof realMinutesSavedBy
         savingLinesOf: typeof realSavingLinesOf
     }>(SUBJECT)
 }
 
-describe("minutesOf", () => {
-    it("reads the table and falls back to the default for an action it does not list", async () => {
-        const policy = await build()
-
-        expect(policy.minutesOf("reply_customer")).toBe(SAVED_MINUTES.reply_customer)
-        expect(policy.minutesOf("an_action_nobody_listed")).toBe(DEFAULT_MINUTES)
-    })
-
-    it("holds only positive whole minutes", () => {
-        for (const minutes of Object.values(SAVED_MINUTES)) {
-            expect(Number.isInteger(minutes)).toBe(true)
-            expect(minutes).toBeGreaterThan(0)
-        }
+describe("DEFAULT_MINUTES", () => {
+    it("is a positive whole number of minutes", () => {
+        expect(Number.isInteger(DEFAULT_MINUTES)).toBe(true)
+        expect(DEFAULT_MINUTES).toBeGreaterThan(0)
     })
 })
 
 describe("minutesSavedBy", () => {
-    it("sums the count of each action times its minutes", async () => {
+    it("sums the finished items, each worth the default", async () => {
         const policy = await build()
 
         expect(
             policy.minutesSavedBy([
-                { action: "reply_customer", count: 10 },
-                { action: "confirm_order", count: 2 },
-                { action: "an_action_nobody_listed", count: 3 },
+                { action: "first_action", count: 10 },
+                { action: "second_action", count: 2 },
             ]),
-        ).toBe(10 * 2 + 2 * 5 + 3 * DEFAULT_MINUTES)
+        ).toBe(12 * DEFAULT_MINUTES)
     })
 
     it("is zero for nothing finished", async () => {
@@ -69,22 +56,22 @@ describe("savingLinesOf", () => {
         const policy = await build()
 
         const lines = policy.savingLinesOf([
-            { action: "reply_customer", count: 10 },
-            { action: "confirm_order", count: 3 },
-            { action: "reply_customer", count: 5 },
-            { action: "send_care", count: 0 },
+            { action: "first_action", count: 10 },
+            { action: "second_action", count: 3 },
+            { action: "first_action", count: 5 },
+            { action: "third_action", count: 0 },
         ])
 
         expect(lines).toEqual([
-            { action: "reply_customer", count: 15, minutesEach: 2 },
-            { action: "confirm_order", count: 3, minutesEach: 5 },
+            { action: "first_action", count: 15, minutesEach: DEFAULT_MINUTES },
+            { action: "second_action", count: 3, minutesEach: DEFAULT_MINUTES },
         ])
     })
 
     it("keeps at most eight lines", async () => {
         const policy = await build()
 
-        const many = Object.keys(SAVED_MINUTES).map((action) => ({ action, count: 1 }))
+        const many = Array.from({ length: 12 }, (_, index) => ({ action: `action_${index}`, count: 1 }))
 
         expect(policy.savingLinesOf(many)).toHaveLength(8)
     })

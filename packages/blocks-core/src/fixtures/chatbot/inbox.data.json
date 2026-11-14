@@ -48,18 +48,8 @@
     "avatarUrl": "",
     "status": "needs",
     "handledBy": "",
-    "stage": "new",
-    "need": "Gội đầu dưỡng sinh dịp Tết",
-    "company": "",
-    "phone": "0938 *** 554",
-    "email": "",
-    "leadId": "lead-thu"
-  },
-  "proposal": {
-    "id": "p1",
-    "asked": "Spa có mở cửa mùng 2 Tết không ạ?",
-    "text": "Dạ chị Thu ơi, mùng 2 Tết spa mở từ 9:00 đến 17:00 ạ. Chị muốn em giữ chỗ giờ nào ạ?",
-    "note": "Gửi cho khách qua Zalo với tên Nhà Mộc. Chỉnh lại bản AI đề xuất nếu cần."
+    "contactId": "0c0a0000-0000-4000-8000-0000000000c1",
+    "routeId": "0c0a0000-0000-4000-8000-0000000000a1"
   },
   "settings": {
     "holdingMessage": "Dạ chị chờ em kiểm tra một chút nhé ạ."

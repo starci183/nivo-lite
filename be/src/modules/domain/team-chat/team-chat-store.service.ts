@@ -1,16 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { OptionalId } from "@modules/domain/agents"
-import { In } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager, returnedIdRows } from "@modules/platform/database"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity, ChatRoomPinEntity } from "./persistence/entities"
-import { MEMBERS_MAX, ROOMS_MAX } from "./team-chat.contracts"
-import type { ChatMemberRef, MessageRef, RoomRole, RoomUnread } from "./team-chat.contracts"
-import { isUniqueViolation, purposeColumnsOf } from "./team-chat.policy"
-import type { ThreadPosition } from "./team-chat.policy"
+import {
+    MEMBERS_MAX,
+    ROOMS_MAX,
+    type ChatMemberRef,
+    type MessageRef,
+    type RoomRole,
+    type RoomUnread,
+} from "./team-chat.contracts"
+import { isUniqueViolation, purposeColumnsOf, type ThreadPosition } from "./team-chat.policy"
 import type {
     CardKind,
     NewCard,
@@ -64,6 +67,12 @@ export type OptionalRoom = ChatRoomEntity | null
 export type OptionalRoomMember = ChatRoomMemberEntity | null
 /** A message row, or none. */
 export type OptionalMessage = ChatRoomMessageEntity | null
+
+/** The text an agent line is rewritten to. */
+interface AgentLineContent {
+    readonly body: string
+    readonly agentMessage: string
+}
 
 @Injectable()
 /**
@@ -401,18 +410,6 @@ export class TeamChatStoreService {
         return kept === undefined ? null : { messageId: kept.id, created: false }
     }
 
-    /** In how many rooms the approval card of a decision stands; 0 when none was posted. */
-    cardCount(workspaceId: string, decisionId: string): Promise<number> {
-        const { key } = cardRefOf("approval", decisionId)
-        return this.entityManager
-            .createQueryBuilder(ChatRoomMessageEntity, "msg")
-            .where(
-                "msg.workspace_id = :workspaceId AND msg.kind = :kind AND (msg.ref ->> CAST(:key AS text)) = :decisionId",
-                { workspaceId, kind: "approval", key, decisionId },
-            )
-            .getCount()
-    }
-
     /** Stores one line of an agent or of the system; the id of the new message, or null when the same key already wrote it. */
     async insertLine(line: NewLine): Promise<OptionalId> {
         const inserted = await this.entityManager
@@ -446,7 +443,7 @@ export class TeamChatStoreService {
     async updateAgentLines(
         workspaceId: string,
         clientIds: ReadonlyArray<string>,
-        content: { readonly body: string; readonly agentMessage: string },
+        content: AgentLineContent,
     ): Promise<number> {
         const updated = await this.entityManager.update(
             ChatRoomMessageEntity,

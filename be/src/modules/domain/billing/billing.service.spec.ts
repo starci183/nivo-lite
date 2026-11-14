@@ -46,7 +46,7 @@ const ORDER: PaymentOrder = {
 }
 const PAYABLE = {
     order: ORDER,
-    qrUrl: "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=990000&des=NIVO8F3K2&template=compact",
+    qrUrl: "https://vietqr.app/img?acc=0123&bank=MB&amount=990000&des=NIVO8F3K2&template=compact",
     bank: OPTIONS.bankAccount,
 }
 const PLAN_DETAIL = {
@@ -135,12 +135,6 @@ const pricedWorld = (plan: PlanEntity = starterPlan()): World => ({
 })
 
 describe("BillingService", () => {
-    it("answers the configured bank account", async () => {
-        const { billing } = await build()
-
-        await expect(billing.bankAccount()).resolves.toEqual(OPTIONS.bankAccount)
-    })
-
     it("lists the active plans", async () => {
         const em = mockEntityManager({
             find: [

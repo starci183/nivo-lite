@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
-import { agentWorkViewOf } from "@/modules/agentWork"
-import type { AgentWorkViewKey } from "@/modules/agentWork"
+import { agentWorkViewOf, type AgentWorkViewKey } from "@/modules/agentWork"
 import { isModuleKey } from "@/modules/catalog"
+import { AgentWorkAddressBody } from "./AddressBody"
 import { AgentWorkPageBase } from "./component"
 
 /** What the route hands the page: the type and the instance of the url. */
@@ -30,3 +30,6 @@ export const AgentWorkPage = (props: AgentWorkPageProps) => {
         />
     )
 }
+
+/** The same tab while the route loads: the view comes from the address in the browser and the panes read the agent from it; they draw their own skeletons. */
+export const AgentWorkLoadingPage = () => <AgentWorkAddressBody />

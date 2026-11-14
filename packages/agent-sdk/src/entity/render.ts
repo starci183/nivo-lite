@@ -3,7 +3,7 @@ import type { EntityDefinition } from "./entity.types"
 import { expectedPolicies, expectedPrivileges } from "./plan-expect"
 import { BASE_TABLES, ENGINE_ROLE, viewNameOf } from "./plan-names"
 import { partitionNameOf } from "./partition-name"
-import { type DdlPiece, checkPieces, excludePieces, indexPieces, viewPiece } from "./render-ddl"
+import { type DdlPiece, checkPieces, excludePieces, foreignKeyPiece, indexPieces, viewPiece } from "./render-ddl"
 import { EntityRenderError, type RenderErrorCode } from "./render-error"
 import { quoteIdent, quoteLiteral } from "./render-sql"
 
@@ -115,6 +115,12 @@ export const renderOp = (op: PlanOp, entities: ReadonlyArray<EntityDefinition>):
             return [`ALTER TABLE ${tableSql(table)} VALIDATE CONSTRAINT ${quoteIdent(name)}`]
         case "add_exclude":
             return pieceOf(excludePieces(own()), name, op.object).statements
+        case "add_foreign_key":
+        case "alter_foreign_key": {
+            const piece = foreignKeyPiece(own())
+            if (piece.name !== name) throw unsupported(op.object)
+            return op.kind === "add_foreign_key" ? piece.statements : [dropConstraint(), ...piece.statements]
+        }
         case "create_index":
         case "add_unique":
             return pieceOf(indexPieces(own()), name, op.object).statements
@@ -140,7 +146,7 @@ export const renderOp = (op: PlanOp, entities: ReadonlyArray<EntityDefinition>):
 
 const STAMP = /^\d{14}$/
 
-const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim()
+const oneLine = (text: string): string => text.replaceAll(/\s+/g, " ").trim()
 
 /**
  * The migration file for a plan: header, then one commented block per step; no transaction control (BE-PERSISTENCE-1, R213).

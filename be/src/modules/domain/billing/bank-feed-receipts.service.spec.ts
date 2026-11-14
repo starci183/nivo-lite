@@ -5,6 +5,7 @@ import {
     incoming,
     feedDelivery,
 } from "@tests/fixtures/builders/bank-feed-receipts.builder"
+import { createHash } from "node:crypto"
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
@@ -33,7 +34,12 @@ const thrownBy = (run: () => unknown): unknown => {
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const raw = (body: object): Buffer => Buffer.from(JSON.stringify(body))
 const refusal = new BillingError({ code: BillingErrorCode.WebhookInvalid })
-const cases = receiptCasesOf(tx1, incoming)
+// The shared payOS fixture carries `reference: "REF1"`: the bank's reference now rides on the credit beside the unchanged event id.
+const cases = receiptCasesOf(tx1, incoming).map((receiptCase) =>
+    receiptCase.provider === "payos"
+        ? { ...receiptCase, credits: receiptCase.credits.map((credit) => ({ ...credit, bankRef: "REF1" })) }
+        : receiptCase,
+)
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
     const outbox = recordingQueueOutbox()
@@ -159,6 +165,71 @@ describe("BankFeedReceiptsService SePay connection page", () => {
         const body = raw({ ...incoming })
         await feed.acceptFeedDelivery(body, "conn-1", "sepay")
         expect(sepayPage.traceIntake).toHaveBeenCalledWith("conn-1", body, expect.any(Function))
+    })
+})
+describe("BankFeedReceiptsService bank facts", () => {
+    it("passes the bank's reference, account and time of a Casso row to the claimed credit", async () => {
+        const { feed, feedInbox } = await build()
+        const row = { ...tx1, tid: "FT20322ABCD", bank_sub_acc_id: "0123456789", when: "2020-11-17 18:46:56" }
+        const body = raw({ error: 0, data: [row] })
+        await feed.acceptCassoDelivery(body, "conn-1")
+        const deliveryId = `conn-1:${createHash("sha256").update(body).digest("hex")}`
+        expect(feedInbox.claim).toHaveBeenCalledWith(expect.anything(), "casso", deliveryId, {
+            connection: "conn-1",
+            credits: [
+                {
+                    amount: 150000,
+                    content: "NIVO8F3K2",
+                    eventId: "casso:7",
+                    fallbackBankName: "ACB",
+                    bankRef: "FT20322ABCD",
+                    account: "0123456789",
+                    occurredAt: "2020-11-17T11:46:56.000Z",
+                },
+            ],
+        })
+    })
+    it("passes the bank's facts of a paid payOS order, keyed as before", async () => {
+        const { feed, feedInbox } = await build()
+        const data = {
+            amount: 10,
+            reference: "FT1",
+            accountNumber: "12345678",
+            transactionDateTime: "2023-02-04 18:25:00",
+        }
+        await feed.acceptPayosDelivery(raw({ code: "00", data }), "conn-1")
+        expect(feedInbox.claim).toHaveBeenCalledWith(expect.anything(), "payos", "conn-1:payos:FT1", {
+            connection: "conn-1",
+            credits: [
+                {
+                    amount: 10,
+                    content: "",
+                    eventId: "payos:FT1",
+                    fallbackBankName: "payOS",
+                    bankRef: "FT1",
+                    account: "12345678",
+                    occurredAt: "2023-02-04T11:25:00.000Z",
+                },
+            ],
+        })
+    })
+    it("passes no bank member for a payOS order known only by its order code", async () => {
+        const { feed, feedInbox } = await build()
+        await feed.acceptPayosDelivery(raw({ code: "00", data: { orderCode: 7, amount: 10 } }), "conn-1")
+        expect(feedInbox.claim).toHaveBeenCalledWith(expect.anything(), "payos", "conn-1:payos:7", {
+            connection: "conn-1",
+            credits: [{ amount: 10, content: "", eventId: "payos:7", fallbackBankName: "payOS" }],
+        })
+    })
+    it("passes the SePay referenceCode of a delivery as the bank's reference", async () => {
+        const { feed, feedInbox } = await build()
+        await feed.acceptFeedDelivery(raw({ ...incoming, referenceCode: "FT321" }), "conn-1", "sepay")
+        expect(feedInbox.claim).toHaveBeenCalledWith(
+            expect.anything(),
+            "sepay-feed",
+            "conn-1:sepay:321",
+            objectLike({ credits: [objectLike({ eventId: "sepay:321", bankRef: "FT321" })] }),
+        )
     })
 })
 describe("BankFeedReceiptsService debits", () => {

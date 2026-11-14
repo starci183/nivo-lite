@@ -1,24 +1,18 @@
 import { Injectable } from "@nestjs/common"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
 import type { IntentBusiness, IntentGap } from "@modules/domain/intent-contracts"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
+import type { UnheldRule } from "./policies/unheld-rules.policy"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import type { GraphDocument, GraphProposalView, LearnedProposal, ProposalKind } from "./agent-graphs.contracts"
+import type { GraphProposalView, ProposalKind } from "./agent-graphs.contracts"
 import { jsonOf } from "./agent-graphs.mapper"
-import type { ProposalRecord } from "./agent-graphs-records.contracts"
+import type { ProposalPatch, ProposalRecord } from "./agent-graphs-records.contracts"
 import { intentBusinessSchema } from "./agent-graphs.schema"
 import { gapKeyOf } from "./policies/intent-gap.policy"
-import { learnSignals } from "./policies/learn-signals.policy"
 import type { ConflictPatch } from "./policies/conflict-patch.policy"
 import { valueHashOf } from "./policies/conflict.policy"
 import type { LearnedPatch } from "./policies/proposal-patch.policy"
-
-/** The most proposals read to know which evidence is spent. */
-const SPENT_LIMIT = 1000
 
 /** A replaced Brain rule, as the proposal that says so. */
 export interface ConflictRaised {
@@ -58,10 +52,6 @@ const viewOf = (row: ProposalRecord): GraphProposalView => ({
     text: patchTextOf(row, row.kind === "gap" ? "question" : "task"),
 })
 
-/** The node that holds a branch, or null when the graph no longer has it. */
-const nodeOfBranch = (graph: GraphDocument, branchKey: string): string | null =>
-    graph.nodes.find((node) => node.decide?.branches.some((branch) => branch.key === branchKey))?.key ?? null
-
 /** Whether the proposal is an open one of this agent (and of this kind, when one is named). */
 const isOpenOf = (row: ProposalRecord | null, agentId: string, kind: ProposalKind | null): row is ProposalRecord =>
     row?.agentId === agentId && row.status === "open" && (kind === null || row.kind === kind)
@@ -79,21 +69,7 @@ export class AgentGraphProposalsService {
         private readonly engine: EntityEngineService,
         private readonly records: AgentGraphRecordsService,
         @InjectClock() private readonly clock: Clock,
-        private readonly decisions: AgentGraphDecisionsService,
     ) {}
-
-    /** Raises the proposals the closed decisions of the agent teach; answers how many new ones were written. */
-    async learn(workspaceId: string, agentId: string, versionId: string | null, graph: GraphDocument): Promise<number> {
-        const learned = learnSignals(await this.decisions.closedOf(workspaceId, agentId))
-        const spent = await this.spentEvidence(workspaceId, agentId)
-        const fresh = learned.filter(
-            (proposal) => !proposal.evidence.some((id) => spent.has(`${proposal.branchKey}:${proposal.signal}:${id}`)),
-        )
-        const written = await Promise.all(
-            fresh.map((proposal) => this.raise(workspaceId, agentId, versionId, graph, proposal)),
-        )
-        return written.filter(Boolean).length
-    }
 
     /** Raises the proposal that a newer rule of the Brain replaced the one a node cites; the same replacement is raised once. */
     raiseConflict(workspaceId: string, agentId: string, versionId: string, conflict: ConflictRaised): Promise<boolean> {
@@ -129,7 +105,12 @@ export class AgentGraphProposalsService {
                 baseVersionId: gap.versionId,
                 nodeKey: null,
                 branchKey: null,
-                patch: { question: gap.question, topic: gap.topic, trigger: gap.trigger },
+                patch: {
+                    question: gap.question,
+                    topic: gap.topic,
+                    trigger: gap.trigger,
+                    ...(gap.amountVnd === undefined ? {} : { amount_vnd: gap.amountVnd }),
+                },
                 widens: false,
                 evidence: { ids: [] },
             }),
@@ -187,6 +168,20 @@ export class AgentGraphProposalsService {
     openOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphProposalView>> {
         return this.engine.scoped(workspaceId, async (tx) =>
             (await this.records.openProposalsOf(tx, agentId, PROPOSAL_LIMIT)).map(viewOf),
+        )
+    }
+
+    /**
+     * The rules of the setup text that were raised as gaps and are still open: each gap that carries the sum it is about, with the
+     * sentence that states it. Read from the stored proposals, so a view makes no model call and reads no words.
+     */
+    unheldOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<UnheldRule>> {
+        return this.engine.scoped(workspaceId, async (tx) =>
+            (await this.records.openProposalsOf(tx, agentId, PROPOSAL_LIMIT)).flatMap((row) => {
+                const amountVnd = row.patch["amount_vnd"]
+                const quote = patchTextOf(row, "question")
+                return row.kind === "gap" && typeof amountVnd === "number" && quote !== null ? [{ amountVnd, quote }] : []
+            }),
         )
     }
 
@@ -267,48 +262,11 @@ export class AgentGraphProposalsService {
         workspaceId: string,
         agentId: string,
         proposalId: string,
-        values: Readonly<Record<string, string>>,
+        values: ProposalPatch,
     ): Promise<boolean> {
         return this.engine.scoped(workspaceId, async (tx) => {
             const row = await this.openIn(tx, agentId, proposalId, null)
             return row !== null && (await this.records.patchProposal(tx, row, values)) !== null
         })
-    }
-
-    /**
-     * The evidence that proposals already spent, by branch and signal: an open, confirmed or declined proposal is not raised again for
-     * decisions it already named, however far the window of the latest decisions has slid since.
-     */
-    private spentEvidence(workspaceId: string, agentId: string): Promise<ReadonlySet<string>> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const rows = await this.records.spentProposalsOf(tx, agentId, "learned", SPENT_LIMIT)
-            return new Set(
-                rows.flatMap((row) =>
-                    row.evidence.map((id) => `${row.branchKey ?? ""}:${String(row.patch["signal"])}:${id}`),
-                ),
-            )
-        })
-    }
-
-    private raise(
-        workspaceId: string,
-        agentId: string,
-        versionId: string | null,
-        graph: GraphDocument,
-        proposal: LearnedProposal,
-    ): Promise<boolean> {
-        return this.engine.scoped(workspaceId, (tx) =>
-            this.records.raiseProposal(tx, {
-                agentId,
-                dedupeKey: proposal.dedupeKey,
-                kind: "learned",
-                baseVersionId: versionId,
-                nodeKey: nodeOfBranch(graph, proposal.branchKey),
-                branchKey: proposal.branchKey,
-                patch: { signal: proposal.signal, amounts: [...proposal.amounts] },
-                widens: proposal.widens,
-                evidence: { ids: [...proposal.evidence] },
-            }),
-        )
     }
 }

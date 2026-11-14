@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { ApplySetupMutation, ApplySetupMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `applySetup` mutation. */
@@ -36,6 +35,6 @@ export const mutateApplySetup = async ({
 }: MutateParams<MutationApplySetup, MutateApplySetupRequest>): Promise<
     ApolloClient.MutateResult<MutateApplySetupResponse>
 > => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

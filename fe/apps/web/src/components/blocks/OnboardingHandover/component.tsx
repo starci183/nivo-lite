@@ -1,21 +1,16 @@
-import { Button, EmptyNotice, Switch } from "@starci/grammar/common"
+import { Button, EmptyNotice } from "@starci/grammar/common"
 import { FirstRunCard } from "@/components/frames/FirstRunCard"
 
-/** One rule the workspace starts with: its name, what it means and the value it holds; a rule with a `toggle` is changed in place. */
+/** One rule the workspace starts with: its name, what it means and the value it holds. */
 export interface OnboardingRuleView {
     readonly id: string
     readonly name: string
     readonly description: string
     readonly value: string
-    readonly toggle?: {
-        readonly isOn: boolean
-        readonly isDisabled: boolean
-    }
 }
 
 /** Copy the handover step supplies. */
 export interface OnboardingHandoverBaseProps {
-    readonly on: { readonly toggle: (ruleId: string, on: boolean) => void }
     readonly props: {
         readonly title: string
         readonly heading: string
@@ -55,21 +50,6 @@ export const OnboardingHandoverBase = (props: OnboardingHandoverBaseProps) => {
                     title: rule.name,
                     description: rule.description,
                     meta: { text: rule.value },
-                    actionPlacement: "end" as const,
-                    ...(rule.toggle === undefined
-                        ? {}
-                        : {
-                              control: (
-                                  <Switch
-                                      name={rule.id}
-                                      label={rule.name}
-                                      isLabelHidden
-                                      isSelected={rule.toggle.isOn}
-                                      isDisabled={rule.toggle.isDisabled}
-                                      onSelectedChange={(on) => props.on.toggle(rule.id, on)}
-                                  />
-                              ),
-                          }),
                 })),
             }}
         />

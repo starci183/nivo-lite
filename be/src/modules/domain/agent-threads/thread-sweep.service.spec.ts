@@ -1,10 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { Query } from "@nivo-lite/agent-sdk/query"
-import { agentRunEntity, agentRunStepEntity, agentRunStopEntity } from "@nivo-lite/blocks-core/entities"
+import { AgentRunRecordsService, type RunListFilter, type StoredRun, type StoredStep } from "@modules/domain/agent-runs"
 import { AgentWorkReadService } from "@modules/domain/agent-work"
+import { runRowOf, stepRowOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import { WorkspacesService } from "@modules/domain/workspaces"
@@ -28,14 +26,8 @@ const NOW = "2026-11-10T10:00:00.000Z"
 const STILL = "2026-11-10T09:50:00.000Z"
 const REF = { workspaceId: "ws-1", runId: "run-1" }
 
-const runRow = (over: Partial<RecordRow["data"]> = {}, updatedAt = STILL): RecordRow => ({
-    id: "run-1",
-    workspaceId: "ws-1",
-    version: "3",
-    createdAt: STILL,
-    updatedAt,
-    data: { agentId: "agent-1", wakeId: "wake-1", status: "running", engine: "langgraph", ...over },
-})
+const runRow = (over: Readonly<Record<string, unknown>> = {}, updatedAt = STILL): StoredRun =>
+    runRowOf({ createdAt: STILL, updatedAt, agentId: "agent-1", wakeId: "wake-1", status: "running", engine: "langgraph", ...over })
 
 const viewOf = (status: ThreadView["status"], over: Partial<ThreadView> = {}): ThreadView => ({
     version: "version-1",
@@ -53,7 +45,7 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
     stepKey: "answer",
     agentId: "agent-1",
     workflowId: null,
-    leadId: null,
+    contactId: null,
     conversationId: "conv-1",
     kind: "ai_report",
     state: "open",
@@ -70,60 +62,41 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
     ...over,
 })
 
-/** The row data of a stop as the entity keeps it, so the sweep's list reads it back through `runStopOf`. */
-const stopRow = (stop: RunStop): RecordRow => ({
-    id: stop.id,
-    workspaceId: "ws-1",
-    version: stop.version,
-    createdAt: stop.stoppedAt,
-    updatedAt: stop.stoppedAt,
-    data: {
-        ...stop,
-        customerLines: { lines: stop.customerLines },
-        answers: { answers: stop.answers },
-    },
-})
-
 interface World {
-    readonly runs?: ReadonlyArray<RecordRow>
+    readonly runs?: ReadonlyArray<StoredRun>
     readonly view?: ThreadView | null
     readonly live?: boolean
     readonly redrive?: ThreadWakeAdmission
     readonly openStops?: ReadonlyArray<RunStop>
     readonly ofRun?: ReadonlyArray<RunStop>
     readonly runStatus?: string | null
-    readonly stepRows?: ReadonlyArray<RecordRow>
+    readonly stepRows?: ReadonlyArray<StoredStep>
     readonly deadline?: StopDeadline | null
     readonly reader?: boolean
 }
 
 const build = async (world: World = {}) => {
     const tx = mock<ScopedTx>()
-    const queries: Array<Query> = []
-    const list = (_tx: ScopedTx, query: Query) => {
-        queries.push(query)
-        const rows =
-            query.from === "agent.run"
-                ? JSON.stringify(query.where).includes('"running"')
-                    ? (world.runs ?? [])
-                    : []
-                : query.from === "agent.run-stop"
-                  ? (world.openStops ?? []).map(stopRow)
-                  : (world.stepRows ?? [])
-        return Promise.resolve({ rows: rows.map((row) => ({ row })), next: null })
-    }
+    const queries: Array<RunListFilter> = []
     const engine = mock<EntityEngineService>({
-        // The engine's generic signatures take no plain double; the world only needs these three reads.
+        // The engine's generic signatures take no plain double; the world only needs its scope.
         scoped: ((_ws: string, work: (scoped: ScopedTx) => unknown) => Promise.resolve(work(tx))) as never,
-        list: list as never,
-        get: jest.fn(() =>
-            Promise.resolve(
-                world.runStatus === null ? null : { ...runRow(), data: { ...runRow().data, status: world.runStatus ?? "waiting" } },
-            ),
+    })
+    const runRows = mock<AgentRunRecordsService>({
+        runRows: jest.fn((_tx: ScopedTx, filter: RunListFilter) => {
+            queries.push(filter)
+            return Promise.resolve(filter.statuses?.includes("running") === true ? (world.runs ?? []) : [])
+        }),
+        runRow: jest.fn(() =>
+            Promise.resolve(world.runStatus === null ? null : runRow({ status: world.runStatus ?? "waiting" })),
         ),
+        stepRowsOf: jest.fn(() => Promise.resolve(world.stepRows ?? [])),
     })
     const port = mock<GraphThreads>({ stateOf: jest.fn().mockResolvedValue(world.view === undefined ? viewOf("open") : world.view) })
-    const records = mock<RunStopRecordsService>({ ofRun: jest.fn().mockResolvedValue(world.ofRun ?? []) })
+    const records = mock<RunStopRecordsService>({
+        ofRun: jest.fn().mockResolvedValue(world.ofRun ?? []),
+        newest: jest.fn().mockResolvedValue(world.openStops ?? []),
+    })
     const stops = mock<RunStopsService>({
         runClosed: jest.fn().mockResolvedValue(1),
         stopOf: jest.fn().mockResolvedValue(stopOf({ stoppedAt: "2026-11-10T09:40:00.000Z" })),
@@ -150,6 +123,7 @@ const build = async (world: World = {}) => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: EntityEngineService, useValue: engine },
+            { provide: AgentRunRecordsService, useValue: runRows },
             { provide: RunStopRecordsService, useValue: records },
             { provide: RunStopsService, useValue: stops },
             { provide: ThreadProjectionService, useValue: projection },
@@ -245,10 +219,8 @@ describe("ThreadSweepService", () => {
 
         it("writes the stop's step fact again from the step row when a stopped thread's run still reads running", async () => {
             const view = viewOf("stopped", { stop: { node: "__freeze", question: { stepKey: "answer" } } })
-            const step: RecordRow = {
-                ...runRow(),
-                id: "step-1",
-                data: {
+            const step = stepRowOf(
+                {
                     stepKey: "answer",
                     nodeKey: "answer",
                     kind: "graph_node",
@@ -256,11 +228,14 @@ describe("ThreadSweepService", () => {
                     input: { versionId: "version-1" },
                     ordinal: 2,
                     attempt: 1,
+                    maxAttempts: 1,
+                    deadlineMs: null,
                     errorCode: "ai_report",
                     error: { code: "ai_report" },
                     waitItemId: null,
                 },
-            }
+                "step-1",
+            )
             const world = await build({ runs: [runRow()], view, stepRows: [step] })
 
             await world.service.sweepWorkspace("ws-1")
@@ -275,6 +250,7 @@ describe("ThreadSweepService", () => {
                             kind: "graph_node",
                             effect: { kind: "pivot" },
                             input: { versionId: "version-1" },
+                            maxAttempts: 1,
                         },
                         ordinal: 2,
                         attempt: 1,
@@ -321,16 +297,17 @@ describe("ThreadSweepService", () => {
         })
     })
 
-    it("sends only queries the entity engine accepts: every list is served by a declared index", async () => {
+    it("reads the open thread runs a status at a time, earliest resume first; the open stops come from the stops' door", async () => {
         const view = viewOf("stopped", { stop: { node: "__freeze", question: { stepKey: "answer" } } })
         const world = await build({ runs: [runRow()], view, openStops: [stopOf()] })
-        const catalog = new Map([agentRunEntity, agentRunStepEntity, agentRunStopEntity].map((entity) => [entity.name, entity]))
 
         await world.service.sweepWorkspace("ws-1")
 
-        const { queries } = world
-        expect(new Set(queries.map((query) => query.from))).toEqual(new Set(["agent.run", "agent.run-step", "agent.run-stop"]))
-        expect(queries.flatMap((query) => queryProblems(query, catalog))).toEqual([])
+        expect(world.queries).toEqual([
+            { statuses: ["running"], engine: "langgraph", order: "resume" },
+            { statuses: ["waiting"], engine: "langgraph", order: "resume" },
+        ])
+        expect(world.records.newest).toHaveBeenCalledWith("ws-1", "open", 100)
     })
 
     it("runs the passes that ride it once per workspace, after its own, and survives a failing one", async () => {

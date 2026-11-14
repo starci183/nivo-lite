@@ -25,6 +25,26 @@ const connection = (patch: Partial<HealthCandidate> = {}): HealthCandidate => ({
     ...patch,
 })
 
+describe("judgeConnection needs_reauth", () => {
+    it("keeps a refused credential a reconnect request while the status says error, and calls it fine once the owner connected again", async () => {
+        const subject = await build()
+        expect(subject.judgeConnection(connection({ health: "needs_reauth", status: "error", lastError: "Reconnect" }), NOW, 72)).toEqual({
+            state: "needs_reauth",
+            reason: "Reconnect",
+        })
+        expect(subject.judgeConnection(connection({ health: "needs_reauth", status: "connected" }), NOW, 72).state).toBe("ok")
+        expect(subject.judgeConnection(connection({ status: "error", lastError: "x" }), NOW, 72).state).toBe("failing")
+    })
+})
+
+describe("judgeConnection degraded", () => {
+    it("keeps the degraded mark the poll scheduler set, except that an error status is failing", async () => {
+        const subject = await build()
+        expect(subject.judgeConnection(connection({ health: "degraded" }), NOW, 72).state).toBe("degraded")
+        expect(subject.judgeConnection(connection({ health: "degraded", status: "error" }), NOW, 72).state).toBe("failing")
+    })
+})
+
 describe("judgeConnection", () => {
     it("calls a connection that reports an error failing, with its words bounded", async () => {
         const subject = await build()

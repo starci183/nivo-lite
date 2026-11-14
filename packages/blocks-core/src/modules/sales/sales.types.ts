@@ -6,6 +6,8 @@ import type { LeadStage, OrderStatus } from "../../rules/sales"
 export interface LeadRow {
     /** The lead id. */
     readonly id: string
+    /** The person (the core contact) this sale record is about, or null. */
+    readonly contactId: string | null
     /** The customer's name. */
     readonly contactName: string
     /** The company, or null when unknown. */
@@ -54,8 +56,8 @@ export interface OrderRow {
     readonly id: string
     /** The order number, unique per workspace. */
     readonly orderNo: string
-    /** The customer, or null. */
-    readonly leadId: string | null
+    /** The person who bought (the core contact), or null. */
+    readonly contactId: string | null
     /** The lines of the order. */
     readonly items: OrderItems
     /** What was ordered, as `2 x tea, 1 x cake`: the text the lists show and search, a projection of the lines. */

@@ -1,12 +1,9 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { Not } from "typeorm"
-import type { EntityManager, UpdateResult } from "typeorm"
+import { Not, type EntityManager, type UpdateResult } from "typeorm"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type {
     AgentDashboardData,
     AgentOwners,
@@ -44,7 +41,6 @@ import {
     knowledgeOf,
     totalOf,
 } from "./dashboard.mapper"
-import type { TagGrants } from "./agent-tag-grants.contracts"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
 
@@ -87,7 +83,7 @@ export class AgentsService {
             order: OLDEST_FIRST,
             take: AGENT_LIMIT,
         })
-        return rows.map(summaryOf)
+        return rows.map((row) => summaryOf(row))
     }
 
     /**
@@ -197,16 +193,6 @@ export class AgentsService {
     /** Who answers for an agent now: its owner, else its fallback, else the workspace owner (see AgentOwnershipService). */
     ownerOf(agentId: string): Promise<AgentOwners> {
         return this.ownership.ownerOf(agentId)
-    }
-
-    /** Whether an agent may pass work to another agent (see AgentOwnershipService). */
-    canTag(agentId: string, targetAgentId: string): Promise<boolean> {
-        return this.ownership.canTag(agentId, targetAgentId)
-    }
-
-    /** Grants the tag rights named, in one workspace (see AgentOwnershipService). */
-    grantTags(workspaceId: string, grants: TagGrants): Promise<void> {
-        return this.ownership.grantTags(workspaceId, grants)
     }
 
     /** Whether a member may hand an agent work (see AgentOwnershipService). */

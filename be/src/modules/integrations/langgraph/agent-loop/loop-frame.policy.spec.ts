@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { SHIPPING_QUESTION_VI, SHIPPING_SNIPPET_VI } from "@tests/fixtures/i18n/langgraph-spec.messages"
 import {
     CONFUSED_TOOL,
     DONE_TOOL,
@@ -8,6 +9,7 @@ import {
     TOOL_CALL_REQUIRED,
     openingTextOf,
     stepBoundOf,
+    systemContentOf,
     wireToolsOf,
 } from "./loop-frame.policy"
 import { toolNamesOf } from "./tool-names.policy"
@@ -85,5 +87,40 @@ describe("loop-frame.policy: the refusals the loop makes itself", () => {
 
     it("bounds the steps of the library well above what the turns of a step need", async () => {
         expect((await build()).stepBoundOf(12)).toBeGreaterThan(12 * 4)
+    })
+})
+
+describe("systemContentOf: the system message of a step's agent (ENG1)", () => {
+    it("is one text part with a breakpoint on Anthropic's client, and the text itself on any other", () => {
+        expect(systemContentOf("CRAFT SHOP", "anthropic")).toEqual([
+            { type: "text", text: "CRAFT SHOP", cache_control: { type: "ephemeral" } },
+        ])
+        expect(systemContentOf("CRAFT SHOP", "openai")).toBe("CRAFT SHOP")
+        expect(systemContentOf("CRAFT SHOP", "fake")).toBe("CRAFT SHOP")
+    })
+})
+
+describe("loop-frame.policy: a search result never sits in a cached layer", () => {
+    const PASSAGE_TOOLS = [
+        { name: "nivo.tool.brain.passage.read", does: "Read passages of one document in order.", argsSchema: { type: "object", properties: {} } },
+        { name: "nivo.tool.brain.passage.search", does: "Search the documents of the business.", argsSchema: { type: "object", properties: {} } },
+    ]
+    const SNIPPET = SHIPPING_SNIPPET_VI
+
+    it("keeps the system text and the tool list byte for byte whatever a search answered; the result lives after them only", async () => {
+        const subject = await build()
+        const names = toolNamesOf(PASSAGE_TOOLS.map((tool) => tool.name), false)
+        // Two turns of one step: before any search, and after a search answered (the answer is a tool message, appended to the run).
+        const stable = () => JSON.stringify([systemContentOf("CRAFT SHOP", "anthropic"), subject.wireToolsOf(PASSAGE_TOOLS, names)])
+        const before = stable()
+        const answered = { notice: "…", legs: ["words"], hits: [{ id: "p1", snippet: SNIPPET }], next: null }
+        const after = stable()
+
+        expect(after).toBe(before)
+        expect(before).not.toContain(SNIPPET)
+        // The frame has no member a result could be written into: the step's opening is the step, its volatile rules and its input.
+        const opening = subject.openingTextOf({ step: "STEP", volatile: "", input: { message: SHIPPING_QUESTION_VI } })
+        expect(opening).not.toContain(SNIPPET)
+        expect(JSON.stringify(answered)).toContain(SNIPPET)
     })
 })

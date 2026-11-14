@@ -5,8 +5,8 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { ShopTruthCandidates, TruthCandidate, TruthCandidateOptions } from "./document-critic.port"
 
-/** The most keys one read looks up: a document filing more facts than this is compared on its first keys only. */
-const KEYS_MAX = 40
+/** The status of a truth that waits to go in force: the only truths whose key is looked up (a truth in force is not judged again). */
+const WAITING = "proposed"
 
 /** True when every document evidence of a fact is this document (and it has some): the fact is the document's own. */
 const onlyFrom = (fact: FactRecord, sourceId: string | null): boolean => {
@@ -18,8 +18,9 @@ const onlyFrom = (fact: FactRecord, sourceId: string | null): boolean => {
 @Injectable()
 /**
  * The stand-in for BG2's meaning-based candidate read: per fact, the facts in force and the waiting proposals of the SAME key (subject +
- * attribute + instance), one indexed `keyed` read per key and status, at most 40 keys. It finds "small basket · price" against "small basket
+ * attribute + instance), one indexed `keyed` read per key and status. It finds "small basket · price" against "small basket
  * · price", never "red roses" against "bunch of red roses" (other words = another key): that is what the vector read adds. No model call.
+ * Every key of a WAITING truth is read; the document's truths already in force are not compared again.
  */
 export class KeyedTruthCandidatesService implements ShopTruthCandidates {
     constructor(
@@ -33,7 +34,10 @@ export class KeyedTruthCandidatesService implements ShopTruthCandidates {
         facts: ReadonlyArray<FactRecord>,
         options: TruthCandidateOptions,
     ): Promise<ReadonlyMap<string, ReadonlyArray<TruthCandidate>>> {
-        const keys = [...new Map(facts.map((fact) => [`${fact.subjectKey}|${fact.attribute}|${fact.installationId ?? ""}`, fact])).values()].slice(0, KEYS_MAX)
+        // EVERY key a waiting truth of the document sits on, with no bound that leaves a truth uncompared (brain walk 5: a bound of
+        // 40 keys left the later truths of a long document with nothing in force beside them, so nothing could contradict them).
+        const waiting = facts.filter((fact) => fact.status === WAITING)
+        const keys = [...new Map(waiting.map((fact) => [`${fact.subjectKey}|${fact.attribute}|${fact.installationId ?? ""}`, fact])).values()]
         const byKey = new Map<string, ReadonlyArray<FactRecord>>()
         await eachInOrder(keys, async (fact) => {
             const active = await this.reads.keyed(this.entityManager, workspaceId, fact.subjectKey, fact.attribute, "active", fact.installationId)

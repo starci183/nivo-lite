@@ -2,16 +2,12 @@ import type { EntityManager } from "typeorm"
 import type { GraphDocument, GraphMode } from "@modules/domain/agent-graphs"
 import { agentsEntities } from "@modules/domain/agents"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
-import type { WorkItem } from "@modules/domain/decisions"
-import { workItemsEntities } from "@modules/domain/work-items"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { insertGraphRecords } from "./agent-graphs-persist.builder"
-import { itemOf } from "./reconcile-payment-performer.builder"
 
 const [AgentEntity] = agentsEntities
 const [ModuleInstallationEntity] = moduleInstallationsEntities
-const [WorkItemEntity] = workItemsEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities
 const [WorkspaceEntity] = workspacesEntities
 
@@ -81,31 +77,3 @@ export const persistGraph = (
         })
         return installed
     })
-
-/** A supplier-payment work item about a record, as the work engine hands it to the branch decider. */
-export const persistPaymentItem = async (
-    manager: EntityManager,
-    who: GraphTenant,
-    action: string,
-    record: string,
-    dedupeKey: string,
-): Promise<WorkItem> => {
-    const installation = await manager.findOneOrFail(ModuleInstallationEntity, { where: { agentId: who.agentId } })
-    const row = await manager.save(WorkItemEntity, {
-        workspaceId: who.workspaceId,
-        department: "accounting",
-        action,
-        subjectType: "invoice",
-        subjectId: record,
-        dedupeKey,
-        proposal: { summary: "Supplier payment", fields: {} },
-    })
-    return itemOf({
-        id: row.id,
-        workspace_id: who.workspaceId,
-        action,
-        subject_type: "invoice",
-        subject_id: record,
-        installation_id: installation.id,
-    })
-}

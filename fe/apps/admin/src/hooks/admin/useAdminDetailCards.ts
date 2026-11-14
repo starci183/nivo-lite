@@ -1,14 +1,18 @@
 "use client"
 
 import { useMemo } from "react"
-import { adminCard, badgeOf, flowTone, healthTone, moduleTone } from "./admin.shared"
-import type {
-    AdminBadgeView,
-    AdminCardView,
-    AdminFormat,
-    AdminRowView,
-    AdminText,
-    AdminWorkspaceDetail,
+import {
+    adminCard,
+    badgeOf,
+    flowTone,
+    healthTone,
+    moduleTone,
+    type AdminBadgeView,
+    type AdminCardView,
+    type AdminFormat,
+    type AdminRowView,
+    type AdminText,
+    type AdminWorkspaceDetail,
 } from "./admin.shared"
 import { useAdminFormat } from "./useAdminFormat"
 

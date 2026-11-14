@@ -6,20 +6,15 @@ import {
     AgentTemplateVersionsService,
     AgentTemplatesErrorCode,
     TemplateRecordsService,
+    type StoredVersion,
 } from "@modules/domain/agent-templates"
-import type { StoredVersion } from "@modules/domain/agent-templates"
-import { AutomationTemplatesService } from "@modules/domain/automation-templates"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModulesService } from "@modules/domain/modules"
-import type { ModuleDefinition } from "@modules/domain/modules"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { ModulesService, type ModuleDefinition } from "@modules/domain/modules"
 import { AdminAccessService } from "@modules/domain/platform-admin"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceMember } from "@modules/domain/workspace-members"
 import type { Principal } from "@modules/platform/cqrs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { MESSAGE_CATALOG, type MessageCatalog } from "@modules/platform/i18n"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { firstPartyKeyOf, FirstPartyTemplatesService, NIVO_PUBLISHER_ID } from "./first-party-templates.service"
 import { TemplateListingsService } from "./template-listings.service"
@@ -36,19 +31,6 @@ const moduleOf = (over: Partial<ModuleDefinition> = {}): ModuleDefinition =>
         points: { vi: ["Nhanh"], en: ["Fast"] },
         category: "operations",
         connectionProviders: ["sepay"],
-        authorityActions: [
-            {
-                action: "pay_supplier",
-                label: { vi: "Tra nha cung cap", en: "Pay supplier" },
-                mode: "ask",
-                limitVnd: 5_000_000,
-                requiredFields: [],
-                amountLimit: true,
-                maxMode: null,
-                note: "",
-                next: [],
-            },
-        ],
         ...over,
     })
 
@@ -118,7 +100,6 @@ const build = async (options: Options = {}) => {
     const modules = mock<ModulesService>({
         catalog: jest.fn().mockResolvedValue({ categories: [], modules: options.modules ?? [moduleOf()] }),
     })
-    const automation = mock<AutomationTemplatesService>({ listTemplates: jest.fn().mockResolvedValue([]) })
     const saved: Array<SavedPackage> = []
     const versions = mock<AgentTemplateVersionsService>({
         latestNumber: jest.fn().mockResolvedValue(options.latest ?? 0),
@@ -155,7 +136,6 @@ const build = async (options: Options = {}) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: ModulesService, useValue: modules },
-            { provide: AutomationTemplatesService, useValue: automation },
             { provide: AgentTemplateVersionsService, useValue: versions },
             { provide: TemplateRecordsService, useValue: records },
             { provide: TemplateListingsService, useValue: listings },
@@ -187,7 +167,7 @@ describe("firstPartyKeyOf", () => {
 })
 
 describe("FirstPartyTemplatesService.sync", () => {
-    it("packages the seed graph of a module as a first-party package, with the numbers of the seed as parameters, and lists it approved", async () => {
+    it("packages the seed graph of a module as a first-party package, with no parameter, and lists it approved", async () => {
         const { service, saved, em } = await build()
 
         const report = await service.sync(ADMIN)
@@ -201,10 +181,7 @@ describe("FirstPartyTemplatesService.sync", () => {
             baseModule: "accounting",
             publisher: { creatorId: NIVO_PUBLISHER_ID, displayName: "Nivo" },
         })
-        expect(pkg?.parameters.length).toBeGreaterThan(0)
-        expect(pkg?.parameters.every((parameter) => parameter.kind === "number")).toBe(true)
-        expect(pkg?.proposedRights.map((right) => right.kind)).toEqual(["brain", "payments"])
-        expect(pkg?.graph.rights).toEqual([])
+        expect(pkg?.parameters).toEqual([])
         expect(saved[0]).toMatchObject({ creatorAccountId: NIVO_PUBLISHER_ID, firstParty: true, breaking: false })
         expect(em.insert).toHaveBeenCalledWith(
             TemplateListingEntity,
@@ -216,17 +193,6 @@ describe("FirstPartyTemplatesService.sync", () => {
                 firstParty: true,
             }),
         )
-    })
-
-    it("keeps the default of each parameter equal to the number the seed has today", async () => {
-        const { service, saved } = await build()
-
-        await service.sync(ADMIN)
-
-        const pkg = saved[0]?.package
-        const wait = pkg?.parameters.find((parameter) => parameter.key.endsWith("_wait"))
-        expect(wait?.default).toBe(240)
-        expect(pkg?.parameters.map((parameter) => parameter.default)).toEqual([240])
     })
 
     it("does not package again a module whose latest version already says what its seed says", async () => {
@@ -265,24 +231,9 @@ describe("FirstPartyTemplatesService.sync", () => {
     })
 })
 
-describe("FirstPartyTemplatesService.sync: waits, points and admins", () => {
-    it("derives a wait only from a branch that asks, and words a point in English when the module gave fewer of them", async () => {
-        const autoModule = moduleOf({
-            points: { vi: ["Nhanh", "Gon"], en: ["Fast"] },
-            authorityActions: [
-                {
-                    action: "pay_supplier",
-                    label: { vi: "Tra", en: "Pay" },
-                    mode: "auto",
-                    limitVnd: 5_000_000,
-                    requiredFields: [],
-                    amountLimit: true,
-                    maxMode: null,
-                    note: "",
-                    next: [],
-                },
-            ],
-        })
+describe("FirstPartyTemplatesService.sync: points and admins", () => {
+    it("words a point in English when the module gave fewer of them", async () => {
+        const autoModule = moduleOf({ points: { vi: ["Nhanh", "Gon"], en: ["Fast"] } })
         const { service, saved } = await build({ modules: [autoModule] })
 
         await service.sync(ADMIN)
@@ -292,7 +243,6 @@ describe("FirstPartyTemplatesService.sync: waits, points and admins", () => {
             { vi: "Nhanh", en: "Fast" },
             { vi: "Gon", en: "Gon" },
         ])
-        expect(pkg?.parameters.every((parameter) => parameter.key.endsWith("_wait"))).toBe(true)
     })
 
     it("is for a platform admin alone", async () => {

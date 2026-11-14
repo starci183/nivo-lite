@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common"
 import { AgentGraphsApiModule } from "../../agent-graphs.module"
 import { ConfirmAgentGraphProposalResolver } from "./confirm-agent-graph-proposal.resolver"
 import { GetAgentGraphRunResolver } from "./get-agent-graph-run.resolver"
-import { ListAgentGraphRunsResolver } from "./list-agent-graph-runs.resolver"
 import { ListAgentGraphCoverageResolver } from "./list-agent-graph-coverage.resolver"
 import { ConfigurableModuleClass } from "./agent-graphs-graphql.module-definition"
 import { GetAgentGraphResolver } from "./get-agent-graph.resolver"
@@ -19,7 +18,6 @@ import { GetAiModelPickerResolver } from "./get-ai-model-picker.resolver"
     providers: [
         ConfirmAgentGraphProposalResolver,
         GetAgentGraphRunResolver,
-        ListAgentGraphRunsResolver,
         ListAgentGraphCoverageResolver,
         GetAgentGraphResolver,
         ListAgentGraphVersionsResolver,

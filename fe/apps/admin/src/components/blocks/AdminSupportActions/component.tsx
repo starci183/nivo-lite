@@ -107,7 +107,7 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
         >
             <Stack gap="section">
                 <Stack gap="row">
-                    <Cluster gap="row" align="end">
+                    <Cluster gap="inline" align="end">
                         <Field
                             id="extend-days"
                             name="days"
@@ -123,7 +123,7 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                             onPress={props.on.askExtend}
                         />
                     </Cluster>
-                    <Cluster gap="row" align="end">
+                    <Cluster gap="inline" align="end">
                         <Action
                             label={props.props.markActiveLabel}
                             intent="alternative"
@@ -141,7 +141,7 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                     </Cluster>
                     {renderSupportPlanFields(props)}
                     {props.props.invites.length > 0 ? (
-                        <Cluster gap="row" align="end">
+                        <Cluster gap="inline" align="end">
                             {props.props.invites.map((invite) => (
                                 <Action
                                     key={invite.id}

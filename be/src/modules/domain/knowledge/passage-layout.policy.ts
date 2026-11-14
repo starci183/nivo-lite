@@ -1,5 +1,4 @@
-import { chunkLocated } from "@modules/domain/knowledge-chunks"
-import type { LocatedText, PassagePlace } from "@modules/domain/knowledge-chunks"
+import { chunkLocated, type LocatedText, type PassagePlace } from "@modules/domain/knowledge-chunks"
 
 /** The passages of a text in order, each with the place it sits at, and the places to write on the passages already stored. */
 export interface PassageLayout {

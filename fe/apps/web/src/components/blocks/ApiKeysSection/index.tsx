@@ -1,171 +1,95 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { isManager, useMember } from "@/hooks/member"
 import { useState } from "react"
-import { useApiKeys } from "@/hooks/developers"
-import { useApiKeyForm } from "@/hooks/rhf"
+import { apiKeyRowOf, useApiKeyCreate, useApiKeyRename, useApiKeys } from "@/hooks/developers"
+import { isManager, useMember } from "@/hooks/member"
 import { ApiKeysSectionBase } from "./component"
+import { NO_AGENT_SCOPE, drawerOf, freshOf, renameOf, rowWordsOf } from "./words"
 
-/** The connected API keys card: lists, creates (the secret is shown once) and revokes keys through the back end GraphQL API. */
-/** Connects the state and commands used by ApiKeysSection. */
-/** Inputs for the connected state mapping. */
-interface BuildApiKeysSectionStateInput {
-    readonly form: ReturnType<typeof useApiKeyForm>
-    readonly format: ReturnType<typeof useFormatter>
-    readonly items: ReturnType<typeof useApiKeys>["items"]
-    readonly revokingId: string | undefined
-    readonly create: ReturnType<typeof useApiKeys>["create"]
-    readonly setFresh: import("react").Dispatch<import("react").SetStateAction<string | undefined>>
-    readonly revoke: ReturnType<typeof useApiKeys>["revoke"]
-    readonly setRevokingId: import("react").Dispatch<import("react").SetStateAction<string | undefined>>
-    readonly member: ReturnType<typeof useMember>
-    readonly t: ReturnType<typeof useTranslations<"developers">>
-    readonly isCreating: ReturnType<typeof useApiKeys>["isCreating"]
-    readonly fresh: string | undefined
-    readonly loadFailed: ReturnType<typeof useApiKeys>["loadFailed"]
-    readonly isRevoking: ReturnType<typeof useApiKeys>["isRevoking"]
+/** Puts a snippet on the clipboard; a refusal is silent (the text stays on screen to select). */
+const copyText = (code: string) => {
+    navigator.clipboard.writeText(code).then(
+        () => undefined,
+        () => undefined,
+    )
 }
 
-/** Derives display values and interactions from the supplied state. */
-const buildApiKeysSectionState = ({
-    form,
-    format,
-    items,
-    revokingId,
-    create,
-    setFresh,
-    revoke,
-    setRevokingId,
-    member,
-    t,
-    isCreating,
-    fresh,
-    loadFailed,
-    isRevoking,
-}: BuildApiKeysSectionStateInput) => {
-    const name = form.watch("name")
-    const date = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
-    const revoking = items.find((item) => item.id === revokingId)
-    const submit = form.handleSubmit(async (values) => {
-        const key = await create(values.name)
-        if (key === undefined) return
-        setFresh(key)
-        form.reset()
-    })
-    const confirmRevoke = async () => {
-        if (revokingId === undefined) return
-        await revoke(revokingId)
-        setRevokingId(undefined)
-    }
-    if (!isManager(member)) return null
-    return {
-        form,
-        submit,
-        setFresh,
-        setRevokingId,
-        confirmRevoke,
-        t,
-        name,
-        isCreating,
-        fresh,
-        loadFailed,
-        items,
-        date,
-        revoking,
-        isRevoking,
-    }
-}
-
-/** Draws the connected view from its current state. */
+/** The connected keys: one list of MCP and public API keys, create (the secret is shown once), rename and revoke. Owner and manager only: staff see nothing of it and it asks the API for nothing. */
 export const ApiKeysSection = () => {
     const t = useTranslations("developers")
-    const member = useMember()
+    const isAllowed = isManager(useMember())
     const format = useFormatter()
-    const { items, loadFailed, create, isCreating, revoke, isRevoking } = useApiKeys()
-    const form = useApiKeyForm()
-    const [fresh, setFresh] = useState<string>()
+    const keys = useApiKeys()
+    const creation = useApiKeyCreate(keys.create)
+    const renaming = useApiKeyRename(keys.items, keys.rename)
     const [revokingId, setRevokingId] = useState<string>()
-
-    const connected = buildApiKeysSectionState({
-        form,
-        format,
-        items,
-        revokingId,
-        create,
-        setFresh,
-        revoke,
-        setRevokingId,
-        member,
-        t,
-        isCreating,
-        fresh,
-        loadFailed,
-        isRevoking,
-    })
-    if (connected === null) return null
-    const { submit, confirmRevoke } = connected
+    const revoking = keys.items.find((item) => item.id === revokingId)
+    const confirmRevoke = async () => {
+        if (revokingId === undefined) return
+        await keys.revoke(revokingId)
+        setRevokingId(undefined)
+    }
+    const date = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium", timeStyle: "short" })
+    const words = rowWordsOf(t)
+    if (!isAllowed) return null
     return (
         <ApiKeysSectionBase
-            props={apiKeysSectionProps(connected)}
+            props={{
+                title: t("keysTitle"),
+                createLabel: t("create"),
+                isLoading: keys.isLoading,
+                loadError: keys.loadFailed ? { title: t("keysLoadFailed") } : undefined,
+                emptyLabel: t("keysEmpty"),
+                revokeLabel: t("revoke"),
+                renameLabel: t("rename"),
+                items: keys.items.map((item) => apiKeyRowOf(item, keys.agents, words, date)),
+                drawer: drawerOf({
+                    t,
+                    isOpen: creation.isOpen,
+                    name: creation.name,
+                    kind: creation.kind,
+                    scope: creation.agentId === "" ? NO_AGENT_SCOPE : creation.agentId,
+                    agents: keys.agents,
+                    isPending: keys.isCreating,
+                    isValid: creation.isValid,
+                }),
+                fresh: creation.fresh.kind === "shown" ? freshOf(t, creation.fresh) : undefined,
+                renaming:
+                    renaming.key === undefined
+                        ? undefined
+                        : renameOf(t, renaming.key, {
+                              name: renaming.name,
+                              isPending: keys.isRenaming,
+                              isValid: renaming.isValid,
+                          }),
+                revoking:
+                    revoking === undefined
+                        ? undefined
+                        : {
+                              title: t("revokeAsk", { name: revoking.name }),
+                              confirmLabel: t("revokeConfirm"),
+                              cancelLabel: t("cancel"),
+                              isPending: keys.isRevoking,
+                          },
+            }}
             on={{
-                changeName: (value) => form.setValue("name", value, { shouldValidate: true }),
-                create: () => void submit(),
-                dismissFresh: () => setFresh(undefined),
+                openCreate: creation.open,
+                closeCreate: creation.close,
+                changeName: creation.setName,
+                changeKind: creation.setKind,
+                changeScope: (value) => creation.setAgent(value === NO_AGENT_SCOPE ? "" : value),
+                submit: creation.submit,
+                dismissFresh: creation.dismissFresh,
+                copySnippet: copyText,
+                askRename: renaming.ask,
+                changeRename: renaming.setName,
+                submitRename: renaming.submit,
+                closeRename: renaming.close,
                 askRevoke: setRevokingId,
                 cancelRevoke: () => setRevokingId(undefined),
                 confirmRevoke: () => void confirmRevoke(),
             }}
         />
     )
-}
-
-/** Builds the props supplied to ApiKeysSectionBase. */
-const apiKeysSectionProps = (
-    connected: NonNullable<ReturnType<typeof buildApiKeysSectionState>>,
-): Parameters<typeof ApiKeysSectionBase>[0]["props"] => {
-    const { t, name, isCreating, form, fresh, loadFailed, items, date, revoking, isRevoking } = connected
-    return {
-        title: t("keysTitle"),
-        body: t("keysBody"),
-        nameLabel: t("keyName"),
-        nameHint: t("keyNameHint"),
-        nameValue: name,
-        createLabel: t("create"),
-        isCreating,
-        isCreateDisabled: !form.formState.isValid,
-        fresh:
-            fresh === undefined
-                ? undefined
-                : {
-                      title: t("newKeyTitle"),
-                      warning: t("newKeyWarn"),
-                      value: fresh,
-                      copyLabel: t("copy"),
-                      copiedLabel: t("copied"),
-                      doneLabel: t("newKeyDone"),
-                  },
-        loadError: loadFailed ? { title: t("keysLoadFailed") } : undefined,
-        emptyLabel: items.length === 0 && !loadFailed ? t("keysEmpty") : undefined,
-        revokeLabel: t("revoke"),
-        items: items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            prefixText: t("prefix", { prefix: `${item.prefix}…` }),
-            datesText: `${t("created", { date: date(item.createdAt) })} · ${
-                item.lastUsedAt === null ? t("neverUsed") : t("lastUsed", { date: date(item.lastUsedAt) })
-            }`,
-            statusLabel: item.revokedAt === null ? t("active") : t("revoked"),
-            isRevoked: item.revokedAt !== null,
-        })),
-        revoking:
-            revoking === undefined
-                ? undefined
-                : {
-                      title: t("revokeAsk", { name: revoking.name }),
-                      confirmLabel: t("revokeConfirm"),
-                      cancelLabel: t("cancel"),
-                      isPending: isRevoking,
-                  },
-    }
 }

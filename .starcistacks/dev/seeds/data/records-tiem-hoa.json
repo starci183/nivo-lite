@@ -2,7 +2,7 @@
   "schema": "nivo/records-seed@1",
   "records": [
     {
-      "entity": "sales.settings",
+      "entity": "blocks-core.sales.settings",
       "on": "key_key",
       "values": {
         "key": "sales",

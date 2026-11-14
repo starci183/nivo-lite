@@ -84,33 +84,34 @@ describe("parseDateLoose", () => {
     it("handles long separators and preserves time-zone and newline boundaries", async () => {
         const subject = await buildSubject()
 
-        expect(subject.parseDateLoose(`2026-10-14${"T ".repeat(10000)}09:30 Z`)).toBe("2026-10-14T09:30:00.000Z")
-        expect(subject.parseDateLoose("2026-10-14\n09:30")).toBe("2026-10-14T02:30:00.000Z")
-        expect(subject.parseDateLoose("14/10/2026T09:30+0700")).toBe("2026-10-14T02:30:00.000Z")
-        expect(subject.parseDateLoose("2026-10-14x09:30")).toBeNull()
-        expect(subject.parseDateLoose("2026-10-14T09:30\nZ\nextra")).toBeNull()
-        expect(subject.parseDateLoose(`2026-10-14T${" ".repeat(10000)}noon`)).toBeNull()
+        expect(subject.parseDateLoose(`2026-10-14${"T ".repeat(10000)}09:30 Z`, "Asia/Ho_Chi_Minh")).toBe("2026-10-14T09:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14\n09:30", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:30:00.000Z")
+        expect(subject.parseDateLoose("14/10/2026T09:30+0700", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14x09:30", "Asia/Ho_Chi_Minh")).toBeNull()
+        expect(subject.parseDateLoose("2026-10-14T09:30\nZ\nextra", "Asia/Ho_Chi_Minh")).toBeNull()
+        expect(subject.parseDateLoose(`2026-10-14T${" ".repeat(10000)}noon`, "Asia/Ho_Chi_Minh")).toBeNull()
     })
 
-    it("reads a date-only value as midnight in Vietnam", async () => {
+    it("reads a date-only value as midnight in Asia/Ho_Chi_Minh", async () => {
         const subject = await buildSubject()
 
-        expect(subject.parseDateLoose("2026-10-14")).toBe("2026-10-13T17:00:00.000Z")
-        expect(subject.parseDateLoose("2026/1/2")).toBe("2026-01-01T17:00:00.000Z")
-        expect(subject.parseDateLoose("14/10/2026")).toBe("2026-10-13T17:00:00.000Z")
-        expect(subject.parseDateLoose("14-10-26")).toBe("2026-10-13T17:00:00.000Z")
-        expect(subject.parseDateLoose("14.10.69")).toBe("2069-10-13T17:00:00.000Z")
-        expect(subject.parseDateLoose("14.10.70")).toBe("1970-10-13T17:00:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14", "Asia/Ho_Chi_Minh")).toBe("2026-10-13T17:00:00.000Z")
+        expect(subject.parseDateLoose("2026/1/2", "Asia/Ho_Chi_Minh")).toBe("2026-01-01T17:00:00.000Z")
+        expect(subject.parseDateLoose("14/10/2026", "Asia/Ho_Chi_Minh")).toBe("2026-10-13T17:00:00.000Z")
+        expect(subject.parseDateLoose("14-10-26", "Asia/Ho_Chi_Minh")).toBe("2026-10-13T17:00:00.000Z")
+        expect(subject.parseDateLoose("14.10.69", "Asia/Ho_Chi_Minh")).toBe("2069-10-13T17:00:00.000Z")
+        // The IANA zone keeps history: Saigon was UTC+8 in 1970, so that midnight is 16:00Z (the two-digit year pivot is what this tests).
+        expect(subject.parseDateLoose("14.10.70", "Asia/Ho_Chi_Minh")).toBe("1970-10-13T16:00:00.000Z")
     })
 
     it("reads a time and a zone", async () => {
         const subject = await buildSubject()
 
-        expect(subject.parseDateLoose("2026-10-14T09:30:05.123+07:00")).toBe("2026-10-14T02:30:05.000Z")
-        expect(subject.parseDateLoose("2026-10-14 9:05")).toBe("2026-10-14T02:05:00.000Z")
-        expect(subject.parseDateLoose("14/10/2026 09:05")).toBe("2026-10-14T02:05:00.000Z")
-        expect(subject.parseDateLoose("2026-10-14T09:30Z")).toBe("2026-10-14T09:30:00.000Z")
-        expect(subject.parseDateLoose("2026-10-14T09:30+0700")).toBe("2026-10-14T02:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14T09:30:05.123+07:00", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:30:05.000Z")
+        expect(subject.parseDateLoose("2026-10-14 9:05", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:05:00.000Z")
+        expect(subject.parseDateLoose("14/10/2026 09:05", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:05:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14T09:30Z", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T09:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14T09:30+0700", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:30:00.000Z")
     })
 })
 
@@ -132,22 +133,22 @@ describe("parseDateLoose validation and precision", () => {
     ])("rejects %s", async (raw) => {
         const subject = await buildSubject()
 
-        expect(subject.parseDateLoose(raw)).toBeNull()
+        expect(subject.parseDateLoose(raw, "Asia/Ho_Chi_Minh")).toBeNull()
     })
 
     it("drops fractional seconds with the current time parser", async () => {
         const subject = await buildSubject()
 
-        expect(subject.parseDateLoose("2026-10-14T09:30:05.123+07:00")).toBe("2026-10-14T02:30:05.000Z")
+        expect(subject.parseDateLoose("2026-10-14T09:30:05.123+07:00", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:30:05.000Z")
     })
 
     it("reads minute precision with an implicit or compact zone", async () => {
         const subject = await buildSubject()
 
-        expect(subject.parseDateLoose("2026-10-14 9:05")).toBe("2026-10-14T02:05:00.000Z")
-        expect(subject.parseDateLoose("14/10/2026 09:05")).toBe("2026-10-14T02:05:00.000Z")
-        expect(subject.parseDateLoose("2026-10-14T09:30Z")).toBe("2026-10-14T09:30:00.000Z")
-        expect(subject.parseDateLoose("2026-10-14T09:30+0700")).toBe("2026-10-14T02:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14 9:05", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:05:00.000Z")
+        expect(subject.parseDateLoose("14/10/2026 09:05", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:05:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14T09:30Z", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T09:30:00.000Z")
+        expect(subject.parseDateLoose("2026-10-14T09:30+0700", "Asia/Ho_Chi_Minh")).toBe("2026-10-14T02:30:00.000Z")
     })
 
     it("structurally rejects a local date match with no year capture", async () => {
@@ -159,7 +160,7 @@ describe("parseDateLoose validation and precision", () => {
         const malformed: RegExpExecArray = Object.assign(captures, { index: 0, input: raw })
         const exec = jest.spyOn(RegExp.prototype, "exec").mockReturnValueOnce(null).mockReturnValueOnce(malformed)
         try {
-            expect(subject.parseDateLoose(raw)).toBeNull()
+            expect(subject.parseDateLoose(raw, "Asia/Ho_Chi_Minh")).toBeNull()
         } finally {
             exec.mockRestore()
         }
@@ -173,9 +174,18 @@ describe("parseDateLoose validation and precision", () => {
         const malformed: RegExpExecArray = Object.assign(captures, { index: 0, input: raw })
         const exec = jest.spyOn(RegExp.prototype, "exec").mockReturnValueOnce(malformed)
         try {
-            expect(subject.parseDateLoose(raw)).toBe("2026-10-13T17:00:00.000Z")
+            expect(subject.parseDateLoose(raw, "Asia/Ho_Chi_Minh")).toBe("2026-10-13T17:00:00.000Z")
         } finally {
             exec.mockRestore()
         }
+    })
+})
+
+describe("parseDateLoose in the workspace's zone", () => {
+    it("reads a date, or a time with no zone, on the clock of the zone it is given", async () => {
+        const subject = await buildSubject()
+        expect(subject.parseDateLoose("2026-07-14", "Europe/London")).toBe("2026-07-13T23:00:00.000Z")
+        expect(subject.parseDateLoose("14/07/2026 09:05", "Europe/London")).toBe("2026-07-14T08:05:00.000Z")
+        expect(subject.parseDateLoose("2026-07-14T09:30Z", "Europe/London")).toBe("2026-07-14T09:30:00.000Z")
     })
 })

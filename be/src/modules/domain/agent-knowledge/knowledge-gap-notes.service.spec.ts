@@ -1,9 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import type { FactRecord } from "@modules/domain/brain-facts"
 import type { Logger } from "@modules/platform/logging"
-import { KnowledgeSearchService } from "@modules/domain/knowledge"
-import type { Passage } from "@modules/domain/knowledge"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import type { GapRecord, MaybeGapRecorded } from "@modules/domain/knowledge-gaps"
 import { GapProposalsService } from "@modules/domain/public-documents"
@@ -11,52 +8,10 @@ import { LOGGER } from "@modules/platform/logging"
 import type { GapNote } from "./agent-knowledge.contracts"
 import { AgentKnowledgeLogEvent } from "./agent-knowledge.log-events"
 import { KnowledgeGapNotesService } from "./knowledge-gap-notes.service"
-import { KnowledgeRecallService } from "./knowledge-recall.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 
-const factOf = (value: string): FactRecord => ({
-    id: "fact-1",
-    subjectType: "policy",
-    subjectKey: "sunday",
-    subjectLabel: "Sunday",
-    attribute: "delivery",
-    attributeLabel: "Delivery",
-    value,
-    valueNumber: null,
-    unit: null,
-    scope: "public",
-    modules: [],
-    installationId: null,
-    status: "active",
-    sourceKind: "owner",
-    trust: 100,
-    validFrom: null,
-    validTo: null,
-    supersedesId: null,
-    conflictWith: null,
-    proposalKind: "set",
-    evidence: [],
-    proposedBy: "owner",
-    proposedAt: "2026-10-01T00:00:00.000Z",
-    decidedBy: null,
-    decidedAt: null,
-    decisionNote: null,
-})
-
-const passageOf = (title: string, topic: string | null, content: string): Passage => ({
-    layer: "business",
-    id: "passage-1",
-    sourceId: "source-1",
-    module: "chatbot",
-    kind: "faq",
-    title,
-    content,
-    score: 1,
-    visibility: "public",
-    topic,
-})
-
+/** A bicycle workshop's customer turn (synthetic trade). */
 const noteOf = (signals: Partial<GapNote["signals"]> = {}): GapNote => ({
     view: {
         workspaceId: WS,
@@ -65,207 +20,72 @@ const noteOf = (signals: Partial<GapNote["signals"]> = {}): GapNote => ({
         installationId: null,
     },
     conversationId: "c1",
-    question: "Do you deliver to Da Nang on Sunday?",
+    question: "Do you true carbon wheels on Saturdays?",
     signals: { knowledgeGap: null, needsHuman: false, proposedAnswer: null, isTransaction: false, ...signals },
 })
 
+/** The model of the turn claimed a gap. */
+const CLAIMED = { question: "Carbon wheel truing on Saturday?", topic: "Wheel truing | Saturday hours" }
+
 const build = async () => {
     const gaps = mock<KnowledgeGapsService>({ record: jest.fn().mockResolvedValue(null) })
-    const recall = mock<KnowledgeRecallService>({ factsMatching: jest.fn().mockResolvedValue([]) })
-    const search = mock<KnowledgeSearchService>({ passagesText: jest.fn().mockResolvedValue([]) })
     const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
     const proposals = mock<GapProposalsService>({ open: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeGapNotesService,
             { provide: KnowledgeGapsService, useValue: gaps },
-            { provide: KnowledgeRecallService, useValue: recall },
-            { provide: KnowledgeSearchService, useValue: search },
             { provide: GapProposalsService, useValue: proposals },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { notes: moduleRef.get(KnowledgeGapNotesService), gaps, recall, search, logger, proposals }
+    return { notes: moduleRef.get(KnowledgeGapNotesService), gaps, logger, proposals }
 }
 
-describe("KnowledgeGapNotesService", () => {
-    it("records the gap the reply named", async () => {
+describe("KnowledgeGapNotesService: the model's claim", () => {
+    it("records the exact gap the turn's model claimed, with its topic, whatever the other signals say", async () => {
         const { notes, gaps } = await build()
-        await notes.note(noteOf({ knowledgeGap: { question: "Sunday delivery?", topic: "Delivery | Days" } }))
-        expect(gaps.record).toHaveBeenCalledWith(WS, expect.objectContaining({ source: "model" }))
-    })
-})
-
-describe("KnowledgeGapNotesService", () => {
-    it("records an uncovered question that asked for a person with nothing to propose", async () => {
-        const { notes, gaps } = await build()
-        await notes.note(noteOf({ needsHuman: true }))
-        expect(gaps.record).toHaveBeenCalledWith(WS, expect.objectContaining({ source: "retrieval" }))
-    })
-})
-
-describe("KnowledgeGapNotesService", () => {
-    it("leaves a transaction alone and never throws", async () => {
-        const { notes, gaps, logger } = await build()
-        await notes.note(noteOf({ needsHuman: true, isTransaction: true }))
-        expect(gaps.record).not.toHaveBeenCalled()
-        gaps.record.mockRejectedValueOnce(new Error("db down"))
-        await expect(notes.note(noteOf({ knowledgeGap: { question: "Q?", topic: "" } }))).resolves.toBeUndefined()
-        expect(logger.error).toHaveBeenCalled()
-    })
-})
-
-describe("KnowledgeGapNotesService", () => {
-    it("records the exact model claim before considering transaction or proposed-answer signals", async () => {
-        const { notes, gaps, recall, search } = await build()
         await notes.note(
             noteOf({
-                knowledgeGap: { question: " Sunday delivery? ", topic: "Delivery | Days" },
-                proposedAnswer: "Ask the dispatcher.",
+                knowledgeGap: { question: " Carbon wheel truing on Saturday? ", topic: CLAIMED.topic },
+                proposedAnswer: "Ask the mechanic.",
                 isTransaction: true,
             }),
         )
+
         expect(gaps.record).toHaveBeenCalledTimes(1)
         expect(gaps.record).toHaveBeenCalledWith(WS, {
             module: "chatbot",
-            question: " Sunday delivery? ",
-            topic: "Delivery | Days",
+            question: " Carbon wheel truing on Saturday? ",
+            topic: CLAIMED.topic,
             conversationId: "c1",
             source: "model",
         })
-        expect(recall.factsMatching).not.toHaveBeenCalled()
-        expect(search.passagesText).not.toHaveBeenCalled()
     })
-})
 
-describe("KnowledgeGapNotesService", () => {
-    it.each([{ needsHuman: false }, { needsHuman: true, proposedAnswer: "We deliver Sundays." }])(
-        "does not search or record when escalation does not need a missing answer: %j",
-        async (signals) => {
-            const { notes, gaps, recall, search } = await build()
-            await notes.note(noteOf(signals))
-            expect(gaps.record).not.toHaveBeenCalled()
-            expect(recall.factsMatching).not.toHaveBeenCalled()
-            expect(search.passagesText).not.toHaveBeenCalled()
-        },
-    )
-})
+    it.each<Partial<GapNote["signals"]>>([
+        { knowledgeGap: null, needsHuman: true },
+        { knowledgeGap: null, needsHuman: true, proposedAnswer: null, isTransaction: false },
+        { knowledgeGap: null, needsHuman: false, proposedAnswer: "We true wheels on Saturdays." },
+        { knowledgeGap: { question: " \t ", topic: "Wheel truing | Saturday hours" }, needsHuman: true },
+        { knowledgeGap: { question: "", topic: "" }, isTransaction: true },
+    ])("no model claim (null or blank) records nothing, whatever the escalation says: %j", async (signals) => {
+        const { notes, gaps, proposals } = await build()
 
-describe("KnowledgeGapNotesService", () => {
-    it("falls back to retrieval when the model claim is blank", async () => {
-        const { notes, gaps, recall, search } = await build()
-        const note = {
-            ...noteOf({ needsHuman: true, knowledgeGap: { question: " \t ", topic: "Delivery" } }),
-            question: "Sunday delivery",
-        }
-        await notes.note(note)
-        expect(recall.factsMatching).toHaveBeenCalledTimes(1)
-        expect(recall.factsMatching).toHaveBeenCalledWith(note.view, "Sunday delivery", 5)
-        expect(search.passagesText).toHaveBeenCalledTimes(1)
-        expect(search.passagesText).toHaveBeenCalledWith(note.view, "sunday delivery", 5)
-        expect(gaps.record).toHaveBeenCalledTimes(1)
-        expect(gaps.record).toHaveBeenCalledWith(WS, {
-            module: "chatbot",
-            question: "Sunday delivery",
-            conversationId: "c1",
-            source: "retrieval",
-        })
-    })
-})
+        await notes.note(noteOf(signals))
 
-describe("KnowledgeGapNotesService", () => {
-    it("does not search a question without significant words", async () => {
-        const { notes, gaps, recall, search } = await build()
-        await notes.note({ ...noteOf({ needsHuman: true }), question: "Hi, how are you?" })
         expect(gaps.record).not.toHaveBeenCalled()
-        expect(recall.factsMatching).not.toHaveBeenCalled()
-        expect(search.passagesText).not.toHaveBeenCalled()
+        expect(proposals.open).not.toHaveBeenCalled()
     })
-})
 
-describe("KnowledgeGapNotesService", () => {
-    it("uses fact subject, attribute and value together to recognize an answered question", async () => {
-        const { notes, gaps, recall, search } = await build()
-        const note = { ...noteOf({ needsHuman: true }), question: "Sunday delivery schedule prices" }
-        recall.factsMatching.mockResolvedValueOnce([factOf("Schedule")])
-        await notes.note(note)
-        expect(recall.factsMatching).toHaveBeenCalledTimes(1)
-        expect(recall.factsMatching).toHaveBeenCalledWith(note.view, note.question, 5)
-        expect(search.passagesText).toHaveBeenCalledTimes(1)
-        expect(search.passagesText).toHaveBeenCalledWith(note.view, "sunday delivery schedule prices", 5)
-        expect(gaps.record).not.toHaveBeenCalled()
-    })
-})
-
-describe("KnowledgeGapNotesService", () => {
-    it.each([passageOf("Sunday", "Delivery", "Schedule"), passageOf("Sunday delivery", null, "Schedule")])(
-        "uses passage title, optional topic and content to recognize an answered question: %j",
-        async (passage) => {
-            const { notes, gaps, recall, search } = await build()
-            recall.factsMatching.mockResolvedValueOnce([factOf("Unknown")])
-            search.passagesText.mockResolvedValueOnce([passage])
-            await notes.note({ ...noteOf({ needsHuman: true }), question: "Sunday delivery schedule prices" })
-            expect(gaps.record).not.toHaveBeenCalled()
-            expect(search.passagesText).toHaveBeenCalledTimes(1)
-        },
-    )
-})
-
-describe("KnowledgeGapNotesService", () => {
-    it("records retrieval gaps when neither facts nor passages cover enough question words", async () => {
-        const { notes, gaps, recall, search } = await build()
-        const note = { ...noteOf({ needsHuman: true }), question: "Sunday delivery schedule prices" }
-        recall.factsMatching.mockResolvedValueOnce([factOf("Unknown")])
-        search.passagesText.mockResolvedValueOnce([passageOf("Sunday", null, "Unavailable")])
-        await notes.note(note)
-        expect(gaps.record).toHaveBeenCalledTimes(1)
-        expect(gaps.record).toHaveBeenCalledWith(WS, {
-            module: "chatbot",
-            question: note.question,
-            conversationId: "c1",
-            source: "retrieval",
-        })
-    })
-})
-
-describe("KnowledgeGapNotesService", () => {
-    it("logs each failed coverage lookup and still records the uncovered question", async () => {
-        const { notes, gaps, recall, search, logger } = await build()
-        const factFailure = new Error("facts unavailable")
-        const passageFailure = new Error("passages unavailable")
-        recall.factsMatching.mockRejectedValueOnce(factFailure)
-        search.passagesText.mockRejectedValueOnce(passageFailure)
-        const note = noteOf({ needsHuman: true })
-        await expect(notes.note(note)).resolves.toBeUndefined()
-        expect(logger.error).toHaveBeenCalledTimes(2)
-        expect(logger.error).toHaveBeenCalledWith(AgentKnowledgeLogEvent.RecallPartFailed, factFailure, {
-            workspaceId: WS,
-            part: "coverage",
-        })
-        expect(logger.error).toHaveBeenCalledWith(AgentKnowledgeLogEvent.RecallPartFailed, passageFailure, {
-            workspaceId: WS,
-            part: "coverage",
-        })
-        expect(gaps.record).toHaveBeenCalledTimes(1)
-        expect(gaps.record).toHaveBeenCalledWith(WS, {
-            module: "chatbot",
-            question: note.question,
-            conversationId: "c1",
-            source: "retrieval",
-        })
-    })
-})
-
-describe("KnowledgeGapNotesService", () => {
-    it("logs the original record failure with its conversation and preserves the reply", async () => {
+    it("logs a record failure with its conversation and never throws", async () => {
         const { notes, gaps, logger } = await build()
         const cause = new Error("gap storage unavailable")
         gaps.record.mockRejectedValueOnce(cause)
-        await expect(notes.note(noteOf({ needsHuman: true }))).resolves.toBeUndefined()
+
+        await expect(notes.note(noteOf({ knowledgeGap: CLAIMED }))).resolves.toBeUndefined()
         expect(logger.error).toHaveBeenCalledTimes(1)
-        expect(logger.error).toHaveBeenCalledWith(AgentKnowledgeLogEvent.GapNoteFailed, cause, {
-            conversationId: "c1",
-        })
+        expect(logger.error).toHaveBeenCalledWith(AgentKnowledgeLogEvent.GapNoteFailed, cause, { conversationId: "c1" })
     })
 })
 
@@ -273,9 +93,9 @@ describe("KnowledgeGapNotesService proposals", () => {
     const gap: GapRecord = {
         id: "g1",
         module: "chatbot",
-        question: "Sunday delivery?",
-        topic: null,
-        attributeGuess: null,
+        question: CLAIMED.question,
+        topic: "Wheel truing",
+        attributeGuess: "Saturday hours",
         count: 1,
         firstSeenAt: "2026-11-01T00:00:00.000Z",
         lastSeenAt: "2026-11-01T00:00:00.000Z",
@@ -285,14 +105,13 @@ describe("KnowledgeGapNotesService proposals", () => {
     }
     const recorded = (flags: Pick<NonNullable<MaybeGapRecorded>, "isNew" | "reopened">) => ({ gap, ...flags })
 
-    it("starts the look for an internal answer when a gap is new, whoever noticed it", async () => {
+    it("starts the look for an internal answer when the claimed gap is new", async () => {
         const { notes, gaps, proposals } = await build()
         gaps.record.mockResolvedValue(recorded({ isNew: true, reopened: false }))
 
-        await notes.note(noteOf({ knowledgeGap: { question: "Sunday delivery?", topic: "Delivery | Days" } }))
-        await notes.note(noteOf({ needsHuman: true }))
+        await notes.note(noteOf({ knowledgeGap: CLAIMED }))
 
-        expect(proposals.open).toHaveBeenCalledTimes(2)
+        expect(proposals.open).toHaveBeenCalledTimes(1)
         expect(proposals.open).toHaveBeenCalledWith(WS, gap)
     })
 
@@ -300,7 +119,7 @@ describe("KnowledgeGapNotesService proposals", () => {
         const { notes, gaps, proposals } = await build()
         gaps.record.mockResolvedValue(recorded({ isNew: false, reopened: true }))
 
-        await notes.note(noteOf({ needsHuman: true }))
+        await notes.note(noteOf({ knowledgeGap: CLAIMED }))
 
         expect(proposals.open).toHaveBeenCalledTimes(1)
     })
@@ -310,8 +129,8 @@ describe("KnowledgeGapNotesService proposals", () => {
         gaps.record.mockResolvedValueOnce(recorded({ isNew: false, reopened: false }))
         gaps.record.mockResolvedValueOnce(null)
 
-        await notes.note(noteOf({ needsHuman: true }))
-        await notes.note(noteOf({ needsHuman: true }))
+        await notes.note(noteOf({ knowledgeGap: CLAIMED }))
+        await notes.note(noteOf({ knowledgeGap: CLAIMED }))
 
         expect(proposals.open).not.toHaveBeenCalled()
     })
@@ -321,7 +140,7 @@ describe("KnowledgeGapNotesService proposals", () => {
         gaps.record.mockResolvedValue(recorded({ isNew: true, reopened: false }))
         proposals.open.mockRejectedValue(new Error("queue down"))
 
-        await expect(notes.note(noteOf({ needsHuman: true }))).resolves.toBeUndefined()
+        await expect(notes.note(noteOf({ knowledgeGap: CLAIMED }))).resolves.toBeUndefined()
         expect(logger.error).toHaveBeenCalled()
     })
 })

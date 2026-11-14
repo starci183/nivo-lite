@@ -6,8 +6,11 @@ import {
     validateFields,
     withoutError,
     withValue,
+    type FormErrors,
+    type FormFieldRule,
+    type FormValue,
+    type FormValues,
 } from "../../rows/form-values"
-import type { FormErrors, FormFieldRule, FormValue, FormValues } from "../../rows/form-values"
 
 /** The values of a form being filled, their errors, and the steps that change them. */
 export interface FormState {

@@ -12,6 +12,7 @@ import { JOB_OPS_OPTIONS } from "./job-ops.decorators"
 import { JobOpsLogEvent } from "./job-ops.log-events"
 import type { JobOpsOptions } from "./job-ops.options"
 import { JobOpsService } from "./job-ops.service"
+import { TestWorldError, TestWorldErrorCode } from "@tests/world/test-world.error"
 
 const INTERVAL_MS = 300_000
 const OPTIONS: JobOpsOptions = {
@@ -106,7 +107,7 @@ describe("JobOpsAlertMonitorService / checks", () => {
 
     it("logs reporting failures and permits later checks with the recorded cooldown", async () => {
         const { service, jobs, logger, reporter } = await build()
-        const failure = new Error("reporter unavailable")
+        const failure = new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
         const fields = {
             kind: "failed-jobs",
             failed24h: 21,
@@ -257,7 +258,7 @@ describe("JobOpsAlertMonitorService / checks", () => {
     })
     it.each([
         ["stats-unavailable", () => Promise.resolve(null)],
-        ["stats-error", () => Promise.reject(new Error("driver error with private details"))],
+        ["stats-error", () => Promise.reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))],
     ] as const)("only warns for %s and leaves both cooldowns available", async (reason, readStats) => {
         const { service, jobs, logger, reporter } = await build()
         jobs.stats.mockImplementationOnce(readStats)

@@ -90,9 +90,7 @@ export const AgentWorkflowGraphBase = (props: AgentWorkflowGraphBaseProps) => {
                     />
                 </PaneSection>
                 <PaneSection>
-                    <Text size="xs" tone="muted">
-                        {copy.legend}
-                    </Text>
+                    <Text tone="muted">{copy.legend}</Text>
                 </PaneSection>
             </Pane>
         </PaneGrid>

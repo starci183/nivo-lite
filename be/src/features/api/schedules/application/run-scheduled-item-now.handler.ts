@@ -1,6 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ScheduledItemsService } from "@modules/domain/agent-doors"
-import type { RunNowAnswer } from "@modules/domain/agent-doors"
+import { ScheduledItemsService, type RunNowAnswer } from "@modules/domain/agent-doors"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RunScheduledItemNowCommand } from "./run-scheduled-item-now.command"
@@ -16,7 +15,6 @@ export class RunScheduledItemNowHandler extends ICQRSHandler<RunScheduledItemNow
     }
 
     protected override process(command: RunScheduledItemNowCommand): Promise<RunNowAnswer> {
-        const { principal, request } = command.params
-        return this.items.runNow(principal.id, request.workspaceId, request.id)
+        return this.items.runNow(command.params.principal.id, command.params.request.workspaceId, command.params.request.id)
     }
 }

@@ -16,7 +16,7 @@ const build = async () => {
     const bindings = mock<AgentBindingsService>()
     bindings.requireResumeChoice.mockResolvedValue([])
     const directory = mock<AgentDirectoryService>()
-    directory.cardsOf.mockResolvedValue([{ id: "agent-1", name: "Minh", module: "sales", canTagAgentIds: [] }])
+    directory.cardsOf.mockResolvedValue([{ id: "agent-1", name: "Minh", module: "sales" }])
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentActivationService,
@@ -91,7 +91,7 @@ describe("AgentActivationService > resuming with channels", () => {
 
         expect(bindings.requireResumeChoice).toHaveBeenCalledWith(
             "ws-1",
-            { id: "agent-1", name: "Minh", module: "sales", canTagAgentIds: [] },
+            { id: "agent-1", name: "Minh", module: "sales" },
             null,
         )
         expect(installs.setLive).not.toHaveBeenCalled()

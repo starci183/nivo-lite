@@ -11,7 +11,6 @@ export const toLessonCandidate = (row: BrainLessonCandidateEntity): LessonCandid
     workflowId: row.workflowId,
     stepKey: row.stepKey,
     question: row.question,
-    keywords: row.keywords,
     answer: row.answer,
     answeredBy: row.answeredBy,
     answeredAt: isoOf(row.answeredAt),

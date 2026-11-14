@@ -1,7 +1,21 @@
 import type * as Shapes from "./api-shapes.builder"
 import { fakeIds } from "@starci/jest-preset"
 import type { InjectionToken } from "@nestjs/common"
-import { Secret } from "@modules/platform/config"
+import { EnvSource, Secret } from "@modules/platform/config"
+import { parseInetConfig } from "@modules/integrations/inet"
+import { parsePayosConfig } from "@modules/integrations/payos"
+import { parseTinoConfig } from "@modules/integrations/tino"
+import { parseElevenLabsConfig } from "@modules/integrations/elevenlabs"
+import { parseVeoConfig } from "@modules/integrations/veo"
+import { parseShotstackConfig } from "@modules/integrations/shotstack"
+import { parseCreatomateConfig } from "@modules/integrations/creatomate"
+import { parseJson2VideoConfig } from "@modules/integrations/json2video"
+import { parseGoogleCalendarConfig } from "@modules/integrations/google-calendar"
+import { parseMetaPublishingConfig } from "@modules/integrations/meta-publishing"
+import { parseYoutubeConfig } from "@modules/integrations/youtube"
+import { parseTiktokConfig } from "@modules/integrations/tiktok"
+import { parseMisaAmisConfig } from "@modules/integrations/misa-amis"
+import { parseMisaMeinvoiceConfig } from "@modules/integrations/misa-meinvoice"
 import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
@@ -95,6 +109,7 @@ const options = {
         readers: { docx: refuseWiringOperation, pdf: refuseWiringOperation, pdfPages: refuseWiringOperation },
     },
     workspaces: { allowFreeWorkspace: true },
+    apiKeys: {},
     workspaceInvites: { siteUrl: "https://site.invalid", inviteDays: 7 },
     billing: {
         sepayApiKey: undefined,
@@ -115,7 +130,6 @@ const options = {
     entityEngine: { cursorKey: new Secret(Buffer.alloc(32, 9).toString("base64")), buildId: undefined },
     remoteFiles: { maxBytes: 10 * 1024 * 1024, timeoutMs: 1000, maxRedirects: 3 },
     zaloProvider: { replyWindowMs: 7 * DAY_MS, staleAfterMs: DAY_MS },
-    agentWork: { debounceMs: 0 },
     zalo: {
         oauthBase: "https://zalo.invalid",
         apiBase: "https://zalo.invalid",
@@ -179,16 +193,24 @@ const options = {
     },
     channelSetup: wiringSettings.channelSetup,
     webhookDelivery: { timeoutMs: 1000 },
-    ffmpeg: { nice: false },
-    tts: { provider: "none" as const, cacheDir: "wiring-fixture/cache", workDir: "wiring-fixture/work", minGapMs: 0 },
-    video: {
-        fontsDir: "wiring-fixture/fonts",
-        workDir: "wiring-fixture/work",
-        maxSeconds: 60,
-        ffmpegThreads: 1,
-    },
-    mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 },
+    inet: parseInetConfig(new EnvSource({})),
+    tino: parseTinoConfig(new EnvSource({})),
+    payos: parsePayosConfig(new EnvSource({})),
+    elevenlabs: parseElevenLabsConfig(new EnvSource({})),
+    veo: parseVeoConfig(new EnvSource({})),
+    shotstack: parseShotstackConfig(new EnvSource({})),
+    creatomate: parseCreatomateConfig(new EnvSource({})),
+    json2video: parseJson2VideoConfig(new EnvSource({})),
+    googleCalendar: parseGoogleCalendarConfig(new EnvSource({})),
+    metaPublishing: parseMetaPublishingConfig(new EnvSource({})),
+    youtube: parseYoutubeConfig(new EnvSource({})),
+    tiktok: parseTiktokConfig(new EnvSource({})),
+    misaAmis: parseMisaAmisConfig(new EnvSource({})),
+    misaMeinvoice: parseMisaMeinvoiceConfig(new EnvSource({})),
+    toolsConfig: { defaultTimeoutMs: 4000 },
     knowledge: { indexChunkDelayMs: 0 },
+    // No vector index in a proof: vectors stay in Postgres (the one switch is QDRANT_URL).
+    qdrant: { url: null, apiKey: null, timeoutMs: 5000 },
 }
 
 /** Explicit doubles for the private resource tokens of the real registered modules. */

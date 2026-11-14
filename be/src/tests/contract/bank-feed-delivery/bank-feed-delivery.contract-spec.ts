@@ -1,5 +1,8 @@
-import { BANK_FEED_DELIVERY_QUEUE, isBankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
-import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
+import {
+    BANK_FEED_DELIVERY_QUEUE,
+    isBankFeedDeliveryRecorded,
+    type BankFeedDeliveryRecorded,
+} from "@modules/queues/bank-feed-delivery"
 
 const message: BankFeedDeliveryRecorded = { provider: "casso", deliveryId: "connection:delivery-1" }
 

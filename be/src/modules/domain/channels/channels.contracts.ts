@@ -1,5 +1,4 @@
 import type { ZaloFailure } from "@modules/integrations/zalo"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import type { ChannelImage } from "./channel-image.contracts"
 
 /** A started Zalo authorization. */
@@ -124,10 +123,37 @@ export interface DeliveryRequest {
     readonly messageId: string
     /** The text to send. */
     readonly text: string
-    /** Pictures that follow the text, in order, each with the words under it: Zalo lays several into one collage image (or sends them one by one when it cannot), Telegram sends them as one album; a refusal of them is logged and does not undo the text. */
+    /** Pictures that follow the text, in order, each with the words under it: Zalo sends them one by one, Telegram sends them as one album; a refusal of them is logged and does not undo the text. */
     readonly images?: ReadonlyArray<ChannelImage>
     /** The structured notice behind the text, when there is one: on Zalo it allows the ZNS fallback outside the 48-hour window. */
     readonly notification?: RenewalNotification
+    /** True when the caller already judged the Zalo reply window from the stored inbound messages: the Zalo route asks no conversation record. */
+    readonly windowChecked?: boolean
+}
+
+/**
+ * One message to a PERSON on one of their channel identities, with no conversation record behind it: the route (an engine row), the
+ * channel, the account and the channel's own id of the person. The send key is the once-key the engine's delivery ledger fences it with.
+ */
+export interface PersonDeliveryRequest {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The route the message goes on (`customer_routes.id`). */
+    readonly routeId: string
+    /** The channel key: telegram, zalo, facebook, instagram or website. */
+    readonly channel: string
+    /** The account: the connection id (the site id of the website), or null. */
+    readonly accountId: string | null
+    /** The person's id on that channel (the contact identity's value). */
+    readonly userId: string
+    /** The once-key of the send. */
+    readonly sendKey: string
+    /** The text to send. */
+    readonly text: string
+    /** Pictures that follow the text. */
+    readonly images?: ReadonlyArray<ChannelImage>
+    /** True when the caller already judged the Zalo reply window from the stored inbound messages: the Zalo route asks no conversation record. */
+    readonly windowChecked?: boolean
 }
 
 /** Which Zalo route carried a delivered message. */
@@ -189,12 +215,29 @@ export interface ZnsRenewalSettings {
 /** The ZNS renewal settings of a connection, or null when no template is configured. */
 export type OptionalZnsRenewal = ZnsRenewalSettings | null
 
+/**
+ * Where a message goes on a channel, as the channel layer reads it: the person's id on the channel and the connection it goes through.
+ * `id` names the route (or, for the old chat-keyed door, the conversation) the send belongs to, for logs and notices.
+ */
+export interface ChannelTarget {
+    /** The route (or conversation) the send belongs to. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The channel key: telegram, zalo, facebook, instagram or website. */
+    readonly channel: string
+    /** The person's id on that channel, possibly with an archive suffix after a colon. */
+    readonly externalId: string | null
+    /** The connection it goes through. */
+    readonly connectionId: string | null
+}
+
 /** Sends a reply on channels this capability does not own (Facebook, Instagram); the owner registers it once at start. */
 export interface ChannelSender {
     /** The conversation channel keys it sends for. */
     readonly channels: ReadonlyArray<string>
     /** Pushes the text to the customer; false when the channel did not accept it. Never throws. */
-    send(conversation: ChatConversationTarget, text: string): Promise<boolean>
+    send(conversation: ChannelTarget, text: string): Promise<boolean>
 }
 
 /** A sender, or none: the answer of the registry. */
@@ -210,8 +253,8 @@ export interface ChannelSenderRegistry {
 
 /** What the health check concluded about one connection. */
 export interface HealthVerdict {
-    /** ok, silent or failing. */
-    readonly state: "ok" | "silent" | "failing"
+    /** ok, silent, degraded (the provider cannot be read for a reason the owner cannot fix by connecting again) needs_reauth (the poll scheduler recorded a refused credential: only the owner connecting again fixes it) or failing (the connection reports another error). */
+    readonly state: "ok" | "silent" | "degraded" | "needs_reauth" | "failing"
     /** Why, in a short sentence; empty for ok. */
     readonly reason: string
 }
@@ -226,6 +269,8 @@ export interface HealthSummary {
     readonly silent: number
     /** Connections that are failing. */
     readonly failing: number
+    /** Connections whose poll breaker is open for a reason that is not a refused credential. */
+    readonly degraded: number
     /** Connections whose recorded verdict changed. */
     readonly changed: number
 }
@@ -240,6 +285,8 @@ export interface HealthTally {
     silent: number
     /** Connections that are failing. */
     failing: number
+    /** Connections whose poll breaker is open for a reason that is not a refused credential. */
+    degraded: number
     /** Connections whose recorded verdict changed. */
     changed: number
 }

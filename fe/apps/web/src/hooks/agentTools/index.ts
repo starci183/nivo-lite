@@ -1,3 +1,3 @@
 export { useAgentTools } from "./useAgentTools"
-export { AGENT_TOOL_ORIGINS, grantModeOf, isGrantMode } from "@/modules/agentTools"
-export type { AgentToolGrantMode, AgentToolWire } from "@/modules/agentTools"
+export { AGENT_TOOL_ORIGINS } from "@/modules/agentTools"
+export type { AgentToolWire } from "@/modules/agentTools"

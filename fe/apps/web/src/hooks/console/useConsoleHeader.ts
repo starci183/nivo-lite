@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { authActionsOf } from "@/hooks/auth"
-import { useQueryInboxLeadsSwr } from "@/hooks/swr"
+import { useQueryChatUnreadSwr } from "@/hooks/swr"
 import { useGuideBubbleShown } from "@/hooks/guide"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useThemeSwitch } from "@/hooks/theme"
@@ -66,9 +66,7 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
     const theme = useThemeSwitch()
     const guideBubble = useGuideBubbleShown()
     const workspaceLogoUrl = useWorkspaceLogo()
-    const waitingCount =
-        useQueryInboxLeadsSwr(session.currentWorkspaceId, { tab: "needs_you", sort: "recent", limit: 1 }).data?.counts
-            .needsYou ?? 0
+    const waitingCount = useQueryChatUnreadSwr(session.currentWorkspaceId).data?.total ?? 0
 
     const roleLabel = t(ROLE_LABELS[session.member.role])
     const workspaces = workspaceSection(
@@ -109,7 +107,7 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
             isGuideBubbleShown: guideBubble.isShown,
             isDark: theme.isDark,
             bellLabel: t("bellLabel"),
-            bellHref: workspaceHref(session.currentWorkspaceId, CONSOLE_ROUTES.inbox),
+            bellHref: workspaceHref(session.currentWorkspaceId, CONSOLE_ROUTES.chat),
             hasWaiting: waitingCount > 0,
         },
         on: {

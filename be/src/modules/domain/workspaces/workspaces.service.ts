@@ -1,24 +1,23 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull, MoreThan, Raw } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, MoreThan, Raw, type EntityManager } from "typeorm"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
-import type {
-    CreatedWorkspace,
-    FirstWorkspace,
-    NamedBusinessType,
-    OptionalAccountId,
-    WorkspaceBrand,
-    WorkspaceMembership,
-    WorkspaceName,
+import {
+    type CreatedWorkspace,
+    type FirstWorkspace,
+    type NamedBusinessType,
+    type OptionalAccountId,
+    type WorkspaceBrand,
+    type WorkspaceMembership,
+    type WorkspaceName,
+    RESTORE_DAYS,
 } from "./workspaces.contracts"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
 import { toLobbyMembership } from "./workspace-lobby.mapper"
-import { RESTORE_DAYS } from "./workspaces.contracts"
 import { InjectWorkspacesOptions } from "./workspaces.port"
 
 /** The most memberships one person reads. */

@@ -1,10 +1,8 @@
-import { branchWritesOf, graphGapLine } from "./setup-branch.policy"
 import type { DraftSnapshot, GateEvidence, SetupFact } from "@modules/domain/module-context-versions"
 import type { Locale } from "@modules/platform/i18n"
 import type { ModuleDefinition } from "../modules.contracts"
 import { gateEntry } from "./setup-gates.policy"
-import { GAP_GATE, sanitizeWrites, writeSpecLines } from "./setup-writes.policy"
-import type { OpenGap, ProposedWrite } from "./setup-writes.policy"
+import { GAP_GATE, sanitizeWrites, writeSpecLines, type OpenGap, type ProposedFact } from "./setup-writes.policy"
 
 /** The words of the chat in the language of the owner, taken from the message catalogue. */
 export interface SetupPromptWords {
@@ -36,8 +34,6 @@ export interface SetupTurnInput {
     readonly known: ReadonlyArray<string>
     /** The words of the chat in the language of the owner. */
     readonly words: SetupPromptWords
-    /** The code of the first vague place of the action graph, or null when the graph has none: the turn asks about that and nothing else. */
-    readonly graphGap?: string | null
 }
 
 /** What the model returned for one turn, validated. */
@@ -51,7 +47,7 @@ export interface SetupTurnResult {
     /** The evidence the model proposes per gate. */
     readonly gates: Readonly<Record<string, string>>
     /** The structured writes the answer implies; each becomes a confirm card. */
-    readonly writes: ReadonlyArray<ProposedWrite>
+    readonly writes: ReadonlyArray<ProposedFact>
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -62,7 +58,7 @@ const clean = (value: unknown, max: number): string => (typeof value === "string
 const factKeyOf = (value: unknown): string => {
     const key = clean(value, 60)
         .toLowerCase()
-        .replace(/[^a-z0-9_]+/gu, "_")
+        .replaceAll(/[^a-z0-9_]+/gu, "_")
     let start = 0
     let end = key.length
     while (start < end && key[start] === "_") start += 1
@@ -144,9 +140,8 @@ export const setupPromptOf = (input: SetupTurnInput): string => {
         specs.length === 0
             ? ""
             : [
-                  '- "writes": for every concrete value the owner gave THIS turn that matches a line of the writes list above, add one write. Use only gates, attributes and actions from that list, copy the attribute label exactly, never invent a value, and skip anything vague.',
+                  '- "writes": for every concrete value the owner gave THIS turn that matches a line of the writes list above, add one write. Use only gates and attributes from that list, copy the attribute label exactly, never invent a value, and skip anything vague.',
                   '  Fact: {"gate": <gateKey>, "kind": "fact", "subject": <what it is about, e.g. the product or business name>, "attribute": <attribute label from the list>, "value": <the value in the words of the owner, prices and hours exact>}',
-                  '  Rule: {"gate": <gateKey>, "kind": "rule", "action": <action from the list>, "mode": "auto"|"ask"|"never"} for a mode field, or {..., "limit_vnd": <integer VND, 20 million = 20000000>} for a limit field. "Never" / "always ask me" / "under X you may do it alone" are rules.',
               ].join("\n")
     const gapRules =
         gaps.length === 0
@@ -167,7 +162,7 @@ export const setupPromptOf = (input: SetupTurnInput): string => {
         "",
         specs.length === 0
             ? ""
-            : `What each gate can write for real (Second Brain facts and the authority of the agent). The owner confirms every write on a card before it happens:\n${specs.join("\n")}`,
+            : `What each gate can write for real (Second Brain facts). The owner confirms every write on a card before it happens:\n${specs.join("\n")}`,
         gapLines === ""
             ? ""
             : `Customers asked these questions and the agent had no answer (open knowledge gaps). Ask the owner about them:\n${gapLines}`,
@@ -191,7 +186,6 @@ export const setupPromptOf = (input: SetupTurnInput): string => {
         knownRulesOf(input.known),
         writesRules,
         gapRules,
-        graphGapLine(input.graphGap ?? null),
         "",
         `Return ONLY a JSON object: {"reply": string, "summary": string, "facts": [{"key": string, "text": string}], "gates": {"<gateKey>": {"status": "proposed", "evidence": string}}${specs.length > 0 || gaps.length > 0 ? ', "writes": [ ... ]' : ""}}`,
         `Valid gate keys: ${module.gates.map((gate) => gate.key).join(", ")}`,
@@ -234,10 +228,7 @@ export const readSetupTurn = (
         ...(summary === "" ? {} : { summary }),
         facts: factsOf(parsed.facts),
         gates: gatesOf(input.module, parsed.gates),
-        writes: [
-            ...sanitizeWrites(input.module, parsed.writes, input.gaps, businessLabel),
-            ...branchWritesOf(input.module, parsed.writes),
-        ],
+        writes: sanitizeWrites(input.module, parsed.writes, input.gaps, businessLabel),
     }
 }
 

@@ -6,13 +6,19 @@ import { isWaitingOf, mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryWorkspaceDashboardSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { PERIOD_PARAM, periodOfWord, periodWordOf, rangeOfPeriod } from "@/modules/overview"
-import type { OverviewPeriod } from "@/modules/overview"
+import {
+    OVERVIEW_PERIODS,
+    PERIOD_PARAM,
+    overviewCsvOf,
+    overviewViewOf,
+    periodOfWord,
+    periodWordOf,
+    rangeOfPeriod,
+    type OverviewPeriod,
+    type OverviewTools,
+} from "@/modules/overview"
 import type { DataSlot, OverviewView } from "@/modules/types"
-import { overviewCsvOf } from "./overview.csv"
 import { PLACEHOLDER_OVERVIEW } from "./overview.shared"
-import { overviewViewOf } from "./overview.view"
-import type { OverviewTools } from "./overview.view"
 
 /** The business clock the range of the period is written on. */
 const BUSINESS_TIME_ZONE = "Asia/Ho_Chi_Minh"
@@ -24,6 +30,8 @@ const CLOCK_TICK_MS = 60_000
 export interface OverviewHookView {
     /** The period the page shows. */
     readonly period: OverviewPeriod
+    /** The periods the page can switch between, in the order the switch lists them. */
+    readonly periods: ReadonlyArray<OverviewPeriod>
     /** The first and last day of the period, written as the page header says them. */
     readonly range: { readonly from: string; readonly to: string }
     /** The figures, worded for the reader, or why there are none yet. */
@@ -50,8 +58,8 @@ const saveTextFile = (name: string, text: string): void => {
     URL.revokeObjectURL(url)
 }
 
-/** The overview of the open workspace: the period in the address, the figures read for it, worded in the reader's language, and the report file. */
-export const useOverview = (): OverviewHookView => {
+/** The overview of the open workspace (read only while `enabled`): the period in the address, the figures read for it, worded in the reader's language, and the report file. */
+export const useOverview = (enabled = true): OverviewHookView => {
     const workspaceId = useWorkspaceId()
     const t = useTranslations("overview")
     const g = useTranslations("governance")
@@ -60,7 +68,7 @@ export const useOverview = (): OverviewHookView => {
     const pathname = navigation.usePathname()
     const router = navigation.useRouter()
     const period = periodOfWord(useSearchParams().get(PERIOD_PARAM))
-    const read = useQueryWorkspaceDashboardSwr(workspaceId, period)
+    const read = useQueryWorkspaceDashboardSwr(enabled ? workspaceId : undefined, period)
     const { mutate } = read
     const tools: OverviewTools = { t, g, format, now }
     const range = rangeOfPeriod(period, now)
@@ -70,6 +78,7 @@ export const useOverview = (): OverviewHookView => {
     const slot = mapSlot(slotOfSwr(read), (data) => overviewViewOf(data, tools, period))
     return {
         period,
+        periods: OVERVIEW_PERIODS,
         range: written,
         slot,
         placeholder: overviewViewOf(PLACEHOLDER_OVERVIEW, tools, period),

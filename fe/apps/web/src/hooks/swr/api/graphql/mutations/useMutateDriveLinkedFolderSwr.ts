@@ -1,12 +1,11 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import {
     queryDriveLinkedFolder,
     type QueryDriveLinkedFolderRequest,
 } from "@/modules/api/graphql/queries/query-drive-linked-folder"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DriveLinkedFolderQuery } from "@/modules/api"
 
 /** The SWR key of the driveLinkedFolder read. */

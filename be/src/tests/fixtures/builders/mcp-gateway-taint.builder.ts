@@ -1,30 +1,29 @@
-import type {
-    GatewayCaller,
-    McpGatewayService,
-    NativeAdapter,
-    NativeConnectorManifest,
-    GatewayCallResult,
-} from "@modules/domain/mcp-gateway"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import {
+    type ToolCaller,
+    type ToolRegistryService,
+    type NativeToolFamily,
+    type ToolManifest,
+    type ToolCallResult,
+    SEPAY_MANIFEST,
+} from "@modules/domain/tools"
 import type { FakeClock, MockOf } from "@starci/jest-preset"
 import { eachInOrder } from "@modules/platform/primitives"
-import { SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
-import type { McpRemote } from "@modules/integrations/mcp"
-import { GATEWAY_CALLER } from "./mcp-gateway.builder"
 
 /** The SePay connector as an open tool of every caller, so the specs of the call path do not depend on who asks. */
-export const OPEN_SEPAY_MANIFEST: NativeConnectorManifest = {
+export const OPEN_SEPAY_MANIFEST: ToolManifest = {
     ...SEPAY_MANIFEST,
     tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, internalOnly: false })),
 }
 
 /** The SePay connector with every tool for internal use only. */
-export const INTERNAL_SEPAY_MANIFEST: NativeConnectorManifest = {
+export const INTERNAL_SEPAY_MANIFEST: ToolManifest = {
     ...SEPAY_MANIFEST,
     tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, internalOnly: true })),
 }
 
 /** A native connector with a read whose answer carries tainted text, a plain read and a write. */
-export const TAINTING_MANIFEST: NativeConnectorManifest = {
+export const TAINTING_MANIFEST: ToolManifest = {
     ...SEPAY_MANIFEST,
     tools: SEPAY_MANIFEST.tools.slice(0, 1).flatMap((base) => [
         { ...base, name: "read", internalOnly: false, taints: true },
@@ -63,24 +62,24 @@ export const taintedTurnExpected: Array<TaintedTurnExpectedShape | TaintedTurnEx
 
 /** Runs that turn: a tainting read, a write (asked), the same write approved by a person, and the write again after the window. */
 export const taintedTurnOf = async (
-    gateway: McpGatewayService,
+    gateway: ToolRegistryService,
     clock: FakeClock,
-    caller: GatewayCaller,
-): Promise<Array<GatewayCallResult>> => {
+    caller: ToolCaller,
+): Promise<Array<ToolCallResult>> => {
     const writer = { ...caller, opKey: "step-1" }
-    await gateway.call(writer, "sepay.read", {})
-    const asked = await gateway.call(writer, "sepay.act", {})
-    const approved = await gateway.call({ ...writer, approvedBy: "person-1" }, "sepay.act", {})
-    const peeked = await gateway.call(writer, "sepay.peek", {})
+    await gateway.call(writer, "nivo.tool.payment.read", {})
+    const asked = await gateway.call(writer, "nivo.tool.payment.act", {})
+    const approved = await gateway.call({ ...writer, approvedBy: "person-1" }, "nivo.tool.payment.act", {})
+    const peeked = await gateway.call(writer, "nivo.tool.payment.peek", {})
     clock.advance(16 * 60_000)
-    return [peeked, asked, approved, await gateway.call(writer, "sepay.act", {})]
+    return [peeked, asked, approved, await gateway.call(writer, "nivo.tool.payment.act", {})]
 }
 
 /** Replays the same held-room intent, then changes its operation identity and finally supplies the caller's replay key. */
 export const replayedHoldKeysOf = async (
-    gateway: McpGatewayService,
-    remote: MockOf<McpRemote>,
-    caller: GatewayCaller,
+    gateway: ToolRegistryService,
+    partner: MockOf<NativeToolFamily>,
+    caller: ToolCaller,
 ): Promise<Array<unknown>> => {
     const step = { ...caller, workItemId: "item-1" }
     const hold = { roomType: "deluxe", checkIn: "2026-10-24", nights: 2, guests: 2, guestId: "g1" }
@@ -88,7 +87,7 @@ export const replayedHoldKeysOf = async (
     await gateway.call(step, "hakuen.booking.hold", hold)
     await gateway.call({ ...step, opKey: "item-1:rehold" }, "hakuen.booking.hold", hold)
     await gateway.call(step, "hakuen.booking.hold", { ...hold, idempotencyKey: "mine" })
-    return remote.call.mock.calls.map(([request]) => request.args.idempotencyKey)
+    return partner.invoke.mock.calls.map(([, , args]) => args.idempotencyKey)
 }
 
 type ReplayedConfirmationOfResultArgsShape = {
@@ -110,14 +109,14 @@ type ReplayedConfirmationOfResultCallerShape = {
 type ReplayedConfirmationOfResultShape = {
     caller: ReplayedConfirmationOfResultCallerShape
     args: ReplayedConfirmationOfResultArgsShape
-    first: GatewayCallResult
-    retried: GatewayCallResult
+    first: ToolCallResult
+    retried: ToolCallResult
 }
 
 /** Makes two semantically equal confirmation requests under the same operation, retaining both results for the spec. */
 export const replayedConfirmationOf = async (
-    gateway: McpGatewayService,
-    original: GatewayCaller,
+    gateway: ToolRegistryService,
+    original: ToolCaller,
 ): Promise<ReplayedConfirmationOfResultShape> => {
     const caller = { ...original, opKey: "customer-message:confirm" }
     const args = { holdId: "hold-1", discountPct: 0 }
@@ -128,13 +127,13 @@ export const replayedConfirmationOf = async (
 
 /** Places a native connector into its half-open recovery window through five actual failed calls. */
 export const openNativeGatewayBreaker = async (
-    gateway: McpGatewayService,
-    native: MockOf<NativeAdapter>,
+    gateway: ToolRegistryService,
+    native: MockOf<NativeToolFamily>,
     clock: FakeClock,
-    caller: GatewayCaller,
+    caller: ToolCaller,
 ): Promise<void> => {
     native.invoke.mockRejectedValue(new Error("down"))
-    await eachInOrder(Array.from({ length: 5 }), () => gateway.call(caller, "sepay.transaction.list", {}))
+    await eachInOrder(Array.from({ length: 5 }), () => gateway.call(caller, TOOL.paymentCreditList, {}))
     clock.advance(120_000)
 }
 
@@ -162,20 +161,6 @@ export const HIDDEN_REPLY: HiddenReplyShape = {
 /** The workspace payment right that hides the account field. */
 export const PAYMENT_RIGHT = { kind: "payments", scope: "workspace", hide: ["account"], mask: [] } as const
 
-type GraphCallerShape = {
-    workItemId: string
-    turnId: string
-    workspaceId: string
-    agentId: string
-    conversationId: string | null
-    audience?: "customer" | "internal"
-    approvedBy?: string
-    opKey?: string | undefined
-}
-
-/** A work-item write in an agent turn governed by its graph. */
-export const GRAPH_CALLER: GraphCallerShape = { ...GATEWAY_CALLER, workItemId: "item-1", turnId: "turn-1" }
-
 /** The masked response of the held booking. */
 export const HELD_REPLY = { ok: true, value: { holdId: "h1" }, summary: '{"holdId":"h1"}' }
 
@@ -185,8 +170,3 @@ export const CONFIRMED_REPLY = { ok: true, value: { bookingId: "b1" }, summary: 
 /** The masked empty-stay read returned after a connector recovers. */
 export const CURRENT_STAY_REPLY = { ok: true, value: { stay: null }, summary: '{"stay":null}' }
 
-/** The graph's two held-write verdicts and their exact public and audit outcomes. */
-export const GRAPH_HOLDS = [
-    [{ kind: "stop" }, { ok: false, code: "not_granted", detail: "graph_stop" }, "refused", "graph_stop"],
-    [{ kind: "ask" }, { ok: false, code: "approval_required", reason: "graph_ask" }, "approval", "graph_ask"],
-] as const

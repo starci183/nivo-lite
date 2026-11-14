@@ -2,10 +2,6 @@
 export interface CredentialInput {
     /** The opaque proof carried by a link. */
     readonly token?: string
-    /** The workspace slug of an anonymous posting submission. */
-    readonly ws?: unknown
-    /** The job slug of an anonymous posting submission. */
-    readonly job?: unknown
 }
 
 /** The GraphQL argument envelope shared by credential doors. */
@@ -17,7 +13,7 @@ export interface CredentialArgumentsInput {
 /** Alternate credentials accepted only by explicitly marked doors. */
 export interface CredentialMetadata {
     /** The credential family this door accepts. */
-    readonly kind: "api-key" | "tool-token" | "link-token" | "posting"
+    readonly kind: "api-key" | "tool-token" | "link-token"
     /** The workflow or operation this credential must admit. */
     readonly workflow?: string | undefined
 }
@@ -26,7 +22,7 @@ export interface CredentialMetadata {
 export interface CredentialPrincipal {
     /** The credential family that established this identity. */
     readonly kind: CredentialMetadata["kind"]
-    /** The key, job, run or stored record that the credential identifies. */
+    /** The key, run or stored record that the credential identifies. */
     readonly subject: string
     /** The only workspace this credential can act for. */
     readonly workspaceId: string

@@ -44,28 +44,6 @@ export interface WorkKindUsage {
     readonly models: ReadonlyArray<string>
 }
 
-/** One day's use of one module for one kind of work: the workspace summary of the last days. */
-export interface DailyWorkUsage {
-    /** The day in Vietnam time, YYYY-MM-DD. */
-    readonly day: string
-    /** The module or shared usage bucket. */
-    readonly module: string
-    /** The kind of work; a call booked without one is grouped under its usage kind. */
-    readonly workKind: string
-    /** The answered calls. */
-    readonly calls: number
-    /** The failed tries. */
-    readonly failedTries: number
-    /** Prompt and completion tokens of the answers. */
-    readonly tokens: number
-    /** The exact cost of the answers in USD. */
-    readonly costUsd: number
-    /** The exact price of the failed tries in USD. */
-    readonly failedCostUsd: number
-    /** The credits of the answers, a fraction (the bill rounds the month's total, never a day). */
-    readonly credits: number
-}
-
 /** The model use of one kind of work, exact: what a document, a lesson or a turn cost. */
 export interface WorkCost {
     /** Answered calls. */

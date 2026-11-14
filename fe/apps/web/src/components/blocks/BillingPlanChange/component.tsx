@@ -1,7 +1,5 @@
-import { Button, Cluster, Stack, SurfaceCard, Tabs, Text } from "@starci/grammar/common"
-import type { DescriptionListItem } from "@starci/grammar/common"
-import { PlanCards } from "@/components/composites/PlanCards"
-import type { PlanOfferCard } from "@/components/composites/PlanCards"
+import { Button, Cluster, Stack, SurfaceCard, Tabs, Text, type DescriptionListItem } from "@starci/grammar/common"
+import { PlanCards, type PlanOfferCard } from "@/components/composites/PlanCards"
 
 /** What the chosen change costs and gives, priced by the back end quote. */
 export interface PlanChangeSummary {

@@ -13,6 +13,9 @@ import {
     deferMsOf,
     deferSecondsOf,
     deliveryOf,
+    fairGroupKeyOf,
+    fairGroupOf,
+    headroomOf,
     isExhausted,
     isUnrecoverable,
     isQueueMemoryBounded,
@@ -22,6 +25,7 @@ import {
     routeOf,
     secondsOf,
     slotOf,
+    workspaceLimitOf,
     workspaceOf,
 } from "./queue.policy"
 import type { BullmqJob } from "./queue-transport.port"
@@ -66,6 +70,10 @@ class QueuePolicySubject {
     readonly secondsOf = secondsOf
     readonly slotOf = slotOf
     readonly workspaceOf = workspaceOf
+    readonly headroomOf = headroomOf
+    readonly fairGroupOf = fairGroupOf
+    readonly fairGroupKeyOf = fairGroupKeyOf
+    readonly workspaceLimitOf = workspaceLimitOf
 }
 
 const build = async () => {
@@ -334,5 +342,48 @@ describe("queue policy routeOf", () => {
 
         expect(subject.routeOf([handlerOf("knowledge.index"), whole], delivery)).toBe(whole)
         expect(subject.routeOf([handlerOf("knowledge.index")], delivery)).toBeUndefined()
+    })
+})
+
+describe("queue policy workspace headroom", () => {
+    it("names the headroom of a job by the handler it goes to, 0 when none is declared", async () => {
+        const subject = await build()
+        const index: QueueHandler = { ...handlerOf("knowledge.index"), workspaceHeadroom: 2 }
+
+        expect(subject.headroomOf([handlerOf(), index], "knowledge.index")).toBe(2)
+        expect(subject.headroomOf([handlerOf(), index], "knowledge.facts")).toBe(0)
+        expect(subject.headroomOf([{ ...handlerOf(), workspaceHeadroom: -3 }], "knowledge.facts")).toBe(0)
+    })
+
+    it("adds the headroom to the app's workspace limit: the router's by job name, else the handler's own", async () => {
+        const subject = await build()
+        const router: QueueHandler = { ...handlerOf(), headroomOf: (job) => (job === "knowledge.index" ? 2 : 0) }
+
+        expect(subject.workspaceLimitOf(2, router, "knowledge.index")).toBe(4)
+        expect(subject.workspaceLimitOf(2, router, "knowledge.facts")).toBe(2)
+        expect(subject.workspaceLimitOf(2, { ...handlerOf("knowledge.index"), workspaceHeadroom: 1.7 }, "knowledge.index")).toBe(3)
+        expect(subject.workspaceLimitOf(2, handlerOf(), "knowledge.index")).toBe(2)
+    })
+})
+
+describe("queue policy fair groups", () => {
+    it("asks the handler the job goes to for its fair group, and has none when it declares none", async () => {
+        const subject = await build()
+        const facts: QueueHandler = { ...handlerOf("knowledge.facts"), fairGroupOf: () => Promise.resolve("document:d1") }
+
+        await expect(subject.fairGroupOf([handlerOf(), facts], "knowledge.facts", {})).resolves.toBe("document:d1")
+        await expect(subject.fairGroupOf([handlerOf(), facts], "knowledge.index", {})).resolves.toBeNull()
+    })
+
+    it("keeps a group the admission can store: non-blank text, at most 200 characters", async () => {
+        const subject = await build()
+
+        expect([subject.fairGroupKeyOf(""), subject.fairGroupKeyOf(" "), subject.fairGroupKeyOf(7), subject.fairGroupKeyOf("g")]).toEqual([
+            null,
+            null,
+            null,
+            "g",
+        ])
+        expect(subject.fairGroupKeyOf("x".repeat(250))).toHaveLength(200)
     })
 })

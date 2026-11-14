@@ -1,7 +1,8 @@
 import type { BadgeTone } from "@starci/grammar/common"
-import { triggerViewsOf } from "@nivo-lite/blocks-core/graph"
+import { toolLabelOf, triggerViewsOf } from "@/modules/plugin-registry"
 import { specOf } from "@/modules/workflowSteps"
 import { humanLabelOf } from "@/modules/agentRuns"
+import { toolWordOf } from "@/modules/toolNames"
 import { flowOfGraph, graphOfJson, stepWordsOf, type StepWordsOf } from "./agentWorkflows.flow"
 import type {
     WorkflowContext,
@@ -119,6 +120,13 @@ const versionRowOf = (version: WorkflowVersionWire, context: WorkflowContext): W
     }
 }
 
+/**
+ * Whether the newer template version can be previewed and accepted: the back end merges from the template version the workflow was
+ * made from, and `templateChangedSteps` is null when that version no longer exists in the template (or nothing runs yet).
+ */
+export const canUpdateFrom = (workflow: WorkflowWire): boolean =>
+    workflow.templateVersion !== null && workflow.templateChangedSteps !== null
+
 /** The notice that a newer template version exists; none when the workflow is on the newest or made from scratch. */
 export const noticeOf = (
     workflow: WorkflowWire,
@@ -136,6 +144,7 @@ export const noticeOf = (
             .slice(0, 2)
             .join(" · "),
         diffLine: changedSteps === null ? "" : context.t("noticeDiff", { count: changedSteps }),
+        canUpdate: canUpdateFrom(workflow),
     }
 }
 
@@ -190,43 +199,58 @@ const marksOf = (diff: WorkflowDiffWire): ReadonlyMap<string, WorkflowMark> =>
         ]),
     )
 
-/** The plain words of a right (`message:read.body` reads as what the kind and the access allow); a kind the catalog does not name says a general phrase, never the key. */
-const rightWordOf = (right: string, context: WorkflowContext): string => {
-    const [head = "", access = ""] = (right.split(".")[0] ?? "").split(":")
-    const key = `right_${head}_${access}`
-    if (context.has(key)) return context.t(key)
-    return context.t(access === "write" ? "rightOtherWrite" : "rightOtherRead")
-}
+/**
+ * The plain words of a tool or an effect (`nivo.tool.customer.message.send`), from the labels the tool vocabulary ships (one place for
+ * the words of a tool, whatever page names it); one no label names says a general phrase, never the id.
+ */
+const grantWordOf = (kind: "tool" | "effect", id: string, context: WorkflowContext): string =>
+    toolWordOf(id, context.locale, toolLabelOf, context.t(kind === "tool" ? "toolOther" : "effectOther"))
 
-/** The plain words of a tool or an effect (`nivo.lead.message.send`); one the catalog does not name says a general phrase, never the id. */
-const grantWordOf = (kind: "tool" | "effect", id: string, context: WorkflowContext): string => {
-    const key = `grant_${kind}_${id.replaceAll(".", "_")}`
-    if (context.has(key)) return context.t(key)
-    return context.t(kind === "tool" ? "toolOther" : "effectOther")
-}
-
-/** The rights, tools and actions gained and lost, one row each in the owner's words, and what wakes the graph when that changed. */
-const grantsOf = (diff: WorkflowDiffWire, context: WorkflowContext): ReadonlyArray<WorkflowDiffGrantView> => {
-    const ofRight = (rights: ReadonlyArray<string>): string[] => [
-        ...new Set(rights.map((right) => rightWordOf(right, context))),
+/** The node modes, tools and actions gained and lost, one row each in the owner's words, and what wakes the graph when that changed. */
+const grantsOf = (
+    diff: WorkflowDiffWire,
+    context: WorkflowContext,
+    stepTitleOf: (nodeKey: string) => string,
+): ReadonlyArray<WorkflowDiffGrantView> => {
+    const nodeRight = (
+        mark: "added" | "removed" | "changed",
+        right: WorkflowDiffWire["nodeRightsAdded"][number],
+        isLoosened: boolean,
+    ): WorkflowDiffGrantView => {
+        const values = { step: stepTitleOf(right.nodeKey), operation: right.operation }
+        return {
+            key: `nodeRight-${mark}-${right.nodeKey}-${right.connectionId}-${right.operation}`,
+            title: isLoosened
+                ? context.t("nodeRightLoosened", values)
+                : context.t("nodeRightLine", { ...values, mode: context.t(right.mode === "auto" ? "nodeRightAuto" : "nodeRightAsk") }),
+            kindLabel: context.t("grantKind_nodeRight"),
+            mark,
+            markLabel: context.t(`mark_${mark}`),
+        }
+    }
+    const nodeRights: ReadonlyArray<WorkflowDiffGrantView> = [
+        ...diff.nodeRightsAdded.map((right) => nodeRight("added", right, false)),
+        ...diff.nodeRightsRemoved.map((right) => nodeRight("removed", right, false)),
+        ...diff.nodeRightsLoosened.map((right) => nodeRight("changed", right, true)),
     ]
     const lists: ReadonlyArray<readonly [string, "added" | "removed", ReadonlyArray<string>]> = [
-        ["right", "added", ofRight(diff.rightsAdded)],
-        ["right", "removed", ofRight(diff.rightsRemoved)],
         ["tool", "added", [...new Set(diff.toolsAdded.map((id) => grantWordOf("tool", id, context)))]],
         ["tool", "removed", [...new Set(diff.toolsRemoved.map((id) => grantWordOf("tool", id, context)))]],
         ["effect", "added", [...new Set(diff.effectsAdded.map((id) => grantWordOf("effect", id, context)))]],
         ["effect", "removed", [...new Set(diff.effectsRemoved.map((id) => grantWordOf("effect", id, context)))]],
     ]
-    return lists.flatMap(([kind, mark, words]) =>
-        words.map((title) => ({
-            key: `${kind}-${mark}-${title}`,
-            title,
-            kindLabel: context.t(`grantKind_${kind}`),
-            mark,
-            markLabel: context.t(`mark_${mark}`),
-        })),
-    )
+    return [
+        ...nodeRights,
+        ...lists.flatMap(([kind, mark, words]) =>
+            words.map((title) => ({
+                key: `${kind}-${mark}-${title}`,
+                title,
+                kindLabel: context.t(`grantKind_${kind}`),
+                mark,
+                markLabel: context.t(`mark_${mark}`),
+            })),
+        ),
+    ]
 }
 
 /** "+2 steps · -1 steps · 3 changed": the count of each mark of the steps, a mark none has left out. */
@@ -280,7 +304,7 @@ export const diffViewOf = (diff: WorkflowDiffWire, context: WorkflowContext): Wo
                 ...stepChangeOf(step, words.get(step.key), context),
             }
         }),
-        grants: [...triggerRow, ...grantsOf(diff, context)],
+        grants: [...triggerRow, ...grantsOf(diff, context, titleOf)],
         flow: flowOfGraph(diff.afterJson, diff.beforeJson, marks, context),
     }
 }

@@ -1,4 +1,5 @@
 import { EntityDefinitionError } from "./entity-error"
+import { thrownFailureOf } from "../tests/thrown-failure"
 import { formatSequence, parseSequenceFormat, sequenceDeclarationValid, sequencePeriodOf } from "./sequence-format"
 
 const DAY = { year: 2026, month: 11, day: 5 }
@@ -80,7 +81,7 @@ describe("formatSequence", () => {
 
     it("refuses an invalid format or counter", () => {
         expect(() => formatSequence("DH", 1, DAY)).toThrow(EntityDefinitionError)
-        expect(() => formatSequence("{n:3}", -1, DAY)).toThrow("ENTITY_SEQUENCE_VALUE_INVALID: n=-1")
+        expect(thrownFailureOf(() => formatSequence("{n:3}", -1, DAY))).toEqual({ code: "ENTITY_SEQUENCE_VALUE_INVALID", at: "n=-1" })
         expect(() => formatSequence("{n:3}", 1.5, DAY)).toThrow(EntityDefinitionError)
     })
 
@@ -95,6 +96,6 @@ describe("formatSequence", () => {
         ["day 32", { year: 2026, month: 1, day: 32 }],
         ["fractional day", { year: 2026, month: 1, day: 1.5 }],
     ])("refuses a date with %s", (_name, date) => {
-        expect(() => formatSequence("{n:3}", 1, date)).toThrow("ENTITY_SEQUENCE_VALUE_INVALID: date")
+        expect(thrownFailureOf(() => formatSequence("{n:3}", 1, date))).toEqual({ code: "ENTITY_SEQUENCE_VALUE_INVALID", at: "date" })
     })
 })

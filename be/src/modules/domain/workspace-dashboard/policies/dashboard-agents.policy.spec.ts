@@ -24,7 +24,7 @@ const DIRECTORY: AgentDirectory = {
 const activityOf = (changes: Partial<AgentActionActivity>): AgentActionActivity => ({
     department: "sales",
     installationId: null,
-    action: "confirm_order",
+    action: "send_lead_offer",
     done: 0,
     autoDone: 0,
     failed: 0,
@@ -139,7 +139,7 @@ describe("agentRowsOf", () => {
             waiting: 3,
             errors: 3,
             medianResponseSeconds: 41,
-            minutesSaved: 50,
+            minutesSaved: 20,
             credits: 210,
         })
     })
@@ -185,16 +185,16 @@ describe("approvalRowOf", () => {
                 id: "w-1",
                 department: "sales",
                 installationId: null,
-                action: "confirm_order",
+                action: "send_lead_offer",
                 createdAt: "2026-11-09T01:00:00.000Z",
-                summary: "Order DH-1",
+                summary: "Offer DH-1",
                 customer: "An",
             }),
         ).toEqual({
             id: "w-1",
             agentName: "Sales",
-            action: "confirm_order",
-            summary: "Order DH-1",
+            action: "send_lead_offer",
+            summary: "Offer DH-1",
             customer: "An",
             createdAt: "2026-11-09T01:00:00.000Z",
             href: "/agents/sales/workbench?focus=w-1",

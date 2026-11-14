@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryModulesCatalog } from "@/modules/api/graphql/queries/query-modules-catalog"
 import type { ModulesCatalogQuery } from "@/modules/api"
 

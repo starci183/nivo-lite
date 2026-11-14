@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { Cluster, EmptyNotice, Stack, Sublabel, SurfaceCard, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Cluster, EmptyNotice, Stack, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
 import { SetupGateBody } from "@/components/branches/SetupGateBody"
 import type { AgentSetupCopy, SetupSideGate, SetupSideView } from "@/modules/types"
 
@@ -25,13 +24,14 @@ interface AgentSetupUnderstandingProps {
     readonly on: AgentSetupUnderstandingCommands
 }
 
-const GROUPS = ["auto", "ask", "never"] as const
+/** What the list of items draws. */
+type ItemsProps = Pick<AgentSetupUnderstandingProps, "view" | "isLoading" | "copy" | "on">
 
-/** The card props and the group a list draws. */
-type GroupViewProps = AgentSetupUnderstandingProps & { readonly group: (typeof GROUPS)[number] }
+/** What the caption under the list draws. */
+type CaptionProps = Pick<AgentSetupUnderstandingProps, "view" | "status" | "publish">
 
 /** The row of one item: its rule text, its status chip and "Edit", or the editor when it is being edited. */
-const rowOf = (props: AgentSetupUnderstandingProps, gate: SetupSideGate): ListRowData => {
+const rowOf = (props: ItemsProps, gate: SetupSideGate): ListRowData => {
     const gates = props.view.gates
     const isEditing = gates.editing === gate.key
     const hasEvidence = gate.evidence !== ""
@@ -39,7 +39,7 @@ const rowOf = (props: AgentSetupUnderstandingProps, gate: SetupSideGate): ListRo
         id: gate.key,
         title: hasEvidence ? gate.evidence : gate.label,
         description: hasEvidence ? gate.label : gate.hint,
-        badges: [{ label: gate.statusLabel, tone: gate.statusTone, isDot: true }],
+        badges: [{ label: gate.statusLabel, tone: gate.statusTone }],
         ...(isEditing
             ? {
                   detail: (
@@ -65,27 +65,19 @@ const rowOf = (props: AgentSetupUnderstandingProps, gate: SetupSideGate): ListRo
     }
 }
 
-/** One group inside the labelled section: its Sublabel (12, weight 500, muted) above one list card of rows. */
-const GroupView = (props: GroupViewProps) => {
-    const label = props.copy.groupLabels[props.group]
-    const gates = props.view.gates.gates.filter((gate) => gate.group === props.group)
-    if (gates.length === 0) return null
-    return (
-        <Stack gap="inline">
-            <Sublabel>{label}</Sublabel>
-            <SurfaceCard
-                kind="list"
-                ariaLabel={label}
-                isLoading={props.isLoading}
-                items={gates.map((gate) => rowOf(props, gate))}
-                empty={<EmptyNotice message={props.copy.understandingEmpty} />}
-            />
-        </Stack>
-    )
-}
+/** The items of the setup as one list card of rows: rule text, status chip, "Edit". */
+const ItemsView = (props: ItemsProps) => (
+    <SurfaceCard
+        kind="list"
+        ariaLabel={props.copy.understandingTitle}
+        isLoading={props.isLoading}
+        items={props.view.gates.gates.map((gate) => rowOf(props, gate))}
+        empty={<EmptyNotice message={props.copy.understandingEmpty} />}
+    />
+)
 
-/** The caption under the last group: where the draft stands in words, and the publish control only while there is one to press. */
-const CaptionView = (props: AgentSetupUnderstandingProps) => (
+/** The caption under the list: where the draft stands in words, and the publish control only while there is one to press. */
+const CaptionView = (props: CaptionProps) => (
     <Cluster gap="inline" justify="between">
         <Text size="xs" tone="muted">
             {[props.view.gates.progressLabel, props.status].filter((part) => part !== "").join(" · ")}
@@ -96,8 +88,7 @@ const CaptionView = (props: AgentSetupUnderstandingProps) => (
 
 /**
  * "What the agent understands about your work": the section Label (the version in use as plain text at its end), then the items of the setup
- * in three groups (what it does on its own, what it must ask, what it never does), each a Sublabel above its own card of rows
- * (rule text, status chip, "Edit"), and one caption line under the last group. No card wraps the groups.
+ * as one card of rows (rule text, status chip, "Edit"), and one caption line under it.
  */
 export const AgentSetupUnderstanding = (props: AgentSetupUnderstandingProps) => {
     const { chip } = props
@@ -107,16 +98,12 @@ export const AgentSetupUnderstanding = (props: AgentSetupUnderstandingProps) => 
                 <Text size="sm" isStrong>
                     {props.copy.understandingTitle}
                 </Text>
-                <Text size="xs" tone="muted">
+                <Text size="sm" tone="muted">
                     {chip === "" ? props.copy.versionNone : chip}
                 </Text>
             </Cluster>
-            <Stack gap="inline">
-                {GROUPS.map((group) => (
-                    <GroupView key={group} {...props} group={group} />
-                ))}
-            </Stack>
-            <CaptionView {...props} />
+            <ItemsView view={props.view} isLoading={props.isLoading} copy={props.copy} on={props.on} />
+            <CaptionView view={props.view} status={props.status} publish={props.publish} />
         </Stack>
     )
 }

@@ -8,8 +8,7 @@ import { mapSlot } from "@/hooks/slot"
 import { useMutateCheckTelegramConnectionSwr } from "@/hooks/swr"
 import type { ConnectionCheck, ConnectionLineView, DataSlot } from "@/modules/types"
 import { TOKEN_REJECTED_CODE, WEBHOOK_REFUSED_CODE } from "./telegramConnection.shared"
-import { useTelegramPage } from "./useTelegramPage"
-import type { TelegramPageData } from "./useTelegramPage"
+import { useTelegramPage, type TelegramPageData } from "./useTelegramPage"
 
 type Verdict = Pick<ConnectionLineView, "badge">
 
@@ -40,13 +39,18 @@ export const useTelegramChecks = (connectionId: string | undefined): UseTelegram
     const fail = (): Verdict => verdictOf(t("markFail"), "danger")
     const warn = (): Verdict => verdictOf(t("markWarn"), "warning")
 
+    const tokenDescription = (rejected: boolean, handle: string): string => {
+        if (rejected) return t("detailTokenRejected")
+        return handle === "" ? t("detailTokenSaved") : t("detailTokenOk", { handle })
+    }
+
     const tokenLine = (page: TelegramPageData): ConnectionLineView => {
-        const handle = page.botUsername === "" ? "-" : `@${page.botUsername}`
+        const handle = page.botUsername === "" ? "" : `@${page.botUsername}`
         const rejected = page.lastError === TOKEN_REJECTED_CODE
         return {
             id: "token",
             title: t("checkToken"),
-            description: rejected ? t("detailTokenRejected") : t("detailTokenOk", { handle }),
+            description: tokenDescription(rejected, handle),
             ...(rejected ? fail() : ok()),
         }
     }

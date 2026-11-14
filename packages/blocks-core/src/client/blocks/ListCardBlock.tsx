@@ -1,10 +1,8 @@
 import type { ReactNode } from "react"
-import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { SurfaceCard } from "@starci/grammar/common"
-import type { FilterFields } from "@starci/grammar/common"
+import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { Link, SurfaceCard, type FilterFields } from "@starci/grammar/common"
 import type { listCardBlock } from "../../blocks/list-card.block"
-import { countsView, moreLabelOf, selectedTab, tabEntriesOf, tabParamValue } from "../../rows/filter-tabs"
-import type { TabSpec } from "../../rows/filter-tabs"
+import { countsView, moreLabelOf, selectedTab, tabEntriesOf, tabParamValue, type TabSpec } from "../../rows/filter-tabs"
 import { footersOf, tabCountsOf } from "../../rows/list-card"
 import { paneHeadersOf } from "../../rows/pane-headers"
 import { RECORD_ROWS_PLACEHOLDER, moreStateOf, recordsView, rowsOf } from "../../rows/rows"
@@ -16,8 +14,42 @@ import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import { usePaneSearch } from "../composites/usePaneSearch"
 import type { RenderOf } from "../render-props"
 
+/** The spec of a list card. */
+type ListCardSpec = RenderOf<typeof listCardBlock>["props"]
+
+/** The filter tabs a spec declares, each with its words. */
+const tabSpecsOf = (block: ListCardSpec, words: ReturnType<typeof useBlockWords>): ReadonlyArray<TabSpec> =>
+    (block.filters ?? []).map((item) => ({
+        value: item.value,
+        label: words(item.label),
+        attention: item.attention === true,
+    }))
+
+/** What names the card: its heading (or an aria label when it has no title) and the link at the end of the head, when the spec has one. */
+const cardNameOf = (
+    block: ListCardSpec,
+    label: string,
+    host: ReturnType<typeof useBlockHost>,
+    words: ReturnType<typeof useBlockWords>,
+) => {
+    const headLink = block.headLink
+    return {
+        ...(block.title === undefined ? { ariaLabel: label } : { label: words(block.title), headingLevel: 3 as const }),
+        ...(headLink === undefined
+            ? {}
+            : {
+                  labelEnd: (
+                      <Link href={host.navigation.href(headLink.path)} variant="head">
+                          {words(headLink.label)}
+                      </Link>
+                  ),
+              }),
+    }
+}
+
 /** A list of records as one card: the filter tabs and the search in its header, the rows (one chosen) under them, the next page in its footer. */
 export const ListCardBlock = (props: RenderOf<typeof listCardBlock>): ReactNode => {
+    const host = useBlockHost()
     const words = useBlockWords()
     const block = props.props
     const searchParam = block.searchParam
@@ -27,11 +59,7 @@ export const ListCardBlock = (props: RenderOf<typeof listCardBlock>): ReactNode 
     const rows = derivedSlot(parsedSlot(read.slot, recordsView), (records) =>
         rowsOf(records, block, relabeller(block.labels, words), words({ key: "rowUntitled" })),
     )
-    const specs: ReadonlyArray<TabSpec> = (block.filters ?? []).map((item) => ({
-        value: item.value,
-        label: words(item.label),
-        attention: item.attention === true,
-    }))
+    const specs = tabSpecsOf(block, words)
     const moreTemplate = words({ key: "filtersMore" })
     const counts = tabCountsOf(parsedSlot(props.slots.counts.slot, countsView))
     const filterParam = block.filterParam
@@ -53,8 +81,7 @@ export const ListCardBlock = (props: RenderOf<typeof listCardBlock>): ReactNode 
     const headers = paneHeadersOf(filter, search)
     const moreWords = { loadMore: words({ key: "listLoadMore" }), retry: labels.retry }
     const label = words(block.label)
-    const name =
-        block.title === undefined ? { ariaLabel: label } : { label: words(block.title), headingLevel: 3 as const }
+    const name = cardNameOf(block, label, host, words)
     return (
         <SlotView
             slot={rows}

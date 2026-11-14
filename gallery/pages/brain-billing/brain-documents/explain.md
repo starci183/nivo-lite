@@ -1,40 +1,48 @@
 ---
 title: Second Brain / Kiến thức / Tài liệu
-route: /workspaces/<ws>/brain (tab Kiến thức, view Tài liệu)
+route: /workspaces/<ws>/brain?tab=knowledge&view=documents
 area: brain-billing
 ---
-# Second Brain, Kiến thức, Tài liệu
+# Second Brain / Kiến thức / Tài liệu
 
-> Shot note: the blank 64px pink strip above the header band described below is visible in THIS older capture (and at 390 as the nav row + strip). The newer audit capture of the same page (gallery/pages/audit/<page>) shows the band directly under the top bar, so treat that single defect as probably fixed; retake this shot to confirm. All other findings stand.
-
-Block `BrainDocuments` (components/blocks/BrainDocuments/component.tsx) in frame `BrainPanes`. Shots `1440.png`, `390.png`, `390-bottom.png`. Grammar paths under `node_modules/@starci/grammar/dist/core/`. Overlays ("N", red dot) are not content.
+Real shot (read only) of the workspace "Tiệm hoa NIVO (brain test)": the figures and rows are what the dev API answers. Block `BrainDocuments`; frames `DocUsageCard`, `DocTruthCard`. Shots `1440.png`, `1920.png`, `390.png`.
 
 ## Khung console (thanh trên, thanh bên)
-Vì sao: same white console chrome as every Brain page; "Second Brain" current with the pink 73 chip.
-Luật: `nivo-surface-layering.md`, `locale-switch-round-dropdown.md`, `table-heroui-native-section-head.md`.
+Vì sao: the same white console chrome as every Brain page (white surface, only the middle well is pink); "Second Brain" is the current item with its count chip.
+Luật: `nivo-surface-layering`, `pink-page-surface-rule`, `locale-switch-round-dropdown`.
 Grammar: `TopBar`, `Sidebar`, `node_modules/@starci/grammar/dist/core/composite/Sidebar/index.d.ts`.
 
-## Dải đầu trang và tầng tab 1 (Việc cần làm 73, Kiến thức, Công khai, Hỏi thử)
-Vì sao: SAI — flush left breadcrumb, title and sublabel, the page tabs in the band; but the blank 64px pink strip above the band and no header command on this view (the "Thêm tài liệu" action of the sibling views is missing here while the empty views have it), so the owner cannot add a document from the list.
-Luật: `nivo-surface-layering.md`, `pink-page-surface-rule.md`, `page-header-left-sublabel-xs.md`.
-Grammar: `Page header tabs`, `PageHeader`, `node_modules/@starci/grammar/dist/core/frame/PageHeader/index.d.ts`; composite `BrainHeaderActions`.
+## Dải đầu trang và hai tầng tab (Kiến thức, Tài liệu)
+Vì sao: breadcrumb, title and the 12px sublabel flush left on the white band; page tabs on the first layer, the Kiến thức chips (Sự thật, Tài liệu, Bài học) as the second underline layer with grey count chips; 0 is hidden on page tabs. Unchanged by this wave.
+Luật: `page-header-left-sublabel-xs`, `table-heroui-native-section-head`.
+Grammar: `PageHeader` `tabs` `subTabs`, `node_modules/@starci/grammar/dist/core/frame/PageHeader/index.d.ts`.
 
-## Tầng tab 2 (Sự thật 73, Tài liệu 7, Hồ sơ, Bài học)
-Vì sao: the second tab layer lives in the white band under layer 1, same 14/40/500, underline on a full-width separator, flush left, grey count chips for plain quantities; exactly the law. "Hồ sơ" and "Bài học" show no count because 0 hides on page tabs.
-Luật: `page-header-left-sublabel-xs.md` (second tab layer in the white band), `table-heroui-native-section-head.md` (page tabs hide 0, chips grey), `surfacecard-zones-api.md`.
-Grammar: `PageHeader subTabs`, `node_modules/@starci/grammar/dist/core/frame/PageHeader/index.d.ts`; composite `brainHeaderSubTabs`.
+## Hai thẻ đo (Tài liệu đã tải lên, Sự thật AI đang dùng)
+Vì sao: two SEPARATE white floating cards side by side above the list (drawing `brain-limit-50mb.png`; the limit itself is `knowledgeUsage.documents.limitBytes`, never typed in code, never the plan's storage). Each card: its name at the start and its reading at the end ("8,0 MB trên 20 MB", "142 trên 5.000 sự thật"), the meter, and a muted 12 line under it ("Còn 12,0 MB · 171 tài liệu", "0,1 MB trên 2 MB"). The fill is the FOREGROUND colour in every state (normal, from 90 %, full), never red: red is for the one main CTA. Grammar puts the reading on the name's line where the drawing stacks it under the name; the Grammar form wins.
+Luật: `red-budget-links-foreground` (red = one CTA), `owner-colors-exact`, `type-scale-14-12`, `surfacecard-select-subtitle` (no loose explanation line), `pink-page-surface-rule`.
+Grammar: `SurfaceCard` (body) in `Grid kind="cards"`, `Meter tone="foreground"` (0.37.38), `node_modules/@starci/grammar/dist/core/leaf/Meter/index.d.ts`.
 
-## Danh sách tài liệu (tên + loại, "N chờ duyệt", "Chờ duyệt", ngày)
-Vì sao: SAI — the block defines a `SurfaceCard kind="table"` with four columns but the shot has no header row and no grey native frame: it reads as a hand-rolled list with columns. Each row repeats the same news twice ("11 chờ duyệt" chip and a "Chờ duyệt" status chip), every type reads "Văn bản", and the date has no column label. Should be the native table (grey frame, header labels Tên, Sự thật, Trạng thái, Cập nhật, pagination footer) with one status chip and the type as a muted line only when it differs.
-Luật: `table-heroui-native-section-head.md` (any columned data is a Table; native frame; column API), `type-scale-14-12.md`.
-Grammar: `SurfaceCard kind="table" columns rows`, `DataTable`, `node_modules/@starci/grammar/dist/core/branch/DataTable/index.d.ts`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`.
+## Danh sách tài liệu (một dòng mỗi tài liệu)
+Vì sao: ONE `SurfaceCard kind="list"` on the pink well, white, shadow, no border. Each row: the title (14, strong), under it ONE 12px muted meta line that says whether the document is found ("Tìm được · N đoạn", or "Tìm theo chữ" while credits are out) and where its truths work stands (sàng lọc a/b, đọc sự thật a/b · n tìm thấy, đưa vào hiệu lực, N đoạn quy định, dữ liệu không thành sự thật, đang đọc các phần còn lại của tệp, chờ credit, đã chạm trần, chưa đọc được). Old documents that still say `extracting_facts` stay readable ("đang đọc sự thật"). A row with no `truths` (not indexed yet) shows nothing new.
+Luật: `type-scale-14-12`, `table-heroui-native-section-head` (one content per card, no section description), `row-control-clearance` (Grammar pads the row).
+Grammar: `SurfaceCard kind="list"` `items` `ListRowData.description` (a node is drawn at 12 muted), `node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.
 
-## Ngăn kéo chi tiết tài liệu (khi chọn một dòng, không có trong shot)
-Vì sao: CHƯA RÕ — a row opens a drawer with facts of the document (`factRowsOf`), but no screenshot shows it.
-Luật: `verify-against-visualize.md`.
-Grammar: `Drawer`, `ListRow`, `node_modules/@starci/grammar/dist/core/frame/Drawer/index.d.ts`.
+## Chip kết quả ở cuối dòng
+Vì sao: at most TWO chips per row (Grammar's `badges` is a pair); a result is a Badge WITHOUT a dot ("118 hiệu lực" success, "9 cần hỏi" warning, "Chỉ để tìm", "Chờ phản biện", "Hết credit" warning, "Đã chạm trần" warning, "Lỗi đọc" and "Lỗi" danger); only something that is running has a dot ("Đang sàng lọc", "Đang đọc", "Đang nạp"). A third fact ("4 chờ chủ tiệm duyệt" beside in force and asked) is said in the meta line, which is why the drawing's third chip is not a chip.
+Luật: `badge-dot-or-not`, `red-budget-links-foreground` (danger is a state, never a CTA).
+Grammar: `ListRowData.badges` (`BadgeData` `isDot`), `node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`; `Badge`, `node_modules/@starci/grammar/dist/core/leaf/Badge/index.d.ts`.
 
-## Bố cục điện thoại 390
-Vì sao: SAI — nav row, blank strip, band, scrolling tab strips; the table becomes a list of rows per the law ("phone = list of rows"), the same data repeated twice per row.
-Luật: `table-heroui-native-section-head.md`.
-Grammar: `DataTable` responsive.
+## Nút cuối dòng (Xem, và Trả lời / Thử lại / Nạp credit)
+Vì sao: "Xem" is the row's `action` (neutral outlined pill, opens the document page); one more neutral `Button size="sm"` sits beside it when the row has a next step: "Trả lời" (the document's questions page) when something needs the founder, "Thử lại" (the existing retry door: a failed document runs again, a document whose truths were not read is read again) and "Nạp credit" (the billing page). No icons on sm buttons, no red: the page has no main CTA.
+Luật: `suggestion-button-sm`, `page-header-left-sublabel-xs` (sm buttons never carry an icon), `red-budget-links-foreground`.
+Grammar: `ListRowData.action` and `ListRowData.control` with `Button size="sm"`, `node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.
+
+## Bấm vào dòng (ngăn kéo, không có trong shot)
+Vì sao: pressing the row itself opens the existing drawer (the way the document took and the facts it gave, with the approval of the safe ones together); not captured here.
+Luật: `complex-content-page-not-drawer` (only a short detail stays a drawer; the full document is the page behind "Xem").
+Grammar: `Drawer`, `node_modules/@starci/grammar/dist/core/frame/Drawer/index.d.ts`.
+
+## Trạng thái đọc cũ và ghi chú sau khi đọc xong
+Vì sao: a document whose `truths.state` is `legacy` has its own line ("đọc theo cách cũ — chưa đếm đoạn": passage counts 0 mean not counted, not none found), the chip "Đọc cách cũ" and the existing "Đọc lại" door (`retry-facts`, the same command as "Thử lại" of a failed reading). The notes of a finished reading are said in the meta line: lượt đọc lỗi sẽ đọc lại (with "Đọc lại"), dòng không khớp tài liệu, sự thật chờ chủ tiệm duyệt.
+Luật: `badge-dot-or-not`, `suggestion-button-sm`.
+Grammar: `ListRowData.description`, `ListRowData.control` with `Button size="sm"`, `node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.

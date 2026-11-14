@@ -1,4 +1,4 @@
-import { Children, useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
 import { conversationLayoutOf } from "../../rows/chatbot/conversation-layout"
@@ -28,15 +28,13 @@ const useFirstThread = (props: RenderOf<typeof inboxBlock>, threadId: string | n
 }
 
 /**
- * The Chatbot inbox in three panes: the list of conversations, the open conversation with its composer and, under its lines, the
- * approval card the spec placed as the block's child, and the contact of the customer, which the head of the thread shows or hides.
+ * The Chatbot inbox in three panes: the list of conversations, the open conversation with its composer, and the contact of the customer, which the head of the thread shows or hides.
  * The thread pane is keyed by the conversation, so a draft and the sends in flight stay with the conversation they were written in.
  * On a phone one pane stands at a time: the list until a conversation is chosen, then the conversation.
  */
 export const InboxBlock = (props: RenderOf<typeof inboxBlock>): ReactNode => {
     const words = useBlockWords()
     const [isContactOpen, setIsContactOpen] = useState(true)
-    const [approval = null] = Children.toArray(props.children)
     const threadId = props.params.value(props.props.selectParam)
     useFirstThread(props, threadId)
     const layout = conversationLayoutOf({
@@ -61,7 +59,6 @@ export const InboxBlock = (props: RenderOf<typeof inboxBlock>): ReactNode => {
                         key={threadId}
                         threadId={threadId}
                         slots={props.slots}
-                        approval={approval}
                         contact={{
                             label: words({ key: "inbox_aside_toggle" }),
                             isOpen: isContactOpen,

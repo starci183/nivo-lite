@@ -1,2 +1,2 @@
-export { useSignOut } from "./useSignOut"
-export { useViewerId } from "./useViewerId"
+export { useAdminSignOut } from "./useAdminSignOut"
+export { useAdminViewerId } from "./useAdminViewerId"

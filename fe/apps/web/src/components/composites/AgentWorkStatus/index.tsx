@@ -1,5 +1,4 @@
-import { Alert, Badge, Text, Cluster } from "@starci/grammar/common"
-import type { PresentationState } from "@starci/grammar/common"
+import { Alert, Badge, Text, Cluster, type PresentationState } from "@starci/grammar/common"
 import type { AgentWorkStatusView } from "@/modules/types"
 /** The status band of the Work tab. */
 interface AgentWorkStatusProps {
@@ -7,13 +6,14 @@ interface AgentWorkStatusProps {
     readonly isLoading: boolean
 }
 
+/** A stop notice informs (a person switched work off); red is for errors, so the danger status still reads informative here. */
 const ALERT_TONE: Readonly<Record<AgentWorkStatusView["tone"], PresentationState>> = {
     neutral: "informative",
     info: "informative",
     accent: "informative",
     success: "affirmative",
     warning: "cautionary",
-    danger: "negative",
+    danger: "informative",
     muted: "informative",
 }
 

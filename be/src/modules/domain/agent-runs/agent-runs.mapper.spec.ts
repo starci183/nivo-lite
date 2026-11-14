@@ -27,7 +27,7 @@ const buildSubject = async () => {
 }
 
 describe("run records", () => {
-    it("reads a run record from the engine row", async () => {
+    it("reads a run record from its stored row", async () => {
         const { runRecordOf, runViewOf } = await buildSubject()
         const run = runRecordOf(
             runRowOf({ error: { code: "boom" }, deadLetteredAt: WHEN.toISOString(), status: "parked" }),
@@ -44,10 +44,9 @@ describe("run records", () => {
         expect(runRecordOf(runRowOf({ error: { code: 3 } })).errorCode).toBeNull()
     })
 
-    it("reads the engine a run is on: legacy for a row that names none, else the one it names", async () => {
+    it("reads the engine a run is on: the one its row names", async () => {
         const { runEngineOf } = await buildSubject()
-        expect(runEngineOf(runRowOf())).toBe("legacy")
-        expect(runEngineOf(runRowOf({ engine: null }))).toBe("legacy")
+        expect(runEngineOf(runRowOf({ engine: "legacy" }))).toBe("legacy")
         expect(runEngineOf(runRowOf({ engine: "langgraph" }))).toBe("langgraph")
         expect(() => runEngineOf(runRowOf({ engine: "unknown-engine" }))).toThrow()
     })
@@ -65,7 +64,7 @@ describe("run records", () => {
 })
 
 describe("step records", () => {
-    it("reads a step record from the engine row", async () => {
+    it("reads a step record from its stored row", async () => {
         const { stepRecordOf } = await buildSubject()
         const step = stepRecordOf(
             stepRowOf({

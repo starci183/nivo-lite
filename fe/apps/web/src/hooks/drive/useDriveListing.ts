@@ -4,10 +4,8 @@ import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } fr
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { useMutateDriveLinkedFolderSwr, useMutateDrivePickedFolderSwr } from "@/hooks/swr"
 import { googlePickerSettings } from "@/modules/config"
-import { isPickedFolder, openDrivePicker } from "@/modules/googleDrive"
-import type { PickedChoice, PickedDoc } from "@/modules/googleDrive"
-import { readableFilesOf } from "./drive.shared"
-import type { DriveFileRow, DriveListing } from "./drive.shared"
+import { isPickedFolder, openDrivePicker, type PickedChoice, type PickedDoc } from "@/modules/googleDrive"
+import { readableFilesOf, type DriveFileRow, type DriveListing } from "./drive.shared"
 
 /** What the files of a folder carry on the wire. */
 interface WireFile {
@@ -43,7 +41,7 @@ const rowOfPicked = (doc: PickedDoc): DriveFileRow => ({
 /** The files the owner chose directly in Picker, as a listing with no folder. */
 const listingOfChosenFiles = (docs: ReadonlyArray<PickedDoc>): DriveListing => ({
     name: "",
-    files: docs.filter((doc) => !isPickedFolder(doc)).map(rowOfPicked),
+    files: docs.filter((doc) => !isPickedFolder(doc)).map((entry) => rowOfPicked(entry)),
     truncated: false,
     empty: false,
 })
@@ -76,7 +74,7 @@ export const useDriveListing = (failedPickerMessage: string): DriveListingViewSh
     const [listing, setListing] = useState<DriveListing | null>(null)
     const [selected, setSelected] = useState<ReadonlyArray<string>>([])
     const [error, setError] = useState("")
-    const [isReading, setReading] = useState(false)
+    const [isReading, setIsReading] = useState(false)
 
     const show = useCallback((next: DriveListing): void => {
         setListing(next)
@@ -85,12 +83,12 @@ export const useDriveListing = (failedPickerMessage: string): DriveListingViewSh
 
     const readFolder = useCallback(async (): Promise<void> => {
         setError("")
-        setReading(true)
+        setIsReading(true)
         const result = await settle(() => readLinked({ url: link.trim() }))
-        setReading(false)
+        setIsReading(false)
         if (result.kind !== "ok") return setError(result.message)
         const folder = result.value
-        show({ name: folder.name, files: folder.files.map(rowOf), truncated: folder.truncated, empty: false })
+        show({ name: folder.name, files: folder.files.map((entry) => rowOf(entry)), truncated: folder.truncated, empty: false })
     }, [settle, readLinked, link, show])
 
     const showChoice = useCallback(
@@ -102,7 +100,7 @@ export const useDriveListing = (failedPickerMessage: string): DriveListingViewSh
             const picked = result.value
             show({
                 name: picked.name,
-                files: picked.files.map(rowOf),
+                files: picked.files.map((entry) => rowOf(entry)),
                 truncated: picked.truncated,
                 empty: picked.empty,
             })
@@ -113,11 +111,11 @@ export const useDriveListing = (failedPickerMessage: string): DriveListingViewSh
     const pick = useCallback(async (): Promise<void> => {
         if (picker === null) return
         setError("")
-        setReading(true)
+        setIsReading(true)
         const outcome = await openDrivePicker(picker)
         if (outcome.kind === "chosen") await showChoice(outcome.choice)
         if (outcome.kind === "failed") setError(failedPickerMessage)
-        setReading(false)
+        setIsReading(false)
     }, [picker, showChoice, failedPickerMessage])
 
     const clear = useCallback((): void => {

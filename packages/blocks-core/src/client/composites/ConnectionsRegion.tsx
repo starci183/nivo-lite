@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, Link, Section, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Link, Section, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { logoOf } from "../../rows/provider-logos"
 import type { ConnectionRow, ConnectionsRegionView } from "../../views/views.types"
 
@@ -34,7 +33,7 @@ const rowOf = (row: ConnectionRow): ListRowData => ({
  * to the agent's rights, where they are changed. The words are the back end's.
  */
 export const ConnectionsRegion = (props: ConnectionsRegionProps): ReactNode => {
-    const items = props.view.rows.map(rowOf)
+    const items = props.view.rows.map((item) => rowOf(item))
     const empty = <EmptyNotice message={props.emptyMessage} />
     const label = props.view.label === "" ? props.label : props.view.label
     const link = (

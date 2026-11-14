@@ -384,6 +384,12 @@ export interface StatusSet {
     readonly status: SupportStatus
 }
 
+/** What setting a workspace's enterprise identifier answers. */
+export interface EnterpriseKeySet {
+    /** The identifier the workspace now carries; null for an ordinary workspace. */
+    readonly enterpriseKey: string | null
+}
+
 /** What moving a workspace to a plan answers. */
 export interface PlanSet {
     /** The plan code. */

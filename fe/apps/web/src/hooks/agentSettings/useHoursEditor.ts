@@ -10,8 +10,8 @@ import {
     minutesOf,
     rangesOf,
     withDayRanges,
+    type WeekSlots,
 } from "@/modules/workingHours"
-import type { WeekSlots } from "@/modules/workingHours"
 
 /** One stretch of duty as the list shows it: "HH:mm" at both ends. */
 export interface ClockRange {
@@ -68,8 +68,8 @@ const sameClocks = (left: ReadonlyArray<ClockRange>, right: ReadonlyArray<ClockR
 const rowsOf = (week: WeekSlots, alone: ReadonlySet<number>): ReadonlyArray<HoursRow> => {
     const groups: Array<Array<number>> = []
     week.forEach((_, day) => {
-        const last = groups[groups.length - 1]
-        const before = last?.[last.length - 1]
+        const last = groups.at(-1)
+        const before = last?.at(-1)
         const joins =
             last !== undefined &&
             before !== undefined &&
@@ -81,7 +81,7 @@ const rowsOf = (week: WeekSlots, alone: ReadonlySet<number>): ReadonlyArray<Hour
     })
     return groups.map((days) => {
         const ranges = clocksOf(week, days[0] ?? 0)
-        const end = ranges[ranges.length - 1]?.end
+        const end = ranges.at(-1)?.end
         return {
             id: days.join("-"),
             days,
@@ -108,7 +108,7 @@ export const useHoursEditor = (week: WeekSlots, onChange: (week: WeekSlots) => v
             add: (days) =>
                 onChange(
                     applyToDays(week, days, (ranges) => {
-                        const start = ranges[ranges.length - 1]?.end ?? 8 * 60
+                        const start = ranges.at(-1)?.end ?? 8 * 60
                         const end = Math.min(HOURS_END_MIN, start + 120)
                         return end > start ? [...ranges, { start, end }] : ranges
                     }),

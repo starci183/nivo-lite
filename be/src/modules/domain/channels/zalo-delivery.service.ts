@@ -1,17 +1,21 @@
-import { Injectable } from "@nestjs/common"
-import { ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import { Injectable, Optional } from "@nestjs/common"
+import { AccountDataReadService } from "@modules/domain/account-data"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectZalo, isZaloMessageRefusal, isZaloTokenRejection, zaloFailureOf } from "@modules/integrations/zalo"
-import type { ZaloClient, ZaloFailure } from "@modules/integrations/zalo"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { DeliveryRequest, DeliveryResult, OptionalZnsRenewal } from "./channels.contracts"
+import {
+    InjectZalo,
+    isZaloMessageRefusal,
+    isZaloTokenRejection,
+    zaloFailureOf,
+    type ZaloClient,
+    type ZaloFailure,
+} from "@modules/integrations/zalo"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import type { DeliveryRequest, DeliveryResult, OptionalZnsRenewal, ChannelTarget } from "./channels.contracts"
 import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
+import { lastInboundAt } from "./zalo-inbound.policy"
 import { picturesAfterQr, sepayQrUrlOf } from "./qr-image.policy"
 import { normaliseVnPhone } from "./vn-phone.policy"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
@@ -35,10 +39,10 @@ export class ZaloDeliveryService {
         @InjectClock() private readonly clock: Clock,
         @InjectZalo() private readonly zalo: ZaloClient,
         @InjectLogger() private readonly logger: Logger,
-        private readonly messages: ChatMessagesService,
         private readonly credentials: ZaloCredentialsService,
         private readonly connections: ConnectionsService,
         private readonly pictures: ZaloPicturesService,
+        @Optional() private readonly raw?: AccountDataReadService,
     ) {}
 
     /**
@@ -46,14 +50,14 @@ export class ZaloDeliveryService {
      * itself saying the window is closed turn to ZNS when the request carries a notice. Never throws, except a busy token refresh.
      */
     async send(
-        target: ChatConversationTarget,
+        target: ChannelTarget,
         userId: string | null,
         request: DeliveryRequest,
     ): Promise<DeliveryResult> {
         const connectionId = target.connectionId
         if (connectionId === null) return { delivered: false, failure: "zalo_not_connected", outcome: "rejected" }
         if (userId === null) return this.outsideWindow(target, connectionId, request, "zalo_not_connected")
-        if (await this.windowClosed(target.workspaceId, target.id))
+        if (request.windowChecked !== true && (await this.windowClosed(connectionId, userId)))
             return this.outsideWindow(target, connectionId, request, "zalo_window_expired")
         const { text } = request
         return this.withToken(connectionId, (token) => this.zalo.sendCsText(token, userId, text)).then(
@@ -87,15 +91,15 @@ export class ZaloDeliveryService {
         await this.withToken(connectionId, (token) => this.zalo.sendCsText(token, userId, text))
     }
 
-    /** True when the customer last wrote longer ago than the free window; a conversation they never wrote in is open. */
-    private async windowClosed(workspaceId: string, conversationId: string): Promise<boolean> {
-        const last = await this.messages.lastCustomerAt(workspaceId, conversationId)
-        return last.kind === "ok" && this.clock.now().getTime() - last.value.getTime() > ZALO_FREE_WINDOW_MS
+    /** True when the customer last wrote longer ago than the free window (read from the engine's stored inbound messages of the connection); a person who never wrote in is open. */
+    private async windowClosed(connectionId: string, userId: string): Promise<boolean> {
+        const last = await lastInboundAt(this.raw, connectionId, userId)
+        return last !== null && this.clock.now().getTime() - last.getTime() > ZALO_FREE_WINDOW_MS
     }
 
     /** Sends the SePay QR of a delivered text as an image; the text already carries the link, so a refusal only leaves a note. */
     private followWithQr(
-        target: ChatConversationTarget,
+        target: ChannelTarget,
         connectionId: string,
         userId: string,
         text: string,
@@ -116,7 +120,7 @@ export class ZaloDeliveryService {
 
     /** The ZNS fallback: only with a notice, a ZNS template on the connection and a phone that reads as a Vietnamese mobile. */
     private async outsideWindow(
-        target: ChatConversationTarget,
+        target: ChannelTarget,
         connectionId: string,
         request: DeliveryRequest,
         refusal: ZaloFailure,
@@ -167,7 +171,7 @@ export class ZaloDeliveryService {
     }
 
     /** Logs a Zalo failure and names it for the workbench; a busy token refresh is thrown back so the caller retries. */
-    private failed(target: ChatConversationTarget, cause: unknown): ZaloFailure {
+    private failed(target: ChannelTarget, cause: unknown): ZaloFailure {
         if (cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy) throw cause
         const failure = zaloFailureOf(cause)
         this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {

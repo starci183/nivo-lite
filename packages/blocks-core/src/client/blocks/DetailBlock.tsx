@@ -10,6 +10,7 @@ import {
     Heading,
     IconButton,
     PinnedActionBar,
+    Section,
     Stack,
     Sublabel,
     SurfaceCard,
@@ -24,6 +25,7 @@ import { recordIdOf } from "../../rows/form-values"
 import { refusalOf } from "../../rows/refusal"
 import { relabeller } from "../../rows/value-labels"
 import { textOf, valueAt } from "../../slots/paths"
+import { useInCard } from "../composites/CardScope"
 import { SurfaceFrame } from "../composites/SurfaceFrame"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -230,10 +232,19 @@ interface DetailFrameProps {
     readonly children: ReactNode
 }
 
-/** The frame of a record: a titled section inside a side pane; else a card, which names itself by its heading unless the record's own head names it. */
+/** The frame of a record: a titled section inside a side pane; else a card, which names itself by its heading unless the record's own head names it; inside a card that already stands, no card of its own. */
 const DetailFrame = (props: DetailFrameProps): ReactNode => {
     const { spec, label, isLoading, children } = props
+    const inCard = useInCard()
     if (spec.surface === "section") return children
+    if (inCard)
+        return spec.titlePath === undefined ? (
+            <Section title={label} headingLevel={2} isLoading={isLoading}>
+                {children}
+            </Section>
+        ) : (
+            children
+        )
     if (spec.titlePath === undefined)
         return (
             <SurfaceCard label={label} headingLevel={2} isLoading={isLoading}>

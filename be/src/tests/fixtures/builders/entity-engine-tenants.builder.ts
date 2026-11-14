@@ -1,5 +1,4 @@
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { workspacesEntities } from "@modules/domain/workspaces"
 

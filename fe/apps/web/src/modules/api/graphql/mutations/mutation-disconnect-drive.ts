@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { MutateParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type MutateParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { DisconnectDriveMutation } from "../__generated__/graphql"
 
 /** The response of the `disconnectDrive` mutation: the typed payload straight from the back end contract. */
@@ -29,6 +28,6 @@ export const mutateDisconnectDrive = async ({
     mutation = MutationDisconnectDrive.Mutation1,
     signal,
 }: MutateDisconnectDriveParams): Promise<ApolloClient.MutateResult<MutateDisconnectDriveResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({ mutation: mutationMap[mutation] })
 }

@@ -1,9 +1,8 @@
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import { invalid, readSeedDocuments } from "./management-seed.policy"
-import { RECORDS_SEED_SCHEMA } from "./records-seed.contracts"
-import type { SeedRecord } from "./records-seed.contracts"
+import { RECORDS_SEED_SCHEMA, type SeedRecord } from "./records-seed.contracts"
 
-const ENTITY_PATTERN = /^[a-z][a-z0-9]*\.[a-z][a-z0-9-]*$/u
+const ENTITY_PATTERN = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){1,2}$/u
 const NAME_PATTERN = /^[a-z][a-z0-9_]{0,63}$/u
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -32,6 +31,6 @@ export const readSeedRecords = (text: string): ReadonlyArray<SeedRecord> =>
     readSeedDocuments(text).flatMap((document) => {
         if (!isRecord(document) || document.schema !== RECORDS_SEED_SCHEMA) return invalid("schema")
         return Array.isArray(document.records) && document.records.length > 0
-            ? document.records.map(recordOf)
+            ? document.records.map((item) => recordOf(item))
             : invalid("records")
     })

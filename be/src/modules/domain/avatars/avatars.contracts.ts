@@ -8,8 +8,8 @@ export interface AvatarFile {
     readonly sizeBytes: number
 }
 
-/** Whose picture an object is: a person's own, or an agent's that a manager set. */
-export type AvatarOwner = "people" | "agents"
+/** Whose picture an object is: a person's own, an agent's that a manager set, or a workspace's logo. */
+export type AvatarOwner = "people" | "agents" | "workspaces"
 
 /** A one-time address the browser PUTs the picture to, and where the picture will be read once it is set. */
 export interface AvatarUpload {

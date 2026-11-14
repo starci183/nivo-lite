@@ -1,13 +1,14 @@
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import type { EntityManager } from "typeorm"
 import { agentsEntities } from "@modules/domain/agents"
-import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
+import { toolGrantsEntities } from "@modules/domain/tool-grants"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
 const [AgentEntity] = agentsEntities
 
 const [WorkspaceEntity] = workspacesEntities
 
-const [McpToolGrantEntity] = mcpToolGrantsEntities
+const [ToolGrantEntity] = toolGrantsEntities
 
 /** The explicit identities of one MCP credential scenario, supplied by the world. */
 interface McpAgentIdentity {
@@ -32,21 +33,11 @@ export const persistMcpAgentRows = async (manager: EntityManager, identity: McpA
             role: "Reads the bank feed",
             instructions: "Answer from the bank feed only.",
         })
-        await tx.insert(McpToolGrantEntity, {
+        await tx.insert(ToolGrantEntity, {
             workspaceId: identity.workspaceId,
             agentId: identity.agentId,
-            tool: "sepay.transaction.list",
+            tool: TOOL.paymentCreditList,
             mode: "auto",
         })
     })
-}
-
-/** Grants an agent every tool of a connector in auto mode. */
-export const grantConnectorTools = async (
-    manager: EntityManager,
-    workspaceId: string,
-    agentId: string,
-    tool: string,
-): Promise<void> => {
-    await manager.insert(McpToolGrantEntity, { workspaceId, agentId, tool, mode: "auto" })
 }

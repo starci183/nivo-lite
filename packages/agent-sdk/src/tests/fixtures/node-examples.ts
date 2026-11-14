@@ -1,10 +1,10 @@
+import { sdkFailureOf } from "../../invoke/sdk-failure"
 import type { EffectDefinition, ToolDefinition } from "../../node/effect.types"
 import { runNode } from "../../node/host"
 import { isBusinessFailure } from "../../node/memory"
 import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../../node/node.types"
 import { canonicalJson } from "../../template/canonical"
-import type { FakeExecuted } from "./node-ports"
-import { scriptedNodePorts } from "./node-ports"
+import { type FakeExecuted, scriptedNodePorts } from "./node-ports"
 
 /** The turn every example runs in. */
 export const EXAMPLE_TURN: TurnRef = { turnId: "turn-1", workspaceId: "workspace-1", agentId: "agent-1", subject: null }
@@ -54,7 +54,7 @@ export const nodeExampleMismatches = async (
                 params: example.params,
                 input: example.input,
                 turn: EXAMPLE_TURN,
-                grant: example.grant ?? { rights: node.rights, tools: node.tools ?? [] },
+                grant: example.grant ?? { tools: node.tools ?? [] },
                 effects: new Map(effects.map((effect) => [effect.id, effect])),
                 tools: new Map(tools.map((tool) => [tool.id, tool])),
                 key: `${node.id}:${example.name}`,
@@ -67,6 +67,8 @@ export const nodeExampleMismatches = async (
     } catch (cause) {
         if (isBusinessFailure(cause) && cause.failure.code === example.failure)
             return effectMismatches(example.effects, fake.executed)
+        const failure = sdkFailureOf(cause)
+        if (failure !== undefined) return [`threw ${failure.code}: ${failure.at}`]
         return [`threw ${cause instanceof Error ? cause.message : String(cause)}`]
     }
 }

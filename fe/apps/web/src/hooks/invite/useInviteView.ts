@@ -2,16 +2,17 @@
 
 import { useTranslations } from "next-intl"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
+import { slotOfReads } from "@/hooks/slot"
 import { useQueryInvitePreviewSwr } from "@/hooks/swr"
 import { AUTH_ROUTES, invitePath, loginPath, signupPath } from "@/modules/routes"
-import { readError } from "@/hooks/workspaceread"
+import type { DataSlot } from "@/modules/types"
 
-/** What the visitor can do with the invitation: wait, nothing (unusable link), sign in, switch account, or accept. */
-export type InviteVisitor = "loading" | "unavailable" | "signedOut" | "mismatch" | "ready"
+/** What the visitor can do with the invitation: nothing (unusable link), sign in, switch account, or accept. */
+export type InviteVisitor = "unavailable" | "signedOut" | "mismatch" | "ready"
 
 /** Everything the invitation card draws, in the visitor's words. */
 export interface InviteView {
-    readonly state: InviteVisitor
+    readonly visitor: InviteVisitor
     readonly token: string
     readonly next: string
     readonly title: string
@@ -38,6 +39,14 @@ export interface InviteView {
     readonly signedInAs: string
 }
 
+/** The invitation read through the one status recipe: its slot, a same-shape placeholder for the skeleton, and the read again after a failure. */
+export interface InviteRead {
+    readonly slot: DataSlot<InviteView>
+    /** What the card draws, as a skeleton, while the invitation and the session are read. */
+    readonly placeholder: InviteView
+    readonly retry: () => void
+}
+
 type Translate = ReturnType<typeof useTranslations<"invite">>
 
 /** The title and body of a link that cannot be used any more. */
@@ -59,12 +68,12 @@ const visitorOf = (signedInEmail: string | undefined, invitedEmail: string): Inv
  * words the right next step: sign in or up when signed out, switch account when signed in with another e-mail, accept when it matches.
  * `enabled` false reads nothing (a join field whose text is not a link yet).
  */
-export const useInviteView = (token: string, enabled = true): InviteView => {
+export const useInviteView = (token: string, enabled = true): InviteRead => {
     const t = useTranslations("invite")
-    const { data: user } = useQueryAuthUserSwr()
+    const userRead = useQueryAuthUserSwr()
+    const { data: user } = userRead
     const swrRead = useQueryInvitePreviewSwr({ token }, enabled)
     const { data: preview } = swrRead
-    const error = readError(swrRead)
     const next = invitePath(token)
     const email = user === undefined || user === null ? undefined : user.email
     const base = {
@@ -87,24 +96,28 @@ export const useInviteView = (token: string, enabled = true): InviteView => {
         mismatchBody: "",
         workspaceName: "",
     }
-    const isLoading = (preview === undefined && error === undefined) || user === undefined
-    if (isLoading) return { ...base, state: "loading", title: t("eyebrow"), body: "" }
-    if (preview?.state !== "pending") {
-        return { ...base, state: "unavailable", ...unavailableCopy(t, preview?.state ?? "invalid") }
+    const placeholder: InviteView = { ...base, visitor: "ready", title: t("eyebrow"), body: "" }
+    const view = (): InviteView | undefined => {
+        if (preview === undefined || user === undefined) return undefined
+        if (preview.state !== "pending") return { ...base, visitor: "unavailable", ...unavailableCopy(t, preview.state) }
+        const role = t(preview.role === "manager" ? "roleManager" : "roleStaff")
+        return {
+            ...base,
+            visitor: visitorOf(email, preview.email),
+            title: t("title", { workspace: preview.workspaceName }),
+            body: t("lead", { workspace: preview.workspaceName, role }),
+            workspaceName: preview.workspaceName,
+            roleLabel: role,
+            forEmail: preview.email,
+            asStaff: preview.staffName ?? undefined,
+            signedOutHint: t("signedOutHint", { email: preview.email }),
+            mismatchBody: t("mismatchBody", { current: email ?? "", email: preview.email }),
+        }
     }
     return {
-        ...base,
-        state: visitorOf(email, preview.email),
-        title: t("title", { workspace: preview.workspaceName }),
-        body: t("lead", {
-            workspace: preview.workspaceName,
-            role: t(preview.role === "manager" ? "roleManager" : "roleStaff"),
-        }),
-        workspaceName: preview.workspaceName,
-        roleLabel: t(preview.role === "manager" ? "roleManager" : "roleStaff"),
-        forEmail: preview.email,
-        asStaff: preview.staffName === null ? undefined : preview.staffName,
-        signedOutHint: t("signedOutHint", { email: preview.email }),
-        mismatchBody: t("mismatchBody", { current: email ?? "", email: preview.email }),
+        slot: slotOfReads([swrRead, userRead], view),
+        placeholder,
+        retry: () => void swrRead.mutate(),
     }
 }
+

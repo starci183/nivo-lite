@@ -1,16 +1,13 @@
 import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
-import { WorkEngineService, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
-import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
-import { ChatConversationsService } from "@modules/domain/chat-records"
+import { ChannelDeliveriesService } from "@modules/domain/customer-routes"
 import { PublicMessagesService } from "@modules/domain/public-api"
 import { persistPublicApiConversation } from "../../fixtures/builders/public-api.builder"
-import { PUBLIC_API_PROOF_MODULES, PublicApiProofAccess } from "../../world/public-api-capabilities.options"
+import { PUBLIC_API_PROOF_MODULES, PublicApiProofDelivery } from "../../world/public-api-capabilities.options"
 import { publicApiWork } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
-import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
-import { apiMessageRequest } from "../../world/public-api-database.service"
+import { apiEvents, apiMessageRequest } from "../../world/public-api-database.service"
 
 describe("Public API message (persisted local integration)", () => {
     const world = useTestWorld({ modules: [...PUBLIC_API_PROOF_MODULES, ProcessPublicApiQueueModule.register({})] })
@@ -19,14 +16,14 @@ describe("Public API message (persisted local integration)", () => {
     const admittedMessage = async (approval: boolean) => {
         const identity = await fixture()
         const conversationId = await persistPublicApiConversation(
-            world.resolve(ChatConversationsService),
+            world,
             identity,
             world.id(),
         )
         await world.resolve(PublicMessagesService).acceptMessage({
             authorization: identity.authorization,
             conversationId,
-            text: "The exact approved API draft",
+            text: "The exact API text",
             requireApproval: approval,
             idempotencyKey: "same-message",
         })
@@ -35,41 +32,38 @@ describe("Public API message (persisted local integration)", () => {
         return { ...identity, conversationId, request }
     }
 
-    it.each([
-        { label: "automatic authority", approval: false, access: "auto", status: "done", performed: 1 },
-        { label: "forced approval", approval: true, access: "auto", status: "waiting_decision", performed: 0 },
-        { label: "connection asks first", approval: false, access: "ask", status: "waiting_decision", performed: 0 },
-    ] as const)(
-        "keeps the message draft behind $label and never sends twice",
-        async ({ approval, access, status, performed }) => {
-            const message = await admittedMessage(approval)
-            world.resolve(PublicApiProofAccess).access = access
-            const prepare = jest
-                .fn<ReturnType<WorkPerformer["prepare"]>, Parameters<WorkPerformer["prepare"]>>()
-                .mockRejectedValue(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
-            const perform = jest
-                .fn<ReturnType<WorkPerformer["perform"]>, Parameters<WorkPerformer["perform"]>>()
-                .mockResolvedValue({ summary: "Synthetic outbound accepted", evidence: "captured" })
-            world.resolve<WorkPerformerRegistry>(WORK_PERFORMER_REGISTRY).add("reply_customer", { prepare, perform })
-            const payload = { workspaceId: message.workspaceId, requestId: message.request.id }
-            await deliver(payload)
-            const [work] = await publicApiWork(world, message.workspaceId)
-            assert(work !== undefined)
-            expect(work).toMatchObject({
-                action: "reply_customer",
-                status: "queued",
-                proposal: { draft: "The exact approved API draft", execution: { preset: true, noChain: true } },
-            })
-            expect(perform).not.toHaveBeenCalled()
-            const engine = world.resolve(WorkEngineService)
-            const ctx = { workspaceId: message.workspaceId, actor: "NIVO", locale: "en" } as const
-            expect(await engine.runQueuedItem(ctx, work.id)).toMatchObject({ status })
-            expect(prepare).not.toHaveBeenCalled()
-            expect(perform).toHaveBeenCalledTimes(performed)
-            await deliver(payload)
-            expect(await engine.runQueuedItem(ctx, work.id)).toBeNull()
-            expect(perform).toHaveBeenCalledTimes(performed)
-            expect(await publicApiWork(world, message.workspaceId)).toHaveLength(1)
-        },
-    )
+    it("claims the exact text once as a delivery-ledger row of the route, delivers it once after commit, stores no chat line and opens no work item", async () => {
+        const message = await admittedMessage(false)
+        const channel = world.resolve(PublicApiProofDelivery)
+        const before = channel.toPerson.length
+        const payload = { workspaceId: message.workspaceId, requestId: message.request.id }
+
+        await deliver(payload)
+        await deliver(payload)
+
+        // The conversation id of the API is the route id: the message is sent to the person on it, once, under the request's key.
+        const sent = channel.toPerson.slice(before)
+        expect(sent).toHaveLength(1)
+        expect(sent[0]).toMatchObject({ routeId: message.conversationId, text: "The exact API text", sendKey: `api.message:${message.request.id}` })
+        expect(channel.delivered).toHaveLength(0)
+        await expect(world.resolve(ChannelDeliveriesService).byKey(message.workspaceId, `api.message:${message.request.id}`)).resolves.toMatchObject({
+            routeId: message.conversationId,
+            text: "The exact API text",
+            state: "delivered",
+        })
+        expect(await publicApiWork(world, message.workspaceId)).toEqual([])
+    })
+
+    it("holds a message the caller asked to approve: nothing is delivered and the hold is recorded", async () => {
+        const message = await admittedMessage(true)
+        const channel = world.resolve(PublicApiProofDelivery)
+        const before = channel.toPerson.length
+
+        await deliver({ workspaceId: message.workspaceId, requestId: message.request.id })
+
+        expect(channel.toPerson.length).toBe(before)
+        expect(await apiEvents(world.db.primary, message.workspaceId)).toContainEqual(
+            expect.objectContaining({ kind: "api.message.held", evidence: "The exact API text" }),
+        )
+    })
 })

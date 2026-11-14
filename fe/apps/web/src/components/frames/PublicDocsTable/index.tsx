@@ -1,5 +1,4 @@
-import { Badge, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
-import type { HeaderZone, TableRowData } from "@starci/grammar/common"
+import { Badge, EmptyNotice, SurfaceCard, Text, type HeaderZone, type TableRowData } from "@starci/grammar/common"
 import type { PublicBrainCopy, PublicTableRowView, PublicTableView } from "@/modules/types"
 
 /** What the table of public documents draws and calls. */
@@ -114,7 +113,7 @@ export const PublicDocsTable = (props: PublicDocsTableProps) => {
                 { id: "status", label: copy.columnStatus },
                 { id: "approval", label: copy.columnApproval, priority: "low" },
             ]}
-            rows={card.rows.map(rowOf)}
+            rows={card.rows.map((row) => rowOf(row))}
             empty={<EmptyOf table={table} copy={copy} onCompose={props.onCompose} onClear={props.onClear} />}
         />
     )

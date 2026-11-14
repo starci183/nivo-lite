@@ -2,7 +2,7 @@ import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { GraphqlJsonObject } from "@modules/platform/graphql"
 
 @ObjectType()
-/** One confirm card of the setup chat: a Second Brain fact or an authority rule the owner decides. */
+/** One confirm card of the setup chat: a Second Brain fact the owner decides. */
 export class SetupCardType {
     /** The card. */
     @Field(() => ID)
@@ -28,7 +28,7 @@ export class SetupCardType {
     @Field()
     targetKey!: string
 
-    /** `fact` or `rule`. */
+    /** Always `fact`. */
     @Field()
     kind!: string
 
@@ -36,7 +36,7 @@ export class SetupCardType {
     @Field()
     status!: string
 
-    /** The fact (subject, attribute, value, scope) or the rule (action, field, mode, limit). */
+    /** The fact (subject, attribute, value, scope). */
     @Field(() => GraphqlJsonObject)
     payload!: object
 

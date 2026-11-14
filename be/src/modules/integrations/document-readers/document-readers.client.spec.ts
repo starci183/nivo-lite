@@ -4,7 +4,8 @@ import { Test } from "@nestjs/testing"
 import mammoth from "mammoth"
 import sharp from "sharp"
 import { ok } from "@modules/platform/primitives"
-import { DOCUMENT_MAX_BYTES, DocumentRefusalCode, LibraryMissingError } from "./document-readers.contracts"
+import { DOCUMENT_MAX_BYTES, DocumentRefusalCode } from "./document-readers.contracts"
+import { DocumentReadersError, DocumentReadersErrorCode } from "./errors/document-readers.error"
 import type { DocumentLibraries, DocumentReadOutcome, ReadOptions, Transcriber } from "./document-readers.contracts"
 import { pictureToolsOf } from "./document-libraries.adapter"
 import { DocumentReadersClient } from "./document-readers.client"
@@ -18,15 +19,15 @@ const libraries: DocumentLibraries = {
     openPdf: () =>
         Promise.resolve({
             pageCount: 1,
-            pageTexts: () => Promise.resolve(["Bảng giá PDF"]),
+            pageTexts: () => Promise.resolve(["B\u1EA3ng gi\u00E1 PDF"]),
             pageImages: () => Promise.resolve([]),
             renderPage: () => Promise.resolve(null),
         }),
     pictures: () => Promise.resolve(pictureToolsOf(sharp)),
-    heicToJpeg: () => Promise.reject(new LibraryMissingError("heic-convert")),
+    heicToJpeg: () => Promise.reject(new DocumentReadersError({ code: DocumentReadersErrorCode.LibraryMissing, params: { library: "heic-convert" } })),
 }
 
-const transcriber: Transcriber = { transcribe: () => Promise.resolve(ok("Hồng | 35.000")) }
+const transcriber: Transcriber = { transcribe: () => Promise.resolve(ok("H\u1ED3ng | 35.000")) }
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
@@ -46,22 +47,22 @@ describe("DocumentReadersClient", () => {
     it("reads every kind with what is installed today", async () => {
         const { read } = await build()
         expect(textOf(await read("prices.csv", fixture("prices.csv")))).toBe(
-            'Món | Giá | Ghi chú\nBó hồng đỏ | 350.000 | Có "thiệp"; giao nhanh\nLẵng hướng dương | 520.000\nHoa cưới | 1.200.000 | đặt trước',
+            'M\u00F3n | Gi\u00E1 | Ghi ch\u00FA\nB\u00F3 h\u1ED3ng \u0111\u1ECF | 350.000 | C\u00F3 "thi\u1EC7p"; giao nhanh\nL\u1EB5ng h\u01B0\u1EDBng d\u01B0\u01A1ng | 520.000\nHoa c\u01B0\u1EDBi | 1.200.000 | \u0111\u1EB7t tr\u01B0\u1EDBc',
         )
         expect(textOf(await read("prices.tsv", fixture("prices.tsv")))).toBe(
-            "Món | Giá\nBó cúc/trắng | 150.000\nHoa lan | 800.000",
+            "M\u00F3n | Gi\u00E1\nB\u00F3 c\u00FAc/tr\u1EAFng | 150.000\nHoa lan | 800.000",
         )
         expect(textOf(await read("notes.txt", fixture("notes.txt")))).toBe(
-            "Ghi chú: mở cửa 7 giờ.\nNghỉ Tết từ 28 đến mùng 4.",
+            "Ghi ch\u00FA: m\u1EDF c\u1EEDa 7 gi\u1EDD.\nNgh\u1EC9 T\u1EBFt t\u1EEB 28 \u0111\u1EBFn m\u00F9ng 4.",
         )
         const markdown = await read("policy.md", fixture("policy.md"))
         expect(markdown).toMatchObject({
             kind: "ok",
-            value: { reader: "markdown", sections: [{ heading: "Chính sách đổi trả" }, { heading: "Hoàn tiền" }] },
+            value: { reader: "markdown", sections: [{ heading: "Ch\u00EDnh s\u00E1ch \u0111\u1ED5i tr\u1EA3" }, { heading: "Ho\u00E0n ti\u1EC1n" }] },
         })
         expect(await read("about.html", fixture("about.html"))).toMatchObject({
             kind: "ok",
-            value: { reader: "html", tables: [{ header: ["Món", "Giá"] }] },
+            value: { reader: "html", tables: [{ header: ["M\u00F3n", "Gi\u00E1"] }] },
         })
         expect(await read("menu.docx", fixture("menu.docx"))).toMatchObject({ kind: "ok", value: { reader: "docx" } })
         expect(await read("price-list.xlsx", fixture("price-list.xlsx"))).toMatchObject({
@@ -74,11 +75,11 @@ describe("DocumentReadersClient", () => {
         })
         expect(await read("bang-gia.pdf", new TextEncoder().encode("%PDF-1.4"))).toMatchObject({
             kind: "ok",
-            value: { reader: "pdf", text: "Bảng giá PDF" },
+            value: { reader: "pdf", text: "B\u1EA3ng gi\u00E1 PDF" },
         })
         expect(await read("anh-bang-gia.jpg", fixture("price-photo.jpg"))).toMatchObject({
             kind: "ok",
-            value: { reader: "image", text: "Hồng | 35.000", transcribed: true },
+            value: { reader: "image", text: "H\u1ED3ng | 35.000", transcribed: true },
         })
         expect(await read("export", fixture("prices.csv"), "text/csv")).toMatchObject({
             kind: "ok",

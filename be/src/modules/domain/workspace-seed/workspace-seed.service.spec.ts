@@ -1,8 +1,4 @@
 import { AgentRecordsService } from "@modules/domain/agents"
-import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
-import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
-import { OfficeAuthorityService } from "@modules/domain/member-grants"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -98,13 +94,7 @@ const build = async (input?: Secret) => {
         members = mock<WorkspaceMembersService>()
     workspaces.ensureNamed.mockResolvedValue({ id: WS })
     workspaces.memberships.mockResolvedValue([named()])
-    const ports = {
-        agents: AgentRecordsService,
-        sources: ProfileSourcesService,
-        toolGrants: McpToolGrantsService,
-        connectors: McpGatewayAdminService,
-        officeAuthority: OfficeAuthorityService,
-    }
+    const ports = { agents: AgentRecordsService }
     const options: WorkspaceSeedOptions = { auth: "auth", ports, input, print }
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -137,7 +127,7 @@ describe("WorkspaceSeedService / ensure", () => {
         expect(members.require).toHaveBeenCalledWith(STAFF, WS, ["staff"])
     })
 
-    it("answers the authenticated owner together with the receipt for the profile steps", async () => {
+    it("answers the authenticated owner together with the receipt", async () => {
         const { seed } = await build()
         await expect(seed.seedOwned(REQUEST)).resolves.toEqual({ report: receipt("ensure"), ownerId: OWNER })
     })
@@ -408,58 +398,5 @@ describe("WorkspaceSeedService / recovery refusal", () => {
         members.require.mockRejectedValue(new Error("policy refusal"))
         await expect(seed.seedOperator()).rejects.toThrow("policy refusal")
         expect(print).not.toHaveBeenCalled()
-    })
-})
-
-describe("WorkspaceSeedService / ensureSeat", () => {
-    it("seats an existing account as the owner without creating or changing anything", async () => {
-        const { seed, auth, members } = await build()
-
-        await expect(seed.ensureSeat(OWNER, WS, { email: "staff@example.test", name: "Staff" }, "staff")).resolves.toBe(
-            STAFF,
-        )
-
-        expect(auth.createUser).not.toHaveBeenCalled()
-        expect(members.ensure).toHaveBeenCalledWith(OWNER, {
-            workspaceId: WS,
-            userId: STAFF,
-            role: "staff",
-            staffId: null,
-            displayName: "Staff",
-        })
-    })
-
-    it("creates a missing account from its private password and seats it", async () => {
-        const { seed, auth, members } = await build()
-        auth.createUser.mockResolvedValue({
-            data: { user: { id: "55555555-5555-4555-8555-555555555555" } },
-            error: null,
-        })
-
-        await expect(
-            seed.ensureSeat(
-                OWNER,
-                WS,
-                { email: "ha@example.test", name: "Chi Ha", password: new Secret("ha-private") },
-                "manager",
-            ),
-        ).resolves.toBe("55555555-5555-4555-8555-555555555555")
-
-        expect(auth.createUser).toHaveBeenCalledWith({
-            email: "ha@example.test",
-            password: "ha-private",
-            email_confirm: true,
-            user_metadata: { full_name: "Chi Ha" },
-        })
-        expect(members.ensure).toHaveBeenCalledWith(OWNER, expect.objectContaining({ role: "manager" }))
-    })
-
-    it("refuses a missing account that has no initial password before any seat", async () => {
-        const { seed, members } = await build()
-
-        await expect(
-            seed.ensureSeat(OWNER, WS, { email: "nobody@example.test", name: "Nobody" }, "staff"),
-        ).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.PasswordRequired })
-        expect(members.ensure).not.toHaveBeenCalled()
     })
 })

@@ -4,11 +4,11 @@ import { wordOf } from "../../messages/catalog"
 export const foldText = (text: string): string =>
     text
         .normalize("NFD")
-        .replace(/\p{M}/gu, "")
+        .replaceAll(/\p{M}/gu, "")
         .replaceAll(wordOf("letterD"), "d")
         .replaceAll(wordOf("letterDCapital"), "D")
         .toLowerCase()
-        .replace(/\s+/g, " ")
+        .replaceAll(/\s+/g, " ")
         .trim()
 
 /** Whether a search text is found in any of the values: accent-insensitive and case-insensitive substring; no search matches all. */

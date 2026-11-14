@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { OriginSource } from "@modules/domain/knowledge-sources"
-import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { ToolsErrorCode, toolNameOf } from "@modules/domain/tools"
 import { DRIVE_MANIFEST, DriveNativeService } from "./drive-native.service"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
@@ -76,6 +76,13 @@ describe("DriveNativeService manifest", () => {
             ["source.list", "read", true, ["title"]],
         ])
     })
+
+    it("publishes them as the platform's drive purposes", () => {
+        expect(DRIVE_MANIFEST.tools.map((tool) => toolNameOf(DRIVE_MANIFEST, tool.name))).toEqual([
+            "nivo.tool.drive.status.get",
+            "nivo.tool.drive.source.list",
+        ])
+    })
 })
 
 describe("DriveNativeService unknown tool and arguments", () => {
@@ -83,7 +90,7 @@ describe("DriveNativeService unknown tool and arguments", () => {
         const { drive } = await build()
 
         await expect(drive.invoke(WS, "files.read", {}, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.UnknownTool,
+            code: ToolsErrorCode.UnknownTool,
             params: { tool: "files.read" },
         })
     })
@@ -95,7 +102,7 @@ describe("DriveNativeService unknown tool and arguments", () => {
         const { drive, tools, sources } = await build()
 
         await expect(drive.invoke(WS, tool, args, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.InvalidArguments,
+            code: ToolsErrorCode.InvalidArguments,
             params: { tool },
         })
         expect(tools.connectionsOf).not.toHaveBeenCalled()
@@ -145,7 +152,7 @@ describe("DriveNativeService status", () => {
         tools.connectionsOf.mockRejectedValue(nativeRefusal("not_connected"))
 
         await expect(drive.invoke(WS, "status.get", {}, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
+            code: ToolsErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
         expect(sources.ofOrigin).not.toHaveBeenCalled()
@@ -211,7 +218,7 @@ describe("DriveNativeService internal use", () => {
             views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
 
             await expect(drive.invoke(WS, tool, {}, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
-                code: McpGatewayErrorCode.NativeRefused,
+                code: ToolsErrorCode.NativeRefused,
                 params: { reason: "internal_only" },
             })
             expect(views.internalOf).toHaveBeenCalledWith(WS, { agentId: "a1", conversationId: "c1" })
@@ -219,4 +226,31 @@ describe("DriveNativeService internal use", () => {
             expect(sources.ofOrigin).not.toHaveBeenCalled()
         },
     )
+})
+
+// #10b (ARCH-REVIEW 2026-11-12 S7): the status of the Drive grant is never the first grant's by accident: the grant the runner handed;
+// else exactly one grant, that one; several, `not_selected`.
+describe("DriveNativeService status: no silent pick", () => {
+    const second = grant({ id: "c2", email: "kho@shop.vn", status: "error" })
+
+    it("two grants and none handed: refused not_selected, before reading any source", async () => {
+        const { drive, tools, sources } = await build()
+        tools.connectionsOf.mockResolvedValue([grant(), second])
+
+        await expect(drive.invoke(WS, "status.get", {}, CALLER)).rejects.toMatchObject({ params: { reason: "not_selected" } })
+        expect(sources.ofOrigin).not.toHaveBeenCalled()
+    })
+
+    it("two grants and one handed: that grant; a handed grant that is not there: not_connected", async () => {
+        const { drive, tools } = await build()
+        tools.connectionsOf.mockResolvedValue([grant(), second])
+
+        await expect(drive.invoke(WS, "status.get", {}, { ...CALLER, connectionId: "c2" })).resolves.toMatchObject({
+            state: "error",
+            accountMasked: "k***@shop.vn",
+        })
+        await expect(drive.invoke(WS, "status.get", {}, { ...CALLER, connectionId: "c9" })).rejects.toMatchObject({
+            params: { reason: "not_connected" },
+        })
+    })
 })

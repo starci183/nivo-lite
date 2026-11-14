@@ -38,7 +38,7 @@ export class BrainLessonCandidateEntity extends UuidAbstractEntity {
     @Column({ name: "question", type: "text" })
     question!: string
 
-    /** Its significant words. */
+    /** No longer written (stays empty): no code reads the words of a question; the draft call's model groups the answers. */
     @Column({ name: "keywords", type: "text", array: true, default: () => "'{}'::text[]" })
     keywords!: Array<string>
 
@@ -62,7 +62,7 @@ export class BrainLessonCandidateEntity extends UuidAbstractEntity {
     @Column({ name: "general", type: "boolean", nullable: true })
     general!: boolean | null
 
-    /** The group of the same gap. */
+    /** The candidate's own group id, given when kept; a card gathers its answers by `change_id`. */
     @Column({ name: "group_id", type: "uuid" })
     groupId!: string
 

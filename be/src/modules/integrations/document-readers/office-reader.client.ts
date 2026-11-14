@@ -1,6 +1,5 @@
-import { ok, refused } from "@modules/platform/primitives"
-import { DocumentRefusalCode } from "./document-readers.contracts"
-import type { DocumentLibraries, DocumentReadOutcome } from "./document-readers.contracts"
+import { attemptAsync, ok, refused } from "@modules/platform/primitives"
+import { DocumentRefusalCode, type DocumentLibraries, type DocumentReadOutcome } from "./document-readers.contracts"
 import { isCompoundFile, isLockedOffice, isZip } from "./document-kind.policy"
 import { htmlText } from "./html-reader.mapper"
 import { presentationText, workbookText } from "./office-reader.mapper"
@@ -16,9 +15,9 @@ const officeRefusal = (bytes: Uint8Array): DocumentRefusalCode | null => {
 export const readWord = async (bytes: Uint8Array, libraries: DocumentLibraries): Promise<DocumentReadOutcome> => {
     const refusal = officeRefusal(bytes)
     if (refusal !== null) return refused(refusal)
-    const html = await libraries.wordToHtml(bytes).catch(() => null)
-    if (html === null) return refused(DocumentRefusalCode.Unreadable)
-    const read = htmlText(html)
+    const converted = await attemptAsync(() => libraries.wordToHtml(bytes))
+    if (!converted.ok) return refused(DocumentRefusalCode.Unreadable, undefined, converted.cause)
+    const read = htmlText(converted.value)
     return ok({
         reader: "docx",
         text: read.text,
@@ -47,8 +46,8 @@ export const readWorkbook = (bytes: Uint8Array): DocumentReadOutcome => {
             transcribed: false,
             warnings: read.warnings,
         })
-    } catch {
-        return refused(DocumentRefusalCode.Unreadable)
+    } catch (cause) {
+        return refused(DocumentRefusalCode.Unreadable, undefined, cause)
     }
 }
 
@@ -70,7 +69,7 @@ export const readSlides = (bytes: Uint8Array): DocumentReadOutcome => {
             transcribed: false,
             warnings: read.warnings,
         })
-    } catch {
-        return refused(DocumentRefusalCode.Unreadable)
+    } catch (cause) {
+        return refused(DocumentRefusalCode.Unreadable, undefined, cause)
     }
 }

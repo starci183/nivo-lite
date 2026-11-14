@@ -1,13 +1,12 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChannelSeedService } from "./channel-seed.service"
 import { ChannelConnectionsService } from "./channel-connections.service"
+import { MoneyConnectionFieldsService } from "./money-connection-fields.service"
 import { SepayConnectionService } from "./sepay-connection.service"
-import { WorkspacePaymentAccountService } from "./workspace-payment-account.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channel-connections.module-definition"
 
 @Module({})
-/** The Telegram, bank-feed and Zalo connection wizards over the connections capability, and the workspace payment account read. */
+/** The Telegram, bank-feed and Zalo connection wizards over the connections capability. */
 export class ChannelConnectionsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -19,13 +18,13 @@ export class ChannelConnectionsModule extends ConfigurableModuleClass {
                 ChannelConnectionsService,
                 ChannelSeedService,
                 SepayConnectionService,
-                WorkspacePaymentAccountService,
+                MoneyConnectionFieldsService,
             ],
             exports: [
                 ChannelConnectionsService,
                 ChannelSeedService,
                 SepayConnectionService,
-                WorkspacePaymentAccountService,
+                MoneyConnectionFieldsService,
             ],
         }
     }

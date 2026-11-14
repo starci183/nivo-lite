@@ -1,24 +1,16 @@
 import { graphVocabulary } from "@modules/domain/intent-contracts"
-import { dataKindOfTool } from "@modules/domain/mcp-gateway"
-import type { DataRight } from "@modules/domain/mcp-gateway"
 import type { Locale } from "@modules/platform/i18n"
-import { MAX_DOES_LENGTH, MAX_TITLE_LENGTH, kindOfStep } from "../agent-graphs.contracts"
-import type { GraphDocument, GraphNode, GraphSource, NodeAnswerKey, Say, ToolUse } from "../agent-graphs.contracts"
-import type { SeedAction, SeedModule, SeedRule, SeedTemplate } from "../agent-graphs-seed.contracts"
-import { approverOfRule, branchesFromRule } from "./seed-from-rules.policy"
-
-/**
- * The grant a seed carries: the data kinds the tools of its module reach (the Brain always), each narrowed to the rows of the
- * conversation it serves, hiding and masking nothing. A seed is governed like any graph, so what is not here is a deny; the owner
- * widens it by publishing a version of their own.
- */
-export const grantsOf = (module: SeedModule): ReadonlyArray<DataRight> => {
-    const kinds = ["brain", ...module.connectionProviders].flatMap((provider) => {
-        const kind = dataKindOfTool(`${provider}.`)
-        return kind === null ? [] : [kind]
-    })
-    return [...new Set(kinds)].map((kind) => ({ kind, scope: "conversation" as const, hide: [], mask: [] }))
-}
+import {
+    MAX_DOES_LENGTH,
+    MAX_TITLE_LENGTH,
+    kindOfStep,
+    type GraphDocument,
+    type GraphNode,
+    type NodeAnswerKey,
+    type Say,
+    type ToolUse,
+} from "../agent-graphs.contracts"
+import type { SeedModule } from "../agent-graphs-seed.contracts"
 
 /** The language of the graph being written: the locale that picks a name from the catalogue data and the lookup of the wording. */
 export interface Voice {
@@ -73,56 +65,10 @@ const toolsOf = (module: SeedModule): ReadonlyArray<ToolUse> =>
             : []
     })
 
-const factOf = (action: SeedAction): string => action.graphFacts?.[0] ?? `${action.action}.amount_vnd`
-
-/** True when the rule leaves the action to run alone with no condition at all, so no person is ever asked. */
-const runsAlone = (rule: SeedRule | undefined): boolean =>
-    rule?.mode === "auto" && rule.auto_max === null && rule.ask_max === null && rule.limit_vnd === null
-
-/** The nodes of one action, the first being where its work enters: the decide point, or the approval, or the act itself. */
-const nodesOfAction = (
-    action: SeedAction,
-    rule: SeedRule | undefined,
-    voice: Voice,
-    end: string,
-): ReadonlyArray<GraphNode> => {
+/** A customer message or a request: where the seed starts. */
+const startOf = (voice: Voice, next: string): GraphNode => {
     const w = wordsOf(voice)
-    const label = action.label[voice.locale]
-    const sources: ReadonlyArray<GraphSource> = [{ kind: "rule", action: action.action }]
-    const act = nodeOf(`act:${action.action}`, "write", label, label, { action: action.action, sources, next: [end] })
-    const approve = nodeOf(`ask:${action.action}`, "approval", w("ask"), w("askDoes"), {
-        doneBy: "person",
-        approver: rule === undefined ? null : approverOfRule(rule),
-        sources,
-        next: [act.key],
-    })
-    const stop = nodeOf(`stop:${action.action}`, "stop", w("stop"), w("stopDoes"), { sources })
-    const amountLimited = action.amountLimit && rule?.unit === "vnd" && action.maxMode === null
-    if (amountLimited) {
-        const targets = { auto: act.key, ask: approve.key, stop: stop.key }
-        const branches = branchesFromRule(rule, factOf(action), targets)
-        const decide = nodeOf(`decide:${action.action}`, "evaluate", w("decide"), w("decideDoes"), {
-            sources,
-            decide: { intent: action.action, facts: [factOf(action)], branches },
-        })
-        // A stop nobody goes to is a node no trigger reaches, which publishing refuses: it is drawn only when a branch stops.
-        return [decide, approve, act, ...(branches.some((entry) => entry.next === stop.key) ? [stop] : [])]
-    }
-    if (rule?.mode === "never") return [stop]
-    return runsAlone(rule) && action.maxMode === null ? [act] : [approve, act]
-}
-
-/** The trigger of a template, or of a customer message when no template starts the flow. */
-const startOf = (template: SeedTemplate | undefined, voice: Voice, next: string): GraphNode => {
-    const w = wordsOf(voice)
-    const sources: ReadonlyArray<GraphSource> =
-        template === undefined ? [] : [{ kind: "template", key: template.key, version: template.version }]
-    const title = template === undefined ? w("request") : template.trigger.line[voice.locale]
-    const step = template === undefined ? "customer_message" : template.trigger.kind
-    return nodeOf(template === undefined ? "start" : `start:${template.key}`, step, title, w("startDoes"), {
-        next: [next],
-        sources,
-    })
+    return nodeOf("start", "customer_message", w("request"), w("startDoes"), { next: [next] })
 }
 
 /** The tag of the agent in Office is a trigger of the graph like any other, not a separate path. */
@@ -131,82 +77,18 @@ const tagOf = (voice: Voice, next: string): GraphNode => {
     return nodeOf("tag", "tag", w("tagged"), w("taggedDoes"), { next: [next] })
 }
 
-/** A pipeline the engine keeps running: a map entry only, so the engine stays the one executor. */
-const pipelineOf = (template: SeedTemplate, voice: Voice, end: string): GraphNode =>
-    nodeOf(`pipeline:${template.key}`, "write", template.name[voice.locale], wordsOf(voice)("pipeline"), {
-        pipeline: template.key,
-        sources: [{ kind: "template", key: template.key, version: template.version }],
-        next: [end],
-    })
-
-/** A template whose message the owner always decides: an approval whose branch can never become `auto`. */
-const alwaysAskOf = (
-    template: SeedTemplate,
-    rule: SeedRule | undefined,
-    voice: Voice,
-    next: string,
-): ReadonlyArray<GraphNode> => {
-    if (template.authority.alwaysAsk !== true) return []
-    const w = wordsOf(voice)
-    return [
-        nodeOf(`always:${template.key}`, "approval", w("ask"), w("askDoes"), {
-            doneBy: "person",
-            approver: rule === undefined ? null : approverOfRule(rule),
-            sources: [{ kind: "template", key: template.key, version: template.version }],
-            next: [next],
-        }),
-    ]
-}
-
-/** What a template does after its trigger: the approval it always asks, then the pipeline the engine runs; the engine stays the one executor. */
-const chainOf = (
-    template: SeedTemplate,
-    rule: SeedRule | undefined,
-    voice: Voice,
-    end: string,
-): ReadonlyArray<GraphNode> => {
-    const pipeline = template.executor === "definition" ? [] : [pipelineOf(template, voice, end)]
-    return [...alwaysAskOf(template, rule, voice, pipeline[0]?.key ?? end), ...pipeline]
-}
-
 /**
- * The base graph of a module for a workspace, derived and never a stored copy: a start node for each template trigger, one
- * understand node, then for each authority action its decide point (when an amount limit applies), its approval and its act, all
- * ending in one done node. A template whose message always asks adds an approval that cannot become `auto`, and a template the
- * engine runs becomes an act node with a `pipeline`. Rights start empty: a new agent reads nothing until the owner turns a right on.
+ * The base graph of a module for a workspace, derived and never a stored copy: a start node, the tag of the agent, one understand node
+ * that uses the module's tools, and one done node. No decide point, approval or act is derived from an authority rule: the rules decide
+ * nothing since the engine gate was removed by the owner's rule (2026-11-13; a node's declared mode alone decides).
  */
-export const baseGraphOf = (
-    module: SeedModule,
-    templates: ReadonlyArray<SeedTemplate>,
-    rules: ReadonlyArray<SeedRule>,
-    voice: Voice,
-): GraphDocument => {
+export const baseGraphOf = (module: SeedModule, voice: Voice): GraphDocument => {
     const w = wordsOf(voice)
     const end = nodeOf("end", "stop", w("end"), w("endDoes"), {})
-    const actions = module.authorityActions.map((action) =>
-        nodesOfAction(
-            action,
-            rules.find((rule) => rule.action === action.action),
-            voice,
-            end.key,
-        ),
-    )
     const understand = nodeOf("understand", "call", w("understand"), w("understandDoes"), {
         uses: toolsOf(module),
-        next: actions.flatMap((nodes) => nodes.slice(0, 1).map((node) => node.key)),
+        next: [end.key],
     })
-    const chains = templates.map((template) =>
-        chainOf(
-            template,
-            rules.find((rule) => rule.action === template.authority.action),
-            voice,
-            end.key,
-        ),
-    )
-    const starts =
-        templates.length === 0
-            ? [startOf(undefined, voice, understand.key)]
-            : templates.map((template, index) => startOf(template, voice, chains[index]?.[0]?.key ?? understand.key))
-    const nodes = [...starts, tagOf(voice, understand.key), understand, ...actions.flat(), ...chains.flat(), end]
-    return { nodes, rights: grantsOf(module) }
+    const nodes = [startOf(voice, understand.key), tagOf(voice, understand.key), understand, end]
+    return { nodes }
 }

@@ -1,10 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { builder, FakeClock, mock } from "@starci/jest-preset"
+import { builder, FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { AccountDataIntakeService } from "@modules/domain/account-data"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { MAIL_ERROR_KINDS, MAIL_RELAY, MailError } from "@modules/integrations/mail"
 import type { MailRelayService } from "@modules/integrations/mail"
 import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -12,6 +14,7 @@ import type { Logger } from "@modules/platform/logging"
 import { EmailMessagesLogEvent } from "./email-messages.log-events"
 import { EmailMessagesService } from "./email-messages.service"
 import type { SendEmailInput } from "./email-messages.contracts"
+import { SMTP_MAIL_TYPE } from "./smtp.data-types"
 import { WorkspaceMailService } from "./workspace-mail.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -56,14 +59,6 @@ describe("WorkspaceMailService", () => {
             attachments: [{ filename: "big.bin", content: big, encoding: "base64" }],
         })
         expect(sent).toMatchObject({ status: "blocked", failure: "attachment", error: "email.err_attachment" })
-    })
-
-    it("refuses a customer email that did not pass the gate", async () => {
-        const service = await build()
-        await expect(service.send({ ...owner, audience: "customer" })).resolves.toMatchObject({
-            status: "blocked",
-            failure: "gate",
-        })
     })
 })
 
@@ -127,6 +122,10 @@ const buildDelivery = async (records: ReadonlyArray<ConnectionRecord> = [connect
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const logger = mock<Logger>()
+    const intake = mock<AccountDataIntakeService>()
+    intake.write.mockResolvedValue({ owner: null, rows: [] })
+    const em = mockEntityManager()
+    const tx = fakeTransaction(em)
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceMailService,
@@ -136,9 +135,11 @@ const buildDelivery = async (records: ReadonlyArray<ConnectionRecord> = [connect
             { provide: LOGGER, useValue: logger },
             { provide: EmailMessagesService, useValue: log },
             { provide: ConnectionsService, useValue: connections },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: AccountDataIntakeService, useValue: intake },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkspaceMailService), mail, log, connections, catalog, logger }
+    return { service: moduleRef.get(WorkspaceMailService), mail, log, connections, catalog, logger, intake, tx }
 }
 
 describe("WorkspaceMailService delivery", () => {
@@ -172,17 +173,15 @@ describe("WorkspaceMailService delivery", () => {
         expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
     })
 
-    it("treats an omitted audience as customer mail and requires an approved work item", async () => {
-        const { service, log, connections } = await buildDelivery()
+    it("treats an omitted audience as customer mail and never falls back to the platform sender for it", async () => {
+        const { service, mail } = await buildDelivery([])
 
         await expect(service.send({ ...OWNER, audience: undefined })).resolves.toMatchObject({
-            status: "blocked",
+            status: "no_smtp",
             via: "none",
-            failure: "gate",
-            error: "email.err_gate",
+            failure: "no_smtp",
         })
-        expect(log.sentSince).not.toHaveBeenCalled()
-        expect(connections.listByProvider).not.toHaveBeenCalled()
+        expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
     })
 
     it("blocks the hundred-and-twenty-first hourly email before selecting a sender", async () => {
@@ -200,6 +199,19 @@ describe("WorkspaceMailService delivery", () => {
     })
 })
 
+describe("WorkspaceMailService delivery without a gate", () => {
+    it("sends customer mail through the workspace's SMTP with no work item: the node's mode decided before the tool ran", async () => {
+        const { service, mail } = await buildDelivery()
+
+        await expect(service.send({ ...OWNER, audience: "customer", to: "customer@example.com" })).resolves.toMatchObject({
+            status: "sent",
+            via: "workspace",
+        })
+        expect(mail.sendThroughSmtp).toHaveBeenCalledTimes(1)
+        expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
+    })
+})
+
 describe("WorkspaceMailService delivery", () => {
     it("sends gated customer mail through the requested SMTP and records its references", async () => {
         const { service, log, mail, connections } = await buildDelivery()
@@ -210,8 +222,7 @@ describe("WorkspaceMailService delivery", () => {
                 ...OWNER,
                 to: " customer@example.com ",
                 audience: "customer",
-                workItemId: "work-1",
-                refs: { invoice_id: "invoice-1", work_item_id: "stale" },
+                refs: { invoice_id: "invoice-1" },
                 connectionId: "smtp-1",
                 attachments: [FILE],
             }),
@@ -239,7 +250,7 @@ describe("WorkspaceMailService delivery", () => {
             via: "workspace",
             providerMessageId: "smtp-message",
             error: null,
-            refs: { invoice_id: "invoice-1", work_item_id: "work-1" },
+            refs: { invoice_id: "invoice-1" },
         })
     })
 
@@ -283,7 +294,7 @@ describe("WorkspaceMailService delivery", () => {
     it("never falls back to the platform for gated customer mail", async () => {
         const { service, mail } = await buildDelivery([])
 
-        await expect(service.send({ ...OWNER, audience: "customer", workItemId: "work-1" })).resolves.toMatchObject({
+        await expect(service.send({ ...OWNER, audience: "customer" })).resolves.toMatchObject({
             status: "no_smtp",
             via: "none",
             failure: "no_smtp",
@@ -394,6 +405,55 @@ describe("WorkspaceMailService delivery", () => {
             expect(logger.error).toHaveBeenCalledWith(EmailMessagesLogEvent.Undecryptable, expect.any(SyntaxError), {
                 connectionId: "smtp-1",
             })
+        })
+    })
+})
+
+describe("WorkspaceMailService: the SMTP account's own record of a send", () => {
+    it("writes one smtp.mail row keyed by the ledger row for a workspace send, without body or password, in a transaction", async () => {
+        const { service, intake, tx } = await buildDelivery()
+
+        await expect(service.send(OWNER)).resolves.toMatchObject({ status: "sent", via: "workspace", emailMessageId: "email-1" })
+
+        expect(intake.write).toHaveBeenCalledWith(expect.anything(), "smtp-1", [
+            {
+                type: SMTP_MAIL_TYPE,
+                value: {
+                    emailMessageId: "email-1",
+                    to: "owner@example.com",
+                    subject: "Daily report",
+                    purpose: "daily_report",
+                    status: "sent",
+                    providerMessageId: "smtp-message",
+                    at: "2026-10-13T10:00:00.000Z",
+                },
+            },
+        ])
+        expect(tx.outcomes).toEqual(["commit"])
+    })
+
+    it("records a failed workspace send too, with no server id; nothing for the platform sender or a refused send", async () => {
+        const failed = await buildDelivery()
+        failed.mail.sendThroughSmtp.mockRejectedValue(new Error("down"))
+        await expect(failed.service.send(OWNER)).resolves.toMatchObject({ status: "failed", via: "workspace" })
+        const written = failed.intake.write.mock.calls[0]?.[2][0]
+        expect(written?.value).toMatchObject({ status: "failed" })
+        expect(written?.value).not.toHaveProperty("providerMessageId")
+
+        const { service, intake } = await buildDelivery([])
+        await expect(service.send(OWNER)).resolves.toMatchObject({ via: "platform" })
+        await expect(service.send({ ...OWNER, to: "bad" })).resolves.toMatchObject({ status: "blocked" })
+        expect(intake.write).not.toHaveBeenCalled()
+    })
+
+    it("never fails the send when the account write fails: it is logged", async () => {
+        const { service, intake, logger } = await buildDelivery()
+        intake.write.mockRejectedValue(new Error("db_down"))
+
+        await expect(service.send(OWNER)).resolves.toMatchObject({ status: "sent", emailMessageId: "email-1" })
+        expect(logger.error).toHaveBeenCalledWith(EmailMessagesLogEvent.AccountKeepFailed, expect.any(Error), {
+            connectionId: "smtp-1",
+            emailMessageId: "email-1",
         })
     })
 })

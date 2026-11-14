@@ -1,6 +1,9 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { CONNECTION_EVENTS_PLACEHOLDER, ConnectionEventsCard } from "@/components/composites/ConnectionEventsCard"
-import type { ConnectionEventLine } from "@/components/composites/ConnectionEventsCard"
+import {
+    CONNECTION_EVENTS_PLACEHOLDER,
+    ConnectionEventsCard,
+    type ConnectionEventLine,
+} from "@/components/composites/ConnectionEventsCard"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The words, the read and the retry of the live rail of the Google Drive connection. */
@@ -10,16 +13,12 @@ export interface DriveConnectionEventsBaseProps {
         readonly liveLabel: string
         readonly emptyMessage: string
         readonly emptyHint: string
-        /** The next step of the empty rail (choose folders); absent when there is none. */
-        readonly emptyActionLabel?: string
-        /** `neutral` while the band shows a primary of its own, so the page has one filled button. */
-        readonly emptyActionIntent: "commit" | "neutral"
         /** Drive is granted, so the progress is a live feed; until then the card shows no live mark. */
         readonly isLive: boolean
         readonly lines: DataSlot<ReadonlyArray<ConnectionEventLine>>
         readonly slotLabels: SlotLabels
     }
-    readonly on: { readonly retry: () => void; readonly emptyAction: () => void }
+    readonly on: { readonly retry: () => void }
 }
 
 /** The rail's words and commands with the lines it draws. */
@@ -37,22 +36,13 @@ const EventsCard = (props: EventsCardProps) => (
         lines={props.lines}
         emptyMessage={props.props.emptyMessage}
         emptyHint={props.props.emptyHint}
-        {...(props.props.emptyActionLabel === undefined
-            ? {}
-            : {
-                  emptyAction: {
-                      label: props.props.emptyActionLabel,
-                      run: props.on.emptyAction,
-                      intent: props.props.emptyActionIntent,
-                  },
-              })}
         isLoading={props.isLoading}
     />
 )
 
 /**
  * Draws the live rail of the Google Drive connection: the files being read and where each stands, newest first. With none (Drive
- * off, or nothing read yet) the card itself says so and offers the next step, instead of the slot's plain empty line.
+ * off, or nothing read yet) the card itself says so, instead of the slot's plain empty line (the steps beside it carry the next command).
  */
 export const DriveConnectionEventsBase = (props: DriveConnectionEventsBaseProps) =>
     "isEmpty" in props.props.lines ? (

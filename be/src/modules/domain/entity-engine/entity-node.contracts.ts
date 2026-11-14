@@ -1,5 +1,4 @@
-import type { NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import type { RightScope } from "@nivo-lite/agent-sdk/rights"
+import type { NodeQuery, ReadScope, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import type { FilterExpr, Query } from "@nivo-lite/agent-sdk/query"
 
 /** The part of a node turn the bridge reads: the workspace, the record the turn is about and the conversation it serves. */
@@ -26,7 +25,7 @@ export interface EntityNodePort {
     /** The data kind it serves. */
     readonly kind: string
     /** Reads the rows of the query, cut to its fields; the host has already checked the rights. */
-    read(turn: EntityNodeTurn, query: NodeQuery, scope: RightScope): Promise<EntityNodeRows>
+    read(turn: EntityNodeTurn, query: NodeQuery, scope: ReadScope): Promise<EntityNodeRows>
 }
 
 /** How a turn-scoped read reaches the turn's record: the record is the entity's own, or a relation of the entity links to it. */

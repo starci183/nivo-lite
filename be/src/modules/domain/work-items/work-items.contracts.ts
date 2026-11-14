@@ -101,8 +101,6 @@ export type SubjectType =
     | "transaction"
     | "conversation"
     | "inbound"
-    | "purchase_order"
-    | "stock"
     | "video_project"
     | "supplier_payable"
 
@@ -177,9 +175,6 @@ export interface WorkItem {
 /** A work item, or null when none matches. */
 export type OptionalWorkItem = WorkItem | null
 
-/** An item nobody touched for this many seconds is free to be taken over again (a worker crashed with it). */
-export const CLAIM_LEASE_SECONDS = 120
-
 /** What a new queued work item is made of. */
 export interface NewWorkItem {
     /** The workspace. */
@@ -210,18 +205,6 @@ export interface NewWorkItem {
     readonly installationId: string | null
 }
 
-/** What a performer prepared, and the corrections to the item's address; a null address part keeps the stored one. */
-export interface PreparedSave {
-    /** The proposal the gate judges. */
-    readonly proposal: Proposal
-    /** The corrected kind of record. */
-    readonly subjectType: SubjectType | null
-    /** The corrected record. */
-    readonly subjectId: string | null
-    /** The corrected customer. */
-    readonly leadId: string | null
-}
-
 /** Why and for what an item waits for a person. */
 export interface WaitingMark {
     /** The first reason. */
@@ -248,18 +231,6 @@ export interface DoneMark {
     readonly evidence: EvidenceState
     /** The customer the performer found or created; null keeps the stored one. */
     readonly leadId: string | null
-}
-
-/** An approval that cannot go on because data is still missing or a candidate is still to be chosen. */
-export interface StillWaitingMark {
-    /** The proposal with the person's edits. */
-    readonly proposal: Proposal
-    /** Required fields still missing. */
-    readonly missing: ReadonlyArray<string>
-    /** The blocking reason. */
-    readonly reason: ReasonCode
-    /** Every reason. */
-    readonly reasons: ReadonlyArray<ReasonCode>
 }
 
 /** A proposal as the database holds it: a legacy row may hold an empty object, so every key is optional. */
@@ -340,30 +311,6 @@ export interface WorkItemRecord {
 
 /** The installation that owns an item, or null when there is no such item or it names none. */
 export type OptionalInstallationId = string | null
-
-/** An item closed as settled. */
-export interface ClosedClaim {
-    /** The item id. */
-    id: string
-    /** The input behind it, when there is one. */
-    inbound_event_id: string | null
-}
-
-/** The accounting work item's lineage in the accounting book. */
-export interface AccountingWork {
-    /** The item id. */
-    readonly id: string
-    /** The action key. */
-    readonly action: string
-    /** The work status. */
-    readonly status: WorkStatus
-    /** The type of record it is about. */
-    readonly subject_type: SubjectType
-    /** The record it is about. */
-    readonly subject_id: string | null
-    /** When the item was written, ISO text. */
-    readonly created_at: string
-}
 
 /** Names the one item a guarded write changes: its id, and the workspace when the caller knows it. */
 export interface WorkItemKey {

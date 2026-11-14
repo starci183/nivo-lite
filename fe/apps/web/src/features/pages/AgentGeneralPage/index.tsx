@@ -2,11 +2,8 @@ import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
-import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
+import { MODULE_REGISTRY, answersCustomersOf, hasReplyLimitsOf, isModuleKey } from "@/modules/catalog"
 import { AgentGeneralPageBase } from "./component"
-
-/** The internal agents: they never talk to customers, so their section has no "answer customers" switch. */
-const INTERNAL_MODULES: ReadonlySet<string> = new Set(["sales", "accounting"])
 
 /** What the route hands the page: the type and the instance of the url. */
 type AgentGeneralPageProps = {
@@ -31,9 +28,26 @@ export const AgentGeneralPage = async (props: AgentGeneralPageProps): Promise<Re
                 module: props.module,
                 installationId: props.installationId,
                 glyph: def.glyph,
-                extrasKey: def.settingsExtras,
+                hasReplyLimits: hasReplyLimitsOf(props.module),
                 activityTitle: t("activityTitle"),
-                answersCustomers: !INTERNAL_MODULES.has(props.module),
+                answersCustomers: answersCustomersOf(props.module),
+            }}
+        />
+    )
+}
+
+/** The same section while the route loads: the card titles stay real, the cards read the agent from the address and draw their skeletons. */
+export const AgentGeneralLoadingPage = async (): Promise<ReactElement> => {
+    const t = await getTranslations("modulesCore")
+    return (
+        <AgentGeneralPageBase
+            props={{
+                module: undefined,
+                installationId: undefined,
+                glyph: undefined,
+                hasReplyLimits: undefined,
+                activityTitle: t("activityTitle"),
+                answersCustomers: undefined,
             }}
         />
     )

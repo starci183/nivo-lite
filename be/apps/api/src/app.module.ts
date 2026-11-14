@@ -12,17 +12,12 @@ import { identityModules } from "./compose/identity"
 import { connectionsModules } from "./compose/connections"
 import { automationsModules } from "./compose/automations"
 import { messagingModules } from "./compose/messaging"
-import { videoModules } from "./compose/video"
-import { businessModules } from "./compose/business"
-import { contentModules } from "./compose/content"
 import { systemModules } from "./compose/system"
 import { knowledgeModules } from "./compose/knowledge"
-import { bookingsModules } from "./compose/bookings"
 import { adminModules } from "./compose/admin"
 import { agentsModules } from "./compose/agents"
 import { agentGraphsModules } from "./compose/agent-graphs"
 import { agentWorkModules } from "./compose/agent-work"
-import { accountingModules } from "./compose/accounting"
 import { agentApiModules } from "./compose/agent-api"
 import { modulesModules } from "./compose/modules"
 import { billingModules } from "./compose/billing"
@@ -44,21 +39,16 @@ export class AppModule {
                 ...connectionsModules(options),
                 ...automationsModules(),
                 ...messagingModules(options),
-                ...videoModules(options),
-                ...businessModules(options),
                 ...API_JOB_QUEUES,
                 ...API_REACTORS,
-                ...contentModules(options),
                 ...systemModules(),
                 ...knowledgeModules(options),
-                ...bookingsModules(),
                 ...adminModules(options),
                 ...agentsModules(options),
                 ...agentWorkModules(options),
                 ...agentGraphsModules(),
-                ...accountingModules(),
                 ...agentApiModules(),
-                ...modulesModules(),
+                ...modulesModules(options.apiKeys),
                 ...billingModules(options),
                 ...webhooksModules(),
                 ...apiModules(),

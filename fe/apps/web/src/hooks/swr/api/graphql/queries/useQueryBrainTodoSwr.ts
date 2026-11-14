@@ -6,7 +6,7 @@ import { answeredData, type ReadResponse } from "@/hooks/workspaceread"
 import { queryBrainTodo } from "@/modules/api/graphql/queries/query-brain-todo"
 import type { BrainTodoQuery } from "@/modules/api"
 
-/** The SWR key of the count of what needs the owner; a write that changes a finding, a fact or a question revalidates the keys that lead with it. */
+/** The SWR key of the count of what needs the owner; a write that changes a fact or a question revalidates the keys that lead with it. */
 export const QUERY_BRAIN_TODO_SWR_KEY = "QUERY_BRAIN_TODO_SWR"
 
 /**

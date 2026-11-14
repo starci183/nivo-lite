@@ -7,27 +7,28 @@ import {
     AgentConnectionsErrorCode,
 } from "@modules/domain/agent-connections"
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
-import { ModuleTagGrantsService, ModulesService } from "@modules/domain/modules"
+import { ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { GraphSeedService } from "./graph-seed.service"
-import { ProfileActivationService } from "./profile-activation.service"
-import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
+import { SeedActivationService } from "./seed-activation.service"
+import { AgentAccountsService } from "@modules/domain/tools"
 import { SEED_AGENTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
-import type { ProfileStatuses } from "./workspace-profile.contracts"
+import type { SeedStatuses } from "./seed-activation.contracts"
 import type { SeedAgentRecords } from "./workspace-seed.port"
 import { installationRecordOf } from "@tests/fixtures/builders/module-install.builder"
 
 const NODES: NodeInstall = { nodes: [], effects: [], tools: [], dataKinds: [] }
+// Ledger (ROAD Opus-1f, 2026-11-14): the graph grant has no `rights` list any more (provider rights FINAL 2026-11-13: rights are
+// account attachments); the reader drops it, so the sample graphs no longer carry `rights: []`.
 const SPEC = {
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["channel"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [{ key: "end", kind: "output", step: "stop" }],
 }
 const TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/sales.json", document: SPEC }] })}\n`
@@ -40,23 +41,13 @@ const gateOf = (key: string, hint: string): ModuleDefinition["gates"][number] =>
     hint_en: hint,
 })
 
-/** The test module under `key`: two gates, one governed action and its agent under the same handle. */
+/** The test module under `key`: two gates and its agent under the same handle. */
 const moduleOf = (key: string): ModuleDefinition =>
     Object.assign(mock<ModuleDefinition>(), {
         key,
         name: { vi: "Ban hang", en: "Sales" },
         defaultOperatingMode: "assist",
         gates: [gateOf("identity", "Shop name and trade"), gateOf("products", "Products sold")],
-        authorityActions: [
-            {
-                action: "create_order",
-                label: { vi: "Create order", en: "Create order" },
-                mode: "ask",
-                limitVnd: 5_000_000,
-                requiredFields: ["total"],
-                amountLimit: true,
-            },
-        ],
         agent: {
             label: { vi: "Agent Ban hang", en: "Sales agent" },
             handle: key,
@@ -84,24 +75,21 @@ const build = async (scenario: Scenario = {}) => {
     workspaces.ownerIdOf.mockResolvedValue(scenario.owner === undefined ? "owner-1" : scenario.owner)
     const modules = mock<ModulesService>()
     modules.find.mockResolvedValue(MODULE)
-    modules.sync.mockResolvedValue({ modules: 1, actions: 1, staleModules: [], staleActions: [] })
+    modules.sync.mockResolvedValue({ modules: 1, staleModules: [] })
     const installations = mock<InstallationRecordsService>()
     const held = [...(scenario.held ?? [record()])]
     installations.firstOfModule.mockImplementation(() => Promise.resolve(held.shift() ?? null))
     installations.insert.mockResolvedValue(scenario.inserted === undefined ? "inst-1" : scenario.inserted)
     const agents = mock<SeedAgentRecords>()
     agents.ensureByHandle.mockResolvedValue("agent-1")
-    const rules = mock<AuthorityRulesService>()
-    const activation = mock<ProfileActivationService>()
-    const statuses: ProfileStatuses = { sales: scenario.status ?? "live" }
+    const activation = mock<SeedActivationService>()
+    const statuses: SeedStatuses = { sales: scenario.status ?? "live" }
     activation.activate.mockResolvedValue(statuses)
     const flows = mock<AgentGraphFlowService>()
     flows.publish.mockResolvedValue("created")
     const bindings = mock<AgentBindingsService>()
-    const tagGrants = mock<ModuleTagGrantsService>()
-    tagGrants.grantFor.mockResolvedValue(undefined)
     flows.holds.mockResolvedValue(scenario.holds ?? false)
-    const abilities = mock<ProviderAbilitiesService>()
+    const abilities = mock<AgentAccountsService>()
     abilities.attachDefaults.mockResolvedValue({ ok: true, attached: [] })
     const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
@@ -115,54 +103,48 @@ const build = async (scenario: Scenario = {}) => {
             { provide: WorkspacesService, useValue: workspaces },
             { provide: ModulesService, useValue: modules },
             { provide: InstallationRecordsService, useValue: installations },
-            { provide: AuthorityRulesService, useValue: rules },
-            { provide: ProfileActivationService, useValue: activation },
+            { provide: SeedActivationService, useValue: activation },
             { provide: AgentGraphFlowService, useValue: flows },
             { provide: AgentBindingsService, useValue: bindings },
-            { provide: ModuleTagGrantsService, useValue: tagGrants },
-            { provide: ProviderAbilitiesService, useValue: abilities },
+            { provide: AgentAccountsService, useValue: abilities },
         ],
     }).compile()
     return {
         service: moduleRef.get(GraphSeedService),
         agents,
         installations,
-        rules,
         activation,
         flows,
         print,
         bindings,
         modules,
-        tagGrants,
         abilities,
     }
 }
 
 const failure = (code: WorkspaceSeedErrorCode) => new WorkspaceSeedError({ code })
 
-const LEDGER_SPEC = {
+const RIGHTS_SPEC = {
     ...SPEC,
-    moduleKey: "accounting",
     grant: {
-        rights: [],
-        tools: ["nivo.ledger.entry.append", "nivo.ledger.entry.void", "nivo.ledger.status.get", "nivo.chat.send"],
+        tools: ["nivo.tool.record.create", "nivo.tool.customer.message.send"],
         effects: [],
     },
 }
-const LEDGER_TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/accounting.json", document: LEDGER_SPEC }] })}\n`
+const RIGHTS_TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/sales.json", document: RIGHTS_SPEC }] })}\n`
 
 describe("GraphSeedService > default provider rights", () => {
     it("attaches the agent to the connected providers its module names, by the module's defaults and only where it holds none", async () => {
         const { service, abilities, print } = await build()
         abilities.attachDefaults.mockResolvedValue({
             ok: true,
-            attached: [{ connectionId: "conn-google", provider: "google", abilities: { "ledger.write": "auto" } }],
+            attached: [{ connectionId: "conn-google", provider: "google" }],
         })
 
-        await service.run(LEDGER_TEXT, "NIVO")
+        await service.run(RIGHTS_TEXT, "NIVO")
 
         expect(abilities.attachDefaults).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", agentId: "agent-1", moduleKey: expect.any(String) },
+            { workspaceId: "ws-1", agentId: "agent-1", moduleKey: "sales" },
             null,
             null,
         )
@@ -172,61 +154,32 @@ describe("GraphSeedService > default provider rights", () => {
     it("does it on a rerun too, when the module is live and already runs the flow", async () => {
         const { service, abilities, activation } = await build({ held: [record({ status: "live" })], holds: true })
 
-        await service.run(LEDGER_TEXT, "NIVO")
+        await service.run(RIGHTS_TEXT, "NIVO")
 
         expect(activation.activate).not.toHaveBeenCalled()
         expect(abilities.attachDefaults).toHaveBeenCalledTimes(1)
     })
 })
 
-describe("GraphSeedService > tag rights", () => {
-    it("grants the tag rights of the module to the agent it seats, as the install door does", async () => {
-        const { service, tagGrants } = await build()
-
-        await service.run(TEXT, "NIVO")
-
-        expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "sales", "agent-1")
-    })
-
-    it("grants them on a rerun too, when the module is live and already runs the flow", async () => {
-        const { service, tagGrants, activation } = await build({ held: [record({ status: "live" })], holds: true })
-
-        await service.run(TEXT, "NIVO")
-
-        expect(activation.activate).not.toHaveBeenCalled()
-        expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "sales", "agent-1")
-    })
-
-    it("grants them to an agent it had to install, once the agent has its seat", async () => {
-        const { service, tagGrants, installations } = await build({ held: [null, record()] })
-
-        await service.run(TEXT, "NIVO")
-
-        expect(installations.insert).toHaveBeenCalledTimes(1)
-        expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "sales", "agent-1")
-    })
-})
+// Ledger (ROAD Opus-1f, 2026-11-14): the three tag-rights cases of the seed are deleted with the tag grant lists (ruling R43).
 
 describe("GraphSeedService > run", () => {
-    it("mirrors the module catalogue before it seeds a rule, so an empty database has the authority actions the rules name", async () => {
-        const { service, modules, rules } = await build()
+    it("mirrors the module catalogue before it activates a module, so an empty database has the module rows", async () => {
+        const { service, modules, activation } = await build()
 
         await service.run(TEXT, "NIVO")
 
         expect(modules.sync).toHaveBeenCalledTimes(1)
         expect(modules.sync.mock.invocationCallOrder[0]).toBeLessThan(
-            rules.seedDefaults.mock.invocationCallOrder[0] ?? 0,
+            activation.activate.mock.invocationCallOrder[0] ?? 0,
         )
     })
 
     it("publishes the flow to the agent of the module installed in the named workspace, and prints no value", async () => {
-        const { service, agents, installations, rules, activation, flows, print } = await build()
+        const { service, agents, installations, activation, flows, print } = await build()
 
         await service.run(TEXT, "NIVO")
 
-        expect(rules.seedDefaults).toHaveBeenCalledWith("ws-1", "sales", [
-            { action: "create_order", mode: "ask", limit_vnd: 5_000_000, required_fields: ["total"] },
-        ])
         expect(activation.activate).toHaveBeenCalledWith({ workspaceId: "ws-1", ownerId: "owner-1" }, [
             {
                 handle: "sales",
@@ -247,8 +200,8 @@ describe("GraphSeedService > run", () => {
         expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created, 1 connections assigned"]])
     })
 
-    it("costs reads only when the module is live and already runs the flow: no rule, activation or publish", async () => {
-        const { service, agents, installations, rules, activation, flows, print } = await build({
+    it("costs reads only when the module is live and already runs the flow: no activation or publish", async () => {
+        const { service, agents, installations, activation, flows, print } = await build({
             held: [record({ status: "live" })],
             holds: true,
         })
@@ -256,7 +209,6 @@ describe("GraphSeedService > run", () => {
         await service.run(TEXT, "NIVO")
 
         expect(flows.holds).toHaveBeenCalledWith("ws-1", "agent-1", SPEC)
-        expect(rules.seedDefaults).not.toHaveBeenCalled()
         expect(activation.activate).not.toHaveBeenCalled()
         expect(flows.publish).not.toHaveBeenCalled()
         expect(agents.ensureByHandle).not.toHaveBeenCalled()
@@ -384,27 +336,12 @@ describe("GraphSeedService > connection assignment", () => {
     const asModule = async (key: string, scenario: Scenario = {}) => {
         const built = await build({ held: [record({ moduleKey: key })], ...scenario })
         built.modules.find.mockResolvedValue(moduleOf(key))
-        const statuses: ProfileStatuses = { [key]: "live" }
+        const statuses: SeedStatuses = { [key]: "live" }
         built.activation.activate.mockResolvedValue(statuses)
         const text = `${JSON.stringify({ documents: [{ path: `data/graphs/${key}.json`, document: { ...SPEC, moduleKey: key } }] })}
 `
         return { ...built, text }
     }
-
-    it("assigns the accounting agent to the SePay feed for its bank feed", async () => {
-        const { service, bindings, print, text } = await asModule("accounting")
-
-        await service.run(text, "NIVO")
-
-        expect(bindings.grant).toHaveBeenCalledTimes(1)
-        expect(bindings.grant).toHaveBeenCalledWith("owner-1", {
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            connectionId: SEPAY,
-            purpose: "bank_feed",
-        })
-        expect(print).toHaveBeenCalledWith("accounting agent agent-1 live, graph created, 1 connections assigned")
-    })
 
     it("assigns the chatbot to the Zalo OA and to Telegram for inbound chat", async () => {
         const { service, bindings, text } = await asModule("chatbot")
@@ -417,7 +354,7 @@ describe("GraphSeedService > connection assignment", () => {
         ])
     })
 
-    it("assigns the sales agent to the SePay account as a data source", async () => {
+    it("assigns the sales agent to the SePay account for its bank feed", async () => {
         const { service, bindings, print, text } = await asModule("sales")
 
         await service.run(text, "NIVO")
@@ -427,13 +364,13 @@ describe("GraphSeedService > connection assignment", () => {
             workspaceId: "ws-1",
             agentId: "agent-1",
             connectionId: SEPAY,
-            purpose: "data_source",
+            purpose: "bank_feed",
         })
         expect(print).toHaveBeenCalledWith("sales agent agent-1 live, graph created, 1 connections assigned")
     })
 
     it("assigns again on a rerun without error, and assigns nothing for a module with no connection", async () => {
-        const rerun = await asModule("accounting")
+        const rerun = await asModule("sales")
         const other = await asModule("care")
 
         await rerun.service.run(rerun.text, "NIVO")

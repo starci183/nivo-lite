@@ -1,10 +1,15 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Board, EmptyNotice } from "@starci/grammar/common"
-import type { BoardColumn, BoardMove } from "@starci/grammar/common"
+import { Board, EmptyNotice, type BoardColumn, type BoardMove } from "@starci/grammar/common"
 import type { boardBlock } from "../../blocks/board.block"
-import { announceOf, boardCardsOf, boardColumnsOf, BOARD_PLACEHOLDER } from "../../rows/board-rows"
-import type { BoardCard, BoardColumnSpec } from "../../rows/board-rows"
+import {
+    announceOf,
+    boardCardsOf,
+    boardColumnsOf,
+    BOARD_PLACEHOLDER,
+    type BoardCard,
+    type BoardColumnSpec,
+} from "../../rows/board-rows"
 import { recordsView } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
 import { relabeller } from "../../rows/value-labels"

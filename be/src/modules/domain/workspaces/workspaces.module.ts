@@ -1,9 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspaces.module-definition"
 import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacePruneService } from "./workspace-prune.service"
 import { WorkspaceBillingService } from "./workspace-billing.service"
+import { WorkspaceEnterpriseService } from "./workspace-enterprise.service"
 import { WorkspaceShellService } from "./workspace-shell.service"
 import { WorkspaceLobbyService } from "./workspace-lobby.service"
 import { WorkspacesService } from "./workspaces.service"
@@ -25,6 +25,7 @@ export class WorkspacesModule extends ConfigurableModuleClass {
                 { provide: WORKSPACES_OPTIONS, useValue: options },
                 WorkspacesService,
                 WorkspaceBillingService,
+                WorkspaceEnterpriseService,
                 WorkspacePruneService,
                 WorkspaceShellService,
                 WorkspaceLobbyService,
@@ -34,6 +35,7 @@ export class WorkspacesModule extends ConfigurableModuleClass {
                 WorkspaceBusinessTypeReadService,
                 WorkspacesService,
                 WorkspaceBillingService,
+                WorkspaceEnterpriseService,
                 WorkspacePruneService,
                 WorkspaceShellService,
                 WorkspaceLobbyService,

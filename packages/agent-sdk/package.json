@@ -12,10 +12,6 @@
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
     },
-    "./rights": {
-      "types": "./dist/rights/index.d.ts",
-      "default": "./dist/rights/index.js"
-    },
     "./mutation": {
       "types": "./dist/mutation/index.d.ts",
       "default": "./dist/mutation/index.js"
@@ -35,6 +31,10 @@
     "./node/vocabulary": {
       "types": "./dist/node/vocabulary.d.ts",
       "default": "./dist/node/vocabulary.js"
+    },
+    "./names": {
+      "types": "./dist/names/index.d.ts",
+      "default": "./dist/names/index.js"
     },
     "./entity": {
       "types": "./dist/entity/index.d.ts",
@@ -68,6 +68,30 @@
       "types": "./dist/port/index.d.ts",
       "default": "./dist/port/index.js"
     },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "default": "./dist/models/index.js"
+    },
+    "./platform": {
+      "types": "./dist/platform/index.d.ts",
+      "default": "./dist/platform/index.js"
+    },
+    "./plugin-tools": {
+      "types": "./dist/plugin-tools/index.d.ts",
+      "default": "./dist/plugin-tools/index.js"
+    },
+    "./service": {
+      "types": "./dist/service/index.d.ts",
+      "default": "./dist/service/index.js"
+    },
+    "./customer-send": {
+      "types": "./dist/customer-send/index.d.ts",
+      "default": "./dist/customer-send/index.js"
+    },
+    "./team-chat": {
+      "types": "./dist/team-chat/index.d.ts",
+      "default": "./dist/team-chat/index.js"
+    },
     "./template": {
       "types": "./dist/template/index.d.ts",
       "default": "./dist/template/index.js"
@@ -75,6 +99,10 @@
     "./testing": {
       "types": "./dist/tests/fixtures/index.d.ts",
       "default": "./dist/tests/fixtures/index.js"
+    },
+    "./webhook": {
+      "types": "./dist/webhook/index.d.ts",
+      "default": "./dist/webhook/index.js"
     },
     "./client": {
       "types": "./dist/esm/client/index.d.ts",
@@ -93,7 +121,8 @@
   },
   "peerDependencies": {
     "@heroui/react": "3.2.6",
-    "@starci/grammar": "0.37.34",
+    "@starci/common": "1.0.1",
+    "@starci/grammar": "0.39.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"
@@ -103,10 +132,6 @@
     "typescript": "5.9.3"
   },
   "starci": {
-    "errorBase": {
-      "name": "SdkError",
-      "file": "src/sdk-error.ts"
-    },
     "outcome": {
       "name": "WorkbenchOutcome",
       "file": "src/workbench/host/host.types.ts"

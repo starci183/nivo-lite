@@ -15,8 +15,7 @@ import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 import { mutate } from "@/modules/viewer-cache"
-import { lobbyInvitesOf } from "./lobby.shared"
-import type { LobbyInvite } from "./lobby.shared"
+import { lobbyInvitesOf, type LobbyInvite } from "./lobby.shared"
 
 /** The invitations addressed to the person and the two answers to each. */
 export interface LobbyInvites {

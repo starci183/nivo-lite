@@ -41,7 +41,7 @@ const previewZone = (preview: WorkspaceJoinPreview, accept: () => void) => ({
     kind: "custom" as const,
     children: (
         <Stack gap="row">
-            <Cluster gap="row" wrap={false}>
+            <Cluster gap="inline" wrap={false}>
                 <Avatar name={preview.workspaceName} size="md" />
                 <Stack gap="identity">
                     <Text isStrong>{preview.workspaceName}</Text>
@@ -54,11 +54,11 @@ const previewZone = (preview: WorkspaceJoinPreview, accept: () => void) => ({
                 {preview.note}
             </Text>
             {preview.action === "join" ? (
-                <Button intent="commit" width="fill" isPending={preview.isAccepting} onPress={accept}>
+                <Button intent="neutral" width="fill" isPending={preview.isAccepting} onPress={accept}>
                     {preview.actionLabel}
                 </Button>
             ) : (
-                <Button endArrow intent="neutral" width="fill" href={preview.openHref}>
+                <Button intent="neutral" width="fill" href={preview.openHref}>
                     {preview.actionLabel}
                 </Button>
             )}

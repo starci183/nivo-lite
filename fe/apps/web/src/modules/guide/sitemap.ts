@@ -15,8 +15,6 @@ export interface GuidePage {
 
 /** The pages of the map. */
 export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
-    { id: "authority", path: "/authority" },
-    { id: "inbox", path: "/inbox" },
     { id: "knowledge", path: "/knowledge", managerOnly: true },
     { id: "brain", path: "/brain" },
     { id: "modules", path: "/agents", managerOnly: true },
@@ -30,6 +28,7 @@ export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
     { id: "connections.webhook", path: "/connections", managerOnly: true, target: "connections.webhook" },
     { id: "developers", path: "/developers", managerOnly: true },
     { id: "billing", path: "/billing", managerOnly: true },
+    { id: "settings", path: "/settings", managerOnly: true },
     { id: "account", path: "/account" },
 ]
 

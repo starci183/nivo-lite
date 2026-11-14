@@ -18,7 +18,6 @@ const DIRECT = "42222222-1111-4111-8111-111111111111"
 const OPENED = "43333333-1111-4111-8111-111111111111"
 const MSG = "51111111-1111-4111-8111-111111111111"
 const RUN = "61111111-1111-4111-8111-111111111111"
-const DECISION = "71111111-1111-4111-8111-111111111111"
 
 const roomOf = (id: string) => Object.assign(new ChatRoomEntity(), { id })
 
@@ -45,15 +44,6 @@ const build = async () => {
     }).compile()
     return { cards: moduleRef.get(TeamChatCardsService), store, access, seats, agents, workspaces }
 }
-
-describe("TeamChatCardsService cardRooms", () => {
-    it("counts the rooms the approval card of a decision stands in, from the store", async () => {
-        const { cards, store } = await build()
-        store.cardCount.mockResolvedValue(2)
-        await expect(cards.cardRooms(WS, DECISION)).resolves.toBe(2)
-        expect(store.cardCount).toHaveBeenCalledWith(WS, DECISION)
-    })
-})
 
 describe("TeamChatCardsService postReport", () => {
     const report = { runId: RUN, agentId: BOT, body: "Done", roomId: NAMED }
@@ -99,50 +89,6 @@ describe("TeamChatCardsService postReport", () => {
         store.roomById.mockResolvedValue(roomOf(NAMED))
         store.insertCard.mockResolvedValue(null)
         await expect(cards.postReport(WS, report)).resolves.toBeNull()
-    })
-})
-
-describe("TeamChatCardsService postApproval", () => {
-    const approval = { decisionId: DECISION, body: "Approve?", agentId: BOT, roomIds: [NAMED], approverSeatIds: ["s1"] }
-
-    it("posts one card to each named room and to the direct room of each approver, once per room", async () => {
-        const { cards, store, seats } = await build()
-        store.roomsByIds.mockResolvedValue([roomOf(NAMED), roomOf(DIRECT)])
-        seats.seatsByIds.mockResolvedValue([
-            { memberId: "s1", userId: ANA, role: "staff", displayName: "Ana", status: "active" },
-        ])
-        store.roomByDirectKey.mockResolvedValue(roomOf(DIRECT))
-        await expect(cards.postApproval(WS, approval)).resolves.toBe(2)
-        expect(seats.seatsByIds).toHaveBeenCalledWith(WS, ["s1"], 1)
-        expect(store.insertCard).toHaveBeenCalledTimes(2)
-        expect(store.insertCard).toHaveBeenCalledWith({
-            workspaceId: WS,
-            roomId: NAMED,
-            authorId: BOT,
-            kind: "approval",
-            refId: DECISION,
-            body: "Approve?",
-        })
-    })
-
-    it("leaves out an approver who is not of the workspace", async () => {
-        const { cards, store, seats, access } = await build()
-        seats.seatsByIds.mockResolvedValue([
-            { memberId: "s1", userId: ANA, role: "staff", displayName: "Ana", status: "disabled" },
-        ])
-        access.allKnown.mockResolvedValue(false)
-        await expect(cards.postApproval(WS, { ...approval, roomIds: [] })).resolves.toBe(0)
-        expect(store.roomsByIds).not.toHaveBeenCalled()
-        expect(store.insertCard).not.toHaveBeenCalled()
-    })
-
-    it("opens no direct room when the system asks or no approver is named", async () => {
-        const { cards, store, seats } = await build()
-        store.roomsByIds.mockResolvedValue([roomOf(NAMED)])
-        await expect(cards.postApproval(WS, { ...approval, agentId: null })).resolves.toBe(1)
-        await expect(cards.postApproval(WS, { ...approval, approverSeatIds: [] })).resolves.toBe(1)
-        expect(seats.seatsByIds).not.toHaveBeenCalled()
-        expect(store.insertCard).toHaveBeenCalledWith(expect.objectContaining({ authorId: null }))
     })
 })
 
@@ -220,7 +166,7 @@ describe("TeamChatCardsService postMessage", () => {
 
 describe("TeamChatCardsService postAsAgent", () => {
     const post = { agent: BOT, toUserId: ANA, body: "hello", key: "k1" }
-    const found = { id: BOT, name: "Bot", module: "sales", canTagAgentIds: [] }
+    const found = { id: BOT, name: "Bot", module: "sales" }
 
     it("says the line as an agent named by id to the person, and answers which agent spoke", async () => {
         const { cards, store, agents } = await build()

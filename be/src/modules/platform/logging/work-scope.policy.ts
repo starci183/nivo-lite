@@ -16,6 +16,9 @@ export interface WorkScope {
     readonly agentId?: string | null | undefined
 }
 
+/** The work scope open on the current call, or null when none is open. */
+export type OpenWorkScope = WorkScope | null
+
 /** The work a scope holds: whatever it awaits is in the scope. */
 type WorkScopeWork<T> = () => Promise<T>
 
@@ -34,4 +37,11 @@ export const withWorkScope = <T>(work: WorkScope, run: WorkScopeWork<T>): Promis
     scope.run(nestedOf(scope.getStore(), work), run)
 
 /** The work the current call belongs to, or null when no work scope is open. */
-export const workInScope = (): WorkScope | null => scope.getStore() ?? null
+export const workInScope = (): OpenWorkScope => scope.getStore() ?? null
+
+/**
+ * Runs `work` as one STEP of the work in scope: the scope's kind, record and agent kept, the step key set (so a document's reading is
+ * booked per stage: `triage`, `extract`, `relations`, `judge`, `index`, `search`). With no scope open, the work is `fallbackKind`.
+ */
+export const withWorkStep = <T>(stepKey: string, fallbackKind: string, run: WorkScopeWork<T>): Promise<T> =>
+    withWorkScope({ kind: scope.getStore()?.kind ?? fallbackKind, stepKey }, run)

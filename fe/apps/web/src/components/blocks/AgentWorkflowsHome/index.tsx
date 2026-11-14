@@ -1,15 +1,16 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
-import { useWorkflowsHome } from "@/hooks/agentWorkflowPages"
+import { useWorkflowReadiness, useWorkflowsHome } from "@/hooks/agentWorkflowPages"
 import { useSlotLabels } from "@/hooks/slot"
 import type { PaneGridLayout, WorkflowTableRowView } from "@/modules/types"
 import { AgentWorkflowsHomeBase, type AgentWorkflowsHomeCopy } from "./component"
 
 /** The instance whose workflows the table lists. */
 type AgentWorkflowsHomeProps = {
-    readonly module: string
-    readonly installationId: string
+    readonly module?: string | undefined
+    readonly installationId?: string | undefined
 }
 
 const GRID: PaneGridLayout = {
@@ -70,6 +71,14 @@ const copyOf = (t: PageWords, td: MakerWords): AgentWorkflowsHomeCopy => ({
             noChanges: td("templateNoChanges"),
         },
     },
+    readiness: { title: t("readinessTitle") },
+    pick: {
+        title: t("readinessPickTitle"),
+        hint: t("readinessPickHint"),
+        choiceLabel: t("readinessPickChoice"),
+        submit: t("readinessPickSubmit"),
+        closeLabel: td("diffClose"),
+    },
 })
 
 /**
@@ -77,10 +86,12 @@ const copyOf = (t: PageWords, td: MakerWords): AgentWorkflowsHomeCopy => ({
  * version, its runs of the last week, where it stands); a row opens the page of that workflow, and "Create workflow" opens the maker.
  */
 export const AgentWorkflowsHome = (props: AgentWorkflowsHomeProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("agentWorkflowPages")
     const td = useTranslations("agentWorkflows")
     const slotLabels = useSlotLabels()
-    const home = useWorkflowsHome(props.module, props.installationId)
+    const home = useWorkflowsHome(route.module, route.installationId)
+    const readiness = useWorkflowReadiness(route.installationId)
     return (
         <AgentWorkflowsHomeBase
             props={{
@@ -91,6 +102,9 @@ export const AgentWorkflowsHome = (props: AgentWorkflowsHomeProps) => {
                 slotLabels: slotLabels(t("empty")),
                 create: home.create.view,
                 templates: home.create.templates,
+                readiness: readiness.rows,
+                canPick: readiness.isOwner,
+                pick: readiness.pick,
             }}
             on={{
                 retry: home.retry,
@@ -98,6 +112,7 @@ export const AgentWorkflowsHome = (props: AgentWorkflowsHomeProps) => {
                 createClose: home.create.close,
                 createPick: home.create.pick,
                 createSubmit: home.create.submit,
+                openPick: readiness.open,
             }}
         />
     )

@@ -5,7 +5,6 @@ import {
     Cluster,
     DescriptionList,
     Input,
-    NumberField,
     RadioGroup,
     ChoiceChips,
     Stack,
@@ -20,8 +19,6 @@ interface SetupWriteViewCommands {
     readonly value: (value: string) => void
     readonly scope: (value: string) => void
     readonly forWho: (value: string) => void
-    readonly mode: (value: string) => void
-    readonly limit: (value: number) => void
     readonly resolution: (value: string) => void
     readonly situation: (value: string) => void
     readonly confirm: () => void
@@ -64,29 +61,6 @@ const FactFields = (props: SetupWriteViewProps) => (
     </>
 )
 
-const RuleFields = (props: SetupWriteViewProps) => (
-    <>
-        <ChoiceChips
-            label={props.props.proposal.modeLabel}
-            empty={props.props.proposal.modeLabel}
-            value={props.props.proposal.mode}
-            onValueChange={props.on.mode}
-            options={props.props.proposal.modeOptions}
-        />
-        {props.props.proposal.hasLimit ? (
-            <NumberField
-                label={props.props.proposal.limitLabel}
-                minValue={0}
-                step={1_000_000}
-                formatOptions={{ maximumFractionDigits: 0 }}
-                isDisabled={props.props.proposal.isLimitDisabled}
-                {...(props.props.proposal.limit !== undefined && { value: props.props.proposal.limit })}
-                onValueChange={props.on.limit}
-            />
-        ) : null}
-    </>
-)
-
 /** Draws one proposed write of the setup chat. A decided card is one line; a waiting card shows what would be written and lets the owner confirm, edit or dismiss it. */
 export const SetupWriteView = (props: SetupWriteViewProps) => {
     const { decided, proposal } = props.props
@@ -94,11 +68,11 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
         return (
             <SurfaceCard ariaLabel={decided.line}>
                 <Stack gap="inline">
-                    <Cluster gap="inline" justify="between">
+                    <Cluster gap="identity" justify="between">
                         <Text size="sm" tone="muted">
                             {decided.line}
                         </Text>
-                        <Badge isDot tone={decided.tone}>
+                        <Badge tone={decided.tone}>
                             {decided.label}
                         </Badge>
                     </Cluster>
@@ -109,20 +83,17 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
     return (
         <SurfaceCard label={proposal.head}>
             <Stack gap="inline">
-                <Cluster gap="inline" justify="between">
+                <Cluster gap="identity" justify="between">
                     {proposal.hasGap ? <Badge tone="warning">{proposal.gapLabel}</Badge> : null}
                 </Cluster>
                 <DescriptionList layout="stacked" items={proposal.items} />
-                {proposal.sharedNote === "" ? null : (
-                    <Text size="xs" tone="muted">
-                        {proposal.sharedNote}
-                    </Text>
-                )}
                 {proposal.isEditing ? (
-                    <Stack gap="row">{proposal.isFact ? <FactFields {...props} /> : <RuleFields {...props} />}</Stack>
+                    <Stack gap="identity">
+                        <FactFields {...props} />
+                    </Stack>
                 ) : null}
                 {proposal.isConflict ? (
-                    <Stack gap="row">
+                    <Stack gap="identity">
                         <Alert tone="cautionary" title={proposal.conflictTitle} description={proposal.conflictBody} />
                         <RadioGroup
                             label={proposal.conflictTitle}
@@ -142,7 +113,7 @@ export const SetupWriteView = (props: SetupWriteViewProps) => {
                         ) : null}
                     </Stack>
                 ) : null}
-                <Cluster gap="inline">
+                <Cluster gap="identity">
                     <Button
                         intent="commit"
                         size="sm"

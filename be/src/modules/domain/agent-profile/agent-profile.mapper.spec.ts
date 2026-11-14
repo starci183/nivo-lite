@@ -1,20 +1,18 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import { headOf, recentOf, ruleLineOf } from "./agent-profile.mapper"
+import { headOf, recentOf } from "./agent-profile.mapper"
 import type { AgentHeadRead, RecentWorkRead } from "./agent-profile-reads.contracts"
-import type { DepartmentRuleLine } from "@modules/domain/authority-rules"
 
 type Subject = {
     headOf: typeof headOf
     recentOf: typeof recentOf
-    ruleLineOf: typeof ruleLineOf
 }
 
 const SUBJECT = Symbol("agent-profile.mapper")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { headOf, recentOf, ruleLineOf } }],
+        providers: [{ provide: SUBJECT, useValue: { headOf, recentOf } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -41,14 +39,6 @@ const recentRowOf = builder<RecentWorkRead>({
     leadId: "l1",
 })
 
-const ruleRowOf = builder<DepartmentRuleLine>({
-    action: "send_quote",
-    department: "sales",
-    mode: "ask",
-    limitVnd: 5_000_000,
-    note: "The owner confirms",
-})
-
 describe("headOf", () => {
     it("maps an agent row to its header", async () => {
         const subject = await buildSubject()
@@ -73,20 +63,6 @@ describe("headOf", () => {
             avatarUrl: null,
             roomName: null,
             operatingMode: null,
-        })
-    })
-})
-
-describe("ruleLineOf", () => {
-    it("keeps what the agent page shows of a rule", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.ruleLineOf(ruleRowOf())).toEqual({
-            action: "send_quote",
-            department: "sales",
-            mode: "ask",
-            limitVnd: 5_000_000,
-            note: "The owner confirms",
         })
     })
 })

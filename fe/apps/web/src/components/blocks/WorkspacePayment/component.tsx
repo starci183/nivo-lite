@@ -1,8 +1,9 @@
 import { Alert, Button, Cluster, Image, MediaFrame, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { CelebrationPanel } from "@/components/composites/CelebrationPanel"
-import type { CelebrationFact } from "@/components/composites/CelebrationPanel"
-import { WorkspacePaymentDetails } from "@/components/composites/WorkspacePaymentDetails"
-import type { WorkspacePaymentDetailsProps } from "@/components/composites/WorkspacePaymentDetails"
+import { CelebrationPanel, type CelebrationFact } from "@/components/composites/CelebrationPanel"
+import {
+    WorkspacePaymentDetails,
+    type WorkspacePaymentDetailsProps,
+} from "@/components/composites/WorkspacePaymentDetails"
 import { CENTERED_CLASS_NAME, ART_CLASS_NAME, MEASURE_CLASS_NAME } from "./classNames"
 
 /** Presentation of a payment step after the connected block resolves its state. */
@@ -47,7 +48,7 @@ const PaymentPendingActions = (props: WorkspacePaymentBaseProps) => (
         <Button intent="commit" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
             {props.props.regenerateLabel}
         </Button>
-        <Button endArrow intent="neutral" href={props.props.allWorkspacesHref}>
+        <Button intent="neutral" href={props.props.allWorkspacesHref}>
             {props.props.allWorkspacesLabel}
         </Button>
     </Cluster>
@@ -66,7 +67,7 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
                     title={view.phase === "missing" ? view.missingTitle : view.errorTitle}
                     description={view.error}
                 />
-                <Button endArrow intent="neutral" href={view.allWorkspacesHref}>
+                <Button intent="neutral" href={view.allWorkspacesHref}>
                     {view.allWorkspacesLabel}
                 </Button>
             </>

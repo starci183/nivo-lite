@@ -107,6 +107,12 @@ describe("IdentityAccountsService / accountOf", () => {
         })
     })
 
+    it("names an account whose email has an empty name before the @ Owner, not an empty name", async () => {
+        const { service } = await build([[USER_BY_ID, [person({}, "@example.test")]]])
+
+        await expect(service.accountOf("u1")).resolves.toMatchObject({ value: { displayName: "Owner" } })
+    })
+
     it("answers no last sign-in for an account that never signed in", async () => {
         const { service } = await build([[USER_BY_ID, [{ ...person({}), last_sign_in_at: null }]]])
 

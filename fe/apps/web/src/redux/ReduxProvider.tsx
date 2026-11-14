@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { Provider } from "react-redux"
 import { makeStore } from "./store"
 

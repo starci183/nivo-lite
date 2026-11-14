@@ -31,7 +31,7 @@ const groupOf = (memberId: string) => ({ roles: [], rooms: [], members: memberId
 
 /** The approver a branch asks, keeping the policy it had; null when it does not ask or names nobody. */
 const approverOf = (row: AgentGraphRowForm, before: AgentGraphWireApprover | null): AgentGraphWireApprover | null => {
-    if (row.then !== "ask" || row.approverId === "") return null
+    if (row.mode !== "ask" || row.approverId === "") return null
     const group = row.approverId === KEEP_GROUP ? (before?.group ?? groupOf("")) : groupOf(row.approverId)
     const backup =
         row.backupId === "" ? { kind: "unset" as const } : { kind: "backup" as const, group: groupOf(row.backupId) }
@@ -101,7 +101,7 @@ const factsOfWhen = (when: unknown): ReadonlyArray<string> => {
     if (typeof when !== "object" || when === null) return []
     if ("fact" in when && typeof when.fact === "string") return [when.fact]
     const members = membersOfWhen(when)
-    return Array.isArray(members) ? members.flatMap(factsOfWhen) : []
+    return Array.isArray(members) ? members.flatMap((entry) => factsOfWhen(entry)) : []
 }
 
 /** The keys a node leads to, for a decision point its branches' and for the others its `next`. */
@@ -173,8 +173,8 @@ const writeBranches = (
         const approver = approverOf(row, before?.approver ?? null)
         const when = whenOf(row, before)
         const next = (() => {
-            if (row.then === "auto") return act?.key ?? before?.next ?? stopKey
-            if (row.then === "stop") return stopKey
+            if (row.mode === "auto") return act?.key ?? before?.next ?? stopKey
+            if (row.mode === "stop") return stopKey
             const askKey = askKeyOf(key, before)
             claimed.add(askKey)
             asks.set(askKey, { node: byKey.get(askKey), approver })
@@ -182,11 +182,11 @@ const writeBranches = (
         })()
         const isChanged =
             before === undefined ||
-            JSON.stringify([before.when, before.then, before.approver]) !== JSON.stringify([when, row.then, approver])
+            JSON.stringify([before.when, before.mode, before.approver]) !== JSON.stringify([when, row.mode, approver])
         return {
             key,
             when,
-            then: row.then,
+            mode: row.mode,
             next,
             approver,
             sources: before?.sources ?? [],
@@ -306,13 +306,13 @@ export const documentWithDecidePoint = (
         {
             key: "b1",
             when: firstWhen,
-            then: "auto",
+            mode: "auto",
             next: act.key,
             approver: null,
             sources: [],
             selfCorrected: true,
         },
-        { key: "else", when: "else", then: "ask", next: askKey, approver, sources: [], selfCorrected: true },
+        { key: "else", when: "else", mode: "ask", next: askKey, approver, sources: [], selfCorrected: true },
     ]
     const decide = addedNode(
         decideKey,

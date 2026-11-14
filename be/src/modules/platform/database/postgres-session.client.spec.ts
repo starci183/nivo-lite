@@ -2,8 +2,11 @@ import { Test } from "@nestjs/testing"
 import { DataSource } from "typeorm"
 import type { PostgresSessionTarget } from "./postgres-session.contracts"
 import { openPostgresSession } from "./postgres-session.client"
+import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 
 const SUBJECT = Symbol("postgres-session.client")
+
+const refusal = () => new DatabaseError({ code: DatabaseErrorCode.MigrationFailed })
 
 type PolicySubject = {
     openPostgresSession: typeof openPostgresSession
@@ -113,7 +116,7 @@ const registerPostgresSessions = () => {
 const registerPostgresFailures = () => {
     it("propagates a refused connect", async () => {
         const subject = await buildSubject()
-        const refused = new Error("connect")
+        const refused = refusal()
         control.connectError = refused
 
         await expect(subject.openPostgresSession(target())).rejects.toBe(refused)
@@ -122,7 +125,7 @@ const registerPostgresFailures = () => {
     it("swallows a failure while closing a live session", async () => {
         const subject = await buildSubject()
         const session = await subject.openPostgresSession(target())
-        control.destroyError = new Error("destroy")
+        control.destroyError = refusal()
 
         await expect(session.close()).resolves.toBeUndefined()
     })

@@ -1,7 +1,7 @@
 import { STOP_STEP, type GraphSpec, type GraphSpecNode, type GraphSpecWait } from "@nivo-lite/agent-sdk/graph"
 import { BRANCH_FIELD, LOOP_BODY_ROUTE, LOOP_STEP, type NodeRole } from "@nivo-lite/agent-sdk/node"
 import { THREAD_END } from "@modules/integrations/langgraph"
-import { loopProblemsOf, loopShapesOf, type LoopShapes } from "./compiler-loop.policy"
+import { isFanoutLoop, loopProblemsOf, loopShapesOf, type LoopShapes } from "./compiler-loop.policy"
 
 /**
  * The name of the engine node every compiled graph carries: a step that cannot complete goes there, it stops the thread and the
@@ -10,7 +10,7 @@ import { loopProblemsOf, loopShapesOf, type LoopShapes } from "./compiler-loop.p
 export const FREEZE_NODE = "__freeze"
 
 /** The names a template key may not take: the keys of the port's `ThreadState`, which LangGraph refuses as node names. */
-export const THREAD_STATE_KEYS: ReadonlyArray<string> = ["trigger", "steps", "trouble", "founderAnswers", "loop"]
+export const THREAD_STATE_KEYS: ReadonlyArray<string> = ["trigger", "steps", "trouble", "founderAnswers", "loop", "branches"]
 
 /** What a graph node name may not contain (LangGraph keeps them for its checkpoint namespaces). */
 const RESERVED_CHARACTERS: ReadonlyArray<string> = ["|", ":"]
@@ -250,6 +250,11 @@ const nodeOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode, 
     const bodyKey = isLoop ? node.routes?.[LOOP_BODY_ROUTE] : undefined
     const target = bodyKey === undefined ? THREAD_END : targetOf(nodes, bodyKey)
     const entry = target === THREAD_END ? null : target
+    // A fan-out's loop node sends an item back to the node it was held at: every node of its body is a place it may go.
+    const resent =
+        isLoop && isFanoutLoop(node.params)
+            ? [...(loops?.bodies.get(node.key) ?? [])].filter((key) => targetOf(nodes, key) !== THREAD_END)
+            : []
     return {
         key: node.key,
         step: node.step,
@@ -257,7 +262,7 @@ const nodeOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode, 
         ...(node.blocking === undefined ? {} : { blocking: node.blocking }),
         ...(node.wait === undefined ? {} : { wait: node.wait }),
         exit,
-        ends: [...new Set([...(entry === null ? [] : [entry]), ...targetsOf(exit)]), FREEZE_NODE],
+        ends: [...new Set([...(entry === null ? [] : [entry]), ...resent, ...targetsOf(exit)]), FREEZE_NODE],
         ...(isLoop ? { loop: { body: entry } } : {}),
         ...(inLoop === undefined ? {} : { inLoop }),
     }

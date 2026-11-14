@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { withReplayKey } from "@modules/domain/tools/idempotency-key.policy"
+import { POST_REPORT_SCHEMA } from "./team-chat-native.schema"
 import { TeamChatNativeService, TEAM_CHAT_MANIFEST } from "./team-chat-native.service"
 import { TeamChatRoomsService } from "./team-chat.service"
 
@@ -11,40 +11,26 @@ const WS = "11111111-1111-4111-8111-111111111111"
 const RUN = "22222222-2222-4222-8222-222222222222"
 const AGENT = "33333333-3333-4333-8333-333333333333"
 const ROOM = "44444444-4444-4444-8444-444444444444"
-const SEAT = "55555555-5555-4555-8555-555555555555"
-const DECISION = "66666666-6666-4666-8666-666666666666"
 const CALLER = { agentId: AGENT, conversationId: null }
 
 const build = async () => {
     const chat = mock<TeamChatRoomsService>()
-    const rules = mock<AuthorityRulesService>()
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const moduleRef = await Test.createTestingModule({
         providers: [
             TeamChatNativeService,
             { provide: TeamChatRoomsService, useValue: chat },
-            { provide: AuthorityRulesService, useValue: rules },
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
     }).compile()
-    return { service: moduleRef.get(TeamChatNativeService), chat, rules, catalog }
-}
-
-const REQUEST = {
-    id: DECISION,
-    action: "refund",
-    amount: 200000,
-    unit: "vnd",
-    requestedByAgentId: AGENT,
-    storedGroup: null,
+    return { service: moduleRef.get(TeamChatNativeService), chat, catalog }
 }
 
 describe("TeamChatNativeService", () => {
-    it("announces the two tools as internal and write", () => {
+    it("announces its one tool as internal and write", () => {
         expect(TEAM_CHAT_MANIFEST.tools.map((tool) => [tool.name, tool.internalOnly, tool.scope])).toEqual([
             ["report.post", true, "write"],
-            ["approval.post", true, "write"],
         ])
     })
 
@@ -67,67 +53,31 @@ describe("TeamChatNativeService", () => {
         chat.postReport.mockResolvedValue(null)
         await expect(
             service.invoke(WS, "report.post", { runId: RUN, agentId: AGENT, trigger: "tag" }, CALLER),
-        ).rejects.toMatchObject({ code: "MCP_GATEWAY_NATIVE_REFUSED" })
+        ).rejects.toMatchObject({ code: "TOOLS_NATIVE_REFUSED" })
         await expect(service.invoke(WS, "report.post", { runId: "x" }, CALLER)).rejects.toMatchObject({
-            code: "MCP_GATEWAY_INVALID_ARGUMENTS",
+            code: "TOOLS_INVALID_ARGUMENTS",
         })
         await expect(service.invoke(WS, "approval.post", {}, CALLER)).rejects.toMatchObject({
-            code: "MCP_GATEWAY_INVALID_ARGUMENTS",
+            code: "TOOLS_UNKNOWN_TOOL",
         })
         await expect(service.invoke(WS, "other", {}, CALLER)).rejects.toMatchObject({
-            code: "MCP_GATEWAY_UNKNOWN_TOOL",
-        })
-    })
-})
-
-describe("TeamChatNativeService approval cards", () => {
-    it("posts the card of a request to the rooms and seats of the group it stored", async () => {
-        const { service, chat } = await build()
-        chat.approvalRequest.mockResolvedValue({
-            ...REQUEST,
-            storedGroup: { roles: ["owner"], rooms: [ROOM], members: [SEAT] },
-        })
-        chat.postApproval.mockResolvedValue(2)
-        await expect(service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)).resolves.toEqual({
-            cards: 2,
-        })
-        expect(chat.postApproval).toHaveBeenCalledWith(WS, {
-            decisionId: DECISION,
-            body: 'teamChat.approval:{"action":"refund","amount":"200000 vnd"}',
-            agentId: AGENT,
-            roomIds: [ROOM],
-            approverSeatIds: [SEAT],
+            code: "TOOLS_UNKNOWN_TOOL",
         })
     })
 
-    it("takes the group of the rule when the request stored none, and words an action with no amount", async () => {
-        const { service, chat, rules } = await build()
-        chat.approvalRequest.mockResolvedValue({ ...REQUEST, amount: null })
-        rules.approvalSetup.mockResolvedValue(
-            mock<ApprovalSetup>({ group: { roles: ["owner"], rooms: [ROOM], members: [] } }),
-        )
-        chat.postApproval.mockResolvedValue(1)
-        await service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)
-        expect(chat.postApproval).toHaveBeenCalledWith(
-            WS,
-            expect.objectContaining({
-                body: 'teamChat.approvalNoAmount:{"action":"refund","amount":""}',
-                roomIds: [ROOM],
-            }),
-        )
-        rules.approvalSetup.mockResolvedValue(null)
-        await service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)
-        expect(chat.postApproval).toHaveBeenLastCalledWith(
-            WS,
-            expect.objectContaining({ roomIds: [], approverSeatIds: [] }),
-        )
-    })
+    // E-FIX2 listed `idempotencyArg: "runId"` (a required uuid) as a replay-key member the gateway's `nivo:<sha>` could never satisfy.
+    // Read (E-FIX3, R52): no defect. The gateway checks the argument schema BEFORE it fills a key (`tool-registry.service.ts`), so a call
+    // with no runId is refused there and the fill never runs; a call names its run, the fill leaves it, and a timed-out post replayed by
+    // that key writes nothing twice (the card store keeps one report per room, kind and run: `insertCard` ... `orIgnore`). The run IS the
+    // replay key of a report.
+    it("takes the run as the report's replay key: a named run is kept as given, a call naming none is refused before any fill", () => {
+        const [spec] = TEAM_CHAT_MANIFEST.tools
+        if (spec === undefined) throw new Error("report.post")
+        const args = { runId: RUN, agentId: AGENT, trigger: "zalo" }
+        const caller = { workspaceId: WS, agentId: AGENT, conversationId: null, workItemId: "item-1" }
 
-    it("refuses the card of a request the workspace does not have", async () => {
-        const { service, chat } = await build()
-        chat.approvalRequest.mockResolvedValue(null)
-        await expect(service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)).rejects.toMatchObject({
-            code: "MCP_GATEWAY_NATIVE_REFUSED",
-        })
+        expect(spec.idempotencyArg).toBe("runId")
+        expect(withReplayKey(spec, caller, "nivo.tool.team-chat.report.post", args)).toBe(args)
+        expect(POST_REPORT_SCHEMA.safeParse({ agentId: AGENT, trigger: "zalo" }).success).toBe(false)
     })
 })

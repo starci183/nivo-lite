@@ -1,20 +1,20 @@
-import { TOOL } from "@nivo-lite/blocks-core"
 import { AgentThreadsErrorCode } from "@modules/domain/agent-threads"
 import { LanggraphErrorCode } from "@modules/integrations/langgraph"
-import {
-    ANSWER,
-    CONV,
-    FRONT,
-    UNDERSTAND,
-    WS,
-    actsOf,
-    customerWrites,
-    processOf,
-    redrive,
-    rowsOf,
-    threadDbOf,
-    type ThreadDb,
-} from "./thread-world"
+import { AGENT_WRITE_PURPOSE, CORE_AGENT_WRITE, NOTE_WRITE } from "@tests/fixtures/builders/engine-core-plugin.builder"
+import { FRONT, WS, redrive, rowsOf, startThread, threadDbOf, type ThreadDb, type ThreadProcess } from "./thread-world"
+import { NOTE_TRIGGER, coreFlowOf, coreProcessOf, noteActsOf } from "./thread-world-core"
+
+// The GENERIC engine core fixture installed beside the core (`engine-core-plugin.builder.ts`; moved off the world's business desk by
+// worker E: the same facts on the generic graph whose agent step writes itself, `tcore.agent-write`).
+jest.mock("@nivo-lite/plugin-registry", () => {
+    const parts: typeof import("@tests/fixtures/builders/installation-parts.builder") = jest.requireActual(
+        "@tests/fixtures/builders/installation-parts.builder",
+    )
+    const fixture: typeof import("@tests/fixtures/builders/engine-core-plugin.builder") = jest.requireActual(
+        "@tests/fixtures/builders/engine-core-plugin.builder",
+    )
+    return { installed: parts.installationWith([fixture.CORE_PLUGIN], "engine-core") }
+})
 
 // Package 0-9, item 4: one driver per thread. Inside one process the second driver gets `busy` (the thread runs refuse it by name, the
 // client answers `busy`); across processes the saver refuses the writes of the driver whose lease was taken over (a stale fence), and
@@ -24,25 +24,23 @@ import {
 const codeOf = (error: unknown): unknown =>
     typeof error === "object" && error !== null ? Reflect.get(error, "code") : null
 
-const OUTCOME = "Shop mo cua tu 8h den 21h a."
-
+/** The agent step's turns: it writes the note, then says it did, `times` over. */
 const answers = (db: ThreadDb, times: number) => {
-    db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
     for (let one = 0; one < times; one += 1)
-        db.model.script(
-            ANSWER,
-            { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: OUTCOME } } },
-            { done: { reply: OUTCOME } },
-        )
+        db.model.script(AGENT_WRITE_PURPOSE, { call: { tool: NOTE_WRITE, args: { noteId: "n1", text: "x" } } }, { done: { said: "x" } })
 }
+
+/** Starts the agent-write graph on a thread of the process (not awaited: a spec holds its agent's turn). */
+const writes = (process: ThreadProcess) =>
+    startThread(process, { flow: coreFlowOf(CORE_AGENT_WRITE), versionId: `${FRONT}:agent-write@1`, trigger: NOTE_TRIGGER, workflowId: "wf:direct" })
 
 describe("two drivers on one thread", () => {
     it("same process: the second driver is refused busy and runs nothing; the first finishes once", async () => {
         const db = threadDbOf()
         answers(db, 1)
-        const process = await processOf(db)
-        const held = db.model.hold(ANSWER)
-        const first = customerWrites(process, "Shop mo cua may gio?")
+        const process = await coreProcessOf(db)
+        const held = db.model.hold(AGENT_WRITE_PURPOSE)
+        const first = writes(process)
         await held.entered
         const runId = [...db.runs.keys()][0] ?? ""
         const ref = { workspaceId: WS, runId }
@@ -58,24 +56,24 @@ describe("two drivers on one thread", () => {
         expect(direct).toEqual({ status: "busy" })
         expect(done.error).toBeNull()
         expect((await process.threads.stateOf(ref))?.status).toBe("ended")
-        expect(actsOf(db, TOOL.customerMessageSend)).toHaveLength(1)
-        expect(db.model.askedOf(ANSWER)).toHaveLength(2)
+        expect(noteActsOf(db)).toHaveLength(1)
+        expect(db.model.askedOf(AGENT_WRITE_PURPOSE)).toHaveLength(2)
         expect(rowsOf(db, runId).run).toMatchObject({ status: "done", engine: "langgraph" })
     })
 
     it("two processes: the driver whose lease was taken over is fenced at the saver; the new one finishes; one send", async () => {
         const db = threadDbOf()
         answers(db, 2)
-        const zombie = await processOf(db)
-        const held = db.model.hold(ANSWER)
-        const first = customerWrites(zombie, "Shop mo cua may gio?")
+        const zombie = await coreProcessOf(db)
+        const held = db.model.hold(AGENT_WRITE_PURPOSE)
+        const first = writes(zombie)
         await held.entered
         const runId = [...db.runs.keys()][0] ?? ""
         const ref = { workspaceId: WS, runId }
 
         // Another worker takes the lease of the scope (a higher fence) and drives the thread on from its last checkpoint.
         db.checkpoints.takeOver(runId, db.fence + 1)
-        const fresh = await processOf(db)
+        const fresh = await coreProcessOf(db)
         const taken = await redrive(fresh, runId, "sweep-1")
         expect(taken.map((one) => one.error)).toEqual([null])
         const after = await fresh.threads.stateOf(ref)
@@ -86,8 +84,7 @@ describe("two drivers on one thread", () => {
 
         expect(codeOf(done.error)).toBe(LanggraphErrorCode.CheckpointFenced)
         expect(await fresh.threads.stateOf(ref)).toEqual(after)
-        expect(actsOf(db, TOOL.customerMessageSend)).toHaveLength(1)
-        expect(db.lines).toHaveLength(1)
+        expect(noteActsOf(db)).toHaveLength(1)
         // The zombie's own row writes (it went on in the background) did not move the run page off the new driver's end.
         expect(rowsOf(db, runId).run).toMatchObject({ status: "done", engine: "langgraph" })
         // Every stored checkpoint row of the thread was written under the new driver's fence or before the take-over.

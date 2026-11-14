@@ -17,7 +17,7 @@ const CHECK_READINESS_JOBS = 'SELECT * FROM "public"."job_stats"()'
 
 const JOB_ROWS = [{ job_stats: { checkedAt: "2026-10-14T00:00:00.000Z" } }]
 
-const READY_REPORT = { status: "ready", checks: { database: "ok", jobs: "ok", ai: "ok" } }
+const READY_REPORT = { status: "ready", checks: { database: "ok", jobs: "ok", ai: "ok", vectors: "off" } }
 
 const deferred = <T>() => {
     let resolve: (value: T) => void = () => undefined

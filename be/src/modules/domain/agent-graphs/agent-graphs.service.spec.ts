@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import {
     OWNER_EXAMPLE,
     ROW_TIME,
@@ -143,29 +142,6 @@ describe("AgentGraphsService versions", () => {
         expect(await codeOf(service.documentOf("ws-1", "agent-1", "version-9"))).toBe(VersionNotFound)
         expect(await codeOf(service.documentOf("ws-1", "agent-1", "version-2"))).toBe(VersionNotFound)
         expect(await codeOf(service.documentOf("ws-1", "agent-1", "version-1"))).toBe(DocumentInvalid)
-    })
-})
-
-describe("AgentGraphsService.approverOf", () => {
-    const decision = {
-        id: "decision-1",
-        workspaceId: "ws-1",
-        agentId: "agent-1",
-        workItemId: "item-9",
-        versionId: "version-1",
-        action: "pay_supplier",
-        branchKey: "middle",
-        path: ["decide", "middle"],
-        amount: 7_200_000,
-        approvalRequestId: null,
-        closed: false,
-    }
-
-    it("names the approver the branch of a decision had in the version that decided, or nobody", async () => {
-        const { service } = await liveAt(versionRow())
-
-        await expect(service.approverOf(decision)).resolves.toMatchObject({ policy: "any", timeoutMinutes: 240 })
-        await expect(service.approverOf({ ...decision, branchKey: "small" })).resolves.toBeNull()
     })
 })
 
@@ -359,7 +335,7 @@ describe("AgentGraphsService.publish", () => {
         records.insertVersion.mockResolvedValue(versionRow(1))
         records.patchGraph.mockResolvedValue(graphRow())
 
-        await service.publish({ ...input, document: { nodes: [], rights: [] } })
+        await service.publish({ ...input, document: { nodes: [] } })
 
         expect(records.insertSource).not.toHaveBeenCalled()
         expect(records.insertVersion).toHaveBeenCalledWith(SCOPE, expect.objectContaining({ number: 1 }))
@@ -462,26 +438,5 @@ describe("AgentGraphsService.activeVersionIdOf", () => {
         await expect(service.activeVersionIdOf("ws-1", "agent-1")).resolves.toBeNull()
         await expect(service.activeVersionIdOf("ws-1", "agent-1")).resolves.toBeNull()
         expect(records.version).not.toHaveBeenCalled()
-    })
-})
-
-const FLOW: GraphSpec = {
-    schema: "nivo/agent-graph@1",
-    moduleKey: "chatbot",
-    trigger: { kind: "tag", sources: ["channel"] },
-    grant: { rights: [], tools: [], effects: [] },
-    nodes: [{ key: "end", kind: "output", step: "stop" }],
-}
-
-describe("AgentGraphsService.hasLiveFlow", () => {
-    it("is true when the live version carries a flow of nodes, false with none or with no graph", async () => {
-        const withFlow = await liveAt(versionRow(2, { ...DOCUMENT, flow: FLOW }))
-        const rulesOnly = await liveAt(versionRow())
-        const noGraph = await build()
-        noGraph.records.graphOf.mockResolvedValue(null)
-
-        await expect(withFlow.service.hasLiveFlow("ws-1", "agent-1")).resolves.toBe(true)
-        await expect(rulesOnly.service.hasLiveFlow("ws-1", "agent-1")).resolves.toBe(false)
-        await expect(noGraph.service.hasLiveFlow("ws-1", "agent-1")).resolves.toBe(false)
     })
 })

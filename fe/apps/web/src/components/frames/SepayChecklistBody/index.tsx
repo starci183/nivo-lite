@@ -1,5 +1,4 @@
-import { Alert, Stepper, Text } from "@starci/grammar/common"
-import type { StepperStep, StepperStepState } from "@starci/grammar/common"
+import { Alert, Stepper, Text, type StepperStep, type StepperStepState } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Icon } from "@/components/leaves/Icon"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -49,7 +48,7 @@ export const SepayChecklistBody = (props: SepayChecklistBodyProps) => (
         labels={props.props.labels}
         onRetry={props.on.retry}
         render={(steps, isSkeleton) => {
-            const current = steps.find((step) => step.state === "current") ?? steps[steps.length - 1]
+            const current = steps.find((step) => step.state === "current") ?? steps.at(-1)
             return (
                 <Stepper
                     label={props.props.stepsLabel}

@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { LanggraphErrorCode } from "../errors/langgraph.error"
 import { idOfWireName, toolNamesOf, wireNameOf } from "./tool-names.policy"
 
@@ -21,7 +21,7 @@ const build = async (): Promise<Subject> => {
 }
 
 /** Every tool id the install names: what the agent of a step may call. */
-const INSTALLED: ReadonlyArray<string> = Object.values(TOOL)
+const INSTALLED: ReadonlyArray<string> = [...new Set<string>(Object.values(TOOL))]
 
 /** The same ids under the `nivo.` prefix the design gives the native tools: the map must hold for them too. */
 const PREFIXED = INSTALLED.map((id) => `nivo.${id}`)
@@ -64,8 +64,8 @@ describe("tool-names.policy: the names of one run", () => {
         const names = (await build()).toolNamesOf(INSTALLED, false)
 
         expect(INSTALLED.map((id) => names.shown(id))).toEqual(INSTALLED)
-        expect(names.idOf("nivo.lead.message.send")).toBe("nivo.lead.message.send")
-        expect(names.idOf("nivo__lead__message__send")).toBe("nivo__lead__message__send")
+        expect(names.idOf("nivo.tool.customer.message.send")).toBe("nivo.tool.customer.message.send")
+        expect(names.idOf("nivo__tool__customer__message__send")).toBe("nivo__tool__customer__message__send")
     })
 
     it("shows each id under its wire name with the map on and reads it back, one to one", async () => {

@@ -1,6 +1,6 @@
 import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { PublicDocumentsQuery } from "../__generated__/graphql"
 
 type QueryPublicDocumentsResponse = PublicDocumentsQuery
@@ -47,7 +47,7 @@ export const queryPublicDocuments = async ({
     query = QueryPublicDocuments.Query1,
     signal,
 }: QueryParams<QueryPublicDocuments> = {}): Promise<ApolloClient.QueryResult<QueryPublicDocumentsResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
     })

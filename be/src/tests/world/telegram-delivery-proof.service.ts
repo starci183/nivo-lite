@@ -2,10 +2,12 @@ import type { EntityManager } from "typeorm"
 import type { ReceiptRow, WebhookJobRow, WebhookMessageRow } from "@tests/fixtures/persistence/proof.rows"
 import type { MockOf } from "@starci/jest-preset"
 import type { QueueOutboxService, QueueOutbox, QueueWriteOptions } from "@modules/platform/queue"
+import { AccountDataIntakeService } from "@modules/domain/account-data"
 import type { TelegramInboxService } from "@modules/domain/telegram-inbox"
+import { persistReceiptAccount } from "../fixtures/builders/account-data.builder"
 import { buildTelegramDelivery } from "../fixtures/builders/telegram-delivery.builder"
 import type { LiteWorld } from "./lite-world.service"
-import { deliveryEnvelopes, deliveryPublications, removeDeliveryOutbox } from "./proof-database.service"
+import { cleanupWorkspace, deliveryEnvelopes, deliveryPublications, removeDeliveryOutbox } from "./proof-database.service"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
 /** The queue a Telegram delivery publishes to. */
@@ -53,10 +55,18 @@ type TelegramDeliveryBuilderResultShape = {
     close: () => Promise<void>
 }
 
-/** Runs real domain intake and publication against the world database and registers resource cleanup. */
+/**
+ * Runs real domain intake and publication against the world database and registers resource cleanup. The receipt is a row of the
+ * connection's account, so the owner, the workspace and the Telegram connection are persisted first (removing the workspace removes
+ * the connection and its account rows).
+ */
 export const telegramDeliveryBuilder = async (world: LiteWorld): Promise<TelegramDeliveryBuilderResultShape> => {
-    const connection = world.key(world.id())
-    const built = await buildTelegramDelivery(world.db.primary, connection)
+    const userId = world.id()
+    const workspaceId = world.id()
+    const connection = world.id()
+    cleanupWorkspace(world, userId, workspaceId)
+    await persistReceiptAccount(world.db.primary, { userId, workspaceId, connectionId: connection, provider: "telegram" })
+    const built = await buildTelegramDelivery(world.db.primary, connection, world.resolve(AccountDataIntakeService))
     cleanupTelegramDelivery(world, built.message.deliveryId)
     world.cleanup(built.close)
     return { ...built, write: jest.spyOn(built.actual, "write") }

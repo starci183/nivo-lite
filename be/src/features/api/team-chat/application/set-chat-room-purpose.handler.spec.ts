@@ -7,7 +7,7 @@ import { SetChatRoomPurposeHandler } from "./set-chat-room-purpose.handler"
 const commandOf = (purpose: { purpose: "group" | "common" } | { purpose: "module"; module: string }) =>
     new SetChatRoomPurposeCommand({
         request: { workspaceId: "ws-1", roomId: "room-1", purpose },
-        principal: { id: "user-1" } as never,
+        principal: { id: "user-1", role: "authenticated" },
     })
 
 describe("SetChatRoomPurposeHandler", () => {

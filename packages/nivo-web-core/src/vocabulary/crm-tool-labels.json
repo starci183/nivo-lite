@@ -1,0 +1,431 @@
+{
+  "nivo.api.crm.nivoweb.get.customers.code.services": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem dịch vụ của khách",
+      "en": "List a customer's services"
+    },
+    "summary": {
+      "vi": "Xem các dịch vụ (tên miền, hosting, website) của một khách và ngày hết hạn.",
+      "en": "List one customer's services (domains, hosting, websites) with their expiry dates."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.customers.code.contracts": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem hợp đồng của khách",
+      "en": "List a customer's contracts"
+    },
+    "summary": {
+      "vi": "Xem các hợp đồng của một khách: mã, tên, ngày ký, trạng thái.",
+      "en": "List one customer's contracts: code, title, signing date, state."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.customers.code.invoices": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem hoá đơn của khách",
+      "en": "List a customer's invoices"
+    },
+    "summary": {
+      "vi": "Xem các hoá đơn đã xuất cho một khách.",
+      "en": "List the invoices issued to one customer."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.customers.code.balance": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem công nợ của khách",
+      "en": "Read a customer's balance"
+    },
+    "summary": {
+      "vi": "Xem số tiền khách còn phải trả và phần quá hạn, như một dữ kiện.",
+      "en": "Read what a customer still owes and the overdue part, as a fact."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.customers.code.documents": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem hồ sơ giấy tờ của khách",
+      "en": "List a customer's documents"
+    },
+    "summary": {
+      "vi": "Xem danh sách giấy tờ của một khách (chỉ tham chiếu, không mở tệp).",
+      "en": "List one customer's documents (references only; no file is opened)."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.services.expiring": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem dịch vụ sắp hết hạn",
+      "en": "List expiring services"
+    },
+    "summary": {
+      "vi": "Xem dịch vụ sắp hết hạn cùng lần nhắc gần nhất, số lần nhắc và việc liên lạc được hay không.",
+      "en": "List services about to expire with the last reminder, the reminder count and whether the customer is reachable."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.services.code.status": {
+    "kind": "reads",
+    "title": {
+      "vi": "Kiểm tra dịch vụ",
+      "en": "Check a service"
+    },
+    "summary": {
+      "vi": "Xem tình trạng một dịch vụ tại nhà cung cấp và ngày hết hạn đã kiểm tra.",
+      "en": "Read a service's state at its provider and the checked expiry date."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.services.code.renewals": {
+    "kind": "acts",
+    "title": {
+      "vi": "Gia hạn dịch vụ tại nhà cung cấp",
+      "en": "Renew a service at the provider"
+    },
+    "summary": {
+      "vi": "Gia hạn một dịch vụ đã được khách trả tiền; tốn tiền của công ty; chạy khi tiền của khách đã ghi nhận.",
+      "en": "Renew a service the customer has paid for; it spends the company's money; it runs once the customer's payment is recorded."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.services.code.reminders": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi nhận lời nhắc gia hạn",
+      "en": "Record a renewal reminder"
+    },
+    "summary": {
+      "vi": "Ghi vào CRM một lời nhắc gia hạn đã gửi hoặc câu trả lời của khách.",
+      "en": "Record in the CRM a renewal reminder sent or the customer's answer."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.prices": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem bảng giá",
+      "en": "Read the price list"
+    },
+    "summary": {
+      "vi": "Xem bảng giá dịch vụ theo loại và kỳ hạn.",
+      "en": "Read the service prices by kind and term."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.receivables.overdue": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem khoản phải thu quá hạn",
+      "en": "List overdue receivables"
+    },
+    "summary": {
+      "vi": "Xem các khoản phải thu của dự án đã đến hạn và lần báo gần nhất.",
+      "en": "List the project receivables that are due and the last notice."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.receivables.code.notices": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi nhận thông báo công nợ",
+      "en": "Record a receivable notice"
+    },
+    "summary": {
+      "vi": "Ghi vào CRM một lần nhắc công nợ đã gửi.",
+      "en": "Record in the CRM a receivable notice that was sent."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.payables": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem công nợ phải trả",
+      "en": "List payables"
+    },
+    "summary": {
+      "vi": "Xem các khoản công ty phải trả nhà cung cấp.",
+      "en": "List what the company owes its suppliers."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.tickets": {
+    "kind": "acts",
+    "title": {
+      "vi": "Mở phiếu hỗ trợ",
+      "en": "Open a support ticket"
+    },
+    "summary": {
+      "vi": "Mở một phiếu hỗ trợ trong CRM cho yêu cầu của khách.",
+      "en": "Open a support ticket in the CRM for a customer's request."
+    }
+  },
+  "nivo.api.crm.nivoweb.patch.tickets.id": {
+    "kind": "acts",
+    "title": {
+      "vi": "Cập nhật phiếu hỗ trợ",
+      "en": "Update a support ticket"
+    },
+    "summary": {
+      "vi": "Đổi trạng thái hoặc ghi chú của một phiếu hỗ trợ.",
+      "en": "Change the state or add a note to a support ticket."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.tickets.id": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem phiếu hỗ trợ",
+      "en": "Read a support ticket"
+    },
+    "summary": {
+      "vi": "Xem một phiếu hỗ trợ trong CRM.",
+      "en": "Read one support ticket in the CRM."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.tickets": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem các phiếu hỗ trợ",
+      "en": "List support tickets"
+    },
+    "summary": {
+      "vi": "Xem các phiếu hỗ trợ của một khách hoặc theo trạng thái.",
+      "en": "List the support tickets of a customer or by state."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.invoice-drafts": {
+    "kind": "acts",
+    "title": {
+      "vi": "Soạn hoá đơn nháp",
+      "en": "Draft an invoice"
+    },
+    "summary": {
+      "vi": "Soạn hoá đơn nháp cho một lần gia hạn; số tiền do CRM tính.",
+      "en": "Draft an invoice for a renewal; the CRM computes the amounts."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.renewals": {
+    "kind": "acts",
+    "title": {
+      "vi": "Lập yêu cầu gia hạn",
+      "en": "Open a renewal request"
+    },
+    "summary": {
+      "vi": "Lập yêu cầu gia hạn chờ thanh toán; CRM tính tổng tiền và mã thanh toán.",
+      "en": "Open a renewal request awaiting payment; the CRM computes the total and the payment code."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.renewals.id": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem yêu cầu gia hạn",
+      "en": "Read a renewal request"
+    },
+    "summary": {
+      "vi": "Xem một yêu cầu gia hạn: trạng thái, tổng tiền, mã thanh toán.",
+      "en": "Read a renewal request: state, total, payment code."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.renewals.open": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem yêu cầu gia hạn đang mở",
+      "en": "List open renewal requests"
+    },
+    "summary": {
+      "vi": "Xem các yêu cầu gia hạn đang chờ thanh toán.",
+      "en": "List the renewal requests awaiting payment."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.renewals.id.payments": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi nhận đã thanh toán",
+      "en": "Record a renewal payment"
+    },
+    "summary": {
+      "vi": "Đánh dấu yêu cầu gia hạn đã trả theo giao dịch ngân hàng; không nhận số tiền.",
+      "en": "Mark a renewal request paid by its bank transaction; takes no amount."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.invoice-drafts.id": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem hoá đơn nháp",
+      "en": "Read an invoice draft"
+    },
+    "summary": {
+      "vi": "Xem một hoá đơn nháp trong CRM: tổng tiền và trạng thái.",
+      "en": "Read one invoice draft in the CRM: its total and state."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.payables.party-code.notes": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi chú hoá đơn nhà cung cấp",
+      "en": "Note a supplier invoice"
+    },
+    "summary": {
+      "vi": "Ghi một hoá đơn nhà cung cấp đã khớp vào khoản phải trả; sổ sách không đổi.",
+      "en": "Note a matched supplier invoice on a payable; the books do not change."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.purchases": {
+    "kind": "acts",
+    "title": {
+      "vi": "Mở yêu cầu mua mới",
+      "en": "Open a purchase enquiry"
+    },
+    "summary": {
+      "vi": "Ghi nhận một yêu cầu mua mới (khách hỏi dịch vụ) trong CRM; cùng cuộc trò chuyện hoặc thư thì trả về yêu cầu đang mở.",
+      "en": "Record a new purchase enquiry in the CRM; the same conversation or mail answers the purchase already open."
+    }
+  },
+  "nivo.api.crm.nivoweb.patch.purchases.id": {
+    "kind": "acts",
+    "title": {
+      "vi": "Cập nhật yêu cầu mua",
+      "en": "Update a purchase enquiry"
+    },
+    "summary": {
+      "vi": "Ghi nhu cầu và liên hệ khách đã nói vào yêu cầu mua, hoặc đóng yêu cầu khi khách không mua.",
+      "en": "Write the need and the contact the person gave onto the purchase, or close it when they do not buy."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.purchases.id": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem yêu cầu mua",
+      "en": "Read a purchase"
+    },
+    "summary": {
+      "vi": "Xem một yêu cầu mua: nhu cầu, báo giá, trạng thái, mã thanh toán và các lần nhắc.",
+      "en": "Read one purchase: the need, its quote, state, payment code and follow-ups."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.purchases.open": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem yêu cầu mua đang mở",
+      "en": "List open purchases"
+    },
+    "summary": {
+      "vi": "Xem các yêu cầu mua đang mở với ngày báo giá, hạn báo giá và lần nhắc gần nhất.",
+      "en": "List the open purchases with their quote day, validity and last follow-up."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.purchases.id.quotes": {
+    "kind": "acts",
+    "title": {
+      "vi": "Lập báo giá",
+      "en": "Create a quote"
+    },
+    "summary": {
+      "vi": "Lập báo giá cho một yêu cầu mua từ bảng giá; CRM tự tính từng dòng, thuế, tổng tiền và hạn báo giá.",
+      "en": "Create the quote of a purchase from the price list; the CRM computes every line, the VAT, the total and the validity."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.purchases.id.followups": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi lần nhắc báo giá",
+      "en": "Record a quote follow-up"
+    },
+    "summary": {
+      "vi": "Ghi một lần nhắc khách về báo giá chưa trả lời và kết quả của lần nhắc.",
+      "en": "Record one follow-up on an unanswered quote and its outcome."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.invoices": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem hoá đơn",
+      "en": "List invoices"
+    },
+    "summary": {
+      "vi": "Xem các hoá đơn công ty đã xuất, mọi khách.",
+      "en": "List the invoices the company issued, every customer."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.contracts": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem hợp đồng",
+      "en": "List contracts"
+    },
+    "summary": {
+      "vi": "Xem các hợp đồng của công ty, mọi khách.",
+      "en": "List the company's contracts, every customer."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.summary.counts": {
+    "kind": "reads",
+    "title": {
+      "vi": "Đếm dữ liệu",
+      "en": "Count records"
+    },
+    "summary": {
+      "vi": "Đếm dịch vụ, yêu cầu gia hạn, phiếu theo trạng thái; hoá đơn, hợp đồng, công nợ.",
+      "en": "Count services, renewals and tickets per state; invoices, contracts, receivables and payables."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.purchases.id.acceptance": {
+    "kind": "acts",
+    "title": {
+      "vi": "Lập hồ sơ mua",
+      "en": "Record the acceptance of a purchase"
+    },
+    "summary": {
+      "vi": "Ghi nhận khách đồng ý báo giá: CRM mở dự án, dịch vụ, hợp đồng, lịch thu và mã thanh toán đợt đầu; đó là việc khách đã đồng ý.",
+      "en": "Record that the customer accepted the quote: the CRM opens the project, the services, the contract, the receivables and the first instalment payment code; it records what the customer agreed."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.purchases.id.payments": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi nhận thanh toán đơn mua",
+      "en": "Record a purchase payment"
+    },
+    "summary": {
+      "vi": "Ghi nhận giao dịch ngân hàng đã trả cho một yêu cầu mua; không nhận số tiền.",
+      "en": "Record the bank transaction that paid a purchase; takes no amount."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.customers": {
+    "kind": "reads",
+    "title": {
+      "vi": "Tìm khách hàng",
+      "en": "Find a customer"
+    },
+    "summary": {
+      "vi": "Tìm khách hàng trong hệ thống theo tên, địa chỉ thư, số điện thoại, tên miền hoặc mã.",
+      "en": "Finds customers in the business system by name, mail address, phone number, domain or code."
+    }
+  },
+  "nivo.api.crm.nivoweb.get.customers.code": {
+    "kind": "reads",
+    "title": {
+      "vi": "Xem khách hàng",
+      "en": "Read a customer"
+    },
+    "summary": {
+      "vi": "Xem hồ sơ một khách hàng và các liên hệ của khách.",
+      "en": "Reads one customer's record and their contacts."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.customers": {
+    "kind": "acts",
+    "title": {
+      "vi": "Tạo khách hàng mới",
+      "en": "Create a customer"
+    },
+    "summary": {
+      "vi": "Mở một khách hàng mới cho một yêu cầu mua đã được khách đồng ý; luôn hỏi người trước.",
+      "en": "Opens a new customer for a purchase the customer agreed to; always asks a person first."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.customers.code.contacts": {
+    "kind": "acts",
+    "title": {
+      "vi": "Gắn liên hệ cho khách",
+      "en": "Link a contact to a customer"
+    },
+    "summary": {
+      "vi": "Gắn một cuộc trò chuyện, địa chỉ thư hoặc số điện thoại vào khách hàng.",
+      "en": "Links a chat conversation, a mail address or a phone number to a customer."
+    }
+  }
+}

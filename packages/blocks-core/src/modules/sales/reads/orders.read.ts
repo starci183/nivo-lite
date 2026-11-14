@@ -1,13 +1,12 @@
 import { portsOf } from "@nivo-lite/agent-sdk/port"
-import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
-import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
+import { countsRead, listRead, type ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { ORDER_STATUSES } from "../../../rules/sales/order-status"
 import { SALES_VIEW } from "../constants"
 import { salesLeads, salesOrdersList } from "../ports"
-import { leadNameOf } from "../sales-records"
+import { leadNameOf, leadOfContact } from "../sales-records"
 import type { OrderRow } from "../sales.types"
 
 /** What the orders list accepts: a search over the items and the note (the number is a sequence, which is not searched), the status as a filter, two sorts. */
@@ -23,7 +22,7 @@ export const ORDERS_LIST: ListShape = {
 export const ORDER_ROW_FIELDS: ReadonlyArray<keyof OrderRow | "customer"> = [
     "id",
     "orderNo",
-    "leadId",
+    "contactId",
     "itemsText",
     "amountVnd",
     "status",
@@ -31,9 +30,9 @@ export const ORDER_ROW_FIELDS: ReadonlyArray<keyof OrderRow | "customer"> = [
     "customer",
 ]
 
-/** `sales.orders`: the orders of the workspace, searched, narrowed by status and sorted. */
+/** `blocks-core.sales.api.order.list`: the orders of the workspace, searched, narrowed by status and sorted. */
 const listedOrders: ListReadDefinition = listRead({
-    id: "sales.orders",
+    id: "blocks-core.sales.api.order.list",
     dataKind: "order",
     permission: SALES_VIEW,
     fields: ORDER_ROW_FIELDS,
@@ -47,7 +46,7 @@ const MAX_CURSOR = 2048
 
 /** The page a list read returns, read for what the customers need: each row keeps every field it came with. */
 const pageShape = z.object({
-    rows: z.array(z.looseObject({ leadId: z.string().max(MAX_ID).nullable() })).max(PAGE_ROWS_MAX),
+    rows: z.array(z.looseObject({ contactId: z.string().max(MAX_ID).nullable() })).max(PAGE_ROWS_MAX),
     cursor: z.string().max(MAX_CURSOR).nullable(),
 })
 
@@ -59,21 +58,21 @@ export const ordersRead: ListReadDefinition = {
         const page = listed.ok ? pageShape.safeParse(listed.data) : null
         if (!listed.ok || !page?.success) return listed
         const { leads } = portsOf(provider, { leads: salesLeads })
-        const ids = new Set(page.data.rows.flatMap((row) => (row.leadId === null ? [] : [row.leadId])))
+        const ids = new Set(page.data.rows.flatMap((row) => (row.contactId === null ? [] : [row.contactId])))
         const names = new Map<string, string>()
         await Promise.all(
             [...ids].map(async (id) => {
-                const lead = await leads.get(id)
+                const lead = await leadOfContact(leads, id)
                 if (lead !== null) names.set(id, leadNameOf(lead.data) ?? "")
             }),
         )
-        const customerOf = (leadId: string | null): string => (leadId === null ? "" : (names.get(leadId) ?? ""))
+        const customerOf = (contactId: string | null): string => (contactId === null ? "" : (names.get(contactId) ?? ""))
         return {
             ok: true,
-            data: { ...page.data, rows: page.data.rows.map((row) => ({ ...row, customer: customerOf(row.leadId) })) },
+            data: { ...page.data, rows: page.data.rows.map((row) => ({ ...row, customer: customerOf(row.contactId) })) },
         }
     },
 }
 
-/** `sales.order-counts`: how many orders each status holds, under the same search. */
-export const orderCountsRead: ReadDefinition = countsRead({ id: "sales.order-counts", of: ordersRead, by: "status" })
+/** `blocks-core.sales.api.order.counts`: how many orders each status holds, under the same search. */
+export const orderCountsRead: ReadDefinition = countsRead({ id: "blocks-core.sales.api.order.counts", of: ordersRead, by: "status" })

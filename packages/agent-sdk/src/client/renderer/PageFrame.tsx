@@ -1,13 +1,11 @@
-import { useEffect, useRef } from "react"
-import type { ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 import { Cluster, Tabs } from "@starci/grammar/common"
 import type { ParamHandle, ReadDefinition } from "../../block/block.types"
 import { wordsOf } from "../../schema/namespaced"
 import type { PlanView } from "../../spec/render-plan"
 import { resolveVariables } from "../../spec/spec-value"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
-import type { CountChip, ViewChrome } from "./view-chrome"
-import { countChipOf } from "./view-chrome"
+import { type CountChip, type ViewChrome, countChipOf } from "./view-chrome"
 
 /** The tab row of a workbench as data, for a host that draws it in its own header (the app frame's second tab layer). */
 export interface PageFrameTabs {
@@ -87,7 +85,7 @@ interface CountChainProps extends Omit<
 /** Reads the counts of the tabs one after the other, each in a component of its own so every hook list stays stable. */
 const CountChain = (props: CountChainProps): ReactNode => {
     const [view, ...rest] = props.rest
-    if (view === undefined) return <>{props.done(props.chips)}</>
+    if (view === undefined) return props.done(props.chips)
     return (
         <TabCount
             chrome={props.chrome.find((candidate) => candidate.id === view.id)}

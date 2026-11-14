@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateLogoutOtherSessions } from "@/modules/api/graphql/mutations/mutation-logout-other-sessions"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { LogoutOtherSessionsMutation } from "@/modules/api"
 
 /** The SWR key of the logoutOtherSessions mutation. */

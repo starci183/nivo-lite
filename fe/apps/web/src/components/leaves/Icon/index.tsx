@@ -2,11 +2,10 @@
 
 import * as Outline from "@heroicons/react/24/outline"
 import * as StarciOutline from "@starci/heroicons/24/outline"
-import { Icon as GrammarIcon, Spinner } from "@starci/grammar/common"
-import type { IconUsage } from "@starci/grammar/common"
+import { Icon as GrammarIcon, Spinner, type IconUsage } from "@starci/grammar/common"
 import type { SVGProps, ReactElement } from "react"
-import { GoogleMark } from "./component"
-import type { IconName } from "./component"
+import { RUN_MARK_COLOURS } from "./classNames"
+import { GoogleMark, type IconName } from "./component"
 
 export type { IconName } from "./component"
 /** Every source in this registry is callable (Heroicons are forward-ref callables; custom marks are functions). */
@@ -28,16 +27,12 @@ const cuts = (outline: GlyphComponent, chip: GlyphComponent): GlyphCuts => ({
 
 /** The app answer to "which glyph means this": every semantic name resolves to the cuts Grammar's Icon may ask for. */
 const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
-    moduleAccounting: cuts(Outline.DocumentTextIcon, Outline.DocumentTextIcon),
     moduleBooking: cuts(Outline.CalendarDaysIcon, Outline.CalendarDaysIcon),
     moduleChatbot: cuts(Outline.ChatBubbleLeftIcon, Outline.ChatBubbleLeftIcon),
     moduleContent: cuts(Outline.DocumentTextIcon, Outline.DocumentTextIcon),
     moduleHiring: cuts(Outline.BriefcaseIcon, Outline.BriefcaseIcon),
-    moduleInventory: cuts(Outline.CubeIcon, Outline.CubeIcon),
     moduleLeadGen: cuts(Outline.FunnelIcon, Outline.FunnelIcon),
-    moduleLoyalty: cuts(Outline.StarIcon, Outline.StarIcon),
     moduleSales: cuts(Outline.ArrowTrendingUpIcon, Outline.ArrowTrendingUpIcon),
-    moduleShifts: cuts(Outline.CalendarDaysIcon, Outline.CalendarDaysIcon),
     moduleVideo: cuts(Outline.VideoCameraIcon, Outline.VideoCameraIcon),
     brand: cuts(Outline.AcademicCapIcon, Outline.AcademicCapIcon),
     streak: cuts(Outline.FireIcon, Outline.FireIcon),
@@ -81,6 +76,8 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     notification: cuts(Outline.BellIcon, Outline.BellIcon),
     account: cuts(Outline.UserCircleIcon, Outline.UserCircleIcon),
     profile: cuts(Outline.IdentificationIcon, Outline.IdentificationIcon),
+    settings: cuts(Outline.Cog6ToothIcon, Outline.Cog6ToothIcon),
+    developers: cuts(Outline.CodeBracketIcon, Outline.CodeBracketIcon),
     saved: cuts(Outline.BookmarkIcon, Outline.BookmarkIcon),
     blog: cuts(Outline.NewspaperIcon, Outline.NewspaperIcon),
     talents: cuts(Outline.SparklesIcon, Outline.SparklesIcon),
@@ -165,16 +162,16 @@ type AgentRunStatusMarkProps = {
     }
 }
 
-/** The glyph of each state that is not running, and the text colour its outline takes. */
-const RUN_MARKS: Readonly<Record<Exclude<RunMarkStatus, "running">, { readonly icon: IconName; readonly colour: string }>> = {
-    queued: { icon: "clock", colour: "text-muted" },
-    scheduled: { icon: "calendar", colour: "text-muted" },
-    waiting: { icon: "clock", colour: "text-warning" },
-    done: { icon: "complete", colour: "text-success" },
-    failed: { icon: "failure", colour: "text-danger" },
-    pending: { icon: "pending", colour: "text-muted" },
-    undone: { icon: "retry", colour: "text-muted" },
-    cancelled: { icon: "remove", colour: "text-muted" },
+/** The glyph of each state that is not running. */
+const RUN_MARKS: Readonly<Record<Exclude<RunMarkStatus, "running">, { readonly icon: IconName }>> = {
+    queued: { icon: "clock" },
+    scheduled: { icon: "calendar" },
+    waiting: { icon: "clock" },
+    done: { icon: "complete" },
+    failed: { icon: "failure" },
+    pending: { icon: "pending" },
+    undone: { icon: "retry" },
+    cancelled: { icon: "remove" },
 }
 
 /**
@@ -186,7 +183,7 @@ export const AgentRunStatusMark = (props: AgentRunStatusMarkProps): ReactElement
     if (status === "running") return <Spinner label={label} size="sm" />
     const mark = RUN_MARKS[status]
     return (
-        <span className={mark.colour}>
+        <span className={RUN_MARK_COLOURS[status]}>
             <GrammarIcon source={nivoIconSource(mark.icon, "leading")} ariaLabel={label} />
         </span>
     )

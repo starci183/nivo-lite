@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-doors.module-definition"
 import { CareOptOutService } from "./care-opt-out.service"
 import { DoorPressesService } from "./door-presses.service"
@@ -26,7 +25,12 @@ export class AgentDoorsModule extends ConfigurableModuleClass {
                 CareOptOutService,
                 HoldReleaseDoorService,
             ],
-            exports: [DoorPressesService, ScheduledItemsService, CareOptOutService, HoldReleaseDoorService],
+            exports: [
+                DoorPressesService,
+                ScheduledItemsService,
+                CareOptOutService,
+                HoldReleaseDoorService,
+            ],
         }
     }
 }

@@ -19,6 +19,15 @@ describe("agent turn policy", () => {
         expect(policy.agentReasoningOf({}, { purpose: "sales.consult:agent" })).toBe("default")
     })
 
+    it("gives a light step's short answer low effort and a heavy step's multi-step tool turn medium, unless the node says", async () => {
+        const policy = await build()
+        const ask = { purpose: "sales.consult-turn:consult" }
+
+        expect(policy.agentReasoningOf({ nodeReasoning: "high" }, ask, "light")).toBe("low")
+        expect(policy.agentReasoningOf({ nodeReasoning: "high" }, ask, "heavy")).toBe("medium")
+        expect(policy.agentReasoningOf({}, { ...ask, reasoning: "off" }, "heavy")).toBe("off")
+    })
+
     it("forces a tool call only on a step whose reasoning is off: forcing it switches the model's reasoning off", async () => {
         const policy = await build()
 

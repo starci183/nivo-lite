@@ -26,5 +26,5 @@ export class AgentRunDecisionType {
 
     /** The answers offered, the one that goes on first. */
     @Field(() => [AgentRunDecisionVerdict])
-    options!: Array<string>
+    options!: ReadonlyArray<string>
 }

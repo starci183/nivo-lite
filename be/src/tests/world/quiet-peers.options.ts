@@ -1,30 +1,28 @@
 import type { Provider } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { AgentRunsService } from "../../modules/domain/agent-runs/agent-runs.service"
-import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
-import type { InstallationDirectory } from "@modules/domain/agents"
-import { AgentTagService } from "../../modules/domain/agent-work/agent-tag.service"
-import { CustomerIntakeService } from "../../modules/domain/conversations/customer-intake.service"
+import { AGENTS_INSTALLATIONS, type InstallationDirectory } from "@modules/domain/agents"
+import { ProviderTriggersService } from "@modules/domain/provider-triggers"
+import { CustomerFilesService } from "@modules/domain/chat-files"
 
 /**
  * Peers that sit behind an owner under proof but are not what the proof is about, bound as quiet doubles: each answers as if nothing
  * happened (the scheduler is told, no agent is woken, no graph speaks), so a world composes without the capability they belong to.
  */
 
-/** The tag door of the agent work store: a tag is told as written, and no wake exists. */
-export const QUIET_AGENT_TAGS: Provider = {
-    provide: AgentTagService,
+/** The one delivery function of the event pipeline: the entry keeps the event and it is delivered to nobody (no agent is woken, nothing is untaken). */
+export const QUIET_PROVIDER_TRIGGERS: Provider = {
+    provide: ProviderTriggersService,
     useFactory: () =>
-        mock<AgentTagService>({ tagAgent: jest.fn().mockResolvedValue({ tagged: true, wakeId: "quiet" }) }),
+        mock<ProviderTriggersService>({
+            deliver: jest.fn().mockResolvedValue({ status: "delivered", events: 0, dropped: 0, woken: [], repeats: 0, untaken: 0, held: 0 }),
+        }),
 }
 
-/** The customer intake of the conversations: the message is stored and no wake starts. */
-export const QUIET_CUSTOMER_INTAKE: Provider = {
-    provide: CustomerIntakeService,
-    useFactory: () =>
-        mock<CustomerIntakeService>({
-            answer: jest.fn().mockResolvedValue(undefined),
-        }),
+/** The customer files of a message: the proofs' messages carry no picture, so nothing is fetched or kept. */
+export const QUIET_CUSTOMER_FILES: Provider = {
+    provide: CustomerFilesService,
+    useFactory: () => mock<CustomerFilesService>({ keep: jest.fn().mockResolvedValue([]) }),
 }
 
 /** The installations of the agents: no proof installs a module, so no agent has an installation to move a conversation to. */

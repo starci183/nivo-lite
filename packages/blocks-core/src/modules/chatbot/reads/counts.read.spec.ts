@@ -1,12 +1,14 @@
 import { STAFF_CONTEXT, memoryProvider, memoryWorld } from "../fixtures/chatbot.memory"
 import { CHANNEL_COUNTS, THREAD_COUNTS } from "./counts.read"
 
+// Design change (ruling R43): a held chat is counted by its stored mark (`ai`): who holds it is the engine's route, no stored mark.
+// R45: `handled` is back as the engine's count of the workspace's held routes (one in the world), outside `total`.
 describe("the chatbot counts reads", () => {
     it("counts the conversations per status and sums them", async () => {
         const result = await THREAD_COUNTS.execute?.(memoryProvider(memoryWorld()), { channel: "zalo" }, STAFF_CONTEXT)
         expect(result).toEqual({
             ok: true,
-            data: { counts: { needs: 1, handled: 1, ai: 2, today: 0 }, total: 4 },
+            data: { counts: { needs: 1, ai: 3, today: 0, handled: 1 }, total: 4 },
         })
     })
 
@@ -15,7 +17,7 @@ describe("the chatbot counts reads", () => {
         const result = await THREAD_COUNTS.execute?.(memoryProvider(memoryWorld()), {}, context)
         expect(result).toEqual({
             ok: true,
-            data: { counts: { needs: 1, handled: 1, ai: 2, today: 2 }, total: 4 },
+            data: { counts: { needs: 1, ai: 3, today: 2, handled: 1 }, total: 4 },
         })
     })
 

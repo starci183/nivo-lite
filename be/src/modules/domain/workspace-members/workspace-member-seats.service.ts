@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 import type {
+    ActiveSeatRecord,
     ActiveUserRecord,
     MemberSeatRecord,
     OptionalMemberSeatRecord,
@@ -60,6 +60,21 @@ export class WorkspaceMemberSeatsService {
         return rows.map((row) => ({ userId: row.userId, displayName: row.displayName }))
     }
 
+    /** The active accounts of the workspace with their seat roles and names, in account id order, at most `limit`. */
+    async activeSeats(
+        workspaceId: string,
+        limit: number,
+        manager: EntityManager = this.entityManager,
+    ): Promise<Array<ActiveSeatRecord>> {
+        const rows = await manager.find(WorkspaceMemberEntity, {
+            select: { userId: true, displayName: true, role: true },
+            where: { workspaceId, status: "active" },
+            order: { userId: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({ userId: row.userId, displayName: row.displayName, role: row.role }))
+    }
+
     /** The seats of the workspace among the given seat ids, whatever their status; a missing seat is absent. */
     async seatsByIds(
         workspaceId: string,
@@ -71,7 +86,7 @@ export class WorkspaceMemberSeatsService {
             where: { workspaceId, id: In([...memberIds]) },
             take: limit,
         })
-        return rows.map(toSeat)
+        return rows.map((item) => toSeat(item))
     }
 
     /** One seat of the workspace by seat id, whatever its status; null when there is none. */

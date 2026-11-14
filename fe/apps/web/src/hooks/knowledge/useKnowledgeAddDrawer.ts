@@ -1,11 +1,11 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useRef } from "react"
 import { useBrainTodoCount } from "./useBrainTodoCount"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
-import { isDocumentActive } from "@/modules/documents"
+import { isDocumentActive, refusalNoticeOf } from "@/modules/documents"
 import type { KnowledgeAddDrawerView } from "@/modules/types"
 import type { AddPreset } from "@/hooks/knowledgeAddTypes"
 import type { ModuleKey } from "@/modules/catalog"
@@ -33,6 +33,8 @@ interface KnowledgeAddDrawerInput {
 export const useKnowledgeAddDrawer = (input: KnowledgeAddDrawerInput): KnowledgeAddDrawerView => {
     const t = useTranslations("knowledge")
     const tp = useTranslations("pane")
+    const tl = useTranslations("brainTruths")
+    const formatter = useFormatter()
     const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
     const { add, view } = useAddDocumentsView(input)
@@ -50,6 +52,7 @@ export const useKnowledgeAddDrawer = (input: KnowledgeAddDrawerInput): Knowledge
         options.setTags(input.preset?.tags ?? "")
         add.pickMode(input.preset === null ? "files" : (input.preset.mode ?? "write"))
     }, [add, options, input.preset, input.presetKey])
+    const refused = queue.items.find((one) => one.refusal !== undefined)
     const moduleLabel = view.options.moduleOptions.find((one) => one.id === view.options.module)?.label ?? ""
     return {
         props: {
@@ -63,12 +66,17 @@ export const useKnowledgeAddDrawer = (input: KnowledgeAddDrawerInput): Knowledge
                 ...view.options,
                 summary: `${view.options.topic.trim() === "" ? t("addNoTopic") : view.options.topic.trim()} · ${moduleLabel}`,
             },
+            refusal:
+                refused?.refusal === undefined
+                    ? null
+                    : refusalNoticeOf(tl, formatter, { name: refused.name, failure: refused.refusal }),
             summary:
                 isRead && todo > 0 ? { title: t("summaryAsk", { count: todo }), actionLabel: t("summarySee") } : null,
         },
         on: {
             close: add.close,
             connectDrive: () => drive?.onPress(),
+            seeDocuments: add.close,
             seeQuestions: () => router.push(workspaceHref(workspaceId, brainTabHref("todo"))),
             setMode: add.pickMode,
             addFiles: queue.addFiles,

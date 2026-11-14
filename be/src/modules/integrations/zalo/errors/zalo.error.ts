@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the Zalo integration. A refusal Zalo explained carries its numeric error in the params as `zaloCode`. */
 export enum ZaloErrorCode {
@@ -17,6 +16,8 @@ export enum ZaloErrorCode {
     NightHours = "ZALO_NIGHT_HOURS",
     /** The OA access token is invalid or expired. */
     TokenRejected = "ZALO_TOKEN_REJECTED",
+    /** Zalo answered the refresh of the OA tokens with a refusal: the refresh token is used up, expired or revoked; only a new authorization fixes it. */
+    TokenRefreshRefused = "ZALO_TOKEN_REFRESH_REFUSED",
     /** The phone is not valid, has no Zalo account, or its owner does not take notifications. */
     RecipientUnreachable = "ZALO_RECIPIENT_UNREACHABLE",
     /** The ZNS template id is unknown or not approved, or its data does not fit the template. */
@@ -38,6 +39,7 @@ export const ZALO_ERROR_KINDS: Record<ZaloErrorCode, ErrorKind> = {
     [ZaloErrorCode.NotFollower]: "conflict",
     [ZaloErrorCode.NightHours]: "conflict",
     [ZaloErrorCode.TokenRejected]: "unauthenticated",
+    [ZaloErrorCode.TokenRefreshRefused]: "unauthenticated",
     [ZaloErrorCode.RecipientUnreachable]: "invalid",
     [ZaloErrorCode.TemplateRejected]: "invalid",
     [ZaloErrorCode.QuotaExhausted]: "rate-limited",

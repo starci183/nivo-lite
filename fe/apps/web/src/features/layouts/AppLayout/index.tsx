@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { getTranslations } from "next-intl/server"
 import { Inter } from "next/font/google"
 import type { ReactNode } from "react"
-import { AppLayoutBase } from "./component"
+import { AppLayoutBase } from "@nivo-lite/fe-shared/app-layout-base"
 
 const inter = Inter({ subsets: ["latin", "vietnamese"], variable: "--font-sans" })
 

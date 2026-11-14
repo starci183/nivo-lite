@@ -50,8 +50,8 @@ describe("the facts a cancellation reads", () => {
         const invoices = recording(0)
         await cancelFactsOf({ transactions: payments.api, invoices: invoices.api }, { id: "o-1", status: "confirmed" })
         const verdicts = [
-            ...payments.asked.map((asked) => queryProblems({ from: "payment.transaction", ...asked }, CATALOG)),
-            ...invoices.asked.map((asked) => queryProblems({ from: "accounting.invoice", ...asked }, CATALOG)),
+            ...payments.asked.map((asked) => queryProblems({ from: "blocks-core.sales.transaction", ...asked }, CATALOG)),
+            ...invoices.asked.map((asked) => queryProblems({ from: "blocks-core.sales.invoice", ...asked }, CATALOG)),
         ]
         expect(verdicts).toEqual([[], []])
     })
@@ -67,6 +67,6 @@ describe("the facts a cancellation reads", () => {
         }
         expect(await openClaimsOf(claims, "o-1")).toEqual([])
         expect(asked).toHaveLength(2)
-        asked.forEach((query) => expect(queryProblems({ from: "payment.claim", ...query }, CATALOG)).toEqual([]))
+        asked.forEach((query) => expect(queryProblems({ from: "blocks-core.sales.claim", ...query }, CATALOG)).toEqual([]))
     })
 })

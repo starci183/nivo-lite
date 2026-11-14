@@ -1,7 +1,6 @@
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import {
     AlertDialog,
-    Button,
-    Drawer,
     EmptyNotice,
     Link,
     Pane,
@@ -11,87 +10,29 @@ import {
     Stack,
     Sublabel,
     SurfaceCard,
-    Tabs,
     Text,
     type ListRowData,
 } from "@starci/grammar/common"
-import { ProviderRightsCard } from "@/components/composites/ProviderRightsCard"
-import type { AgentConnectionsBaseProps, AttachDrawerView, NivoToolsView, ToolGrantView, ToolRowView } from "./types"
+import type {
+    AccountRowView,
+    AccountsCardCopy,
+    AgentConnectionsBaseProps,
+    NivoToolsView,
+    RightsPageView,
+    ToolRowView,
+} from "./types"
 
 export type { AgentConnectionsBaseProps } from "./types"
 
-type Props = AgentConnectionsBaseProps["props"]
 type On = AgentConnectionsBaseProps["on"]
-
-/** The input of a part that needs the view and the commands. */
-interface PartInput {
-    readonly view: Props
-    readonly on: On
-}
-
-/** The input of the accounts list: the view only. */
-interface ViewInput {
-    readonly view: Props
-}
-
-/** The input of the attach drawer parts. */
-interface DrawerInput {
-    readonly view: AttachDrawerView
-    readonly on: On
-}
-
-/** The cards of the accounts the agent holds in one flat run: a small label above the cards of its group, 8px between all of them. */
-const ProviderGroups = ({ view }: ViewInput) => {
-    if (view.groups.length === 0) return <EmptyNotice message={view.emptyLabel} />
-    return (
-        <Stack gap="inline">
-            {view.groups.flatMap((group) => [
-                <Sublabel key={`label-${group.id}`}>{group.label}</Sublabel>,
-                ...group.cards.map((entry) => <ProviderRightsCard key={entry.id} {...entry.card} />),
-            ])}
-        </Stack>
-    )
-}
-
-/** The body of the attach drawer: one row per connected account not attached (mark, name, consequence line, "Attach"), or the notice that none is left. */
-const AttachOptions = ({ view, on }: DrawerInput) => (
-    <SurfaceCard
-        kind="list"
-        ariaLabel={view.optionsLabel}
-        empty={<EmptyNotice message={view.emptyLabel} />}
-        items={view.options.map((option) => ({
-            id: option.id,
-            title: option.title,
-            description: option.subtitle,
-            leading: {
-                avatar: { name: option.name, ...(option.logo === undefined ? {} : { src: option.logo }), shape: "rounded" },
-                size: "md",
-            },
-            actionPlacement: "end",
-            action: { label: view.attachLabel, intent: "neutral", press: () => on.attach(option.id) },
-        }))}
-    />
-)
-
-/** The drawer that lists the connected accounts the agent does not hold yet. */
-const AttachDrawer = ({ view, on }: DrawerInput) => (
-    <Drawer
-        isOpen={view.isOpen}
-        onOpenChange={(isOpen) => (isOpen ? undefined : on.closeDrawer())}
-        title={view.title}
-        closeLabel={view.closeLabel}
-    >
-        <AttachOptions view={view} on={on} />
-    </Drawer>
-)
 
 /** The input of the tools section. */
 interface ToolsInput {
     readonly view: NivoToolsView
 }
 
-/** One tool as a list row: its name over the 12 muted line, the "acts"/"reads" chip at the end; muted when not usable. */
-const plainToolItemOf = (row: ToolRowView): ListRowData => ({
+/** One tool as a list row: its name over the 12 muted line and the "acts"/"reads" chip; muted when not usable. */
+const toolItemOf = (row: ToolRowView): ListRowData => ({
     id: row.id,
     title: row.title,
     // A node line is drawn at 12 muted under the name (a string line would be 14).
@@ -107,29 +48,6 @@ const plainToolItemOf = (row: ToolRowView): ListRowData => ({
     badges: [{ label: row.chip }],
     ...(row.isReady ? {} : { state: "unavailable" as const }),
 })
-
-/** One of the agent's own "acts" tools: the row, and its grant as the row's control (the primary Tabs pill, as on the account cards). */
-const grantToolItemOf = (row: ToolRowView, grant: ToolGrantView): ListRowData => ({
-    ...plainToolItemOf(row),
-    actionPlacement: "end",
-    control: (
-        <Tabs
-            appearance="primary"
-            label={grant.label}
-            selectedKey={grant.value}
-            onSelect={grant.onChange}
-            items={[
-                { ...grant.options[0], isDisabled: grant.isDisabled },
-                { ...grant.options[1], isDisabled: grant.isDisabled },
-                { ...grant.options[2], isDisabled: grant.isDisabled },
-            ]}
-        />
-    ),
-})
-
-/** One tool as a list row, with its grant control when it has one. */
-const toolItemOf = (row: ToolRowView): ListRowData =>
-    row.grant === undefined ? plainToolItemOf(row) : grantToolItemOf(row, row.grant)
 
 /** The NIVO tools the agent may call: the label with its count and the head link to the rules, then one card per origin under its small label. */
 const ToolsSection = ({ view }: ToolsInput) => (
@@ -159,24 +77,47 @@ const ToolsSection = ({ view }: ToolsInput) => (
     </Section>
 )
 
-/** The section of the attached accounts: its label with the count chip and, at the end of the head, the neutral small "attach more" button; then the groups. */
-const ProvidersSection = ({ view, on }: PartInput) => (
-    <Section
-        kind="region"
-        title={view.title}
-        count={view.groups.reduce((sum, group) => sum + group.cards.length, 0)}
+/** The input of the node-model account card. */
+interface AccountsInput {
+    readonly view: RightsPageView
+    readonly copy: AccountsCardCopy
+    readonly isLoading: boolean
+    readonly on: On
+}
+
+/** One account as a row: its mark, its name over "<provider> · <steps line | not attached>", and at the end the neutral small "Detach" or "Attach". */
+const accountItemOf = (row: AccountRowView, copy: AccountsCardCopy, on: On): ListRowData => ({
+    id: row.id,
+    title: row.name,
+    description: row.line,
+    leading: {
+        avatar: { name: row.name, ...(row.logo === undefined ? {} : { src: row.logo }), shape: "rounded" },
+        size: "md",
+    },
+    actionPlacement: "end",
+    action: row.isAttached
+        ? { label: copy.detach, intent: "neutral", press: () => on.askDetach(row.id) }
+        : { label: copy.attach, intent: "neutral", press: () => on.attach(row.id) },
+})
+
+/**
+ * The accounts card of the node model: the label with the count of attached accounts, one row per connected account of the workspace
+ * the agent can use (attached ones say how many steps use them), what detaching does in the note under the card.
+ */
+const AccountsCard = ({ view, copy, isLoading, on }: AccountsInput) => (
+    <SurfaceCard
+        kind="list"
+        label={copy.title}
         headingLevel={2}
-        action={
-            <Button size="sm" intent="neutral" onPress={on.openDrawer}>
-                {view.attachLabel}
-            </Button>
-        }
-    >
-        <ProviderGroups view={view} />
-    </Section>
+        count={view.attachedCount}
+        note={copy.note}
+        isLoading={isLoading}
+        empty={<EmptyNotice message={copy.empty} />}
+        items={view.accounts.map((row) => accountItemOf(row, copy, on))}
+    />
 )
 
-/** Draws the rights tab of an agent as one well: the accounts it holds (grouped by kind), then the NIVO tools it may call; the attach drawer and the detach confirm open over it. */
+/** Draws the rights tab of an agent as one well: the account card (attach, detach), the read-only roll-up of what the steps call and the NIVO tools. The detach confirm opens over it. */
 export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
     const { props: view, on } = props
     return (
@@ -184,12 +125,23 @@ export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
             <PaneGrid label={view.paneLabel} areas={{ base: ["well"] }} columns={{ base: ["fill"] }}>
                 <Pane area="well" scroll label={view.paneLabel}>
                     <PaneSection gap="section">
-                        <ProvidersSection view={view} on={on} />
+                        <SlotView
+                            {...view.read}
+                            onRetry={on.retry}
+                            render={(page, isLoading) => (
+                                <AccountsCard
+                                    view={page}
+                                    copy={view.accountsCard}
+                                    isLoading={isLoading || view.isBoardLoading}
+                                    on={on}
+                                />
+                            )}
+                        />
+                        {view.rollup}
                         {view.tools === undefined ? null : <ToolsSection view={view.tools} />}
                     </PaneSection>
                 </Pane>
             </PaneGrid>
-            <AttachDrawer view={view.drawer} on={on} />
             <AlertDialog
                 isOpen={view.detach.isOpen}
                 onOpenChange={(isOpen) => {

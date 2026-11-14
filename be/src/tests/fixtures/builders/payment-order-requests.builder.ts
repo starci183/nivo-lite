@@ -58,7 +58,7 @@ export const PAYABLE: PayableOrder = {
         packCode: null,
         detail: {},
     },
-    qrUrl: "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=990000&des=NIVO8F3K2&template=compact",
+    qrUrl: "https://vietqr.app/img?acc=0123&bank=MB&amount=990000&des=NIVO8F3K2&template=compact",
     bank: { account: "0123", bank: "MB", holder: "NIVO" },
 }
 

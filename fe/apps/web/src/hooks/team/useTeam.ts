@@ -7,8 +7,7 @@ import {
     useQueryWorkspaceMembersSwr,
     useQueryWorkspaceStaffSwr,
 } from "@/hooks/swr"
-import { teamViews } from "./team.shared"
-import type { TeamViews } from "./team.shared"
+import { teamViews, type TeamViews } from "./team.shared"
 
 /** The team of a workspace as the page draws it. */
 export interface TeamState {
@@ -41,7 +40,10 @@ export const useTeam = (workspaceId: string, enabled: boolean): TeamState => {
     )
     return {
         views,
-        isLoading: enabled && failure === undefined && (members.isLoading || invites.isLoading || staff.isLoading),
+        isLoading:
+            enabled &&
+            failure === undefined &&
+            (members.isLoading || invites.isLoading || staff.isLoading || declined.isLoading),
         error: failure?.message,
         reload: () => {
             void members.mutate()

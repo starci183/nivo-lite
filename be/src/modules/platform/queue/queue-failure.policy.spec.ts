@@ -43,6 +43,15 @@ describe("classifyFailure", () => {
         expect(subject.classifyFailure(wrapped)).toBe("transient")
     })
 
+    it("judges a package's coded error (the AI router's) by its code like the app's own: transient when the other side is away", async () => {
+        const subject = await buildSubject()
+
+        // `@starci/ai-router` throws DomainErrors of the shared base; a job retries them within its bounded attempts (ATTEMPTS).
+        expect(subject.classifyFailure(new Coded({ code: "ROUTED_CATALOG_UNAVAILABLE" }))).toBe("transient")
+        expect(subject.classifyFailure(new Error("outer", { cause: new Coded({ code: "AI_ROUTER_TIMEOUT" }) }))).toBe("transient")
+        expect(subject.classifyFailure(new Coded({ code: "ROUTED_NAME_UNKNOWN" }))).toBe("input")
+    })
+
     it("calls a capability error input, or config when its code names a setting or a connection", async () => {
         const subject = await buildSubject()
 

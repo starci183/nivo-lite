@@ -57,6 +57,13 @@ describe("zaloAuthorizeUrl", () => {
         expect(url.searchParams.get("state")).toBe("conn.nonce")
     })
 
+    it("falls back to the Zalo host when the declared base is empty", async () => {
+        const subject = await build()
+        expect(subject.zaloAuthorizeUrl({ zaloOauthBase: "" }, "a", "r", "v", "s")).toMatch(
+            /^https:\/\/oauth\.zaloapp\.com\/v4\/oa\/permission\?/u,
+        )
+    })
+
     it("follows a local fake host", async () => {
         const subject = await build()
         expect(subject.zaloAuthorizeUrl({ zaloOauthBase: "http://fake.test/" }, "a", "r", "v", "s")).toMatch(

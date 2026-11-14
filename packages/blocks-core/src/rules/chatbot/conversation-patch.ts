@@ -1,31 +1,15 @@
-import { inboxStatusOf, unansweredOf } from "./conversation-status"
-import type { InboxStatus } from "./conversation-status"
-import { tailAfter } from "./conversation-tail"
-import type { ConversationTail, TailLine } from "./conversation-tail"
+import { chatMarkOf, type ChatMark } from "./conversation-status"
 
-/** What a conversation stores that the next change starts from. */
-export interface ConversationState extends ConversationTail {
+/** What a conversation stores that the next change of its open question starts from. */
+export interface ConversationState {
     /** Whether the AI handed a question to a person that is not answered yet. */
     readonly waiting: boolean
-    /** The person who holds the conversation; null while the AI answers. */
-    readonly handledBy: string | null
 }
 
-/** The stored marks of a conversation that follow from its state: written with every change so the inbox filters and sorts on them. */
+/** The stored mark of a conversation that follows from its state: written with every change so the inbox filters and sorts on it. */
 export interface ConversationMarks {
-    /** Where the conversation stands in the inbox. */
-    readonly status: InboxStatus
-    /** Whether the customer wrote last and a person is needed. */
-    readonly unanswered: boolean
-}
-
-/** The fields a new line changes on its conversation. */
-export type LinePatch = ConversationTail & ConversationMarks
-
-/** The fields a take-over or a release changes on its conversation. */
-export interface HandlingPatch extends ConversationMarks {
-    /** The person who holds the conversation now; null once it is handed back to the AI. */
-    readonly handledBy: string | null
+    /** The stored mark: a customer waits for a person, or not (who holds the thread is the engine's route, ruling R43). */
+    readonly status: ChatMark
 }
 
 /** The fields a raised or answered question changes on its conversation. */
@@ -35,22 +19,7 @@ export interface WaitingPatch extends ConversationMarks {
 }
 
 /** The marks of a state. */
-export const marksOf = (state: ConversationState): ConversationMarks => ({
-    status: inboxStatusOf(state),
-    unanswered: unansweredOf(state),
-})
-
-/** What storing one more line changes: the tail and the marks that follow from it. */
-export const patchAfterLine = (state: ConversationState, line: TailLine): LinePatch => {
-    const tail = tailAfter(state, line)
-    return { ...tail, ...marksOf({ ...state, ...tail }) }
-}
-
-/** What a take-over (a name) or a release (null) changes. */
-export const patchAfterHandling = (state: ConversationState, handledBy: string | null): HandlingPatch => ({
-    handledBy,
-    ...marksOf({ ...state, handledBy }),
-})
+export const marksOf = (state: ConversationState): ConversationMarks => ({ status: chatMarkOf(state.waiting) })
 
 /** What raising or answering a question for a person changes. */
 export const patchAfterWaiting = (state: ConversationState, waiting: boolean): WaitingPatch => ({

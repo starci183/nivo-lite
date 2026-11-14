@@ -1,6 +1,12 @@
 import { isIP } from "node:net"
-import { openMssqlSession, openMysqlSession, openPostgresSession, selectRows } from "@modules/platform/database"
-import type { CustomerSession, PostgresSessionTarget } from "@modules/platform/database"
+import {
+    openMssqlSession,
+    openMysqlSession,
+    openPostgresSession,
+    selectRows,
+    type CustomerSession,
+    type PostgresSessionTarget,
+} from "@modules/platform/database"
 import type { DatabaseSession, DatabaseTarget, DatabaseTlsOptions } from "./database-session.contracts"
 import { toRows } from "./database-values.policy"
 

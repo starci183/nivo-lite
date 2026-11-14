@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { REMOTE_FILES, REMOTE_FILES_OPTIONS } from "./remote-files.decorators"
 import { RemoteFilesClient } from "./remote-files.client"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./remote-files.module-definition"

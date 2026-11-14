@@ -1,13 +1,13 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { workflowTemplatesOf } from "@nivo-lite/blocks-core/modules"
-import type { WorkflowTemplate } from "@nivo-lite/blocks-core/modules"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import type { WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
+import { EntityEngineService, type ScopedTx, type ScopedWork } from "@modules/domain/entity-engine"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
+import { AgentGraphRightsService } from "./agent-graph-rights.service"
+import { AgentRightsRecordsService } from "./agent-rights-records.service"
 import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
 import { AgentWorkflowStoreService, WORKFLOW_LIMIT } from "./agent-workflow-store.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -21,11 +21,13 @@ import type {
     WorkflowCopy,
     WorkflowRecord,
 } from "./agent-workflows.contracts"
+import { noRights, settledOr, type RightsSettlement } from "./policies/node-rights-gate.policy"
 import { sameJson } from "./policies/workflow-diff.policy"
 import {
     adoptedAuthorOf,
     adoptedKindOf,
     closestLinkOf,
+    snapshotHashOf,
     snapshotOf,
     workflowNotFound,
 } from "./policies/workflow-view.policy"
@@ -42,6 +44,13 @@ interface PrimaryStanding {
     readonly synced: boolean
 }
 
+/** A workflow a copy or an adoption made, with the version it runs and the workflow it came from. */
+interface CopiedWorkflow {
+    readonly sourceId: string
+    readonly workflowId: string
+    readonly versionId: string
+}
+
 /** The agent graph that decides: its version id and its flow. */
 interface ActiveGraph {
     readonly versionId: string
@@ -53,6 +62,8 @@ interface ActiveGraph {
  * Keeps the primary workflow of an agent in step with the agent's own graph (adopting it, with its history, when the agent has no
  * workflow yet; appending a version when the graph was published elsewhere), and copies the workflows of one installation's agent to
  * another's. Adopted versions keep their kind, author and time; each carries as provenance the template version it is closest to.
+ * No person walks these roads, so the rights gate never refuses here: the version that runs brings the grant rows the agent's ticks
+ * already give it (nothing changes for the workspace), and what it asks beyond them waits for the owner.
  */
 export class AgentWorkflowAdoptionService {
     constructor(
@@ -62,6 +73,8 @@ export class AgentWorkflowAdoptionService {
         private readonly graphs: AgentGraphsService,
         @InjectLogger() private readonly logger: Logger,
         @Optional() private readonly installations?: InstallationRecordsService,
+        @Optional() private readonly rights?: AgentGraphRightsService,
+        @Optional() private readonly rows?: AgentRightsRecordsService,
     ) {}
 
     /**
@@ -92,7 +105,7 @@ export class AgentWorkflowAdoptionService {
                     workflow.template === null ? [] : [workflow.template.templateId],
                 ),
             )
-            return workflowTemplatesOf(moduleKey).filter((template) => !template.primary && !held.has(template.id))
+            return INSTALLED.templatesOf(moduleKey).filter((template) => !template.primary && !held.has(template.id))
         })
     }
 
@@ -104,17 +117,53 @@ export class AgentWorkflowAdoptionService {
     async copyWorkflows(workspaceId: string, copy: WorkflowCopy, author: WorkflowAuthor): Promise<number> {
         const [source, target] = await this.agentsOf(workspaceId, copy)
         await this.adoptAgentGraph(workspaceId, source)
-        return this.engine.scoped(workspaceId, async (tx) => {
+        const sourcesOf = async (tx: ScopedTx): Promise<ReadonlyArray<WorkflowRecord>> => {
             const taken = await this.store.keysOf(tx, target)
-            const sources = (await this.records.workflowsOf(tx, source, WORKFLOW_LIMIT)).filter(
+            return (await this.records.workflowsOf(tx, source, WORKFLOW_LIMIT)).filter(
                 (workflow) => !taken.has(workflow.key),
             )
-            let copied = 0
-            await eachInOrder(sources, async (workflow) => {
-                if (await this.copyOne(tx, workflow, target, author)) copied += 1
+        }
+        const settled = await this.copyRightsOf(workspaceId, target, sourcesOf)
+        const work: ScopedWork<ReadonlyArray<CopiedWorkflow>> = async (tx) => {
+            const copies: Array<CopiedWorkflow> = []
+            await eachInOrder(await sourcesOf(tx), async (workflow) => {
+                const made = await this.copyOne(tx, workflow, target, author, settled.get(workflow.id))
+                if (made !== null) copies.push(made)
             })
-            return copied
+            return copies
+        }
+        const order = [...settled.keys()]
+        const copies =
+            this.rows === undefined
+                ? await this.engine.scoped(workspaceId, work)
+                : await this.rows.runMany(workspaceId, [...settled.values()], work, (made) =>
+                      order.map((sourceId) => made.find((entry) => entry.sourceId === sourceId)),
+                  )
+        return copies.length
+    }
+
+    /** What the gate settles for each workflow a copy would make, by the id of its source: the target agent's ticks decide what comes with it. */
+    private async copyRightsOf(
+        workspaceId: string,
+        agentId: string,
+        sourcesOf: (tx: ScopedTx) => Promise<ReadonlyArray<WorkflowRecord>>,
+    ): Promise<ReadonlyMap<string, RightsSettlement>> {
+        const settled = new Map<string, RightsSettlement>()
+        const { rights } = this
+        if (rights === undefined) return settled
+        const graphs = await this.engine.scoped(workspaceId, async (tx) => {
+            const read: Array<{ readonly sourceId: string; readonly graph: GraphSpec }> = []
+            await eachInOrder(await sourcesOf(tx), async (workflow) => {
+                const running = await this.store.runningOf(tx, workflow)
+                if (running !== null) read.push({ sourceId: workflow.id, graph: snapshotOf(running) })
+            })
+            return read
         })
+        await eachInOrder(graphs, async ({ sourceId, graph }) => {
+            const question = { workspaceId, agentId, workflowId: null, before: null, after: graph, byTemplate: true }
+            settled.set(sourceId, await rights.decide(question))
+        })
+        return settled
     }
 
     private async copyOne(
@@ -122,9 +171,10 @@ export class AgentWorkflowAdoptionService {
         source: WorkflowRecord,
         agentId: string,
         author: WorkflowAuthor,
-    ): Promise<boolean> {
+        rights: RightsSettlement | undefined,
+    ): Promise<CopiedWorkflow | null> {
         const running = await this.store.runningOf(tx, source)
-        if (running === null) return false
+        if (running === null) return null
         const graph = snapshotOf(running)
         const held = source.primary ? await this.heldVersionOf(source.workspaceId, agentId, graph) : null
         const workflow = await this.store.insertWorkflow(tx, {
@@ -136,7 +186,7 @@ export class AgentWorkflowAdoptionService {
             template: source.template,
             createdBy: author.memberId,
         })
-        await this.store.writeVersion(tx, {
+        const written = await this.store.writeVersion(tx, {
             workflow: { ...workflow, position: source.position },
             graph,
             kind: "copy",
@@ -146,8 +196,9 @@ export class AgentWorkflowAdoptionService {
             fromNumber: running.number,
             graphVersionId: held,
             expected: 0,
+            rights: settledOr(rights, snapshotHashOf(graph), agentId, workflow.id),
         })
-        return true
+        return { sourceId: source.id, workflowId: workflow.id, versionId: written.version.id }
     }
 
     /**
@@ -190,20 +241,45 @@ export class AgentWorkflowAdoptionService {
     ): Promise<string> {
         const view = versions.find((version) => version.id === active.versionId)
         if (view === undefined) return primary.id
-        await this.engine.scoped(workspaceId, async (tx) => {
-            const current = await this.store.workflowRequired(tx, primary.id)
-            await this.store.writeVersion(
-                tx,
-                this.adoptedWrite(current, { view, flow: active.flow }, false, current.latestNumber),
-            )
+        const rights = await this.rights?.decideWorkflow({
+            workspaceId,
+            workflowId: primary.id,
+            afterOf: () => Promise.resolve(active.flow),
+            byTemplate: true,
         })
+        const work: ScopedWork<string> = async (tx) => {
+            const current = await this.store.workflowRequired(tx, primary.id)
+            const written = await this.store.writeVersion(tx, {
+                ...this.adoptedWrite(current, { view, flow: active.flow }, false, current.latestNumber),
+                rights: settledOr(rights, snapshotHashOf(active.flow), current.agentId, current.id),
+            })
+            return written.version.id
+        }
+        if (this.rows === undefined || rights === undefined) await this.engine.scoped(workspaceId, work)
+        else await this.rows.run(workspaceId, rights, work, (versionId) => ({ workflowId: primary.id, versionId }))
         return primary.id
     }
 
-    private adoptAll(workspaceId: string, agentId: string, adopted: ReadonlyArray<AdoptedVersion>): Promise<string> {
-        const newest = adopted[adopted.length - 1]?.flow ?? adopted[0]?.flow
-        const template = workflowTemplatesOf(newest?.moduleKey ?? "").find((entry) => entry.primary) ?? null
-        return this.engine.scoped(workspaceId, async (tx) => {
+    private async adoptAll(
+        workspaceId: string,
+        agentId: string,
+        adopted: ReadonlyArray<AdoptedVersion>,
+    ): Promise<string> {
+        const newest = adopted.at(-1)?.flow ?? adopted[0]?.flow
+        const template = INSTALLED.templatesOf(newest?.moduleKey ?? "").find((entry) => entry.primary) ?? null
+        // Only the newest adopted version runs: the gate decides it, and the versions before it are history that asks nothing.
+        const rights =
+            newest === undefined
+                ? undefined
+                : await this.rights?.decide({
+                      workspaceId,
+                      agentId,
+                      workflowId: null,
+                      before: null,
+                      after: newest,
+                      byTemplate: true,
+                  })
+        const work: ScopedWork<CopiedWorkflow> = async (tx) => {
             const workflow = await this.store.insertWorkflow(tx, {
                 agentId,
                 key: template === null ? MAIN_KEY : (template.id.split(".").at(-1) ?? MAIN_KEY),
@@ -214,11 +290,24 @@ export class AgentWorkflowAdoptionService {
                 createdBy: null,
             })
             let current = workflow
+            let versionId = ""
             await eachInOrder(adopted, async (entry, at) => {
-                current = (await this.store.writeVersion(tx, this.adoptedWrite(current, entry, at === 0, at))).workflow
+                const hash = snapshotHashOf(entry.flow)
+                const last = at === adopted.length - 1
+                const written = await this.store.writeVersion(tx, {
+                    ...this.adoptedWrite(current, entry, at === 0, at),
+                    rights: last ? settledOr(rights, hash, agentId, workflow.id) : noRights(hash, agentId, workflow.id),
+                })
+                current = written.workflow
+                versionId = written.version.id
             })
-            return workflow.id
-        })
+            return { sourceId: workflow.id, workflowId: workflow.id, versionId }
+        }
+        const made =
+            this.rows === undefined || rights === undefined
+                ? await this.engine.scoped(workspaceId, work)
+                : await this.rows.run(workspaceId, rights, work, (written) => written)
+        return made.workflowId
     }
 
     private adoptedWrite(
@@ -226,8 +315,8 @@ export class AgentWorkflowAdoptionService {
         entry: AdoptedVersion,
         first: boolean,
         expected: number,
-    ): VersionWrite {
-        const template = workflowTemplatesOf(entry.flow.moduleKey).find(
+    ): Omit<VersionWrite, "rights"> {
+        const template = INSTALLED.templatesOf(entry.flow.moduleKey).find(
             (candidate) => candidate.id === workflow.template?.templateId,
         )
         return {

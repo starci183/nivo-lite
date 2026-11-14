@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { DossierReviewRunnerService } from "@modules/domain/dossier-review"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { KnowledgeJobsService } from "@modules/domain/knowledge"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE, KnowledgeJob } from "@modules/queues/knowledge"
 import { ReviewDossiersStep } from "../../steps/review-dossiers.step"
@@ -12,9 +12,13 @@ export class ReviewDossiersProcessor extends FencedProcessor {
     override readonly queue: "knowledge" = KNOWLEDGE_QUEUE
     override readonly job: KnowledgeJob.DossierReview = KnowledgeJob.DossierReview
 
+    /** The review runs form one fair group (D-R-8): while none runs, a review does not wait behind a big document's truths jobs. */
+    override readonly fairGroupOf = (): Promise<string | null> => this.knowledge.critiqueGroupOf()
+
     constructor(
         private readonly reviewDossiers: ReviewDossiersStep,
         private readonly runner: DossierReviewRunnerService,
+        private readonly knowledge: KnowledgeJobsService,
     ) {
         super()
     }

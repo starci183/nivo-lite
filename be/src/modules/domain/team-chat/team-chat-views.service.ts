@@ -3,15 +3,14 @@ import { AiUsageOverviewService } from "@modules/domain/ai-usage-events"
 import { LessonCandidatesService } from "@modules/domain/brain-lessons"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
+import { eachInOrder } from "@modules/platform/primitives"
 import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
-import type { ChatMemberRef, MessageView, ChatRoomView } from "./team-chat.contracts"
-import { TeamChatApprovalsService } from "./team-chat-approvals.service"
+import type { ApprovalState, ChatMemberRef, MessageView, ChatRoomView } from "./team-chat.contracts"
 import { TeamChatFilesService } from "./team-chat-files.service"
 import { reactionsByMessageOf } from "./team-chat-reaction.policy"
 import { TeamChatReactionStoreService } from "./team-chat-reaction-store.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
 import {
-    decisionIdsOf,
     messageViewOf,
     nameKeyOf,
     refsOfMessages,
@@ -40,7 +39,6 @@ export class TeamChatViewsService {
         private readonly people: WorkspaceMembersReadService,
         private readonly agents: AgentDirectoryService,
         private readonly files: TeamChatFilesService,
-        private readonly approvals: TeamChatApprovalsService,
         private readonly reactions: TeamChatReactionStoreService,
         // What a learning card's proposal cost (U1): absent in an app that composes neither, then no card shows a cost.
         @Optional() private readonly lessons?: LessonCandidatesService,
@@ -137,7 +135,8 @@ export class TeamChatViewsService {
         const urls = await this.files.urlsOf(
             messages.flatMap((message) => message.attachments.map((file) => file.fileKey)),
         )
-        const approvals = await this.approvals.statesOf(workspaceId, viewerId, decisionIdsOf(messages))
+        // No road opens an approval card any more: an old card shows no decision state.
+        const approvals: ReadonlyMap<string, ApprovalState> = new Map()
         const reactions = reactionsByMessageOf(await this.reactions.rowsAmong(messages.map((message) => message.id)), {
             memberKind: "user",
             memberId: viewerId,
@@ -177,14 +176,14 @@ export class TeamChatViewsService {
             COSTED_CARDS,
         )
         const costs = new Map<string, BrainChangeCost>()
-        for (const changeId of changeIds) {
+        await eachInOrder(changeIds, async (changeId) => {
             const group = await lessons.ofChange(workspaceId, changeId)
             const cost = await usage.lessonsCostOf(
                 workspaceId,
                 group.map((lesson) => lesson.id),
             )
             costs.set(changeId, { credits: cost.credits, usd: cost.costUsd })
-        }
+        })
         return costs
     }
 

@@ -1,7 +1,6 @@
 "use client"
 
-import { create } from "zustand"
-import type { UseBoundStore, StoreApi } from "zustand"
+import { create, type UseBoundStore, type StoreApi } from "zustand"
 
 /** Feature-local state of the workspaces lobby: the workspace the person joined from a pending invitation in this visit. */
 interface LobbyJoinedState {

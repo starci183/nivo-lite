@@ -1,23 +1,35 @@
 import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
-import { LATEST_VERSION, WORKFLOW_CALL_MEMBER, WORKFLOW_PARAMS_MEMBER } from "@nivo-lite/agent-sdk/graph"
-import { TEAM_CHAT_LINES_MAX, TEAM_CHAT_MODULES, TEAM_CHAT_WORKFLOW_KEY } from "@nivo-lite/blocks-core"
-import type { TeamChatIntent, TeamChatLine, TeamChatRoom } from "@nivo-lite/blocks-core"
-import { AgentTagService } from "@modules/domain/agent-work"
-import { AgentDirectoryService } from "@modules/domain/agents"
-import type { AgentCard } from "@modules/domain/agents"
+import type { EntityManager } from "typeorm"
+import { LATEST_VERSION } from "@nivo-lite/agent-sdk/graph"
+import {
+    TEAM_CHAT_LINES_MAX,
+    TEAM_CHAT_WORKFLOW_KEY,
+    type TeamChatIntent,
+    type TeamChatLine,
+    type TeamChatRoom,
+} from "@nivo-lite/agent-sdk/team-chat"
+import { AgentWorkflowsService } from "@modules/domain/agent-graphs"
+import { callDeliveryOf } from "@modules/domain/agent-schedules/workflow-call-delivery.policy"
+import { WORKFLOW_CALL_TRIGGER } from "@modules/domain/agent-schedules/workflow-call.trigger"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { AgentDirectoryService, AgentViewScopeService, type AgentCard } from "@modules/domain/agents"
 import { BrainChangeRequestsService } from "@modules/domain/brain-facts"
-import { TeamChatCardsService, TeamChatRoomsService, TeamChatStoreService } from "@modules/domain/team-chat"
+import { ProviderTriggersService } from "@modules/domain/provider-triggers"
+import {
+    TeamChatCardsService,
+    TeamChatRoomsService,
+    TeamChatStoreService,
+    type HeardReply,
+    type PersonLineHeard,
+    type PersonLineListener,
+} from "@modules/domain/team-chat"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { eachInOrder } from "@modules/platform/primitives"
+import { ChatFallbackService } from "./chat-fallback.service"
 import { ChatTurnLimiterService } from "./chat-turn-limiter.service"
-import type {
-    AskerSeat,
-    CaptureOutcome,
-    CaptureRequest,
-    HeardReply,
-    PersonLineHeard,
-    TurnParams,
-} from "./team-chat-turns.contracts"
+import type { AskerSeat, CaptureOutcome, CaptureRequest, TurnParams, UnroutedTurn } from "./team-chat-turns.contracts"
 import { TeamChatTurnsLogEvent } from "./team-chat-turns.log-events"
 import {
     agentOfDirectKey,
@@ -26,6 +38,7 @@ import {
     captureReasonOf,
     fittedParamsOf,
     mayCapture,
+    outsideTurnsOf,
     pauseLineOf,
     standingOf,
     turnKeyOf,
@@ -40,15 +53,32 @@ const DIRECTORY_MAX = 200
 /** The language a chat turn answers in: the team chat keeps none per room, the shop speaks Vietnamese. */
 const TEAM_LOCALE = "vi"
 
-/** The listener the team chat calls with every person's new message; it answers the agents whose turn it took. */
-export type PersonLineListener = (line: PersonLineHeard) => Promise<ReadonlyArray<string>>
-
 /** The door the team chat opens to its one line listener (W11's `listenLines`). */
 interface LineDoor {
     listenLines(listener: PersonLineListener): void
 }
 
 const hasLineDoor = (chat: object): chat is LineDoor => typeof Reflect.get(chat, "listenLines") === "function"
+
+/** The person's message an agent's turn answers. */
+interface AskedLine {
+    /** The message. */
+    readonly id: string
+    /** Its words. */
+    readonly body: string
+    /** The room it was written in. */
+    readonly roomId: string
+}
+
+/** How an agent's turn runs: the kind of room, what it was asked for, and the key that makes it once. */
+interface TurnHow {
+    /** A private room with the agent, or a room of several people. */
+    readonly room: TeamChatRoom
+    /** What the turn was started for. */
+    readonly intent: TeamChatIntent
+    /** The idempotency key of the wake. */
+    readonly eventKey: string
+}
 
 /** What a started turn knows of its room, read once for every agent the message is for. */
 interface TurnContext {
@@ -67,7 +97,19 @@ interface Seat {
 type TurnEnd = "started" | "duplicate" | "paused" | "quiet" | "no_chat_turn" | "no_agent" | "not_tagged"
 
 /** The ends after which the old tag path must not run for the agent too: the turn is this router's. */
-const TAKEN: ReadonlyArray<TurnEnd> = ["started", "duplicate", "paused", "quiet"]
+const TAKEN: ReadonlySet<TurnEnd> = new Set<TurnEnd>(["started", "duplicate", "paused", "quiet"])
+
+/** How one agent's turn ended. */
+interface AgentEnd {
+    readonly agentId: string
+    readonly ended: TurnEnd
+}
+
+/** The turns that did not start, with the code of each; a turn this router took is none. */
+const unroutedOf = (ends: ReadonlyArray<AgentEnd>): ReadonlyArray<UnroutedTurn> =>
+    ends.flatMap(({ agentId, ended }): ReadonlyArray<UnroutedTurn> =>
+        ended === "no_chat_turn" || ended === "no_agent" || ended === "not_tagged" ? [{ agentId, code: ended }] : [],
+    )
 
 @Injectable()
 /**
@@ -75,14 +117,22 @@ const TAKEN: ReadonlyArray<TurnEnd> = ["started", "duplicate", "paused", "quiet"
  * the agents it is for, and of no other. A private room with an agent: every message is for that agent. A room of several people:
  * each agent the message names (once, in order), then the agent whose line it replies to. A message that names nobody, an agent's own
  * line, or a reply to a card a person decides on (stop, approval, truth change: their own doors) starts nothing and costs no read and
- * no model call. A turn is a pinned tag (the workflow `team-chat`, latest) carrying the asked words, who asked with their standing,
+ * no model call. A turn is one workflow call of the one event pipeline (concept triggers rule 13), pinned to the `team-chat` workflow
+ * (latest) and delivered for the agent, the asker beside it: the event's data carries the asked words, who asked with their standing,
  * the room's latest lines and the line replied to, so the agent answers with the asker's rights. It runs on threads (the one engine):
  * an agent whose module ships no chat turn (`TEAM_CHAT_MODULES`) keeps the old tag path untouched. A room over its rate limit gets one line, then quiet.
  * The router never starts a business workflow: the pin names only `team-chat`.
+ *
+ * While the workspace's switch "node rights decide" is ON, a message in /chat may only run the module's own chat workflow: the old tag
+ * path (an UNPINNED tag, which the agent's own graph or a workflow woken by a person's tag would answer) is kept shut for every
+ * agent the message names. An agent whose turn did not start (no chat turn, no such agent, the tag not written, a router failure,
+ * a message the router starts no turn for) gets no tag at all and the room is told (`ChatFallbackService`). With the switch off the
+ * old tag path runs exactly as before.
  */
 export class TeamChatTurnsService implements OnModuleInit {
     constructor(
-        private readonly tags: AgentTagService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly triggers: ProviderTriggersService,
         private readonly agents: AgentDirectoryService,
         private readonly members: WorkspaceMembersReadService,
         private readonly store: TeamChatStoreService,
@@ -91,6 +141,9 @@ export class TeamChatTurnsService implements OnModuleInit {
         @Optional() private readonly chat?: TeamChatRoomsService,
         @Optional() private readonly cards?: TeamChatCardsService,
         @Optional() private readonly changes?: BrainChangeRequestsService,
+        @Optional() private readonly scopes?: AgentViewScopeService,
+        @Optional() private readonly fallback?: ChatFallbackService,
+        @Optional() private readonly workflows?: AgentWorkflowsService,
     ) {}
 
     /** Listens to the team chat's new person lines once the app has started; an app without the chat (or its door) hears nothing. */
@@ -101,21 +154,39 @@ export class TeamChatTurnsService implements OnModuleInit {
 
     /**
      * Routes one person's new message: answers the agents whose turn this router took (started, already started, paused or quiet), so
-     * the team chat writes no old tag wake for them. A failure starts nothing and never fails the person's message.
+     * the team chat writes no old tag wake for them. A failure starts nothing and never fails the person's message. With the node
+     * rights deciding, it answers EVERY agent the message names (the old tag path writes nothing) and tells the room of the turns
+     * that did not start.
      */
     async heard(line: PersonLineHeard): Promise<ReadonlyArray<string>> {
         const targets = turnTargetsOf(line)
-        if (targets.agentIds.length === 0) return []
+        if (targets.agentIds.length === 0 && line.agentMentions.length === 0) return []
+        const closed = (await this.fallback?.closed(line.workspaceId)) === true
+        const outside = closed ? outsideTurnsOf(line.agentMentions, targets.agentIds) : []
+        if (targets.agentIds.length === 0) return this.shut(line, [], outside)
         try {
-            return await this.routed(line, targets.agentIds, targets.room)
+            const ends = await this.routed(line, targets.agentIds, targets.room)
+            const taken = ends.filter((end) => TAKEN.has(end.ended)).map((end) => end.agentId)
+            return closed ? await this.shut(line, taken, [...unroutedOf(ends), ...outside]) : taken
         } catch (cause) {
             this.logger.error(TeamChatTurnsLogEvent.RouteFailed, cause, { roomId: line.room.id })
-            return []
+            if (!closed) return []
+            const failed = targets.agentIds.map((agentId): UnroutedTurn => ({ agentId, code: "route_failed" }))
+            return this.shut(line, [], [...failed, ...outside])
         }
     }
 
+    /** The agents the old tag path must skip: the turns this router took and, while the path is shut, the turns that did not start. */
+    private shut(
+        line: PersonLineHeard,
+        taken: ReadonlyArray<string>,
+        unrouted: ReadonlyArray<UnroutedTurn>,
+    ): Promise<ReadonlyArray<string>> {
+        return this.fallback === undefined ? Promise.resolve(taken) : this.fallback.shut(line, taken, unrouted)
+    }
+
     /**
-     * "Ghi vào Second Brain" on a message: the owner or a manager files it as a truth change. With the truth named on the form it is
+     * "Save to Second Brain" on a message: the owner or a manager files it as a truth change. With the truth named on the form it is
      * filed at once through the truth graph's change requests (the card waits in the room for the owner; no AI call); without, the agent
      * drafts and files it in a chat turn of intent `capture`.
      */
@@ -133,21 +204,23 @@ export class TeamChatTurnsService implements OnModuleInit {
         const agent = await this.agents.find(workspaceId, agentId)
         if (agent === null) return this.captured("not_found")
         const roomKind: TeamChatRoom = room.kind === "direct" ? "direct" : "common"
-        if (request.fact !== null && this.changes !== undefined) {
+        const named = request.fact ?? null
+        if (named !== null && this.changes !== undefined) {
             const filed = await this.changes.propose(workspaceId, {
-                subjectLabel: request.fact.subjectLabel,
-                attributeLabel: request.fact.attributeLabel,
-                value: request.fact.value,
-                unit: request.fact.unit,
+                subjectLabel: named.subjectLabel,
+                attributeLabel: named.attributeLabel,
+                value: named.value ?? null,
+                unit: named.unit ?? null,
                 room: roomKind,
                 messageId: message.id,
                 quote: message.body.slice(0, 500),
-                validFrom: request.fact.validFrom,
-                validTo: request.fact.validTo,
-                reason: captureReasonOf(asker.name, request.fact.value),
+                validFrom: named.validFrom ?? null,
+                validTo: named.validTo ?? null,
+                reason: captureReasonOf(asker.name, named.value ?? null),
                 proposedBy: agent.module,
                 agentId: agent.id,
-                installationId: null,
+                // The agent's instance only finds a value kept for it (changed in its scope); a new truth is filed workspace-wide (FX6).
+                installationId: (await this.scopes?.lensOf(workspaceId, agent.id))?.installationId ?? null,
             })
             return this.captured(filed.outcome)
         }
@@ -172,7 +245,7 @@ export class TeamChatTurnsService implements OnModuleInit {
         line: PersonLineHeard,
         agentIds: ReadonlyArray<string>,
         room: TeamChatRoom,
-    ): Promise<ReadonlyArray<string>> {
+    ): Promise<ReadonlyArray<AgentEnd>> {
         let context: Promise<TurnContext | null> | null = null
         const read = (): Promise<TurnContext | null> => {
             context ??= this.seatOf(line.workspaceId, line.userId).then((seat) =>
@@ -182,10 +255,10 @@ export class TeamChatTurnsService implements OnModuleInit {
             )
             return context
         }
-        const taken: Array<string> = []
-        for (const agentId of agentIds) {
+        const ends: Array<AgentEnd> = []
+        await eachInOrder(agentIds, async (agentId) => {
             const agent = await this.agents.find(line.workspaceId, agentId)
-            const ended =
+            const ended: TurnEnd =
                 agent === null
                     ? "no_agent"
                     : await this.turnOf(
@@ -195,25 +268,28 @@ export class TeamChatTurnsService implements OnModuleInit {
                           { room, intent: "answer", eventKey: turnKeyOf(line.message.id, agentId) },
                           read,
                       )
-            if (TAKEN.includes(ended)) taken.push(agentId)
+            ends.push({ agentId, ended })
             this.logger.info(ended === "started" ? TeamChatTurnsLogEvent.TurnStarted : TeamChatTurnsLogEvent.TurnSkipped, {
                 agentId,
                 roomId: line.room.id,
                 code: ended,
             })
-        }
-        return taken
+        })
+        return ends
     }
 
-    /** One agent's turn: when its module ships one, within the room's limit, as one pinned tag of the person. */
+    /** One agent's turn: when its module ships one, within the room's limit, as one workflow call of the person (the `team-chat` workflow, latest). */
     private async turnOf(
         workspaceId: string,
         agent: AgentCard,
-        asked: { readonly id: string; readonly body: string; readonly roomId: string },
-        how: { readonly room: TeamChatRoom; readonly intent: TeamChatIntent; readonly eventKey: string },
+        asked: AskedLine,
+        how: TurnHow,
         read: () => Promise<TurnContext | null>,
     ): Promise<TurnEnd> {
-        if (!TEAM_CHAT_MODULES.includes(agent.module)) return "no_chat_turn"
+        // A module ships a chat turn when a plugin ships its chat-turn template (`<module>.team-chat`).
+        const templateId = `${agent.module}.${TEAM_CHAT_WORKFLOW_KEY}`
+        if (INSTALLED.templateOf(templateId) === null) return "no_chat_turn"
+        await this.held(workspaceId, agent, templateId)
         const admission = this.limiter.admit(`${workspaceId}:${asked.roomId}`)
         if (admission === "quiet") return "quiet"
         if (admission === "pause_notice") {
@@ -233,21 +309,46 @@ export class TeamChatTurnsService implements OnModuleInit {
             replyTo: context.replyTo,
             locale: TEAM_LOCALE,
         })
-        const tagged = await this.tags.tagAgent({
-            workspaceId,
-            toAgentId: agent.id,
-            personId: context.asker.memberId,
-            text: params.text,
-            subject: `chat-room:${asked.roomId}`,
-            locale: TEAM_LOCALE,
-            context: {
-                [WORKFLOW_CALL_MEMBER]: { workflow: TEAM_CHAT_WORKFLOW_KEY, version: LATEST_VERSION },
-                [WORKFLOW_PARAMS_MEMBER]: { ...params },
-            },
-            eventKey: how.eventKey,
-        })
-        if (tagged.tagged) return "started"
-        return tagged.reason === "duplicate" ? "duplicate" : "not_tagged"
+        const event = WORKFLOW_CALL_TRIGGER.translate({ key: how.eventKey, params: { ...params } }, { connectionId: null })
+        if (event === null) return "not_tagged"
+        const result = await this.entityManager.transaction((tx) =>
+            this.triggers.deliver(
+                {
+                    workspaceId,
+                    declaration: WORKFLOW_CALL_TRIGGER,
+                    connectionId: null,
+                    agentId: agent.id,
+                    events: [
+                        {
+                            event,
+                            pin: { workflow: TEAM_CHAT_WORKFLOW_KEY, version: LATEST_VERSION },
+                            actorMemberId: context.asker.memberId,
+                        },
+                    ],
+                },
+                tx,
+            ),
+        )
+        const delivery = callDeliveryOf(result)
+        if (delivery === "started") return "started"
+        return delivery === "duplicate" ? "duplicate" : "not_tagged"
+    }
+
+    /**
+     * The pin names the agent's OWN `team-chat` workflow, and only a seed makes a workflow from a template: an agent a person installed
+     * through the app holds none, so its pinned wake would find no workflow and end with no handler. Before the pin is written the
+     * agent is given the chat-turn workflow of its module when it holds none from that template (once: afterwards this is one read);
+     * one it already holds is left as its owner set it. A failure is logged and the turn goes on, so the engine still tells the
+     * founder when nothing takes the wake.
+     */
+    private async held(workspaceId: string, agent: AgentCard, templateId: string): Promise<void> {
+        if (this.workflows === undefined) return
+        try {
+            const made = await this.workflows.seedAgent(workspaceId, agent.id, agent.module, templateId)
+            if (made > 0) this.logger.info(TeamChatTurnsLogEvent.ChatTurnSeeded, { agentId: agent.id })
+        } catch (cause) {
+            this.logger.error(TeamChatTurnsLogEvent.ChatTurnSeedFailed, cause, { agentId: agent.id })
+        }
     }
 
     /** The one line an agent says when its room reached the limit; once per window (the limiter says when). */

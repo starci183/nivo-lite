@@ -1,6 +1,5 @@
-import type { DocumentTable } from "./document-readers.contracts"
+import type { DocumentTable, DocumentSection, DocumentWarning } from "./document-readers.contracts"
 import { cellText, sectionsOf, tableOf, tableText } from "./text-reader.mapper"
-import type { DocumentSection, DocumentWarning } from "./document-readers.contracts"
 
 /** The named characters a page commonly writes as entities. */
 const NAMED: ReadonlyMap<string, string> = new Map([
@@ -20,7 +19,7 @@ const NAMED: ReadonlyMap<string, string> = new Map([
 
 /** Text with its HTML entities written out. */
 export const decodeEntities = (text: string): string =>
-    text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/giu, (whole, body: string) => {
+    text.replaceAll(/&(#x[0-9a-f]+|#\d+|[a-z]+);/giu, (whole, body: string) => {
         if (body.startsWith("#x") || body.startsWith("#X"))
             return String.fromCodePoint(Number.parseInt(body.slice(2), 16))
         if (body.startsWith("#")) return String.fromCodePoint(Number.parseInt(body.slice(1), 10))
@@ -29,7 +28,7 @@ export const decodeEntities = (text: string): string =>
 
 /** The text of an inline stretch of HTML: tags dropped, entities written out, spaces tidied. */
 const inlineText = (html: string): string =>
-    cellText(decodeEntities(html.replace(/<br\s*\/?>/giu, " ").replace(/<[^>]*>/gu, " ")))
+    cellText(decodeEntities(html.replaceAll(/<br\s*\/?>/giu, " ").replaceAll(/<[^>]*>/gu, " ")))
 
 /** The tag of a table placeholder, which no page text holds. */
 const MARK = "\u0000"
@@ -39,7 +38,7 @@ const PLACEHOLDER = new RegExp(`${MARK}(\\d+)${MARK}`, "gu")
 
 /** A table already read, put back as the text of the cell that held it: its rows joined by semicolons. */
 const nestedText = (html: string, tables: ReadonlyArray<DocumentTable>): string =>
-    html.replace(PLACEHOLDER, (_whole, index: string) => {
+    html.replaceAll(PLACEHOLDER, (_whole, index: string) => {
         const table = tables[Number(index)]
         return table === undefined ? " " : ` ${tableText(table).replaceAll("\n", "; ")} `
     })
@@ -73,11 +72,11 @@ export const htmlText = (html: string): HtmlText => {
     const tables: Array<DocumentTable> = []
     const warnings: Array<DocumentWarning> = []
     let body = html
-        .replace(/<!--[\s\S]*?-->/gu, "")
-        .replace(/<(script|style|noscript|template|svg|head)\b[\s\S]*?<\/\1>/giu, "")
+        .replaceAll(/<!--[\s\S]*?-->/gu, "")
+        .replaceAll(/<(script|style|noscript|template|svg|head)\b[\s\S]*?<\/\1>/giu, "")
     // Innermost tables first: a table inside a cell becomes the text of its cell.
     for (let guard = 0; guard < 200 && /<table\b/iu.test(body); guard += 1) {
-        body = body.replace(/<table\b[^>]*>((?:(?!<table\b)[\s\S])*?)<\/table>/giu, (_whole, inner: string) => {
+        body = body.replaceAll(/<table\b[^>]*>((?:(?!<table\b)[\s\S])*?)<\/table>/giu, (_whole, inner: string) => {
             const made = tableOf(null, rowsOf(inner, tables))
             warnings.push(...made.warnings)
             if (made.table === null) return "\n\n"
@@ -88,24 +87,24 @@ export const htmlText = (html: string): HtmlText => {
     }
     const text = decodeEntities(
         body
-            .replace(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/giu, (_whole, level: string, inner: string) => {
+            .replaceAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/giu, (_whole, level: string, inner: string) => {
                 const heading = inlineText(inner)
                 return heading === "" ? "\n\n" : `\n\n${"#".repeat(Number(level))} ${heading}\n\n`
             })
-            .replace(/<li\b[^>]*>/giu, "\n- ")
-            .replace(/<\/li>/giu, "")
-            .replace(/<br\s*\/?>/giu, "\n")
-            .replace(
+            .replaceAll(/<li\b[^>]*>/giu, "\n- ")
+            .replaceAll(/<\/li>/giu, "")
+            .replaceAll(/<br\s*\/?>/giu, "\n")
+            .replaceAll(
                 /<\/?(?:p|div|section|article|header|footer|main|aside|nav|ul|ol|dl|dt|dd|blockquote|pre|figure|figcaption|caption|form|fieldset)\b[^>]*>/giu,
                 "\n\n",
             )
-            .replace(/<[^>]*>/gu, " "),
+            .replaceAll(/<[^>]*>/gu, " "),
     )
         .split("\n")
-        .map((line) => line.replace(/[ \t ]+/gu, " ").trim())
+        .map((line) => line.replaceAll(/[ \t ]+/gu, " ").trim())
         .join("\n")
-        .replace(/\n{3,}/gu, "\n\n")
-        .replace(PLACEHOLDER, (_whole, index: string) => {
+        .replaceAll(/\n{3,}/gu, "\n\n")
+        .replaceAll(PLACEHOLDER, (_whole, index: string) => {
             const table = tables[Number(index)]
             return table === undefined ? "" : tableText(table)
         })

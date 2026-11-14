@@ -1,4 +1,4 @@
-import { Button, DescriptionList, Dialog } from "@starci/grammar/common"
+import { Button, DescriptionList, Dialog, SurfaceCard } from "@starci/grammar/common"
 import type { WorkspaceReasonView } from "@/modules/types"
 
 /** Copy and facts the connected reason dialog supplies. */
@@ -65,7 +65,7 @@ export const WorkspaceReasonDialogBase = (props: WorkspaceReasonDialogBaseProps)
             description={props.props.description}
             footer={<FooterActions {...props} />}
         >
-            {rows.length === 0 ? null : <DescriptionList items={rows} />}
+            {rows.length === 0 ? null : <SurfaceCard><DescriptionList items={rows} /></SurfaceCard>}
         </Dialog>
     )
 }

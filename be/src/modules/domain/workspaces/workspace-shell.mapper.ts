@@ -20,7 +20,7 @@ const agentFrom = (row: JsonRecord): ShellAgent => ({
 export const toShellFacts = (json: unknown): ShellFacts => {
     const data: JsonRecord = isRecord(json) ? json : {}
     return {
-        agents: rows(data.agents).map(agentFrom),
+        agents: rows(data.agents).map((item) => agentFrom(item)),
         hasChatbot: data.has_chatbot === true,
         isFoundingMember: data.is_founding_member === true,
     }

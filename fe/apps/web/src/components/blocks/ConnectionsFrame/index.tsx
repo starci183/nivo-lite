@@ -58,7 +58,8 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                 canAdd: view?.canManage === true,
                 isLoading: "isLoading" in list.slot,
             }}
-            children={props.children}
-        />
+        >
+            {props.children}
+        </ConnectionsFrameBase>
     )
 }

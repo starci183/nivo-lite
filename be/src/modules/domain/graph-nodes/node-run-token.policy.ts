@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto"
 import { parseJsonText } from "@modules/platform/primitives"
-import type { NodeRunClaims, OptionalRunClaims, NodeToolArgs } from "./node-run-token.contracts"
+import type { NodeRunClaims, NodeStepRef, OptionalRunClaims, NodeToolArgs } from "./node-run-token.contracts"
 
 const ORIGINS: ReadonlySet<unknown> = new Set(["customer", "owner", "staff", "system"])
 const SCOPES: ReadonlySet<unknown> = new Set(["public", "workspace"])
@@ -8,6 +8,13 @@ const SCOPES: ReadonlySet<unknown> = new Set(["public", "workspace"])
 const encode = (buffer: Buffer): string => buffer.toString("base64url")
 
 const textOrNull = (value: unknown): value is string | null => value === null || typeof value === "string"
+
+/** True when a value is a workflow step as the host signs it. */
+const isStep = (value: unknown): value is NodeStepRef => {
+    if (typeof value !== "object" || value === null) return false
+    const step: Partial<Record<keyof NodeStepRef, unknown>> = value
+    return typeof step.nodeKey === "string" && typeof step.versionId === "string" && textOrNull(step.workflowId)
+}
 
 /** True when a parsed body holds every claim with its type. */
 const isClaims = (value: unknown): value is NodeRunClaims => {
@@ -21,7 +28,8 @@ const isClaims = (value: unknown): value is NodeRunClaims => {
         ORIGINS.has(claims.origin) &&
         textOrNull(claims.memberId) &&
         SCOPES.has(claims.scope) &&
-        typeof claims.expiresAt === "number"
+        typeof claims.expiresAt === "number" &&
+        (claims.step === undefined || isStep(claims.step))
     )
 }
 
@@ -50,7 +58,7 @@ export const verifyRunToken = (key: Buffer, token: string, now: number): Optiona
 
 /** The JSON of a value with the members of every object in name order, so equal arguments always print the same. */
 const canonical = (value: unknown): string => {
-    if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`
+    if (Array.isArray(value)) return `[${value.map((item: unknown) => canonical(item)).join(",")}]`
     if (typeof value === "object" && value !== null) {
         const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
         const members = entries.map(([name, member]) => [JSON.stringify(name), canonical(member)].join(":"))
@@ -59,8 +67,11 @@ const canonical = (value: unknown): string => {
     return JSON.stringify(value) ?? "null"
 }
 
-/** The fingerprint of one tool call: the tool and its arguments, hashed, so an approval binds to exactly what the person saw. */
-export const toolFingerprintOf = (tool: string, args: NodeToolArgs): string =>
+/**
+ * The fingerprint of one tool call: the tool and its arguments, hashed, so an approval binds to exactly what the person saw; with the
+ * connected account the call acts on, when the runner handed one, so an approval stays on that one account.
+ */
+export const toolFingerprintOf = (tool: string, args: NodeToolArgs, connectionId?: string): string =>
     createHash("sha256")
-        .update(`${tool}\n${canonical(args)}`)
+        .update(connectionId === undefined ? `${tool}\n${canonical(args)}` : `${tool}\n${canonical(args)}\n${connectionId}`)
         .digest("hex")

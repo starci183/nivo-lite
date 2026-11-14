@@ -3,7 +3,7 @@ import { Column, Entity } from "typeorm"
 import { UuidAbstractEntity } from "@modules/platform/database"
 
 @Entity({ schema: "public", name: "staff" })
-/** A staff record of one workspace, used by the accounting assignment picker and the shifts workbench. */
+/** A staff record of one workspace, used by the accounting assignment picker. */
 export class StaffEntity extends UuidAbstractEntity {
     /** The workspace the person works for. */
     @Column({ name: "workspace_id", type: "uuid" })

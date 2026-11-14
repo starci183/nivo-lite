@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { WorkspaceDashboardService } from "@modules/domain/workspace-dashboard"
-import type { WorkspaceDashboardData } from "@modules/domain/workspace-dashboard"
+import { WorkspaceDashboardService, type WorkspaceDashboardData } from "@modules/domain/workspace-dashboard"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetWorkspaceDashboardQuery } from "./get-workspace-dashboard.query"
 
 @QueryHandler(GetWorkspaceDashboardQuery)

@@ -6,19 +6,20 @@ export type { TeamChatTags } from "./team-chat.port"
 export { TeamChatFilesService } from "./team-chat-files.service"
 export { TeamChatForwardService } from "./team-chat-forward.service"
 export { TeamChatReactionsService } from "./team-chat-reactions.service"
-export type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
 export { TeamChatNativeService } from "./team-chat-native.service"
 export { TeamChatModule } from "./team-chat.module"
 export { TeamChatRoomsService } from "./team-chat.service"
-export type { AgentLineReplied, AgentLineReply, PersonLineHeard, PersonLineListener } from "./team-chat.service"
+export type { AgentLineReplied, HeardReply, PersonLineHeard, PersonLineListener } from "./team-chat-lines.contracts"
 export { lineKeyOf } from "./team-chat.policy"
 export { TeamChatStoreService } from "./team-chat-store.service"
 export { TeamChatAccessService } from "./team-chat-access.service"
-export { TeamChatApprovalsService } from "./team-chat-approvals.service"
 export { TeamChatViewsService } from "./team-chat-views.service"
 export { TeamChatCardsService } from "./team-chat-cards.service"
 export { TeamChatAudienceService } from "./team-chat-audience.service"
-export type { TeamCardMessage, TeamCardPost, TeamCardPosted } from "./team-chat-audience.contracts"
+export { TeamChatNoticesService } from "./team-chat-notices.service"
+export { TeamChatChainStopReporterService } from "./team-chat-chain-stop-reporter.service"
+export type { BackgroundStopReason } from "./background-stop-card.contracts"
+export type { TeamCardMessage } from "./team-chat-audience.contracts"
 export { PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
 export type {
     ChatUpload,
@@ -29,13 +30,10 @@ export type {
     RoomUnread,
     ChatRoomView,
     GroupPurpose,
-    RoomPurpose,
     TeamChatResult,
     UnreadView,
 } from "./team-chat.contracts"
-export { lineClientIdOf } from "./team-chat.policy"
-export { TeamChatDecisionService } from "./team-chat-decision.service"
-export type { DecideOutcome } from "./team-chat-decision.policy"
+export type { DecideOutcome } from "./team-chat.contracts"
 export {
     createRoomRequestOf,
     decideRequestOf,
@@ -54,34 +52,17 @@ export {
     uploadPayloadOf,
 } from "./team-chat-wire.mapper"
 export { NO_NEEDS, STOP_CARD_MESSAGE_KIND } from "./stop-card.policy"
-export {
-    BRAIN_CHANGE_MESSAGE_KIND,
-    brainChangeCardViewOf,
-    brainChangeKeyOf,
-    brainChangeMessageOf,
-    storedBrainChangeOf,
-} from "./brain-change-card.policy"
-export type {
-    BrainChangeCardView,
-    BrainChangeEvidence,
-    BrainChangePayload,
-    BrainChangeViewerRole,
-} from "./brain-change-card.contracts"
-export { brainChangePayload } from "./brain-change-card.schema"
-export {
-    channelFactOf,
-    codeFactsOf,
-    factWordsOf,
-    reasonWordsOf,
-    STUCK_FACT,
-    wordedStopFactsOf,
-    wordOr,
-} from "./engine-facts.policy"
-export type { BankNameOf, FactWords, FactWordsSource, StopFactContext, WordsOfKey } from "./engine-facts.policy"
+export { brainChangeCardViewOf, brainChangeKeyOf, brainChangeMessageOf } from "./brain-change-card.policy"
+export type { BrainChangeEvidence, BrainChangePayload } from "./brain-change-card.contracts"
+export { channelFactOf, codeFactsOf, factWordsOf, LINE_FACT, LINE_NOT_TOLD, STUCK_FACT, wordOr } from "./engine-facts.policy"
+export type { FactWords } from "./engine-facts.policy"
 export type {
     StopCardApproval,
     StopCardKind,
     StopCardNeeds,
+    StopCardReplyKind,
     StopCardSectionGiven,
     StopCardState,
 } from "./stop-card.contracts"
+export { TeamChatTagDeliveryService } from "./team-chat-tag-delivery.service"
+export { TEAM_CHAT_MESSAGE_TRIGGER } from "./team-chat-message.trigger"

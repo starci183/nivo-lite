@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectWebhookProofRegistry } from "@modules/platform/http-security"
-import type { WebhookProofRegistry } from "@modules/platform/http-security"
+import { InjectWebhookProofRegistry, type WebhookProofRegistry } from "@modules/platform/http-security"
 
 import type { ScopedWebhookDelivery } from "./webhook-proofs.contracts"
 import type { WebhookVerifier } from "./webhook-proofs.port"

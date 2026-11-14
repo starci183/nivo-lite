@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { AuthGuard, CredentialGuard } from "@modules/domain/identity"
 import { ErrorsFilter } from "@modules/platform/errors"
@@ -9,9 +8,9 @@ import type { McpAppOptions } from "./mcp.options"
 
 @Module({})
 /**
- * The composition root of the NIVO MCP gateway app: one MCP endpoint (Streamable HTTP) per workspace in front of every connector,
- * denied by default (rate limit, origin, the per-agent credential, then the session guard). Grants, approvals, limits, the breakers
- * and the audit live in the gateway modules, shared with the api's chat turns.
+ * The composition root of the NIVO MCP app: the outbound MCP endpoint (Streamable HTTP) an outside AI client reaches with an MCP key,
+ * denied by default (rate limit, origin, the key's credential, then the session guard). A thin protocol surface: NIVO's data ops and
+ * the agent and workflow ops, each through its GraphQL operation's own handler; it loads no provider and runs no tool and no graph.
  */
 export class AppModule {
     /** Builds the app from its parsed options. */

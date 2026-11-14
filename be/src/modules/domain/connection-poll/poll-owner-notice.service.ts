@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { AuthFailureReason } from "./connection-poll.contracts"
@@ -27,6 +26,7 @@ export class PollOwnerNoticeService {
     ): Promise<void> {
         const reason = why === "permission" ? POLL_NEEDS_PERMISSION_REASON : POLL_NEEDS_REAUTH_REASON
         await this.connections.markFailing(record.id, reason)
+        await this.connections.markHealth(record.id, { state: "needs_reauth", reason, checkedAt: new Date(openedAt).toISOString() })
         await this.entityManager.transaction((manager) =>
             this.inboundEvents.keepForOwner(manager, {
                 workspaceId: record.workspaceId,

@@ -83,7 +83,7 @@ export const updateRateLimitProofBucket = async (
         .returning("hits")
         .execute()
     const raw: unknown = result.raw
-    return Array.isArray(raw) ? raw.map(hitsRowOf) : []
+    return Array.isArray(raw) ? raw.map((item) => hitsRowOf(item)) : []
 }
 
 /** Calls the actual invoker function using the backend role's table policies and cleanup grant. */

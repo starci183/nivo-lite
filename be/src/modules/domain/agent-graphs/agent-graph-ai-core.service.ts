@@ -1,7 +1,8 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { z } from "zod"
 import type { StepJson } from "@modules/domain/agent-runs"
-import { ChatMessagesService } from "@modules/domain/chat-records"
+import { ChannelDeliveriesService } from "@modules/domain/customer-routes"
+import { isRecord } from "@modules/platform/primitives"
 import { GraphNodeHostService, GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
 import {
     AI_CORE_FAILED,
@@ -26,6 +27,11 @@ export interface CoreAsk {
     readonly turn: NodeTurn
     /** The key of the node in the graph. */
     readonly nodeKey: string
+    /**
+     * The run step that could not complete (the node key, or `<node>[<index>]` in a for-each body): the AI core's call is booked to it,
+     * so the run page lists it under that step and never as a call of no step. Absent books the node key.
+     */
+    readonly stepKey?: string | undefined
     /** The installed node the step runs. */
     readonly nodeStep: string
     /** What went wrong, as true facts. */
@@ -71,13 +77,13 @@ export class AgentGraphAiCoreService {
     constructor(
         private readonly host: GraphNodeHostService,
         private readonly nodes: GraphNodeRegistryService,
-        @Optional() private readonly messages?: ChatMessagesService,
+        @Optional() private readonly deliveries?: ChannelDeliveriesService,
     ) {}
 
     /** Decides one step that could not complete. Exactly one call of the model; never throws. */
     async decide(asked: CoreAsk): Promise<CoreDecision> {
         const definition = this.nodes.installed().nodes.get(asked.nodeStep)
-        const mayProduce = definition !== undefined && definition.effects.length === 0
+        const mayProduce = definition?.effects.length === 0
         try {
             const answer = await this.host.core(
                 asked.turn,
@@ -87,6 +93,7 @@ export class AgentGraphAiCoreService {
                     input: await this.readingOf(asked, definition?.output),
                 },
                 mayProduce ? coreDecisionSchema : coreReportSchema,
+                asked.stepKey ?? asked.nodeKey,
             )
             if (answer.decision === "report") {
                 const line = answer.customerLine?.trim() ?? ""
@@ -130,16 +137,44 @@ export class AgentGraphAiCoreService {
         }
     }
 
-    /** The newest lines of the customer's conversation, oldest first; null when the run serves none or it cannot be read. */
+    /**
+     * The newest lines of the customer's thread, oldest first, from the engine's own state: the customer's words of the wake that started
+     * the run (`trigger.messages`, read from the raw message rows) and what the shop told the customer on the route (the delivery ledger:
+     * delivered rows, whoever told them). It reads no chatbot record, so the customer's EARLIER lines (before this wake), the lines of a
+     * message that was not delivered and the system notices are not in it; a graph that wants more hands it to the step. Null when the run
+     * serves no route or the ledger cannot be read.
+     */
     private async transcriptOf(asked: CoreAsk): Promise<ReadonlyArray<{ role: string; body: string }> | null> {
-        if (asked.conversationId === null || this.messages === undefined) return null
+        if (asked.conversationId === null) return null
         try {
-            const lines = await this.messages.transcript(asked.turn.workspaceId, asked.conversationId)
-            return lines.slice(-TRANSCRIPT_LINES).map((line) => ({ role: line.role, body: line.body }))
+            const told =
+                this.deliveries === undefined
+                    ? []
+                    : (await this.deliveries.listByRoute(asked.turn.workspaceId, asked.conversationId, { limit: TRANSCRIPT_LINES })).rows
+            const said = [
+                ...wakeLinesOf(asked.trigger),
+                ...told.flatMap((row) =>
+                    row.state === "delivered" ? [{ role: "agent", body: row.text, at: row.deliveredAt ?? row.createdAt }] : [],
+                ),
+            ]
+            return said
+                .toSorted((left, right) => left.at.localeCompare(right.at))
+                .slice(-TRANSCRIPT_LINES)
+                .map(({ role, body }) => ({ role, body }))
         } catch {
             return null
         }
     }
+}
+
+/** The customer's lines of the wake, from the trigger's `messages` (each with its words and time); anything that is not such a line is left out. */
+const wakeLinesOf = (trigger: StepJson): ReadonlyArray<{ role: string; body: string; at: string }> => {
+    const messages: unknown = Reflect.get(trigger, "messages")
+    return (Array.isArray(messages) ? messages : []).flatMap((entry: unknown) =>
+        isRecord(entry) && typeof entry.text === "string" && entry.text !== ""
+            ? [{ role: "user", body: entry.text, at: typeof entry.at === "string" ? entry.at : "" }]
+            : [],
+    )
 }
 
 /** The JSON Schema of a node's output for the AI core to read, or null for a schema that has none. */

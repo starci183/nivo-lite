@@ -1,5 +1,4 @@
-import { META_SCOPES } from "./meta.contracts"
-import type { MetaSite } from "./meta.contracts"
+import { META_SCOPES, type MetaSite } from "./meta.contracts"
 import type { MetaOptions } from "./meta.options"
 
 /** The oldest Graph API major version this client speaks. */

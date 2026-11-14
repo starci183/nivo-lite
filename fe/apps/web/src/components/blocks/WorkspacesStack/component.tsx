@@ -61,8 +61,8 @@ const rowDetail = (props: WorkspacesStackBaseProps, row: WorkspaceTableRowView) 
     const action = ACTION_OF_STATUS[row.status]
     return (
         <Cluster gap="inline" align="center" justify="between">
-            <Cluster gap="inline" align="center">
-                <Badge tone={STATUS_TONES[row.status]} isDot>
+            <Cluster gap="identity" align="center">
+                <Badge tone={STATUS_TONES[row.status]}>
                     {copy.statuses[row.status]}
                 </Badge>
                 <Text size="sm" tone="muted">
@@ -71,7 +71,7 @@ const rowDetail = (props: WorkspacesStackBaseProps, row: WorkspaceTableRowView) 
             </Cluster>
             <Button
                 intent={row.isPrimary ? "commit" : "neutral"}
-                {...(action === "open" ? { endArrow: true } : {})}
+                {...(action === "open" && row.isPrimary ? { endArrow: true } : {})}
                 isPending={row.isBusy}
                 onPress={() => props.on[action](row.id)}
             >

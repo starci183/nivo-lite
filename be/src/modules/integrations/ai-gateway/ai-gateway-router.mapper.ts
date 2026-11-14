@@ -1,13 +1,26 @@
 import type { AiRouterModuleOptions, KeyConfig, ModelConfig, ModelCost, ProviderConfig } from "@starci/ai-router"
 import type { AiGatewayKey, AiGatewayOptions, AiGatewayProvider } from "./ai-gateway.options"
-import { EMBEDDING_PROFILES } from "@nivo-lite/blocks-core"
+import { CHEAP_MODEL, EMBEDDING_PROFILES, SONNET_MODEL } from "@nivo-lite/agent-sdk/models"
 import { servedProfilesOf } from "./ai-gateway-config.policy"
-import { ANTHROPIC_PROVIDER, OPENAI_PROVIDER, modelProfilesOf } from "./ai-gateway-profiles.policy"
-import type { ModelProfileSeats } from "./ai-gateway-profiles.policy"
+import {
+    ANTHROPIC_PROVIDER,
+    OPENAI_PROVIDER,
+    WORK_SEATS,
+    chatProfileRoutesOf,
+    modelProfilesOf,
+    type ChatProfileRoutes,
+    type ModelProfileSeats,
+} from "./ai-gateway-profiles.policy"
 
 /** The profile of chat work: the `model` an OpenAI client asks for. */
 export const WORK_PROFILE = "work"
 
+/**
+ * The chat profiles of the pool with the models that may serve each (`chatProfileRoutesOf` over the pool's models: the cheap tier and
+ * Sonnet): what the app hands the AI client (`AiModule` `profileRoutes`) so a call's effort fields are built for the serving model.
+ */
+export const chatProfileRoutes = (): ChatProfileRoutes =>
+    chatProfileRoutesOf(WORK_PROFILE, { work: CHEAP_MODEL, strong: SONNET_MODEL })
 
 /**
  * How long one attempt of a chat call may take at the gateway, milliseconds. The caller sets the real deadline of each call by its
@@ -62,7 +75,13 @@ const openAiEmbedModels = (): Array<ModelConfig> => [
     ...new Map(
         Object.values(EMBEDDING_PROFILES).map((entry): [string, ModelConfig] => [
             entry.model,
-            { id: entry.model, identity: entry.model, dimensions: entry.dimensions, capabilities: ["embeddings"], cost: OPENAI_EMBED_COST },
+            {
+                id: entry.model,
+                identity: entry.model,
+                dimensions: entry.dimensions,
+                capabilities: ["embeddings"],
+                cost: OPENAI_EMBED_COST,
+            },
         ]),
     ).values(),
 ]
@@ -84,7 +103,7 @@ const providerOf = (provider: AiGatewayProvider, models: ReadonlyArray<ModelConf
     kind: provider.kind,
     baseUrl: provider.baseUrl,
     ...(provider.kind === "anthropic" ? { defaultMaxTokens: STRONG_DEFAULT_MAX_TOKENS } : {}),
-    keys: provider.keys.map(keyOf),
+    keys: provider.keys.map((key) => keyOf(key)),
     models,
 })
 
@@ -103,8 +122,18 @@ const modelProfileOf = (profile: ModelProfileSeats): NonNullable<AiRouterModuleO
 /** The pool over a non-empty provider list: Anthropic serves every chat profile, OpenAI the pinned embeddings profiles. */
 const poolOf = (options: AiGatewayOptions): AiRouterModuleOptions => {
     const chatCapabilities: ModelConfig["capabilities"] = ["chat", "streaming", "tools", "json", "vision"]
-    const cheap: ModelConfig = { id: options.models.work, capabilities: chatCapabilities, cost: CHEAP_COST, ...CLAUDE_REQUEST_SHAPE }
-    const strong: ModelConfig = { id: options.models.strong, capabilities: chatCapabilities, cost: STRONG_COST, ...CLAUDE_REQUEST_SHAPE }
+    const cheap: ModelConfig = {
+        id: options.models.work,
+        capabilities: chatCapabilities,
+        cost: CHEAP_COST,
+        ...CLAUDE_REQUEST_SHAPE,
+    }
+    const strong: ModelConfig = {
+        id: options.models.strong,
+        capabilities: chatCapabilities,
+        cost: STRONG_COST,
+        ...CLAUDE_REQUEST_SHAPE,
+    }
     const modelsOf = (provider: AiGatewayProvider): Array<ModelConfig> =>
         provider.id === ANTHROPIC_PROVIDER ? [cheap, strong] : openAiEmbedModels()
     const served = new Set(servedProfilesOf(options.providers, options.models))
@@ -118,10 +147,10 @@ const poolOf = (options: AiGatewayOptions): AiRouterModuleOptions => {
                 ? {
                       [WORK_PROFILE]: {
                           // The cheap model, Sonnet when it has no usable lane: Claude only, never another vendor.
-                          candidates: [
-                              { provider: ANTHROPIC_PROVIDER, model: options.models.work },
-                              { provider: ANTHROPIC_PROVIDER, model: options.models.strong },
-                          ],
+                          candidates: WORK_SEATS.map((seat) => ({
+                              provider: seat.provider,
+                              model: options.models[seat.model],
+                          })),
                           // One attempt per call: the caller (the AI task layer) owns the count of tries of a model call, so the
                           // gateway never multiplies it by retrying on its own.
                           maxAttempts: 1,

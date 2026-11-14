@@ -39,9 +39,12 @@ export class FetchHttpClient implements HttpClient {
             body: this.bodyOf(request).body,
             timeoutMs: request.timeoutMs,
             signal,
+            ...(request.maxBytes === undefined ? {} : { maxBytes: request.maxBytes }),
         })
         const base = { status: answer.status, headers: answer.headers, url: request.url }
-        if (request.read === "bytes") return { ...base, body: answer.body }
+        if (request.read === "bytes") {
+            return { ...base, body: answer.body, ...(answer.tooLarge === true ? { tooLarge: true as const } : {}) }
+        }
         const text = answer.body.toString("utf8")
         if (request.read === "text") return { ...base, body: text }
         return { ...base, body: text === "" ? undefined : this.parse(text) }

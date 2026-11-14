@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
-import { CLOCK } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { CLOCK, type Clock } from "@modules/platform/clock"
 import { QueueError, QueueErrorCode } from "@modules/platform/queue"
 import { worldIds } from "../../world/lite-world.service"
 import { redisQueueModules } from "../../world/redis-capabilities.options"

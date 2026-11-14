@@ -1,6 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import { agentsEntities } from "@modules/domain/agents"
-import type { Installation } from "@modules/domain/agents"
+import { agentsEntities, type Installation } from "@modules/domain/agents"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
 const AgentEntity: (typeof agentsEntities)[0] = agentsEntities[0]
@@ -26,7 +25,6 @@ export const agentEntityOf: (overrides?: Partial<AgentEntity>) => AgentEntity = 
     fallbackMemberId: null,
     assignableRoles: ["owner", "manager"],
     assignableRooms: [],
-    canTagAgentIds: [],
     avatarUrl: null,
     avatarPreset: null,
     updatedAt: new Date("2026-10-01T00:00:00.000Z"),
@@ -92,7 +90,6 @@ export const ownedAgentOf: (overrides?: Partial<AgentEntity>) => AgentEntity = b
     fallbackMemberId: "m-nam",
     assignableRoles: ["owner", "manager"],
     assignableRooms: ["sales"],
-    canTagAgentIds: ["a2"],
 })
 
 /** AI Sales before anybody owns it. */
@@ -113,25 +110,11 @@ export const openAgentOf: (overrides?: Partial<AgentEntity>) => AgentEntity = bu
 /** The open agent when no room may be handed work. */
 export const roomlessOpenAgent = (): AgentEntity => openAgentOf({ assignableRooms: [] })
 
-/** Agent a1 that may tag agent a2. */
-export const taggingAgent = (): AgentEntity => agentEntityOf({ id: "a1", canTagAgentIds: ["a2"] })
-
-/** Agent a2, Accounting AI, as the agent a1 tags. */
-export const taggedAgent = (): AgentEntity => agentEntityOf({ id: "a2", name: "Accounting AI" })
-
-/** Agent a3, whom a1 does not tag. */
-export const untaggedAgent = (): AgentEntity => agentEntityOf({ id: "a3" })
-
-/** Agent a2, Accounting AI of the accounting module, the target of a tag list. */
-export const accountingTarget = (): AgentEntity =>
-    agentEntityOf({ id: "a2", name: "Accounting AI", module: "accounting" })
-
 /** The stored agent a9 whose instructions are the given text. */
 export const agentHoldingInstructions = (instructions: string): AgentEntity => agentEntityOf({ id: "a9", instructions })
 
-/** The agent a2 named Lan of the shifts module, who may tag the agent a1. */
-export const lanAgent = (): AgentEntity =>
-    agentEntityOf({ id: "a2", name: "Lan", module: "shifts", canTagAgentIds: ["a1"] })
+/** The agent a2 named Lan of the shifts module. */
+export const lanAgent = (): AgentEntity => agentEntityOf({ id: "a2", name: "Lan", module: "shifts" })
 
 /** The agent a1 created at the given moment. */
 export const agentCreatedAt = (createdAt: Date): AgentEntity => agentEntityOf({ createdAt })

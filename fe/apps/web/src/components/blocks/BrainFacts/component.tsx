@@ -1,6 +1,5 @@
-import { Alert, Stack } from "@starci/grammar/common"
+import { Alert, Stack, type FooterZone, type HeaderZone } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { HeaderZone } from "@starci/grammar/common"
 import { ConflictDrawer } from "@/components/composites/ConflictDrawer"
 import { FactDetailDrawer } from "@/components/composites/FactDetailDrawer"
 import { FactPickTable } from "@/components/composites/FactPickTable"
@@ -14,6 +13,7 @@ import type {
     ConflictDrawerView,
     DataSlot,
     FactDrawerDetailView,
+    FactsPagingView,
     FactDrawerView,
     FactPickCopy,
     FactPickGroupView,
@@ -42,6 +42,18 @@ export interface BrainFactsBaseProps {
         readonly labels: SlotLabels
         readonly copy: FactPickCopy
         readonly words: FactsWords
+        /** The words of the paging footer. */
+        readonly pager: {
+            readonly nav: string
+            readonly previous: string
+            readonly next: string
+            /** "Trang {page}" with the page left to fill in. */
+            readonly pageTemplate: string
+            /** "1-50 / 120", already worded; empty when there is no paging. */
+            readonly summary: string
+        }
+        /** The paging of the list; null when everything fits one page or the tab is drawn from the whole read. */
+        readonly paging: FactsPagingView | null
         readonly count: number
         readonly status: ReadonlyArray<{ readonly id: string; readonly label: string; readonly count: number }>
         readonly selectedStatus: string
@@ -61,10 +73,10 @@ export interface BrainFactsBaseProps {
         readonly map: FactMapView
     }
     readonly on: {
-        readonly reviewAll: () => void
         readonly selectTab: (id: string) => void
         readonly setStatus: (id: string) => void
         readonly setQuery: (value: string) => void
+        readonly setPage: (page: number) => void
         readonly setGrouping: (id: string) => void
         readonly retry: () => void
         readonly maintain: () => void
@@ -154,6 +166,27 @@ const headersOf = (props: BrainFactsBaseProps): ReadonlyArray<HeaderZone> => {
     ]
 }
 
+/** The zone under the table: the pager of the server's pages, only when there is more than one page. */
+const footersOf = (props: BrainFactsBaseProps): ReadonlyArray<FooterZone> => {
+    const { paging, pager } = props.props
+    if (paging === null) return []
+    return [
+        {
+            kind: "paging",
+            page: paging.page,
+            pageCount: paging.pageCount,
+            onPage: props.on.setPage,
+            labels: {
+                nav: pager.nav,
+                previous: pager.previous,
+                next: pager.next,
+                page: (page) => pager.pageTemplate.replace("{page}", String(page)),
+                summary: pager.summary,
+            },
+        },
+    ]
+}
+
 /** The card of the map: the same facts, drawn as subjects, facts and the documents they cite. */
 const MapBody = (props: BrainFactsBaseProps) => (
     <FactMapCard
@@ -198,7 +231,7 @@ const Body = (props: BrainFactsBaseProps) => {
                             fact: String(props.props.count),
                             groups,
                             headers: headersOf(props),
-                            footers: [],
+                            footers: footersOf(props),
                             canWrite: props.props.canWrite,
                             isLoading,
                         }}
@@ -222,7 +255,7 @@ const Body = (props: BrainFactsBaseProps) => {
  * drawer; a conflict opens the comparison.
  */
 export const BrainFactsBase = (props: BrainFactsBaseProps) => (
-    <BrainKnowledgeFrame header={props.props.header} onReviewAll={props.on.reviewAll} onSelectTab={props.on.selectTab}>
+    <BrainKnowledgeFrame header={props.props.header} onSelectTab={props.on.selectTab}>
         <Body {...props} />
         <ConflictDrawer
             props={{ view: props.props.conflict }}

@@ -1,13 +1,11 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ModuleInstallService } from "@modules/domain/modules"
-import type { InstallationView } from "@modules/domain/modules"
+import { ModuleInstallService, type InstallationView } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetOperatingModeCommand } from "./set-operating-mode.command"
 
 @CommandHandler(SetOperatingModeCommand)
-/** Sets the operating mode through the module install service. */
+/** The old operating-mode switch: the module install service answers a typed refusal (a node's declared mode alone decides). */
 export class SetOperatingModeHandler extends ICQRSHandler<SetOperatingModeCommand, InstallationView> {
     constructor(
         @InjectLogger() logger: Logger,
@@ -17,11 +15,6 @@ export class SetOperatingModeHandler extends ICQRSHandler<SetOperatingModeComman
     }
 
     protected override process(command: SetOperatingModeCommand): Promise<InstallationView> {
-        return this.installs.setOperatingMode(
-            command.params.principal.id,
-            command.params.request.workspaceId,
-            command.params.request.installationId,
-            command.params.request.mode,
-        )
+        return this.installs.setOperatingMode(command.params.principal.id, command.params.request.workspaceId)
     }
 }

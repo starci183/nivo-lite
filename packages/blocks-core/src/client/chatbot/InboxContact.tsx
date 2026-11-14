@@ -3,7 +3,7 @@ import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { Link, Stack, Sublabel, SurfaceCard } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
-import { contactOf, leadFactsOf, type ContactView } from "../../rows/chatbot/contact"
+import { contactOf, type ContactView } from "../../rows/chatbot/contact"
 import { derivedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -18,19 +18,14 @@ interface ContactBodyProps {
 type Words = (text: SpecText) => string
 
 /** What the facts of the conversation are given. */
-interface LeadFactsProps {
+interface ChatFactsProps {
     readonly contact: ContactView
     readonly words: Words
 }
 
-/** The facts of the conversation: who the customer is, the channel and, when the customer was captured as a lead, what is known of them. */
-const ChatFacts = (props: LeadFactsProps): ReactNode => {
+/** The facts of the conversation: who the customer is and the channel. */
+const ChatFacts = (props: ChatFactsProps): ReactNode => {
     const { contact, words } = props
-    const lead = leadFactsOf(contact).map((fact) => ({
-        id: fact.id,
-        title: words({ key: `fact_${fact.id}` }),
-        value: fact.id === "stage" ? words({ key: `stage_${fact.text}` }) : fact.text,
-    }))
     return (
         <SurfaceCard
             kind="list"
@@ -47,14 +42,13 @@ const ChatFacts = (props: LeadFactsProps): ReactNode => {
                               value: contact.channelName,
                           },
                       ]),
-                ...lead,
             ]}
             empty={null}
         />
     )
 }
 
-/** The side of the open conversation: which agent answers (and whether a person holds it), the facts of the conversation and the way to the customer's record. */
+/** The side of the open conversation: which agent answers (and whether a person holds it), the facts of the conversation and the way to the customer's contact. */
 const ContactBody = (props: ContactBodyProps): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
@@ -84,9 +78,12 @@ const ContactBody = (props: ContactBodyProps): ReactNode => {
             <Stack gap="row">
                 <Sublabel>{words({ key: "inbox_chat_label" })}</Sublabel>
                 <ChatFacts contact={contact} words={words} />
-                {contact.leadId === "" ? null : (
-                    <Link href={host.navigation.href(`/w/sales/pipeline?lead=${encodeURIComponent(contact.leadId)}`)}>
-                        {words({ key: "inbox_open_lead" })}
+                {contact.contactId === "" ? null : (
+                    <Link
+                        variant="plain"
+                        href={host.navigation.href(`/contacts/${encodeURIComponent(contact.contactId)}`)}
+                    >
+                        {words({ key: "inbox_open_contact" })}
                     </Link>
                 )}
             </Stack>
@@ -100,10 +97,7 @@ const PLACEHOLDER: ContactView = {
     channelName: "........",
     avatar: "",
     handledBy: "",
-    stage: "",
-    need: "",
-    phone: "",
-    leadId: "",
+    contactId: "",
 }
 
 /** The body of the contact pane, in the states of the thread read. */

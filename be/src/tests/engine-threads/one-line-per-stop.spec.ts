@@ -1,5 +1,6 @@
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import {
+    ANSWER_NODE,
     ANSWER,
     CONV,
     CORE,
@@ -16,10 +17,22 @@ import {
 } from "./thread-world"
 import type { ModelAnswer } from "./thread-world-outside"
 
+// The world's desk installed beside the core: an agent step that acts itself, on the template road (`thread-desk-plugin.builder.ts`).
+jest.mock("@nivo-lite/plugin-registry", () => {
+    const parts: typeof import("@tests/fixtures/builders/installation-parts.builder") = jest.requireActual(
+        "@tests/fixtures/builders/installation-parts.builder",
+    )
+    const desk: typeof import("@tests/fixtures/builders/thread-desk-plugin.builder") = jest.requireActual(
+        "@tests/fixtures/builders/thread-desk-plugin.builder",
+    )
+    return { installed: parts.installationWith([desk.DESK_PLUGIN], "world-desk") }
+})
+
 // FX2 (D-P11-2, restart FIFTEEN, live): ONE customer line per stop, ever (design 8.3). The front desk's `answer` step told the customer
-// it would check (its own `nivo.lead.message.send`), then reported confused; the AI core's report carried a holding line too, and the
+// it would check (its own `nivo.tool.customer.message.send`), then reported confused; the AI core's report carried a holding line too, and the
 // engine sent it as a SECOND line (`honest-line:<run>:answer`). Now the engine reads the stop it just opened (its `customerLines`, filled
-// from the effect ledger's sends of this run + step) and adds no line when the step already told the customer for this stop.
+// from the effect ledger's sends of this run + step) and adds no line when the step already told the customer for this stop. A retried
+// step answers its earlier send at the same position from that send's receipt (nivo-frame rights 11d), so it never tells twice either.
 
 const QUESTION = "Shop co xuat hoa don VAT cho cong ty khong a?"
 const STEP_LINE = "Da ve hoa don VAT em chua co thong tin chac chan, em hoi lai chu tiem roi bao minh som a."
@@ -43,7 +56,7 @@ const linesOf = (db: ThreadDb): ReadonlyArray<string> => db.lines.map((line) => 
 
 /** The front desk understands a question its knowledge does not cover; the answer step does as scripted; the AI core reports. */
 const askedVat = async (db: ThreadDb, answerTurns: ReadonlyArray<ModelAnswer>, options: { readonly agentLoop?: ReadonlyArray<string> } = {}) => {
-    db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: hoa don VAT" } })
+    db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: hoa don VAT" } })
     db.model.script(ANSWER, ...answerTurns)
     db.model.script(CORE, report(ENGINE_LINE))
     const process = await processOf(db, options.agentLoop === undefined ? {} : { agentLoop: [...options.agentLoop] })
@@ -85,7 +98,7 @@ describe("one customer line per stop (D-P11-2)", () => {
         expect(db.team).toHaveLength(1)
     })
 
-    it("retry after the LIVE stop: the reworded line is refused by the door, the step stops again, the engine adds none; still ONE line", async () => {
+    it("retry after the LIVE stop: the reworded line is answered from the step's first send's receipt, the step stops again, the engine adds none; still ONE line", async () => {
         const db = threadDbOf({ uuidRuns: true })
         const { process, runId } = await askedVat(db, [send(STEP_LINE), confused])
         db.model.script(ANSWER, send("Da shop van dang kiem tra hoa don VAT nhe."), confused)
@@ -94,7 +107,7 @@ describe("one customer line per stop (D-P11-2)", () => {
         const ran = await founderDecides(process, runId, button(db, "retry"))
 
         expect(ran.map((one) => one.error)).toEqual([null])
-        expect(JSON.stringify(db.model.askedOf(ANSWER).at(-1)?.request)).toContain("already_told_for_this_stop")
+        expect(JSON.stringify(db.model.askedOf(ANSWER).at(-1)?.request)).not.toContain("already_told_for_this_stop")
         expect(db.model.askedOf(CORE)).toHaveLength(2)
         expect(linesOf(db)).toEqual([STEP_LINE])
         const stops = await stopsOf(process, runId)
@@ -107,11 +120,11 @@ describe("one customer line per stop (D-P11-2)", () => {
         const db = threadDbOf({ uuidRuns: true })
         const { process, runId } = await askedVat(db, [
             send(STEP_LINE),
-            { call: { tool: TOOL.paymentQrCreate, args: { orderId: "order-1" } } },
+            { call: { tool: TOOL.ledgerEntryAppend, args: { orderId: "order-1" } } },
             confused,
         ])
 
-        expect(actsOf(db, TOOL.paymentQrCreate)).toEqual([])
+        expect(actsOf(db, TOOL.ledgerEntryAppend)).toEqual([])
         expect(db.model.askedOf(CORE)).toHaveLength(1)
         expect(linesOf(db)).toEqual([STEP_LINE])
         const stops = await stopsOf(process, runId)
@@ -123,7 +136,7 @@ describe("one customer line per stop (D-P11-2)", () => {
         const db = threadDbOf({ uuidRuns: true })
         const timeout = (): Error => Object.assign(new Error("deadline"), { name: "TimeoutError" })
         const { process, runId } = await askedVat(db, [send(STEP_LINE), timeout(), timeout(), timeout()], {
-            agentLoop: ["chatbot.answer"],
+            agentLoop: [ANSWER_NODE],
         })
 
         expect(db.model.askedOf(CORE)).toHaveLength(0)

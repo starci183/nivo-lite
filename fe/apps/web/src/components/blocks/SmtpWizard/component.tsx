@@ -11,8 +11,15 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, CheckboxGroup, Input, RadioGroup, Text } from "@starci/grammar/common"
 import { SmtpAccountStep } from "@/components/composites/SmtpAccountStep"
 import { SmtpGuideStep } from "@/components/composites/SmtpGuideStep"
-import { backAction, closeAction, forwardAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import {
+    backAction,
+    closeAction,
+    forwardAction,
+    nextAction,
+    startActions,
+    WizardFooter,
+    type WizardAction,
+} from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/frames/WizardFrame"
 
 /** The ready drawing with its canonical first-read loading atom. */

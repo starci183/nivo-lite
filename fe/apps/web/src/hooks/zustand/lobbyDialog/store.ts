@@ -1,7 +1,6 @@
 "use client"
 
-import { create } from "zustand"
-import type { UseBoundStore, StoreApi } from "zustand"
+import { create, type UseBoundStore, type StoreApi } from "zustand"
 
 /** Which lobby dialog is open: rename, leave, the last-owner refusal, delete, or why access is off. */
 export type LobbyDialogKind = "rename" | "leave" | "leaveOwner" | "delete" | "reason"

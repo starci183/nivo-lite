@@ -1,6 +1,5 @@
 import { QUERY_BOUNDS } from "@nivo-lite/agent-sdk/query"
 import { RUNS_PAGE, RUNS_PAGE_MAX } from "./platform/reads/agent-runs.read"
-import { STEPS_PAGE } from "./platform/reads/agent-run.read"
 import { MODULE_DECLARATIONS } from "./module-declarations"
 
 describe("the page sizes of the declared reads", () => {
@@ -10,6 +9,6 @@ describe("the page sizes of the declared reads", () => {
         )
         expect(sizes.length).toBeGreaterThan(0)
         expect(sizes.every((size) => size <= QUERY_BOUNDS.pageSize)).toBe(true)
-        expect([RUNS_PAGE, RUNS_PAGE_MAX, STEPS_PAGE].every((size) => size <= QUERY_BOUNDS.pageSize)).toBe(true)
+        expect([RUNS_PAGE, RUNS_PAGE_MAX].every((size) => size <= QUERY_BOUNDS.pageSize)).toBe(true)
     })
 })

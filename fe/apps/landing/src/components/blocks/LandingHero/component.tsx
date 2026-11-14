@@ -9,10 +9,10 @@ import {
     Stack,
     SurfaceCard,
     Text,
+    type ListRowData,
 } from "@starci/grammar/common"
 import { LandingBrowserFrame } from "@/components/composites/LandingBrowserFrame"
 import { IconGlyph } from "@/components/leaves/Icon"
-import type { ListRowData } from "@starci/grammar/common"
 
 /** One row of the "what NIVO follows today" card. */
 interface LandingHeroRow {
@@ -48,8 +48,7 @@ interface LandingHeroBaseProps {
 
 /** The hero keeps its single visible h1; Page already owns its measure and inset. */
 export const LandingHeroBase = (props: LandingHeroBaseProps) => (
-    <>
-        <Stack gap="section">
+    <Stack gap="section">
             <Grid
                 kind="main-rail"
                 railWidth="wide"
@@ -116,5 +115,4 @@ export const LandingHeroBase = (props: LandingHeroBaseProps) => (
                 priority
             />
         </Stack>
-    </>
 )

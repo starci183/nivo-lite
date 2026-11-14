@@ -1,4 +1,5 @@
 import type { MessageBundle } from "@modules/platform/i18n"
+import type { FieldWords } from "@modules/domain/connection-fields"
 
 /** The reason stored on a Zalo connection whose refresh token Zalo refused: the owner reads it on Connections, in Vietnamese as the product does. */
 export const ZALO_RECONNECT_REASON = "Zalo OA cần được kết nối lại (token hết hạn hoặc bị thu hồi). Bấm Kết nối lại."
@@ -19,8 +20,6 @@ export const CHANNELS_MESSAGES: MessageBundle = {
         "errors.CHANNELS_ZALO_REFRESH_BUSY": "Zalo đang làm mới mã truy cập, hãy thử lại sau giây lát.",
         "errors.CHANNELS_ZALO_STATE_REJECTED": "Phiên cấp quyền Zalo không hợp lệ.",
         "errors.CHANNELS_ZALO_STATE_EXPIRED": "Phiên cấp quyền Zalo đã hết hạn, hãy bắt đầu lại.",
-        "errors.CHANNELS_COLLAGE_NOT_FOUND": "Không tìm thấy ảnh ghép này.",
-        "errors.CHANNELS_COLLAGE_STORE_FAILED": "Chưa lưu được ảnh ghép.",
     },
     en: {
         "errors.CHANNELS_CONNECTION_NOT_FOUND": "That connection was not found.",
@@ -29,7 +28,14 @@ export const CHANNELS_MESSAGES: MessageBundle = {
         "errors.CHANNELS_ZALO_REFRESH_BUSY": "Zalo is refreshing the access token, try again in a moment.",
         "errors.CHANNELS_ZALO_STATE_REJECTED": "The Zalo authorization session is not valid.",
         "errors.CHANNELS_ZALO_STATE_EXPIRED": "The Zalo authorization session expired, start again.",
-        "errors.CHANNELS_COLLAGE_NOT_FOUND": "That collage was not found.",
-        "errors.CHANNELS_COLLAGE_STORE_FAILED": "The collage could not be stored.",
     },
+}
+
+/** The words of a Zalo OA's connection form fields (Kết nối card). */
+export const ZALO_FIELD_WORDS: Readonly<Record<"oaName" | "oaId" | "appId" | "webhookUrl" | "oaSecret", FieldWords>> = {
+    oaName: { vi: "Tên OA", en: "OA name" },
+    oaId: { vi: "Mã OA", en: "OA id" },
+    appId: { vi: "App ID", en: "App ID" },
+    webhookUrl: { vi: "Webhook URL", en: "Webhook URL" },
+    oaSecret: { vi: "OA Secret Key", en: "OA Secret Key" },
 }

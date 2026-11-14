@@ -211,7 +211,7 @@ const CHAT_ANSWERS: Readonly<Record<string, FixtureAnswer>> = {
             .filter((room) => kind === "" || room.kind === kind)
             .filter((room) => member === "" || room.members.includes(member))
             .sort((a, b) => (ofRoom(b.id)[0]?.createdAt ?? "").localeCompare(ofRoom(a.id)[0]?.createdAt ?? ""))
-        return { chatRooms: wanted.map(roomOf) }
+        return { chatRooms: wanted.map((entry) => roomOf(entry)) }
     },
     ChatMessages: (variables) => {
         const input = inputOf(variables)
@@ -219,7 +219,7 @@ const CHAT_ANSWERS: Readonly<Record<string, FixtureAnswer>> = {
         return {
             chatMessages: {
                 __typename: "ChatMessagePage",
-                nodes: nodes.map(messageOf),
+                nodes: nodes.map((entry) => messageOf(entry)),
                 pageInfo: { __typename: "ChatPageInfo", hasNextPage: false, endCursor: null },
             },
         }
@@ -271,7 +271,7 @@ const CHAT_ANSWERS: Readonly<Record<string, FixtureAnswer>> = {
     UnpinChatMessage: (variables) => pinned(variables, false),
     CreateChatRoom: (variables) => {
         const input = inputOf(variables)
-        const members = Array.isArray(input.members) ? input.members.map(refIdOf) : []
+        const members = Array.isArray(input.members) ? input.members.map((entry) => refIdOf(entry)) : []
         const room =
             input.kind === "direct"
                 ? directRoomWith(members[0] ?? "")

@@ -1,5 +1,6 @@
 export {
     graphQLErrorCode,
+    graphQLErrorParams,
     isForbiddenFailure,
     isInvalidFailure,
     isNotFoundFailure,

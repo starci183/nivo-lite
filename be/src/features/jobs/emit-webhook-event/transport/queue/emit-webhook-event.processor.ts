@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { N8N_QUEUE, N8N_WEBHOOK_JOB } from "@modules/queues/n8n"
 import { EmitWebhookEventStep } from "../../steps/deliver.step"
 

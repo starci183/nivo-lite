@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentLoopClient } from "./agent-loop/agent-loop.client"
 import { AGENT_LOOPS } from "./agent-loop/agent-loop.decorators"
 import { LanggraphClient } from "./langgraph.client"

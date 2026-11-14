@@ -1,3 +1,4 @@
+import { IsNull } from "typeorm"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { RecordEntity } from "../persistence/entities"
 import { entityOf } from "./catalog-access.policy"
@@ -5,6 +6,7 @@ import type { EntityCatalog } from "./compiler.contracts"
 import { getRecord } from "./get-record.policy"
 import { dataOf } from "./record-data.policy"
 import { RECORD_RETURNING, recordRowsOf } from "./record-row.policy"
+import { agentKeyOf } from "./agent-scope.policy"
 import type { ScopedTx } from "./scoped-tx.contracts"
 
 /** One update of a record. */
@@ -24,7 +26,7 @@ export type UpdateOutcome =
     { readonly kind: "ok"; readonly row: RecordRow } | { readonly kind: "stale" } | { readonly kind: "missing" }
 
 /**
- * One `UPDATE ... SET data = data || patch, version = version + 1 WHERE entity AND id AND workspace [AND version = expected]
+ * One `UPDATE ... SET data = data || patch, version = version + 1 WHERE entity AND id AND workspace AND deleted_at IS NULL [AND version = expected]
  * RETURNING` builder statement; the record after the write, or null when no row matched.
  */
 export const patchRecord = async (
@@ -33,7 +35,7 @@ export const patchRecord = async (
     input: UpdateInput,
 ): Promise<RecordRow | null> => {
     const entity = entityOf(catalog, input.entity)
-    const key = { entity: entity.name, id: input.id, workspaceId: tx.workspaceId }
+    const key = { entity: entity.name, id: input.id, workspaceId: tx.workspaceId, deletedAt: IsNull(), ...agentKeyOf(tx) }
     const result = await tx.manager
         .createQueryBuilder(RecordEntity, "r")
         .update(RecordEntity)

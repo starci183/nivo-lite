@@ -9,6 +9,7 @@ import { useTeamChatRooms, type TeamChatRoomsView, type TeamChatTarget } from ".
 import { useTeamChatPinned, type TeamChatPinnedView } from "./useTeamChatPinned"
 import { useTeamChatForward, type TeamChatForwardState } from "./useTeamChatForward"
 import { useTeamChatReactions, type TeamChatReactionsView } from "./useTeamChatReactions"
+import { useTeamChatBrainChanges, type TeamChatBrainChangesView } from "./useTeamChatBrainChanges"
 import { useTeamChatStops, type TeamChatStopsView } from "./useTeamChatStops"
 import { useTeamChatThread, type TeamChatThreadView } from "./useTeamChatThread"
 import type { TeamChatMessageRow, TeamChatPanel } from "@/modules/types"
@@ -20,6 +21,8 @@ export interface TeamChatRoomState {
     readonly cards: TeamChatCardsView
     /** The typed stop cards of runs: who may approve, the card in flight, and their actions. */
     readonly stops: TeamChatStopsView
+    /** The truth-change cards: the change in flight and the decision. */
+    readonly changes: TeamChatBrainChangesView
     readonly composer: TeamChatComposerView
     /** The reactions: one tap of an emoji on a message. */
     readonly reactions: TeamChatReactionsView
@@ -79,6 +82,10 @@ export const useTeamChatRoomState = (target: TeamChatTarget): TeamChatRoomState 
         thread.refresh()
         pinned.refresh()
     })
+    const changes = useTeamChatBrainChanges(() => {
+        thread.refresh()
+        pinned.refresh()
+    })
     const parties = useMemo(() => partiesOf(rooms.room, rooms.viewerId), [rooms.room, rooms.viewerId])
     const composer = useTeamChatComposer({
         roomId: rooms.roomId,
@@ -95,6 +102,7 @@ export const useTeamChatRoomState = (target: TeamChatTarget): TeamChatRoomState 
         thread,
         cards,
         stops,
+        changes,
         composer,
         reactions,
         replying,

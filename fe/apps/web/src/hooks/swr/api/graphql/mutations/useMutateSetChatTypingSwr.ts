@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetChatTyping,
     type mutateSetChatTyping as SetChatTypingOperation,
 } from "@/modules/api/graphql/mutations/mutation-set-chat-typing"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetChatTypingMutation } from "@/modules/api"
 
 /** What the SetChatTyping mutation is triggered with. */

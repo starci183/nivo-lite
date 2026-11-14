@@ -1,22 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { EntitlementsService } from "@modules/domain/billing"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, IsNull, Not, type EntityManager } from "typeorm"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { unwrapOutcome } from "@modules/platform/primitives"
-import { uploadContentTypeOf } from "@modules/integrations/object-storage"
-import type { StorageObjectsPort } from "@modules/integrations/object-storage"
+import { uploadContentTypeOf, type StorageObjectsPort } from "@modules/integrations/object-storage"
 import { KnowledgeSourceIndexedEvent } from "@modules/events/api"
-import { InjectEventBus } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectEventBus, type EventBus } from "@modules/platform/event-bus"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { ProgressChange } from "./knowledge-progress.contracts"
@@ -26,29 +18,32 @@ import {
     KNOWLEDGE_UPLOAD_MIME,
     STORAGE_OBJECT_MISSING,
     PUBLIC_DOCUMENT_ORIGIN,
+    type AddSourceInput,
+    type DeletedSource,
+    type MaybeNote,
+    type MaybeSource,
+    type MaybeUploadedFile,
+    type ReindexInput,
+    type SourceDetail,
+    type SourceRef,
+    type SourceStatus,
+    type SourceSummary,
+    type StoredNote,
+    type UpdateSourceInput,
+    type UploadAddress,
 } from "./knowledge-sources.contracts"
-import type {
-    AddSourceInput,
-    DeletedSource,
-    MaybeNote,
-    MaybeSource,
-    MaybeUploadedFile,
-    ReindexInput,
-    SourceDetail,
-    SourceRef,
-    SourceStatus,
-    SourceSummary,
-    StoredNote,
-    UpdateSourceInput,
-    UploadAddress,
-} from "./knowledge-sources.contracts"
+import { type MaybeSourceMove } from "./source-areas.contracts"
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import {
-    NOW,
+    areaOf,
+    changesReaders,
+    genericSourceOf,
     metaChanges,
+    moveOf,
     normalizeSource,
     normalizeUpdate,
+    NOW,
     replacementContent,
     safeFileName,
     uploadVerdict,
@@ -95,6 +90,9 @@ const IDLE_STATUSES: Array<SourceStatus> = ["pending", "ready", "failed", "block
 /** Who may change the knowledge of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
+/** Who may move a document from the internal area into the public one (it exposes its lines to customers). */
+const OWNER_ONLY: ReadonlyArray<WorkspaceRole> = ["owner"]
+
 @Injectable()
 /** The documents of a workspace: adding, changing, retrying, re-reading and deleting them, and the stages a worker moves them through. */
 export class KnowledgeSourcesService {
@@ -105,7 +103,6 @@ export class KnowledgeSourcesService {
         private readonly members: WorkspaceMembersService,
         private readonly queue: KnowledgeQueue,
         @InjectEventBus() private readonly bus: EventBus,
-        private readonly entitlements: EntitlementsService,
         private readonly installations: InstallationRecordsService,
         private readonly quota: SourceQuotaService,
         private readonly progress: KnowledgeProgressService,
@@ -159,7 +156,7 @@ export class KnowledgeSourcesService {
             const ref = await this.entityManager.transaction(async (tx) => {
                 const stored = await this.storedUpload(tx, workspaceId, source.storagePath)
                 if (stored !== null) return stored
-                await this.quota.admit(tx, workspaceId, sizeBytes)
+                await this.quota.admit(tx, workspaceId, sizeBytes, source.visibility)
                 const inserted = await tx.insert(KnowledgeSourceEntity, {
                     workspaceId,
                     module: instance?.moduleKey ?? source.module,
@@ -186,9 +183,9 @@ export class KnowledgeSourcesService {
             })
             await this.progress.announce(workspaceId, ref.id)
             return ref
-        } catch (failure) {
-            await this.quota.discardRefused(source.storagePath, failure)
-            throw failure
+        } catch (error) {
+            await this.quota.discardRefused(source.storagePath, error)
+            throw error
         }
     }
 
@@ -250,18 +247,37 @@ export class KnowledgeSourcesService {
         return { id: input.sourceId }
     }
 
-    /** Changes the metadata of a source; the database moves its passages to the new module and visibility. */
-    async updateSource(userId: string, workspaceId: string, input: UpdateSourceInput): Promise<void> {
-        await this.members.require(userId, workspaceId, MANAGERS)
+    /**
+     * Changes the metadata of a source (owner, manager). A `visibility` is the MOVE (into PUBLIC: the owner alone; into INTERNAL: owner
+     * or manager): the document must fit the area it
+     * enters (`admitMove`), the trigger `knowledge_sources_visibility_sync` moves its passages and `vector.sync` commits
+     * with it. Answers the move, else null.
+     */
+    async updateSource(userId: string, workspaceId: string, input: UpdateSourceInput): Promise<MaybeSourceMove> {
+        const me = await this.members.require(userId, workspaceId, MANAGERS)
         const change = unwrapOutcome(normalizeUpdate(input), KnowledgeSourcesError)
-        const changed = await this.entityManager.update(
-            KnowledgeSourceEntity,
-            [
-                { id: input.sourceId, workspaceId, origin: IsNull() },
-                { id: input.sourceId, workspaceId, origin: Not(PUBLIC_DOCUMENT_ORIGIN) },
-            ],
-            metaChanges(change),
-        )
+        const where = genericSourceOf(workspaceId, input.sourceId)
+        // INTERNAL -> PUBLIC exposes the document to customers: the owner alone moves it there. PUBLIC -> INTERNAL any manager may do.
+        if (change.visibility === "public") {
+            const now = await this.entityManager.findOne(KnowledgeSourceEntity, { select: { id: true, visibility: true }, where })
+            if (now !== null && now.visibility !== "public") await this.members.require(userId, workspaceId, OWNER_ONLY)
+        }
+        const columns = metaChanges(change)
+        const parts = metaChanges({ ...change, title: null })
+        const moved = changesReaders(parts)
+        const changed = moved
+            ? await this.entityManager.transaction(async (tx) => {
+                  const whole = await this.parts.wholeOf(workspaceId, input.sourceId, tx)
+                  const to = change.visibility
+                  if (to !== null && whole !== null && whole.origin !== PUBLIC_DOCUMENT_ORIGIN)
+                      await this.quota.admitMove(tx, workspaceId, whole.ids, to)
+                  const written = await tx.update(KnowledgeSourceEntity, where, columns)
+                  if (written.affected === 0) return { affected: 0, move: null }
+                  await this.parts.follow(workspaceId, input.sourceId, parts, tx)
+                  await this.parts.sourcesChanged(workspaceId, [input.sourceId], tx)
+                  return { affected: written.affected ?? 1, move: moveOf(whole, change, me.displayName) }
+              })
+            : { ...(await this.entityManager.update(KnowledgeSourceEntity, where, columns)), move: null }
         if (changed.affected === 0) {
             const row = await this.entityManager.findOne(KnowledgeSourceEntity, {
                 select: { id: true, origin: true },
@@ -274,7 +290,8 @@ export class KnowledgeSourcesService {
                         : KnowledgeSourcesErrorCode.SourceNotFound,
             })
         }
-        await this.parts.follow(workspaceId, input.sourceId, metaChanges({ ...change, title: null }))
+        if (!moved) await this.parts.follow(workspaceId, input.sourceId, parts)
+        return changed.move
     }
 
     /** Deletes a source with its passages, and with it the later parts of a long document; answers its title and theirs so the brain can note what it withdraws. */
@@ -283,20 +300,21 @@ export class KnowledgeSourcesService {
         return this.parts.removeWhole(workspaceId, sourceId)
     }
 
-    /** An address a browser uploads one document to: `<workspaceId>/<uuid>/<filename>` in the private bucket. */
+    /** An address a browser uploads one document to (`<workspaceId>/<uuid>/<filename>`); a file too large for its `area` is refused first. */
     async createUpload(
         userId: string,
         workspaceId: string,
         filename: string,
         contentType: string,
         sizeBytes?: number,
+        area?: string,
     ): Promise<UploadAddress> {
         await this.members.require(userId, workspaceId, MANAGERS)
         unwrapOutcome(uploadVerdict(filename, sizeBytes ?? null), KnowledgeSourcesError)
         const signedType = uploadContentTypeOf(KNOWLEDGE_UPLOAD_MIME, filename, contentType)
         if (signedType === null)
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileTypeUnsupported })
-        await this.entitlements.requireStorageFor(workspaceId, 0)
+        await this.quota.beforeUpload(workspaceId, sizeBytes, areaOf(area) ?? undefined)
         const path = `${workspaceId}/${this.ids.next()}/${safeFileName(filename)}`
         const signed = await this.storage.signedUpload(KNOWLEDGE_UPLOAD_BUCKET, path, signedType)
         if (signed.kind === "refused") {
@@ -390,14 +408,13 @@ export class KnowledgeSourcesService {
         })
     }
 
-    /** The passages are stored: the source records them and a note, and `knowledge_source_indexed` is published with the move to that stage in one transaction. */
+    /**
+     * The passages are stored: the source is READY (its passages are searchable by words and by meaning from here on), with a note
+     * when one stands, and `knowledge_source_indexed` is published in the same transaction: the truths of the document are worked out
+     * of it by the job that event queues, in a state of their own (`brain_extractions`), never by holding the document back.
+     */
     async finishIndexing(workspaceId: string, sourceId: string, note: MaybeNote, chunks: number): Promise<void> {
         await this.entityManager.transaction(async (tx) => {
-            await tx.update(
-                KnowledgeSourceEntity,
-                { id: sourceId, workspaceId },
-                { error: note, chunkCount: chunks, progress: 80, updatedAt: NOW },
-            )
             const indexed = KnowledgeSourceIndexedEvent.create({
                 sourceId,
                 workspaceId,
@@ -408,9 +425,11 @@ export class KnowledgeSourcesService {
                 KnowledgeSourceEntity,
                 { id: sourceId, workspaceId },
                 {
-                    status: "extracting_facts",
-                    progress: 85,
-                    stage: "facts",
+                    status: "ready",
+                    error: note,
+                    chunkCount: chunks,
+                    progress: 100,
+                    stage: null,
                     stageDone: null,
                     stageTotal: null,
                     updatedAt: NOW,
@@ -433,7 +452,7 @@ export class KnowledgeSourcesService {
         })
     }
 
-    /** The facts are read (or could not be): the source is ready, with a stored note when the reading failed. */
+    /** The source is ready, with a stored note when one stands (its truths could not be read, it is a duplicate). */
     ready(workspaceId: string, sourceId: string, note: MaybeNote): Promise<void> {
         return this.progress.write(workspaceId, sourceId, {
             status: "ready",
@@ -445,7 +464,7 @@ export class KnowledgeSourcesService {
         })
     }
 
-    /** The passages and the facts of this text are complete: the source is ready and records the hash, so the same text is not worked on again. */
+    /** The passages and the truths of this text are complete: the source records the hash, so the same text is not worked on again. */
     settle(workspaceId: string, sourceId: string, content: string): Promise<void> {
         return this.progress.write(workspaceId, sourceId, {
             status: "ready",
@@ -466,17 +485,6 @@ export class KnowledgeSourcesService {
             done: null,
             total: null,
             error: note,
-        })
-    }
-
-    /** The facts cannot be read because the workspace has no credits left: the source waits for them. */
-    blockFacts(workspaceId: string, sourceId: string, note: StoredNote): Promise<void> {
-        return this.progress.write(workspaceId, sourceId, {
-            status: "blocked_credits",
-            error: note,
-            stage: null,
-            done: null,
-            total: null,
         })
     }
 

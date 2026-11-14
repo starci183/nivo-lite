@@ -1,6 +1,5 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
-import { InjectMailOutbox } from "@modules/integrations/mail"
-import type { MailOutboxService } from "@modules/integrations/mail"
+import { InjectMailOutbox, type MailOutboxService } from "@modules/integrations/mail"
 
 /** What the operator typed. */
 export interface OutboxMailRequest {

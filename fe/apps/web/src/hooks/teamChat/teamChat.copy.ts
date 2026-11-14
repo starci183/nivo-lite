@@ -5,12 +5,22 @@ import type { TeamChatMessagesCopy } from "@/modules/types"
 type Words = ReturnType<typeof useTranslations<"teamChat">>
 
 /** The words of the cards and controls of a thread. */
-export const messagesCopyOf = (t: Words): TeamChatMessagesCopy => ({
+export const messagesCopyOf = (t: Words, locale: string): TeamChatMessagesCopy => ({
     pin: t("pin"),
     unpin: t("unpin"),
     pinned: t("pinned"),
     report: t("reportBadge"),
     approvalTitle: t("approvalTitle"),
+    approvalNeeded: t("approvalNeeded"),
+    approvalRows: {
+        step: t("approvalRowStep"),
+        account: t("approvalRowAccount"),
+        tool: t("approvalRowTool"),
+        node: t("approvalRowNode"),
+        locale: locale === "en" ? "en" : "vi",
+        details: t("approvalDetails"),
+        technical: t("approvalTechnical"),
+    },
     relatedWork: t("relatedWork"),
     runName: t("runName"),
     workName: t("workName"),

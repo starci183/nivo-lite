@@ -85,7 +85,7 @@ A step that cannot complete writes `state.trouble` and goes to `__freeze`, which
   key throws `EffectOutcomeUnknownError` (`graph-nodes/errors/`) without acting: a person decides. Forward recovery only: no
   automatic compensation on threads.
 - One customer line per stop: the stop's `customerLines` are filled from the ledger; the send door refuses a second line from the
-  stopped step to an already-told conversation (`already_told_for_this_stop`, `mcp-gateway/node-tool-door.service.ts`) until an
+  stopped step to an already-told conversation (`already_told_for_this_stop`, `tools/node-tool-door.service.ts`) until an
   `answer` arrives. `alreadySent` (`agent-graphs/agent-graph-turn-policy.service.ts`) also carries lines told to the same customer by
   other open or recently resolved stops.
 - Known limit: a crash between an act and its ledger row can repeat an act that has no business key of its own (a customer message).

@@ -1,5 +1,4 @@
-import { getMetadataArgsStorage } from "typeorm"
-import type { ObjectLiteral, SelectQueryBuilder } from "typeorm"
+import { getMetadataArgsStorage, type ObjectLiteral, type SelectQueryBuilder } from "typeorm"
 import type { QueryBuilderCall } from "./entity-query-builder.builder"
 
 /** One query a spec saw: the table it read and every chained call. */

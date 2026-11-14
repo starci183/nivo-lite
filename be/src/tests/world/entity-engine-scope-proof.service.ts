@@ -1,8 +1,6 @@
 import assert from "node:assert/strict"
-import { QueryFailedError } from "typeorm"
-import type { EntityManager, QueryRunner } from "typeorm"
-import { callDbFunction } from "@modules/platform/database"
-import type { SqlText } from "@modules/platform/database"
+import { QueryFailedError, type EntityManager, type QueryRunner } from "typeorm"
+import { callDbFunction, type SqlText } from "@modules/platform/database"
 import type { LiteWorld } from "./lite-world.service"
 import {
     AS_BACKEND_LOCAL,

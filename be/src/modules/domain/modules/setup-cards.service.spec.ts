@@ -1,40 +1,22 @@
-import {
-    REGISTRY,
-    SESSION,
-    factOf,
-    gapOf,
-    installationOf,
-    ruleOf,
-    CARD_BASE,
-    FACT,
-    RULE,
-    factCard,
-    ruleCard,
-} from "../../../tests/fixtures/builders/setup-cards.builder"
+import { SESSION, factOf, gapOf, installationOf, FACT, factCard } from "../../../tests/fixtures/builders/setup-cards.builder"
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import { AuthorityActionsService } from "@modules/domain/authority-actions"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { BrainFactsService } from "@modules/domain/brain-facts"
-import { EventsService } from "@modules/domain/events"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import { SetupWritesService } from "@modules/domain/module-setup-writes"
-import type { BranchCardPayload, CardRecord } from "@modules/domain/module-setup-writes"
 import { InstallationChangesService } from "./installation-changes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
-import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
 import type { CardDecision } from "./module-setup.contracts"
 import { ModulesService } from "./modules.service"
-import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { SetupCardsService } from "./setup-cards.service"
-import { SETUP_GRAPH } from "./modules.decorators"
-import type { SetupGraphPort } from "./modules.port"
+import { catalogModuleOf } from "./modules.testing"
+
+const SALES_MODULE = catalogModuleOf("sales")
 const NOW = "2026-10-13T02:00:00.000Z"
 const build = async () => {
     const writes = mock<SetupWritesService>()
@@ -56,19 +38,13 @@ const build = async () => {
         status: "active",
     })
     const modules = mock<ModulesService>()
-    modules.catalog.mockResolvedValue({ categories: [], modules: [ACCOUNTING_MODULE] })
-    modules.find.mockResolvedValue(ACCOUNTING_MODULE)
+    modules.catalog.mockResolvedValue({ categories: [], modules: [SALES_MODULE] })
+    modules.find.mockResolvedValue(SALES_MODULE)
     const facts = mock<BrainFactsService>()
     facts.byKey.mockResolvedValue([])
     facts.propose.mockResolvedValue({ fact: factOf(), outcome: "applied" })
-    const rules = mock<AuthorityRulesService>()
-    rules.list.mockResolvedValue([])
-    const actions = mock<AuthorityActionsService>({ list: jest.fn().mockResolvedValue(REGISTRY) })
     const gaps = mock<KnowledgeGapsService>()
-    const events = mock<EventsService>()
     const sync = mock<InstallationChangesService>()
-    const branches = mock<SetupBranchCardsService>()
-    const graph = mock<SetupGraphPort>({ followRules: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupCardsService,
@@ -80,14 +56,8 @@ const build = async () => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ModulesService, useValue: modules },
             { provide: BrainFactsService, useValue: facts },
-            { provide: AuthorityRulesService, useValue: rules },
-            { provide: AuthorityActionsService, useValue: actions },
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager() },
             { provide: KnowledgeGapsService, useValue: gaps },
-            { provide: EventsService, useValue: events },
             { provide: InstallationChangesService, useValue: sync },
-            { provide: SetupBranchCardsService, useValue: branches },
-            { provide: SETUP_GRAPH, useValue: graph },
         ],
     }).compile()
     return {
@@ -98,22 +68,18 @@ const build = async () => {
         installations,
         messages,
         facts,
-        rules,
         gaps,
-        events,
         sync,
-        branches,
-        graph,
     }
 }
 describe("SetupCardsService > openGapsOf", () => {
     it("answers at most five open questions of the module", async () => {
         const { service, gaps } = await build()
         gaps.list.mockResolvedValue([
-            gapOf({ id: "other", module: "sales" }),
+            gapOf({ id: "other", module: "chatbot" }),
             ...Array.from({ length: 6 }, (_, n) => gapOf({ id: `gap-${n}` })),
         ])
-        const open = await service.openGapsOf("ws-1", "accounting")
+        const open = await service.openGapsOf("ws-1", "sales")
         expect(open.map((gap) => gap.id)).toEqual(["gap-0", "gap-1", "gap-2", "gap-3", "gap-4"])
         expect(open[0]).toEqual({
             id: "gap-0",
@@ -126,56 +92,16 @@ describe("SetupCardsService > openGapsOf", () => {
 })
 
 describe("SetupCardsService > propose", () => {
-    it("keeps a fact, completes a rule from the catalogue and drops a rule that changes nothing", async () => {
+    it("stores each proposed fact as a waiting card of its target", async () => {
         const { service, writes } = await build()
-        await service.propose("ws-1", "s-1", "m-1", [
-            { gateKey: "scope", kind: "fact", payload: FACT },
-            {
-                gateKey: "limits",
-                kind: "rule",
-                payload: { action: "issue_invoice", field: "limit_vnd", mode: null, limitVnd: 5000000 },
-            },
-            {
-                gateKey: "limits",
-                kind: "rule",
-                payload: { action: "issue_invoice", field: "mode", mode: "auto", limitVnd: undefined },
-            },
-        ])
+        await service.propose("ws-1", "s-1", "m-1", [{ gateKey: "scope", kind: "fact", payload: FACT }])
         expect(writes.propose.mock.calls).toEqual([
             [
                 "ws-1",
                 "s-1",
                 "m-1",
-                [
-                    { gate_key: "scope", kind: "fact", target_key: "fact:shop|opening-hours", payload: FACT },
-                    {
-                        gate_key: "limits",
-                        kind: "rule",
-                        target_key: "rule:issue_invoice",
-                        payload: { action: "issue_invoice", field: "limit_vnd", mode: "auto", limitVnd: 5000000 },
-                    },
-                ],
+                [{ gate_key: "scope", kind: "fact", target_key: "fact:shop|opening-hours", payload: FACT }],
             ],
-        ])
-    })
-
-    it("reads the rule in force from the stored rules first", async () => {
-        const { service, writes, rules } = await build()
-        rules.list.mockResolvedValue([ruleOf()])
-        await service.propose("ws-1", "s-1", "m-1", [
-            {
-                gateKey: "limits",
-                kind: "rule",
-                payload: { action: "issue_invoice", field: "mode", mode: "auto", limitVnd: undefined },
-            },
-        ])
-        expect(writes.propose.mock.calls[0]?.[3]).toEqual([
-            {
-                gate_key: "limits",
-                kind: "rule",
-                target_key: "rule:issue_invoice",
-                payload: { action: "issue_invoice", field: "mode", mode: "auto", limitVnd: 1000000 },
-            },
         ])
     })
 })
@@ -190,10 +116,9 @@ describe("SetupCardsService > viewsOf", () => {
     it("pairs each waiting card with the value it would replace", async () => {
         const { service, writes, facts } = await build()
         const decided = factCard({}, "applied")
-        writes.ofSessions.mockResolvedValue([ruleCard(), factCard(), decided])
+        writes.ofSessions.mockResolvedValue([factCard(), decided])
         facts.byKey.mockResolvedValue([factOf({ value: "8 to 20", scope: "internal" })])
         await expect(service.viewsOf("ws-1", ["s-1"])).resolves.toEqual([
-            { card: ruleCard(), current: { kind: "rule", mode: "auto", limitVnd: 20000000 } },
             { card: factCard(), current: { kind: "fact", value: "8 to 20", scope: "internal", modules: [] } },
             { card: decided, current: null },
         ])
@@ -247,59 +172,6 @@ describe("SetupCardsService > decide", () => {
 })
 
 describe("SetupCardsService > decide", () => {
-    it("saves a confirmed rule with the edit of the owner and records it", async () => {
-        const { service, writes, rules, events } = await build()
-        writes.find.mockResolvedValue(ruleCard())
-        rules.save.mockResolvedValue(ruleOf({ id: "rule-9", mode: "auto", limit_vnd: 3000000 }))
-        await service.decide("u1", "ws-1", "card-1", { decision: "confirm", limitVnd: 3000000 }, "en")
-        expect(rules.save).toHaveBeenCalledWith("ws-1", {
-            action: "issue_invoice",
-            department: "accounting",
-            mode: "auto",
-            limit_vnd: 3000000,
-            required_fields: ["customer", "amount_vnd"],
-            note: null,
-        })
-        expect(events.record).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            kind: "authority.rule_updated",
-            actor: "Lan",
-            summary: `accounting.issue_invoice -> auto < 3000000 (${ACCOUNTING_MODULE.name.en} setup chat)`,
-        })
-        expect(writes.close.mock.calls[0]?.[2]).toEqual({
-            status: "applied",
-            payload: { ...RULE, limitVnd: 3000000 },
-            result: { outcome: "applied", ruleId: "rule-9" },
-            decidedBy: "Lan",
-        })
-        writes.find.mockResolvedValue(ruleCard({ action: "send_email" }))
-        rules.save.mockResolvedValue(ruleOf({ action: "send_email", mode: "never", limit_vnd: null }))
-        await service.decide("u1", "ws-1", "card-1", { decision: "confirm", mode: "never" }, "vi")
-        expect(rules.save).toHaveBeenCalledWith("ws-1", {
-            action: "send_email",
-            department: "accounting",
-            mode: "never",
-            limit_vnd: null,
-            required_fields: ["contact"],
-            note: null,
-        })
-        expect(events.record.mock.calls.at(-1)?.[0]?.summary).toBe(
-            `accounting.send_email -> never (${ACCOUNTING_MODULE.name.vi} setup chat)`,
-        )
-    })
-})
-
-describe("SetupCardsService > decide", () => {
-    it.each([
-        ["unknown", "never", ModulesErrorCode.CardRuleUnknownAction],
-        ["pay_vendor", "auto", ModulesErrorCode.CardRuleModeCapped],
-    ] as const)("refuses the rule of %s as the Authority page would", async (action, mode, code) => {
-        const { service, writes, rules } = await build()
-        writes.find.mockResolvedValue(ruleCard({ action }))
-        const decision = { decision: "confirm", mode } as const
-        await expect(service.decide("u1", "ws-1", "card-1", decision, "en")).rejects.toMatchObject({ code })
-        expect(rules.save).not.toHaveBeenCalled()
-    })
     it.each([undefined, null, "", "private", 0, {}, []])("keeps the fact scope for edit %p", async (scope) => {
         const { service, writes, facts, sync, installations, messages, gaps, closed } = await build()
         writes.find.mockResolvedValue(factCard({ scope: "restricted" }))
@@ -312,14 +184,14 @@ describe("SetupCardsService > decide", () => {
             attributeLabel: "Opening hours",
             value: "7 to 21",
             scope: "restricted",
-            modules: ["accounting"],
+            modules: ["sales"],
             sourceKind: "owner",
             proposedBy: "Lan",
             evidence: [
                 {
                     kind: "message",
                     ref: "m-1",
-                    label: `${ACCOUNTING_MODULE.name.en} - setup chat (scope)`,
+                    label: `${SALES_MODULE.name.en} - setup chat (scope)`,
                     at: NOW,
                 },
             ],
@@ -361,7 +233,7 @@ describe("SetupCardsService > decide", () => {
             {
                 kind: "message",
                 ref: "setup:s-1",
-                label: `${ACCOUNTING_MODULE.name.en} - setup chat (scope)`,
+                label: `${SALES_MODULE.name.en} - setup chat (scope)`,
                 at: NOW,
             },
         ])
@@ -434,60 +306,3 @@ describe("SetupCardsService > decide", () => {
     })
 })
 
-describe("SetupCardsService > branch cards", () => {
-    const PAYLOAD: BranchCardPayload = {
-        action: "issue_invoice",
-        boundaryVnd: 5000000,
-        belongsTo: null,
-        approverName: "Mr Nam",
-        approverMemberId: null,
-        quote: "above 5 million ask Nam",
-    }
-    const branchCard: CardRecord = { ...CARD_BASE, targetKey: "branch:issue_invoice", kind: "branch", payload: PAYLOAD }
-
-    it("stores the card the branch service made for a proposed branch", async () => {
-        const { service, writes, branches } = await build()
-        const card = { gate_key: "g1", target_key: "branch:issue_invoice", kind: "branch" as const, payload: PAYLOAD }
-        branches.cardOf.mockResolvedValue(card)
-
-        await service.propose("ws-1", "s-1", "m-1", [{ gateKey: "g1", kind: "branch", payload: PAYLOAD }])
-
-        expect(writes.propose).toHaveBeenCalledWith("ws-1", "s-1", "m-1", [card])
-    })
-
-    it("hands a confirmed branch to the branch service, and shows no current value for a waiting one", async () => {
-        const { service, writes, branches } = await build()
-        writes.find.mockResolvedValue(branchCard)
-        writes.ofSessions.mockResolvedValue([branchCard])
-        const change = { decision: "confirm" as const, belongsTo: "higher" as const, approverMemberId: "nam" }
-
-        await service.decide("u1", "ws-1", "card-1", change, "en")
-
-        expect(branches.confirm).toHaveBeenCalledWith(
-            expect.objectContaining({ installationId: "inst-1", messageId: "m-1", base: PAYLOAD, change }),
-        )
-        await expect(service.viewsOf("ws-1", ["s-1"])).resolves.toEqual([{ card: branchCard, current: null }])
-    })
-
-    it("closes a rejected branch without touching the graph", async () => {
-        const { service, writes, branches } = await build()
-        writes.find.mockResolvedValue(branchCard)
-
-        await service.decide("u1", "ws-1", "card-1", { decision: "reject" }, "en")
-
-        expect(branches.confirm).not.toHaveBeenCalled()
-        expect(writes.close.mock.calls[0]?.[2]).toMatchObject({ status: "rejected" })
-    })
-})
-
-describe("SetupCardsService > decide > rule", () => {
-    it("brings the graph of the installation along after the save and before the card closes", async () => {
-        const { service, writes, rules, graph } = await build()
-        writes.find.mockResolvedValue(ruleCard())
-        rules.save.mockResolvedValue(ruleOf({ id: "rule-9", mode: "auto", limit_vnd: 3000000 }))
-        await service.decide("u1", "ws-1", "card-1", { decision: "confirm", limitVnd: 3000000 }, "en")
-        expect(graph.followRules).toHaveBeenCalledWith("ws-1", installationOf().id)
-        const order = [rules.save, graph.followRules, writes.close].map((f) => f.mock.invocationCallOrder[0] ?? 0)
-        expect(order).toEqual([...order].sort((a, b) => a - b))
-    })
-})

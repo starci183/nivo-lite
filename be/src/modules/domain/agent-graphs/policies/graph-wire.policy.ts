@@ -1,5 +1,4 @@
 import type { Locale } from "@modules/platform/i18n"
-import type { RunEntry } from "../agent-graph-decisions.service"
 import type { AgentGraphView } from "../agent-graphs.contracts"
 
 /** The graph of one agent as the editor receives it: the structured parts travel as JSON text, and the revision, mode and version as they are. */
@@ -31,68 +30,6 @@ export interface AgentGraphWire {
     /** The sums the setup text states as a rule that the graph does not hold, as JSON text. */
     readonly unheldRulesJson: string
 }
-
-/** One run of a graph as the owner lists it; the facts and the path travel as JSON text. */
-export interface AgentGraphRunEntryWire {
-    /** The run. */
-    readonly id: string
-    /** The road it left by: work, reply, tool or handover. */
-    readonly road: string
-    /** The mode the graph ran in. */
-    readonly mode: string
-    /** The action key. */
-    readonly action: string
-    /** The number of the version it ran on, or null when it is past the listing. */
-    readonly version: number | null
-    /** The branch that matched, or the node the walk entered at; empty when no node holds the action. */
-    readonly branchKey: string
-    /** What the graph did: auto, ask, stop or divert. */
-    readonly outcome: string
-    /** What the gate answered, or null on a road no gate judges. */
-    readonly gateVerdict: string | null
-    /** How the work ended, or null while it is open. */
-    readonly closedAs: string | null
-    /** True when the graph answered differently from the gate alone. */
-    readonly differs: boolean
-    /** Why the graph could not judge it, or null. */
-    readonly unjudged: string | null
-    /** The facts it could not read, as JSON text. */
-    readonly unreadJson: string
-    /** The facts as read, as JSON text. */
-    readonly factsJson: string
-    /** The nodes the walk went through, as JSON text. */
-    readonly pathJson: string
-    /** The work item, or null on a run that left none. */
-    readonly workItemId: string | null
-    /** The type of the subject, or null. */
-    readonly subjectType: string | null
-    /** The id of the subject, or null. */
-    readonly subjectId: string | null
-    /** When it ran. */
-    readonly createdAt: string
-}
-
-/** A run as the owner lists it. */
-export const runEntryWireOf = (run: RunEntry, version: number | null): AgentGraphRunEntryWire => ({
-    id: run.id,
-    road: run.road,
-    mode: run.mode,
-    action: run.action,
-    version,
-    branchKey: run.branchKey,
-    outcome: run.outcome,
-    gateVerdict: run.gateVerdict,
-    closedAs: run.closedAs,
-    differs: run.differs,
-    unjudged: run.unjudged,
-    unreadJson: JSON.stringify(run.unread),
-    factsJson: JSON.stringify(run.facts),
-    pathJson: JSON.stringify(run.path),
-    workItemId: run.workItemId,
-    subjectType: run.subjectType,
-    subjectId: run.subjectId,
-    createdAt: run.createdAt,
-})
 
 /** One run of the graph over a work item: which trigger, which branch, the version and the nodes, the structured parts as JSON text. */
 export interface AgentGraphRunWire {

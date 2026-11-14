@@ -39,9 +39,6 @@ export interface AgentWorkCopy {
     readonly timePlaceholder: string
     readonly timeInvalid: string
     readonly scheduleAdd: string
-    readonly turnsTitle: string
-    readonly turnsEmpty: string
-    readonly turnOpenItem: string
     readonly readOnlyHint: string
     readonly formOpen: string
     readonly formCancel: string
@@ -64,8 +61,6 @@ export interface AgentWorkDraft {
 /** Copy, the read, the form and the commands of the Work tab. */
 export interface AgentWorkPanesBaseProps {
     readonly props: {
-        readonly installationId: string
-        readonly view: "work" | "runs"
         readonly copy: AgentWorkCopy
         readonly slot: DataSlot<AgentWorkView>
         readonly placeholder: AgentWorkView
@@ -94,9 +89,7 @@ const goalFooterOf = (base: AgentWorkPanesBaseProps, canEdit: boolean, isLoading
     const { copy, draft, isSaving } = base.props
     if (!canEdit) {
         return (
-            <Text size="xs" tone="muted">
-                {copy.readOnlyHint}
-            </Text>
+            <Text tone="muted">{copy.readOnlyHint}</Text>
         )
     }
     if (draft.openForm !== "goal") return undefined

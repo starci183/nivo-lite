@@ -1,15 +1,16 @@
 import { Injectable } from "@nestjs/common"
-import { BrainFactRelationsService, BrainFactsReadService } from "@modules/domain/brain-facts"
-import type { FactRelation, RelationKind } from "@modules/domain/brain-facts"
+import { BrainFactRelationsService, BrainFactsPagingService, BrainFactsReadService, type FactRelation, type RelationKind } from "@modules/domain/brain-facts"
 import { BrainExtractionsService } from "@modules/domain/brain-extractions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { graphOf, subjectPageOf } from "./brain-graph.policy"
 import type { BrainGraph, BrainGraphFilter } from "./brain.contracts"
 import { MANAGERS } from "./founder.policy"
 
-/** The most truths and proposals one graph read looks across: a workspace keeps a few hundred. */
+/**
+ * The most truths and proposals one graph read looks across (a drawing bound). Above it the read is capped and SAYS so: the totals carry
+ * the SQL counts and how many are not shown (`nodesNotShown`, `pendingNotShown`).
+ */
 const GRAPH_WINDOW = 2000
 
 /** One page of the graph a workspace member asks for. */
@@ -54,17 +55,23 @@ export class BrainGraphService {
         private readonly reads: BrainFactsReadService,
         private readonly relations: BrainFactRelationsService,
         private readonly extractions: BrainExtractionsService,
+        private readonly counts: BrainFactsPagingService,
     ) {}
 
     /** One page of the graph, paged by subject. */
     async graph(userId: string, request: GraphRequest): Promise<BrainGraph> {
         const { workspaceId, ...filter } = request
         await this.members.require(userId, workspaceId, MANAGERS)
-        const [facts, proposals, readings] = await Promise.all([
+        const [facts, proposals, readings, counted] = await Promise.all([
             this.reads.list(workspaceId, { statuses: ["active", "scheduled"], limit: GRAPH_WINDOW }),
             this.reads.list(workspaceId, { statuses: ["proposed"], limit: GRAPH_WINDOW }),
             this.extractions.progress(workspaceId),
+            this.counts.countByStatus(workspaceId, ["active", "scheduled", "proposed"]),
         ])
+        const counts = {
+            nodes: (counted.get("active") ?? 0) + (counted.get("scheduled") ?? 0),
+            pending: counted.get("proposed") ?? 0,
+        }
         const page = subjectPageOf(facts, filter)
         const ids = new Set(facts.map((fact) => fact.id))
         const edges = (await this.relations.ofFacts(workspaceId, [...ids])).filter(
@@ -75,7 +82,7 @@ export class BrainGraphService {
         const replaced = facts.flatMap((fact) => (fact.supersedesId === null ? [] : [fact.supersedesId]))
         const previous = new Map((await this.reads.byIds(workspaceId, replaced)).map((fact) => [fact.id, fact]))
         return graphOf(
-            { facts, proposals, previous, relations: pageEdges, readings, relationTotal: edges.length },
+            { facts, proposals, previous, relations: pageEdges, readings, relationTotal: edges.length, counts },
             page,
             this.clock.now().getTime(),
         )

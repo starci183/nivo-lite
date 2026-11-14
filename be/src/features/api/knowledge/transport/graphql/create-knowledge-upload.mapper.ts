@@ -12,6 +12,7 @@ export const toCreateKnowledgeUploadRequest = (
     filename: input.filename,
     contentType: input.contentType,
     sizeBytes: input.sizeBytes,
+    visibility: input.visibility,
 })
 
 /** Maps the answer to the GraphQL type. */

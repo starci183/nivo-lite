@@ -1,6 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { CareOptOutService } from "@modules/domain/agent-doors"
-import type { CareOptOutAnswer } from "@modules/domain/agent-doors"
+import { CareOptOutService, type CareOptOutAnswer } from "@modules/domain/agent-doors"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetCareOptOutCommand } from "./set-care-opt-out.command"
@@ -16,7 +15,11 @@ export class SetCareOptOutHandler extends ICQRSHandler<SetCareOptOutCommand, Car
     }
 
     protected override process(command: SetCareOptOutCommand): Promise<CareOptOutAnswer> {
-        const { principal, request } = command.params
-        return this.optOuts.set(principal.id, request.workspaceId, request.leadId, request.optOut)
+        return this.optOuts.set(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.leadId,
+            command.params.request.optOut,
+        )
     }
 }

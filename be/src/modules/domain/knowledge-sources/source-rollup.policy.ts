@@ -34,7 +34,7 @@ const mergedOf = (first: SourceSummary, later: ReadonlyArray<SourceSummary>): So
         stageTotal: lead.stageTotal,
         chunkCount: all.reduce((sum, one) => sum + one.chunkCount, 0),
         sizeBytes: all.reduce((sum, one) => sum + one.sizeBytes, 0),
-        updatedAt: all.reduce((newest, one) => (one.updatedAt > newest ? one.updatedAt : newest), first.updatedAt),
+        updatedAt: all.reduce((newest, one) => (Date.parse(one.updatedAt) > Date.parse(newest) ? one.updatedAt : newest), first.updatedAt),
         partCount: all.length,
     }
 }

@@ -3,7 +3,7 @@ import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import { hasExternalPort } from "@nivo-lite/agent-sdk/invoke"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import type { PortMap } from "@nivo-lite/agent-sdk/port"
-import { isNamespaced } from "@nivo-lite/agent-sdk/schema"
+import { isOperationId } from "@nivo-lite/agent-sdk/schema"
 import { entityOfPortId, portKindOf } from "./door-port-kind.policy"
 import { WorkbenchDoorError, WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 import type { DoorRead, DoorRegistry } from "./workbench-door.contracts"
@@ -53,7 +53,7 @@ const served = (action: ActionDefinition): boolean => action.execute !== undefin
 /**
  * The reads and actions the door serves, from the module declarations and the entities. Only a read or action that runs in the package
  * (it has `execute`) is served; one that names a host operation is not the door's. Throws `WorkbenchDoorError` at boot, so a wiring bug
- * stops the start and never a request: an id that is taken twice (`RegistryDuplicate`) or is not `<module>.<name>`
+ * stops the start and never a request: an id that is taken twice (`RegistryDuplicate`) or names no module operation (`isOperationId`)
  * (`RegistryIdInvalid`), a port nothing provides (`RegistryPortUnknown`), a list read or entity port whose entity nobody declared
  * (`RegistryEntityMissing`), or a transactional action that lists a port reaching outside the database (`ExternalInTx`).
  */
@@ -67,12 +67,12 @@ export const registryOf = (
     const duplicate = duplicateOf(ids)
     if (duplicate !== null)
         throw new WorkbenchDoorError({ code: WorkbenchDoorErrorCode.RegistryDuplicate, params: { id: duplicate } })
-    const malformed = ids.find((id) => !isNamespaced(id))
+    const malformed = ids.find((id) => !isOperationId(id))
     if (malformed !== undefined)
         throw new WorkbenchDoorError({ code: WorkbenchDoorErrorCode.RegistryIdInvalid, params: { id: malformed } })
     const lists = new Map(declaredReads.map((read) => [read.id, read]))
     const reads = declaredReads.flatMap((read) => readOf(read, lists))
-    const actions = declaredActions.filter(served)
+    const actions = declaredActions.filter((action) => served(action))
     for (const read of reads) assertPorts(read.definition.id, read.definition.ports, read.dataKind, entities)
     for (const action of actions) assertPorts(action.id, action.ports, null, entities)
     const external = actions.find((action) => action.transactional === true && hasExternalPort(action.ports))

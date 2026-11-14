@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { GenerationRunnerService } from "@modules/domain/ai-generations"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the queued generation runs on the model and its answer, or its failure, is written on the row (it never retries). */

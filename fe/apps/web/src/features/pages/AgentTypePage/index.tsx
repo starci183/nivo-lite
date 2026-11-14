@@ -32,3 +32,9 @@ export const AgentTypePage = (props: AgentTypePageProps) => {
         />
     )
 }
+
+/**
+ * The same list while the route loads: the block reads the type from the address and draws its own skeletons. It holds the list (no redirect
+ * from a loading view); the ready page decides whether the only instance opens.
+ */
+export const AgentTypeLoadingPage = () => <AgentTypePageBase props={{ module: undefined, query: "", showList: true }} />

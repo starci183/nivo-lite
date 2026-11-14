@@ -1,5 +1,5 @@
 import { Command } from "@nestjs/cqrs"
-import type { ConversationRelease } from "@modules/domain/agent-graphs"
+import type { ConversationRelease } from "@modules/domain/agent-doors"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { ReleaseConversationRequest } from "./agent-doors.contracts"
 

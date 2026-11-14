@@ -1,12 +1,9 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { COMMAND_INTENTS } from "../rows/decision-commands"
-import type { CommandIntent } from "../rows/decision-commands"
+import { COMMAND_INTENTS, type CommandIntent } from "../rows/decision-commands"
 import { currencyCode } from "./currency-prop"
-import { FORM_FIELDS_MAX, FORM_NAME_MAX, formField } from "./form.block"
-import type { FormFieldSchema } from "./form.block"
+import { FORM_FIELDS_MAX, FORM_NAME_MAX, formField, type FormFieldSchema } from "./form.block"
 import type { TextSchema, EnumSchema, RequiredRead, OptionalAction, OptionalRead } from "./schema-types"
 
 /** Where a queue stands: a card on a card page, or a section in a pane. */
@@ -110,6 +107,7 @@ const props: z.ZodObject<{
     commands: z.ZodOptional<z.ZodArray<CommandSchema>>
     edit: z.ZodOptional<EditSchema>
     choices: z.ZodOptional<z.ZodArray<ChoiceSchema>>
+    elsewhere: z.ZodOptional<TextSchema>
 }> = z.object({
     surface: z.enum(QUEUE_SURFACES),
     isHeadless: z.boolean().optional(),
@@ -131,6 +129,7 @@ const props: z.ZodObject<{
         .max(QUEUE_COMMANDS_MAX)
         .refine((choices) => new Set(choices.map((entry) => entry.command)).size === choices.length)
         .optional(),
+    elsewhere: specText.optional(),
 })
 /** The slots of the decision queue block: the queue read and the command a row may run. */
 type Slots = {
@@ -150,7 +149,8 @@ const slots: Slots = {
  * opens a small inline form of the declared fields, started from the row's draft, and the action slot runs with
  * `{ id, command: "edit", values }` so a proposal can be changed before it is approved. A command listed in `choices` first opens
  * an overlay that picks one of the `options` (a searchable list, the closest to the row's amount first) or confirms, and then runs
- * the action with `{ id, command: sends, values }`.
+ * the action with `{ id, command: sends, values }`. A row may also offer an `alternative` command, drawn as its own button before the
+ * main one (a "decline" beside an "approve"). `elsewhere` is what a row with no command says at its end: where it is answered.
  */
 export const decisionQueueBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.decision-queue",

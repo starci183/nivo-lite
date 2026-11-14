@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./job-ops.module-definition"
 import { JobOpsConsoleService } from "./job-ops-console.service"
 import { JobOpsAlertMonitorService } from "./job-ops-alert-monitor.service"

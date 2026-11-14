@@ -21,6 +21,9 @@ type WizardFooterProps = {
     readonly isLoading?: boolean
 }
 
+/** The arrow a forward action ends in. */
+const arrowOf = (action: WizardAction) => (action.isForward === true ? { endArrow: true } : {})
+
 /** The flags a wizard action may carry onto its button. */
 const flagsOf = (action: WizardAction, isLoading: boolean) => ({
     isLoading,
@@ -37,7 +40,7 @@ export const WizardFooter = (props: WizardFooterProps) => {
             {next === undefined ? null : (
                 <Button
                     intent="commit"
-                    {...(next.isForward === true ? { endArrow: true } : {})}
+                    {...arrowOf(next)}
                     {...flagsOf(next, isLoading)}
                     onPress={next.onPress}
                 >

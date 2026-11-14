@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type {
     ProviderTemplateCandidatesQuery,
     ProviderTemplateCandidatesQueryVariables,
@@ -23,10 +23,6 @@ const query1: Document = gql`
             agentId
             agentName
             module
-            abilities {
-                id
-                mode
-            }
         }
     }
 `
@@ -52,6 +48,6 @@ export const queryProviderTemplateCandidates = async ({
 }: QueryProviderTemplateCandidatesParams): Promise<
     ApolloClient.QueryResult<QueryProviderTemplateCandidatesResponse>
 > => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

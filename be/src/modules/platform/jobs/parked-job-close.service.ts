@@ -1,9 +1,23 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { JobsLogEvent } from "./jobs.log-events"
 import { JobEntity } from "./persistence/entities"
+
+/** Where an operator command prints (a process's `stdout`). */
+export interface CommandOutput {
+    /** Writes the text. */
+    write(text: string): unknown
+}
+
+/** What an operator command sets its exit code on (the `process`). */
+export interface CommandExit {
+    /** The exit code the process ends with. */
+    exitCode?: number | string | null | undefined
+}
+
+/** The id of a job row. */
+const JOB_ID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu
 
 /** What a closed job keeps as its error: that a person closed it, and why. */
 export const closedErrorOf = (reason: string): string => `closed: ${reason}`
@@ -29,5 +43,31 @@ export class ParkedJobCloseService {
         if ((closed.affected ?? 0) === 0) return false
         this.logger.info(JobsLogEvent.Closed, { jobId, reason })
         return true
+    }
+
+    /**
+     * `cli jobs close <jobId> --reason "<why>"`: closes the parked job the id names and prints that it did. An id that is no id, a missing
+     * reason and a job that is not parked close nothing; each says so on `out` and sets a failing exit code, so a script that closes a
+     * list stops on the first one that did not close.
+     */
+    async closeFor(
+        out: CommandOutput,
+        exit: CommandExit,
+        manager: EntityManager,
+        jobId: string | undefined,
+        reason: string | undefined,
+    ): Promise<void> {
+        const id = jobId ?? ""
+        const why = reason?.trim() ?? ""
+        if (!JOB_ID.test(id)) return this.refused(out, exit, `not a job id: ${id}`)
+        if (why === "") return this.refused(out, exit, 'a reason is required: --reason "<why>"')
+        if (!(await this.close(manager, id, why))) return this.refused(out, exit, `not a parked job: ${id}`)
+        out.write(`closed ${id}\n`)
+    }
+
+    /** Says why nothing was closed and makes the command fail. */
+    private refused(out: CommandOutput, exit: CommandExit, why: string): void {
+        out.write(`${why}\n`)
+        exit.exitCode = 1
     }
 }

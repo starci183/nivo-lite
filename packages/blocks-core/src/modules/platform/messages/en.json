@@ -1,12 +1,8 @@
 {
-  "action_resume_run": "Run again",
   "parked_error_delivery_failed": "The message could not be sent",
   "parked_error_timeout": "The channel did not answer",
   "parked_step_confirm": "Confirm the order",
   "parked_step_notify": "Tell the customer",
-  "refusal_forbidden": "Only an owner, a manager or someone who manages this module can run it again",
-  "refusal_missing": "This run was not found",
-  "refusal_not_parked": "This run is not stopped, there is nothing to run again",
   "tab_runs": "Run history",
   "runs_title": "Runs",
   "status_label": "Filter runs by status",
@@ -18,5 +14,7 @@
   "runs_empty": "This agent has not run yet",
   "run_idle_title": "Choose a run",
   "run_idle_body": "Choose a run to see its steps",
-  "timeline_label": "Steps of the run"
+  "timeline_label": "Steps of the run",
+  "desk_run_read": "read {count}",
+  "desk_run_changed": "changed {count}"
 }

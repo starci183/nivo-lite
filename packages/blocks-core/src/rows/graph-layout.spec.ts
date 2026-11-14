@@ -72,7 +72,7 @@ describe("graphFlowOf", () => {
             edges: [],
         }
         expect(graphFlowOf(graph, null, WORDS)?.nodes[0]).toMatchObject({
-            description: "state:failed · Loi",
+            description: "state:failed \u00b7 Loi",
             tone: "danger",
         })
     })

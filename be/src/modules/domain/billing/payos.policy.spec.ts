@@ -118,18 +118,46 @@ describe("payos policy > readPayosDelivery", () => {
             amount: 50000,
             content: "NIVO8F3K2",
             eventId: "payos:REF1",
+            bankRef: "REF1",
         })
+    })
+
+    it("keeps the bank's reference, account and time of a paid order under the unchanged event id", async () => {
+        const { readPayosDelivery } = await buildSubject()
+
+        const data = { ...DATA, accountNumber: "12345678", transactionDateTime: "2023-02-04 18:25:00" }
+        expect(readPayosDelivery({ code: "00", success: true, data })).toEqual({
+            kind: "credit",
+            amount: 50000,
+            content: "NIVO8F3K2",
+            eventId: "payos:REF1",
+            bankRef: "REF1",
+            account: "12345678",
+            occurredAt: "2023-02-04T11:25:00.000Z",
+        })
+    })
+
+    it("keeps no time it cannot read and reads a zoned ISO time as it is", async () => {
+        const { readPayosDelivery } = await buildSubject()
+
+        const unreadable = readPayosDelivery({ code: "00", data: { ...DATA, transactionDateTime: "04/02/2023" } })
+        expect(unreadable).not.toHaveProperty("occurredAt")
+        const zoned = readPayosDelivery({ code: "00", data: { ...DATA, transactionDateTime: "2023-02-04T18:25:00Z" } })
+        expect(zoned).toMatchObject({ occurredAt: "2023-02-04T18:25:00.000Z" })
     })
 
     it("keys the credit by the order code when there is no reference", async () => {
         const { readPayosDelivery } = await buildSubject()
 
-        expect(readPayosDelivery({ code: "00", data: { orderCode: 7, amount: 1000 } })).toEqual({
+        const reading = readPayosDelivery({ code: "00", data: { orderCode: 7, amount: 1000 } })
+        expect(reading).toEqual({
             kind: "credit",
             amount: 1000,
             content: "",
             eventId: "payos:7",
         })
+        // An order code is payOS's own: it is never taken for the bank's reference.
+        expect(reading).not.toHaveProperty("bankRef")
     })
 
     it("ignores the sample order, an unpaid delivery and a delivery without an amount or reference", async () => {

@@ -92,7 +92,7 @@ export const turnCallOf = (loop: NodeAgentLoop, turn: number, messages: Readonly
     `${loop.purpose}#${String(turn)}:${digestOf({
         instructions: loop.instructions,
         tools: loop.tools.map((tool) => tool.name),
-        messages: messages.map(plainOf),
+        messages: messages.map((message) => plainOf(message)),
     })}`
 
 /** A confusion as the model wrote it, handed on for the runner to judge. */
@@ -102,6 +102,17 @@ const confusionOf = (args: unknown): Parameters<NodeAgentLoop["confused"]>[0] =>
         reason: typeof said.reason === "string" ? said.reason : "",
         question: typeof said.question === "string" ? said.question : null,
     }
+}
+
+/** Runs `act` and returns its promise, noting the first one that rejects in `state` for the client to answer with. */
+const keptOn = <Value>(state: StepState, act: () => Promise<Value>): Promise<Value> => {
+    const pending = Promise.resolve().then(act)
+    // Kept as the rejection it is, for the client to answer with; the cause is handed on, never dropped.
+    void pending.then(undefined, (cause: unknown) => {
+        state.failed ??= pending
+        return { cause }
+    })
+    return pending
 }
 
 /**
@@ -126,15 +137,7 @@ const confusionOf = (args: unknown): Parameters<NodeAgentLoop["confused"]>[0] =>
  */
 export const stepMiddlewareOf = (loop: NodeAgentLoop, model: AgentLoopModel, scope: StepScope): StepMiddleware => {
     const state: StepState = { asked: 0, used: 0, ended: false, open: null, failed: null }
-    const kept = <Value>(act: () => Promise<Value>): Promise<Value> => {
-        const pending = Promise.resolve().then(act)
-        // Kept as the rejection it is, for the client to answer with; the cause is handed on, never dropped.
-        void pending.then(undefined, (cause: unknown) => {
-            state.failed ??= pending
-            return { cause }
-        })
-        return pending
-    }
+    const kept = <Value>(act: () => Promise<Value>): Promise<Value> => keptOn(state, act)
     const ending = (judged: NodeAgentEndAnswer): Promise<CallFact> => {
         state.ended = judged.ok
         return Promise.resolve(judged)

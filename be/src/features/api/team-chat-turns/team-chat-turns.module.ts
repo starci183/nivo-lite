@@ -5,5 +5,5 @@ import { ConfigurableModuleClass } from "./team-chat-turns.module-definition"
 @Module({
     providers: [CaptureChatTruthHandler],
 })
-/** The "Ghi vào Second Brain" door of the team chat: the handler of its application. */
+/** The "Ghi vao Second Brain" door of the team chat: the handler of its application. */
 export class TeamChatTurnsApiModule extends ConfigurableModuleClass {}

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentChannelChoicesQuery, AgentChannelChoicesQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `agentChannelChoices` query. */
@@ -51,6 +50,6 @@ export const queryAgentChannelChoices = async ({
     request,
     signal,
 }: QueryAgentChannelChoicesParams): Promise<ApolloClient.QueryResult<QueryAgentChannelChoicesResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

@@ -40,7 +40,7 @@ export const layersOf = (
             layer,
             isRead: readsFacts(layer, lanes) || readsDocuments(layer, lanes),
             documents: documents.filter((one) => one.visibility === layer).length,
-            approvedFacts: inLayer.filter(isApproved).length,
+            approvedFacts: inLayer.filter((item) => isApproved(item)).length,
             totalFacts: inLayer.length,
         }
     })
@@ -60,7 +60,7 @@ export const documentsOf = (
             layer: one.visibility,
             updatedAt: one.updatedAt,
             isRead: readsDocuments(one.visibility, lanes),
-            approvedFacts: cited.filter(isApproved).length,
+            approvedFacts: cited.filter((item) => isApproved(item)).length,
             waitingFacts: cited.filter((fact) => !isApproved(fact)).length,
         }
     })

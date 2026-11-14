@@ -24,5 +24,10 @@ export const knowledgeChunkOf: (overrides?: Partial<KnowledgeChunkEntity>) => Kn
     contentHash: null,
     placeKind: null,
     placeLabel: null,
+    textHash: null,
+    indexedAt: null,
+    triage: null,
+    triageVersion: null,
+    truthsVersion: null,
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
 })

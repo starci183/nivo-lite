@@ -11,7 +11,8 @@ import { partitionNameOf } from "./partition-name"
  * - `entity` the `records.entity` value; `partition` the partition table, `records_<snake(entity)>` cut at 63 bytes.
  * - `view` present only when the entity declares `view: true`; always `v_<partition>` cut at 63 bytes.
  * - `checks` every CHECK and EXCLUDE constraint name of the partition: `<partition>_<snake(field)>_chk` per field,
- *   `<partition>_<name>` per declared check or noOverlap constraint; present only when not empty.
+ *   `<partition>_<name>` per declared check or noOverlap constraint, and `<partition>_agent_scope_chk` (`agent_id IS NOT NULL`) on every
+ *   partition; always present. (The `<partition>_agent_fk` foreign key to the agents is no check and is not listed.)
  * - `indexes` every index name of the partition besides the primary key: `<partition>_<name>` per declared index or unique
  *   constraint, `<partition>_<snake(field)>_trgm_idx`, `<partition>_<snake(field)>_<snake(key)>_idx`, `<partition>_<snake(field)>_gin_idx`;
  *   present only when not empty.
@@ -57,5 +58,5 @@ const manifestEntityOf = (entity: EntityDefinition): ManifestEntity => {
 /** The manifest the app's `cli entities` command writes for the declared entities. */
 export const manifestOf = (entities: ReadonlyArray<EntityDefinition>): EntityManifest => ({
     version: 1,
-    entities: entities.map(manifestEntityOf).sort((left, right) => left.entity.localeCompare(right.entity)),
+    entities: entities.map((entry) => manifestEntityOf(entry)).sort((left, right) => left.entity.localeCompare(right.entity)),
 })

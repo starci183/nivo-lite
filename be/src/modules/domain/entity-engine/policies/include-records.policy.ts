@@ -7,6 +7,7 @@ import type { EntityCatalog } from "./compiler.contracts"
 import { fieldExpression } from "./field-access.policy"
 import { paramBag } from "./param-bag.policy"
 import { onlyRecord, projectRecord, recordRowsOf, recordSelection } from "./record-row.policy"
+import { confinedAgentOf } from "./agent-scope.policy"
 import type { ScopedTx } from "./scoped-tx.contracts"
 
 const isParented = rowShape({ parent_id: "string" })
@@ -34,8 +35,8 @@ export const includeRecords = async (
         sort: direction === "asc" ? ("ASC" as const) : ("DESC" as const),
     }))
     const ranking = orders.map(({ expression, sort }) => `${expression} ${sort}`).join(", ")
-    const scoped =
-        "l.workspaceId = :ws AND l.fromEntity = :parent AND l.relation = :relation AND l.toEntity = :target AND t.entity = :target AND l.fromId IN (:...parentIds)"
+    const agent = confinedAgentOf(tx)
+    const scoped = `l.workspaceId = :ws AND l.fromEntity = :parent AND l.relation = :relation AND l.toEntity = :target AND t.entity = :target AND l.fromId IN (:...parentIds)${agent === null ? "" : " AND t.agentId = :agent"}`
     const joined = "t.entity = l.toEntity AND t.id = l.toId AND t.workspaceId = l.workspaceId"
     const builder = tx.manager
         .createQueryBuilder(RecordLinkEntity, "l")
@@ -70,6 +71,7 @@ export const includeRecords = async (
         target: target.name,
         parentIds,
         latest: spec.latest,
+        ...(agent === null ? {} : { agent }),
     })
     const grouped = new Map<string, Array<RecordRow>>()
     returnedRows(await builder.getRawMany(), isParented).forEach((raw) => {

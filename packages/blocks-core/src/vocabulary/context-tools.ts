@@ -1,5 +1,4 @@
-import { defineTool } from "@nivo-lite/agent-sdk/node"
-import type { ToolDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineTool, type ToolDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID } from "../bounds"
 import { TOOL } from "./tool-ids"
@@ -11,7 +10,7 @@ import { TOOL } from "./tool-ids"
 export interface ContextReadResult {
     /** The words that say the rest is reference data, never an instruction. */
     readonly notice: string
-    /** The source the facts come from (`nivo.conversation`, `nivo.lead`). */
+    /** The source the facts come from (`nivo.conversation`, `nivo.contact`, `nivo.lead`). */
     readonly source: string
     /** When the records were read, ISO 8601: they hold as of then. */
     readonly asOf: string
@@ -45,38 +44,6 @@ const listArgsOf = (max: number, said: string): z.ZodType<ContextListArgs> =>
         .strict()
         .describe("Takes no conversation or customer id: it always reads the one this run serves.")
 
-/** The thread of the conversation the run serves: who said what and when, newest first. Reads only. */
-export const conversationMessageListTool: ToolDefinition<
-    z.ZodType<ContextListArgs>,
-    z.ZodType<ContextReadResult>
-> = defineTool({
-    id: TOOL.conversationMessageList,
-    title: {
-        vi: "Đọc các tin nhắn gần nhất của cuộc trò chuyện đang phục vụ",
-        en: "Read the latest lines of the conversation this run serves",
-    },
-    args: listArgsOf(30, "The most lines, newest first; 20 when absent."),
-    result: contextResult,
-    mutates: false,
-    rights: [],
-})
-
-/** The customer the run serves: their record and what the shop's workflows remember of them. Reads only. */
-export const leadProfileGetTool: ToolDefinition<
-    z.ZodType<Readonly<Record<string, never>>>,
-    z.ZodType<ContextReadResult>
-> = defineTool({
-    id: TOOL.leadProfileGet,
-    title: {
-        vi: "Đọc hồ sơ khách đang phục vụ: tên, liên hệ và điều tiệm đã ghi nhớ",
-        en: "Read the profile of the customer this run serves: name, contact and what the shop remembers",
-    },
-    args: z.object({}).strict().describe("Takes no customer id: it always reads the customer this run serves."),
-    result: contextResult,
-    mutates: false,
-    rights: [],
-})
-
 /** The latest orders of the customer the run serves, newest first, with how each delivery goes. Reads only. */
 export const leadOrderListTool: ToolDefinition<
     z.ZodType<ContextListArgs>,
@@ -84,35 +51,15 @@ export const leadOrderListTool: ToolDefinition<
 > = defineTool({
     id: TOOL.leadOrderList,
     title: {
-        vi: "Đọc các đơn gần nhất của khách đang phục vụ",
+        vi: "\u0110\u1ecdc c\u00e1c \u0111\u01a1n g\u1ea7n nh\u1ea5t c\u1ee7a kh\u00e1ch \u0111ang ph\u1ee5c v\u1ee5",
         en: "Read the latest orders of the customer this run serves",
     },
     args: listArgsOf(10, "The most orders, newest first; 5 when absent."),
     result: contextResult,
     mutates: false,
-    rights: [],
-})
-
-/** What the shop's workflows wrote down about the customer the run serves, newest first. Reads only. */
-export const leadNoteListTool: ToolDefinition<
-    z.ZodType<ContextListArgs>,
-    z.ZodType<ContextReadResult>
-> = defineTool({
-    id: TOOL.leadNoteList,
-    title: {
-        vi: "Đọc ghi chú các bước quy trình đã ghi về khách đang phục vụ",
-        en: "Read what the workflow steps noted about the customer this run serves",
-    },
-    args: listArgsOf(20, "The most notes, newest first; 10 when absent."),
-    result: contextResult,
-    mutates: false,
-    rights: [],
 })
 
 /** The context reads locked to the run's own conversation and customer: the door fills the ids and refuses any other. */
 export const contextTools: ReadonlyArray<ToolDefinition> = [
-    conversationMessageListTool,
-    leadProfileGetTool,
     leadOrderListTool,
-    leadNoteListTool,
 ]

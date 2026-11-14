@@ -280,30 +280,6 @@ export interface BillingPaymentOrder extends Omit<PaymentOrder, "detail"> {
 /** A normalized payment order, or null when the scoped order does not exist. */
 export type BillingPaymentOrderLookup = BillingPaymentOrder | null
 
-/** Money an owner or manager knows arrived, entered by hand. */
-export interface ManualCredit {
-    /** Whole dong, greater than zero. */
-    readonly amount: number
-    /** The day the money arrived, yyyy-mm-dd. */
-    readonly date: string
-    /** What the transfer said. */
-    readonly content: string
-    /** A note, when the person added one. */
-    readonly note?: string | undefined
-    /** The payer, when the person named one. */
-    readonly payer?: string | undefined
-}
-
-/**
- * What the bank feed answered for one move of a committed receipt: `booked` recorded a live payment event and queued its
- * reconcile job, `debited` recorded money that left the account as a debit transaction, `duplicate` counted a repeat, `unbound`
- * remembered the move on the connection because no accounting agent is bound, and `refused` with `test_environment` kept a
- * move of a provider test connection out of every business table.
- */
-export type FeedCreditAnswer =
-    | { readonly status: "booked" | "debited" | "duplicate" | "unbound" }
-    | { readonly status: "refused"; readonly code: "test_environment" }
-
 /** The workspace providers admitted by the bank-feed receipt job. */
 export type BankFeedProvider = "casso" | "payos" | "sepay-feed"
 

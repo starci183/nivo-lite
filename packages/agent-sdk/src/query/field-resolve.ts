@@ -34,6 +34,8 @@ const CLASS_OF: Readonly<Record<FieldKind, KindClass>> = {
     enum: "text",
     money_vnd: "number",
     sequence: "text",
+    file: "json",
+    contact: "uuid",
 }
 
 /** The families a value can be ordered in (lt, gt, min, max, sort). */

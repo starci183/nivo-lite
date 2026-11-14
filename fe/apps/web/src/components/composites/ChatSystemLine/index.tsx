@@ -1,7 +1,7 @@
 import { Cluster, Text } from "@starci/grammar/common"
 
 /** What a system line says and when. */
-export interface ChatSystemLineProps {
+interface ChatSystemLineProps {
     readonly text: string
 }
 

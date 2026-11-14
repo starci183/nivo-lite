@@ -1,106 +1,20 @@
-/** The facts of a file the browser is about to upload; they are feedback only, the stored object is checked at send. */
-export interface ChatFileFacts {
-    /** The type the browser declares. */
-    readonly contentType: string
-    /** The size the browser declares, in bytes. */
-    readonly sizeBytes: number
-}
-
-/** Where a file belongs: the Office of a workspace. */
-export interface ChatFileScope {
-    /** The workspace, whose Office folder holds the object. */
-    readonly workspaceId: string
-}
-
-/** The turn that reads the file of a message, whoever sent it. */
-export interface ChatFileTurn {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The message of the turn, whoever wrote it; null when the wake names none. */
-    readonly messageId: string | null
-    /** The module of the agent, for the usage meter. */
-    readonly module: string
-}
-
-/** A picture sent with a turn. */
-export interface ChatTurnAttachment {
-    /** The name of the file. */
-    readonly fileName: string
-    /** The type of the picture. */
-    readonly mimeType: string
-    /** The bytes, in base64. */
-    readonly content: string
-}
-
-/** Where the browser PUTs one file. */
-export interface ChatFileUpload {
-    /** The object path to name when the message is sent. */
-    readonly path: string
-    /** The presigned address. */
-    readonly signedUrl: string
-}
-
-/** A stored file proved to be what it claims: its bytes were read and its type comes from them, not from the browser. */
-export interface VerifiedChatFile {
-    /** The object path. */
-    readonly path: string
-    /** The name the sender gave it. */
-    readonly name: string
-    /** The type read from the bytes. */
-    readonly contentType: string
-    /** The stored size in bytes. */
-    readonly sizeBytes: number
-}
-
-/** A file as a line of the Office shows it. */
-export interface ChatFileView {
-    /** The attachment. */
-    readonly id: string
-    /** The message it came with. */
-    readonly messageId: string
-    /** The name the sender gave it. */
-    readonly name: string
-    /** The type of the file. */
-    readonly contentType: string
-    /** A short-lived read address. */
+/** A picture or file a customer sent on a channel, where the channel serves it, before the shop keeps a copy. */
+export interface CustomerAttachment {
+    /** `image` or `file`. */
+    readonly kind: "image" | "file"
+    /** The channel's address of the bytes (it may expire); empty when the channel gave none. */
     readonly url: string
-}
-
-/** What a turn read from a file about a money transfer; this is the customer's evidence, never money received. */
-export interface ChatFileRead {
-    /** True when the file shows a transfer, or could not be read and may show one. */
-    readonly isTransfer: boolean
-    /** The amount in dong, or null when it could not be read with certainty. */
-    readonly amountVnd: number | null
-    /** The receiving account or person as written, or null. */
-    readonly recipient: string | null
-    /** The time as written, or null. */
-    readonly paidAt: string | null
-}
-
-/** The read of a message's file, or null when the message holds none. */
-export type OptionalChatFileRead = ChatFileRead | null
-
-/** The fenced text of a message's document for a turn to read, or null for a picture or a message with no file. */
-export type OptionalDocumentBlock = string | null
-
-/** The bytes of a file for a turn to read. */
-export interface ChatFileBytes {
-    /** The name the sender gave it. */
+    /** The name the sender gave it, or an empty text. */
     readonly name: string
-    /** The type of the file. */
+}
+
+/** The bytes of a kept customer file, as a model call carries them. */
+export interface CustomerFileBytes {
+    /** The type read from the bytes. */
     readonly contentType: string
     /** The bytes. */
     readonly bytes: Uint8Array
 }
 
-/** A stored file of a message with what was read from it so far. */
-export interface StoredChatFile extends ChatFileBytes {
-    /** The attachment. */
-    readonly id: string
-    /** What a turn read from it, or null before it was read. */
-    readonly read: ChatFileRead | null
-}
-
-/** The first file of a message, or null when it holds none or the store no longer has it. */
-export type OptionalStoredChatFile = StoredChatFile | null
+/** A kept customer file's bytes, or null when the store no longer holds it or the address is not the shop's. */
+export type OptionalCustomerFileBytes = CustomerFileBytes | null

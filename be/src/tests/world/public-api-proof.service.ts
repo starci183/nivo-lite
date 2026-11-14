@@ -1,13 +1,16 @@
-import type { JobClaims, ClaimedJob } from "@modules/platform/jobs"
+import { type JobClaims, type ClaimedJob, JOB_CLAIMS } from "@modules/platform/jobs"
 import assert from "node:assert/strict"
-import { JOB_CLAIMS } from "@modules/platform/jobs"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { LiteWorld } from "./lite-world.service"
 import { cleanupJobs, cleanupWorkspace } from "./proof-database.service"
-import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
-import { persistPublicApiWorkspace } from "../fixtures/builders/public-api.builder"
-import { apiRequest, apiWork, cleanApiPublications } from "./public-api-database.service"
-import type { PublicApiRequestState, PublicApiWorkState } from "./public-api-database.service"
+import { type PublicApiIdentity, persistPublicApiWorkspace } from "../fixtures/builders/public-api.builder"
+import {
+    apiRequest,
+    apiWork,
+    cleanApiPublications,
+    type PublicApiRequestState,
+    type PublicApiWorkState,
+} from "./public-api-database.service"
 import { cleanApiInbox } from "./inbox-database.service"
 
 /** Builds only isolated local rows and registers cleanup of their messages, inbox and parents. */

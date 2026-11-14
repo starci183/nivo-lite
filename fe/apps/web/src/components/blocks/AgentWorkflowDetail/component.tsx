@@ -12,8 +12,9 @@ import type {
     StepsMapView,
     WorkflowDetailView,
     WorkflowOverviewView,
+    WorkflowStatus,
 } from "@/modules/types"
-import { DetailHead, DetailPanel, type AgentWorkflowDetailCopy, type DetailTab } from "./parts"
+import { DetailHead, DetailPanel, TemplateNotice, type AgentWorkflowDetailCopy, type DetailTab } from "./parts"
 
 /** The step a new step goes after: the selected one, else the last of the map. */
 const afterKeyOf = (page: AgentWorkflowDetailBaseProps["props"]): string =>
@@ -38,12 +39,16 @@ export interface AgentWorkflowDetailBaseProps {
         readonly versionBase: string
         readonly grid: PaneGridLayout
         readonly slotLabels: SlotLabels
+        /** True while a write of this page (turn on, pause, update from the template) is on its way. */
+        readonly isWriting: boolean
     }
     readonly on: {
         readonly retry: () => void
         readonly openMap: () => void
         readonly step: (action: StepAction) => void
         readonly rollback: (number: number) => void
+        readonly toggle: (status: WorkflowStatus) => void
+        readonly sync: () => void
         readonly runsFilter: (next: Partial<RunsFilter>) => void
         readonly runsTab: (key: string) => void
         readonly runsRetry: () => void
@@ -75,8 +80,18 @@ export const AgentWorkflowDetailBase = (props: AgentWorkflowDetailBaseProps) => 
                                     isLoading={isLoading}
                                     onMap={props.on.openMap}
                                     onAddStep={() => props.on.step({ kind: "add", afterKey: afterKeyOf(props.props) })}
+                                    onToggle={props.on.toggle}
+                                    isWriting={props.props.isWriting}
                                 />
                                 <PaneSection gap="section">
+                                    {view.notice === null ? null : (
+                                        <TemplateNotice
+                                            notice={view.notice}
+                                            copy={copy}
+                                            onSync={props.on.sync}
+                                            previewHref={`${props.props.versionBase}/preview/${view.notice.version}`}
+                                        />
+                                    )}
                                     <DetailPanel
                                         tab={tab}
                                         copy={copy}

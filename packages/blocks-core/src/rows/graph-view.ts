@@ -1,10 +1,8 @@
 import { z } from "zod"
-import { PARAM_INPUTS } from "../nodes/node-params"
-import type { ParamField } from "../nodes/node-params"
+import { PARAM_INPUTS, type ParamField } from "../nodes/node-params"
 import type { NodeOutputView } from "../nodes/node-cards"
-import { RUN_STATES } from "./run-state"
+import { RUN_STATES, type RunState } from "./run-state"
 import type { BindingView, CallView, EntryView, OutcomeEndView, OutcomeView, TriggerView } from "./workflow-contract-view"
-import type { RunState } from "./run-state"
 
 /**
  * What a node of a graph is. `trigger`, `step`, `output` are the first drawing of a graph; `event`, `action`, `ask`, `end` (with `condition`
@@ -77,7 +75,7 @@ export interface GraphNodeView {
     readonly call?: CallView | undefined
     /** For an outcome end (`core.outcome`): the outcome and the outputs it fills. */
     readonly outcome?: OutcomeEndView | undefined
-    /** For a "Lặp qua từng" step: the list it loops over, the most items and the keys of its body. */
+    /** For a "Lap qua tung" step: the list it loops over, the most items and the keys of its body. */
     readonly loop?: LoopView | undefined
     /** The loop step whose body holds this node, when it is inside one. */
     readonly parent?: string | undefined
@@ -85,8 +83,11 @@ export interface GraphNodeView {
 
 /** A for-each step as its container card draws it. */
 export interface LoopView {
+    /** Where the loop takes its list from; null when it is not bound. */
     readonly items: BindingView | null
+    /** The most items the loop goes through. */
     readonly max: number
+    /** The keys of the steps that make up the loop body. */
     readonly bodyKeys: ReadonlyArray<string>
 }
 

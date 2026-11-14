@@ -7,7 +7,7 @@ import { SepayConnectionStepsBase } from "./component"
 /** What the page hands the steps: the connection of the url. */
 type SepayConnectionStepsProps = { readonly connectionId: string }
 
-/** The connected setup of a SePay connection: one joined list of five steps, each with its own body and its mark. */
+/** The connected setup of a SePay connection: one joined list of the three steps the form does not cover, each with its own body and its mark. */
 export const SepayConnectionSteps = (props: SepayConnectionStepsProps) => {
     const views = useSepayStepViews(props.connectionId)
     const refusal = useConnectionRefusal()
@@ -17,12 +17,9 @@ export const SepayConnectionSteps = (props: SepayConnectionStepsProps) => {
             props={{
                 stepsLabel: views.stepsLabel,
                 steps: views.steps,
-                environment: views.environment,
-                account: views.account,
                 paste: views.paste,
                 openSepay: views.openSepay,
                 checklist: views.checklist,
-                matching: views.matching,
                 grants: views.grants.props,
             }}
             on={{

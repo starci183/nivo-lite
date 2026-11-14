@@ -1,5 +1,11 @@
-import { backAction, closeAction, forwardAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import {
+    backAction,
+    closeAction,
+    forwardAction,
+    nextAction,
+    WizardFooter,
+    type WizardAction,
+} from "@/components/branches/WizardFooter"
 import type { TelegramUserWizardCopy, TelegramUserLoginView } from "@/modules/types"
 
 /** Only the facts, labels and commands that determine this wizard's footer. */

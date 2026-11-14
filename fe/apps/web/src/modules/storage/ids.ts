@@ -11,6 +11,8 @@ export enum StorageId {
     ZaloReturn = "NIVO_ZALO_RETURN",
     /** The files of an upload batch whose bytes were on their way to storage, so a reload says the upload stopped. */
     UploadInFlight = "NIVO_UPLOAD_IN_FLIGHT",
+    /** The anonymous id this browser gives itself on the hosted form of a shop website, one record keyed by the public key of the site. */
+    WebsiteVisitors = "NIVO_WEBSITE_VISITORS",
 }
 
 /** The cookie that remembers the last workspace the person opened, so the front address leads back to it. */

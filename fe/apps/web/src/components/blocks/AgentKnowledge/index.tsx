@@ -1,10 +1,9 @@
 "use client"
 
+import { useAgentRoute, type ModuleKey } from "@/hooks/installations"
 import { useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
-import { useAgentKnowledge } from "@/hooks/agentKnowledge"
-import type { AgentKnowledgeData } from "@/hooks/agentKnowledge"
-import type { ModuleKey } from "@/hooks/installations"
+import { useAgentKnowledge, type AgentKnowledgeData } from "@/hooks/agentKnowledge"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { AgentKnowledgeBase } from "./component"
@@ -12,9 +11,9 @@ import { knowledgeViewOf } from "./view"
 
 /** What the route hands the tab: the workspace and the installed agent of the url. */
 interface AgentKnowledgeProps {
-    readonly workspaceId: string
-    readonly module: ModuleKey
-    readonly installationId: string
+    readonly workspaceId?: string | undefined
+    readonly module?: ModuleKey | undefined
+    readonly installationId?: string | undefined
 }
 
 /** The sources a page of the table holds. */
@@ -53,14 +52,15 @@ const PLACEHOLDER_DATA: AgentKnowledgeData = {
  * it reads and the facts that wait for the owner, read through the same view the agent answers by.
  */
 export const AgentKnowledge = (props: AgentKnowledgeProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("agentKnowledge")
     const tabs = useTranslations("modulesCore")
     const format = useFormatter()
     const router = navigation.useRouter()
     const slotLabels = useSlotLabels()
     const [page, setPage] = useState(1)
-    const data = useAgentKnowledge(props.module, props.installationId)
-    const scope = { workspaceId: props.workspaceId }
+    const data = useAgentKnowledge(route.module, route.installationId)
+    const scope = { workspaceId: route.workspaceId }
     return (
         <AgentKnowledgeBase
             props={{

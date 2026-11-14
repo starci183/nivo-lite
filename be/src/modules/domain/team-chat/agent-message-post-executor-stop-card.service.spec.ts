@@ -42,191 +42,197 @@ const build = async () => {
     return { chat, executor: added[0], postOf }
 }
 
+const CARD = {
+    workflow: { moduleKey: "accounting", key: "reconcile", title: "Doi soat tien ve" },
+    step: { key: "match", nodeId: "accounting.match-payment", title: "Khop giao dich" },
+    runId: "run-1",
+    leadId: null,
+    conversationId: null,
+    by: "ai",
+    reason: "Tiem nhan 500 VND cho don DH-0003, con thieu 500 VND.",
+    question: "Ghi nhan da tra hay giu don mo?",
+    facts: [{ name: "So tien", value: "500 VND" }],
+    suggestions: [{ text: "Giu don mo", handledBy: "workflow" }],
+    decisions: ["retry", "take_over", "skip"],
+    repeats: 1,
+    firstAt: "2026-11-10T10:00:00.000Z",
+    lastAt: "2026-11-10T10:00:00.000Z",
+}
+const OPEN = {
+    version: 1,
+    stopId: "stop-1",
+    runId: "run-1",
+    stepKey: "match",
+    kind: "ai_report",
+    state: "open",
+    headline: "Quy trinh dang dung",
+    needs: { answer: true, decisions: ["retry", "take_over", "skip"], verdicts: [] },
+    replies: [],
+    repeats: 1,
+    stoppedAt: "2026-11-10T10:00:00.000Z",
+    resolvedAt: null,
+}
+const REPLY = { kind: "answer", text: "Giu don mo nhe", by: "seat-1", at: "2026-11-10T10:05:00.000Z" }
+const ANSWERED = {
+    ...OPEN,
+    state: "answered",
+    headline: "Da nhan tra loi",
+    needs: { answer: false, decisions: [], verdicts: [] },
+    replies: [REPLY],
+}
+const CALL_OPEN: EffectCall = { key: "run-stuck:run-1:match:1", dedupeKey: "run-stuck:run-1:match" }
+const stored = (payload: unknown) => ({
+    kind: "workflow.stopped",
+    intent: "ask",
+    title: "Quy trinh dang dung",
+    summary: CARD.reason,
+    payload,
+    occurrence: CALL_OPEN.key,
+})
+
 describe("AgentMessagePostExecutorService the typed card of a thread's stop (workflow.stopped + stop)", () => {
-    const CARD = {
-        workflow: { moduleKey: "accounting", key: "reconcile", title: "Doi soat tien ve" },
-        step: { key: "match", nodeId: "accounting.match-payment", title: "Khop giao dich" },
-        runId: "run-1",
-        leadId: null,
-        conversationId: null,
-        by: "ai",
-        reason: "Tiem nhan 500 VND cho don DH-0003, con thieu 500 VND.",
-        question: "Ghi nhan da tra hay giu don mo?",
-        facts: [{ name: "So tien", value: "500 VND" }],
-        suggestions: [{ text: "Giu don mo", handledBy: "workflow" }],
-        decisions: ["retry", "take_over", "skip"],
-        repeats: 1,
-        firstAt: "2026-11-10T10:00:00.000Z",
-        lastAt: "2026-11-10T10:00:00.000Z",
-    }
-    const OPEN = {
-        version: 1,
-        stopId: "stop-1",
-        runId: "run-1",
-        stepKey: "match",
-        kind: "ai_report",
-        state: "open",
-        headline: "Quy trinh dang dung",
-        needs: { answer: true, decisions: ["retry", "take_over", "skip"], verdicts: [] },
-        replies: [],
-        repeats: 1,
-        stoppedAt: "2026-11-10T10:00:00.000Z",
-        resolvedAt: null,
-    }
-    const REPLY = { kind: "answer", text: "Giu don mo nhe", by: "seat-1", at: "2026-11-10T10:05:00.000Z" }
-    const ANSWERED = {
-        ...OPEN,
-        state: "answered",
-        headline: "Da nhan tra loi",
-        needs: { answer: false, decisions: [], verdicts: [] },
-        replies: [REPLY],
-    }
-    const CALL_OPEN: EffectCall = { key: "run-stuck:run-1:match:1", dedupeKey: "run-stuck:run-1:match" }
-    const stored = (payload: unknown) => ({
-        kind: "workflow.stopped",
-        intent: "ask",
-        title: "Quy trinh dang dung",
-        summary: CARD.reason,
-        payload,
-        occurrence: CALL_OPEN.key,
-    })
+    describe("posting and answering", () => {
+        it("posts the typed card once: the typed part kept on the payload, counted as the first write", async () => {
+            const { chat, executor, postOf } = await build()
+            chat.storedCard.mockResolvedValue(null)
 
-    it("posts the typed card once: the typed part kept on the payload, counted as the first write", async () => {
-        const { chat, executor, postOf } = await build()
-        chat.storedCard.mockResolvedValue(null)
+            await executor?.execute(
+                TURN,
+                {
+                    kind: "workflow.stopped",
+                    title: "Quy trinh dang dung",
+                    summary: CARD.reason,
+                    card: { ...CARD, stop: OPEN },
+                },
+                CALL_OPEN,
+            )
 
-        await executor?.execute(
-            TURN,
-            {
-                kind: "workflow.stopped",
+            expect(postOf()?.message).toMatchObject({
+                intent: "ask",
                 title: "Quy trinh dang dung",
-                summary: CARD.reason,
-                card: { ...CARD, stop: OPEN },
-            },
-            CALL_OPEN,
-        )
+                payload: { ...CARD, stop: { ...OPEN, revision: 1 } },
+                options: [{ id: "0", label: "Giu don mo" }],
+            })
+        })
 
-        expect(postOf()?.message).toMatchObject({
-            intent: "ask",
-            title: "Quy trinh dang dung",
-            payload: { ...CARD, stop: { ...OPEN, revision: 1 } },
-            options: [{ id: "0", label: "Giu don mo" }],
+        it("rewrites the one card in place on an answer: the founder's reply kept, nothing asked, one write more, never a second card", async () => {
+            const { chat, executor } = await build()
+            chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...OPEN, revision: 1 } }))
+            chat.foldTeamCard.mockResolvedValue("msg-1")
+
+            const fact = await executor?.execute(
+                TURN,
+                {
+                    kind: "workflow.stopped",
+                    rewrite: { title: "Da nhan tra loi", summary: "Da nhan tra loi", stop: ANSWERED },
+                },
+                { key: "run-stuck:run-1:match:answered:1:1", dedupeKey: CALL_OPEN.dedupeKey },
+            )
+
+            expect(chat.postTeamCard).not.toHaveBeenCalled()
+            expect(fact).toMatchObject({ id: "msg-1", facts: { rewritten: true, state: "answered", revision: 2 } })
+            const [, key, message] = chat.foldTeamCard.mock.calls[0] ?? []
+            expect(key).toBe(lineKeyOf("run-stuck:run-1:match"))
+            expect(message).toMatchObject({
+                intent: "notify",
+                title: "Da nhan tra loi",
+                options: [],
+                occurrence: CALL_OPEN.key,
+            })
+            expect(message?.payload).toEqual({
+                ...CARD,
+                suggestions: [],
+                decisions: [],
+                resolvedAt: null,
+                stop: { ...ANSWERED, revision: 2 },
+            })
         })
     })
 
-    it("rewrites the one card in place on an answer: the founder's reply kept, nothing asked, one write more, never a second card", async () => {
-        const { chat, executor } = await build()
-        chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...OPEN, revision: 1 } }))
-        chat.foldTeamCard.mockResolvedValue("msg-1")
+    describe("stopping again and taking over", () => {
+        it("keeps the trace when the step stops again after the answer: the same card goes back to open under the new question", async () => {
+            const { chat, executor } = await build()
+            chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...ANSWERED, revision: 2 } }))
+            chat.foldTeamCard.mockResolvedValue("msg-1")
+            const again = { ...OPEN, repeats: 2, replies: [REPLY], stoppedAt: "2026-11-10T10:06:00.000Z" }
 
-        const fact = await executor?.execute(
-            TURN,
-            {
-                kind: "workflow.stopped",
-                rewrite: { title: "Da nhan tra loi", summary: "Da nhan tra loi", stop: ANSWERED },
-            },
-            { key: "run-stuck:run-1:match:answered:1:1", dedupeKey: CALL_OPEN.dedupeKey },
-        )
+            await executor?.execute(
+                TURN,
+                {
+                    kind: "workflow.stopped",
+                    title: "Quy trinh dang dung",
+                    summary: "Con thieu?",
+                    card: { ...CARD, question: "Con thieu?", repeats: 2, stop: again },
+                },
+                { key: "run-stuck:run-1:match:2", dedupeKey: CALL_OPEN.dedupeKey },
+            )
 
-        expect(chat.postTeamCard).not.toHaveBeenCalled()
-        expect(fact).toMatchObject({ id: "msg-1", facts: { rewritten: true, state: "answered", revision: 2 } })
-        const [, key, message] = chat.foldTeamCard.mock.calls[0] ?? []
-        expect(key).toBe(lineKeyOf("run-stuck:run-1:match"))
-        expect(message).toMatchObject({
-            intent: "notify",
-            title: "Da nhan tra loi",
-            options: [],
-            occurrence: CALL_OPEN.key,
-        })
-        expect(message?.payload).toEqual({
-            ...CARD,
-            suggestions: [],
-            decisions: [],
-            resolvedAt: null,
-            stop: { ...ANSWERED, revision: 2 },
-        })
-    })
-
-    it("keeps the trace when the step stops again after the answer: the same card goes back to open under the new question", async () => {
-        const { chat, executor } = await build()
-        chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...ANSWERED, revision: 2 } }))
-        chat.foldTeamCard.mockResolvedValue("msg-1")
-        const again = { ...OPEN, repeats: 2, replies: [REPLY], stoppedAt: "2026-11-10T10:06:00.000Z" }
-
-        await executor?.execute(
-            TURN,
-            {
-                kind: "workflow.stopped",
-                title: "Quy trinh dang dung",
-                summary: "Con thieu?",
-                card: { ...CARD, question: "Con thieu?", repeats: 2, stop: again },
-            },
-            { key: "run-stuck:run-1:match:2", dedupeKey: CALL_OPEN.dedupeKey },
-        )
-
-        expect(chat.postTeamCard).not.toHaveBeenCalled()
-        const message = chat.foldTeamCard.mock.calls[0]?.[2]
-        expect(message).toMatchObject({ intent: "ask", summary: "Con thieu?" })
-        expect(message?.payload).toMatchObject({
-            question: "Con thieu?",
-            repeats: 2,
-            stop: { state: "open", replies: [REPLY], revision: 3 },
-        })
-    })
-
-    it("asks still after a take-over (words, retry, skip), and rewrites nothing when the stop never had a card", async () => {
-        const { chat, executor } = await build()
-        chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...OPEN, revision: 1 } }))
-        chat.foldTeamCard.mockResolvedValue("msg-1")
-        const taken = {
-            ...OPEN,
-            state: "answered",
-            needs: { answer: true, decisions: ["retry", "skip"], verdicts: [] },
-        }
-
-        await executor?.execute(
-            TURN,
-            { kind: "workflow.stopped", rewrite: { title: "t", summary: "s", stop: taken } },
-            CALL_OPEN,
-        )
-        expect(chat.foldTeamCard.mock.calls[0]?.[2]).toMatchObject({
-            intent: "ask",
-            payload: { decisions: ["retry", "skip"] },
+            expect(chat.postTeamCard).not.toHaveBeenCalled()
+            const message = chat.foldTeamCard.mock.calls[0]?.[2]
+            expect(message).toMatchObject({ intent: "ask", summary: "Con thieu?" })
+            expect(message?.payload).toMatchObject({
+                question: "Con thieu?",
+                repeats: 2,
+                stop: { state: "open", replies: [REPLY], revision: 3 },
+            })
         })
 
-        chat.storedCard.mockResolvedValue(null)
-        chat.foldTeamCard.mockClear()
-        await expect(
-            executor?.execute(
+        it("asks still after a take-over (words, retry, skip), and rewrites nothing when the stop never had a card", async () => {
+            const { chat, executor } = await build()
+            chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...OPEN, revision: 1 } }))
+            chat.foldTeamCard.mockResolvedValue("msg-1")
+            const taken = {
+                ...OPEN,
+                state: "answered",
+                needs: { answer: true, decisions: ["retry", "skip"], verdicts: [] },
+            }
+
+            await executor?.execute(
                 TURN,
                 { kind: "workflow.stopped", rewrite: { title: "t", summary: "s", stop: taken } },
                 CALL_OPEN,
-            ),
-        ).resolves.toMatchObject({ facts: { rewritten: false } })
-        expect(chat.foldTeamCard).not.toHaveBeenCalled()
-        expect(chat.postTeamCard).not.toHaveBeenCalled()
+            )
+            expect(chat.foldTeamCard.mock.calls[0]?.[2]).toMatchObject({
+                intent: "ask",
+                payload: { decisions: ["retry", "skip"] },
+            })
+
+            chat.storedCard.mockResolvedValue(null)
+            chat.foldTeamCard.mockClear()
+            await expect(
+                executor?.execute(
+                    TURN,
+                    { kind: "workflow.stopped", rewrite: { title: "t", summary: "s", stop: taken } },
+                    CALL_OPEN,
+                ),
+            ).resolves.toMatchObject({ facts: { rewritten: false } })
+            expect(chat.foldTeamCard).not.toHaveBeenCalled()
+            expect(chat.postTeamCard).not.toHaveBeenCalled()
+        })
     })
 
-    it("marks the typed part resolved too when the old resolve path rewrites a typed card", async () => {
-        const { chat, executor } = await build()
-        chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...OPEN, revision: 1 } }))
-        chat.foldTeamCard.mockResolvedValue("msg-1")
-        const at = "2026-11-10T11:00:00.000Z"
+    describe("the old resolve path", () => {
+        it("marks the typed part resolved too when the old resolve path rewrites a typed card", async () => {
+            const { chat, executor } = await build()
+            chat.storedCard.mockResolvedValue(stored({ ...CARD, stop: { ...OPEN, revision: 1 } }))
+            chat.foldTeamCard.mockResolvedValue("msg-1")
+            const at = "2026-11-10T11:00:00.000Z"
 
-        await executor?.execute(
-            TURN,
-            { kind: "workflow.stopped", resolved: { title: "Xong", summary: "Xong", at } },
-            CALL_OPEN,
-        )
+            await executor?.execute(
+                TURN,
+                { kind: "workflow.stopped", resolved: { title: "Xong", summary: "Xong", at } },
+                CALL_OPEN,
+            )
 
-        expect(chat.foldTeamCard.mock.calls[0]?.[2].payload).toMatchObject({
-            resolvedAt: at,
-            stop: {
-                state: "resolved",
-                needs: { answer: false, decisions: [], verdicts: [] },
+            expect(chat.foldTeamCard.mock.calls[0]?.[2].payload).toMatchObject({
                 resolvedAt: at,
-                revision: 2,
-            },
+                stop: {
+                    state: "resolved",
+                    needs: { answer: false, decisions: [], verdicts: [] },
+                    resolvedAt: at,
+                    revision: 2,
+                },
+            })
         })
     })
 })
@@ -301,7 +307,7 @@ describe("AgentMessagePostExecutorService worded facts on a thread's typed stop 
 
         await executor?.execute(TURN, { kind: "workflow.stopped", title: "t", summary: "r", card: { ...RAW_CARD, stop: SECTION } }, CALL)
 
-        const facts = (postOf()?.message.payload as { facts: ReadonlyArray<{ name: string; value: string; technical: boolean }> }).facts
+        const facts = factsOfPayload(postOf()?.message.payload)
         expect(facts).toEqual([
             { name: "Workflow", value: "Reconcile incoming money", technical: false },
             { name: "Step", value: "Match the transaction", technical: false },
@@ -322,7 +328,122 @@ describe("AgentMessagePostExecutorService worded facts on a thread's typed stop 
 
         await executor?.execute(TURN, { kind: "workflow.stopped", title: "t", summary: "r", card: RAW_CARD }, CALL)
 
-        expect((postOf()?.message.payload as { facts: unknown }).facts).toEqual(RAW_CARD.facts)
+        expect(factsOfPayload(postOf()?.message.payload)).toEqual(RAW_CARD.facts)
+    })
+})
+
+/** A fact of a stored card. */
+type Fact = { readonly name: string; readonly value: string; readonly technical?: boolean }
+
+/** The facts of a posted card payload, or none when the payload carries no list of facts. */
+const factsOfPayload = (payload: unknown): ReadonlyArray<Fact> => {
+    if (typeof payload === "object" && payload !== null && "facts" in payload && Array.isArray(payload.facts)) return payload.facts.filter(isFact)
+    return []
+}
+/** The English words of a catalogue key; empty for a missing key, so an expectation on it can never pass by accident. */
+const en = (key: string): string => TEAM_CHAT_MESSAGES.en[key] ?? ""
+/** The facts the stored card holds, already worded. */
+const LINE_STORED_FACTS: ReadonlyArray<Fact> = [
+    { name: "Workflow", value: "Reconcile incoming money", technical: false },
+    { name: "Amount", value: "500 VND", technical: false },
+    { name: "Step key", value: "match", technical: true },
+    { name: "Run id", value: "run-1", technical: true },
+]
+/** The typed card as stored. */
+const LINE_CARD = {
+    workflow: { moduleKey: "accounting", key: "reconcile", title: "Reconcile incoming money" },
+    step: { key: "match", nodeId: "accounting.match-payment", title: "Match the transaction" },
+    runId: "run-1",
+    leadId: null,
+    conversationId: "conv-1",
+    by: "ai",
+    reason: "r",
+    question: "q?",
+    facts: LINE_STORED_FACTS,
+    suggestions: [],
+    decisions: ["retry", "take_over", "skip"],
+    repeats: 1,
+    firstAt: "2026-11-10T10:00:00.000Z",
+    lastAt: "2026-11-10T10:00:00.000Z",
+}
+/** The stop section of the stored card, open. */
+const LINE_OPEN = {
+    version: 1,
+    stopId: "stop-1",
+    runId: "run-1",
+    stepKey: "match",
+    kind: "ai_report",
+    state: "open",
+    headline: "The workflow stopped",
+    needs: { answer: true, decisions: ["retry", "take_over", "skip"], verdicts: [] },
+    replies: [],
+    repeats: 1,
+    stoppedAt: "2026-11-10T10:00:00.000Z",
+    resolvedAt: null,
+}
+const LINE_CALL: EffectCall = { key: "run-stuck:run-1:match:open:1:0:f6:ability_off", dedupeKey: "run-stuck:run-1:match" }
+/** The raw line facts of a stop whose holding line the send refused. */
+const NOT_TOLD = [
+    { name: "customerLine", value: "not_told" },
+    { name: "customerLineReason", value: "ability_off" },
+]
+
+/** A value read back as a card fact. */
+const isFact = (value: unknown): value is Fact =>
+    typeof value === "object" && value !== null && typeof Reflect.get(value, "name") === "string" && typeof Reflect.get(value, "value") === "string"
+
+/** The executor over one stored card, and the facts of the card it folds in place, as stored (never filtered). */
+const rewrittenWith = async (rewrite: Record<string, unknown>) => {
+    const { chat, executor } = await buildWorded()
+    chat.storedCard.mockResolvedValue({
+        kind: "workflow.stopped",
+        intent: "ask",
+        title: "The workflow stopped",
+        summary: "r",
+        payload: { ...LINE_CARD, stop: { ...LINE_OPEN, revision: 1 } },
+        occurrence: "run-stuck:run-1:match:1",
+    })
+    chat.foldTeamCard.mockResolvedValue("msg-1")
+    await executor?.execute(TURN, { kind: "workflow.stopped", rewrite: { title: "t", summary: "s", stop: LINE_OPEN, ...rewrite } }, LINE_CALL)
+    expect(chat.postTeamCard).not.toHaveBeenCalled()
+    const facts: unknown = Reflect.get(chat.foldTeamCard.mock.calls[0]?.[2].payload ?? {}, "facts")
+    const stored: ReadonlyArray<unknown> = Array.isArray(facts) ? facts : []
+    return stored
+}
+
+describe("AgentMessagePostExecutorService the engine's holding line on a rewritten stop card (rewrite.lineFacts)", () => {
+    it("stores the card with the line worded (not told, why, the code technical) and keeps every other stored fact", async () => {
+        const facts = await rewrittenWith({ lineFacts: NOT_TOLD })
+
+        expect(facts).toEqual([
+            LINE_STORED_FACTS[0],
+            LINE_STORED_FACTS[1],
+            { name: en("teamChat.fact.customerLine"), value: en("teamChat.customerLine.notTold"), technical: false },
+            { name: en("teamChat.fact.customerLineReason"), value: en("teamChat.lineReason.ability_off"), technical: false },
+            LINE_STORED_FACTS[2],
+            LINE_STORED_FACTS[3],
+            { name: en("teamChat.fact.customerLineCode"), value: "ability_off", technical: true },
+        ])
+    })
+
+    it.each([
+        ["no lineFacts at all", {}],
+        ["an empty lineFacts list", { lineFacts: [] }],
+        ["lineFacts that are no { name, value } strings", { lineFacts: [{ name: 1, value: "x" }, "customerLine", null] }],
+    ])("a rewrite with %s leaves the stored facts byte-equal", async (_name, rewrite) => {
+        const facts = await rewrittenWith(rewrite)
+
+        expect(JSON.stringify(facts)).toBe(JSON.stringify(LINE_STORED_FACTS))
+    })
+
+    it("an allowed send (the stop says nothing of the line) never shows a not-told fact", async () => {
+        const facts = await rewrittenWith({ lineFacts: [] })
+
+        expect(facts.every(isFact)).toBe(true)
+        const shown = facts.filter(isFact).map((fact) => `${fact.name} ${fact.value}`).join(" | ")
+        expect(shown).not.toContain(en("teamChat.customerLine.notTold"))
+        expect(shown).not.toContain(en("teamChat.fact.customerLine"))
+        expect(shown).not.toContain("not_told")
     })
 })
 

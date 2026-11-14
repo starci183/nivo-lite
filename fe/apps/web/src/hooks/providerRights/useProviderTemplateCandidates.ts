@@ -25,7 +25,7 @@ interface ProviderTemplateCandidates {
 }
 
 /**
- * `providerTemplateCandidates({ connectionId })` for each connected account of the shop whose provider has abilities, with
+ * `providerTemplateCandidates({ connectionId })` for each connected account of the shop whose provider serves tools, with
  * `attachProviderByTemplate`. An account with no candidate left is not listed.
  */
 export const useProviderTemplateCandidates = (): ProviderTemplateCandidates => {
@@ -34,7 +34,7 @@ export const useProviderTemplateCandidates = (): ProviderTemplateCandidates => {
         rights.data === undefined
             ? null
             : rights.data.providers
-                  .filter((provider) => provider.abilities.length > 0)
+                  .filter((provider) => provider.tools.length > 0)
                   .flatMap((provider) =>
                       provider.accounts
                           .filter((account) => account.connected)

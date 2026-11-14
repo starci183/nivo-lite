@@ -17,6 +17,7 @@ export interface BillingOverviewBaseProps {
         /** The payment history is drawn here (the credits page draws its own). */
         readonly withOrders: boolean
         readonly planLabel: string
+        readonly planTermLabel: string
         readonly statusLabel: string
         readonly paidUntilLabel: string
         readonly renewalLabel: string
@@ -141,7 +142,7 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
                 items={[
                     {
                         id: "plan",
-                        term: props.props.planLabel,
+                        term: props.props.planTermLabel,
                         description: (
                             <Text isStrong isLoading={isLoading}>
                                 {plan.planName}

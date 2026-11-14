@@ -31,7 +31,7 @@ describe("defineBlock", () => {
         const config = { title: { key: "t" }, slots: {}, children: false } as const
         expect(() => defineBlock({ ...config, id: "Core.Figures", props: z.object({}) })).toThrow(SdkDefinitionError)
         const error = captured(() => defineBlock({ ...config, id: "core.bad", props: z.object({ at: z.date() }) }))
-        expect(error).toMatchObject({ code: "BLOCK_PROPS_UNSERIALIZABLE", at: "core.bad", name: "SdkDefinitionError" })
+        expect(error).toMatchObject({ code: "BLOCK_PROPS_UNSERIALIZABLE", params: { at: "core.bad" }, name: "SdkDefinitionError" })
     })
 })
 
@@ -41,6 +41,23 @@ describe("defineRead and defineAction", () => {
         expect(defineAction({ id: "sales.open", operation: "o", permission: "p", label: { key: "l" } }).entry).toBe(
             "action",
         )
+    })
+
+    it("keep the staff mark an action declares, and leave an action without it unmarked: owner and manager only is the default", () => {
+        const base = { id: "sales.open", operation: "o", permission: "p", label: { key: "l" } } as const
+        expect(defineAction({ ...base, staff: true }).staff).toBe(true)
+        expect(defineAction(base).staff).toBeUndefined()
+        const running = defineAction({
+            id: "sales.note-add",
+            permission: "p",
+            label: { key: "l" },
+            staff: true,
+            input: z.object({}),
+            ports: {},
+            run: () => Promise.resolve({ ok: true }),
+            refreshes: [],
+        })
+        expect(running.staff).toBe(true)
     })
 
     it("refuse a malformed id, and read variables that do not convert", () => {

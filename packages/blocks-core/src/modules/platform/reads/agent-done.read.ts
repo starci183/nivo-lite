@@ -1,17 +1,12 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
-import { q } from "@nivo-lite/agent-sdk/query"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import type { ItemsRegionView } from "../../../views/views.types"
-import { agentRuns } from "../ports"
+import { coreReadsPort } from "../ports"
 import { doneRowOf } from "../runs-done"
 
 /** The most finished items the region lists. */
 export const DONE_SHOWN = 5
-
-/** The fields of a run the region reads. */
-const RUN_FIELDS: ReadonlyArray<string> = ["trigger", "endedAt"]
 
 /** `platform.agent-done`: what the agent finished lately (its runs that ended done, newest first), as the collapsed "done" region reads it. */
 export const agentDoneRead: ReadDefinition = defineRead({
@@ -22,22 +17,12 @@ export const agentDoneRead: ReadDefinition = defineRead({
     paths: { rows: "list" },
     variables: z.object({ agent: z.uuid().max(MAX_ID) }),
     permission: "platform.view",
-    ports: { runs: agentRuns },
-    run: async ({ runs }, { agent }): Promise<ItemsRegionView> => {
-        const where = q.and(q.eq("agentId", agent), q.eq("status", "done"))
-        const page = await runs.list({
-            select: RUN_FIELDS,
-            where,
-            order: [
-                ["endedAt", "desc"],
-                ["id", "desc"],
-            ],
-            page: { size: DONE_SHOWN },
-        })
-        const totals = await runs.aggregate({ where, measures: { count: { kind: "count" } }, limit: 1 })
-        const rows = page.rows.map((listed) => doneRowOf(listed.row))
-        const counted = totals[0]?.measures["count"]
-        const total = typeof counted === "number" ? counted : rows.length
+    ports: { core: coreReadsPort },
+    run: async ({ core }, { agent }): Promise<ItemsRegionView> => {
+        const page = await core.runs.list({ agent, statuses: ["done"], order: "ended", size: DONE_SHOWN })
+        const totals = await core.runs.count(agent, ["done"])
+        const rows = page.rows.map((run) => doneRowOf(run))
+        const total = totals.length === 0 ? rows.length : totals.reduce((sum, group) => sum + group.count, 0)
         return {
             count: total === 0 ? null : String(total),
             rows,

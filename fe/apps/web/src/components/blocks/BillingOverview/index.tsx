@@ -5,8 +5,7 @@ import { useBillingOverview } from "@/hooks/billing"
 import { useMember } from "@/hooks/member"
 import { loadingSlot, useSlotLabels } from "@/hooks/slot"
 import { useUsageCardPlaceholder } from "@/hooks/usageCard"
-import { BillingOverviewBase } from "./component"
-import type { BillingOverviewBaseProps } from "./component"
+import { BillingOverviewBase, type BillingOverviewBaseProps } from "./component"
 
 interface BillingOverviewProps {
     /** The workspace to bill; the signed-in workspace when none is named. */
@@ -24,6 +23,7 @@ const wordsOf = (
     BillingOverviewBaseProps["props"],
     | "withOrders"
     | "planLabel"
+    | "planTermLabel"
     | "statusLabel"
     | "paidUntilLabel"
     | "renewalHint"
@@ -39,6 +39,7 @@ const wordsOf = (
 > => ({
     withOrders,
     planLabel: t("currentPlan"),
+    planTermLabel: t("planTerm"),
     statusLabel: t("status"),
     paidUntilLabel: t("paidUntil"),
     renewalHint: t("renewHint"),

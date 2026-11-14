@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { ok, refused } from "@modules/platform/primitives"
-import { DOCUMENT_MAX_BYTES, DocumentRefusalCode } from "./document-readers.contracts"
-import type {
-    DocumentFile,
-    DocumentLibraries,
-    DocumentReadOutcome,
-    DocumentReaderKind,
-    ReadDocument,
-    ReadOptions,
+import {
+    DOCUMENT_MAX_BYTES,
+    DocumentRefusalCode,
+    type DocumentFile,
+    type DocumentLibraries,
+    type DocumentReadOutcome,
+    type DocumentReaderKind,
+    type ReadDocument,
+    type ReadOptions,
 } from "./document-readers.contracts"
 import { InjectDocumentLibraries } from "./document-readers.decorators"
 import type { DocumentReadersPort } from "./document-readers.port"
@@ -23,9 +24,10 @@ const LETTER = /\p{L}|\p{N}/u
 
 /** The delimiter of a CSV file: the one its first line holds most of, comma by default (a Vietnamese Excel may export with `;`). */
 const csvDelimiterOf = (text: string): string => {
-    const first = text.slice(0, text.indexOf("\n") < 0 ? text.length : text.indexOf("\n"))
+    const first = text.slice(0, !text.includes("\n") ? text.length : text.indexOf("\n"))
     const counts = [",", ";", "\t"].map((delimiter) => ({ delimiter, count: first.split(delimiter).length - 1 }))
-    const best = counts.sort((left, right) => right.count - left.count)[0]
+    counts.sort((left, right) => right.count - left.count)
+    const best = counts[0]
     return best !== undefined && best.count > 0 ? best.delimiter : ","
 }
 

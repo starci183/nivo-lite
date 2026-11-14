@@ -1,10 +1,9 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { useFormatter, useTranslations } from "next-intl"
 import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import {
     DB_ENGINES,
     DB_ENTITIES,
@@ -17,8 +16,7 @@ import {
     useDatabaseWizard,
 } from "@/hooks/database-wizard"
 import type { AgentOption } from "@/modules/types"
-import { DatabaseWizardBase } from "./component"
-import type { DatabaseWizardBaseProps } from "./component"
+import { DatabaseWizardBase, type DatabaseWizardBaseProps } from "./component"
 
 /** What the board hands the database wizard. */
 interface DatabaseWizardProps {
@@ -68,7 +66,7 @@ export const DatabaseWizard = (props: DatabaseWizardProps) => {
                 agentStep: {
                     title: t("agentTitle"),
                     notice: null,
-                    agents: agentChoicesOf(props.agents, "database", tw),
+                    agents: agentChoicesOf(props.agents, tw),
                     value: wizard.agentIds,
                     hint: tw("agentHint"),
                     none: tw("agentNone"),
@@ -161,7 +159,7 @@ const tablesOf = (wizard: DatabaseState, t: DatabaseSay, format: ReturnType<type
                   value: dbTableKey(x),
                   label: `${dbTableKey(x)} (${format.number(x.columns.length)})`,
               })),
-              picked: wizard.picked.map(dbTableKey),
+              picked: wizard.picked.map((table) => dbTableKey(table)),
               none: wizard.picked.length === 0 ? t("tablesNone") : null,
               limit: t("limitNote", { rows: format.number(DB_MAX_ROWS) }),
               mapped: wizard.mapped.map((table) => ({

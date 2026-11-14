@@ -10,12 +10,14 @@ import { LOGGER, withRunScope, withWorkScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
-import { ANSWER, COMBO_ORDER, USAGE } from "@tests/fixtures/builders/ai-tasks-service.builder"
+import { ANSWER, COMBO_ORDER, ITEMS_SCHEMA, USAGE } from "@tests/fixtures/builders/ai-tasks-service.builder"
 import { AiTasksService } from "./ai-tasks.service"
 import { AI_TASKS_METER, AI_TASKS_OPTIONS } from "./ai-tasks.decorators"
 import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
-import { ORDER_SCHEMA } from "./ai-tasks.schema"
+
+/** A booked row: what the insert was handed is an object of columns. */
+const isRow = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
 const RUN = "9e0c8d1a-1111-4222-8333-444455556666"
 const AGENT = "0b6f6c2e-1111-4222-8333-444455556666"
@@ -54,7 +56,7 @@ const build = async () => {
         ],
     }).compile()
     const rows = (): ReadonlyArray<Record<string, unknown>> =>
-        em.insert.mock.calls.map(([, row]) => row as Record<string, unknown>)
+        em.insert.mock.calls.map(([, row]) => row).filter(isRow)
     return { client: moduleRef.get(AiTasksService), ai, rows }
 }
 
@@ -84,8 +86,8 @@ describe("failed tries are booked (owner 2026-11-11: model and credits on every 
             // The scope the graph node host opens for the step `match` of the run (`nodeWorkOf`).
             withWorkScope({ kind: "node", stepKey: "match", agentId: AGENT }, async () => {
                 // The step's first call fails all three tries; the engine asks again and the call answers on its first try.
-                await expect(client.nodeJson(scope, ask, ORDER_SCHEMA)).rejects.toMatchObject({ params: { tries: 3 } })
-                await client.nodeJson(scope, ask, ORDER_SCHEMA)
+                await expect(client.nodeJson(scope, ask, ITEMS_SCHEMA)).rejects.toMatchObject({ params: { tries: 3 } })
+                await client.nodeJson(scope, ask, ITEMS_SCHEMA)
             }),
         )
 
@@ -153,7 +155,7 @@ describe("FX5: a try cut at the output cap books what the provider produced", ()
             })
             .mockResolvedValueOnce(answered)
 
-        await withRunScope(RUN, () => client.nodeJson(scope, ask, ORDER_SCHEMA))
+        await withRunScope(RUN, () => client.nodeJson(scope, ask, ITEMS_SCHEMA))
 
         const [cut] = rows()
         expect(cut).toMatchObject({
@@ -187,7 +189,7 @@ describe("FX5: a try cut at the output cap books what the provider produced", ()
             })
             .mockResolvedValueOnce(answered)
 
-        await withRunScope(RUN, () => client.nodeJson(scope, ask, ORDER_SCHEMA))
+        await withRunScope(RUN, () => client.nodeJson(scope, ask, ITEMS_SCHEMA))
 
         const [cut] = rows()
         expect(cut).toMatchObject({ failure: "length", estimated: true, completionTokens: 7000, durationMs: 72_000 })

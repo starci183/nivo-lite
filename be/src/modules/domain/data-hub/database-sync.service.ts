@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { DATABASE_MAX_ROWS, InjectDatabase } from "@modules/integrations/data-sources"
-import type { DatabaseClient, DatabaseReader } from "@modules/integrations/data-sources"
+import {
+    DATABASE_MAX_ROWS,
+    InjectDatabase,
+    type DatabaseClient,
+    type DatabaseReader,
+} from "@modules/integrations/data-sources"
 import { isDomainError } from "@modules/platform/errors"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { TableMapping } from "./database-config.contracts"
 import { invalid, parseConfig, parseTarget, tableKey } from "./database-config.policy"

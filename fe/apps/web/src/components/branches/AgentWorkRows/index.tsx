@@ -1,8 +1,6 @@
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 
 /** One row of a list of the Work tab: a title, the facts of its supporting line, and the parts Grammar's row draws at its end. */
 interface AgentWorkRow {
@@ -60,6 +58,6 @@ export const AgentWorkRows = (props: AgentWorkRowsProps) => (
         isLoading={props.isLoading}
         footers={footersOf(props)}
         empty={<EmptyNotice message={props.words.emptyMessage} iconSource={nivoIconSource(props.emptyIcon, "leading")} />}
-        items={props.rows.map(rowOf)}
+        items={props.rows.map((entry) => rowOf(entry))}
     />
 )

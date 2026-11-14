@@ -5,9 +5,9 @@ import type { EntityManager } from "typeorm"
 import { AiWorkUsageService } from "./ai-work-usage.service"
 import { AiUsageEventEntity } from "./persistence/entities"
 
-/** The migration that declares the work columns and the indexes the reads go by. */
+/** The baseline migration that declares the work columns and the indexes the reads go by. */
 const MIGRATION = readFileSync(
-    join(__dirname, "../../../../../db/migrations/20261112014000_ai-usage-work-reference.sql"),
+    join(__dirname, "../../../../../db/migrations/20261113180000_baseline.sql"),
     "utf8",
 )
 
@@ -128,48 +128,11 @@ describe("AiWorkUsageService", () => {
         expect(sent).toEqual([])
     })
 
-    it("summary: per day, module and kind of work over the window (at most 90 days), the guide left out (index ai_usage_events_ws_time)", async () => {
-        const { service, sent } = await build([
-            {
-                day: "2026-11-11",
-                module: "accounting",
-                work_kind: "node",
-                calls: 6,
-                failed_tries: 2,
-                tokens: 50_000,
-                cost_usd: 0.0565,
-                failed_cost_usd: 0.01,
-            },
-            {
-                day: "2026-11-11",
-                module: "knowledge",
-                work_kind: "document_read",
-                calls: 4,
-                failed_tries: 0,
-                tokens: 8_000,
-                cost_usd: 0.000565,
-                failed_cost_usd: 0,
-            },
-        ])
-
-        const days = await service.daily("ws-1", 400)
-
-        expect(days.map((day) => [day.module, day.workKind, day.credits, day.failedTries])).toEqual([
-            ["accounting", "node", 50, 2],
-            ["knowledge", "document_read", 0.5, 0],
-        ])
-        const sql = flat(sent[0]?.sql)
-        expect(sql).toContain(`WHERE "u"."workspace_id" = :workspaceId AND "u"."kind" <> 'guide'`)
-        expect(sql).toContain(`COALESCE("u"."work_kind", "u"."kind")`)
-        expect(sent[0]?.parameters).toMatchObject({ days: 90 })
-    })
-
     it("never sums a failed try as an answer: every figure of an answer is filtered on `failure IS NULL`", async () => {
         const { service, sent } = await build()
 
         await service.agentSteps("ws-1", "agent-1", new Date(0))
         await service.byRefs("ws-1", ["lesson:c1"])
-        await service.daily("ws-1", 30)
 
         for (const { sql } of sent) {
             expect(flat(sql)).toContain(`SUM("u"."cost_usd") FILTER (WHERE "u"."failure" IS NULL)`)

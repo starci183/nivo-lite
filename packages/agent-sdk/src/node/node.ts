@@ -1,5 +1,5 @@
 import { z } from "../schema/zod-entry"
-import { assertNamespaced } from "../block/block"
+import { assertNamespaced, assertToolName } from "../block/block"
 import { SdkDefinitionError } from "../block/definition-error"
 import type { NodeConfig, NodeDefinition } from "./node.types"
 
@@ -13,12 +13,13 @@ const holdsBranch = (output: z.ZodType): boolean => output instanceof z.ZodObjec
  * Defines an executable step. Throws `SdkDefinitionError` at module load: `ID_MALFORMED` for a bad node, effect or tool id,
  * `NODE_CONDITION_BRANCH` for a condition whose output holds no `branch`, `NODE_CONDITION_EFFECTS` for a condition that declares effects:
  * a condition is pure, so a graph can re-run its branching at no cost.
+ * @deprecated Kept while the nodes are converted: a package node is `defineTemplateNode` of `@nivo-lite/agent-sdk/template`.
  */
 export const defineNode = <I extends z.ZodType, O extends z.ZodType, P extends z.ZodType>(
     config: NodeConfig<I, O, P>,
 ): NodeDefinition<I, O, P> => {
     assertNamespaced(config.id)
-    for (const name of [...config.effects, ...(config.tools ?? [])]) assertNamespaced(name)
+    for (const name of [...config.effects, ...(config.tools ?? [])]) assertToolName(name)
     for (const name of config.requires ?? []) {
         if (![...config.effects, ...(config.tools ?? [])].includes(name)) {
             throw new SdkDefinitionError("REQUIRES_UNDECLARED", name)

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { SepayError, SepayErrorCode } from "./errors/sepay.error"
 import type { SepayTransaction, SepayTransactionsQuery } from "./sepay.contracts"
@@ -47,6 +46,8 @@ const transactionOf = (row: unknown): SepayTransaction => {
     const time = textOf(row.transaction_date)
     const occurredAt = time === null ? undefined : new Date(`${time.replace(" ", "T")}+07:00`)
     if (id === null || occurredAt === undefined || Number.isNaN(occurredAt.getTime())) return malformed()
+    const reference = textOf(row.reference_number)
+    const account = textOf(row.account_number)
     return {
         id,
         occurredAt,
@@ -55,6 +56,8 @@ const transactionOf = (row: unknown): SepayTransaction => {
         content: textOf(row.transaction_content) ?? "",
         code: textOf(row.code),
         bank: textOf(row.bank_brand_name),
+        ...(reference === null ? {} : { reference }),
+        ...(account === null ? {} : { account }),
     }
 }
 
@@ -103,6 +106,6 @@ export class SepayClient {
         if (!isRecord(answer.body) || !Array.isArray(answer.body.transactions)) {
             throw new SepayError({ code: SepayErrorCode.Unavailable })
         }
-        return answer.body.transactions.map(transactionOf)
+        return answer.body.transactions.map((row: unknown) => transactionOf(row))
     }
 }

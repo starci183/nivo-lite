@@ -42,7 +42,7 @@ describe("MetaThreadsService", () => {
             [
                 ["last_user_at"],
                 ["connection_id", "platform", "user_id"],
-                { overwriteCondition: { where: "meta_threads.last_user_at < EXCLUDED.last_user_at" } },
+                { overwriteCondition: { where: "mt.last_user_at < EXCLUDED.last_user_at" } },
             ],
         ])
         expect(primary.createQueryBuilder).not.toHaveBeenCalled()

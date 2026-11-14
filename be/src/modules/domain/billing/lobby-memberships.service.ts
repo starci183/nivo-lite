@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { WorkspacesService } from "@modules/domain/workspaces"
-import type { WorkspaceMembership } from "@modules/domain/workspaces"
+import { WorkspacesService, type WorkspaceMembership } from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BillingService } from "./billing.service"
 import type { LobbyMembership, Plan } from "./billing.contracts"

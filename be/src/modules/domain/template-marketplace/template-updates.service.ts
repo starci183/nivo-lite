@@ -1,9 +1,23 @@
 import { Injectable } from "@nestjs/common"
-import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
-import { AgentTemplateVersionsService, TemplateRecordsService } from "@modules/domain/agent-templates"
-import type { TemplateInstallView } from "@modules/domain/agent-templates"
-import { applyUnits, instantiate, resolveValues, updateUnits } from "@nivo-lite/agent-sdk/template"
-import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
+import {
+    AgentGraphPublishService,
+    AgentGraphsService,
+    agreedRightsOf,
+    graphDocumentSchema,
+    type AgreedRightRequest,
+} from "@modules/domain/agent-graphs"
+import {
+    AgentTemplateVersionsService,
+    TemplateRecordsService,
+    type TemplateInstallView,
+} from "@modules/domain/agent-templates"
+import {
+    applyUnits,
+    instantiate,
+    resolveValues,
+    updateUnits,
+    type UpdateOffer,
+} from "@nivo-lite/agent-sdk/template"
 import type { OptionalUpdateOffer } from "./template-marketplace.contracts"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
@@ -14,6 +28,12 @@ export type OfferOrNone = UpdateOffer | null
 
 /** The most installations a workspace lists offers for. */
 const LIST_MAX = 100
+
+/** The rights the owner agreed to with an accept, or null when none were named. */
+export type OptionalAgreedRights = ReadonlyArray<AgreedRightRequest> | null
+
+/** The ids of the update units the owner takes in an accept. */
+export type AcceptedUnitIds = ReadonlyArray<string>
 
 @Injectable()
 /**
@@ -48,13 +68,16 @@ export class TemplateUpdatesService {
 
     /**
      * Takes the named units of the newer version into the graph that decides, as a version of kind template. The install moves to the
-     * newer version only when every unit has been taken, so a unit left alone stays on offer.
+     * newer version only when every unit has been taken, so a unit left alone stays on offer. What the merged flow asks for on the
+     * agent's connected accounts passes the rights gate of the publish: asking for more than the agent's workflow holds is refused
+     * `AGENT_GRAPHS_RIGHTS_NEED_OWNER` with the list, and passes when the OWNER's call carries the same entries (`agreedRights`).
      */
     async accept(
         userId: string,
         workspaceId: string,
         installationId: string,
-        unitIds: ReadonlyArray<string>,
+        unitIds: AcceptedUnitIds,
+        agreedRights?: OptionalAgreedRights,
     ): Promise<OptionalUpdateOffer> {
         const member = await this.members.require(userId, workspaceId, ["owner", "manager"])
         const install = await this.requireInstall(workspaceId, installationId)
@@ -72,7 +95,15 @@ export class TemplateUpdatesService {
         if (!document.success)
             throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.UpdateUnavailable })
         const by = { memberId: await this.members.idOf(userId, workspaceId), role: member.role }
-        await this.publish.publishTemplate(workspaceId, merged.agentId, document.data, by)
+        const agreed = agreedRightsOf(agreedRights)
+        // A call that agrees nothing publishes exactly as before node rights.
+        await this.publish.publishTemplate(
+            workspaceId,
+            merged.agentId,
+            document.data,
+            by,
+            ...(agreed.length === 0 ? [] : [agreed]),
+        )
         if (merged.units.every((unit) => unitIds.includes(unit.id))) {
             await this.records.moveInstall({
                 installationId,

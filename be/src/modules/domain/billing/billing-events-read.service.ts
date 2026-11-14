@@ -35,7 +35,7 @@ export class BillingEventsReadService {
             order: { createdAt: "DESC" },
             take: limit,
         })
-        return rows.map(toRow)
+        return rows.map((row) => toRow(row))
     }
 
     /** The newest events of every workspace, newest first. */
@@ -45,6 +45,6 @@ export class BillingEventsReadService {
             order: { createdAt: "DESC" },
             take: limit,
         })
-        return rows.map(toRow)
+        return rows.map((row) => toRow(row))
     }
 }

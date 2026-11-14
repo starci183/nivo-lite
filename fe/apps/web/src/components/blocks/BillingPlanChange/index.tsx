@@ -2,12 +2,10 @@
 
 import { useState } from "react"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { usePlanChoices } from "@/hooks/billing"
-import type { PlanChoicesView } from "@/hooks/billing"
+import { usePlanChoices, type PlanChoicesView } from "@/hooks/billing"
 import { useMember } from "@/hooks/member"
 import type { PlanOfferCard } from "@/components/composites/PlanCards"
-import { BillingPlanChangeBase } from "./component"
-import type { PlanChangeSummary } from "./component"
+import { BillingPlanChangeBase, type PlanChangeSummary } from "./component"
 
 /** What the plan change reads from its page. */
 interface BillingPlanChangeProps {

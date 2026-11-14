@@ -20,7 +20,7 @@ const GOVERNORS = ["owner", "manager"] as const
 /**
  * The pictures of people and agents. A browser uploads straight to Storage through a one-time address issued here (the bucket
  * itself holds the type and size limits), then hands the path back to set the picture; only an HTTPS public address is kept.
- * A person sets their own picture; an agent's picture is a manager's edit, like its name.
+ * A person sets their own picture; an agent's picture is a manager's edit, like its name; the workspace logo takes the same road.
  */
 export class AvatarsService {
     constructor(
@@ -58,6 +58,17 @@ export class AvatarsService {
     ): Promise<void> {
         const address = typeof path === "string" ? this.addressOf("agents", path) : null
         await this.identity.setAvatar(userId, workspaceId, agentId, address)
+    }
+
+    /** An upload address for the workspace logo; a manager only. */
+    async requestWorkspaceUpload(userId: string, workspaceId: string, file: AvatarFile): Promise<AvatarUpload> {
+        await this.members.require(userId, workspaceId, GOVERNORS)
+        return this.issue("workspaces", file)
+    }
+
+    /** The public HTTPS address of an uploaded workspace logo, from the path an upload address named. */
+    workspaceLogoAddressOf(path: string): string {
+        return this.addressOf("workspaces", path)
     }
 
     private async issue(owner: AvatarOwner, file: AvatarFile): Promise<AvatarUpload> {

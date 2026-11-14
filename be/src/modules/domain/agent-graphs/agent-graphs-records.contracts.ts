@@ -1,9 +1,5 @@
-import type { GraphRoad } from "@modules/domain/authority-rules"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type {
-    DecisionClosedAs,
-    DecisionOutcome,
-    FactValue,
     GraphChangeKind,
     GraphMode,
     ProposalKind,
@@ -126,54 +122,103 @@ export interface ProposalRecord {
     readonly createdAt: Date
 }
 
-/** A decision as its record stores it. */
-export interface GraphDecisionRecord {
-    /** The record. */
-    readonly id: string
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The record version a write must still find. */
-    readonly fence: string
+/** A graph as `ensureGraph` writes it when the agent has none. */
+export interface GraphInsert {
     /** The agent. */
     readonly agentId: string
-    /** The work item, or null on a run that left none. */
-    readonly workItemId: string | null
-    /** The road it left by. */
-    readonly road: GraphRoad
-    /** The mode the graph ran in. */
+    /** The installation the agent runs as. */
+    readonly installationId: string
+    /** The first draft. */
+    readonly draft: PlainJson
+    /** The revision of the draft. */
+    readonly draftRev: number
+    /** Whether the graph decides or only records. */
     readonly mode: GraphMode
-    /** What the gate answered, or null. */
-    readonly gateVerdict: "auto" | "ask" | null
-    /** The facts a condition needed and could not read. */
-    readonly unread: ReadonlyArray<string>
-    /** Why the graph could not judge it, or null. */
-    readonly unjudged: string | null
-    /** The type of the subject, or null. */
-    readonly subjectType: string | null
-    /** The id of the subject, or null. */
-    readonly subjectId: string | null
-    /** The version that decided. */
-    readonly versionId: string
-    /** The wake that started the turn, or null. */
-    readonly wakeId: string | null
-    /** The action key. */
-    readonly action: string
-    /** The keys of the nodes the work went through. */
-    readonly path: ReadonlyArray<string>
-    /** The facts as read from real records. */
-    readonly facts: Readonly<Record<string, FactValue>>
-    /** The branch that matched. */
-    readonly branchKey: string
-    /** What the run came to. */
-    readonly outcome: DecisionOutcome
-    /** The approval request a branch ask opened, or null. */
-    readonly approvalRequestId: string | null
-    /** How the work came to an end, or null while it is open. */
-    readonly closedAs: DecisionClosedAs | null
-    /** True when the graph answered differently from the gate alone. */
-    readonly shadowDiff: boolean
-    /** When it ran. */
-    readonly createdAt: Date
-    /** When it last changed. */
-    readonly updatedAt: Date
+}
+
+/** The members of a graph a write changes; an absent member is left as it is. */
+export interface GraphPatch {
+    /** The draft. */
+    readonly draft?: PlainJson
+    /** The revision of the draft. */
+    readonly draftRev?: number
+    /** The version that decides. */
+    readonly activeVersionId?: string | null
+    /** Whether the graph decides or only records. */
+    readonly mode?: GraphMode
+    /** The owner who set the mode. */
+    readonly modeSetBy?: string | null
+    /** When they did (ISO text). */
+    readonly modeSetAt?: string | null
+}
+
+/** A version as `insertVersion` writes it; `publishedAt` absent is the moment of the write. */
+export interface VersionInsert {
+    /** The agent. */
+    readonly agentId: string
+    /** The number of the version within the agent. */
+    readonly number: number
+    /** The frozen graph. */
+    readonly document: PlainJson
+    /** The hash of the document. */
+    readonly documentHash: string
+    /** The context version it was published with, or null. */
+    readonly contextVersionId: string | null
+    /** How it came to be. */
+    readonly changeKind: GraphChangeKind
+    /** A note of the publisher. */
+    readonly note: string
+    /** Who published it, or null. */
+    readonly publishedBy: string | null
+    /** When it was published (ISO text). */
+    readonly publishedAt?: string
+}
+
+/** One source of a version as `insertSource` indexes it. */
+export type SourceInsert = Omit<GraphSourceRecord, "workspaceId">
+
+/** A proposal as `raiseProposal` writes it, open. */
+export interface ProposalInsert {
+    /** The agent. */
+    readonly agentId: string
+    /** The cause it is raised once for. */
+    readonly dedupeKey: string
+    /** What raised it. */
+    readonly kind: ProposalKind
+    /** The version it was raised against, or null. */
+    readonly baseVersionId: string | null
+    /** The node it is about, or null. */
+    readonly nodeKey: string | null
+    /** The branch it is about, or null. */
+    readonly branchKey: string | null
+    /** The change, as data. */
+    readonly patch: RecordJson
+    /** True when applying it would give the agent more reach. */
+    readonly widens: boolean
+    /** The evidence: decision ids, old and new passages. */
+    readonly evidence: { readonly ids: ReadonlyArray<string> }
+}
+
+/** The members of a proposal a decision on it changes. */
+export interface ProposalPatch {
+    /** Where it stands. */
+    readonly status?: ProposalStatus
+    /** Who decided it. */
+    readonly decidedBy?: string
+    /** When (ISO text). */
+    readonly decidedAt?: string
+    /** The version its confirmation published. */
+    readonly resultVersionId?: string
+}
+
+/** Which proposals of an agent a list reads: the statuses, the kind when named, and whether by status (else newest first). */
+export interface ProposalStatusFilter {
+    /** The agent. */
+    readonly agentId: string
+    /** The statuses read. */
+    readonly statuses: ReadonlyArray<ProposalStatus>
+    /** The kind read, or every kind. */
+    readonly kind?: ProposalKind
+    /** True: ordered by status then id; false: newest first. */
+    readonly byStatus: boolean
 }

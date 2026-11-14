@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { TelegramUserWizardService } from "@modules/domain/data-hub"
-import type { TelegramSetupState } from "@modules/domain/data-hub"
+import { TelegramUserWizardService, type TelegramSetupState } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { LoadTelegramUserSetupQuery } from "./load-telegram-user-setup.query"
 
 @QueryHandler(LoadTelegramUserSetupQuery)

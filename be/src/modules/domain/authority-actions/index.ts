@@ -1,5 +1,0 @@
-export type { AuthorityActionRecord } from "./authority-actions.contracts"
-export { ruleRefusalOf } from "./rule-refusal.policy"
-export { AuthorityActionsModule } from "./authority-actions.module"
-export { AuthorityActionsService } from "./authority-actions.service"
-export { authorityActionsEntities } from "./persistence/entities"

@@ -1,9 +1,7 @@
 import { wakeSources } from "./agent-wake-source.policy"
-import { wakeOriginOf } from "./wake-origin.policy"
-import type { WakeOrigin, WakeOriginInput } from "./wake-origin.policy"
-import type { AgentBurstSetting, AgentBurstWindow } from "./agent-work.port"
-import type { AgentWorkOptions } from "./agent-work.options"
+import type { AgentBurstWindow } from "./agent-work.port"
 import type { AgentWakeContext, AgentWakeSource, AgentWakeStatus } from "./agent-work.contracts"
+import type { AgentWakeSettle } from "./agent-wake-settle.contracts"
 
 /** The runtime session key of an agent's turn: the thread key and the agent, so agents that share a runtime agent never share a session. */
 export const sessionKeyOf = (threadKey: string, agentId: string): string => `${threadKey}:${agentId}`
@@ -50,9 +48,6 @@ export const WAKE_RETENTION_MS: number = 30 * 24 * 60 * 60_000
 /** How long the lease row of an idle customer conversation is kept, in milliseconds. */
 export const IDLE_LEASE_RETENTION_MS: number = 2 * 24 * 60 * 60_000
 
-/** The default time zone of a schedule. */
-export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh"
-
 /** The priority of a wake of this source. */
 export const priorityOf = (source: AgentWakeSource): number => wakeSources.of(source).priority
 
@@ -92,21 +87,6 @@ export const wakeProgressOf = (status: AgentWakeStatus): "queued" | "running" | 
     return status === "failed" || status === "dead" ? "failed" : "queued"
 }
 
-/** The word a flow's trigger uses for each origin of a wake. */
-const BURST_SOURCES: Readonly<Record<WakeOrigin, string>> = {
-    channel: "channel",
-    person: "chats-group",
-    agent: "agent",
-    event: "system-event",
-    schedule: "schedule",
-}
-
-/** The burst window of a conversation when the app root names none, milliseconds. */
-export const DEFAULT_DEBOUNCE_MS = 6000
-
-/** The longest a burst may keep a turn waiting when the app root names none, milliseconds. */
-export const DEFAULT_DEBOUNCE_MAX_MS = 20_000
-
 /**
  * The source a follow-up drain is keyed under: a drain that came before its conversation's burst window ended schedules one more
  * for the time the database says is left. It is a word of the job's dedupe key only; no wake has this source.
@@ -134,23 +114,17 @@ export const rearmHopOf = (payload: object): number => {
  * for the same newest message at the same hop asks for the same follow-up, so the burst gets one; a follow-up that itself came
  * early asks for the next hop, which is a new job.
  */
-export const rearmEventKeyOf = (scopeKey: string, wakeId: string, hop: number): string => `${scopeKey}:${wakeId}:${String(hop)}`
+export const rearmEventKeyOf = (scopeKey: string, wakeId: string, hop: number): string =>
+    `${scopeKey}:${wakeId}:${String(hop)}`
 
 /** How long a follow-up drain waits: what the database said is left, never under the floor. */
 export const rearmWaitMsOf = (waitMs: number): number => Math.max(REARM_MIN_WAIT_MS, Math.ceil(waitMs))
 
-/** The window in force: what the app root named, never below zero, or the default. */
-export const debounceMsOf = (named: number | undefined): number => Math.max(0, named ?? DEFAULT_DEBOUNCE_MS)
-
-/** The longest wait in force: what the app root named or the default, never shorter than the window itself. */
-export const debounceMaxMsOf = (named: number | undefined, windowMs: number): number =>
-    Math.max(windowMs, named ?? DEFAULT_DEBOUNCE_MAX_MS)
-
-/** The kind of tag a wake is, as a flow's trigger names it: the origin of the wake in the words of the graph. */
-export const burstSourceOf = (wake: WakeOriginInput): string => BURST_SOURCES[wakeOriginOf(wake)]
-
-/** The window and the longest wait a wake takes: what its flow asked, else the app's defaults; the wait is never shorter than the window. */
-export const burstFor = (asked: AgentBurstSetting | null, options: AgentWorkOptions | null): AgentBurstWindow => {
-    const windowMs = asked?.windowMs ?? debounceMsOf(options?.debounceMs)
-    return { windowMs, maxWaitMs: debounceMaxMsOf(asked?.maxWaitMs ?? options?.debounceMaxMs, windowMs) }
+/**
+ * The window and the longest wait of a wake's settle time (its source's declaration): the longest wait is never shorter than the window,
+ * and a declaration that names none waits no longer than the window.
+ */
+export const burstFor = (settle: AgentWakeSettle): AgentBurstWindow => {
+    const windowMs = Math.max(0, settle.windowMs)
+    return { windowMs, maxWaitMs: Math.max(windowMs, settle.maxWaitMs ?? windowMs) }
 }

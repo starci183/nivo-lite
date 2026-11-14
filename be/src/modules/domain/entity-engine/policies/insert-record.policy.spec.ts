@@ -93,7 +93,7 @@ describe("insertRecord", () => {
         expect(ticketUpdate?.callsOf("returning")).toEqual([["value"]])
         expect(insert?.callsOf("into")).toEqual([[RecordEntity]])
         expect(insert?.callsOf("values")).toEqual([
-            [{ id: ID, workspaceId: WORKSPACE_ID, entity: "sales.lead", data: ANY_FUNCTION }],
+            [{ id: ID, workspaceId: WORKSPACE_ID, entity: "sales.lead", agentId: null, data: ANY_FUNCTION }],
         ])
         expect(insert?.callsOf("setParameter")).toEqual([["data", JSON.stringify(data)]])
         const written = insert?.callsOf("values")[0]?.[0]
@@ -134,8 +134,38 @@ describe("insertRecord (2)", () => {
 
         expect(row.data).toEqual({ n: "#1" })
         expect(insert?.callsOf("values")).toEqual([
-            [{ id: ID, workspaceId: WORKSPACE_ID, entity: "sales.counter", data: ANY_FUNCTION }],
+            [{ id: ID, workspaceId: WORKSPACE_ID, entity: "sales.counter", agentId: null, data: ANY_FUNCTION }],
         ])
         expect(insert?.callsOf("setParameter")).toEqual([["data", '{"n":"#1"}']])
+    })
+})
+
+describe("insertRecord (3)", () => {
+    const AGENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+
+    it.each([
+        ["no agent behind the scope", undefined, null],
+        ["an agent that sees only its own", { id: AGENT, sees: "own" as const }, AGENT],
+        ["an agent a person acts for", { id: AGENT, sees: "all" as const }, AGENT],
+    ])("stamps the scope's agent on the record (%s), never a value of the call", async (_name, agent, stamped) => {
+        const policy = await build()
+        const em = mockEntityManager()
+        const counter: EntityDefinition = {
+            entry: "entity",
+            name: "sales.note",
+            dataKind: "sales-note",
+            fields: { text: { kind: "text", nullable: true } },
+        }
+        const [insert] = queueQueryBuilders(em, [{ execute: { raw: [returned({ text: "x" })] } }])
+
+        await policy.insertRecord(
+            mintScopedTx({ manager: em, workspaceId: WORKSPACE_ID, ...(agent === undefined ? {} : { agent }) }),
+            new Map([[counter.name, counter]]),
+            { entity: "sales.note", id: ID, values: { text: "x" }, stamp: insertStampOf() },
+        )
+
+        expect(insert?.callsOf("values")).toEqual([
+            [{ id: ID, workspaceId: WORKSPACE_ID, entity: "sales.note", agentId: stamped, data: ANY_FUNCTION }],
+        ])
     })
 })

@@ -1,13 +1,9 @@
 import { z } from "zod"
-import type { DataRight } from "../rights/rights.types"
 import { defineDataKind, defineEffect } from "./effect"
 import { defineNode } from "./node"
 import type { NodeDefinition } from "./node.types"
 import { branchesOf, graphNodeProblems, nodeIndexOf, nodeListProblems } from "./problems"
 import { trusted } from "../schema/trusted"
-
-const READ: DataRight = { kind: "order", access: "read", scope: "turn", fields: ["id"] }
-const SEND: DataRight = { kind: "message", access: "write", scope: "turn", fields: ["body"] }
 
 const order = defineDataKind({ kind: "order", title: { key: "o" }, fields: z.object({ id: z.string().max(200) }) })
 const message = defineDataKind({
@@ -15,7 +11,7 @@ const message = defineDataKind({
     title: { key: "m" },
     fields: z.object({ body: z.string().max(200) }),
 })
-const send = defineEffect({ id: "channel.send", title: { key: "s" }, payload: z.object({}), rights: [SEND] })
+const send = defineEffect({ id: "channel.send", title: { key: "s" }, payload: z.object({}) })
 
 const base = {
     title: { key: "t" },
@@ -31,7 +27,6 @@ const pick = trusted<NodeDefinition>({
         id: "order.pick",
         role: "condition",
         output: z.object({ branch: z.enum(["yes", "no"]) }),
-        rights: [READ],
         effects: [],
         examples: [{ name: "e", params: { limit: 1 }, input: {}, output: { branch: "yes" }, effects: [] }],
     }),
@@ -44,14 +39,13 @@ const free = trusted<NodeDefinition>(
         id: "order.free",
         role: "condition",
         output: z.object({ branch: z.string().max(200) }),
-        rights: [],
         effects: [],
         examples: [{ name: "e", params: { limit: 1 }, input: {}, output: { branch: "yes" }, effects: [] }],
     }),
 )
 
 const index = nodeIndexOf({ nodes: [pick, free], effects: [send], tools: [], dataKinds: [order, message] })
-const grant = { rights: [READ, SEND] }
+const grant = {}
 
 describe("nodeListProblems", () => {
     it("is empty for a sound install", () => {
@@ -60,15 +54,10 @@ describe("nodeListProblems", () => {
         ).toEqual([])
     })
 
-    it("names duplicates, unknown effects, unknown kinds and unknown fields", () => {
-        const rights: ReadonlyArray<DataRight> = [
-            { ...READ, fields: ["id", "secret"] },
-            { ...READ, kind: "ghost" },
-        ]
-        const wide = { ...pick, rights }
+    it("names duplicates; no data right is judged against the data kinds", () => {
         expect(
             nodeListProblems({
-                nodes: [pick, pick, wide],
+                nodes: [pick, pick],
                 effects: [send, send],
                 tools: [],
                 dataKinds: [order, order],
@@ -77,10 +66,6 @@ describe("nodeListProblems", () => {
             { code: "NODE_DUPLICATE", at: "order.pick" },
             { code: "EFFECT_DUPLICATE", at: "channel.send" },
             { code: "DATA_KIND_DUPLICATE", at: "order" },
-            { code: "RIGHT_FIELD_UNKNOWN", at: "order.pick:order.secret" },
-            { code: "RIGHT_KIND_UNKNOWN", at: "order.pick:ghost" },
-            { code: "RIGHT_KIND_UNKNOWN", at: "channel.send:message" },
-            { code: "RIGHT_KIND_UNKNOWN", at: "channel.send:message" },
         ])
     })
 
@@ -103,9 +88,9 @@ describe("graphNodeProblems", () => {
     const ref = { key: "k", kind: "condition", step: "order.pick", params: { limit: 1 }, routes: { yes: "a", no: "b" } }
 
     it("leaves a built-in step alone and passes a sound node", () => {
-        expect(graphNodeProblems({ key: "k", kind: "output", step: "reply" }, index, { rights: [] })).toEqual([])
+        expect(graphNodeProblems({ key: "k", kind: "output", step: "reply" }, index, {})).toEqual([])
         expect(graphNodeProblems(ref, index, grant)).toEqual([])
-        expect(graphNodeProblems({ ...ref, step: "order.free", routes: { any: "a" } }, index, { rights: [] })).toEqual(
+        expect(graphNodeProblems({ ...ref, step: "order.free", routes: { any: "a" } }, index, {})).toEqual(
             [],
         )
     })
@@ -116,13 +101,12 @@ describe("graphNodeProblems", () => {
         ])
     })
 
-    it("names a role mismatch, bad params, missing routes and an ungranted right", () => {
-        expect(graphNodeProblems({ key: "k", kind: "execute", step: "order.pick" }, index, { rights: [READ] })).toEqual(
+    it("names a role mismatch, bad params and missing routes", () => {
+        expect(graphNodeProblems({ key: "k", kind: "execute", step: "order.pick" }, index, {})).toEqual(
             [
                 { code: "NODE_ROLE_MISMATCH", at: "k" },
                 { code: "NODE_PARAMS_INVALID", at: "k" },
                 { code: "NODE_ROUTE_MISSING", at: "k" },
-                { code: "NODE_RIGHTS_UNGRANTED", at: "k" },
             ],
         )
         expect(graphNodeProblems({ ...ref, step: "order.free", routes: {} }, index, grant)).toEqual([
@@ -130,7 +114,7 @@ describe("graphNodeProblems", () => {
         ])
     })
 
-    it("does not route an execute node, and counts an uninstalled effect as no right", () => {
+    it("does not route an execute node", () => {
         const run = trusted<NodeDefinition>({ ...pick, id: "order.run", role: "execute", effects: ["order.ghost"] })
         const withRun = nodeIndexOf({ nodes: [run], effects: [], tools: [], dataKinds: [] })
         expect(

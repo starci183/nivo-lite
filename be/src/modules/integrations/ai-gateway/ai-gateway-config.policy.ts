@@ -1,5 +1,5 @@
 import type { Secret } from "@modules/platform/config"
-import { CHEAP_MODEL, EMBEDDING_PROFILES, SONNET_MODEL } from "@nivo-lite/blocks-core"
+import { CHEAP_MODEL, EMBEDDING_PROFILES, SONNET_MODEL } from "@nivo-lite/agent-sdk/models"
 import type {
     AiGatewayHost,
     AiGatewayKey,

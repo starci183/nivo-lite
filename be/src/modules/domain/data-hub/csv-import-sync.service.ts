@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { InjectTable } from "@modules/integrations/data-sources"
-import type { TableClient } from "@modules/integrations/data-sources"
+import { InjectTable, type TableClient } from "@modules/integrations/data-sources"
 import type { DataConnector, DataSyncContext, DataSyncResult } from "./data-hub.contracts"
 import { DataRecordsService } from "@modules/domain/data-records"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { CSV_COPY } from "./messages/csv-import.messages"
 import { invalid, mappingOf, missingColumns, readConfig, summaryOf } from "./csv-import-config.policy"
 import { buildRecords } from "./csv-import-records.policy"
@@ -16,6 +16,7 @@ export class CsvImportSyncService implements DataConnector {
     constructor(
         private readonly records: DataRecordsService,
         @InjectTable() private readonly table: TableClient,
+        private readonly zones: WorkspaceTimeZoneService,
     ) {}
 
     /** Re-reads the saved Google Sheets link with the saved mapping and upserts the rows. */
@@ -29,7 +30,11 @@ export class CsvImportSyncService implements DataConnector {
         if (missing.length > 0) {
             throw invalid(CSV_COPY.sheetChanged(missing.join(", ")))
         }
-        const { records } = buildRecords(table, mappingOf(config))
+        const { records } = buildRecords(
+            await this.zones.timeZoneOf(context.connection.workspaceId),
+            table,
+            mappingOf(config),
+        )
         const updated = await this.records.countExisting(
             context.connection.id,
             config.entity,

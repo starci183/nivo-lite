@@ -5,7 +5,7 @@ import { definePort, portsOf } from "@nivo-lite/agent-sdk/port"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
 import { rightsPort } from "../platform/ports"
-import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "./fixtures/sales.data"
+import { sampleState, SAMPLE_NOW } from "./fixtures/sales.data"
 import { memoryProvider } from "./memory"
 import type { MemoryState } from "./memory"
 import {
@@ -130,7 +130,7 @@ describe("the in-memory list source", () => {
 })
 
 const ORDER_ROWS: EntityQuery = {
-    select: ["orderNo", "status", "amountVnd", "leadId"],
+    select: ["orderNo", "status", "amountVnd", "contactId"],
     order: [
         ["createdAt", "asc"],
         ["id", "asc"],
@@ -194,7 +194,7 @@ describe("the in-memory order port", () => {
     it("lists the orders of a customer newest first through the index the engine has", async () => {
         const page = await ordersOf().list({
             select: ["orderNo", "status", "amountVnd"],
-            where: q.eq("leadId", "lead-4"),
+            where: q.eq("contactId", "contact-lead-4"),
             order: [
                 ["createdAt", "desc"],
                 ["id", "desc"],
@@ -205,29 +205,12 @@ describe("the in-memory order port", () => {
         expect(page.next).toBeNull()
     })
 
-    it("lists the orders that wait for the owner, oldest first, with the customer joined", async () => {
+    it("lists the orders that wait for the owner, oldest first", async () => {
         const page = await ordersOf().list({
             ...ORDER_ROWS,
-            join: { lead: ["contactName"] },
             where: q.and(q.eq("status", "draft"), q.or(q.isNull("amountVnd"), q.gte("amountVnd", 5_000_000))),
         })
-        expect(page.rows.map((listed) => [listed.row.id, listed.joined["lead"]?.data["contactName"]])).toEqual([
-            ["order-1", "Ph\u1ea1m Qu\u1ed1c D\u0169ng"],
-        ])
-    })
-
-    it("joins none for an order with no customer or whose customer is gone", async () => {
-        const state = sampleState([])
-        state.orders.push(
-            { ...ORDER_WAITING, id: "order-9", leadId: "lead-9", createdAt: "2026-12-01T00:00:00.000Z" },
-            { ...ORDER_WAITING, id: "order-8", leadId: null, createdAt: "2026-12-01T00:00:00.000Z" },
-        )
-        const page = await ordersOf(state).list({
-            ...ORDER_ROWS,
-            join: { lead: ["contactName"] },
-            where: q.eq("status", "draft"),
-        })
-        expect(page.rows.slice(-2).map((listed) => listed.joined["lead"])).toEqual([null, null])
+        expect(page.rows.map((listed) => [listed.row.id, listed.row.data["contactId"]])).toEqual([["order-1", "contact-lead-4"]])
     })
 
     it("pages by the cursor it hands out", async () => {
@@ -322,8 +305,8 @@ describe("the in-memory engine conditions, aggregates and settings", () => {
     it("runs ne, in, not, notNull and isNull", async () => {
         expect(await idsWhere(q.ne("status", "paid"))).toHaveLength(5)
         expect(await idsWhere(q.in("status", ["cancelled", "confirmed"]))).toEqual(["order-3", "order-5"])
-        expect(await idsWhere(q.not(q.notNull("leadId")))).toEqual(["order-6"])
-        expect(await idsWhere(q.isNull("leadId"))).toEqual(["order-6"])
+        expect(await idsWhere(q.not(q.notNull("contactId")))).toEqual(["order-6"])
+        expect(await idsWhere(q.isNull("contactId"))).toEqual(["order-6"])
     })
 
     it("sums and counts under the condition of a measure, and groups by a field", async () => {

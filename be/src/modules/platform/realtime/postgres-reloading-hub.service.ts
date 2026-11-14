@@ -1,16 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { notify } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { CancelTimer, Timer } from "@modules/platform/retry"
 import { readNotification } from "./realtime-notification.mapper"
 import { CATCH_UP_ROWS, NOTIFY_CHANNEL, RECONNECT_DELAY_MS } from "./realtime.contracts"
 import { InjectRealtimeTimer, InjectNotificationListener, InjectRealtimeManagers } from "./realtime.decorators"
 import { RealtimeLogEvent } from "./realtime.log-events"
-import { entryOf, PostgresReplayHubService } from "./postgres-replay-hub.service"
-import type { EventFacts } from "./postgres-replay-hub.service"
+import { entryOf, PostgresReplayHubService, type EventFacts } from "./postgres-replay-hub.service"
 import type { NotificationListener } from "./postgres-listener.port"
 import { RealtimeEventEntity } from "./persistence/entities"
 
@@ -146,7 +144,7 @@ export class PostgresReloadingHubService extends PostgresReplayHubService {
             .orderBy("e.seq", "ASC")
             .limit(CATCH_UP_ROWS)
             .getRawMany<EventFacts>()
-        const entries = rows.map(entryOf)
+        const entries = rows.map((row) => entryOf(row))
         this.subscriptions.fanOut(entries)
         for (const entry of entries) loaded.set(entry.topic, Number(entry.position))
         if (rows.length === CATCH_UP_ROWS) await this.reloadFrom(followed, loaded)

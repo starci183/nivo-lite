@@ -1,11 +1,9 @@
 import type { DynamicModule } from "@nestjs/common"
-import { FlowsGraphqlModule } from "@features/api/flows"
 import { ApiKeysGraphqlModule } from "@features/api/api-keys"
 import { DataHubGraphqlModule } from "@features/api/data-hub"
-import { HiringGraphqlModule } from "@features/api/hiring"
 import { AdminGraphqlModule } from "@features/api/admin"
 import { WorkspacesGraphqlModule } from "@features/api/workspaces"
-import { InboxGraphqlModule } from "@features/api/inbox"
+import { WebsiteIntakeGraphqlModule } from "@features/api/website-intake"
 import { WorkspaceDashboardGraphqlModule } from "@features/api/workspace-dashboard"
 import { AgentWorkGraphqlModule } from "@features/api/agent-work"
 import { AgentRunsGraphqlModule } from "@features/api/agent-runs"
@@ -14,37 +12,34 @@ import { SchedulesGraphqlModule } from "@features/api/schedules"
 import { TeamChatGraphqlModule } from "@features/api/team-chat"
 import { TeamChatTurnsGraphqlModule } from "@features/api/team-chat-turns"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
-import { CHAT_FILES_ERROR_KINDS, CHAT_FILES_MESSAGES, ChatFilesModule } from "@modules/domain/chat-files"
-import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import { ChatFilesModule } from "@modules/domain/chat-files"
+import { STORAGE_ASSETS, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
 import { BrainGraphGraphqlModule } from "@features/api/brain-graph"
+import { BrainPoliciesGraphqlModule } from "@features/api/brain-policies"
 import { BrainCriticGraphqlModule } from "@features/api/brain-critic"
 import { PublicDocumentsGraphqlModule } from "@features/api/public-documents"
-import { DossierReviewGraphqlModule } from "@features/api/dossier-review"
-import { EvidenceGraphqlModule } from "@features/api/evidence"
+import { ContactsGraphqlModule } from "@features/api/contacts"
+import { WorkspaceThemeGraphqlModule } from "@features/api/workspace-theme"
 import { LeadFreezesGraphqlModule } from "@features/api/lead-freezes"
 import { AgentGraphsGraphqlModule } from "@features/api/agent-graphs"
 import { AgentWorkflowsGraphqlModule } from "@features/api/agent-workflows"
 import { TemplateMarketplaceGraphqlModule } from "@features/api/template-marketplace"
-import { McpGatewayGraphqlModule } from "@features/api/mcp-gateway"
+import { ToolsGraphqlModule } from "@features/api/tools"
 import { AuthHttpModule } from "@features/api/auth"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
-import { ProductImagesHttpModule } from "@features/api/product-images"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { MetaHttpModule } from "@features/webhooks/meta"
 import { ConnectionsGraphqlModule } from "@features/api/connections"
 import { SepayConnectionGraphqlModule } from "@features/api/sepay-connection"
 import { ZaloConnectionPageGraphqlModule } from "@features/api/zalo-connection-page"
 import { TelegramConnectionPageGraphqlModule } from "@features/api/telegram-connection-page"
-import type { ErrorKind } from "@modules/platform/errors"
-import type { MessageBundle } from "@modules/platform/i18n"
 /** The api area of the API, in registration order. */
 export const apiModules = (): Array<DynamicModule> => [
     WorkspacesGraphqlModule.register({}),
     ApiKeysGraphqlModule.register({}),
-    HiringGraphqlModule.register({}),
     AccountGraphqlModule.register({}),
     ShellGraphqlModule.register({}),
     ConnectionsGraphqlModule.register({}),
@@ -52,7 +47,7 @@ export const apiModules = (): Array<DynamicModule> => [
     ZaloConnectionPageGraphqlModule.register({}),
     TelegramConnectionPageGraphqlModule.register({}),
     DataHubGraphqlModule.register({}),
-    InboxGraphqlModule.register({}),
+    WebsiteIntakeGraphqlModule.register({}),
     WorkspaceDashboardGraphqlModule.register({}),
     AgentWorkGraphqlModule.register({}),
     AgentRunsGraphqlModule.register({}),
@@ -61,29 +56,22 @@ export const apiModules = (): Array<DynamicModule> => [
     TeamChatGraphqlModule.register({}),
     TeamChatTurnsGraphqlModule.register({}),
     ChattypingGraphqlModule.register({}),
-    ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
+    ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS, assets: STORAGE_ASSETS }),
     KnowledgeGraphqlModule.register({}),
     BrainGraphGraphqlModule.register({}),
+    BrainPoliciesGraphqlModule.register({}),
     BrainCriticGraphqlModule.register({}),
     PublicDocumentsGraphqlModule.register({}),
-    DossierReviewGraphqlModule.register({}),
-    EvidenceGraphqlModule.register({}),
     LeadFreezesGraphqlModule.register({}),
-    McpGatewayGraphqlModule.register({}),
+    ContactsGraphqlModule.register({}),
+    WorkspaceThemeGraphqlModule.register({}),
+    ToolsGraphqlModule.register({}),
     AgentGraphsGraphqlModule.register({}),
     AgentWorkflowsGraphqlModule.register({}),
     TemplateMarketplaceGraphqlModule.register({}),
     AuthHttpModule.register({}),
     GoogleConnectionsHttpModule.register({}),
-    ProductImagesHttpModule.register({}),
     MetaConnectionsHttpModule.register({}),
     MetaHttpModule.register({}),
-    FlowsGraphqlModule.register({}),
     AdminGraphqlModule.register({}),
 ]
-
-/** The error kinds of the capabilities this group registers, in registration order. */
-export const apiErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [CHAT_FILES_ERROR_KINDS]
-
-/** The message bundles of the capabilities this group registers, in registration order. */
-export const apiMessages: ReadonlyArray<MessageBundle> = [CHAT_FILES_MESSAGES]

@@ -1,9 +1,6 @@
-import type { AgentTaggedBySource, AgentTriggerPreset, AgentTriggerRecord } from "@modules/domain/agent-work"
-import { CARE_DUE_EVENT } from "@nivo-lite/blocks-core"
-import type { CareTask } from "@nivo-lite/blocks-core"
+import type { AgentTriggerPreset, AgentTriggerRecord } from "@modules/domain/agent-work"
 import type { ModuleTrigger } from "@modules/domain/modules"
 import type { QueueSchedule } from "@modules/platform/queue"
-import type { CareTimerOwner, TimerPress } from "./agent-schedules.contracts"
 
 const MINUTE_MS = 60_000
 
@@ -19,7 +16,7 @@ export const PROBE_BUDGET_MS = 2000
 /** How late a slot must be before the sweep treats it as missed; the database function uses the same two minutes. */
 export const MISSED_AFTER_MS: number = 2 * MINUTE_MS
 
-/** How far back the probes of money and documents look, in milliseconds. */
+/** How far back the probe of documents looks, in milliseconds. */
 export const PROBE_WINDOW_MS: number = 24 * 60 * MINUTE_MS
 
 /** The most items a probe names in its brief. */
@@ -160,38 +157,3 @@ export const isMissed = (at: Date, now: Date): boolean => now.getTime() - at.get
 /** The first trigger of each agent, in the order given: an agent that asked for an event twice is woken once. */
 export const firstPerAgent = <Row extends { readonly agentId: string }>(rows: ReadonlyArray<Row>): ReadonlyArray<Row> =>
     rows.filter((row, at) => rows.findIndex((other) => other.agentId === row.agentId) === at)
-
-/** What starts a care tag: the clock of the care steps. */
-export const CARE_SOURCE = "care-timer"
-
-/**
- * The tag a care timer wakes its agent with: from the system, naming the step, the record it is about (an order, or the customer for an
- * occasion) and the moment it was really due, keyed by the task and its wake time so a replay is one wake. A person's "run now" makes
- * the moment now and names them (`runNowBy`). One shape for the minute sweep, the "run now" door and the list that names the workflow.
- */
-export const careTagOf = (
-    owner: CareTimerOwner,
-    taskId: string,
-    at: Date,
-    care: CareTask,
-    press: TimerPress | null,
-): AgentTaggedBySource => {
-    const aboutOrder = care.kind !== "occasion"
-    return {
-        workspaceId: owner.workspaceId,
-        toAgentId: owner.agentId,
-        source: CARE_SOURCE,
-        text: `${CARE_DUE_EVENT} ${care.kind}`,
-        subject: `${aboutOrder ? "order" : "lead"}:${care.ref}`,
-        ...(aboutOrder ? {} : { leadId: care.ref }),
-        eventKey: `care:${taskId}:${String(at.getTime())}`,
-        context: {
-            event: CARE_DUE_EVENT,
-            careKind: care.kind,
-            ref: care.ref,
-            suffix: care.suffix,
-            dueAt: press === null ? care.dueAt : press.at.toISOString(),
-            ...(press === null ? {} : { runNowBy: press.memberId }),
-        },
-    }
-}

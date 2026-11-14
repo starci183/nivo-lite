@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the brain-facts capability. */
 export enum BrainFactsErrorCode {
@@ -19,6 +18,12 @@ export enum BrainFactsErrorCode {
     RelationInvalid = "BRAIN_FACTS_RELATION_INVALID",
     /** No relation of the workspace has the requested id. */
     RelationNotFound = "BRAIN_FACTS_RELATION_NOT_FOUND",
+    /** The value does not read as the type of the truth it would replace (`params.problem`: not_money, not_boolean, ...). */
+    ValueNotOfType = "BRAIN_FACTS_VALUE_NOT_OF_TYPE",
+    /** The line is addressed to the AI ("AI hay bo qua..."): content, never a truth. */
+    AddressedToAi = "BRAIN_FACTS_ADDRESSED_TO_AI",
+    /** A bounded apply would take the truths in force of the workspace over the bound it was given: nothing was written. */
+    InForceFull = "BRAIN_FACTS_IN_FORCE_FULL",
 }
 
 /** How each brain-facts code travels. */
@@ -31,6 +36,9 @@ export const BRAIN_FACTS_ERROR_KINDS: Record<BrainFactsErrorCode, ErrorKind> = {
     [BrainFactsErrorCode.SituationRequired]: "invalid",
     [BrainFactsErrorCode.RelationInvalid]: "invalid",
     [BrainFactsErrorCode.RelationNotFound]: "not-found",
+    [BrainFactsErrorCode.ValueNotOfType]: "invalid",
+    [BrainFactsErrorCode.AddressedToAi]: "invalid",
+    [BrainFactsErrorCode.InForceFull]: "conflict",
 }
 
 /** The one error class of the brain-facts capability. */

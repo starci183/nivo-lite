@@ -33,4 +33,6 @@ export interface SepayPayload {
     readonly accountNumber: string | undefined
     /** When the bank booked the transfer, as SePay writes it (`2026-11-05 14:02:37`, Vietnam time). */
     readonly transactionDate: string | undefined
+    /** The bank's own reference of the transfer (`referenceCode`, e.g. `FT25309…`), trimmed; undefined when absent or empty. */
+    readonly referenceCode?: string | undefined
 }

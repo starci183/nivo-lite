@@ -10,4 +10,4 @@ export { MetaInboxErrorCode } from "./errors/meta-inbox.error"
 export { MetaDeliveryService } from "./meta-delivery.service"
 
 export { MetaReceiptPolicy } from "./meta-receipt.policy"
-export { metaInboxEntities } from "./persistence/entities"
+export { META_DATA_TYPES } from "./meta.data-types"

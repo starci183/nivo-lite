@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { DashboardRecordsReadService } from "./dashboard-records-read.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspace-dashboard.module-definition"
 import { WorkspaceDashboardService } from "./workspace-dashboard.service"

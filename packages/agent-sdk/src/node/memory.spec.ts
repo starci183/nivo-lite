@@ -28,7 +28,7 @@ const done = (output: StepMemory["output"]): StepMemory => ({
 })
 
 const MEMORY: LeadMemorySnapshot = {
-    subject: { key: "lead:l1", leadId: "l1", conversationId: null },
+    subject: { key: "contact:l1", contactId: "l1", conversationId: null },
     lead: { address: "12 Ly Thuong Kiet", phone: "0901234567" },
     workflows: { "accounting.payment": { settle: done({ paidVnd: 500_000 }) } },
 }
@@ -156,20 +156,20 @@ describe("business failures, facts and masking", () => {
     })
 
     it("masks secrets and personal data for display, keeps files and plain data", () => {
-        expect(maskValue("0901234567", "pii")).toBe("09••••••67")
-        expect(maskValue("abc", "pii")).toBe("•••")
+        expect(maskValue("0901234567", "pii")).toBe("09\u2022\u2022\u2022\u2022\u2022\u202267")
+        expect(maskValue("abc", "pii")).toBe("\u2022\u2022\u2022")
         expect(maskValue("x", "secret")).toBe(SECRET_MASK)
         const file = { $file: "image", id: "f1", mime: "image/png" }
         const value = { phone: "0901234567", apiToken: "t", total: 5, receipt: file, nested: { note: "n" } }
         expect(maskJson(value, { "nested.note": "pii" })).toEqual({
-            phone: "09••••••67",
+            phone: "09\u2022\u2022\u2022\u2022\u2022\u202267",
             apiToken: SECRET_MASK,
             total: 5,
             receipt: file,
-            nested: { note: "•" },
+            nested: { note: "\u2022" },
         })
         const masked = maskSnapshot(MEMORY)
-        expect(masked.lead.phone).toBe("09••••••67")
+        expect(masked.lead.phone).toBe("09\u2022\u2022\u2022\u2022\u2022\u202267")
         expect(masked.workflows["accounting.payment"]?.["settle"]?.output).toEqual({ paidVnd: 500_000 })
     })
 })

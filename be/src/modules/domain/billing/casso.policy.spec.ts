@@ -150,7 +150,7 @@ describe("casso policy > cassoCredits", () => {
                 ],
             }),
         ).toEqual([
-            { amount: 5, content: "", eventId: "casso:T1", bankName: "Casso" },
+            { amount: 5, content: "", eventId: "casso:T1", bankName: "Casso", bankRef: "T1" },
             { amount: 6, content: "", eventId: "casso:R1", bankName: "Casso" },
         ])
     })
@@ -170,6 +170,71 @@ describe("casso policy > cassoCredits", () => {
         ]
         expect(cassoCredits({ data: rows })).toEqual([])
         expect(cassoCredits({})).toEqual([])
+    })
+})
+
+describe("casso policy > cassoCredits, the bank's facts", () => {
+    it("keeps the bank's reference, account and time of a V1 row under the unchanged event id", async () => {
+        const { cassoCredits } = await buildSubject()
+
+        const row = {
+            id: 7,
+            tid: "FT20322ABCD",
+            amount: 150000,
+            description: " NIVO8F3K2 ",
+            when: "2020-11-17 18:46:56",
+            bank_sub_acc_id: "0123456789",
+        }
+        expect(cassoCredits({ error: 0, data: [row] })).toEqual([
+            {
+                amount: 150000,
+                content: "NIVO8F3K2",
+                eventId: "casso:7",
+                bankName: "Casso",
+                bankRef: "FT20322ABCD",
+                account: "0123456789",
+                occurredAt: "2020-11-17T11:46:56.000Z",
+            },
+        ])
+    })
+
+    it("keeps the bank's reference, account and time of a V2 object, never Casso's own id", async () => {
+        const { cassoCredits } = await buildSubject()
+
+        const row = {
+            id: 7,
+            reference: "FT25309XYZ",
+            amount: 150000,
+            description: "NIVO8F3K2",
+            bankName: "ACB",
+            accountNumber: "88888888",
+            transactionDateTime: "2025-02-01 10:00:00",
+        }
+        expect(cassoCredits({ error: 0, data: row })).toEqual([
+            {
+                amount: 150000,
+                content: "NIVO8F3K2",
+                eventId: "casso:7",
+                bankName: "ACB",
+                bankRef: "FT25309XYZ",
+                account: "88888888",
+                occurredAt: "2025-02-01T03:00:00.000Z",
+            },
+        ])
+    })
+
+    it("reads a row without the bank's facts as before, and an unreadable time as no time", async () => {
+        const { cassoCredits } = await buildSubject()
+
+        const tx = { id: 7, description: " NIVO8F3K2 ", amount: "150000", bankName: "ACB" }
+        expect(cassoCredits({ data: tx })).toEqual([
+            { amount: 150000, content: "NIVO8F3K2", eventId: "casso:7", bankName: "ACB" },
+        ])
+        const [credit] = cassoCredits({ data: { ...tx, transactionDateTime: "yesterday", reference: " " } })
+        expect(credit).not.toHaveProperty("occurredAt")
+        expect(credit).not.toHaveProperty("bankRef")
+        // V1 reads `tid` only: a V2 member in a V1 row is not the bank's reference.
+        expect(cassoCredits({ data: [{ ...tx, reference: "R1" }] })[0]).not.toHaveProperty("bankRef")
     })
 })
 

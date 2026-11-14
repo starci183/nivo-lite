@@ -1,6 +1,5 @@
-import { coreAgentMessageViews } from "./agent-message-views"
-import type { AgentMessageView } from "./agent-message-views"
-import { accountingAgentMessageViews } from "../accounting/accounting-agent-message-views"
+import { coreAgentMessageViews, type AgentMessageView } from "./agent-message-views"
+import { accountingAgentMessageViews } from "../sales/ledger/accounting-agent-message-views"
 import { salesAgentMessageViews } from "../sales/sales-agent-message-views"
 
 /**

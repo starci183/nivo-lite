@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AgentIdentityService } from "@modules/domain/agents"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetAgentAvatarPresetCommand } from "./set-agent-avatar-preset.command"
 
 @CommandHandler(SetAgentAvatarPresetCommand)

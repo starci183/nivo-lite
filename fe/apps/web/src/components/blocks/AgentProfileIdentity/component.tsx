@@ -79,7 +79,7 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                             onRemove={props.on.remove}
                         />
                         <Form label={view.title} onSubmit={props.on.save} isPending={view.isSaving}>
-                            <Stack gap="section" measure="form">
+                            <Stack gap="row" measure="form">
                                 <Input
                                     id="agent-name"
                                     name="name"

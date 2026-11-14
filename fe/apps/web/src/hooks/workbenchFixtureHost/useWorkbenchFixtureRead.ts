@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation"
 import { useContext } from "react"
 import type { ReadPage, ReadVariables } from "@nivo-lite/agent-sdk/block"
 import type { HostRead, HostReadOptions } from "@nivo-lite/agent-sdk/client"
+import { useReportReadFreshness } from "@/hooks/workbenchHost"
 import { FIXTURE_QUERY_KEY, FixtureTablesContext, fixtureModeOf, fixtureReadOf } from "@/modules/workbench-host"
 
 const idle = (): void => undefined
@@ -25,7 +26,13 @@ export const useWorkbenchFixtureRead = (
     const mode = fixtureModeOf(useSearchParams().get(FIXTURE_QUERY_KEY))
     const source = tables.reads[operation]
     const page = options?.isPaged === true ? LAST_PAGE : null
-    if (variables === null) return { ...fixtureReadOf("loading", null), page }
-    if (source === undefined) return { ...fixtureReadOf("error", null), page }
-    return { ...fixtureReadOf(mode, source(variables)), page }
+    const answer = variables === null || source === undefined ? null : source(variables)
+    const readOf = (): HostRead => {
+        if (variables === null) return fixtureReadOf("loading", null)
+        if (source === undefined) return fixtureReadOf("error", null)
+        return fixtureReadOf(mode, answer)
+    }
+    const read = readOf()
+    useReportReadFreshness(operation, read.status === "ready" ? answer : null)
+    return { ...read, page }
 }

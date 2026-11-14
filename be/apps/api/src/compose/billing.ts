@@ -29,7 +29,9 @@ import {
 } from "@modules/domain/provider-registry"
 import { RedisModule } from "@modules/integrations/redis"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
-import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { TeamChatNoticesService } from "@modules/domain/team-chat"
+import { ProviderTriggersModule } from "@modules/domain/provider-triggers"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { BillingGraphqlModule } from "@features/api/billing"
 import { CreditsGraphqlModule } from "@features/api/credits"
@@ -45,10 +47,10 @@ export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     BankFeedInboxModule.register({ isGlobal: true }),
     SepayProviderModule.register({ isGlobal: true, feedWebhook: true }),
     BillingModule.register({ isGlobal: true, ...options.billing }),
+    ProviderTriggersModule.register({ isGlobal: true, ports: { agentNames: AgentDirectoryService } }),
     BillingGraphqlModule.register({}),
     SepayTransactionsModule.register({ isGlobal: true }),
-    PaymentTransactionsModule.register({ isGlobal: true }),
-    AiUsageEventsModule.register({ isGlobal: true }),
+    AiUsageEventsModule.register({ isGlobal: true, notices: TeamChatNoticesService }),
     CreditsModule.register({ isGlobal: true }),
     CreditsGraphqlModule.register({}),
     PaymentOrderRequestsModule.register({ isGlobal: true }),

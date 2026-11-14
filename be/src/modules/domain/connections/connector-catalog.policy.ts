@@ -19,6 +19,15 @@ const STATUS_BY_ID: Readonly<Record<string, ConnectorStatus>> = {
     smtp: "official",
     google: "official",
     webhook: "official",
+    // Built from public docs, not walked live yet: the domain registrars and the media providers.
+    inet: "early",
+    tino: "early",
+    elevenlabs: "early",
+    veo: "early",
+    tiktok: "early",
+    shotstack: "early",
+    creatomate: "early",
+    json2video: "early",
     tiktok_chat: "soon",
     shopee: "soon",
     tiktok_shop: "soon",
@@ -28,6 +37,7 @@ const STATUS_BY_ID: Readonly<Record<string, ConnectorStatus>> = {
     haravan: "soon",
     shopify: "soon",
     woocommerce: "soon",
+    // Connectable keys, no operation built: their public documentation could not be read.
     misa_amis: "soon",
     misa_meinvoice: "soon",
     viettel_sinvoice: "soon",

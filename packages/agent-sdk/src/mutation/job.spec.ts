@@ -1,4 +1,5 @@
 import { z } from "../schema/zod-entry"
+import { thrownFailureOf } from "../tests/thrown-failure"
 import { defineJob, JOB_ATTEMPTS_MAX, jobProblems } from "./job"
 import type { JobContext } from "./job"
 import { JobDefinitionError } from "./job-definition-error"
@@ -77,6 +78,6 @@ describe("defineJob", () => {
         const attempt = (): unknown =>
             defineJob({ name: "send", input, ports: {}, attempts: 0, run: () => Promise.resolve() })
         expect(attempt).toThrow(JobDefinitionError)
-        expect(attempt).toThrow("JOB_NAME_MALFORMED: send")
+        expect(thrownFailureOf(attempt)).toEqual({ code: "JOB_NAME_MALFORMED", at: "send" })
     })
 })

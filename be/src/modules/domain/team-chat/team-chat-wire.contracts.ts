@@ -272,3 +272,6 @@ export interface DecideWireRequest {
     /** Approve or reject. */
     readonly verdict: "approve" | "reject"
 }
+
+/** The module a group room is for, as an input names it; null when the input names none. */
+export type OptionalModuleKey = string | null

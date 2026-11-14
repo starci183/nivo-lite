@@ -16,6 +16,8 @@ export type { LocalTimer } from "./queue-timer.policy"
 export { startLocalInterval } from "./queue-timer.policy"
 
 export { QueueOutboxService } from "./queue-outbox.service"
+export { QueueStatusService } from "./queue-status.service"
+export { InjectQueueStatusService } from "./queue.decorators"
 export type { QueueOptions } from "./queue.options"
 
 export type { QueueTimeout } from "./queue-timeout.port"

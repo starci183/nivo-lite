@@ -1,5 +1,0 @@
-export { BookingHoursModule } from "./booking-hours.module"
-export { BookingHoursService } from "./booking-hours.service"
-export { bookingHoursEntities } from "./persistence/entities"
-export { BookingHoursReadService } from "./booking-hours-read.service"
-export type { BookingHourRecord } from "./booking-hours-read.contracts"

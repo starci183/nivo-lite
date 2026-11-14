@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto"
 import { Injectable, Optional } from "@nestjs/common"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
@@ -13,19 +11,15 @@ import type { GraphRecord, VersionRecord } from "./agent-graphs-records.contract
 import { graphDocumentSchema } from "./agent-graphs.schema"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type {
-    BranchApprover,
     GraphChangeKind,
     GraphDocument,
     GraphMode,
     GraphVersionView,
 } from "./agent-graphs.contracts"
-import type { DecisionView } from "./agent-graph-decisions.service"
-import { branchApproverOf } from "./policies/branch-approver.policy"
 import { withoutStrayStops } from "./policies/stray-stops.policy"
 import { sourcesIndexOf } from "./policies/sources-index.policy"
-import { EMPTY_GRANT, ownRunGrantOf, workflowRunGrantOf } from "./policies/workflow-grant.policy"
+import { EMPTY_GRANT, ownRunGrantOf, workflowRunGrantOf, type RunGrant } from "./policies/workflow-grant.policy"
 import { agentToolsOf } from "./policies/flow.policy"
-import type { RunGrant } from "./policies/workflow-grant.policy"
 
 /** The most versions one listing answers. */
 const VERSION_LIMIT = 100
@@ -107,9 +101,6 @@ export interface PublishInput {
 /** A graph, or null when the agent has none or it cannot be read. */
 export type OptionalGraphState = GraphState | null
 
-/** The approver of a branch, or null when the version names none. */
-export type OptionalBranchApprover = BranchApprover | null
-
 /** The hash of a graph; the same graph always has the same hash. */
 const hashOf = (document: GraphDocument): string => createHash("sha256").update(JSON.stringify(document)).digest("hex")
 
@@ -156,12 +147,6 @@ export class AgentGraphsService {
             workspaceId,
             async (tx) => (await this.records.graphOf(tx, agentId))?.activeVersionId ?? null,
         )
-    }
-
-    /** Whether the live version of the agent's graph has a flow of nodes, so a tag or a message can start it. */
-    async hasLiveFlow(workspaceId: string, agentId: string): Promise<boolean> {
-        const state = await this.stateOfAgent(workspaceId, agentId)
-        return state?.active?.flow !== undefined
     }
 
     /** The graph of the agent, or null when it has none or it cannot be read. */
@@ -269,12 +254,6 @@ export class AgentGraphsService {
         return (await this.versionAt(workspaceId, agentId, versionId)).document
     }
 
-    /** The approver the branch of a decision named in the version that decided, or null when that version no longer names one. */
-    async approverOf(decision: DecisionView): Promise<OptionalBranchApprover> {
-        const document = await this.documentOf(decision.workspaceId, decision.agentId, decision.versionId)
-        return branchApproverOf(document, decision.action, decision.branchKey, decision.path)
-    }
-
     /** Of these agents of the workspace, the ones that have no graph yet. */
     async missingGraph(workspaceId: string, agentIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
         const held = new Set<string>()
@@ -318,6 +297,21 @@ export class AgentGraphsService {
     }
 
     /**
+     * The id a run's version is NAMED BY wherever a right or an audit names it (the run token's step, the call log, the shadow
+     * tallies, the node rows): always the WORKFLOW version. A run of the primary workflow is pinned to the agent graph version that
+     * mirrors its workflow version, so that pin is answered as the workflow version that published or adopted it; a pin that is
+     * already a workflow version, and a graph version no workflow version mirrors, are answered as they are. One indexed read.
+     */
+    workflowVersionIdOf(workspaceId: string, agentId: string, versionId: string): Promise<string> {
+        const { workflows } = this
+        if (workflows === undefined) return Promise.resolve(versionId)
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const mirror = await workflows.versionOfGraphVersion(tx, agentId, versionId)
+            return mirror?.id ?? versionId
+        })
+    }
+
+    /**
      * What a step of a run read by this version may reach. A version of the agent's own graph (the primary workflow) runs under its
      * grant as it stands. A version of any other workflow runs under what its own graph declares, its tools and effects bounded by the
      * tool set the agent's module declares (`workflowRunGrantOf`): a workflow never reaches past the agent, and never depends on what
@@ -347,7 +341,7 @@ export class AgentGraphsService {
             : {
                   agentId: version.agentId,
                   number: version.number,
-                  document: { nodes: [], rights: [], flow: version.document },
+                  document: { nodes: [], flow: version.document },
               }
     }
 

@@ -1,6 +1,6 @@
 import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { CreditTopupLotsQuery } from "../__generated__/graphql"
 
 type QueryCreditTopupLotsResponse = CreditTopupLotsQuery
@@ -29,7 +29,7 @@ export const queryCreditTopupLots = async ({
     query = QueryCreditTopupLots.Query1,
     signal,
 }: QueryParams<QueryCreditTopupLots> = {}): Promise<ApolloClient.QueryResult<QueryCreditTopupLotsResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
     })

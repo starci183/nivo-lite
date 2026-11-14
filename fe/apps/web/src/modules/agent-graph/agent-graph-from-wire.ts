@@ -19,10 +19,8 @@ import type {
     AgentGraphWireSource,
     AgentGraphWireStep,
 } from "./agent-graph-wire"
-import { termsOfWhen, termsWords } from "./agent-graph-condition"
-import type { AgentGraphConditionWords } from "./agent-graph-condition"
-import { roleWordOf } from "./agent-graph-words"
-import type { AgentGraphT } from "./agent-graph-words"
+import { termsOfWhen, termsWords, type AgentGraphConditionWords } from "./agent-graph-condition"
+import { roleWordOf, type AgentGraphT } from "./agent-graph-words"
 
 /** One version of the history as the contract lists it. */
 export interface AgentGraphWireVersion {
@@ -174,7 +172,7 @@ const branchOf = (
         key: branch.key,
         when: sentence(ctx.isOneFact !== true),
         whenFull: sentence(true),
-        then: branch.then,
+        mode: branch.mode,
         next: branch.next,
         approver: approverOf(branch.approver, members, words.t, coverageWordsOf(row, words.t)),
         sources: branch.sources.map((source) => sourceOf(source, words, ctx.input)),

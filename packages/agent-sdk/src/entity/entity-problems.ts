@@ -2,7 +2,9 @@ import type { FilterExpr } from "../query/query.types"
 import { isNamespaced } from "../schema/namespaced"
 import type { AnyEntityDefinition } from "./entity-any.types"
 import type { ConstraintDef, EntityProblem, EntityProblemCode, FieldDef, IndexPart } from "./entity.types"
+import { FILE_ACCEPT_MAX, FILE_BYTES_CEILING, FILE_LIST_MAX, isFileAccept } from "./file-ref"
 import { partitionNameOf } from "./partition-name"
+import { agentOfRecordType } from "./record-scope"
 import { sequenceDeclarationValid } from "./sequence-format"
 import { SYSTEM_FIELDS } from "./system-fields"
 
@@ -22,7 +24,7 @@ export const filterFieldsOf = (expr: FilterExpr): ReadonlyArray<string> => {
     switch (expr.op) {
         case "and":
         case "or":
-            return expr.of.flatMap(filterFieldsOf)
+            return expr.of.flatMap((entry) => filterFieldsOf(entry))
         case "not":
             return filterFieldsOf(expr.of)
         case "has":
@@ -100,6 +102,52 @@ const checkJsonb = (name: string, field: FieldDef, report: Report): void => {
     }
 }
 
+/** The count form of a file field: the single form is nullable with no default, the list form (`many`) has a whole `max` of 1 to `FILE_LIST_MAX`, is not nullable and defaults to empty. */
+const checkFileCount = (at: string, field: FieldDef, report: Report): void => {
+    if (field.many !== true) {
+        if (field.many !== undefined || field.max !== undefined) report("ENTITY_FILE_MANY_INVALID", at)
+        if (!field.nullable || field.default !== undefined) report("ENTITY_FILE_PRESENCE_INVALID", at)
+        return
+    }
+    const { max } = field
+    if (max === undefined || !Number.isInteger(max) || max < 1 || max > FILE_LIST_MAX) report("ENTITY_FILE_MANY_INVALID", at)
+    if (field.nullable || field.default !== "empty") report("ENTITY_FILE_PRESENCE_INVALID", at)
+}
+
+/**
+ * A file field: a non-empty list of valid content types, a whole positive size limit under the ceiling; the single form nullable with no
+ * default, the list form (`many`) with a whole `max` of 1 to `FILE_LIST_MAX`, not nullable and defaulting to empty.
+ */
+const checkFile = (name: string, field: FieldDef, report: Report): void => {
+    const at = `fields.${name}`
+    if (field.kind !== "file") {
+        if (field.accept !== undefined) report("ENTITY_FILE_ACCEPT_INVALID", at)
+        if (field.maxBytes !== undefined) report("ENTITY_FILE_MAX_BYTES_INVALID", at)
+        if (field.many !== undefined || field.max !== undefined) report("ENTITY_FILE_MANY_INVALID", at)
+        return
+    }
+    const accept = field.accept ?? []
+    if (accept.length === 0 || accept.length > FILE_ACCEPT_MAX || !accept.every((entry) => isFileAccept(entry))) {
+        report("ENTITY_FILE_ACCEPT_INVALID", at)
+    }
+    const { maxBytes } = field
+    if (maxBytes === undefined || !Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > FILE_BYTES_CEILING) {
+        report("ENTITY_FILE_MAX_BYTES_INVALID", at)
+    }
+    checkFileCount(at, field, report)
+}
+
+/** A contact field: no default (the id is the caller's), `clear` only on a nullable field; `onContactDelete` only on a contact field. */
+const checkContact = (name: string, field: FieldDef, report: Report): void => {
+    const at = `fields.${name}`
+    if (field.kind !== "contact") {
+        if (field.onContactDelete !== undefined) report("ENTITY_CONTACT_INVALID", at)
+        return
+    }
+    if (field.default !== undefined) report("ENTITY_CONTACT_INVALID", at)
+    if (field.onContactDelete === "clear" && !field.nullable) report("ENTITY_CONTACT_INVALID", at)
+}
+
 const checkField = (name: string, field: FieldDef, report: Report): void => {
     const at = `fields.${name}`
     if (
@@ -113,6 +161,8 @@ const checkField = (name: string, field: FieldDef, report: Report): void => {
         report("ENTITY_SEQUENCE_FORMAT_INVALID", at)
     }
     checkJsonb(name, field, report)
+    checkFile(name, field, report)
+    checkContact(name, field, report)
 }
 
 const checkFields = (entity: AnyEntityDefinition, report: Report): void => {
@@ -154,6 +204,27 @@ const checkConstraintsAndKeys = (entity: AnyEntityDefinition, report: Report): v
     }
 }
 
+/**
+ * The declared states: the field is a declared enum, every state named (initial, a source, a target) is one of its values. Needs no
+ * other entity, so `defineEntity` refuses on it at module load.
+ */
+const checkStates = (entity: AnyEntityDefinition, report: Report): void => {
+    const { states } = entity
+    if (states === undefined) return
+    const field = hasOwn(entity.fields, states.field) ? entity.fields[states.field] : undefined
+    const values = new Set(field?.kind === "enum" ? (field.of ?? []) : [])
+    const named = [
+        ...(states.initial ?? []),
+        ...Object.keys(states.transitions),
+        ...Object.values(states.transitions).flat(),
+    ]
+    if (values.size === 0 || named.some((state) => !values.has(state))) report("ENTITY_STATES_INVALID", "states")
+}
+
+/**
+ * The refs: a target the catalog holds, and of the SAME agent (`RECORD_REF_OTHER_AGENT`): agents never reach each other's records, so
+ * a ref to another agent's type is a definition-time problem. Cross-agent data goes through `callWorkflow`.
+ */
 const checkRelations = (
     entity: AnyEntityDefinition,
     catalog: ReadonlyMap<string, AnyEntityDefinition>,
@@ -162,6 +233,9 @@ const checkRelations = (
     for (const [name, relation] of Object.entries(entity.relations ?? {})) {
         if (relation.target !== entity.name && !catalog.has(relation.target)) {
             report("ENTITY_RELATION_TARGET_UNKNOWN", `relations.${name}`)
+        }
+        if (agentOfRecordType(relation.target) !== agentOfRecordType(entity.name)) {
+            report("RECORD_REF_OTHER_AGENT", `relations.${name}`)
         }
     }
 }
@@ -213,11 +287,12 @@ export const entityLocalProblems = (entity: AnyEntityDefinition): ReadonlyArray<
         (report) => checkFields(entity, report),
         (report) => checkIndexes(entity, report),
         (report) => checkConstraintsAndKeys(entity, report),
+        (report) => checkStates(entity, report),
     ])
 
 /**
- * Every problem of a declaration against the catalog of the entities it may name: the local problems plus the relation targets,
- * the projection sources and a partition name another entity already maps to. An empty list means the declaration is sound.
+ * Every problem of a declaration against the catalog of the entities it may name: the local problems plus the relation targets (known,
+ * and of the same agent), the projection sources and a partition name another entity already maps to. An empty list means the declaration is sound.
  */
 export const entityProblems = (
     entity: AnyEntityDefinition,

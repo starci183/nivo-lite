@@ -1,5 +1,4 @@
-import { ConnectionGrantsBand } from "@/components/frames/ConnectionGrantsBand"
-import type { ConnectionGrantsBandProps } from "@/components/frames/ConnectionGrantsBand"
+import { ConnectionGrantsBand, type ConnectionGrantsBandProps } from "@/components/frames/ConnectionGrantsBand"
 
 /** The words, the read and the commands of the agents band of a connection. */
 export interface ConnectionAgentsBaseProps {

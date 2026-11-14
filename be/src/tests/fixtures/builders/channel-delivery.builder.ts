@@ -1,9 +1,9 @@
 import type { DeliveryRequest } from "@modules/domain/channels"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import type { ChannelTarget } from "@modules/domain/channels/channels.contracts"
 import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
 
 /** A Telegram conversation target, with the selected fields overridden for a case. */
-export const target = (patch: Partial<ChatConversationTarget> = {}): ChatConversationTarget => ({
+export const target = (patch: Partial<ChannelTarget> = {}): ChannelTarget => ({
     id: "conv-1",
     workspaceId: "ws-1",
     channel: "telegram",
@@ -13,7 +13,7 @@ export const target = (patch: Partial<ChatConversationTarget> = {}): ChatConvers
 })
 
 /** A Zalo conversation target, with the selected fields overridden for a case. */
-export const zaloTarget = (patch: Partial<ChatConversationTarget> = {}): ChatConversationTarget =>
+export const zaloTarget = (patch: Partial<ChannelTarget> = {}): ChannelTarget =>
     target({ channel: "zalo", externalId: "user-1", ...patch })
 
 /** The answer of a connection secret read that refuses. */

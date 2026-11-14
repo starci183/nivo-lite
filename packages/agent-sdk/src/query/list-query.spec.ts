@@ -13,7 +13,7 @@ function codeOf(call: () => unknown): string {
     try {
         call()
     } catch (error) {
-        return error instanceof QueryBuildError ? `${error.code}: ${error.at}` : "other"
+        return error instanceof QueryBuildError ? `${error.code}: ${String(error.params.at)}` : "other"
     }
     return "none"
 }

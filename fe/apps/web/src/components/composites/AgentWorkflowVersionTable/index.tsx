@@ -98,7 +98,12 @@ export const AgentWorkflowVersionTable = (props: AgentWorkflowVersionTableProps)
         version,
     }))
     const renderCell = (row: VersionRow, columnId: string) => {
-        if (columnId === "number") return <Link href={props.props.hrefOf(row.version.number)}>{row.version.title}</Link>
+        if (columnId === "number")
+            return (
+                <Link variant="plain" href={props.props.hrefOf(row.version.number)}>
+                    {row.version.title}
+                </Link>
+            )
         if (columnId === "date") return <Text tone="muted">{row.version.date ?? ""}</Text>
         if (columnId === "author") return <Text tone="muted">{row.version.author ?? ""}</Text>
         if (columnId === "note") return <Text tone="muted">{row.version.note ?? row.version.description}</Text>

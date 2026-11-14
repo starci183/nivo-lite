@@ -140,4 +140,11 @@ export class BrainFactEntity extends UuidAbstractEntity {
     /** The vector's dimensions, computed by the database from the vector itself. */
     @Column({ name: "embedding_dimensions", type: "integer", nullable: true, insert: false, update: false })
     embeddingDimensions?: number | null
+
+    /**
+     * When the vector index accepted the vector of the fact's line (vectors live in the index, one point per row; migration
+     * 20261112015600). Never read back by default: a build that meets a database without the column still reads facts.
+     */
+    @Column({ name: "indexed_at", type: "timestamptz", nullable: true, select: false })
+    indexedAt?: Date | null
 }

@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -7,20 +9,24 @@ import { AgentWorkErrorCode } from "./errors/agent-work.error"
 
 const HAS_AGENT = 'SELECT * FROM "public"."agent_work_has_agent"($1, $2)'
 
+const INSTALLATION = mock<InstallationRecord>({ id: "inst-1", agentId: "agent-1" })
+
 const build = async (rows: ReadonlyArray<unknown>) => {
     const members = mock<WorkspaceMembersService>({
         require: jest.fn().mockResolvedValue({}),
         idOf: jest.fn().mockResolvedValue("member-1"),
     })
+    const installations = mock<InstallationRecordsService>({ find: jest.fn().mockResolvedValue(INSTALLATION) })
     const em = mockEntityManager({ query: [HAS_AGENT, rows] })
     const container = await Test.createTestingModule({
         providers: [
             AgentWorkAccessService,
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: InstallationRecordsService, useValue: installations },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
         ],
     }).compile()
-    return { service: container.get(AgentWorkAccessService), members, em }
+    return { service: container.get(AgentWorkAccessService), members, installations, em }
 }
 
 describe("AgentWorkAccessService.manager", () => {
@@ -68,4 +74,22 @@ describe("AgentWorkAccessService.agent", () => {
             })
         },
     )
+})
+
+describe("AgentWorkAccessService.managedInstallation", () => {
+    it("proves the seat first and then answers the instance the workspace holds", async () => {
+        const { service, members, installations } = await build([])
+
+        await expect(service.managedInstallation("user-1", "ws-1", "inst-1")).resolves.toBe(INSTALLATION)
+        expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
+        expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
+    })
+
+    it("reads no instance for a caller the membership refuses", async () => {
+        const { service, members, installations } = await build([])
+        members.require.mockRejectedValueOnce(new Error("forbidden"))
+
+        await expect(service.managedInstallation("user-1", "ws-1", "inst-1")).rejects.toThrow("forbidden")
+        expect(installations.find).not.toHaveBeenCalled()
+    })
 })

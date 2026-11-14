@@ -9,12 +9,15 @@ export type {
     BlockChildren,
     BlockConfig,
     BlockDefinition,
+    BlockFileStore,
+    BlockFiles,
     BlockHost,
     BlockNavigation,
     BlockPropsOf,
     BlockReadSlot,
     BlockSlot,
     BlockSlots,
+    FileUploadOptions,
     InputProblem,
     ParamHandle,
     ReadConfig,
@@ -25,6 +28,7 @@ export type {
     ReadVariables,
     RunActionConfig,
     RunReadConfig,
+    SignedFileUrl,
     SlotValues,
 } from "./block.types"
 export type {
@@ -49,3 +53,7 @@ export type { ParsedInput } from "./input"
 export { actionPayloadOf, parseStrict } from "./input"
 export { outcomeOf } from "./outcome"
 export { defineAction, defineBlock, defineRead } from "./block"
+export type { FileBindings } from "./files"
+export { FILE_RECORD_SLOT, FILE_UNBOUND, FILE_WRITE_SLOT, FileBindingError, filesVia } from "./files"
+export { defineRecordQuery } from "./record-query"
+export type { RecordQueryConfig } from "./record-query"

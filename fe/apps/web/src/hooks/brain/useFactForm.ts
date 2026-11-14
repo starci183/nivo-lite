@@ -1,8 +1,7 @@
 "use client"
 
 import type { MutateSaveBrainFactRequest } from "@/hooks/swr"
-import { dayInstant } from "@/modules/brain"
-import type { FactPreset } from "@/modules/brain"
+import { dayInstant, type FactPreset } from "@/modules/brain"
 import type { BrainFact, FactScope, FactSubjectType } from "@/modules/types"
 import { useState } from "react"
 

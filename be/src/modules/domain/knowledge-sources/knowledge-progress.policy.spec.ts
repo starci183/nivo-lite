@@ -2,7 +2,6 @@ import { Test } from "@nestjs/testing"
 import {
     columnsOf as realColumns,
     embedPercent as realEmbedPercent,
-    factsPercent as realFactsPercent,
     knowledgeProgressTopic as realTopic,
     progressOfRow as realProgress,
 } from "./knowledge-progress.policy"
@@ -16,7 +15,6 @@ const buildSubject = async () => {
                 useValue: {
                     columnsOf: realColumns,
                     embedPercent: realEmbedPercent,
-                    factsPercent: realFactsPercent,
                     knowledgeProgressTopic: realTopic,
                     progressOfRow: realProgress,
                 },
@@ -130,15 +128,5 @@ describe("columnsOf", () => {
         expect(columnsOf({ progress: 42.4 })).toEqual({ progress: 42 })
         expect(columnsOf({ progress: -3 })).toEqual({ progress: 0 })
         expect(columnsOf({ progress: 140 })).toEqual({ progress: 100 })
-    })
-})
-
-describe("factsPercent", () => {
-    it("fills 85 to 99 while the windows of the document are read", async () => {
-        const { factsPercent } = await buildSubject()
-        expect(factsPercent(0, 4)).toBe(85)
-        expect(factsPercent(2, 4)).toBe(92)
-        expect(factsPercent(4, 4)).toBe(99)
-        expect(factsPercent(0, 0)).toBe(85)
     })
 })

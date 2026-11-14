@@ -1,7 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateCopyInviteLink } from "@/modules/api/graphql/mutations/mutation-copy-invite-link"
 import { queryWorkspaceInvites } from "@/modules/api/graphql/queries/query-workspace-invites"
 import { answeredData } from "@/hooks/workspaceread"

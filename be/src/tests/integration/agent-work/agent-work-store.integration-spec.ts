@@ -1,5 +1,4 @@
 import assert from "node:assert/strict"
-import { join } from "node:path"
 import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentDrainService } from "../../../modules/domain/agent-work/agent-drain.service"
@@ -8,8 +7,7 @@ import { AgentWakeService } from "../../../modules/domain/agent-work/agent-wake.
 import { AgentWorkSettingsService } from "../../../modules/domain/agent-work/agent-work-settings.service"
 import type { AgentWake } from "../../../modules/domain/agent-work/agent-work.contracts"
 import { agentWakeOf } from "../../fixtures/builders/agent-work.builder"
-import { persistOfficeRows } from "../../fixtures/builders/office-chain.builder"
-import type { OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
+import { persistOfficeRows, type OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
 import { AGENT_WORK_MODULES, ScriptedAgentWork } from "../../world/agent-work-capabilities.options"
 import {
     drainJobsOf,
@@ -22,11 +20,9 @@ import {
     wakesOfFact,
 } from "../../world/agent-work-database.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
-import { ageWake, flowBurstOf, stampBurst } from "../../world/agent-work-burst.service"
+import { dueLater } from "../../world/agent-work-burst.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
-
-const CHATBOT_FLOW = join(__dirname, "../../../../../.starcistacks/dev/seeds/data/graphs/chatbot.json")
 
 const world = useTestWorld({ modules: AGENT_WORK_MODULES })
 
@@ -52,10 +48,7 @@ const wakeOf = (eventKey: string, over: Partial<AgentWake> = {}): AgentWake =>
     })
 
 const customerWake = (eventKey: string, conversationId: string): AgentWake =>
-    wakeOf(eventKey, { source: "customer", context: { conversationId } })
-
-const messageWake = (eventKey: string, conversationId: string): AgentWake =>
-    wakeOf(eventKey, { source: "customer", context: { conversationId, messageId: `${world.prefix}:${eventKey}` } })
+    wakeOf(eventKey, { source: "trigger", context: { conversationId } })
 
 const post = (wake: AgentWake) => em().transaction((tx) => world.resolve(AgentWakeService).wake(tx, wake))
 
@@ -63,8 +56,6 @@ const drain = (scopeKey = "agent") =>
     world.resolve(AgentDrainService).drain({ workspaceId: WS, agentId: AGENT, scopeKey })
 
 const rowOf = (wake: AgentWake) => wakeOfFact(em(), wake.agentId, wake.source, wake.eventKey)
-
-const older = async (wake: AgentWake, ms: number): Promise<void> => ageWake(em(), (await rowOf(wake)).id, ms)
 
 const begin = async (conversationId: string): Promise<Record<string, unknown>> => {
     const [row] = await callDbFunction<{ agent_turn_begin: Record<string, unknown> }>(em(), "public.agent_turn_begin", [
@@ -165,6 +156,9 @@ describe("agent-work/lock: one turn per scope", () => {
         expect((await rowOf(second)).status).toBe("pending")
     })
 
+})
+
+describe("agent-work/lock: wakes that arrive while a turn runs", () => {
     it("agent-work/no-lost-wake: a wake that arrives while a turn runs is served by the follow-on drain, with no sweep", async () => {
         const running = wakeOf("no-lost-first")
         const arriving = wakeOf("no-lost-second")
@@ -184,6 +178,20 @@ describe("agent-work/lock: one turn per scope", () => {
 
         await drain()
         expect((await rowOf(arriving)).status).toBe("done")
+    })
+
+    it("agent-work/early-drain (D-MX-5): a drain that comes before the wake is due by the database clock schedules ONE follow-up, no sweep", async () => {
+        const resumed = wakeOf("early-drain", { source: "thread" })
+        await post(resumed)
+        // The live case: the database clock was stepped back after the commit, so the drain reads a now() before the wake's not_before.
+        await dueLater(em(), (await rowOf(resumed)).id, 1500)
+
+        await drain()
+
+        expect((await rowOf(resumed)).status).toBe("pending")
+        expect(scripted().ran).toHaveLength(0)
+        const wakeId = (await rowOf(resumed)).id
+        expect(await drainJobsOf(em(), `agent-turn:${AGENT}:rearm:agent:${wakeId}:1`)).toHaveLength(1)
     })
 
     it("agent-work/priority: a tag passes a schedule that was written first", async () => {
@@ -310,49 +318,5 @@ describe("agent-work/kill-switch: held, never dropped", () => {
         expect((await rowOf(wake)).status).toBe("pending")
         await drain()
         expect((await rowOf(wake)).status).toBe("done")
-    })
-})
-
-describe("agent-work/burst: a sliding window per conversation", () => {
-    // The window and the longest wait are the ones the chatbot flow asks for its channel; the wakes carry them, as the wake door resolves them.
-    const asked = flowBurstOf(CHATBOT_FLOW)
-    const WINDOW_MS = asked.windowMs
-    const MAX_MS = asked.maxWaitMs
-    const resolved = async (...wakes: ReadonlyArray<AgentWake>): Promise<void> => {
-        await eachInOrder(wakes, async (wake) => stampBurst(em(), (await rowOf(wake)).id, asked))
-    }
-    it("agent-work/burst-text-then-image: a text and an image four seconds apart are one turn that reads both", async () => {
-        const text = messageWake("burst-text", "conv-burst")
-        const image = messageWake("burst-image", "conv-burst")
-        await post(text)
-        await post(image)
-        await resolved(text, image)
-        await older(text, 4000)
-
-        // Four seconds in, the image is inside the window: the turn waits for more.
-        await expect(begin("conv-burst")).resolves.toMatchObject({ result: "idle" })
-        expect((await rowOf(text)).status).toBe("pending")
-
-        // Quiet for the whole window since the image: one turn, on the first message, with the image taken into it.
-        await older(text, WINDOW_MS)
-        await older(image, WINDOW_MS)
-        const begun = await begin("conv-burst")
-        expect(begun).toMatchObject({ result: "begun", wakeId: (await rowOf(text)).id })
-        expect(begun.context).toMatchObject({ mergedMessageIds: image.context.messageId })
-        expect((await rowOf(image)).status).toBe("skipped")
-    })
-
-    it("agent-work/burst-cap: a burst that keeps going stops waiting once its first message is older than the longest wait", async () => {
-        const first = messageWake("cap-1", "conv-cap")
-        const last = messageWake("cap-2", "conv-cap")
-        await post(first)
-        await post(last)
-        await resolved(first, last)
-        await older(first, MAX_MS + 1000)
-
-        const begun = await begin("conv-cap")
-
-        expect(begun).toMatchObject({ result: "begun", wakeId: (await rowOf(first)).id })
-        expect(begun.context).toMatchObject({ mergedMessageIds: last.context.messageId })
     })
 })

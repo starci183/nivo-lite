@@ -1,5 +1,4 @@
-import { GraphQLScalarType, Kind } from "graphql"
-import type { ValueNode } from "graphql"
+import { GraphQLScalarType, Kind, type ValueNode } from "graphql"
 
 const isPlainObject = (value: unknown): value is object =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -8,7 +7,7 @@ const literalOf = (node: ValueNode): unknown => {
     if (node.kind === Kind.OBJECT) {
         return Object.fromEntries(node.fields.map((field) => [field.name.value, literalOf(field.value)]))
     }
-    if (node.kind === Kind.LIST) return node.values.map(literalOf)
+    if (node.kind === Kind.LIST) return node.values.map((value) => literalOf(value))
     if (node.kind === Kind.INT || node.kind === Kind.FLOAT) return Number(node.value)
     if (node.kind === Kind.STRING || node.kind === Kind.ENUM || node.kind === Kind.BOOLEAN) return node.value
     return null

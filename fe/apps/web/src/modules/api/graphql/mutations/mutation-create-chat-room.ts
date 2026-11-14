@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { CreateChatRoomMutation, CreateChatRoomMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the CreateChatRoom mutation. */
@@ -62,7 +61,7 @@ export const mutateCreateChatRoom = async ({
     signal,
     headers,
 }: MutateCreateChatRoomParams): Promise<ApolloClient.MutateResult<MutateCreateChatRoomResponse>> => {
-    const apollo = createAuthApolloClient({ signal, headers })
+    const apollo = createAuthApolloClient(webApiTransport, { signal, headers })
     return apollo.mutate({
         mutation: mutationMap[mutation],
         variables: { input: request },

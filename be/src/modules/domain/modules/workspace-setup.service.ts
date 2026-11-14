@@ -1,49 +1,26 @@
 import { Injectable } from "@nestjs/common"
-import { AuthorityService } from "@modules/domain/authority"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { WorkspacesService } from "@modules/domain/workspaces"
-import type { CreatedWorkspace, FirstWorkspace, NamedBusinessType } from "@modules/domain/workspaces"
-import { eachInOrder } from "@modules/platform/primitives"
-import { ModulesService } from "./modules.service"
-import { defaultRulesOf } from "./policies/instance.policy"
+import {
+    WorkspacesService,
+    type CreatedWorkspace,
+    type FirstWorkspace,
+    type NamedBusinessType,
+} from "@modules/domain/workspaces"
 
 @Injectable()
 /**
- * The setup of a new workspace: the workspace itself, then the governance it starts with, its authority sheet and the default
- * authority rules of every stable module of the catalogue (an early module grants its own rules when it is installed). The web app used
- * to lay the governance down on the first session of a workspace; the back end now does it when the workspace is set up. The rules are
- * granted only together with the sheet, so a rule the owner removed later never comes back, and a rule already set is never overwritten.
+ * The setup of a new workspace: the workspace itself. No authority sheet and no default authority rules are laid down: the rules decide
+ * nothing since the engine gate was removed by the owner's rule (2026-11-13; a node's declared mode alone decides).
  */
 export class WorkspaceSetupService {
-    constructor(
-        private readonly workspaces: WorkspacesService,
-        private readonly authority: AuthorityService,
-        private readonly rules: AuthorityRulesService,
-        private readonly catalog: ModulesService,
-    ) {}
+    constructor(private readonly workspaces: WorkspacesService) {}
 
-    /** Creates a free workspace owned by the person, with the business type they named, and lays down its governance. */
-    async createFree(userId: string, name: string, businessType: NamedBusinessType = null): Promise<CreatedWorkspace> {
-        const created = await this.workspaces.createFree(userId, name, businessType)
-        await this.ensureGovernance(created.id)
-        return created
+    /** Creates a free workspace owned by the person, with the business type they named. */
+    createFree(userId: string, name: string, businessType: NamedBusinessType = null): Promise<CreatedWorkspace> {
+        return this.workspaces.createFree(userId, name, businessType)
     }
 
-    /** The first workspace of a person with none, with the governance a created one starts with; its id is null when none was made. */
-    async startFirst(userId: string): Promise<FirstWorkspace> {
-        const first = await this.workspaces.startFirst(userId)
-        if (first.id !== null) await this.ensureGovernance(first.id)
-        return first
-    }
-
-    /** Lays down the authority sheet and the default rules of a workspace that has no sheet yet; answers true when it did. */
-    async ensureGovernance(workspaceId: string): Promise<boolean> {
-        if (!(await this.authority.ensureSheet(workspaceId))) return false
-        const { modules } = await this.catalog.catalog()
-        await eachInOrder(
-            modules.filter((module) => module.status === "stable"),
-            (module) => this.rules.seedDefaults(workspaceId, module.key, defaultRulesOf(module)),
-        )
-        return true
+    /** The first workspace of a person with none; its id is null when none was made. */
+    startFirst(userId: string): Promise<FirstWorkspace> {
+        return this.workspaces.startFirst(userId)
     }
 }

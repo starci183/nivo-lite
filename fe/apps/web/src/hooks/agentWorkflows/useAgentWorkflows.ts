@@ -8,8 +8,7 @@ import {
     useQueryAgentWorkflowTemplatePreviewSwr,
     useQueryAgentWorkflowsSwr,
 } from "@/hooks/swr"
-import { noticeOf, workflowDetailOf, workflowRowOf } from "@/modules/agentWorkflows"
-import type { WorkflowWire } from "@/modules/agentWorkflows"
+import { canUpdateFrom, noticeOf, workflowDetailOf, workflowRowOf, type WorkflowWire } from "@/modules/agentWorkflows"
 import type { DataSlot, WorkflowDetailView, WorkflowListView } from "@/modules/types"
 import { useWorkflowContext } from "./useWorkflowContext"
 
@@ -40,7 +39,8 @@ const NO_CHANGES: PreviewWire["changes"] = []
 const newerOf = (workflow: WorkflowWire | undefined): number | null => {
     const latest = workflow?.templateLatest ?? null
     const version = workflow?.templateVersion ?? null
-    return latest !== null && version !== null && latest > version ? latest : null
+    // A workflow whose template version is gone has nothing to preview or accept: no read is issued for it.
+    return workflow !== undefined && canUpdateFrom(workflow) && latest !== null && version !== null && latest > version ? latest : null
 }
 
 /** The workflows of one agent: the list, the open one with its history and the notice that its template has a newer version. */
@@ -54,6 +54,7 @@ export const useAgentWorkflows = (installationId: string): AgentWorkflowsRead =>
     const newer = newerOf(selected)
     const preview = useQueryAgentWorkflowTemplatePreviewSwr(
         selected === undefined || newer === null ? null : { installationId, workflowId: selected.id, templateVersion: newer, locale },
+        { shouldRetryOnError: false },
     )
     const { mutate: reloadList } = list
     const { mutate: reloadDetail } = read

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { SourceBrief } from "./knowledge-sources.contracts"
 import type {
@@ -115,6 +114,15 @@ export class KnowledgeSourcesReadService {
             take: sourceIds.length,
         })
         return rows.map((row) => ({ id: row.id, kind: row.kind, title: row.title, topic: row.topic }))
+    }
+
+    /** Where one source of a workspace came from (its `origin`, e.g. the first part of a long file); null when it has none or is gone. */
+    async originOf(workspaceId: string, sourceId: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(KnowledgeSourceEntity, {
+            select: { id: true, origin: true },
+            where: { workspaceId, id: sourceId },
+        })
+        return row?.origin ?? null
     }
 
     /** The sources a workspace added from one origin (for example `google_drive`), newest change first, at most `limit`. */

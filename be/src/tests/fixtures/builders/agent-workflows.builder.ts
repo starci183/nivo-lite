@@ -1,22 +1,30 @@
 import type { Provider, Type } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { AnyEntityDefinition, FieldDefault } from "@nivo-lite/agent-sdk/entity"
 import type { EngineResult, ListPage, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { Mutation, MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { FilterExpr, Query } from "@nivo-lite/agent-sdk/query"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
-import { latestTemplateVersion, workflowTemplateOf } from "@nivo-lite/blocks-core/modules"
-import { AgentGraphsService } from "@modules/domain/agent-graphs"
-import type { GraphVersionView } from "@modules/domain/agent-graphs"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
+import { AgentGraphsService, type GraphVersionView } from "@modules/domain/agent-graphs"
+import { AGENT_GRAPH_STORE } from "@modules/domain/agent-graphs/agent-graph-store.port"
+import { AGENT_WORKFLOW_STORE } from "@modules/domain/agent-graphs/agent-workflow-store.port"
+import { AgentRunRecordsService } from "@modules/domain/agent-runs"
+import { EntityEngineService, EntityMutationService, type ScopedTx } from "@modules/domain/entity-engine"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import { CLOCK } from "@modules/platform/clock"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { LOGGER, type Logger } from "@modules/platform/logging"
 import { pageOf, wireScope } from "./agent-graph-records.builder"
+import {
+    CORE_TABLE_KEYS,
+    keyTaken,
+    memoryGraphStore,
+    memoryRunStore,
+    memoryWorkflowStore,
+    type TableRows,
+} from "./engine-core-tables.builder"
 
 /** The time every row of the memory engine is stamped with. */
 const STAMP = "2026-11-09T02:00:00.000Z"
@@ -26,19 +34,19 @@ const NO_GRAPH: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "none",
     trigger: { kind: "tag", sources: [] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [],
 }
 
 /** The graph of a shipped template: that of its newest version (every shipped template holds one version). */
 export const templateGraph = (id: string): GraphSpec => {
-    const template = workflowTemplateOf(id)
+    const template = INSTALLED.templateOf(id)
     return template === null ? NO_GRAPH : latestTemplateVersion(template).graph
 }
 
 /** The number of the newest version of a shipped template; 0 for a template that is not there. */
 export const templateNewest = (id: string): number => {
-    const template = workflowTemplateOf(id)
+    const template = INSTALLED.templateOf(id)
     return template === null ? 0 : latestTemplateVersion(template).version
 }
 
@@ -51,11 +59,22 @@ export const ownerEdited = (graph: GraphSpec): GraphSpec => ({
     nodes: graph.nodes.map((node, at) => (at === graph.nodes.length - 1 ? { ...node, group: SHOP_GROUP } : node)),
 })
 
-/** The accounting graph the demo shop runs: the reconcile template as shipped, with the owner's one change. */
-export const shopAccountingGraph = (): GraphSpec => ownerEdited(templateGraph("accounting.reconcile"))
+/**
+ * The primary graph the demo shop runs: the invoice template of `webbooks` (the module's primary, the stand-in of the dropped accounting
+ * agent: a living agent with five graphs, none of which hands off to another agent), with the owner's one change.
+ */
+export const shopAccountingGraph = (): GraphSpec => ownerEdited(templateGraph("webbooks.invoice"))
+
+/**
+ * The bank-credit graph of a second living agent, `sales`: the payment template (it wakes on a bank credit, a system event, and hands off
+ * to `sales.after-sale` INSIDE the same agent), with the owner's one change. The stand-in of the dropped accounting agent's reconcile graph
+ * for the specs whose subject is a wake routed to the primary workflow. A spec that publishes it makes `sales.after-sale` first (the
+ * * contract check wants the callee there). It runs as the primary of the world agent (module `webbooks`).
+ */
+export const shopCreditGraph = (): GraphSpec => ({ ...ownerEdited(templateGraph("sales.payment")), moduleKey: "webbooks" })
 
 const CATALOG: ReadonlyMap<string, AnyEntityDefinition> = new Map(
-    FLOW_F_ENTITIES.map((entity) => [entity.name, entity]),
+    INSTALLED.entities().map((entity) => [entity.name, entity]),
 )
 
 const defaultOf = (value: FieldDefault | undefined): unknown => {
@@ -98,14 +117,18 @@ const ordered = (rows: ReadonlyArray<RecordRow>, query: Query): ReadonlyArray<Re
 /**
  * An in-memory entity engine: the rows of each entity, read by id or by a list query (eq, in and and filters, the order, the page
  * size), and written by insert, by update under the record version, and by ensure under a match key, with the unique constraints and
- * the field defaults of the blocks-core entity declarations. The double of the engine and of the mutation port for a store's specs.
+ * the field defaults of the blocks-core entity declarations. The double of the engine and of the mutation port for a store's specs, and
+ * the database of the core-table doubles (`TableRows`: the graphs, workflows and runs under their table names and unique keys), whose
+ * writes join the same transactions and failures.
  */
-export class MemoryEngine {
+export class MemoryEngine implements TableRows {
     readonly engine: ReturnType<typeof mock<EntityEngineService>> = mock<EntityEngineService>()
     readonly mutations: ReturnType<typeof mock<EntityMutationService>> = mock<EntityMutationService>()
     private readonly tables: Map<string, Map<string, RecordRow>> = new Map()
     private readonly undo: Map<ScopedTx, Array<() => void>> = new Map()
+    private readonly joined: Map<EntityManager, Array<() => void>> = new Map()
     private next = 0
+    private fails: (mutation: Mutation) => boolean = () => false
 
     constructor() {
         wireScope(this.engine)
@@ -117,6 +140,37 @@ export class MemoryEngine {
     /** The rows of one entity, in the order they were written. */
     rows(entity: string): ReadonlyArray<RecordRow> {
         return [...this.table(entity).values()]
+    }
+
+    /** Copies of the rows of a table whose members hold every value of `where`. */
+    of(table: string, where: Readonly<Record<string, unknown>> = {}): ReadonlyArray<RecordRow> {
+        return this.rows(table)
+            .filter((row) => Object.entries(where).every(([name, value]) => row.data[name] === value))
+            .map((row) => structuredClone(row))
+    }
+
+    /** A copy of one row of a table, or null. */
+    get(table: string, id: string): RecordRow | null {
+        const row = this.table(table).get(id)
+        return row === undefined ? null : structuredClone(row)
+    }
+
+    /** Writes one mutation of a core table, in the transaction of `tx` when one is named (taken back with it), and fails as `failWhen` says. */
+    write(mutation: Mutation, tx?: ScopedTx): EngineResult {
+        if (this.fails(mutation)) throw new Error(`memory engine: ${mutation.op} failed`)
+        return tx === undefined ? this.mutate(mutation) : this.logged(tx, mutation)
+    }
+
+    /** Removes one row of a table. */
+    remove(table: string, id: string): void {
+        this.table(table).delete(id)
+    }
+
+    /** Stores a row of a table under its id, as a first version (what an earlier write of the app left: a run its open wrote). */
+    put(table: string, id: string, data: RecordRow["data"]): RecordRow {
+        const row: RecordRow = { id, workspaceId: "ws-1", version: "1", createdAt: STAMP, updatedAt: STAMP, data: structuredClone(data) }
+        this.table(table).set(id, row)
+        return structuredClone(row)
     }
 
     /**
@@ -140,8 +194,41 @@ export class MemoryEngine {
         return this
     }
 
+    /**
+     * Opt-in, on top of `transactional`: makes `within` JOIN the transaction of the manager it is given, as on the database. What
+     * the engine writes in it is kept per manager after the engine scope is left, so a failure later in that transaction (a row
+     * written on the manager) takes it back with `rollBack(manager)`; `commit(manager)` forgets it once the transaction committed.
+     */
+    managed(): this {
+        this.engine.within.mockImplementation(async (manager, workspaceId, work) => {
+            const tx = mock<ScopedTx>({ workspaceId, manager })
+            const undo = this.joined.get(manager) ?? []
+            this.joined.set(manager, undo)
+            this.undo.set(tx, undo)
+            try {
+                return await work(tx)
+            } finally {
+                this.undo.delete(tx)
+            }
+        })
+        return this
+    }
+
+    /** Puts back, newest first, every row the engine wrote in the transaction of this manager (see `managed`). */
+    rollBack(manager: EntityManager): void {
+        const undo = this.joined.get(manager) ?? []
+        this.joined.delete(manager)
+        undo.toReversed().forEach((step) => step())
+    }
+
+    /** Keeps what the engine wrote in the transaction of this manager: it committed (see `managed`). */
+    commit(manager: EntityManager): void {
+        this.joined.delete(manager)
+    }
+
     /** Makes the next writes that `fails` picks throw, as a lost connection would, until it answers false. */
     failWhen(fails: (mutation: Mutation) => boolean): void {
+        this.fails = fails
         this.mutations.mutate.mockImplementation((tx, mutation) => {
             if (fails(mutation)) return Promise.reject(new Error(`memory engine: ${mutation.op} failed`))
             return Promise.resolve(this.logged(tx, mutation))
@@ -191,6 +278,8 @@ export class MemoryEngine {
                 this.rows(entity).some((row) => constraint.on.every((field) => row.data[field] === data[field])),
         )
         if (taken !== undefined) return { ok: false, reason: "taken", constraint: taken.name, refusal: "" }
+        const keyed = (CORE_TABLE_KEYS[entity] ?? []).some((key) => this.rows(entity).some((row) => keyTaken(row.data, values, key)))
+        if (keyed) return { ok: false, reason: "taken", constraint: `${entity}:unique`, refusal: "" }
         this.next += 1
         const row: RecordRow = {
             id: `${entity.split(".").at(-1) ?? "row"}-${this.next}`,
@@ -239,10 +328,10 @@ export const graphStateOf = (versionId: string, flow: GraphSpec, agentId = "agen
     agentId,
     installationId: "inst-1",
     mode: "enforced",
-    draft: { nodes: [], rights: [], flow },
+    draft: { nodes: [], flow },
     draftRev: 1,
     activeVersionId: versionId,
-    active: { nodes: [], rights: [], flow },
+    active: { nodes: [], flow },
     activeKind: "spec",
 })
 
@@ -257,20 +346,27 @@ export const graphVersionOf = (id: string, version: number): GraphVersionView =>
 })
 
 /** Wires the graph store double: the shop graph decides as version 1, and each publish becomes the next version that decides. */
-const wireGraphs = (graphs: ReturnType<typeof mock<AgentGraphsService>>): void => {
-    graphs.stateOfAgent.mockResolvedValue(graphStateOf("graph-v1", shopAccountingGraph()))
+const wireGraphs = (graphs: ReturnType<typeof mock<AgentGraphsService>>, shop: GraphSpec): void => {
+    graphs.stateOfAgent.mockResolvedValue(graphStateOf("graph-v1", shop))
     graphs.stateOfAgentIn.mockImplementation((tx, agentId) => graphs.stateOfAgent(tx.workspaceId, agentId))
     graphs.publishIn.mockImplementation((_tx, input) => graphs.publish(input))
     graphs.versionsOf.mockResolvedValue([graphVersionOf("graph-v1", 1)])
-    graphs.documentOf.mockResolvedValue({ nodes: [], rights: [], flow: shopAccountingGraph() })
+    graphs.documentOf.mockResolvedValue({ nodes: [], flow: shop })
     let published = 1
     graphs.publish.mockImplementation((input) => {
         published += 1
-        const flow = input.document.flow ?? shopAccountingGraph()
+        const flow = input.document.flow ?? shop
         graphs.stateOfAgent.mockResolvedValue(graphStateOf(`graph-v${published}`, flow, input.agentId))
         return Promise.resolve(graphVersionOf(`graph-v${published}`, published))
     })
 }
+
+/** The core tables of the graphs, workflows and runs on the memory engine: the stores the records services are built on. */
+export const coreTablesOf = (memory: MemoryEngine): ReadonlyArray<Provider> => [
+    { provide: AGENT_GRAPH_STORE, useValue: memoryGraphStore(memory) },
+    { provide: AGENT_WORKFLOW_STORE, useValue: memoryWorkflowStore(memory) },
+    { provide: AgentRunRecordsService, useValue: new AgentRunRecordsService(memoryRunStore(memory, () => STAMP)) },
+]
 
 /** The doubles the workflow services are built on, and the providers that bind them beside the services under test. */
 export interface WorkflowDoubles {
@@ -282,17 +378,17 @@ export interface WorkflowDoubles {
 }
 
 /**
- * The doubles of the workflow services: a memory engine, a graph store whose shop graph decides, the installations inst-1 (agent-1)
- * and any other (agent-2) of the accounting module, and a logger; the services under test are listed first in the providers.
+ * The doubles of the workflow services: a memory engine, a graph store whose shop graph decides (the invoice template unless one is given),
+ * the installations inst-1 (agent-1) and any other (agent-2) of the `webbooks` module, and a logger; the services under test are listed first in the providers.
  */
-export const workflowDoubles = (services: ReadonlyArray<Type>): WorkflowDoubles => {
+export const workflowDoubles = (services: ReadonlyArray<Type>, shop: GraphSpec = shopAccountingGraph()): WorkflowDoubles => {
     const memory = new MemoryEngine()
     const graphs = mock<AgentGraphsService>()
-    wireGraphs(graphs)
+    wireGraphs(graphs, shop)
     const installations = mock<InstallationRecordsService>()
     installations.find.mockImplementation((_workspaceId, id) =>
         Promise.resolve(
-            mock<InstallationRecord>({ id, agentId: id === "inst-1" ? "agent-1" : "agent-2", moduleKey: "accounting" }),
+            mock<InstallationRecord>({ id, agentId: id === "inst-1" ? "agent-1" : "agent-2", moduleKey: "webbooks" }),
         ),
     )
     const logger = mock<Logger>()
@@ -301,6 +397,7 @@ export const workflowDoubles = (services: ReadonlyArray<Type>): WorkflowDoubles 
             ...services,
             { provide: EntityEngineService, useValue: memory.engine },
             { provide: EntityMutationService, useValue: memory.mutations },
+            ...coreTablesOf(memory),
             { provide: AgentGraphsService, useValue: graphs },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: LOGGER, useValue: logger },
@@ -328,7 +425,7 @@ export const storeDoubles = (services: ReadonlyArray<Type>): StoreDoubles => {
     const installations = mock<InstallationRecordsService>()
     installations.find.mockImplementation((_workspaceId, id) =>
         Promise.resolve(
-            mock<InstallationRecord>({ id, agentId: id === "inst-1" ? "agent-1" : "agent-2", moduleKey: "accounting" }),
+            mock<InstallationRecord>({ id, agentId: id === "inst-1" ? "agent-1" : "agent-2", moduleKey: "webbooks" }),
         ),
     )
     const logger = mock<Logger>()
@@ -337,6 +434,7 @@ export const storeDoubles = (services: ReadonlyArray<Type>): StoreDoubles => {
             ...services,
             { provide: EntityEngineService, useValue: memory.engine },
             { provide: EntityMutationService, useValue: memory.mutations },
+            ...coreTablesOf(memory),
             { provide: InstallationRecordsService, useValue: installations },
             { provide: LOGGER, useValue: logger },
             { provide: CLOCK, useValue: new FakeClock(STAMP) },

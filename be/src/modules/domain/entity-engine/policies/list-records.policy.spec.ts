@@ -205,3 +205,41 @@ describe("listRecords (4)", () => {
         ).rejects.toMatchObject({ code: EntityEngineErrorCode.EntityUnknown })
     })
 })
+
+describe("listRecords (agent scope)", () => {
+    const AGENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    const query: Query = {
+        from: "sales.lead",
+        select: ["contactName"],
+        order: [["id", "asc"]],
+        page: { size: 2 },
+    }
+
+    it("lists only the scope's agent's records in a scope confined to an agent, always filtered in the statement", async () => {
+        const policy = await build()
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getRawMany: [] }])
+
+        await policy.listRecords(
+            mintScopedTx({ manager: em, workspaceId: WORKSPACE_ID, agent: { id: AGENT, sees: "own" } }),
+            CATALOG,
+            { query, after: null },
+        )
+
+        expect(fake?.callsOf("andWhere")).toEqual([["r.agentId = :agent", { agent: AGENT }]])
+    })
+
+    it("adds no agent filter in a scope that only stamps", async () => {
+        const policy = await build()
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getRawMany: [] }])
+
+        await policy.listRecords(
+            mintScopedTx({ manager: em, workspaceId: WORKSPACE_ID, agent: { id: AGENT, sees: "all" } }),
+            CATALOG,
+            { query, after: null },
+        )
+
+        expect(fake?.callsOf("andWhere")).toEqual([])
+    })
+})

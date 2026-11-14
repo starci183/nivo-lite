@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { WorkspaceStaffQuery } from "../__generated__/graphql"
 
 /** The response of the `workspaceStaff` query: the typed payload straight from the back end contract. */
@@ -35,6 +34,6 @@ export const queryWorkspaceStaff = async ({
     query = QueryWorkspaceStaff.Query1,
     signal,
 }: QueryWorkspaceStaffParams = {}): Promise<ApolloClient.QueryResult<QueryWorkspaceStaffResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query] })
 }

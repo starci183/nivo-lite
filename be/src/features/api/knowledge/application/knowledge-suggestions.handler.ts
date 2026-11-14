@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { KnowledgeSuggestionStateService } from "@modules/domain/knowledge-suggestion-state"
-import type { SuggestionContext } from "@modules/domain/knowledge-suggestion-state"
+import { KnowledgeSuggestionStateService, type SuggestionContext } from "@modules/domain/knowledge-suggestion-state"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KnowledgeSuggestionsQuery } from "./knowledge-suggestions.query"
 
 @QueryHandler(KnowledgeSuggestionsQuery)

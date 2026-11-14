@@ -1,10 +1,8 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import type { MeasureValue } from "@nivo-lite/agent-sdk/entity/port"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
-import { salesFiguresOf } from "../../../rules/sales/figures"
-import type { SalesFigures } from "../../../rules/sales/figures"
+import { salesFiguresOf, type SalesFigures } from "../../../rules/sales/figures"
 import { CONFIRMED_STATUSES } from "../../../rules/sales/order-status"
 import { SALES_VIEW } from "../constants"
 import { salesLeads, salesOrders } from "../ports"
@@ -17,9 +15,9 @@ const STAGES_MAX = 10
 const DRAFT = q.eq("status", "draft")
 const CONFIRMED = q.in("status", CONFIRMED_STATUSES)
 
-/** `sales.figures`: the open customers, the value on offer, the orders closed and the won share, over the whole workspace. */
+/** `blocks-core.sales.api.order.figures`: the open customers, the value on offer, the orders closed and the won share, over the whole workspace. */
 export const figuresRead: ReadDefinition = defineRead({
-    id: "sales.figures",
+    id: "blocks-core.sales.api.order.figures",
     dataKind: "sales-figures",
     shape: "record",
     fields: [

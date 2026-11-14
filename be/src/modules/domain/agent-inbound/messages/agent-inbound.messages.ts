@@ -3,8 +3,6 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the agent-inbound codes, Vietnamese and English. */
 export const AGENT_INBOUND_MESSAGES: MessageBundle = {
     vi: {
-        "agentInbound.chainStopped":
-            "Chuỗi agent đã dừng ở lượt thứ {{depth}} ({{reason}}) để không lặp vô hạn. Cần người xem lại sự kiện {{eventType}}.",
         "errors.AGENT_INBOUND_ADAPTER_UNKNOWN": "Nguồn sự kiện {{adapter}} chưa được đăng ký.",
         "errors.AGENT_INBOUND_ADAPTER_DUPLICATE": "Nguồn sự kiện {{adapter}} đã được đăng ký.",
         "errors.AGENT_INBOUND_PAYLOAD_TOO_LARGE": "Nội dung sự kiện quá lớn.",
@@ -16,8 +14,6 @@ export const AGENT_INBOUND_MESSAGES: MessageBundle = {
         "errors.AGENT_INBOUND_JOB_PAYLOAD_INVALID": "Việc cần chạy không nêu sự kiện nào.",
     },
     en: {
-        "agentInbound.chainStopped":
-            "The agent chain stopped at step {{depth}} ({{reason}}) so it cannot loop for ever. A person needs to look at the {{eventType}} event.",
         "errors.AGENT_INBOUND_ADAPTER_UNKNOWN": "The event source {{adapter}} is not registered.",
         "errors.AGENT_INBOUND_ADAPTER_DUPLICATE": "The event source {{adapter}} is already registered.",
         "errors.AGENT_INBOUND_PAYLOAD_TOO_LARGE": "The event payload is too large.",

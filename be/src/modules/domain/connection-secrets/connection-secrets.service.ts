@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { LessThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { LessThan, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { InjectConnectionSecretsOptions } from "./connection-secrets.decorators"
 import type {
     ConnectionSecret,
@@ -142,6 +140,11 @@ export class ConnectionSecretsService {
               }
     }
 
+    /** True when the connection has a sealed credential; the credential is never opened. */
+    has(connectionId: string): Promise<boolean> {
+        return this.entityManager.exists(ConnectionSecretEntity, { where: { connectionId } })
+    }
+
     /** Seals and stores the credential; the webhook secret changes only when one is given (a new row gets a random one). */
     async write(connectionId: string, plain: string, webhookSecret?: string): Promise<void> {
         await this.entityManager
@@ -158,9 +161,9 @@ export class ConnectionSecretsService {
             .execute()
     }
 
-    /** Deletes the stored credential of a connection. */
-    async wipe(connectionId: string): Promise<void> {
-        await this.entityManager.delete(ConnectionSecretEntity, { connectionId })
+    /** Deletes the stored credential of a connection; inside the caller transaction when one is supplied. */
+    async wipe(connectionId: string, manager: EntityManager = this.entityManager): Promise<void> {
+        await manager.delete(ConnectionSecretEntity, { connectionId })
     }
 
     /** Takes the refresh lease when nobody holds a live one; false when another caller has it. */
@@ -175,7 +178,7 @@ export class ConnectionSecretsService {
             })
             .returning('connection_id AS "connectionId"')
             .execute()
-        return Array.isArray(taken.raw) && taken.raw.some(hasConnectionId)
+        return Array.isArray(taken.raw) && taken.raw.some((entry) => hasConnectionId(entry))
     }
 
     /** Drops the refresh lease. */

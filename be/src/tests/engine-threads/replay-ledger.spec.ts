@@ -1,8 +1,13 @@
-import { TOOL } from "@nivo-lite/blocks-core"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { AGENT_RUN_STEPS } from "@tests/fixtures/builders/engine-core-tables.builder"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { DESK_CARE } from "@tests/fixtures/builders/thread-desk-plugin.builder"
 import {
+    ANSWER_NODE,
     ANSWER,
     CONV,
     CORE,
+    LEAD,
     UNDERSTAND,
     WS,
     actsOf,
@@ -13,14 +18,27 @@ import {
     ledgerOf,
     processOf,
     redrive,
+    refOf,
+    startThread,
     stopsOf,
     threadDbOf,
     type ThreadDb,
 } from "./thread-world"
 
-// Package 0-9, items 2 and 3: the REAL effect ledger (GraphNodeEffectsService over the records) and the REAL per-stop repeat guard
-// (NodeToolDoorService.repeatGuard) under the REAL replay of LangGraph tasks (replayPortsOf through GraphNodeHostService), never a
-// stand-in. "Once" is counted at the outside world: every act that reached the fake channel.
+// The world's desk installed beside the core: an agent step that acts itself, on the template road (`thread-desk-plugin.builder.ts`).
+jest.mock("@nivo-lite/plugin-registry", () => {
+    const parts: typeof import("@tests/fixtures/builders/installation-parts.builder") = jest.requireActual(
+        "@tests/fixtures/builders/installation-parts.builder",
+    )
+    const desk: typeof import("@tests/fixtures/builders/thread-desk-plugin.builder") = jest.requireActual(
+        "@tests/fixtures/builders/thread-desk-plugin.builder",
+    )
+    return { installed: parts.installationWith([desk.DESK_PLUGIN], "world-desk") }
+})
+
+// Package 0-9, items 2 and 3: the REAL effect ledger (GraphNodeEffectsService over the records) and the REAL step receipts of the
+// ToolRunner (a step that runs again answers its earlier write at the same position from its receipt, nivo-frame rights 11d) under the
+// REAL replay of LangGraph tasks (replayPortsOf through GraphNodeHostService), never a stand-in. "Once" is counted at the outside world: every act that reached the fake channel.
 
 const QUESTION = "Shop mo cua may gio?"
 const CHECKING = "Shop dang kiem tra gio mo cua, ban doi chut a."
@@ -31,8 +49,8 @@ const send = (text: string) => ({ call: { tool: TOOL.customerMessageSend, args: 
 /** The log event of a restarted node that leaves its record (`LanggraphLogEvent.ReplayLeft`). */
 const REPLAY_LEFT = "langgraph.replay.left"
 
-/** The node whose agent's turns the host's own loop takes in the prebuilt-loop cases (`AGENT_LOOP=prebuilt:chatbot.answer`). */
-const PREBUILT = ["chatbot.answer"]
+/** The node whose agent's turns the host's own loop takes in the prebuilt-loop cases (`AGENT_LOOP=prebuilt:<the answer node>`). */
+const PREBUILT = [ANSWER_NODE]
 
 /** Lets the work a cut drive left running go on: turns of the event loop until `done` holds, at most `ticks` of them. */
 const settledOf = async (done: () => boolean, ticks = 200): Promise<void> => {
@@ -62,7 +80,7 @@ const stopsAtAnswer = (
     db: ThreadDb,
     options: { readonly sendsFirst?: boolean; readonly holdingLine?: string | null } = {},
 ) => {
-    db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+    db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
     db.model.script(ANSWER, ...(options.sendsFirst === false ? [] : [send(CHECKING)]), confused)
     db.model.script(CORE, report(options.holdingLine ?? null))
 }
@@ -94,30 +112,64 @@ describe("the real ledger under replay (item 2)", () => {
         // The repeated line was answered by the ledger (same call key: same step, same digest); the outcome line went out once.
         expect(sendsOf(db)).toEqual([CHECKING, OUTCOME])
         expect(db.lines.map((line) => line.text)).toEqual([CHECKING, OUTCOME])
-        const keys = ledgerOf(db).map((row) => String(row.effectKey))
+        // The sends' rows (a template step also keeps its fixed instant and day in the ledger, `engine.step-instant` / `-day`).
+        const keys = ledgerOf(db)
+            .filter((row) => row.effectId === TOOL.customerMessageSend)
+            .map((row) => String(row.effectKey))
         expect(keys.filter((key) => key.startsWith(`call:${runId}:answer:`))).toHaveLength(2)
         // The founder's words reached the step's model request.
         expect(JSON.stringify(db.model.askedOf(ANSWER).at(-1)?.request)).toContain("Shop mo 8h den 21h")
     })
 
-    it("retry with no words: the identical line replays from the ledger, a reworded one is refused by the guard; one line", async () => {
+    it("retry after a new build (live: the 4 runs retried after the restart): a NEW process answers the reworded line from the receipt; one line", async () => {
+        const db = threadDbOf()
+        stopsAtAnswer(db)
+        const { runId } = await started(db)
+
+        // The restart: the stopped thread is driven by a process built fresh over the same stores (a new build of the api).
+        const rebuilt = await processOf(db)
+        db.model.script(ANSWER, send("Shop van dang kiem tra nhe!"), { done: { reply: CHECKING } })
+        const ran = await founderDecides(rebuilt, runId, button(db, "retry"))
+
+        expect(ran.map((one) => one.error)).toEqual([null])
+        expect((await rebuilt.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("ended")
+        expect(sendsOf(db)).toEqual([CHECKING])
+        expect(db.lines).toHaveLength(1)
+    })
+
+    it("retry with no words (run eb7c6306): the reworded line is answered from the first line's receipt, the step completes; one line", async () => {
         const db = threadDbOf()
         stopsAtAnswer(db)
         const { process, runId } = await started(db)
 
-        db.model.script(ANSWER, send(CHECKING), send("Shop van dang kiem tra nhe!"), { done: { reply: CHECKING } })
+        db.model.script(ANSWER, send("Shop van dang kiem tra nhe!"), { done: { reply: CHECKING } })
         const ran = await founderDecides(process, runId, button(db, "retry"))
 
         expect(ran.map((one) => one.error)).toEqual([null])
         expect((await process.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("ended")
         expect(sendsOf(db)).toEqual([CHECKING])
         expect(db.lines).toHaveLength(1)
-        // The model was shown the refusal fact of the guard for the reworded line.
+        // No refusal: the send answered as the first one did, so the step went on (no stop, no `already_told_for_this_stop`).
         const last = JSON.stringify(db.model.askedOf(ANSWER).at(-1)?.request)
-        expect(last).toContain("already_told_for_this_stop")
+        expect(last).not.toContain("already_told_for_this_stop")
+        const [stop] = await stopsOf(process, runId)
+        expect(stop?.state).toBe("resolved")
     })
 
-    it("the AI core's holding line counts as the stop's line: after a retry the step's own line is refused; one line", async () => {
+    it("retry with no words: the identical line replays from the ledger under its own key; one line", async () => {
+        const db = threadDbOf()
+        stopsAtAnswer(db)
+        const { process, runId } = await started(db)
+
+        db.model.script(ANSWER, send(CHECKING), { done: { reply: CHECKING } })
+        await founderDecides(process, runId, button(db, "retry"))
+
+        expect((await process.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("ended")
+        expect(sendsOf(db)).toEqual([CHECKING])
+        expect(db.lines).toHaveLength(1)
+    })
+
+    it("the engine's holding line is no receipt of the step: after a retry the step's own line goes out once", async () => {
         const db = threadDbOf()
         stopsAtAnswer(db, { sendsFirst: false, holdingLine: CHECKING })
         const { process, runId } = await started(db)
@@ -129,8 +181,9 @@ describe("the real ledger under replay (item 2)", () => {
         db.model.script(ANSWER, send("Da, shop dang xem lai gio mo cua."), { done: { reply: CHECKING } })
         await founderDecides(process, runId, button(db, "retry"))
 
-        expect(sendsOf(db)).toEqual([CHECKING])
-        expect(db.lines).toHaveLength(1)
+        // The holding line was the engine's while the step stood stopped; the retried step's own line is its first send: it goes once.
+        expect(sendsOf(db)).toEqual([CHECKING, "Da, shop dang xem lai gio mo cua."])
+        expect(db.lines).toHaveLength(2)
     })
 
     it("a different line after an answer goes out once, also when the thread is driven again afterwards", async () => {
@@ -149,7 +202,7 @@ describe("the real ledger under replay (item 2)", () => {
 describe("kill and replay (item 3)", () => {
     /** The question route, its answer step sending one line and completing. */
     const answers = (db: ThreadDb, times = 1) => {
-        db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+        db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
         for (let one = 0; one < times; one += 1)
             db.model.script(
                 ANSWER,
@@ -163,7 +216,7 @@ describe("kill and replay (item 3)", () => {
     const crashesAfterTheSend = (db: ThreadDb) => {
         let done = 0
         db.records.crashOnce((mutation) => {
-            if (mutation.entity !== "agent.run-step" || mutation.op !== "update" || mutation.values.status !== "done")
+            if (mutation.entity !== AGENT_RUN_STEPS || mutation.op !== "update" || mutation.values.status !== "done")
                 return false
             done += 1
             return done === 2
@@ -191,12 +244,11 @@ describe("kill and replay (item 3)", () => {
         expect(db.model.askedOf(UNDERSTAND)).toHaveLength(1)
     })
 
-    // DOCUMENTED COST (D-0-9-1, accepted by the coordinator 2026-11-10, not a defect): the replay of model calls goes by request
-    // CONTENT, and `chatbot.answer` (like every agent step that reads its conversation) reads the line it sent itself before the crash,
-    // so after a crash mid-step the whole step runs live again (`langgraph.replay.left`, why `asks-another`, position 0). Measured here:
-    // the answer step's 3 model turns are asked again (6 in all instead of 3); the ledger keeps the send at one. Replaying a stale model
-    // decision would be worse. The live walk's kill-mid-step check (0-10) should expect these extra turns.
-    it("cost D-0-9-1: after a crash mid-step an agent step that reads its conversation asks the model all its turns again (3 → 6)", async () => {
+    // COST D-0-9-1, settled (ruling F2, accepted by the coordinator 2026-11-13): the old cost was the whole agent step asked again after
+    // a crash mid-step (3 → 6 model turns), because `chatbot.answer` read the line it had sent itself inside its turns. Since the flip
+    // (template nodes) the re-run of the step finds its turns in the replay record (no `langgraph.replay.left`) and asks the model
+    // nothing new: 3 turns in all. The send stays at one, by the ledger.
+    it("cost D-0-9-1: after a crash mid-step an agent step asks the model no turn again (3), and the line is sent ONCE", async () => {
         const db = threadDbOf()
         answers(db, 2)
         crashesAfterTheSend(db)
@@ -205,15 +257,12 @@ describe("kill and replay (item 3)", () => {
         expect(db.model.askedOf(ANSWER)).toHaveLength(3)
 
         const second = await processOf(db)
-        await redrive(second, runId, "sweep-1")
+        const ran = await redrive(second, runId, "sweep-1")
 
-        // The first turn of the re-run reads the line the step sent before the crash: another request, so the record is left there.
-        const [before, after] = [db.model.askedOf(ANSWER)[0], db.model.askedOf(ANSWER)[3]]
-        expect(JSON.stringify(before?.request.input)).not.toContain(OUTCOME)
-        expect(JSON.stringify(after?.request.input)).toContain(OUTCOME)
-        expect(second.logger.warn).toHaveBeenCalledWith(REPLAY_LEFT, { thread: runId, position: 0, why: "asks-another" })
-        expect(db.model.askedOf(ANSWER)).toHaveLength(6)
-        // The cost is model turns only: the send stays at one, by the ledger.
+        expect(ran.map((one) => one.error)).toEqual([null])
+        expect((await second.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("ended")
+        expect(second.logger.warn).not.toHaveBeenCalledWith(REPLAY_LEFT, expect.anything())
+        expect(db.model.askedOf(ANSWER)).toHaveLength(3)
         expect(sendsOf(db)).toEqual([OUTCOME])
         expect(db.lines).toHaveLength(1)
     })
@@ -238,7 +287,7 @@ describe("kill and replay (item 3)", () => {
 
 /** The drive of the first process loses its lease (the signal aborts) after the answer step's send acted, while its next turn waits. */
 const abortedAfterTheSend = async (db: ThreadDb) => {
-    db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+    db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
     db.model.script(ANSWER, send(OUTCOME))
     const first = await processOf(db)
     const controller = new AbortController()
@@ -284,7 +333,7 @@ describe("kill and replay (item 3): a lost lease, an outcome-unknown code", () =
 
     it("an outcome-unknown code stops for the founder; the machine never runs the step again", async () => {
         const db = threadDbOf()
-        db.model.script(UNDERSTAND, { answer: { branch: "buy", summary: "Lan: buy" } })
+        db.model.script(UNDERSTAND, { done: { branch: "buy", summary: "Lan: buy" } })
         db.model.script(CORE, report(null))
         db.throwOn.set(TOOL.agentTag, Object.assign(new Error("tag sent, no answer"), { code: "tool_outcome_unknown" }))
         const process = await processOf(db)
@@ -309,9 +358,9 @@ describe("kill and replay (item 3): a lost lease, an outcome-unknown code", () =
 })
 
 // L2-5 (package P8): the host's own agent loop (`AGENT_LOOP=prebuilt:chatbot.answer`: LangChain's prebuilt agent, native tool calls)
-// under the same engine rules, on the REAL ledger, the REAL per-stop guard, the REAL replay and the REAL tries policy.
+// under the same engine rules, on the REAL ledger, the REAL step receipts, the REAL replay and the REAL tries policy.
 describe("the prebuilt agent loop under the engine's rules", () => {
-    it("retry with no words: the identical line replays from the ledger; the reworded one is refused already_told_for_this_stop, which satisfies requires", async () => {
+    it("retry with no words: the reworded line is answered from the first line's receipt, which satisfies requires", async () => {
         const db = threadDbOf()
         stopsAtAnswer(db)
         const process = await processOf(db, { agentLoop: PREBUILT })
@@ -319,25 +368,25 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         expect((await process.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("stopped")
         expect(sendsOf(db)).toEqual([CHECKING])
 
-        db.model.script(ANSWER, send(CHECKING), send("Shop van dang kiem tra nhe!"), { done: { reply: CHECKING } })
+        db.model.script(ANSWER, send("Shop van dang kiem tra nhe!"), { done: { reply: CHECKING } })
         const ran = await founderDecides(process, runId, button(db, "retry"))
 
         expect(ran.map((one) => one.error)).toEqual([null])
-        // `requires: [nivo.lead.message.send]` is met by the guard's refusal: the output was taken on the third turn of the visit.
+        // `requires: [nivo.tool.customer.message.send]` is met by the receipt's answer: the output was taken on the second turn.
         expect((await process.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("ended")
         expect(sendsOf(db)).toEqual([CHECKING])
         expect(db.lines).toHaveLength(1)
         expect(db.model.left(ANSWER)).toBe(0)
-        // The model read the refusal as the tool message of its call, on the turn that followed it.
+        // The model read the receipt's answer (no refusal) as the tool message of its call, on the turn that followed it.
         const [kind, fact] = messagesOf(db.model.askedOf(ANSWER).at(-1)?.request.input).at(-1) ?? ["", ""]
         expect(kind).toBe("tool")
-        expect(fact).toContain('"ok":false')
-        expect(fact).toContain("already_told_for_this_stop")
+        expect(fact).not.toContain('"ok":false')
+        expect(fact).not.toContain("already_told_for_this_stop")
     })
 
     it("sends the full tool set on every turn, and only appends: each turn's messages open with the previous turn's, byte for byte", async () => {
         const db = threadDbOf()
-        db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+        db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
         db.model.script(
             ANSWER,
             { call: { tool: TOOL.brainSearch, args: { query: "gio mo cua" } } },
@@ -366,7 +415,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
 
     it("kill mid-loop, replay with the recorder: a new process re-asks no turn already answered; the send goes out once", async () => {
         const db = threadDbOf()
-        db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+        db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
         db.model.script(ANSWER, { call: { tool: TOOL.brainSearch, args: { query: "gio mo cua" } } })
         const first = await processOf(db, { agentLoop: PREBUILT })
         // The drive of the first process loses its lease while the second turn waits: the first turn and its search are recorded.
@@ -401,5 +450,65 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         expect(messagesOf(again[1]?.request.input).map(([kind]) => kind)).toEqual(["human", "ai", "tool", "ai", "tool"])
         expect(sendsOf(db)).toEqual([OUTCOME])
         expect(db.lines).toHaveLength(1)
+    })
+})
+
+/** One step that arms a check-in on the template road (`wdesk.care`), with the care effect granted as a template grants it. (It was the order step; the order tool is removed with the money, wave 4: the same shape, an effect that answers facts and a subject.) */
+const careFlow: GraphSpec = {
+    schema: "nivo/agent-graph@1",
+    moduleKey: "sales",
+    trigger: { kind: "tag", sources: [] },
+    grant: {
+        tools: [],
+        effects: [TOOL.agentTag],
+    },
+    // The step's ONE mode, as the template adapter writes it on every node step (nivo-frame `rights`): its node's `auto`.
+    nodes: [{ key: "care", kind: "output", step: "wdesk.care", mode: "auto", params: {}, input: { leadId: { $ref: "trigger.leadId" } } }],
+}
+
+// Defect 3 of the flip: an EFFECT answers a template node its FACTS as `value` (the members a converted node reads, `value.taskId`) and
+// the record it wrote in `meta.subject`; the ledger keeps the effect's subject, so a re-run of the step is handed the SAME value and meta.
+describe("an effect's facts on the template road, and the ledger's replay of them", () => {
+    it("the node reads value.taskId and meta.subject; after a stop the retry is answered by the ledger: the same task, armed once", async () => {
+        const db = threadDbOf()
+        db.model.script(DESK_CARE, confused)
+        db.model.script(CORE, report(null))
+        const process = await processOf(db)
+        const started = await startThread(process, {
+            flow: careFlow,
+            versionId: "sales-agent:care@1",
+            workflowId: "wf:care",
+            trigger: { leadId: LEAD, locale: "vi" },
+        })
+        expect(started.error).toBeNull()
+        const runId = started.runId ?? ""
+        expect((await process.threads.stateOf(refOf(runId)))?.status).toBe("stopped")
+        expect((await stopsOf(process, runId)).map((stop) => stop.stepKey)).toEqual(["care"])
+        // The check-in was armed once; the ledger keeps its subject with the facts the executor answered.
+        expect(actsOf(db, TOOL.agentTag)).toHaveLength(1)
+        const careRows = () => ledgerOf(db).filter((row) => row.effectId === TOOL.agentTag)
+        const taskId = String(careRows()[0]?.subjectId)
+        expect(careRows()).toEqual([
+            expect.objectContaining({ subjectEntity: "agent-task", subjectId: taskId, facts: expect.objectContaining({ taskId }) }),
+        ])
+        // Its facts (never `{ kind, id, facts }`) reached the node: the node handed its agent `value.taskId` and `value.dueAt`.
+        const toldFirst = JSON.stringify(db.model.askedOf(DESK_CARE)[0]?.request)
+        expect(toldFirst).toContain(`"taskId":"${taskId}"`)
+        expect(toldFirst).toContain('"dueAt":"2026-11-15T02:00:00.000Z"')
+
+        db.model.script(DESK_CARE, { done: { ok: true } })
+        const ran = await founderDecides(process, runId, button(db, "retry"))
+
+        expect(ran.map((one) => one.error)).toEqual([null])
+        const state = await process.threads.stateOf(refOf(runId))
+        expect(state?.status).toBe("ended")
+        // The retry's call was answered by the ledger under the same key: nothing written again, the same value and the same subject.
+        expect(actsOf(db, TOOL.agentTag)).toHaveLength(1)
+        const told = db.model.askedOf(DESK_CARE).map((one) => JSON.stringify(one.request))
+        expect(told).toHaveLength(2)
+        expect(told[1]).toContain(`"taskId":"${taskId}"`)
+        expect(told[1]).toContain('"dueAt":"2026-11-15T02:00:00.000Z"')
+        expect(state?.state.steps.care).toMatchObject({ output: { taskId, subject: `agent-task:${taskId}` } })
+        expect(careRows()).toHaveLength(1)
     })
 })

@@ -1,5 +1,4 @@
-import { Badge, Sidebar } from "@starci/grammar/common"
-import type { SidebarGroup, SidebarItem } from "@starci/grammar/common"
+import { Badge, Sidebar, type SidebarGroup, type SidebarItem } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import type { ConsoleNavItem } from "@/modules/types"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -42,7 +41,7 @@ const toGroups = (
     GROUP_ORDER.map((group) => ({
         id: group,
         ...(group === "work" ? {} : { label: labels[group] }),
-        items: items.filter((item) => item.group === group).map(toSidebarItem),
+        items: items.filter((item) => item.group === group).map((item) => toSidebarItem(item)),
     })).filter((group) => group.items.length > 0)
 
 /** The selection prop of the active item, absent while none is active. */

@@ -1,7 +1,0 @@
-export { INBOX_COPY_KEYS, inboxCopyOf } from "./copy"
-export type { InboxCopy, InboxCopyKey } from "./copy"
-export { detailViewOf } from "./detail"
-export { inboxGridOf } from "./grid"
-export { chipViewsOf, listViewOf } from "./rows"
-export type { InboxChoice, InboxTranslate, InboxWords } from "./rows"
-export { ALL_OPTION, INBOX_STAGES, channelKeyOf, embedSnippetOf, maskedPhoneOf, stageIndexOf } from "./shared"

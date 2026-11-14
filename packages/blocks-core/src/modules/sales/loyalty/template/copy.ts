@@ -1,0 +1,12 @@
+import type { Bilingual } from "@nivo-lite/agent-sdk/module"
+import * as en from "./messages/en.json"
+import * as vi from "./messages/vi.json"
+
+/** A key of the Loyalty template's own message catalogue. */
+export type LoyaltyCopyKey = Exclude<keyof typeof vi, "default">
+
+/** One message of the template in its original language. */
+export const loyaltyCopy = (key: LoyaltyCopyKey, locale: "vi" | "en"): string => (locale === "en" ? en[key] : vi[key])
+
+/** One message of the template in both product languages. */
+export const loyaltyText = (key: LoyaltyCopyKey): Bilingual => ({ vi: vi[key], en: en[key] })

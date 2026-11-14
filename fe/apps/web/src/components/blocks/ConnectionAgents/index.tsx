@@ -15,8 +15,8 @@ interface ConnectionAgentsProps {
 }
 
 /**
- * The agents region of every connection page: the agents bound to the connection, unbinding one and binding another (what each may
- * do through it is ticked on the agent's rights tab). Nothing for a member who may not read the page.
+ * The agents region of every connection page: the agents bound to the connection, unbinding one and binding another (which accounts an agent holds is the
+ * agent's rights tab). Nothing for a member who may not read the page.
  */
 export const ConnectionAgents = (props: ConnectionAgentsProps) => {
     const t = useTranslations("connections")

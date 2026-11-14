@@ -1,5 +1,16 @@
 import type { HttpPin } from "@modules/platform/http"
 
+/**
+ * Limits a caller may set above the integration's own defaults, for a read it takes responsibility for (the file store, whose field
+ * declares its own `maxBytes`). Each is still lowered to the request's own `maxBytes` and `timeoutMs`.
+ */
+export interface RemoteFileLimits {
+    /** The most bytes the read may hold, instead of the configured `maxBytes`. */
+    readonly maxBytes: number
+    /** The longest wait, in milliseconds, instead of the configured `timeoutMs`. */
+    readonly timeoutMs: number
+}
+
 /** One remote file to read. The size limit, the deadline and the type check are required: a read without them does not type-check. */
 export interface RemoteFileRequest {
     /** The absolute address. */
@@ -14,6 +25,11 @@ export interface RemoteFileRequest {
     readonly maxBytes: number
     /** How long to wait for the answer, in milliseconds. */
     readonly timeoutMs: number
+    /**
+     * Raises the configured size and deadline ceilings for this read only: the body is cut as soon as it passes the size (never
+     * buffered past it) and the answer is described as too large. Absent: the configured ceilings apply.
+     */
+    readonly limits?: RemoteFileLimits
     /** Whether the content type the answer declares (a `content-type` header value) is one the caller accepts. */
     readonly accepts: (contentType: string) => boolean
 }

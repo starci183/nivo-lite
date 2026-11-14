@@ -1,10 +1,31 @@
 import type { ReadDefinition } from "../block/block.types"
 import type { ListListing, ListShape, ListSource } from "../block/list.types"
-import type { PortDefinition } from "../port/port.types"
+import type { PortDefinition, PortMap, PortsOf, RunContext } from "../port/port.types"
 import type { Namespaced, PropsSchema } from "../schema/schema.types"
 
+/**
+ * What a list read adds to the rows of each page from ports other than its source (a fact another store holds, for instance the
+ * engine's last customer line of a chat's route): the page and its cursor stay the source's; only the rows are joined.
+ */
+export interface ListRowsJoin<T, P extends PortMap> {
+    /** The ports the join reads, by the name `rows` reaches them by (never `source`: that is the list's own). */
+    readonly ports: P
+    /** The rows of one page, joined; the same rows in the same order (a join neither drops nor reorders). */
+    readonly rows: (
+        ports: PortsOf<ListJoinPorts<T, P>>,
+        rows: ReadonlyArray<T>,
+        context: RunContext,
+    ) => Promise<ReadonlyArray<unknown>>
+}
+
+/** The ports a joined list read runs on: the join's own and the list's `source`. */
+export type ListJoinPorts<T, P extends PortMap> = P & {
+    /** The list's own source port: where the page's rows are read from before the join. */
+    readonly source: PortDefinition<ListSource<T>>
+}
+
 /** What `listRead` takes. */
-export interface ListReadConfig<T> {
+export interface ListReadConfig<T, P extends PortMap = PortMap> {
     /** The registry id of the read, `<module>.<name>`. */
     readonly id: Namespaced
     /** The kind of rows the list yields, which a slot may demand. */
@@ -19,6 +40,8 @@ export interface ListReadConfig<T> {
     readonly source: PortDefinition<ListSource<T>>
     /** Variables beyond the derived ones (`q`, one per filter, `sort`, `cursor`), for instance a scoping id. */
     readonly variables?: PropsSchema
+    /** What each page's rows get from other ports; absent: the source's rows as they are. */
+    readonly join?: ListRowsJoin<T, P> | undefined
 }
 
 /** A list read: a read that also says what it lists, so a counts read and a spec can follow it. */

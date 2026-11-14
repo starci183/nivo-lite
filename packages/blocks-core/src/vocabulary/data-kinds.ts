@@ -1,8 +1,6 @@
-import { defineDataKind } from "@nivo-lite/agent-sdk/node"
-import type { DataKindDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineDataKind, type DataKindDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../bounds"
-import { boundedRecord } from "../json.schema"
 
 const id = z.string().max(MAX_ID)
 const text = z.string().max(MAX_LINE)
@@ -115,20 +113,20 @@ export const conversationKind: DataKindDefinition = defineDataKind({
     fields: z.object({ id, leadId: id.nullable(), channel: text, status: text, lastAt: moment.nullable() }),
 })
 
-/** One message of a conversation. */
+/**
+ * One line of a conversation with a customer: the ENGINE's line (`platform.customer-messages`, ruling R26), both directions, with the
+ * files it carried by address.
+ */
 export const messageKind: DataKindDefinition = defineDataKind({
     kind: "message",
     title: { key: "dataKindMessage" },
     fields: z.object({
         id,
-        conversationId: id,
-        authorKind: text,
-        body: longText,
-        createdAt: moment,
-        role: text,
+        routeId: id,
+        direction: z.enum(["from_person", "to_person"]),
         text: longText,
-        sentAt: moment,
-        status: text,
+        saidAt: moment,
+        files: z.array(z.object({ url: longText, name: text, contentType: text })).max(MAX_ENTRIES),
     }),
 })
 
@@ -139,24 +137,7 @@ export const knowledgeDocumentKind: DataKindDefinition = defineDataKind({
     fields: z.object({ id, title: text, body: longText, visibility: z.enum(["public", "internal"]) }),
 })
 
-/** The permission level the owner set for one action of the agent's module: `auto` runs alone, `ask` waits for a person, `never` does not run. */
-export const authorityRuleKind: DataKindDefinition = defineDataKind({
-    kind: "authority-rule",
-    title: { key: "dataKindAuthorityRule" },
-    fields: z.object({ id, action: text, mode: z.enum(["auto", "ask", "never"]) }),
-})
-
-/**
- * One entry of a customer's lead memory, as care reads it: the facts entry (`<subject>|$lead|$facts`) holds what the consult learned
- * (`careOptOut`, `occasions`, `recipientName`, `deliveryAt`, `address`) under `output.value`. Read by its key only.
- */
-export const leadMemoryKind: DataKindDefinition = defineDataKind({
-    kind: "agent-lead-memory",
-    title: { vi: "Trí nhớ khách", en: "Customer memory" },
-    fields: z.object({ id, entryKey: text, leadId: id.nullable(), kind: text, output: boundedRecord }),
-})
-
-/** Every data kind the core nodes may hold rights over; the back end registers a data port for each. */
+/** Every data kind the core nodes read and write through their data port; the back end registers a data port for each. */
 export const coreDataKinds: ReadonlyArray<DataKindDefinition> = [
     orderKind,
     salesLeadKind,
@@ -166,6 +147,4 @@ export const coreDataKinds: ReadonlyArray<DataKindDefinition> = [
     conversationKind,
     messageKind,
     knowledgeDocumentKind,
-    authorityRuleKind,
-    leadMemoryKind,
 ]

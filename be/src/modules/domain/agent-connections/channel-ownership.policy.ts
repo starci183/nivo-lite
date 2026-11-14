@@ -28,20 +28,32 @@ export const channelOwnerOf = (holders: ReadonlyArray<ChannelHolder>, module: st
         .filter((holder) => holder.module === module && answersChannel(holder.purpose))
         .sort(byGrantedAt)[0] ?? null
 
+/** The purpose by which an agent is the front door of a connection: its customers' messages wake it. */
+const INBOUND: Purpose = "inbound_chat"
+
 /**
- * The agent that already answers the connection for the role of a claim, when the claim would make a second one: null when the claim
- * does not answer the channel (its purpose is no channel purpose), or the role's owner is the claiming agent itself.
+ * THE FRONT-DOOR RULE: a channel connection (one stream of customer messages) has exactly ONE inbound agent, whatever its role, so one
+ * event starts one run. The holder is the agent granted inbound first.
+ */
+export const frontDoorOf = (holders: ReadonlyArray<ChannelHolder>): OptionalChannelOwner =>
+    [...holders].filter((holder) => holder.purpose === INBOUND).sort(byGrantedAt)[0] ?? null
+
+/**
+ * The agent that already answers the connection in a way the claim would double: null when the claim does not answer the channel (its
+ * purpose is no channel purpose) or the holder is the claiming agent itself. An inbound claim meets the connection's front door of ANY
+ * role (a second front door on one stream is refused); any other channel claim meets the owner of its own role.
  */
 export const ownershipConflictOf = (
     holders: ReadonlyArray<ChannelHolder>,
     claim: ChannelClaim,
 ): OptionalChannelOwner => {
     if (!answersChannel(claim.purpose)) return null
-    const owner = channelOwnerOf(
-        holders.filter((holder) => holder.agentId !== claim.agentId),
-        claim.module,
-    )
-    return owner
+    const others = holders.filter((holder) => holder.agentId !== claim.agentId)
+    if (claim.purpose === INBOUND) {
+        const front = frontDoorOf(others)
+        if (front !== null) return front
+    }
+    return channelOwnerOf(others, claim.module)
 }
 
 /** The owner of each connection for one role, one entry per connection that has one, in the order the connections first appear. */

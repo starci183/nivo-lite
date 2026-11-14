@@ -1,6 +1,6 @@
 "use client"
 
-import { useBrainInbox, useBrainPageHeader, useInboxCopy } from "@/hooks/brain"
+import { useBrainCritiqueTodo, useBrainInbox, useBrainPageHeader, useInboxCopy } from "@/hooks/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading } from "@/modules/types"
@@ -25,12 +25,12 @@ export const BrainTodo = (props: BrainTodoProps) => {
     const workspaceId = useWorkspaceId()
     const header = useBrainPageHeader("todo", props.header)
     const inbox = useBrainInbox({ fact: props.fact, edit: props.edit, answer: props.answer })
+    const critique = useBrainCritiqueTodo()
     const copy = useInboxCopy({ progress: inbox.view.progress, isNarrowed: inbox.view.trust === "high" })
     return (
         <BrainTodoBase
-            props={{ header: header.props, copy, inbox: inbox.view }}
+            props={{ header: header.props, copy, inbox: inbox.view, critique }}
             on={{
-                reviewAll: header.on.reviewAll,
                 selectTab: header.on.selectTab,
                 ...inbox.on,
                 ...inbox.pick.on,

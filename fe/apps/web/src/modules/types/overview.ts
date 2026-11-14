@@ -3,37 +3,8 @@ export interface OverviewKpiView {
     readonly id: string
     readonly term: string
     readonly value: string
-    /** The change and the period it is told against, already worded. */
-    readonly meta: string
-}
-
-/** One bar of the chart. */
-export interface OverviewBarView {
-    readonly id: string
-    readonly label: string
-    readonly value: number
-    readonly valueLabel: string
-}
-
-/** One step of the sales funnel. */
-export interface OverviewFunnelStepView {
-    readonly id: string
-    readonly label: string
-    /** The count, 0 up to `max`. */
-    readonly value: number
-    readonly max: number
-    /** The count and its share of the first step, already worded. */
-    readonly valueLabel: string
-}
-
-/** One channel customers come through. */
-export interface OverviewChannelView {
-    readonly id: string
-    readonly label: string
-    readonly leads: string
-    readonly revenue: string
-    /** The leads of this channel as a share of the most any channel has, 0..100. */
-    readonly share: number
+    /** The change and the period it is told against, already worded; absent for a figure that has no period before it. */
+    readonly meta?: string
 }
 
 /** One item that waits for the owner. */
@@ -79,10 +50,6 @@ export interface OverviewAgentView {
 /** The whole overview, every figure already worded for the reader. */
 export interface OverviewView {
     readonly kpis: ReadonlyArray<OverviewKpiView>
-    readonly revenueBars: ReadonlyArray<OverviewBarView>
-    readonly orderBars: ReadonlyArray<OverviewBarView>
-    readonly funnel: ReadonlyArray<OverviewFunnelStepView>
-    readonly channels: ReadonlyArray<OverviewChannelView>
     readonly approvals: {
         readonly count: number | null
         readonly items: ReadonlyArray<OverviewApprovalView>

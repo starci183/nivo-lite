@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { PLATFORM_VIEW } from "../constants"
 import { MAX_ID, MAX_LINE } from "../../../bounds"

@@ -15,7 +15,7 @@ export class CopiedSetupType {
     @Field()
     contextVersion!: boolean
 
-    /** How many permission rules now list the new agent too. */
+    /** Always 0: no permission rule exists to extend (authority rules are gone, 2026-11-13); the web still selects it. */
     @Field(() => Int)
     rules!: number
 

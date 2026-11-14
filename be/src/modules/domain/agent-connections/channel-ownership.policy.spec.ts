@@ -132,6 +132,21 @@ describe("channel ownership policy > conflicts and owners", () => {
         ).toBeNull()
     })
 
+    it("refuses a second front door on one stream, whatever its role, naming the holder", async () => {
+        const subject = await buildSubject()
+        const front = holderOf({ agentId: "w1", agentName: "Webdesk", module: "webdesk", purpose: "inbound_chat" })
+
+        expect(
+            subject.ownershipConflictOf([front], { agentId: "c1", module: "chatbot", purpose: "inbound_chat" })?.agentName,
+        ).toBe("Webdesk")
+        expect(
+            subject.ownershipConflictOf([front], { agentId: "w1", module: "webdesk", purpose: "inbound_chat" }),
+        ).toBeNull()
+        expect(
+            subject.ownershipConflictOf([front], { agentId: "b1", module: "booking", purpose: "outbound_chat" }),
+        ).toBeNull()
+    })
+
     it("lists one owner per connection for a role", async () => {
         const subject = await buildSubject()
 

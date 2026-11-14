@@ -1,3 +1,5 @@
+import * as facts from "@tests/fixtures/builders/brain-facts.builder"
+
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -6,6 +8,7 @@ import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builde
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { BrainFactBatchService } from "./brain-fact-batch.service"
+import { BrainFactEntity } from "./persistence/entities"
 
 const WS = "ws-1"
 
@@ -45,5 +48,24 @@ describe("BrainFactBatchService reopen", () => {
         const service = await build(em)
 
         await expect(service.reopen(WS, "f1", "b-1")).resolves.toBe(false)
+    })
+})
+
+describe("BrainFactBatchService inForce", () => {
+    it("reads the facts of one batch still in force by the batch's tag, never out of the newest facts in force", async () => {
+        const em = mockEntityManager({
+            find: [
+                BrainFactEntity,
+                [facts.rowOf({ id: "a", status: "active", decisionNote: "bulk:b-1 - Applied together" })],
+            ],
+        })
+        const service = await build(em)
+
+        await expect(service.inForce(WS, "b-1")).resolves.toMatchObject([{ id: "a", status: "active" }])
+        expect(em.find.mock.calls[0]?.[1]).toEqual({
+            where: { workspaceId: WS, status: "active", decisionNote: Like("bulk:b-1%") },
+            order: { id: "ASC" },
+            take: 2000,
+        })
     })
 })

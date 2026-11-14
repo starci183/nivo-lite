@@ -1,6 +1,6 @@
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { RunState } from "../../rows/run-state"
 import type { RunCallView, RunStepView, RunView } from "../../rows/run-timeline-view"
+import type { CoreRun, CoreRunCount, CoreRunStep } from "./platform.types"
 
 /** The filters of the runs list: what a person tells apart, each standing for one or more statuses of the engine. */
 export const RUN_FILTERS = ["running", "parked", "done", "failed"] as const
@@ -36,7 +36,7 @@ export const runStateOf = (status: unknown): RunState => {
 
 /** One run as the list draws it. */
 export interface AgentRunRow {
-    /** The `agent.run` id, which `platform.resume-run` takes. */
+    /** The run id, which `platform.resume-run` takes. */
     readonly id: string
     /** The filter the run belongs to. */
     readonly status: RunFilter
@@ -98,28 +98,14 @@ export const durationOf = (startedAt: unknown, endedAt: unknown, now: Date): str
     return clockOf(end.getTime() - start.getTime())
 }
 
-/** The fields of a run the list and the timeline read. */
-export const RUN_FIELDS: ReadonlyArray<string> = [
-    "agentId",
-    "trigger",
-    "status",
-    "startedAt",
-    "endedAt",
-    "parkReason",
-    "waitWorkItemId",
-]
-
 /** The row of one run of the list. */
-export const runRowOf = (run: RecordRow, where: RunLocale): AgentRunRow => {
-    const trigger = run.data["trigger"]
-    return {
-        id: run.id,
-        status: filterOf(run.data["status"]),
-        trigger: typeof trigger === "string" ? trigger : "",
-        when: whenOf(run.data["startedAt"], where),
-        duration: durationOf(run.data["startedAt"], run.data["endedAt"], where.now),
-    }
-}
+export const runRowOf = (run: CoreRun, where: RunLocale): AgentRunRow => ({
+    id: run.id,
+    status: filterOf(run.status),
+    trigger: run.trigger,
+    when: whenOf(run.startedAt, where),
+    duration: durationOf(run.startedAt, run.endedAt, where.now),
+})
 
 /** One page of the runs of an installation: the rows and the cursor of the next page. */
 export interface AgentRunsPage {
@@ -137,35 +123,12 @@ export interface AgentRunCounts {
     readonly total: number
 }
 
-/** The counts of the groups of an aggregate by engine status: several statuses of one filter add up. */
-export const countsOf = (
-    groups: ReadonlyArray<{
-        readonly groups: Readonly<Record<string, unknown>>
-        readonly measures: Readonly<Record<string, unknown>>
-    }>,
-): AgentRunCounts => {
+/** The counts of the runs by engine status: several statuses of one filter add up. */
+export const countsOf = (groups: ReadonlyArray<CoreRunCount>): AgentRunCounts => {
     const counts: Record<RunFilter, number> = { running: 0, parked: 0, done: 0, failed: 0 }
-    for (const group of groups) {
-        const held = group.measures["count"]
-        if (typeof held === "number") counts[filterOf(group.groups["status"])] += held
-    }
+    for (const group of groups) counts[filterOf(group.status)] += group.count
     return { counts, total: RUN_FILTERS.reduce((sum, filter) => sum + counts[filter], 0) }
 }
-
-/** The fields of a step the timeline reads. */
-export const STEP_FIELDS: ReadonlyArray<string> = [
-    "stepKey",
-    "nodeKey",
-    "status",
-    "input",
-    "result",
-    "startedAt",
-    "durationMs",
-    "doorCalls",
-    "effectKey",
-    "errorCode",
-    "waitItemId",
-]
 
 /** The longest line a step tells of what it was given or produced. */
 const SUMMARY_LENGTH = 160
@@ -180,7 +143,7 @@ export const summaryOf = (value: unknown): string => {
         )
         .map(([key, held]) => `${key}: ${String(held)}`)
     const line = parts.join(", ")
-    return line.length > SUMMARY_LENGTH ? `${line.slice(0, SUMMARY_LENGTH - 1)}…` : line
+    return line.length > SUMMARY_LENGTH ? `${line.slice(0, SUMMARY_LENGTH - 1)}\u2026` : line
 }
 
 /** The door calls a step recorded, as the timeline lists them; none where the step recorded none. */
@@ -218,41 +181,31 @@ const stepStateOf = (status: unknown, runIsWaiting: boolean, waitsOnItem: boolea
  * drawn parked, with the reason the engine parked it, and is the one that offers to run again. A failed or dead run (one that stopped after
  * its tries or was given to a person) offers to run again from its first failed step, drawn failed, unless one of its steps was undone.
  */
-export const runViewOf = (run: RecordRow, steps: ReadonlyArray<RecordRow>): RunView => {
-    const status = run.data["status"]
-    const parkedAt = status === "parked" ? steps.findIndex((step) => !isFinished(step.data["status"])) : -1
+export const runViewOf = (run: CoreRun, steps: ReadonlyArray<CoreRunStep>): RunView => {
+    const { status, parkReason } = run
+    const parkedAt = status === "parked" ? steps.findIndex((step) => !isFinished(step.status)) : -1
     const resumableAt =
-        RESUMABLE_STATUSES.has(String(status)) && !steps.some((step) => isUndone(step.data["status"]))
-            ? steps.findIndex((step) => step.data["status"] === "failed")
+        RESUMABLE_STATUSES.has(status) && !steps.some((step) => isUndone(step.status))
+            ? steps.findIndex((step) => step.status === "failed")
             : -1
-    const parkReason = run.data["parkReason"]
     return {
         id: run.id,
         status: runStateOf(status),
         steps: steps.map((step, index): RunStepView => {
-            const data = step.data
-            const stepKey = data["stepKey"]
-            const nodeKey = data["nodeKey"]
-            const errorCode = data["errorCode"]
             const isParked = index === parkedAt
-            const reason = isParked && typeof parkReason === "string" ? parkReason : errorCode
-            const started = data["startedAt"]
-            const took = data["durationMs"]
-            const effectKey = data["effectKey"]
+            const reason = isParked && parkReason !== null ? parkReason : step.errorCode
             return {
-                id: typeof stepKey === "string" ? stepKey : step.id,
-                node: typeof nodeKey === "string" ? nodeKey : step.id,
-                label: typeof nodeKey === "string" ? nodeKey : step.id,
-                state: isParked
-                    ? "parked"
-                    : stepStateOf(data["status"], status === "waiting", typeof data["waitItemId"] === "string"),
-                at: typeof started === "string" ? started : null,
-                inputSummary: summaryOf(data["input"]),
-                outputSummary: summaryOf(data["result"]),
-                durationMs: typeof took === "number" ? took : null,
-                calls: callsOf(data["doorCalls"]),
-                effectKey: typeof effectKey === "string" ? effectKey : null,
-                reason: typeof reason === "string" ? reason : null,
+                id: step.stepKey,
+                node: step.nodeKey,
+                label: step.nodeKey,
+                state: isParked ? "parked" : stepStateOf(step.status, status === "waiting", step.waitItemId !== null),
+                at: step.startedAt,
+                inputSummary: summaryOf(step.input),
+                outputSummary: summaryOf(step.result),
+                durationMs: step.durationMs,
+                calls: callsOf(step.doorCalls),
+                effectKey: step.effectKey,
+                reason,
                 approvalPath: null,
                 ...(index === resumableAt ? { canResume: true } : {}),
             }

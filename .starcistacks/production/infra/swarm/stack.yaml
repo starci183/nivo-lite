@@ -264,6 +264,34 @@ services:
       rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
+  # The vector index (owner ruling 2026-11-11): one point per Postgres row, the point id is the row id; Postgres stays the system of record and
+  # the reconcile job rebuilds the index from it, so this volume has no backup. Private `agents` network only (nivo-qdrant:6333), no published
+  # port. The API key is the sealed QDRANT_API_KEY, granted to this service as a Swarm secret file (deploy.secrets.grants). Stateful: stop-first,
+  # one replica pinned to the manager with its single-host volume.
+  nivo-qdrant:
+    image: qdrant/qdrant:v1.19.2@sha256:b7b0444c4c351c970b98e90a6f89c2ee4287c65b44e52b4cb503fa5b2aa927ad
+    command: ["sh", "-c", "QDRANT__SERVICE__API_KEY=\"`cat /run/secrets/QDRANT_API_KEY`\" exec ./entrypoint.sh"]
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks: [agents]
+    healthcheck:
+      # The image ships no HTTP client: liveness is that the REST port accepts a connection; readiness is the api's /readyz `vectors` member.
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      replicas: 1
+      placement: { constraints: [node.role == manager] }
+      resources: { limits: { memory: 1G } }
+      update_config: { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0 }
+      rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 5s }
+
   # The database: the app's managed db image (rulings lite-official-postgres-image, lite-db-image-in-stacks), built by `starci app stack build`
   # from .starcistacks/images/db/Dockerfile: the Docker Official postgres image plus pgvector and pgmq (the event bus). Private `agents` network
   # only (db:5432), no published port. The superuser is `postgres` with the sealed POSTGRES_PASSWORD of the `postgres` member
@@ -346,6 +374,7 @@ volumes:
   video-cache: { external: true, name: nivo-engine_video-cache }
   n8n-data: { external: true, name: nivo-engine_n8n-data }
   redis-data: { external: true, name: nivo-engine_redis-data }
+  qdrant-data: { external: true, name: nivo-engine_qdrant-data }
   ai-router-data: { external: true, name: nivo-engine_ai-router-data }
   postgres-data: { external: true, name: nivo-engine_postgres-data }
   postgres-backups: { external: true, name: nivo-engine_postgres-backups }
@@ -366,6 +395,7 @@ secrets:
   n8n: { external: true, name: nivo-custody-n8n-v1 }
   postgres: { external: true, name: nivo-custody-postgres-v1 }
   redis: { external: true, name: nivo-custody-redis-v1 }
+  qdrant: { external: true, name: nivo-custody-qdrant-v1 }
   auth: { external: true, name: nivo-custody-auth-v1 }
   google: { external: true, name: nivo-custody-google-v1 }
   storage: { external: true, name: nivo-custody-storage-v1 }

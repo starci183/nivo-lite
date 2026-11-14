@@ -31,6 +31,7 @@ const roomOf = (members: ReadonlyArray<RoomMember>): ChatRoomView => ({
     purpose: "group",
     purposeModule: null,
     name: "Sales",
+    withNivo: false,
     position: 0,
     createdBy: "user-1",
     createdAt: new Date(NOW),

@@ -3,26 +3,40 @@ export { BrainCommandRunnerService } from "./brain-command-runner.service"
 export { BrainLogEvent } from "./brain.log-events"
 export { BrainModule } from "./brain.module"
 export { BrainChangeMessagesService } from "./brain-change-messages.service"
-export type { BrainChangeDecide, BrainChangeDecision, BrainChangePost, BrainChangePosted } from "./brain-change-messages.service"
+export type { BrainChangeDecision } from "./brain-change-messages.service"
 export { DocumentFactsService } from "./document-facts.service"
+export { DocumentNatureAnswerService } from "./document-nature-answer.service"
+export type { NatureAnswered } from "./document-nature-answer.service"
+export { PART_NATURES } from "./document-nature.policy"
+export type { FounderNature, PartNature } from "./document-nature.policy"
 export { BRAIN_MESSAGES } from "./messages/brain.messages"
 export { BrainPageService } from "./brain-page.service"
-export type { BrainLens, BrainOverview, LessonMiningState } from "./brain-page.service"
+export type { BrainFactsAsk, BrainLens, BrainOverview, LessonMiningState } from "./brain-page.service"
 export { BrainTodoService } from "./brain-todo.service"
 export type { BrainTodo } from "./brain-todo.service"
 export { BrainBulkService } from "./brain-bulk.service"
 export { BrainService } from "./brain.service"
-export type { BulkApplied, BulkUndone, Correction, CorrectionSource } from "./brain.contracts"
+export { DocumentAreaService } from "./document-area.service"
+export type { BulkApplied, BulkUndone } from "./brain.contracts"
 export { IndexedSourcesService } from "./indexed-sources.service"
 export { brainEntities } from "./persistence/entities"
 export { BrainGraphService } from "./brain-graph.service"
-export type { GraphLinkForm, GraphRequest, GraphUnlinkRequest } from "./brain-graph.service"
-export { FactEmbeddingsService } from "./fact-embeddings.service"
+export type { BrainGraph } from "./brain.contracts"
+export { BrainPoliciesService } from "./brain-policies.service"
 export type {
-    BrainGraph,
-    BrainGraphFilter,
-    BrainGraphNode,
-    BrainGraphOrigin,
-    BrainGraphPending,
-    BrainGraphSource,
-} from "./brain.contracts"
+    SetPolicyRequest,
+    SetPolicyResult,
+    UnsetPolicyRequest,
+    UnsetPolicyResult,
+} from "./brain-policies.contracts"
+export type { BrainPoliciesWire, BrainPolicyDetailWire } from "./brain-policies-wire.contracts"
+export { BrainPolicyReadService } from "./brain-policy-read.service"
+export { BrainPolicyDeriveService } from "./brain-policy-derive.service"
+export { BrainPolicyDerivationsService } from "./brain-policy-derivations.service"
+export type { PolicyDeriveRequested } from "./brain-policy-derivations.service"
+export { TruthCeilingService } from "./truth-ceiling.service"
+export type { KnowledgeUsageView } from "./truth-ceiling.policy"
+export { DocumentPartsService } from "./document-parts.service"
+export { KnowledgeSourcesListingService } from "./knowledge-sources-listing.service"
+export { BrainFactDecisionService } from "./brain-fact-decision.service"
+export type { KnowledgeSourceListing } from "./knowledge-sources-listing.contracts"

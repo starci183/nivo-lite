@@ -1,6 +1,4 @@
 import { z } from "../schema/zod-entry"
-import { rightsGaps } from "../rights/rights"
-import type { DataAccess, DataRight, RightScope, RightsGrant } from "../rights/rights.types"
 import { isRecord } from "../schema/is-record"
 import type { Namespaced } from "../schema/schema.types"
 import type {
@@ -12,53 +10,24 @@ import type {
     NodeRunRequest,
 } from "./host.types"
 import { NodeRunError } from "./node-run-error"
-import { isRefused } from "./node.types"
-import type {
-    EffectOptions,
-    EffectPayload,
-    NodeAgentRequest,
-    NodeConfusion,
-    NodeContext,
-    NodeModelDecision,
-    NodeTools,
-    NodeQuery,
-    NodeModelRequest,
-    SubjectRef,
+import {
+    isRefused,
+    type EffectOptions,
+    type EffectPayload,
+    type NodeAgentRequest,
+    type NodeConfusion,
+    type NodeContext,
+    type NodeModelDecision,
+    type NodeTools,
+    type NodeQuery,
+    type NodeModelRequest,
+    type SubjectRef,
 } from "./node.types"
 import { RightsDeniedError } from "./rights-denied-error"
 import { NodeBusinessFailure, NodeConfused } from "./memory"
 import { ToolUndeclaredError } from "./tool-undeclared-error"
 import { trusted } from "../schema/trusted"
-
-/** Whether a grant covers one right. */
-const covers = (grant: RightsGrant, right: DataRight): boolean => rightsGaps(grant, [right]).length === 0
-
-/** The right a call needs, or a refusal when it names no field. */
-const rightOf = (kind: string, access: DataAccess, scope: RightScope, fields: ReadonlyArray<string>): DataRight => {
-    const [first, ...rest] = fields
-    if (first === undefined) throw new RightsDeniedError(kind)
-    return { kind, access, scope, fields: [first, ...rest] }
-}
-
-/**
- * The scope a call runs in: the widest the node declared for these fields, and only when the agent's grant covers it too. A call
- * outside either is refused: default deny.
- */
-const scopeOf = (
-    request: NodeRunRequest,
-    kind: string,
-    access: DataAccess,
-    fields: ReadonlyArray<string>,
-): RightScope => {
-    const declared = { rights: request.node.rights }
-    const scope = (["workspace", "turn"] as const).find((candidate) =>
-        covers(declared, rightOf(kind, access, candidate, fields)),
-    )
-    if (scope === undefined || !covers(request.grant, rightOf(kind, access, scope, fields))) {
-        throw new RightsDeniedError(kind)
-    }
-    return scope
-}
+import { callDigestOf, stableJson } from "./call-digest"
 
 /** Parses a value with a node schema, or refuses with the code. */
 const parsed = <S extends z.ZodType>(
@@ -85,58 +54,9 @@ const parsedRecord = (
 }
 
 /**
- * The JSON of a value with the members of every object in name order (an undefined member left out), so equal data always has the
- * same text. Written here, in plain code, because this file is also built for the browser, where no Node module can be imported.
- */
-const stableJson = (value: unknown): string => {
-    if (Array.isArray(value)) return `[${value.map((item: unknown) => stableJson(item)).join(",")}]`
-    if (typeof value === "object" && value !== null) {
-        return `{${Object.entries(value)
-            .filter(([, member]) => member !== undefined)
-            .sort(([left], [right]) => (left < right ? -1 : 1))
-            .map(([name, member]) => `${JSON.stringify(name)}:${stableJson(member)}`)
-            .join(",")}}`
-    }
-    return JSON.stringify(value) ?? "null"
-}
-
-/** The seeds and the multipliers of the two 32-bit halves of a text's digest. */
-const DIGEST_SEEDS: readonly [number, number] = [0xdeadbeef, 0x41c6ce57]
-const DIGEST_STEPS: readonly [number, number] = [2654435761, 1597334677]
-const DIGEST_MIXES: readonly [number, number] = [2246822507, 3266489909]
-
-/** A 32-bit half as eight hex digits. */
-const hex8 = (half: number): string => (half >>> 0).toString(16).padStart(8, "0")
-
-/**
- * The digest of a text: sixteen hex digits (64 bits) from two 32-bit halves mixed over its code units. It is no secret and guards
- * nothing: it only tells the few calls of one step apart, the same on every host, with no Node module.
- */
-const textDigestOf = (text: string): string => {
-    let [first, second] = DIGEST_SEEDS
-    for (let index = 0; index < text.length; index += 1) {
-        const unit = text.charCodeAt(index)
-        first = Math.imul(first ^ unit, DIGEST_STEPS[0])
-        second = Math.imul(second ^ unit, DIGEST_STEPS[1])
-    }
-    const mixedFirst =
-        Math.imul(first ^ (first >>> 16), DIGEST_MIXES[0]) ^ Math.imul(second ^ (second >>> 13), DIGEST_MIXES[1])
-    const mixedSecond =
-        Math.imul(second ^ (second >>> 16), DIGEST_MIXES[0]) ^ Math.imul(first ^ (first >>> 13), DIGEST_MIXES[1])
-    return `${hex8(mixedSecond)}${hex8(mixedFirst)}`
-}
-
-/**
- * What tells one call of a step from another: the tool or effect and its parsed arguments, whatever their member order. A step that
- * runs again makes its calls in whatever order its agent chooses, so the place of a call says nothing: a replay must only ever answer
- * the same tool asked the same thing.
- */
-export const callDigestOf = (id: string, args: Readonly<Record<string, unknown>>): string =>
-    textDigestOf(stableJson([id, args]))
-
-/**
- * The tools a node reaches: declared, installed, granted by name and by right, never mutating from a condition, args and answer
- * parsed. Each call is keyed by the run step, the tool and its arguments, so the door can replay instead of calling again.
+ * The tools a node reaches: declared, installed, named by the run's grant, never mutating from a condition, args and answer
+ * parsed. Each call is keyed by the run step, the tool and its arguments, so the door can replay instead of calling again: the same
+ * key an effect of the same id and arguments gets, so either road reaches the one ledger line, receipt and op key.
  */
 const toolsOf = (request: NodeRunRequest, ports: NodeHostPorts): NodeTools => {
     const { node } = request
@@ -146,10 +66,9 @@ const toolsOf = (request: NodeRunRequest, ports: NodeHostPorts): NodeTools => {
             const tool = request.tools.get(name)
             if (tool === undefined) throw new NodeRunError("TOOL_UNKNOWN", name)
             if (tool.mutates && node.role === "condition") throw new NodeRunError("TOOL_MUTATES", name)
-            const named = (request.grant.tools ?? []).includes(name)
-            if (!named || rightsGaps(request.grant, tool.rights).length > 0) throw new RightsDeniedError(name)
+            if (!(request.grant.tools ?? []).includes(name)) throw new RightsDeniedError(name)
             const checked = parsedRecord(tool.args, args, "TOOL_ARGS_INVALID", name)
-            const key = `${request.key}:tool:${callDigestOf(name, checked)}`
+            const key = `${request.key}:${callDigestOf(name, checked)}`
             return trusted<R>(
                 parsed(tool.result, await ports.callTool(tool, checked, key), "TOOL_RESULT_INVALID", name),
             )
@@ -163,7 +82,7 @@ const CONFUSION_MAX = 2000
 /** What `decide` adds to a node's own instructions: the way out of guessing. */
 const DECIDE_RULE =
     'Answer ONLY with JSON, in one of two shapes. When you can decide from what you are given: {"answer": <the answer described above>}. ' +
-    'When you cannot decide without guessing (the data is missing, contradicts itself, or does not fit what you were asked): ' +
+    "When you cannot decide without guessing (the data is missing, contradicts itself, or does not fit what you were asked): " +
     '{"confused": {"reason": "<why you cannot decide, plainly>", "question": "<what a person must answer for you to go on, or null>"}}. ' +
     "Never guess to avoid the second shape."
 
@@ -202,15 +121,23 @@ const confusionSchema: z.ZodType<NodeConfusion> = z.object({
     question: z.string().max(CONFUSION_MAX).nullable(),
 })
 
+/** One tool call of the agent: the tool's name and its arguments. */
+interface AgentToolCall {
+    readonly tool: string
+    readonly args: Readonly<Record<string, unknown>>
+}
+
+/** How a host-run agent loop ended: its decision once the agent answered or said it is confused, null while it runs. */
+interface HostLoopEnd<T> {
+    decision: NodeModelDecision<T> | null
+}
+
 /** One turn of the agent, as the model answers it: a call, the output, or its confusion. */
-type AgentTurn =
-    | { readonly call: { readonly tool: string; readonly args: Readonly<Record<string, unknown>> } }
-    | { readonly done: unknown }
-    | { readonly confused: NodeConfusion }
+type AgentTurn = { readonly call: AgentToolCall } | { readonly done: unknown } | { readonly confused: NodeConfusion }
 
 /**
  * The schema of one turn. A fake scripts an agent with these very shapes, in call order:
- * `{ call: { tool: "nivo.payment.order.settle", args: { orderId, transactionId } } }`, then `{ done: <the step's output> }`,
+ * `{ call: { tool: "nivo.tool.payment.order.settle", args: { orderId, transactionId } } }`, then `{ done: <the step's output> }`,
  * or `{ confused: { reason, question } }`.
  */
 const agentTurnSchema: z.ZodType<AgentTurn> = z.union([
@@ -261,23 +188,32 @@ const WAITING_RULE =
 const ANSWERED_RULE =
     "The shop's founder answered what this step asked before (`founderAnswers`, oldest first). Their answer is a fact and a decision: follow it. It still cannot make a tool do what the tool refuses."
 
+/** What every agent of a turn is told about the founder's answers to the reports of other steps about the same customer. */
+const DECIDED_RULE =
+    "The shop's founder already answered reports about this customer (`founderDecisions`: what was asked, the founder's words, oldest first). They are the shop's decisions for this customer, in force: follow them as facts, and never tell the customer they are unconfirmed or not yet known."
+
+/** What the agent of a step is told about bank credits for the same order that joined its run while it waited. */
+const JOINED_RULE =
+    "More bank credits for the same order arrived while this run waited for the founder (`creditsJoined`). They belong to this run's work: count them with the credit the run is about, and settle them together when the money is to be recorded."
+
+/** What the agent of a step is told about the events of its run's key that arrived while the run was in flight (`run.queue`). */
+const QUEUED_EVENTS_RULE =
+    "More events about the same subject arrived while this run was in flight (`queuedEvents`, oldest first, each as its trigger supplied it). They were queued on this run instead of starting their own: handle them as part of this run's work."
+
 /** What the agent of a step that runs again is told about the lines the step already sent the customer. */
 const ALREADY_SENT_RULE =
     "This step already sent the customer the lines in `alreadySent` (oldest first) when it ran before. They were delivered: never say the same thing again, in the same or in other words; send a new line only when it says something new."
-
-/** What goes before the values of the agent's policy: they are facts, and they are the workspace's own. */
-const POLICY_RULE =
-    "The values of this policy as they stand for this shop (JSON, by name). They are facts: where the words above name a default, the value here is the one that holds."
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 // The layout of a model call (prompt caching)
 //
 // A provider caches the PREFIX of a prompt, so every model call of the engine is laid out from what changes least to what changes
 // most, and equal data always has the same text (`stableJson`, tools in name order):
-//   L1  the agent's craft: the guidance of its policy, its whole tool set with the schemas, how an agent takes its turns;
-//   L2  the shop's policy values;
+//   L1  the agent's craft: its guidance, its whole tool set with the schemas, how an agent takes its turns;
+//   L2  (the shop's rules from the truth graph: not laid out by this host)
 //   L3  the step: its goal, the tools it may call, the schema of its output (the host appends the schema of the answer);
-//   ---- END OF THE STABLE PART: `instructions` ends here; a host that marks a cacheable prefix marks this point ----
+//   ---- END OF THE STABLE PART: `instructions` ends here; a host that marks a cacheable prefix marks this point, and the end of
+//        L1 (`sharedLength`) as well, so the first call of ANOTHER step of the same agent and shop reads that opening ----
 //   L4  what changes from call to call: `volatile` (the rules about what waits, what was answered, what was sent) and `input`
 //       (the thread, the facts, the calls so far).
 // Nothing of L4 may enter `instructions`: no clock, no run, lead or record id, no member order that depends on how an object was
@@ -377,37 +313,47 @@ const craftOf = (frame: ModelCallFrame, own: ReadonlyArray<string>, agentTurn: b
     ]
 }
 
-/** L2, the shop's policy values; nothing when the turn carries none. */
-const shopOf = (turn: NodeRunRequest["turn"]): ReadonlyArray<string> => {
-    const values = turn.policy ?? {}
-    return Object.keys(values).length === 0 ? [] : [`${POLICY_RULE}\n${stableJson(values)}`]
-}
-
 /**
- * L1 + L2 of an agent whose turns the host takes itself: the guidance, how an agent acts, and the shop's policy values. The tool set
+ * L1 of an agent whose turns the host takes itself: the guidance and how an agent acts. The tool set
  * is not in the words: the host shows it to the model its own way, from the list the runner hands over.
  */
 const hostLoopCraftOf = (frame: ModelCallFrame): string => {
     const guidance = (frame.turn.guidance ?? "").trim()
-    return [...(guidance === "" ? [] : [guidance]), AGENT_ACT_RULE, ...shopOf(frame.turn)].join("\n\n")
+    return [...(guidance === "" ? [] : [guidance]), AGENT_ACT_RULE].join("\n\n")
 }
 
-/** The stable part of a call: L1, L2, then the step's own words (L3). */
+/** The stable part of a call laid out: L1 (the opening every step's call of the agent shares), then the step's own words (L3). */
+interface StableLayout {
+    /** L1 and L3, one blank line between them. */
+    readonly instructions: string
+    /** How long the L1 opening of `instructions` is; absent when the turn carries none (the call is its step alone). */
+    readonly sharedLength?: number
+}
+
+/** The stable part of a call: L1, then the step's own words (L3), with where the shared opening (L1) ends. */
 const stableOf = (
     frame: ModelCallFrame,
     own: ReadonlyArray<string>,
     agentTurn: boolean,
     step: string,
-): string => [...craftOf(frame, own, agentTurn), ...shopOf(frame.turn), step].join("\n\n")
+): StableLayout => {
+    const shared = craftOf(frame, own, agentTurn).join("\n\n")
+    return shared === ""
+        ? { instructions: step }
+        : { instructions: `${shared}\n\n${step}`, sharedLength: shared.length }
+}
 
 /**
- * A plain model call of a turn's agent laid out for the cache: the agent's craft and the shop's policy values in front of the call's
- * own instructions, when the turn carries any. A host uses it for a model call it makes for the agent outside a node (the engine's
- * own decision on a stuck step); the same call is returned when the turn adds nothing.
+ * A plain model call of a turn's agent laid out for the cache: the agent's craft in front of the call's
+ * own instructions, when the turn carries any, with `sharedLength` saying where that shared opening ends (a host that marks cache
+ * breakpoints marks there too, so every step of the agent reads it from the cache). A host uses it for a model call it makes for the
+ * agent outside a node (the engine's own decision on a stuck step); the same call is returned when the turn adds nothing.
  */
 export const guidedModelRequest = (frame: ModelCallFrame, model: NodeModelRequest): NodeModelRequest => {
-    const instructions = stableOf(frame, [], false, model.instructions)
-    return instructions === model.instructions ? model : { ...model, instructions }
+    const laid = stableOf(frame, [], false, model.instructions)
+    return laid.sharedLength === undefined
+        ? model
+        : { ...model, instructions: laid.instructions, sharedLength: laid.sharedLength }
 }
 
 /** The rules about what changes between two tries of a step, each only when the turn carries its data: L4, never the stable part. */
@@ -415,6 +361,9 @@ const volatileWordsOf = (turn: NodeRunRequest["turn"]): string | undefined => {
     const words = [
         ...((turn.waitingOnFounder ?? []).length === 0 ? [] : [WAITING_RULE]),
         ...((turn.founderAnswers ?? []).length === 0 ? [] : [ANSWERED_RULE]),
+        ...((turn.founderDecisions ?? []).length === 0 ? [] : [DECIDED_RULE]),
+        ...((turn.creditsJoined ?? []).length === 0 ? [] : [JOINED_RULE]),
+        ...((turn.queue ?? []).length === 0 ? [] : [QUEUED_EVENTS_RULE]),
         ...((turn.alreadySent ?? []).length === 0 ? [] : [ALREADY_SENT_RULE]),
     ]
     return words.length === 0 ? undefined : words.join("\n\n")
@@ -425,9 +374,15 @@ const volatileFactsOf = (turn: NodeRunRequest["turn"]): Readonly<Record<string, 
     const waiting = turn.waitingOnFounder ?? []
     const answers = turn.founderAnswers ?? []
     const sent = turn.alreadySent ?? []
+    const decided = turn.founderDecisions ?? []
+    const joined = turn.creditsJoined ?? []
+    const events = turn.queue ?? []
     return {
         ...(waiting.length === 0 ? {} : { waitingOnFounder: waiting }),
         ...(answers.length === 0 ? {} : { founderAnswers: answers }),
+        ...(decided.length === 0 ? {} : { founderDecisions: decided }),
+        ...(joined.length === 0 ? {} : { creditsJoined: joined }),
+        ...(events.length === 0 ? {} : { queuedEvents: events }),
         ...(sent.length === 0 ? {} : { alreadySent: sent }),
     }
 }
@@ -452,7 +407,7 @@ class ToolRefused extends Error {
 }
 
 /** Why a call or an answer was refused, as the fact the agent reads: a stable code and bounded words. */
-const refusalOf = (cause: unknown): { readonly code: string; readonly message: string; readonly data?: unknown } => {
+const refusalOf = (cause: unknown): NodeAgentRefusal => {
     const code: unknown = typeof cause === "object" && cause !== null ? Reflect.get(cause, "code") : undefined
     const params: unknown = typeof cause === "object" && cause !== null ? Reflect.get(cause, "params") : undefined
     return {
@@ -516,12 +471,18 @@ const agentRun = async <S extends z.ZodType>(
     // The output the agent offers: taken once every required call succeeded and it fits the step's schema, else refused with why.
     const done = (
         offered: unknown,
-    ): { readonly ok: true; readonly value: z.output<S> } | { readonly ok: false; readonly refused: NodeAgentRefusal } => {
+    ):
+        | { readonly ok: true; readonly value: z.output<S> }
+        | { readonly ok: false; readonly refused: NodeAgentRefusal } => {
         const missing = required.filter((id) => !succeeded.has(id))
-        if (missing.length > 0) return { ok: false, refused: { code: "REQUIRED_CALL_MISSING", message: missing.join(", ") } }
+        if (missing.length > 0)
+            return { ok: false, refused: { code: "REQUIRED_CALL_MISSING", message: missing.join(", ") } }
         const output = asked.output.safeParse(offered)
         if (!output.success) {
-            return { ok: false, refused: { code: "OUTPUT_INVALID", message: output.error.message.slice(0, REFUSAL_MAX) } }
+            return {
+                ok: false,
+                refused: { code: "OUTPUT_INVALID", message: output.error.message.slice(0, REFUSAL_MAX) },
+            }
         }
         return { ok: true, value: output.data }
     }
@@ -535,7 +496,7 @@ const agentRun = async <S extends z.ZodType>(
     const facts = volatileFactsOf(request.turn)
     if (ports.agent !== undefined) {
         // The host takes the turns (a native tool-calling loop); the closures above stay the only way a call acts or an output stands.
-        const ended: { decision: NodeModelDecision<z.output<S>> | null } = { decision: null }
+        const ended: HostLoopEnd<z.output<S>> = { decision: null }
         const over: NodeAgentRefusal = { code: "STEP_ENDED", message: "The step's agent has already ended." }
         await ports.agent({
             purpose,
@@ -579,13 +540,14 @@ const agentRun = async <S extends z.ZodType>(
         })
         return ended.decision ?? exhausted
     }
-    const instructions = stableOf(request, own, true, step)
+    const { instructions, sharedLength } = stableOf(request, own, true, step)
     const calls: Array<unknown> = []
     const take = async (left: number): Promise<NodeModelDecision<z.output<S>>> => {
         if (left === 0) return exhausted
         const turn = await ports.model.json(agentTurnSchema, {
             purpose,
             instructions,
+            ...(sharedLength === undefined ? {} : { sharedLength }),
             ...(volatile === undefined ? {} : { volatile }),
             // The calls so far come last and only grow, so the text of one turn is the opening of the next turn's.
             input: { input: asked.input, ...facts, calls: [...calls], turnsLeft: left - 1 },
@@ -620,31 +582,31 @@ const contextOf = (
         ...guidedModelRequest(request, model),
         purpose: `${node.id}:${model.purpose}`,
     })
-    const effect = async (kind: Namespaced, payload: EffectPayload, options: EffectOptions = {}): Promise<SubjectRef> => {
-        if (!node.effects.includes(kind)) throw new NodeRunError("EFFECT_UNDECLARED", kind)
-        const definition = request.effects.get(kind)
-        if (definition === undefined) throw new NodeRunError("EFFECT_UNKNOWN", kind)
-        const checked = parsedRecord(definition.payload, payload, "EFFECT_PAYLOAD_INVALID", kind)
-        if (rightsGaps(request.grant, definition.rights).length > 0) throw new RightsDeniedError(kind)
-        const call = { key: `${request.key}:${callDigestOf(kind, checked)}`, dedupeKey: options.dedupeKey ?? null }
-        const subject = await ports.execute(definition, checked, call)
-        // A refusal changed nothing: it is no effect of the step, and the host kept nothing under its key, so the call made again is really made.
-        if (!isRefused(subject)) done.push({ id: kind, subject })
-        return subject
-    }
+    // One road for the node's own code and for the agent's calls: the code may post the wider `codePayload` shape of an effect (a card its
+    // step built), the agent only the `payload` shape it is shown, so a model never types what only a step may build.
+    const effectOf =
+        (byAgent: boolean) =>
+        async (kind: Namespaced, payload: EffectPayload, options: EffectOptions = {}): Promise<SubjectRef> => {
+            if (!node.effects.includes(kind)) throw new NodeRunError("EFFECT_UNDECLARED", kind)
+            const definition = request.effects.get(kind)
+            if (definition === undefined) throw new NodeRunError("EFFECT_UNKNOWN", kind)
+            const shape = byAgent ? definition.payload : (definition.codePayload ?? definition.payload)
+            const checked = parsedRecord(shape, payload, "EFFECT_PAYLOAD_INVALID", kind)
+            const call = { key: `${request.key}:${callDigestOf(kind, checked)}`, dedupeKey: options.dedupeKey ?? null }
+            const subject = await ports.execute(definition, checked, call)
+            // A refusal changed nothing: it is no effect of the step, and the host kept nothing under its key, so the call made again is really made.
+            if (!isRefused(subject)) done.push({ id: kind, subject })
+            return subject
+        }
+    const effect = effectOf(false)
     const tools = toolsOf(request, ports)
     return {
         turn: request.turn,
         params,
         data: {
-            read: async <T>(kind: string, query: NodeQuery): Promise<ReadonlyArray<T>> => {
-                const scope = scopeOf(request, kind, "read", query.fields)
-                return trusted<ReadonlyArray<T>>(await ports.read(kind, query, scope))
-            },
-            write: (kind, record) => {
-                scopeOf(request, kind, "write", Object.keys(record))
-                return ports.write(kind, record)
-            },
+            read: async <T>(kind: string, query: NodeQuery): Promise<ReadonlyArray<T>> =>
+                trusted<ReadonlyArray<T>>(await ports.read(kind, query, query.scope ?? "turn")),
+            write: (kind, record) => ports.write(kind, record),
         },
         effect,
         model: {
@@ -659,7 +621,7 @@ const contextOf = (
             },
         },
         tools,
-        agent: { run: (asked) => agentRun(request, ports, { effect, tools }, asked) },
+        agent: { run: (asked) => agentRun(request, ports, { effect: effectOf(true), tools }, asked) },
         fail: (failure) => {
             throw new NodeBusinessFailure(failure)
         },
@@ -671,16 +633,14 @@ const contextOf = (
 }
 
 /**
- * Runs one node the way every host must: params and input parsed by the node's schemas, the agent's grant covering every right the
- * node requires, each read and write checked against both the node's declared rights and the grant, each effect declared, installed,
- * its payload parsed and its rights granted before the port acts, each tool the same through the NIVO MCP door, and the output parsed. Default deny throughout.
+ * Runs one node the way every host must: params and input parsed by the node's schemas, each effect declared and installed and its
+ * payload parsed before the port acts, each tool declared by the node, installed and named by the run's grant before the NIVO MCP door
+ * calls it, and the output parsed. A node's reach is its code: no data right is judged (`nivo-frame.rights`).
  */
 export const runNode = async (request: NodeRunRequest, ports: NodeHostPorts): Promise<NodeRun> => {
     const { node } = request
     const params = parsed(node.params, request.params, "PARAMS_INVALID", node.id)
     const input = parsed(node.input, request.input, "INPUT_INVALID", node.id)
-    const [gap] = rightsGaps(request.grant, node.rights)
-    if (gap !== undefined) throw new RightsDeniedError(gap.right.kind)
     const effects: Array<NodeRunEffect> = []
     const raw = await node.run(input, contextOf(request, ports, params, effects))
     return { output: parsed(node.output, raw, "OUTPUT_INVALID", node.id), effects }

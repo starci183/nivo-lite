@@ -5,6 +5,9 @@ import type { LeadRow, OrderRow } from "../sales.types"
 /** The instant the sample data is read at, ISO text. */
 export const SAMPLE_NOW = "2026-11-05T09:00:00.000Z"
 
+/** The person (the core contact) a sample customer record is about. */
+export const contactOfLead = (leadId: string): string => `contact-${leadId}`
+
 const lead = (
     id: string,
     contactName: string,
@@ -15,6 +18,7 @@ const lead = (
     extra: Partial<LeadRow> = {},
 ): LeadRow => ({
     id,
+    contactId: contactOfLead(id),
     contactName,
     company: "",
     channel: "zalo",
@@ -106,7 +110,7 @@ const order = (
 ): OrderRow => ({
     id,
     orderNo,
-    leadId,
+    contactId: leadId === null ? null : contactOfLead(leadId),
     items: { lines: pricedLinesOf(itemLinesOf(itemsText)) },
     itemsText,
     note: "",

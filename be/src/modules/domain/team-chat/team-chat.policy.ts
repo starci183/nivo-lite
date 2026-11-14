@@ -1,6 +1,18 @@
 import { createHash } from "node:crypto"
-import { BODY_MAX, FILES_MAX, MENTIONS_MAX, PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
-import type { ChatDone, ChatMemberRef, ChatRefused, GroupPurpose, RoomKind, StoredMention } from "./team-chat.contracts"
+import {
+    BODY_MAX,
+    FILES_MAX,
+    MENTIONS_MAX,
+    PAGE_DEFAULT,
+    PAGE_MAX,
+    type ChatDone,
+    type ChatMemberRef,
+    type ChatRefused,
+    type GroupPurpose,
+    type RoomKeyed,
+    type RoomKind,
+    type StoredMention,
+} from "./team-chat.contracts"
 import type { PurposeColumns } from "./team-chat-audience.contracts"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 
@@ -42,6 +54,25 @@ export const directKeyOf = (first: ChatMemberRef, second: ChatMemberRef): string
         .map((member) => `${member.memberKind}:${member.memberId}`)
         .toSorted((left, right) => left.localeCompare(right))
         .join("|")
+
+/** The member part NIVO itself takes in the key of a person's NIVO room; it is never a seat (NIVO is no member). */
+const NIVO_KEY_PART = "system:nivo"
+
+/**
+ * The key of a person's NIVO room: the direct room where NIVO itself (no agent) tells that person what stopped in the background. The
+ * pair is NIVO and the person, sorted like every direct key (`system:` sorts before `user:`); only the person is seated.
+ */
+export const nivoRoomKeyOf = (userId: string): string => `${NIVO_KEY_PART}|user:${userId}`
+
+/** True for the key of a NIVO room. */
+export const isNivoRoomKey = (directKey: string | null): boolean => directKey?.startsWith(`${NIVO_KEY_PART}|`) === true
+
+/**
+ * Whether no person may write in a room: the founder's NIVO room is read-only (NIVO reports there and nothing answers, so a line typed
+ * there would reach nobody, and an `@agent` tag there would wake an agent from a room it does not sit in). Every other room is open to
+ * the people seated in it.
+ */
+export const isReadOnlyRoom = (room: RoomKeyed): boolean => room.kind === "direct" && isNivoRoomKey(room.directKey)
 
 /** The name of a group once trimmed, or null when it is empty or too long. */
 export const groupNameOf = (name: string | null): string | null => {

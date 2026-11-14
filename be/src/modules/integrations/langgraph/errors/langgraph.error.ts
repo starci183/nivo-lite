@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the LangGraph integration: every way a thread call is refused by name instead of doing nothing. */
 export enum LanggraphErrorCode {
@@ -13,6 +12,8 @@ export enum LanggraphErrorCode {
     ThreadNotStopped = "LANGGRAPH_THREAD_NOT_STOPPED",
     /** A node answered a `goto` it did not declare (`node`, `goto`). */
     RouteUndeclared = "LANGGRAPH_ROUTE_UNDECLARED",
+    /** A node of a fan-out branch wrote a key only the shared state's nodes write, or ended the thread from the branch (`node`, `what`). */
+    BranchInvalid = "LANGGRAPH_BRANCH_INVALID",
     /** A value that must be stored in a checkpoint is not plain JSON (`at`). */
     NotPlain = "LANGGRAPH_NOT_PLAIN",
     /** The graph cannot be compiled: no entry, a key used twice or reserved, a route to a node it does not have (`node`). */
@@ -38,6 +39,7 @@ export const LANGGRAPH_ERROR_KINDS: Record<LanggraphErrorCode, ErrorKind> = {
     [LanggraphErrorCode.ThreadExists]: "conflict",
     [LanggraphErrorCode.ThreadNotStopped]: "conflict",
     [LanggraphErrorCode.RouteUndeclared]: "internal",
+    [LanggraphErrorCode.BranchInvalid]: "internal",
     [LanggraphErrorCode.NotPlain]: "internal",
     [LanggraphErrorCode.GraphUnsound]: "internal",
     [LanggraphErrorCode.ThreadUnreadable]: "internal",

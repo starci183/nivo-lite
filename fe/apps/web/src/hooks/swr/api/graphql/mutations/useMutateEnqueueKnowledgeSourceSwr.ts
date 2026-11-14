@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateEnqueueKnowledgeSource,
     type MutateEnqueueKnowledgeSourceRequest,
 } from "@/modules/api/graphql/mutations/mutation-enqueue-knowledge-source"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { EnqueueKnowledgeSourceMutation } from "@/modules/api"
 
 /** What the EnqueueKnowledgeSource mutation is triggered with. */

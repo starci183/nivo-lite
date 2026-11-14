@@ -1,12 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
+import { InjectAi, type AiService } from "@modules/integrations/ai"
+import { InjectVectorIndex, type VectorIndex } from "@modules/integrations/qdrant"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectTimer } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectTimer, type Timer } from "@modules/platform/retry"
 import { LivenessError, LivenessErrorCode } from "./errors/liveness.error"
 import type { ReadinessReport } from "./readiness.contracts"
 import { ReadinessLogEvent } from "./readiness.log-events"
@@ -36,6 +34,7 @@ export class ReadinessService {
         @InjectLogger() private readonly logger: Logger,
         @InjectTimer() private readonly timer: Timer,
         @InjectAi() private readonly ai: AiService,
+        @Optional() @InjectVectorIndex() private readonly vectors: VectorIndex | null = null,
     ) {}
 
     /** Reports ready only when the AI endpoint is configured and both database probes answer within three seconds. */
@@ -65,7 +64,9 @@ export class ReadinessService {
                 throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })
             }
             release(cancels)
-            return { status: "ready", checks: { database: "ok", jobs: "ok", ai: "ok" } }
+            // The vector index never makes the process unready: without it the meaning search answers by words. The probe says so.
+            const vectors = this.vectors == null ? "off" : this.vectors.health()
+            return { status: "ready", checks: { database: "ok", jobs: "ok", ai: "ok", vectors } }
         } catch (cause) {
             release(cancels)
             this.logger.error(ReadinessLogEvent.CheckFailed, cause)

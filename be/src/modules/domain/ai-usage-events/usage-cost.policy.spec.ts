@@ -64,13 +64,14 @@ describe("usage cost policy > estimateTokens", () => {
 })
 
 describe("usage cost policy > creditsOf", () => {
-    it("converts dollars at 250 credits and rounds to two decimal places", async () => {
+    it("converts dollars at one credit per 0.00113 USD, exactly to 6 decimals, never rounded up", async () => {
         const { creditsOf } = await build()
 
         expect(CREDIT_USD_VALUE).toBe(0.00113)
         expect(creditsOf(0)).toBe(0)
-        expect(creditsOf(1)).toBe(885)
-        expect(creditsOf(0.123456)).toBe(110)
+        expect(creditsOf(1)).toBe(884.955752)
+        expect(creditsOf(0.123456)).toBe(109.253097)
+        expect(creditsOf(CREDIT_USD_VALUE * 0.4)).toBe(0.4)
     })
 })
 

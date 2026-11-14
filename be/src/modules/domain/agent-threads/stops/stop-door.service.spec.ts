@@ -3,14 +3,14 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { AgentRunCancelService, AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
 import type { RunView } from "@modules/domain/agent-runs"
 import { AgentWorkAccessService } from "@modules/domain/agent-work"
-import { ChatConversationsService } from "@modules/domain/chat-records"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
-import { ThreadRunsService } from "../thread-runs.service"
+import { ThreadResumeRequestsService } from "../thread-resume-requests.service"
 import type { ThreadWakeAdmission } from "../thread-runs.service"
 import { RunStopRecordsService } from "./run-stop-records.service"
 import { RunStopsService } from "./run-stops.service"
 import type { RunStop } from "./run-stop.contracts"
+import { CustomerRoutesService } from "@modules/domain/customer-routes/customer-routes.service"
 import { StopDoorService, cancelOfSkip, stopDecisionOfAsk, targetStopOf } from "./stop-door.service"
 
 const NOW = "2026-11-10T10:00:00.000Z"
@@ -23,7 +23,7 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
     stepKey: "match",
     agentId: "agent-1",
     workflowId: "wf-1",
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_report",
     state: "open",
@@ -71,12 +71,13 @@ const build = async (world: World = {}) => {
         ofRun: jest.fn().mockResolvedValue(stops),
         byRunStep: jest.fn().mockResolvedValue(world.after === undefined ? (stops[0] ?? null) : world.after),
     })
-    const threads = mock<ThreadRunsService>({
+    const threads = mock<ThreadResumeRequestsService>({
         resume: jest.fn().mockResolvedValue(world.admission ?? { kind: "admitted", fresh: true }),
     })
     const cancels = mock<AgentRunCancelService>()
-    const conversations = mock<ChatConversationsService>({ setHolder: jest.fn().mockResolvedValue(undefined) })
     const runStops = mock<RunStopsService>({ leftoverWithdrawn: jest.fn().mockResolvedValue(true) })
+    // The staff hold of the routes (ruling R43): the take-over makes the person the holder of the run's route.
+    const routes = mock<CustomerRoutesService>({ hold: jest.fn().mockResolvedValue("held") })
     const moduleRef = await Test.createTestingModule({
         providers: [
             StopDoorService,
@@ -86,14 +87,114 @@ const build = async (world: World = {}) => {
             { provide: AgentRunsService, useValue: runs },
             { provide: AgentRunsViewService, useValue: view },
             { provide: RunStopRecordsService, useValue: records },
-            { provide: ThreadRunsService, useValue: threads },
+            { provide: ThreadResumeRequestsService, useValue: threads },
             { provide: AgentRunCancelService, useValue: cancels },
-            { provide: ChatConversationsService, useValue: conversations },
             { provide: RunStopsService, useValue: runStops },
+            { provide: CustomerRoutesService, useValue: routes },
         ],
     }).compile()
-    return { door: moduleRef.get(StopDoorService), access, members, threads, records, conversations, cancels, runStops }
+    return { door: moduleRef.get(StopDoorService), access, members, threads, records, cancels, runStops, routes }
 }
+
+describe("StopDoorService: a retry on a stop that waits for the owner's verdict on a permission request", () => {
+    /** An approval stop whose owner item still waits (no verdict kept). */
+    const waiting = stopOf({
+        id: "stop-approval",
+        stepKey: "send-qr",
+        kind: "approval",
+        question: null,
+        conversationId: "conv-1",
+        detail: { suggestions: [], facts: [{ name: "workItemId", value: "item-1" }, { name: "tool", value: "nivo.tool.payment.transfer.create" }] },
+    })
+    const withVerdict = (verdict: string): RunStop => ({
+        ...waiting,
+        detail: { ...waiting.detail, facts: [...waiting.detail.facts, { name: "verdict", value: verdict }] },
+    })
+
+    it("is refused before any side effect: no wake, nothing withdrawn, and the answer names the door for the verdict", async () => {
+        const { door, threads, runStops, records } = await build({ stops: [waiting] })
+
+        const answer = await door.decide("user-1", { ...ASK, stepKey: "send-qr", action: "retry" })
+
+        expect(answer).toEqual({
+            outcome: "approval_pending",
+            stepKey: "send-qr",
+            refusal: { stopId: "stop-approval", workItemId: "item-1", door: "decideAgentRunStep", verdicts: ["approve", "reject"] },
+        })
+        expect(threads.resume).not.toHaveBeenCalled()
+        expect(runStops.leftoverWithdrawn).not.toHaveBeenCalled()
+        // The door read the stop once and wrote nothing: the approval still waits as it did.
+        expect(records.byRunStep).not.toHaveBeenCalled()
+    })
+
+    it("is refused for the work engine's own caller too (`apply`), and when no step is named (the run's open stop)", async () => {
+        const { door, threads } = await build({ stops: [waiting] })
+
+        await expect(door.apply({ memberId: "member-9", name: "Minh" }, { ...ASK, action: "retry" })).resolves.toMatchObject({
+            outcome: "approval_pending",
+            stepKey: "send-qr",
+        })
+        expect(threads.resume).not.toHaveBeenCalled()
+    })
+
+    it("a retry goes through once the item's verdict is kept on the stop (the approval door's own resume), and on any stop that is no approval", async () => {
+        const approved = await build({ stops: [withVerdict("approved:member-owner")] })
+        const withdrawn = await build({ stops: [withVerdict("withdrawn")] })
+        const report = await build()
+
+        await expect(approved.door.decide("user-1", { ...ASK, action: "retry" })).resolves.toEqual({ outcome: "admitted", stepKey: "send-qr" })
+        await expect(withdrawn.door.decide("user-1", { ...ASK, action: "retry" })).resolves.toEqual({ outcome: "admitted", stepKey: "send-qr" })
+        await expect(report.door.decide("user-1", { ...ASK, action: "retry" })).resolves.toEqual({ outcome: "admitted", stepKey: "match" })
+        expect(report.threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "match" }, { kind: "retry", by: "member-1", at: NOW })
+    })
+
+    it("the founder's words are refused the same way: nothing withdrawn, no wake, the door for the verdict named", async () => {
+        const { door, threads, runStops } = await build({ stops: [waiting] })
+
+        const answer = await door.decide("user-1", { ...ASK, action: "answer", text: "Cu gui di", at: "2026-11-10T09:30:00.000Z" })
+
+        expect(answer).toMatchObject({ outcome: "approval_pending", stepKey: "send-qr", refusal: { door: "decideAgentRunStep", workItemId: "item-1" } })
+        expect(threads.resume).not.toHaveBeenCalled()
+        expect(runStops.declinedByTakeOver).not.toHaveBeenCalled()
+    })
+
+    it("a take-over declines the request first, by the person, then takes the stop as on any other", async () => {
+        const { door, threads, runStops } = await build({ stops: [waiting] })
+        const order: Array<string> = []
+        runStops.declinedByTakeOver.mockImplementation(() => {
+            order.push("declined")
+            return Promise.resolve(true)
+        })
+        threads.resume.mockImplementation(() => {
+            order.push("take_over")
+            return Promise.resolve({ kind: "admitted", fresh: true })
+        })
+
+        const answer = await door.decide("user-1", { ...ASK, action: "take_over" })
+
+        expect(answer).toEqual({ outcome: "admitted", stepKey: "send-qr" })
+        expect(order).toEqual(["declined", "take_over"])
+        expect(runStops.declinedByTakeOver).toHaveBeenCalledWith(ASK, "send-qr", { memberId: "member-1", name: "Lan" }, { locale: "vi" })
+        expect(threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "send-qr" }, { kind: "take_over", by: "member-1", at: NOW })
+    })
+
+    it("words and a take-over on a stop that is NO permission request go as before, and decline nothing", async () => {
+        const { door, threads, runStops } = await build()
+
+        await expect(door.decide("user-1", { ...ASK, action: "answer", text: "Don DH-1" })).resolves.toEqual({ outcome: "admitted", stepKey: "match" })
+        await expect(door.decide("user-1", { ...ASK, action: "take_over" })).resolves.toEqual({ outcome: "admitted", stepKey: "match" })
+
+        expect(threads.resume).toHaveBeenCalledTimes(2)
+        expect(runStops.declinedByTakeOver).not.toHaveBeenCalled()
+    })
+
+    it("the run page's cancel (skip) of a run that waits on an approval is still taken: ending the run is its own, named act", async () => {
+        const { door, threads } = await build({ stops: [waiting] })
+
+        await expect(door.decide("user-1", { ...ASK, action: "skip" })).resolves.toEqual({ outcome: "admitted", stepKey: "send-qr" })
+        expect(threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "send-qr" }, { kind: "skip", by: "member-1", at: NOW })
+    })
+})
 
 describe("StopDoorService: a person's decision on the stop of a thread run", () => {
     it("hands the founder's words to the thread runs as an answer by their member id, at the moment they gave them", async () => {
@@ -104,7 +205,7 @@ describe("StopDoorService: a person's decision on the stop of a thread run", () 
         ).resolves.toEqual({ outcome: "admitted", stepKey: "match" })
 
         expect(access.manager).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(threads.resume).toHaveBeenCalledWith(ASK, {
+        expect(threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "match" }, {
             kind: "answer",
             text: "This is the deposit of order DH-1",
             by: "member-1",
@@ -118,28 +219,58 @@ describe("StopDoorService: a person's decision on the stop of a thread run", () 
         for (const action of ["retry", "skip"] as const)
             await expect(door.decide("user-1", { ...ASK, action })).resolves.toEqual({ outcome: "admitted", stepKey: "match" })
 
-        expect(threads.resume).toHaveBeenNthCalledWith(1, ASK, { kind: "retry", by: "member-1", at: NOW })
-        expect(threads.resume).toHaveBeenNthCalledWith(2, ASK, { kind: "skip", by: "member-1", at: NOW })
+        expect(threads.resume).toHaveBeenNthCalledWith(1, { ...ASK, stepKey: "match" }, { kind: "retry", by: "member-1", at: NOW })
+        expect(threads.resume).toHaveBeenNthCalledWith(2, { ...ASK, stepKey: "match" }, { kind: "skip", by: "member-1", at: NOW })
     })
 
-    it("on take over also hands the run's conversation to the person by name, once, when the wake is new", async () => {
-        const told = await build({ stops: [stopOf({ conversationId: "conv-1" })] })
-        await told.door.decide("user-1", { ...ASK, action: "take_over" })
-        expect(told.threads.resume).toHaveBeenCalledWith(ASK, { kind: "take_over", by: "member-1", at: NOW })
-        expect(told.conversations.setHolder).toHaveBeenCalledWith("ws-1", "conv-1", "Lan")
+    it("on take over resumes the run as the person's decision and writes no chat record (the door binds no chat service at all); a repeated admission is answered as such", async () => {
+        const told = await build({ stops: [stopOf({ conversationId: "route-1" })] })
+        await expect(told.door.decide("user-1", { ...ASK, action: "take_over" })).resolves.toEqual({ outcome: "admitted", stepKey: "match" })
+        expect(told.threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "match" }, { kind: "take_over", by: "member-1", at: NOW })
 
-        const again = await build({ stops: [stopOf({ conversationId: "conv-1" })], admission: { kind: "admitted", fresh: false } })
+        const again = await build({ stops: [stopOf({ conversationId: "route-1" })], admission: { kind: "admitted", fresh: false } })
         await expect(again.door.decide("user-1", { ...ASK, action: "take_over" })).resolves.toEqual({
             outcome: "already_admitted",
             stepKey: "match",
         })
-        expect(again.conversations.setHolder).not.toHaveBeenCalled()
-
-        const bankFed = await build()
-        await bankFed.door.decide("user-1", { ...ASK, action: "take_over" })
-        expect(bankFed.conversations.setHolder).not.toHaveBeenCalled()
     })
 
+    it("on an admitted take over makes the person the holder of the run's route (ruling R43), and the same on a repeated admission", async () => {
+        const told = await build({ stops: [stopOf({ conversationId: "route-1" })] })
+        await told.door.decide("user-1", { ...ASK, action: "take_over" })
+        expect(told.routes.hold).toHaveBeenCalledWith("ws-1", "route-1", "member-1")
+
+        const again = await build({ stops: [stopOf({ conversationId: "route-1" })], admission: { kind: "admitted", fresh: false } })
+        await again.door.decide("user-1", { ...ASK, action: "take_over" })
+        expect(again.routes.hold).toHaveBeenCalledWith("ws-1", "route-1", "member-1")
+    })
+
+    it("holds no route for a take over the thread refused, for another button, or for a run about no route", async () => {
+        const refused = await build({ stops: [stopOf({ conversationId: "route-1" })], admission: { kind: "refused", code: "already_answered" } })
+        await expect(refused.door.decide("user-1", { ...ASK, action: "take_over" })).resolves.toMatchObject({ outcome: "already_answered" })
+        expect(refused.routes.hold).not.toHaveBeenCalled()
+
+        const retried = await build({ stops: [stopOf({ conversationId: "route-1" })] })
+        await retried.door.decide("user-1", { ...ASK, action: "retry" })
+        expect(retried.routes.hold).not.toHaveBeenCalled()
+
+        const bankFed = await build({ stops: [stopOf({ conversationId: null })] })
+        await expect(bankFed.door.decide("user-1", { ...ASK, action: "take_over" })).resolves.toMatchObject({ outcome: "admitted" })
+        expect(bankFed.routes.hold).not.toHaveBeenCalled()
+    })
+
+    // Ruling R52 moved the clearing of a take-over's hold out of this door into the ONE resume door (`heldRouteEndedBy`, every caller:
+    // retry, words, skip, the run page's cancel, a hand-back), written with the wake; its spec is `thread-resume-requests.service.spec`.
+    // This door only sets the hold, and releases nothing itself.
+    it("releases no hold itself for any decision on a stop a person took over: the resume door ends it (ruling R52)", async () => {
+        const taken = { kind: "take_over" as const, text: null, by: "member-1", at: NOW }
+        for (const action of ["retry", "answer", "skip"] as const) {
+            const world = await build({ stops: [stopOf({ conversationId: "route-1", decision: taken, answers: [taken] })] })
+            await expect(world.door.decide("user-1", { ...ASK, action, text: "8h-21h" })).resolves.toMatchObject({ outcome: "admitted" })
+            expect(world.threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "match" }, expect.objectContaining({ kind: action }))
+            expect(world.routes.release).not.toHaveBeenCalled()
+        }
+    })
 })
 
 describe("StopDoorService: what is refused, and why", () => {
@@ -179,7 +310,6 @@ describe("StopDoorService: what is refused, and why", () => {
             outcome: "already_answered",
             stepKey: "match",
         })
-        expect(answered.conversations.setHolder).not.toHaveBeenCalled()
 
         const running = await build({ admission: { kind: "refused", code: "thread_not_stopped" }, after: stopOf() })
         await expect(running.door.decide("user-1", { ...ASK, action: "retry" })).resolves.toMatchObject({ outcome: "step_running" })
@@ -231,7 +361,7 @@ describe("StopDoorService: what is refused, and why", () => {
             outcome: "admitted",
         })
         expect(access.manager).not.toHaveBeenCalled()
-        expect(threads.resume).toHaveBeenCalledWith(ASK, { kind: "retry", by: "member-9", at: NOW })
+        expect(threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "match" }, { kind: "retry", by: "member-9", at: NOW })
     })
 })
 
@@ -249,7 +379,7 @@ describe("StopDoorService.skipRun: the run page's Cancel of a thread run", () =>
     it("cancels a thread run by its stop's skip, as the same person; a closed stop is not cancellable", async () => {
         const { door, threads } = await build()
         await expect(door.skipRun(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
-        expect(threads.resume).toHaveBeenCalledWith(ASK, { kind: "skip", by: "member-1", at: NOW })
+        expect(threads.resume).toHaveBeenCalledWith({ ...ASK, stepKey: "match" }, { kind: "skip", by: "member-1", at: NOW })
 
         const closed = await build({ stops: [stopOf({ state: "resolved" })] })
         await expect(closed.door.skipRun(REQUEST)).resolves.toEqual({ kind: "not_cancellable", note: null })

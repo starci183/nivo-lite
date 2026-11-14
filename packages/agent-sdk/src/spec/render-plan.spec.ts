@@ -1,4 +1,5 @@
 import { blockIndex } from "./spec"
+import { thrownFailureOf } from "../tests/thrown-failure"
 import { BLOCKS, docOf, listNode } from "./spec.fixture"
 import type { PlanView } from "./render-plan"
 import { planNode, renderPlan, viewOf } from "./render-plan"
@@ -74,7 +75,7 @@ describe("renderPlan", () => {
     })
 
     it("refuses to plan a node whose block is missing, which only an unvalidated spec reaches", () => {
-        expect(() => planNode(new Map(), { id: "x", block: "test.nope" })).toThrow("PLAN_SPEC_UNVALIDATED: test.nope")
+        expect(thrownFailureOf(() => planNode(new Map(), { id: "x", block: "test.nope" }))).toEqual({ code: "PLAN_SPEC_UNVALIDATED", at: "test.nope" })
     })
 })
 

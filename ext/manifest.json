@@ -1,0 +1,494 @@
+{
+  "schema": "starci/project-ext@1",
+  "api": 1,
+  "rules": [
+    {
+      "id": "NIVO-NAMES-1",
+      "code": "NIVO_TOOL_ID_TYPED",
+      "severity": "error",
+      "doc": "ext/docs/NIVO-NAMES-1.md",
+      "appliesTo": [
+        "packages/blocks-core/src/**/*.ts",
+        "packages/blocks-core/src/**/*.tsx",
+        "packages/nivo-web-core/src/**/*.ts",
+        "packages/nivo-web-core/src/**/*.tsx"
+      ],
+      "lint": {
+        "tool": "eslint",
+        "file": "tool-ids-from-names.mjs"
+      }
+    },
+    {
+      "id": "NIVO-NAMES-2",
+      "code": "NIVO_NAME_LEVEL_CROSSED",
+      "severity": "error",
+      "doc": "ext/docs/NIVO-NAMES-2.md",
+      "appliesTo": [
+        "packages/*/src/**/*.ts",
+        "packages/*/src/**/*.tsx",
+        "fe/**/*.ts",
+        "fe/**/*.tsx"
+      ],
+      "lint": {
+        "tool": "eslint",
+        "file": "node-level-names.mjs"
+      }
+    },
+    {
+      "id": "NIVO-NODES-1",
+      "code": "NIVO_NODE_PROVIDER_LOGIC",
+      "severity": "error",
+      "doc": "ext/docs/NIVO-NODES-1.md",
+      "appliesTo": [
+        "packages/*/src/**/*.ts",
+        "packages/*/src/**/*.tsx"
+      ],
+      "lint": {
+        "tool": "eslint",
+        "file": "no-provider-logic-in-nodes.mjs"
+      }
+    },
+    {
+      "id": "NIVO-TIERS-1",
+      "code": "NIVO_TEMPLATE_TIER_HOME",
+      "severity": "error",
+      "doc": "ext/docs/NIVO-TIERS-1.md",
+      "appliesTo": [
+        "packages/*/src/**/*.ts",
+        "packages/*/src/**/*.tsx",
+        "be/src/**/*.ts"
+      ],
+      "lint": {
+        "tool": "eslint",
+        "file": "template-tier-homes.mjs"
+      }
+    },
+    {
+      "id": "NIVO-GRAPHS-1",
+      "code": "NIVO_GRAPH_NOT_DATA",
+      "severity": "error",
+      "doc": "ext/docs/NIVO-GRAPHS-1.md",
+      "appliesTo": [
+        "packages/*/src/**/*.ts",
+        "packages/*/src/**/*.tsx"
+      ],
+      "lint": {
+        "tool": "eslint",
+        "file": "graphs-are-data.mjs"
+      }
+    },
+    {
+      "id": "NIVO-TOOLS-1",
+      "code": "NIVO_TOOL_DEFINED_OUTSIDE_ENGINE",
+      "severity": "error",
+      "doc": "ext/docs/NIVO-TOOLS-1.md",
+      "appliesTo": [
+        "be/src/**/*.ts",
+        "packages/*/src/**/*.ts",
+        "packages/*/src/**/*.tsx",
+        "fe/**/*.ts",
+        "fe/**/*.tsx"
+      ],
+      "lint": {
+        "tool": "eslint",
+        "file": "tools-defined-in-engine.mjs"
+      }
+    },
+    {
+      "id": "NIVO-EXT-1",
+      "code": "NIVO_EXT_CONCEPT_UNKNOWN",
+      "severity": "error",
+      "doc": "ext/docs/NIVO-EXT-1.md",
+      "appliesTo": [
+        "ext/manifest.json",
+        "ext/docs/**/*.md",
+        "ext/lint/*.mjs",
+        ".starciwork/concepts/*.md"
+      ],
+      "hfs": "concept-keys.mjs"
+    }
+  ],
+  "checks": [
+    {
+      "id": "registry",
+      "run": "ext/checks/registry.mjs",
+      "why": "The generated plugin registry equals what the installed plugins declare (.starciwork/concepts/templates.md: packages describe templates, one generated registry installs them)."
+    },
+    {
+      "id": "seed-graphs",
+      "run": "ext/checks/seed-graphs.mjs",
+      "why": "Each dev seed graph equals the installed primary graph of its template agent (.starciwork/concepts/seeds-and-data.md: the running tier is the installed template, never a hand-edited copy)."
+    },
+    {
+      "id": "tool-names",
+      "run": "ext/checks/tool-names.mjs",
+      "why": "No retired tool id and no id outside the three-level name law is written anywhere in the repository (.starciwork/concepts/tools.md: nivo.api, nivo.tool, nivo.trigger)."
+    },
+    {
+      "id": "account-data",
+      "run": "ext/checks/account-data.mjs",
+      "why": "The committed DDL of every declared account data type equals what the generator renders (.starciwork/concepts/account-data.md: one partition per declared type, its checks and indexes generated)."
+    },
+    {
+      "id": "crm-names",
+      "run": "ext/checks/crm-names.mjs",
+      "why": "A CRM provider via OpenAPI: every package's api.generated.ts equals what its pinned src/crm/<id>/openapi.json gives, every nivo.api.crm.<id>.* it names is an operation of its own pin, declared sources have their document, CRM ids are unique across packages, and no nivo.tool.crm.* is hand-named (.starciwork/concepts/tools.md, providers.md)."
+    },
+    {
+      "id": "record-names",
+      "run": "ext/checks/record-names.mjs",
+      "why": "Every installed record type is <package>.<agent>.<domain> and every record read <package>.<agent>.api.<domain>.<query> of its own plugin's package and agents, and refs and reads reach only their own agent's types (.starciwork/concepts/records.md: records are the mini-database of agents)."
+    },
+    {
+      "id": "record-ddl",
+      "run": "ext/checks/record-ddl.mjs",
+      "why": "The committed entities manifest and fresh-database DDL equal what the record type declarations render, keys unique per workspace and agent (.starciwork/concepts/records.md: DDL generated from the declarations, checked)."
+    },
+    {
+      "id": "nivo-api-graphql",
+      "run": "ext/checks/nivo-api-graphql.mjs",
+      "why": "Every NIVO-owned API name maps 1:1 to one GraphQL operation of the contract through the declared table, and the two agree (.starciwork/concepts/tools.md: nivo.api.nivo.* and GraphQL, one declaration, no drift)."
+    },
+    {
+      "id": "mcp-tools",
+      "run": "ext/checks/mcp-tools.mjs",
+      "why": "The outbound MCP surface's tool list is generated from the NIVO data op declarations and equals its committed contract snapshot, with few client-safe, fully annotated tools (.starciwork/concepts/mcp.md: generated exposure, few tools, annotations)."
+    },
+    {
+      "id": "engine-imports",
+      "run": "ext/checks/engine-imports.mjs",
+      "why": "The engine (be/**) and the front end (fe/apps/*/src, fe/packages/*/src) import neither blocks-core nor nivo-web-core, and the plugin registry only at the composition roots listed in COMPOSITION_ROOTS; agent-sdk imports none of the three (.starciwork/concepts/layers.md: the engine holds no business)."
+    },
+    {
+      "id": "engine-business-contracts",
+      "run": "ext/checks/engine-business-contracts.mjs",
+      "why": "The engine and agent-sdk name only the service contracts listed as generic in layers.md (no contract of one module's business, no domain module wrapping one), and a provider module (one that registers itself in a provider registry at boot) imports among the domain pieces only the table of providers.md (.starciwork/concepts/layers.md rule 14, providers.md rule 13)."
+    },
+    {
+      "id": "template-tools",
+      "run": "ext/checks/template-tools.mjs",
+      "why": "A template lists only tools that act outside or on other people: the default record, file, timer and read-context tools are never listed, except an AI read a node's own code calls or requires (.starciwork/concepts/nivo-toolset.md: two default sets, one declaration each)."
+    }
+  ],
+  "packages": {
+    "packages/agent-sdk": {
+      "closed": true,
+      "slots": [
+        {
+          "id": "workbench-fe",
+          "path": "src/workbench/**",
+          "lint": "fe",
+          "coverage": {
+            "none": "front-end views, proven by the front end's own gates"
+          }
+        },
+        {
+          "id": "client-fe",
+          "path": "src/client/**",
+          "lint": "fe",
+          "coverage": {
+            "none": "front-end views, proven by the front end's own gates"
+          }
+        },
+        {
+          "id": "barrel",
+          "path": "src/index.ts"
+        },
+        {
+          "id": "block",
+          "path": "src/block/**"
+        },
+        {
+          "id": "entity",
+          "path": "src/entity/**"
+        },
+        {
+          "id": "graph",
+          "path": "src/graph/**"
+        },
+        {
+          "id": "host",
+          "path": "src/host/**"
+        },
+        {
+          "id": "installation",
+          "path": "src/installation/**"
+        },
+        {
+          "id": "invoke",
+          "path": "src/invoke/**"
+        },
+        {
+          "id": "module",
+          "path": "src/module/**"
+        },
+        {
+          "id": "mutation",
+          "path": "src/mutation/**"
+        },
+        {
+          "id": "names",
+          "path": "src/names/**"
+        },
+        {
+          "id": "node",
+          "path": "src/node/**"
+        },
+        {
+          "id": "port",
+          "path": "src/port/**"
+        },
+        {
+          "id": "query",
+          "path": "src/query/**"
+        },
+        {
+          "id": "rights",
+          "path": "src/rights/**"
+        },
+        {
+          "id": "schema",
+          "path": "src/schema/**"
+        },
+        {
+          "id": "slot",
+          "path": "src/slot/**"
+        },
+        {
+          "id": "spec",
+          "path": "src/spec/**"
+        },
+        {
+          "id": "template",
+          "path": "src/template/**"
+        },
+        {
+          "id": "test-fixtures",
+          "path": "src/tests/fixtures/**"
+        },
+        {
+          "id": "client",
+          "path": "src/client/**",
+          "coverage": {
+            "none": "renderers: presentation only; judged by the fe canon and Grammar lint (SHARED-TEST-1)"
+          }
+        },
+        {
+          "id": "workbench",
+          "path": "src/workbench/**",
+          "coverage": {
+            "none": "front-end views of the workbench host; judged by the fe canon and Grammar lint (SHARED-TEST-1)"
+          }
+        }
+      ]
+    },
+    "packages/blocks-core": {
+      "closed": true,
+      "slots": [
+        {
+          "id": "client-fe",
+          "path": "src/client/**",
+          "lint": "fe",
+          "coverage": {
+            "none": "front-end views, proven by the front end's own gates"
+          }
+        },
+        {
+          "id": "barrel",
+          "path": "src/index.ts"
+        },
+        {
+          "id": "bounds",
+          "path": "src/bounds.ts"
+        },
+        {
+          "id": "plugin",
+          "path": "src/plugin.ts"
+        },
+        {
+          "id": "json-schema",
+          "path": "src/json.schema.ts"
+        },
+        {
+          "id": "fixtures-barrel",
+          "path": "src/fixtures.ts"
+        },
+        {
+          "id": "grammar-tones",
+          "path": "src/grammar-tones.d.ts",
+          "coverage": {
+            "none": "a type declaration: it augments the Grammar tone registry and holds no runtime code to run"
+          }
+        },
+        {
+          "id": "package-specs",
+          "path": "src/*.spec.ts"
+        },
+        {
+          "id": "block",
+          "path": "src/blocks/**"
+        },
+        {
+          "id": "entity",
+          "path": "src/entities/**"
+        },
+        {
+          "id": "fixture",
+          "path": "src/fixtures/**"
+        },
+        {
+          "id": "message",
+          "path": "src/messages/**"
+        },
+        {
+          "id": "node",
+          "path": "src/nodes/**"
+        },
+        {
+          "id": "row",
+          "path": "src/rows/**"
+        },
+        {
+          "id": "rule",
+          "path": "src/rules/**"
+        },
+        {
+          "id": "slot",
+          "path": "src/slots/**"
+        },
+        {
+          "id": "view",
+          "path": "src/views/**"
+        },
+        {
+          "id": "vocabulary",
+          "path": "src/vocabulary/**"
+        },
+        {
+          "id": "module-action",
+          "path": "src/modules/<module>/actions/"
+        },
+        {
+          "id": "module-read",
+          "path": "src/modules/<module>/reads/"
+        },
+        {
+          "id": "module-job",
+          "path": "src/modules/<module>/jobs/"
+        },
+        {
+          "id": "module-message",
+          "path": "src/modules/<module>/messages/"
+        },
+        {
+          "id": "module-fixture",
+          "path": "src/modules/<module>/fixtures/"
+        },
+        {
+          "id": "module-spec",
+          "path": "src/modules/<module>/specs/"
+        },
+        {
+          "id": "module-template",
+          "path": "src/modules/<module>/template/"
+        },
+        {
+          "id": "module-root",
+          "path": "src/modules/*/*"
+        },
+        {
+          "id": "modules",
+          "path": "src/modules/*"
+        },
+        {
+          "id": "client",
+          "path": "src/client/**",
+          "coverage": {
+            "none": "renderers: presentation only; judged by the fe canon and Grammar lint (SHARED-TEST-1)"
+          }
+        }
+      ]
+    },
+    "packages/nivo-web-core": {
+      "closed": true,
+      "slots": [
+        {
+          "id": "barrel",
+          "path": "src/index.ts"
+        },
+        {
+          "id": "plugin",
+          "path": "src/plugin.ts"
+        },
+        {
+          "id": "package-specs",
+          "path": "src/*.spec.ts"
+        },
+        {
+          "id": "contract",
+          "path": "src/contracts/**"
+        },
+        {
+          "id": "node",
+          "path": "src/nodes/**"
+        },
+        {
+          "id": "rule",
+          "path": "src/rules/**"
+        },
+        {
+          "id": "vocabulary",
+          "path": "src/vocabulary/**"
+        },
+        {
+          "id": "module-message",
+          "path": "src/modules/<module>/messages/"
+        },
+        {
+          "id": "module-template",
+          "path": "src/modules/<module>/template/"
+        },
+        {
+          "id": "module-root",
+          "path": "src/modules/*/*"
+        },
+        {
+          "id": "modules",
+          "path": "src/modules/*"
+        }
+      ]
+    },
+    "packages/plugin-registry": {
+      "closed": true,
+      "slots": [
+        {
+          "id": "client-fe",
+          "path": "src/client/**",
+          "lint": "fe",
+          "coverage": {
+            "none": "front-end views, proven by the front end's own gates"
+          }
+        },
+        {
+          "id": "barrel",
+          "path": "src/index.ts"
+        },
+        {
+          "id": "installed",
+          "path": "src/installed.ts"
+        },
+        {
+          "id": "installed-spec",
+          "path": "src/installed.spec.ts"
+        },
+        {
+          "id": "client",
+          "path": "src/client/**",
+          "coverage": {
+            "none": "renderers: the registry of the block renderers is presentation wiring; judged by the fe canon and Grammar lint (SHARED-TEST-1)"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { SELF_DECLARED_DEPS_METADATA } from "@nestjs/common/constants"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { ChannelFrontDoorService } from "@modules/domain/agent-instances"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ConnectionLifecycleService } from "@modules/domain/connection-lifecycle"
@@ -43,6 +44,7 @@ const build = async (entityManager: MockEntityManager) => {
     const google = mock<GoogleConnectionsService>()
     const meta = mock<MetaConnectionsService>()
     const lifecycle = mock<ConnectionLifecycleService>()
+    const frontDoor = mock<ChannelFrontDoorService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConnectionCommandsService,
@@ -55,9 +57,10 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: GoogleConnectionsService, useValue: google },
             { provide: MetaConnectionsService, useValue: meta },
             { provide: ConnectionLifecycleService, useValue: lifecycle },
+            { provide: ChannelFrontDoorService, useValue: frontDoor },
         ],
     }).compile()
-    return { service: moduleRef.get(ConnectionCommandsService), errors, connections }
+    return { service: moduleRef.get(ConnectionCommandsService), errors, connections, meta, channels, frontDoor }
 }
 
 describe("ConnectionCommandsService", () => {
@@ -186,5 +189,36 @@ describe("ConnectionCommandsService", () => {
                 },
             ],
         ])
+    })
+})
+
+describe("ConnectionCommandsService front door", () => {
+    it("makes sure a channel has its front door when the first-event poll finds it connected with its first event", async () => {
+        const entityManager = mockEntityManager({
+            findOne: [ConnectionCommandEntity, row],
+            update: [ConnectionCommandEntity, { affected: 1 }],
+        })
+        const { service, connections, frontDoor } = await build(entityManager)
+        connections.firstEvent.mockResolvedValue({
+            status: "connected",
+            firstEvent: { amount: 0, content: "Khach", at: "2026-10-13T02:00:00.000Z" },
+        })
+
+        await service.run("command-1")
+
+        expect(frontDoor.ensureForConnection.mock.calls).toEqual([[actor, CONNECTION_ID]])
+    })
+
+    it("leaves the front door alone while the connection is still waiting for its first event", async () => {
+        const entityManager = mockEntityManager({
+            findOne: [ConnectionCommandEntity, row],
+            update: [ConnectionCommandEntity, { affected: 1 }],
+        })
+        const { service, connections, frontDoor } = await build(entityManager)
+        connections.firstEvent.mockResolvedValue({ status: "pending", firstEvent: null })
+
+        await service.run("command-1")
+
+        expect(frontDoor.ensureForConnection).not.toHaveBeenCalled()
     })
 })

@@ -1,3 +1,4 @@
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
@@ -55,6 +56,7 @@ const build = async () => {
             { provide: AgentDirectoryService, useValue: agents },
             { provide: WorkspaceMembersReadService, useValue: members },
             { provide: WorkspacesService, useValue: workspaces },
+            { provide: WorkspaceTimeZoneService, useValue: mock<WorkspaceTimeZoneService>({ timeZoneOf: () => Promise.resolve("Asia/Ho_Chi_Minh") }) },
         ],
     }).compile()
     return { service: moduleRef.get(ChatSeedService), transaction, print }

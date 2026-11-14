@@ -1,8 +1,7 @@
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { SALES_SETTINGS_KEY } from "../../entities/sales/settings.entity"
-import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
-import type { SalesSettings } from "../../rules/sales/settings"
+import { SALES_SETTINGS_DEFAULTS, type SalesSettings } from "../../rules/sales/settings"
 import { SETTINGS_FIELDS, settingsRowOf } from "./sales-records"
 
 /** The settings of a workspace and the instant they were last saved. */

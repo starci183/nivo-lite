@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { LessonMiningStatusQuery, LessonMiningStatusQueryVariables } from "../__generated__/graphql"
 
 /** The response of the `lessonMiningStatus` query: the typed payload straight from the back end contract. */
@@ -49,7 +48,7 @@ export const queryLessonMiningStatus = async ({
     request,
     signal,
 }: QueryLessonMiningStatusParams): Promise<ApolloClient.QueryResult<QueryLessonMiningStatusResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
         variables: { input: request },

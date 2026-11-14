@@ -51,29 +51,23 @@ export interface GapRecorded {
     readonly reopened: boolean
 }
 
-/** A gap that is open, with the words it is matched on. */
-export interface OpenGap {
-    /** The gap id. */
-    readonly id: string
-    /** The agent it was asked of. */
-    readonly module: string
-    /** The significant words of the question. */
-    readonly keywords: ReadonlyArray<string>
-}
-
-/** A fact or a document, reduced to what decides whether it answers a question. */
+/**
+ * The truth that answers: its two labels, as written by whoever stated it. An open gap is answered by it when the topic and the
+ * attribute a MODEL wrote for the gap (the agent's own turn, `GapInput.topic`) are the same keys (`factSlugOf`, exact). No word of
+ * the question or of the answer is compared.
+ */
 export interface Answerer {
-    /** The words of its text. */
-    readonly text: string
-    /** The share of the question's words it must cover. */
-    readonly minimum: number
+    /** The subject label of the truth. */
+    readonly subject: string
+    /** Its attribute label. */
+    readonly attribute: string
     /** The agent it is for; null = every agent. */
     readonly module: string | null
     /** The `answered_by` stamp. */
     readonly by: string
 }
 
-/** What recording a question did, or null when the question has no significant word to remember it by. */
+/** What recording a question did, or null when the question has no letter or digit to remember it by. */
 export type MaybeGapRecorded = GapRecorded | null
 
 /** The open gaps of one agent and how many there are. */

@@ -158,6 +158,20 @@ describe("readManagementSeed > a development document", () => {
         expect(seed.channels.payos.apiKey).toBeUndefined()
     })
 
+    it("reads the Telegram webhook secret sealed by name, for the dev webhook mock", async () => {
+        const subject = await build()
+        const seed = subject.readManagementSeed({
+            ...dev,
+            values: { WORKSPACE_TELEGRAM_BOT_TOKEN: "t", WORKSPACE_TELEGRAM_WEBHOOK_SECRET: "hook_1" },
+        })
+
+        expect(seed.channels.telegram).toEqual({
+            id: MANAGEMENT_CONNECTION_IDS.telegram,
+            token: "t",
+            webhookSecret: "hook_1",
+        })
+    })
+
     it("takes the owner from the sealed values when both name one, and from the document when the member lacks it", async () => {
         const subject = await build()
         const both = { ...dev, values: { WORKSPACE_OWNER_EMAIL: "owner@nivo.test" } }

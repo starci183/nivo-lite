@@ -1,14 +1,19 @@
+import { IsNull, Not, type FindOptionsWhere } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import {
     LEGACY_OFFICE_EXTENSIONS,
     MAX_SOURCE_CHARS,
     MAX_UPLOAD_BYTES,
+    PUBLIC_DOCUMENT_ORIGIN,
     SOURCE_KINDS,
+    type AddSourceInput,
+    type DocumentVisibility,
+    type SourceKind,
+    type UpdateSourceInput,
 } from "./knowledge-sources.contracts"
-import type { AddSourceInput, SourceKind, UpdateSourceInput } from "./knowledge-sources.contracts"
+import { DOCUMENT_AREAS, type MaybeSourceMove, type MaybeWholeDocument } from "./source-areas.contracts"
 import type { KnowledgeSourceEntity } from "./persistence/entities"
 
 /** A new source after its input was checked and tidied. */
@@ -31,8 +36,8 @@ export interface NormalizedSource {
     readonly module: string | null
     /** The agent instance, or null for every instance. */
     readonly installationId: string | null
-    /** Always internal: a document becomes public only as a separate public document an owner approved. */
-    readonly visibility: "internal"
+    /** The area the member uploads it into (owner 2026-11-12: "what you upload is what you get"); internal when none is given. */
+    readonly visibility: DocumentVisibility
     /** Where it came from. */
     readonly origin: string | null
 }
@@ -47,8 +52,8 @@ export interface NormalizedUpdate {
     readonly tags: ReadonlyArray<string> | null
     /** The new module. */
     readonly module: string | null
-    /** The new visibility. A change a person asks for through the API is never public (see `normalizeUpdate`); a trusted seed may make a document public. */
-    readonly visibility: "public" | "internal" | null
+    /** The area to move the document to (the MOVE); null keeps it. */
+    readonly visibility: DocumentVisibility | null
 }
 
 /** The database instant of a write, for the `updated_at` column. */
@@ -77,6 +82,39 @@ export const metaChanges = (change: NormalizedUpdate): QueryDeepPartialEntity<Kn
     ...(change.visibility === null ? {} : { visibility: change.visibility }),
     updatedAt: NOW,
 })
+
+/** The rows of a source the generic doors may change: any but an approved public document (its own approval flow changes it). */
+export const genericSourceOf = (
+    workspaceId: string,
+    sourceId: string,
+): Array<FindOptionsWhere<KnowledgeSourceEntity>> => [
+    { id: sourceId, workspaceId, origin: IsNull() },
+    { id: sourceId, workspaceId, origin: Not(PUBLIC_DOCUMENT_ORIGIN) },
+]
+
+/** Whether a metadata change moves who reads a source's passages (audience or module): the vector index must follow it. */
+export const changesReaders = (changes: QueryDeepPartialEntity<KnowledgeSourceEntity>): boolean =>
+    changes.visibility !== undefined || changes.module !== undefined
+
+/** The area a visibility names, or null when it names none (absent, or another word). */
+export const areaOf = (visibility: string | undefined): DocumentVisibility | null =>
+    DOCUMENT_AREAS.find((area) => area === visibility) ?? null
+
+/**
+ * The move a written change makes, or null: a change that names an area moves the whole document (first source and parts) from the
+ * area it was in to that one, by the member who asked. The same area again is a move too, so a move that stopped half way (its truths)
+ * is finished by asking again.
+ */
+export const moveOf = (whole: MaybeWholeDocument, change: NormalizedUpdate, movedBy: string): MaybeSourceMove => {
+    if (whole === null || change.visibility === null) return null
+    return {
+        sourceIds: whole.ids,
+        title: change.title ?? whole.title,
+        from: areaOf(whole.visibility) ?? "internal",
+        to: change.visibility,
+        movedBy,
+    }
+}
 
 /** The result of checking the input of a new source. */
 export type NormalizedSourceOutcome = Outcome<NormalizedSource, KnowledgeSourcesErrorCode>
@@ -148,7 +186,6 @@ const inputRefusal = (workspaceId: string, kind: SourceKind, body: SourceBody): 
 export const normalizeSource = (workspaceId: string, input: AddSourceInput): NormalizedSourceOutcome => {
     const kind = SOURCE_KINDS.find((candidate) => candidate === input.kind)
     if (kind === undefined) return refused(KnowledgeSourcesErrorCode.SourceKindUnknown)
-    if (input.visibility === "public") return refused(KnowledgeSourcesErrorCode.PublicByApproval)
     const url = (input.url ?? "").trim()
     const path = (input.storagePath ?? "").trim()
     const content = (input.content ?? "").trim()
@@ -167,22 +204,21 @@ export const normalizeSource = (workspaceId: string, input: AddSourceInput): Nor
         tags: tagsOf(input.tags),
         module: textOrNull(input.module, 40),
         installationId: textOrNull(input.installationId, 40),
-        visibility: "internal",
+        visibility: areaOf(input.visibility) ?? "internal",
         origin: textOrNull(input.origin, 300),
     })
 }
 
-/** Tidies a change of metadata; a change to public is refused, since no internal document is moved to public through the API. */
+/** Tidies a change of metadata; a visibility is an area to move the document to (the MOVE), anything else in its place is refused. */
 export const normalizeUpdate = (input: UpdateSourceInput): Outcome<NormalizedUpdate, KnowledgeSourcesErrorCode> => {
-    if (input.visibility !== undefined && input.visibility !== "internal") {
-        return refused(KnowledgeSourcesErrorCode.PublicByApproval)
-    }
+    const area = areaOf(input.visibility)
+    if (input.visibility !== undefined && area === null) return refused(KnowledgeSourcesErrorCode.VisibilityUnknown)
     return ok({
         title: input.title === undefined ? null : input.title.trim().slice(0, 160) || "Untitled",
         topic: input.topic === undefined ? null : input.topic.trim().slice(0, 80),
         tags: input.tags === undefined ? null : tagsOf(input.tags),
         module: input.module === undefined ? null : input.module.trim().slice(0, 40),
-        visibility: input.visibility === undefined ? null : "internal",
+        visibility: area,
     })
 }
 
@@ -199,10 +235,10 @@ export const safeFileName = (name: string): string => {
     const base = name
         .replace(/^.*[\\/]/u, "")
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
+        .replaceAll(/\p{Diacritic}/gu, "")
         .replaceAll(D_STROKE, "d")
         .replaceAll(CAPITAL_D_STROKE, "D")
-        .replace(/[^\w.-]+/gu, "_")
+        .replaceAll(/[^\w.-]+/gu, "_")
     let start = 0
     let end = base.length
     while (start < end && base[start] === "_") start += 1

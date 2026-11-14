@@ -1,4 +1,4 @@
-import { installed } from "@nivo-lite/plugin-registry"
+import { installed } from "@/modules/plugin-registry"
 import type { RegistryCheck } from "@nivo-lite/agent-sdk/client"
 
 /** What the back end serves of the installation: the modules enabled for the workspace and the hash of its registry. */

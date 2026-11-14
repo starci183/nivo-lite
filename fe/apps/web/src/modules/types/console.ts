@@ -26,6 +26,8 @@ export type ConsoleIconName =
     | "talents"
     | "servers"
     | "wallet"
+    | "settings"
+    | "developers"
 
 /** One workspace the signed-in person is an active member of. */
 export type ConsoleWorkspace = {

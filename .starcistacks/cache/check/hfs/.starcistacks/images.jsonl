@@ -1,6 +1,0 @@
-{"data":{},"findings":[],"hash":"fa6e634b2193c82c46c1b1be3c2418ec99e02f977ca4678213cbf1f46e3a5b68","path":".starcistacks/images/db/Dockerfile","step":"file-rules"}
-{"data":{},"findings":[],"hash":"8b59dee72e1db1a5216c597121e0ced43b420971f3dda7c4f526ecd02988a886","path":".starcistacks/images/openclaw/Dockerfile","step":"file-rules"}
-{"data":{},"findings":[],"hash":"ce5403ba91a44f179e89e87add46c79d631f6a93876e5bebb366caa7ba5b8c3b","path":".starcistacks/images/openclaw/nivo-bridge/bridge-token.js","step":"file-rules"}
-{"data":{},"findings":[],"hash":"e1630f6f60de173b67688bbc3098ed50b8f893f61d367e03989613716fd9176d","path":".starcistacks/images/openclaw/nivo-bridge/index.js","step":"file-rules"}
-{"data":{},"findings":[],"hash":"389341bc9810de71a9326234c581d3639ea3f1a422147f360268a0b713c6d12f","path":".starcistacks/images/openclaw/nivo-bridge/openclaw.plugin.json","step":"file-rules"}
-{"data":{},"findings":[],"hash":"117d7512ea16f75e05758faf96faf9809835028387cadab263cd216231adaa44","path":".starcistacks/images/openclaw/nivo-bridge/package.json","step":"file-rules"}

@@ -148,20 +148,19 @@ export const partyKeyOf = (party: ChatParty): string => `${party.kind}:${party.i
 export const partyOfKey = (key: string, parties: ReadonlyArray<ChatParty>): ChatParty | undefined =>
     parties.find((party) => partyKeyOf(party) === key)
 export { agentCardOf } from "./agentCard"
+export { agentMessageWordsOf } from "./agentWords"
+export { stopPreviewNodeOf, stopPreviewOf } from "./stopPreview"
+export { NIVO_MARK, backgroundStoppedViewOf } from "./backgroundStopped"
+export type { BackgroundStoppedWords } from "./backgroundStopped"
+export { brainChangeViewOf } from "./brainChange"
+export { quoteOf } from "./quote"
+export type { BrainChangeWords } from "./brainChange"
 export { stopCardViewOf } from "./stopCard"
 export type { StopCardWords } from "./stopCard"
-export { GROUP_GAP_MS, groupPositionsOf } from "./grouping"
+export { groupPositionsOf } from "./grouping"
 export type { GroupItem, GroupPosition } from "./grouping"
-export {
-    REACTION_BURST_MS,
-    REACTION_TIMES_MAX,
-    createPendingTaps,
-    createReactionBatcher,
-    reactionKeyOf,
-    withPendingTaps,
-    withTaps,
-} from "./reactions"
-export type { BatcherClock, PendingTaps, ReactionBatch, ReactionBatcher } from "./reactions"
+export { createPendingTaps, createReactionBatcher, withPendingTaps } from "./reactions"
+export type { PendingTaps, ReactionBatch } from "./reactions"
 
 /** The mark of the sender of a message, as the thread draws it beside a bubble and a card: the agent's picture or the person's avatar. */
 export const chatMarkOf = (row: TeamChatMessageRow): TeamChatMarkView => ({

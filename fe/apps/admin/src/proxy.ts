@@ -1,6 +1,5 @@
 import { createProxy } from "@starci/next-i18n/proxy"
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
 import { checkSession } from "@/modules/auth-session"
 import { consoleLoginUrl } from "@/modules/config"
 import { i18n } from "@/modules/i18n"

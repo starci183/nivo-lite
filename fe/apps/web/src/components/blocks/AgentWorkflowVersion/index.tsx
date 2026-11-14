@@ -2,16 +2,17 @@
 
 import { useTranslations } from "next-intl"
 import { useWorkflowVersion } from "@/hooks/agentWorkflowPages"
+import { useAgentRoute } from "@/hooks/installations"
 import { useSlotLabels } from "@/hooks/slot"
 import { EMPTY_STEPS_MAP } from "@/hooks/workflowSteps"
 import type { PaneGridLayout, WorkflowDiffReadView } from "@/modules/types"
 import { AgentWorkflowVersionBase } from "./component"
 
-/** The version whose page this is: the workflow by its key, and the version by its number. */
+/** The version whose page this is: the workflow by its key, and the version by its number; none on the loading route, which reads the address. */
 type AgentWorkflowVersionProps = {
-    readonly installationId: string
-    readonly workflowKey: string
-    readonly number: number
+    readonly installationId?: string | undefined
+    readonly workflowKey?: string | undefined
+    readonly number?: number | undefined
 }
 
 const GRID: PaneGridLayout = {
@@ -30,7 +31,8 @@ export const AgentWorkflowVersion = (props: AgentWorkflowVersionProps) => {
     const t = useTranslations("agentWorkflowPages")
     const td = useTranslations("agentWorkflows")
     const slotLabels = useSlotLabels()
-    const page = useWorkflowVersion(props.installationId, props.workflowKey, props.number)
+    const route = useAgentRoute(props)
+    const page = useWorkflowVersion(route.installationId, route.workflowKey, props.number ?? route.version)
     return (
         <AgentWorkflowVersionBase
             props={{

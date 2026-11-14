@@ -171,14 +171,6 @@ export interface ParameterView {
     readonly options: ReadonlyArray<ParameterOption> | null
 }
 
-/** A data right a package proposes. */
-export interface RightView {
-    /** The kind of data. */
-    readonly kind: string
-    /** `conversation` or `workspace`. */
-    readonly scope: string
-}
-
 /** A number of the graph a creator could turn into a parameter. */
 export interface SuggestionView {
     /** A key to propose. */
@@ -211,8 +203,6 @@ export interface PackageSummaryView {
     readonly starterKnowledge: number
     /** The settings of the buyer. */
     readonly parameters: Array<ParameterView>
-    /** The rights proposed. */
-    readonly proposedRights: Array<RightView>
     /** The real person the persona is modelled on, or null. */
     readonly personName: string | null
 }

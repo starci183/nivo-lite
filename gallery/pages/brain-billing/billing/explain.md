@@ -83,3 +83,7 @@ Grammar: `Link` with arrow in `PaneHeader actions`, `node_modules/@starci/gramma
 Vì sao: SAI — (partly right, see the flagged part) the sidebar collapses behind a round "⋯" button in its own row, then a blank pink strip, then the band; cards stack in one column, the right column blocks (Enterprise, Nạp thêm) follow after the left ones. The extra blank strip and the separate nav row cost 128px of the first screen (SAI, same band defect).
 Luật: `nivo-surface-layering.md` (below lg the aside becomes the first blocks), `pink-page-surface-rule.md`.
 Grammar: `Sidebar` responsive, `PaneGrid`, `node_modules/@starci/grammar/dist/core/frame/PaneGrid/index.d.ts`.
+
+## Ngân sách đỏ của trang (cập nhật 2026-11-13, Q-1)
+Vì sao: màu đỏ (primary) chỉ nằm ở MỘT nút đổi gói: "Nâng cấp" trong thẻ khuyến nghị (`CreditsUpgrade`). "Gia hạn" trong thẻ gói hiện tại (`BillingRenewal`), "Mua" các gói credit, "Liên hệ NIVO" và mọi liên kết đều trung tính. Trên `/billing/plan` các nút thẻ gói đều trung tính; chỉ nút thanh toán của thay đổi đã chọn là đỏ, và nó chỉ xuất hiện sau khi đã chọn một gói, nên không bao giờ có hai nút đỏ cùng lúc.
+Luật: `red-budget-links-foreground.md`. Shot thiếu: trang với thẻ khuyến nghị + nút Gia hạn trung tính.

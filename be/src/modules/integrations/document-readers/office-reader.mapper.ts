@@ -1,6 +1,11 @@
 import { strFromU8, unzipSync } from "fflate"
-import { DocumentWarningCode } from "./document-readers.contracts"
-import type { DocumentPage, DocumentTable, DocumentWarning } from "./document-readers.contracts"
+import {
+    DocumentWarningCode,
+    type DocumentPage,
+    type DocumentTable,
+    type DocumentWarning,
+} from "./document-readers.contracts"
+import { DocumentReadersError, DocumentReadersErrorCode } from "./errors/document-readers.error"
 import { decodeEntities } from "./html-reader.mapper"
 import { tableOf, tableText } from "./text-reader.mapper"
 
@@ -62,7 +67,7 @@ const dateStylesOf = (xml: string | undefined): Array<boolean> => {
     return [...cellXfs.matchAll(/<xf\b[^>]*>/gu)].map((tag) => {
         const id = Number(attribute(tag[0], "numFmtId"))
         if (DATE_FORMATS.has(id)) return true
-        const code = (custom.get(id) ?? "").replace(/"[^"]*"|\[[^\]]*\]/gu, "").toLowerCase()
+        const code = (custom.get(id) ?? "").replaceAll(/"[^"]*"|\[[^\]]*\]/gu, "").toLowerCase()
         return /[dy]/u.test(code) && !/[#0]/u.test(code)
     })
 }
@@ -153,7 +158,7 @@ export const workbookText = (bytes: Uint8Array): WorkbookText => {
             name === "xl/styles.xml" ||
             name.startsWith("xl/worksheets/"),
     )
-    if (!parts.has("xl/workbook.xml")) throw new Error("not a workbook")
+    if (!parts.has("xl/workbook.xml")) throw new DocumentReadersError({ code: DocumentReadersErrorCode.NotWorkbook })
     const book: CellBook = {
         strings: sharedStringsOf(parts.get("xl/sharedStrings.xml")),
         dates: dateStylesOf(parts.get("xl/styles.xml")),
@@ -183,17 +188,24 @@ export const workbookText = (bytes: Uint8Array): WorkbookText => {
 /** The number of a slide part (`ppt/slides/slide12.xml` is 12). */
 const slideNumber = (name: string): number => Number(/slide(\d+)\.xml$/u.exec(name)?.[1] ?? "0")
 
+/** The slides of a presentation and the parts it could not read whole. */
+export interface PresentationText {
+    /** One page per slide, in slide order. */
+    pages: Array<DocumentPage>
+    /** The slides that had no text. */
+    warnings: Array<DocumentWarning>
+}
+
 /** The slides of a PPTX presentation, each its paragraphs one per line. Rejects when the archive is no presentation. */
-export const presentationText = (
-    bytes: Uint8Array,
-): { pages: Array<DocumentPage>; warnings: Array<DocumentWarning> } => {
+export const presentationText = (bytes: Uint8Array): PresentationText => {
     const parts = officeParts(
         bytes,
         (name) => /^ppt\/slides\/slide\d+\.xml$/u.test(name) || name === "ppt/presentation.xml",
     )
-    if (!parts.has("ppt/presentation.xml")) throw new Error("not a presentation")
+    if (!parts.has("ppt/presentation.xml")) throw new DocumentReadersError({ code: DocumentReadersErrorCode.NotPresentation })
     const names = [...parts.keys()].filter((name) => name !== "ppt/presentation.xml")
-    const ordered = names.sort((left, right) => slideNumber(left) - slideNumber(right))
+    names.sort((left, right) => slideNumber(left) - slideNumber(right))
+    const ordered = names
     const pages: Array<DocumentPage> = []
     const warnings: Array<DocumentWarning> = []
     ordered.forEach((name, index) => {

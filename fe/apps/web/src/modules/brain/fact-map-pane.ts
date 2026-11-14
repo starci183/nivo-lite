@@ -1,6 +1,12 @@
 import type { PickBadgeView } from "@/modules/types"
-import { FACT_MAP_KINDS, factMapCountsOf, factMapDocumentsOf, factVisibleTo } from "./fact-map"
-import type { FactMapDocument, FactMapRef } from "./fact-map"
+import {
+    FACT_MAP_KINDS,
+    factMapCountsOf,
+    factMapDocumentsOf,
+    factVisibleTo,
+    type FactMapDocument,
+    type FactMapRef,
+} from "./fact-map"
 import type { FactDrawerWords } from "./fact-drawers"
 import { trustBadgeOf, valueOf } from "./fact-pick"
 import type { FactKey, FactKeyKind } from "./inbox"

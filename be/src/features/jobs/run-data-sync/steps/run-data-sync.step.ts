@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { DataSyncService } from "@modules/domain/data-hub"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: a scheduler tick queues the due syncs, and a sync job reads the owner's system into the hub and settles its run. */

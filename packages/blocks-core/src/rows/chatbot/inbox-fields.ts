@@ -1,6 +1,6 @@
-import type { MessagePaths, ProposalPaths } from "./conversation.types"
+import type { MessagePaths } from "./conversation.types"
 
-/** The fields of a line of `chatbot.messages`: the inbox reads the thread through them, no spec names them. */
+/** The fields of a line of `blocks-core.chatbot.api.message.list`: the inbox reads the thread through them, no spec names them. */
 export const THREAD_LINE_FIELDS: MessagePaths = {
     idPath: "id",
     textPath: "text",
@@ -13,23 +13,12 @@ export const THREAD_LINE_FIELDS: MessagePaths = {
     orderPath: "order",
 }
 
-/** The fields of the record of `chatbot.proposals`: the reply the AI proposed, with what the customer asked. */
-export const PROPOSAL_FIELDS: ProposalPaths = {
-    idPath: "id",
-    textPath: "text",
-    askedPath: "asked",
-    notePath: "note",
-}
-
-/** The fields of the record of `chatbot.thread` that head the thread and fill the contact pane. */
+/** The fields of the record of `blocks-core.chatbot.api.chat.get` that head the thread and fill the contact pane. */
 export const THREAD_FIELDS = {
     id: "id",
     name: "name",
     channelName: "channelName",
     avatarUrl: "avatarUrl",
     handledBy: "handledBy",
-    stage: "stage",
-    need: "need",
-    phone: "phone",
-    leadId: "leadId",
+    contactId: "contactId",
 } as const

@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, MoreThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, MoreThan, type EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceAdminReadService } from "@modules/domain/workspaces"
-import { InjectAccountDirectory, WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+    InjectAccountDirectory,
+    WorkspaceMembersService,
+    type AccountDirectory,
+} from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import { WorkspaceInvitesError, WorkspaceInvitesErrorCode } from "./errors/workspace-invites.error"

@@ -7,7 +7,6 @@ import type { BrainPageHeaderView } from "@/modules/types"
 /** What the knowledge frame draws around the page of a chip. */
 interface BrainKnowledgeFrameProps {
     readonly header: BrainPageHeaderView
-    readonly onReviewAll: () => void
     readonly onSelectTab: (id: string) => void
     /** The page of the chip: the documents or the facts, drawn as tables. */
     readonly children: ReactNode
@@ -15,7 +14,7 @@ interface BrainKnowledgeFrameProps {
 
 /**
  * A page of the knowledge tab drawn as tables: the Second Brain header with its four tabs and its command, with the chips (documents,
- * facts, dossiers, lessons) as its second tab row, and the page of the chosen chip under it, full width so no title is cut.
+ * facts, lessons) as its second tab row, and the page of the chosen chip under it, full width so no title is cut.
  */
 export const BrainKnowledgeFrame = (props: BrainKnowledgeFrameProps) => {
     const { header } = props
@@ -23,13 +22,7 @@ export const BrainKnowledgeFrame = (props: BrainKnowledgeFrameProps) => {
         <Page
             header={{
                 ...header.heading,
-                actions: (
-                    <BrainHeaderActions
-                        review={header.actions.review}
-                        add={header.actions.add}
-                        onReview={props.onReviewAll}
-                    />
-                ),
+                actions: <BrainHeaderActions add={header.actions.add} />,
                 tabs: brainHeaderTabs({ tabs: header.tabs, onSelect: props.onSelectTab }),
                 ...brainHeaderSubTabs(header.chips),
             }}

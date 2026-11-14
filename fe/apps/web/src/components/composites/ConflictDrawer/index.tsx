@@ -64,7 +64,7 @@ const Footer = (props: OpenProps) => (
         <Text size="xs" tone="muted">
             {props.view.footerNote}
         </Text>
-        <Cluster gap="inline">
+        <Cluster gap="identity">
             <Button intent="dismiss" onPress={props.on.close}>
                 {props.view.laterLabel}
             </Button>

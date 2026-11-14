@@ -8,7 +8,7 @@ const titleOf = (title: string): string => (title.length > TITLE_CHARS ? `${titl
 
 /** The names a brief lists: the first few, then how many more there are. */
 export const listOf = (names: ReadonlyArray<string>): string => {
-    const shown = names.slice(0, BRIEF_ITEMS).map(titleOf).join("; ")
+    const shown = names.slice(0, BRIEF_ITEMS).map((item) => titleOf(item)).join("; ")
     return names.length > BRIEF_ITEMS ? `${shown}; and ${String(names.length - BRIEF_ITEMS)} more` : shown
 }
 

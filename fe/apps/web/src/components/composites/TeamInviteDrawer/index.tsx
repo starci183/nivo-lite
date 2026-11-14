@@ -36,7 +36,7 @@ interface TeamInviteDrawerProps {
 /** The form: the address, the role, the staff row the person is, with the failure in place. */
 const InviteForm = (props: TeamInviteDrawerProps) => (
     <Form id="team-invite-form" label={props.view.title} onSubmit={props.on.submit} isPending={props.view.isPending}>
-        <Stack gap="section">
+        <Stack gap="row">
             <Input
                 id="invite-email"
                 name="email"

@@ -3,8 +3,7 @@
 import { useMemo } from "react"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryModulesCatalogSwr } from "@/hooks/swr"
-import { isModuleKey } from "@/modules/catalog"
-import type { ModuleCopy, ModuleKey } from "@/modules/catalog"
+import { isModuleKey, type ModuleCopy, type ModuleKey } from "@/modules/catalog"
 import { readError } from "@/hooks/workspaceread"
 
 import type { DataSlot } from "@/modules/types"
@@ -70,11 +69,7 @@ type UseModuleCatalogResult = {
             | "chatbot"
             | "lead_gen"
             | "sales"
-            | "accounting"
-            | "shifts"
             | "booking"
-            | "inventory"
-            | "loyalty"
             | "video"
             | "content"
             | "hiring",

@@ -1,22 +1,19 @@
 import { invalid, readSeedDocuments, textOf } from "./management-seed.policy"
-import { CHAT_SEED_SCHEMA } from "./chat-seed.contracts"
-import type {
-    ChatSeedDay,
-    ChatSeedMessage,
-    ChatSeedRoom,
-    ChatSeedRoomPurpose,
-    ChatSeedWho,
+import {
+    CHAT_SEED_SCHEMA,
+    type ChatSeedDay,
+    type ChatSeedMessage,
+    type ChatSeedRoom,
+    type ChatSeedRoomPurpose,
+    type ChatSeedWho,
 } from "./chat-seed.contracts"
+import { addDays, localDate, zonedMs } from "@modules/domain/workspace-settings"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u
 const KEY = /^[a-z0-9][a-z0-9-]{0,39}$/u
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/u
 const NAME_MAX = 80
 const BODY_MAX = 2000
-
-/** Vietnam keeps UTC+7 all year, so the shop's day is the UTC clock moved by seven hours. */
-const SHOP_OFFSET_MS = 7 * 3_600_000
-const DAY_MS = 86_400_000
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === "object" && !Array.isArray(value)
@@ -65,7 +62,7 @@ const roomOf = (raw: unknown): ChatSeedRoom => {
     if (!UUID.test(id) || name.length > NAME_MAX) return invalid("room.id")
     if (!Array.isArray(raw.members) || raw.members.length === 0) return invalid("room.members")
     if (!Array.isArray(raw.messages) || raw.messages.length === 0) return invalid("room.messages")
-    const messages = raw.messages.map(messageOf)
+    const messages = raw.messages.map((item) => messageOf(item))
     if (new Set(messages.map((message) => message.key)).size !== messages.length) return invalid("message.key")
     const members = raw.members.map((member) => whoOf(member, "room.members"))
     return { id, name, ...purposeOf(raw), members, messages }
@@ -76,7 +73,7 @@ export const readChatSeedRooms = (text: string): ReadonlyArray<ChatSeedRoom> => 
     const rooms = readSeedDocuments(text).flatMap((document) => {
         if (!isRecord(document) || document.schema !== CHAT_SEED_SCHEMA) return invalid("schema")
         return Array.isArray(document.rooms) && document.rooms.length > 0
-            ? document.rooms.map(roomOf)
+            ? document.rooms.map((item) => roomOf(item))
             : invalid("rooms")
     })
     return new Set(rooms.map((room) => room.id)).size === rooms.length ? rooms : invalid("room.id")
@@ -86,12 +83,15 @@ export const readChatSeedRooms = (text: string): ReadonlyArray<ChatSeedRoom> => 
  * The instants of the lines of one room, in the order given: each is its day and time in the shop's time zone, and a line that would
  * fall after `now` is moved back to just before it, a minute apart, so the thread keeps its order and nothing is said in the future.
  */
-export const instantsOf = (messages: ReadonlyArray<ChatSeedMessage>, now: Date): ReadonlyArray<Date> => {
-    const today = Math.floor((now.getTime() + SHOP_OFFSET_MS) / DAY_MS) * DAY_MS - SHOP_OFFSET_MS
+export const instantsOf = (
+    messages: ReadonlyArray<ChatSeedMessage>,
+    now: Date,
+    timeZone: string,
+): ReadonlyArray<Date> => {
+    const today = localDate(now.getTime(), timeZone)
     return messages.map((message, index) => {
-        const [hours, minutes] = message.time.split(":").map(Number)
         const day: ChatSeedDay = message.day
-        const wanted = today - (day === "yesterday" ? DAY_MS : 0) + ((hours ?? 0) * 60 + (minutes ?? 0)) * 60_000
+        const wanted = zonedMs(day === "yesterday" ? addDays(today, -1) : today, message.time, timeZone)
         const latest = now.getTime() - (messages.length - index) * 60_000
         return new Date(Math.min(wanted, latest))
     })

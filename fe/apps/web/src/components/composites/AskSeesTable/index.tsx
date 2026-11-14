@@ -1,5 +1,4 @@
-import { Cluster, DataTable, EmptyNotice, Text } from "@starci/grammar/common"
-import type { DataTableRow } from "@starci/grammar/common"
+import { Cluster, DataTable, EmptyNotice, Text, type DataTableRow } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
 import type { AskSeesLane, AskSeesView, BrainAskCopy } from "@/modules/types"
 

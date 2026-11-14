@@ -1,6 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { useSWRConfig } from "swr"
 import { matchesSwrKey } from "@/modules/utils"
 import {
@@ -8,7 +8,6 @@ import {
     type MutateDecideAgentRunStepRequest,
 } from "@/modules/api/graphql/mutations/mutation-decide-agent-run-step"
 import { QUERY_AGENT_RUN_SWR_KEY } from "../queries/useQueryAgentRunSwr"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DecideAgentRunStepMutation } from "@/modules/api"
 
 /** What the DecideAgentRunStep mutation is triggered with. */

@@ -26,7 +26,7 @@ export const ASK: Node = stepOf("ask", "approval", ["act"], { doneBy: "person", 
 export const STOP: Node = stepOf("stop", "stop", [])
 
 /** A graph of exactly these nodes. */
-export const documentOf = (...nodes: ReadonlyArray<Node>): Document => ({ nodes, rights: [] })
+export const documentOf = (...nodes: ReadonlyArray<Node>): Document => ({ nodes })
 
 type AmountShape = {
     "supplier_payment.amount_vnd": number

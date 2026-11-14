@@ -1,7 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
+import { nodeIndexOf, type NodeIndex } from "@nivo-lite/agent-sdk/node"
 import {
     AgentBindingsService,
     AgentConnectionsError,
@@ -9,17 +8,15 @@ import {
 } from "@modules/domain/agent-connections"
 import { AgentGraphFlowService, AgentWorkflowsService } from "@modules/domain/agent-graphs"
 import { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModuleTagGrantsService, ModulesService, defaultRulesOf } from "@modules/domain/modules"
-import type { ModuleDefinition } from "@modules/domain/modules"
-import { WorkspacesService } from "@modules/domain/workspaces"
+import { AgentAccountsService } from "@modules/domain/tools"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { ModulesService, type ModuleDefinition } from "@modules/domain/modules"
+import { WorkspaceEnterpriseService, WorkspacesService } from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { CONNECTION_BINDINGS, readGraphSpecs } from "./graph-seed.policy"
-import { ProfileActivationService } from "./profile-activation.service"
+import { SeedActivationService } from "./seed-activation.service"
 import { InjectSeedAgents, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
 import type { WorkspaceSeedOptions } from "./workspace-seed.options"
 import type { SeedAgentRecords } from "./workspace-seed.port"
@@ -31,7 +28,7 @@ interface SeedSeat {
     readonly installed: NodeIndex
 }
 
-/** The language the agents and installations seeded here are named in, as the profile seed names them. */
+/** The language the agents and installations seeded here are named in, as the module catalogue names them. */
 const SEED_LOCALE = "vi"
 /** The most workspaces looked through for the named one. */
 const WORKSPACE_SCAN_LIMIT = 1000
@@ -45,8 +42,7 @@ interface Seat {
 @Injectable()
 /**
  * The seed of the agent graphs: for each graph spec of the stack seed step, the module is installed in the named workspace (its agent
- * under the handle of its module, so `sales`, `accounting` and `chatbot` name the installed agents), given the default authority rules
- * of the module, brought live through the same activation the profile seed uses (the gates are confirmed with the wording of the module
+ * under the handle of its module, so `sales` and `chatbot` name the installed agents), brought live through the seed activation (the gates are confirmed with the wording of the module
  * itself, so no setup chat runs), and the spec is published as the flow the agent runs, judged against the installed nodes first. A
  * rerun with the same content changes nothing and is cheap: a module that is live and already runs the flow costs reads only (its
  * installation and its live graph), so the seed may run on every start. It prints what it did and never a value.
@@ -58,43 +54,40 @@ export class GraphSeedService {
         private readonly workspaces: WorkspacesService,
         private readonly modules: ModulesService,
         private readonly installations: InstallationRecordsService,
-        private readonly rules: AuthorityRulesService,
-        private readonly activation: ProfileActivationService,
+        private readonly activation: SeedActivationService,
         private readonly flows: AgentGraphFlowService,
         private readonly bindings: AgentBindingsService,
-        private readonly tagGrants: ModuleTagGrantsService,
-        private readonly abilities: ProviderAbilitiesService,
+        private readonly abilities: AgentAccountsService,
         @Optional() private readonly workflows?: AgentWorkflowsService,
+        @Optional() private readonly enterprise?: WorkspaceEnterpriseService,
     ) {}
 
     /**
      * Seeds every graph of the envelope read from `text` into the workspace named `workspaceName`; a refused graph stops the run. The module
-     * catalogue is mirrored first, so the authority actions the default rules name exist even on a database no catalogue step reached yet.
+     * catalogue is mirrored first, so the module rows the installations name exist even on a database no catalogue step reached yet.
      */
     async run(text: string, workspaceName: string): Promise<void> {
         const specs = readGraphSpecs(text)
         const installed = this.installedNodes()
         const workspaceId = await this.workspaceOf(workspaceName)
         const ownerId = await this.ownerOf(workspaceId)
-        // The default rules a graph seeds name authority actions by foreign key: on an empty database the catalogue is not mirrored yet.
+        // An installation names its module by foreign key: on an empty database the catalogue is not mirrored yet.
         await this.modules.sync()
         await eachInOrder(specs, (spec) => this.seedGraph({ workspaceId, ownerId, installed }, spec))
     }
 
-    /** Seeds one graph into its module's agent: the rights first, then the rules, the activation and the published graph. */
+    /** Seeds one graph into its module's agent: the rights first, then the activation and the published graph. */
     private async seedGraph(seat: SeedSeat, spec: GraphSpec): Promise<void> {
         const { workspaceId, ownerId, installed } = seat
         const module = await this.modules.find(spec.moduleKey)
+        await this.requireOpen(workspaceId, module.key)
         const { installation, agentId } = await this.seatOf(workspaceId, module)
-        // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
-        await this.tagGrants.grantFor(workspaceId, module.key, agentId)
         await this.attachProviders(workspaceId, agentId, module.key)
         if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
             this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
             await this.seedWorkflows(workspaceId, module.key, agentId)
             return
         }
-        await this.rules.seedDefaults(workspaceId, module.key, defaultRulesOf(module))
         const statuses = await this.activation.activate({ workspaceId, ownerId }, [
             {
                 handle: module.agent.handle,
@@ -128,9 +121,8 @@ export class GraphSeedService {
     }
 
     /**
-     * Gives the agent the default rights of its module on the providers the workspace connected (the abilities its declaration names,
-     * by kind), where it holds none: an attachment that exists is left exactly as the workspace holds it, so a rerun of the seed or a
-     * new version of a module never changes a right. Without them the published graph could not send, draw a QR or write the ledger.
+     * Attaches the agent to the working accounts of the providers its module's template lists, where it holds none: an attachment that
+     * exists is left exactly as the workspace holds it, so a rerun of the seed or a new version of a module never changes a right. Without them the published graph could not send, draw a QR or write the ledger.
      */
     private async attachProviders(workspaceId: string, agentId: string, moduleKey: string): Promise<void> {
         const made = await this.abilities.attachDefaults({ workspaceId, agentId, moduleKey }, null, null)
@@ -166,6 +158,17 @@ export class GraphSeedService {
             }
         })
         return assigned
+    }
+
+    /**
+     * Refuses to seed a module of a private plugin into a workspace that is not one of the enterprise workspaces the plugin names
+     * (the workspace's enterprise identifier is set first, by `WorkspaceEnterpriseService.set`): the seed is no way around who may
+     * hold a private module. A module of a public plugin costs no read.
+     */
+    private async requireOpen(workspaceId: string, moduleKey: string): Promise<void> {
+        if (INSTALLED.isOpenTo(moduleKey, null)) return
+        if ((await this.enterprise?.opens(workspaceId, moduleKey)) === true) return
+        throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.InputInvalid })
     }
 
     private installedNodes(): NodeIndex {

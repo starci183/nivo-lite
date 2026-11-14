@@ -1,5 +1,6 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
 import { tabOf, useRunsTableCopy } from "@/hooks/agentRuns"
 import { useWorkflowDetail } from "@/hooks/agentWorkflowPages"
@@ -12,9 +13,9 @@ import type { AgentWorkflowDetailCopy, DetailTab } from "./parts"
 
 /** The workflow whose page this is: its key (the old addresses carried its id, which is read the same way). */
 type AgentWorkflowDetailProps = {
-    readonly module: string
-    readonly installationId: string
-    readonly workflowKey: string
+    readonly module?: string | undefined
+    readonly installationId?: string | undefined
+    readonly workflowKey?: string | undefined
     /** The part of the page the route names. */
     readonly part: DetailTab
 }
@@ -67,7 +68,6 @@ const overviewCopyOf = (t: PageWords): AgentWorkflowDetailCopy["overview"] => ({
     inputsTitle: t("inputsTitle"),
     inputsEmpty: t("inputsEmpty"),
     inputName: t("inputName"),
-    inputLabel: t("inputLabel"),
     inputRequired: t("inputRequired"),
     yes: t("yes"),
     entryLine: (entry) => t("entryLine", { entry }),
@@ -84,6 +84,9 @@ const copyOf = (t: PageWords, td: WorkflowWords, runs: RunsTableCopy): AgentWork
     paneLabel: t("paneLabel"),
     editMap: t("editMap"),
     addStep: t("addStep"),
+    noticeAction: t("noticeAction"),
+    noticePreview: t("noticePreview"),
+    noticeCaption: td("noticeCaption"),
     mapTitle: t("mapTitle"),
     graphLabel: td("graphLabel"),
     graphCaption: td("graphCaption"),
@@ -111,13 +114,14 @@ const copyOf = (t: PageWords, td: WorkflowWords, runs: RunsTableCopy): AgentWork
 
 /** The connected page of one workflow: reads it, its overview, its map and its runs, and draws them in four parts. */
 export const AgentWorkflowDetail = (props: AgentWorkflowDetailProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("agentWorkflowPages")
     const td = useTranslations("agentWorkflows")
     const runsCopy = useRunsTableCopy()
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
     const base = navigation.usePathname().replace(/\/(map|versions|runs)$/, "")
-    const page = useWorkflowDetail(props.module, props.installationId, props.workflowKey)
+    const page = useWorkflowDetail(route.module, route.installationId, route.workflowKey)
     const { runs } = page
     return (
         <AgentWorkflowDetailBase
@@ -136,12 +140,15 @@ export const AgentWorkflowDetail = (props: AgentWorkflowDetailProps) => {
                 part: props.part,
                 grid: GRID,
                 slotLabels: slotLabels(t("notFound")),
+                isWriting: page.isWriting,
             }}
             on={{
                 retry: page.retry,
                 openMap: () => router.push(`${base}/map`),
                 step: page.steps.act,
                 rollback: page.rollback,
+                toggle: page.setStatus,
+                sync: page.sync,
                 runsFilter: runs.setFilter,
                 runsTab: (key) => runs.setFilter({ tab: tabOf(key) }),
                 runsRetry: runs.reload,

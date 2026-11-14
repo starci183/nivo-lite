@@ -1,17 +1,18 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import type { PageRow } from "@nivo-lite/agent-sdk/entity/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { Query } from "@nivo-lite/agent-sdk/query"
-import { FLOW_F_ENTITIES, agentNodeEffectEntity, agentRunStopEntity, conversationEntity } from "@nivo-lite/blocks-core/entities"
-import { TOOL } from "@nivo-lite/blocks-core"
-import { MODULE_DECLARATIONS, agentGuidanceOf } from "@nivo-lite/blocks-core/modules"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeDataPort, NodeTurn } from "@modules/domain/graph-nodes"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { RunStopRecordsService } from "@modules/domain/agent-threads/stops/run-stop-records.service"
+import type { RunStop } from "@modules/domain/agent-threads/stops/run-stop.contracts"
+import { ConversationContactsService } from "@modules/domain/contacts"
+import { NODE_EFFECT_STORE } from "@modules/domain/graph-nodes"
+import type { NodeEffectStore, NodeTurn, StoredEffect } from "@modules/domain/graph-nodes"
+import { ChannelDeliveriesService } from "@modules/domain/customer-routes"
+import { ContactsService } from "@modules/domain/contacts"
 import { CLOCK } from "@modules/platform/clock"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { MemoryChannelDeliveryStore } from "@tests/fixtures/builders/customer-routes-stores.builder"
+import { installedModules } from "@tests/fixtures/builders/installed-modules.builder"
 import { AgentGraphTurnPolicyService } from "./agent-graph-turn-policy.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -24,176 +25,48 @@ const TURN: NodeTurn = {
     conversationId: "c-1",
     locale: "vi",
 }
-const ANSWERED: NodeTurn = { ...TURN, founderAnswers: [{ text: "duyệt", at: AT }] }
+const ANSWERED: NodeTurn = { ...TURN, founderAnswers: [{ text: "duy\u1ec7t", at: AT }] }
 
-const settingsRow = (data: Readonly<Record<string, unknown>>): PageRow => ({
-    row: { id: "s-1", workspaceId: WS, version: "1", createdAt: AT, updatedAt: AT, data },
-    joined: {},
-    position: ["s-1"],
-    included: {},
-})
-
-/** The real entity declarations by name: the engine refuses a list no declared index serves, and so does this fake. */
-const CATALOG: ReadonlyMap<string, EntityDefinition> = new Map(
-    FLOW_F_ENTITIES.map((entity): [string, EntityDefinition] => [entity.name, entity as EntityDefinition]),
-)
-
-/**
- * The service over an engine that knows the real entity declarations, refuses a list the engine would refuse (an unindexed order),
- * and whose `sales.settings` holds `saved` (no record when null).
- */
-const build = async (saved: Readonly<Record<string, unknown>> | null, lines?: NodeDataPort) => {
-    const engine = mock<EntityEngineService>()
-    engine.scoped.mockImplementation((_workspace, work) => work(mock<ScopedTx>()))
-    engine.definition.mockImplementation((name) => {
-        const entity = CATALOG.get(name)
-        if (entity === undefined) throw new Error(`unknown entity ${name}`)
-        return entity
-    })
-    engine.list.mockImplementation((_tx, query: Query) => {
-        const problems = queryProblems(query, CATALOG)
-        if (problems.length > 0) return Promise.reject(new Error(`ENTITY_ENGINE_QUERY_INVALID ${JSON.stringify(problems)}`))
-        const rows = query.from === "sales.settings" && saved !== null ? [settingsRow(saved)] : []
-        return Promise.resolve({ rows, next: null })
-    })
-    const nodes = mock<GraphNodeRegistryService>()
-    nodes.optionalPortOf.mockReturnValue(lines)
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            AgentGraphTurnPolicyService,
-            { provide: EntityEngineService, useValue: engine },
-            { provide: GraphNodeRegistryService, useValue: nodes },
-        ],
-    }).compile()
-    return { policy: moduleRef.get(AgentGraphTurnPolicyService), engine, nodes }
+/** The service with no ledger and no stops: only the module's guidance and tool set. */
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({ providers: [AgentGraphTurnPolicyService] }).compile()
+    return { policy: moduleRef.get(AgentGraphTurnPolicyService) }
 }
 
-describe("AgentGraphTurnPolicyService: the settings read against the real entity declarations", () => {
-    it.each(MODULE_DECLARATIONS.filter((module) => module.agent !== undefined).map((module) => module.key))(
-        "reads the policy values of the %s agent with a query the engine serves",
-        async (moduleKey) => {
-            const { policy } = await build({})
-            const defaults = MODULE_DECLARATIONS.find((module) => module.key === moduleKey)?.agent?.policy.limits ?? {}
-            await expect(policy.valuesOf(WS, moduleKey, defaults)).resolves.toEqual(defaults)
-        },
-    )
-
-    it("covers the three agents of the Zalo flow", () => {
-        const keys = MODULE_DECLARATIONS.filter((module) => module.agent !== undefined).map((module) => module.key)
-        expect(keys).toEqual(expect.arrayContaining(["chatbot", "sales", "accounting"]))
+describe("AgentGraphTurnPolicyService: the agents the installation lists", () => {
+    it("covers the agents of the Zalo flow (the accounting agent was dropped)", () => {
+        const keys = installedModules().filter((module) => module.agent !== undefined).map((module) => module.key)
+        expect(keys).toEqual(expect.arrayContaining(["chatbot", "sales"]))
+        expect(keys).not.toContain("accounting")
     })
 })
 
-describe("AgentGraphTurnPolicyService: the policy of the module's agent", () => {
-    it("gives the turn the module's guidance in the run's language and the workspace's own value over the default", async () => {
-        const { policy, engine } = await build({ approvalThresholdVnd: 3_000_000 })
+describe("AgentGraphTurnPolicyService: the guidance of the module's agent", () => {
+    it("gives the turn the module's guidance in the run's language and no policy values of its own", async () => {
+        const { policy } = await build()
 
         const told = await policy.toldOf(TURN, "sales", "run-1:create-order")
 
-        expect(told.guidance).toBe(agentGuidanceOf("sales", "vi"))
+        expect(told.guidance).toBe(INSTALLED.guidanceOf("sales", "vi"))
         expect(told.guidance).not.toBe("")
-        expect(told.policy).toEqual({
-            approvalThresholdVnd: 3_000_000,
-            paymentReminderHours: 2,
-            paymentStaleHours: 24,
-            autoWon: true,
-        })
-        expect(engine.list).toHaveBeenCalledWith(
-            expect.anything(),
-            {
-                from: "sales.settings",
-                select: ["approvalThresholdVnd", "autoWon"],
-                order: [
-                    ["key", "asc"],
-                    ["id", "asc"],
-                ],
-                page: { size: 1 },
-            },
-            expect.any(String),
-        )
+        expect(told).not.toHaveProperty("policy")
         expect((await policy.toldOf({ ...TURN, locale: "en" }, "sales", "k")).guidance).toBe(
-            agentGuidanceOf("sales", "en"),
+            INSTALLED.guidanceOf("sales", "en"),
         )
-    })
-
-    it("keeps the module's defaults for a workspace that saved no settings", async () => {
-        const { policy } = await build(null)
-        const told = await policy.toldOf(TURN, "sales", "run-1:create-order")
-        expect(told.policy).toEqual({
-            approvalThresholdVnd: 5_000_000,
-            paymentReminderHours: 2,
-            paymentStaleHours: 24,
-            autoWon: true,
-        })
-    })
-
-    it("keeps the defaults without reading when the module's settings hold none of the policy's names", async () => {
-        const { policy, engine } = await build({ approvalThresholdVnd: 1 })
-
-        const told = await policy.toldOf(TURN, "accounting", "run-1:match")
-
-        expect(told.guidance).toBe(agentGuidanceOf("accounting", "vi"))
-        expect(told.policy).toEqual({ refund: "never" })
-        expect(engine.list).not.toHaveBeenCalled()
     })
 
     it("adds nothing for a module that declares no agent", async () => {
-        const { policy } = await build(null)
+        const { policy } = await build()
         await expect(policy.toldOf(TURN, "no-such-module", "k")).resolves.toEqual(TURN)
-    })
-})
-
-describe("AgentGraphTurnPolicyService: what a step that runs again already sent", () => {
-    const linesPort = (): jest.Mocked<NodeDataPort> => {
-        const port = mock<NodeDataPort>({ kind: "message" })
-        port.read.mockResolvedValue([
-            { channelRef: "line:run-1:create-order:aaaa", text: "Dạ shop đang kiểm tra ạ.", sentAt: AT },
-            { channelRef: "line:run-1:consult:bbbb", text: "Mình cần giao ở đâu ạ?", sentAt: AT },
-        ])
-        return port
-    }
-
-    it("lists the lines kept under the step's key, read among the conversation's latest agent lines", async () => {
-        const port = linesPort()
-        const { policy } = await build(null, port)
-
-        const told = await policy.toldOf(ANSWERED, "sales", "run-1:create-order")
-
-        expect(told.alreadySent).toEqual([{ text: "Dạ shop đang kiểm tra ạ.", at: AT }])
-        expect(port.read).toHaveBeenCalledWith(
-            ANSWERED,
-            { where: { conversationId: "c-1", role: "agent" }, fields: ["text", "sentAt", "channelRef"], limit: 20 },
-            "workspace",
-        )
-    })
-
-    it("reads nothing on a first try, without a conversation, or when the app serves no conversation lines", async () => {
-        const port = linesPort()
-        const first = await build(null, port)
-        expect((await first.policy.toldOf(TURN, "sales", "run-1:create-order")).alreadySent).toBeUndefined()
-        const calling = await first.policy.toldOf({ ...ANSWERED, conversationId: null }, "sales", "run-1:create-order")
-        expect(calling.alreadySent).toBeUndefined()
-        expect(port.read).not.toHaveBeenCalled()
-
-        const unserved = await build(null)
-        expect((await unserved.policy.toldOf(ANSWERED, "sales", "run-1:create-order")).alreadySent).toBeUndefined()
     })
 })
 
 const RUN = "run-1"
 const OTHER_RUN = "run-0"
-const LEAD = "lead-1"
+const CONTACT = "contact-1"
 const NOW = new Date("2026-11-10T05:00:00.000Z")
 const CHECKING = "Da nhan, shop dang kiem tra a."
 const OUTCOME = "Shop da xac nhan don a."
-
-/** The real declarations of the ledger, the stops and the conversation, beside the flow's. */
-const TOLD_CATALOG: ReadonlyMap<string, EntityDefinition> = new Map([
-    ...CATALOG,
-    ...[agentNodeEffectEntity, agentRunStopEntity, conversationEntity].map(
-        (entity): [string, EntityDefinition] => [entity.name, entity as EntityDefinition],
-    ),
-])
 
 const rowOf = (id: string, data: Readonly<Record<string, unknown>>, createdAt = AT): PageRow => ({
     row: { id, workspaceId: WS, version: "1", createdAt, updatedAt: createdAt, data },
@@ -203,60 +76,127 @@ const rowOf = (id: string, data: Readonly<Record<string, unknown>>, createdAt = 
 })
 
 const sendOf = (id: string, text: string, conversationId: string, at: string): PageRow =>
-    rowOf(id, { effectId: "nivo.lead.message.send", args: { conversationId, text } }, at)
+    rowOf(id, { effectId: "nivo.tool.customer.message.send", args: { conversationId, text } }, at)
+
+/** A ledger row of a case as the effect ledger store keeps it: the members the case wrote, a subject a kept act names. */
+const effectOf = (row: PageRow): StoredEffect => {
+    const { data } = row.row
+    const args: unknown = data.args
+    return {
+        effectKey: row.row.id,
+        effectId: String(data.effectId),
+        subjectEntity: typeof data.subjectEntity === "string" ? data.subjectEntity : "record",
+        subjectId: row.row.id,
+        undoneAt: typeof data.undoneAt === "string" ? data.undoneAt : null,
+        runId: null,
+        stepKey: null,
+        args: typeof args === "object" && args !== null && !Array.isArray(args) ? Object.fromEntries(Object.entries(args)) : null,
+        facts: null,
+        createdAt: row.row.createdAt,
+    }
+}
 
 interface World {
     /** Ledger rows by `<run>:<step>`. */
     readonly ledger?: Readonly<Record<string, ReadonlyArray<PageRow>>>
     /** Stop rows by state. */
     readonly stops?: Readonly<Record<string, ReadonlyArray<PageRow>>>
-    /** The customer each conversation names. */
+    /** The contact each conversation's channel identity resolves to. */
     readonly conversations?: Readonly<Record<string, string | null>>
+    /** The engine's delivery ledger: what each run step claimed to send (the real service over its in-memory store). */
+    readonly deliveries?: ReadonlyArray<WorldDelivery>
 }
 
-/** The service over an engine that knows the real declarations and refuses any list no declared index serves. */
+/** One send of the delivery ledger of a case, claimed and then settled at `state` (`claimed` stays in flight). */
+interface WorldDelivery {
+    readonly key: string
+    readonly runId: string
+    readonly stepKey: string
+    readonly text: string
+    readonly state: "delivered" | "refused" | "unknown" | "claimed"
+    readonly routeId?: string
+}
+
+const isLine = (value: unknown): value is RunStop["customerLines"][number] =>
+    typeof value === "object" && value !== null && typeof Reflect.get(value, "text") === "string"
+
+const isAnswer = (value: unknown): value is RunStop["answers"][number] =>
+    typeof value === "object" && value !== null && typeof Reflect.get(value, "kind") === "string"
+
+/** A stop as the stops' door answers it, from the members a case wrote as the stop keeps them. */
+const stopOfRow = (row: PageRow): RunStop => {
+    const { data } = row.row
+    const lines: unknown = Reflect.get(Object(data.customerLines), "lines")
+    const answers: unknown = Reflect.get(Object(data.answers), "answers")
+    return {
+        id: row.row.id,
+        version: row.row.version,
+        runId: String(data.runId),
+        stepKey: String(data.stepKey),
+        agentId: "agent-1",
+        workflowId: null,
+        contactId: CONTACT,
+        conversationId: null,
+        kind: "ai_report",
+        state: data.resolvedAt === null ? "open" : "resolved",
+        reason: typeof data.reason === "string" ? data.reason : "",
+        question: typeof data.question === "string" ? data.question : null,
+        detail: { suggestions: [], facts: [] },
+        cardMessageId: null,
+        customerLines: Array.isArray(lines) ? lines.filter(isLine) : [],
+        answers: Array.isArray(answers) ? answers.filter(isAnswer) : [],
+        decision: null,
+        repeats: 1,
+        stoppedAt: row.row.createdAt,
+        resolvedAt: typeof data.resolvedAt === "string" ? data.resolvedAt : null,
+    }
+}
+
+/** The service over the stops, the ledger and the conversation a world holds. */
 const told = async (world: World) => {
-    const engine = mock<EntityEngineService>()
-    engine.scoped.mockImplementation((_workspace, work) => work(mock<ScopedTx>()))
-    engine.definition.mockImplementation((name) => {
-        const entity = TOLD_CATALOG.get(name)
-        if (entity === undefined) throw new Error(`unknown entity ${name}`)
-        return entity
-    })
-    engine.get.mockImplementation((_tx, entity, id) => {
-        const leadId = world.conversations?.[id]
-        return Promise.resolve(
-            entity === "chat.conversation" && leadId !== undefined ? rowOf(id, { leadId }).row : null,
-        )
-    })
-    engine.list.mockImplementation((_tx, query: Query) => {
-        const problems = queryProblems(query, TOLD_CATALOG)
-        if (problems.length > 0) return Promise.reject(new Error(`ENTITY_ENGINE_QUERY_INVALID ${JSON.stringify(problems)}`))
-        const pinned = Object.fromEntries(
-            (query.where?.op === "and" ? query.where.of : []).flatMap((part) =>
-                part.op === "eq" ? [[part.field, part.value]] : [],
-            ),
-        )
-        if (query.from === "agent.node-effect")
-            return Promise.resolve({ rows: world.ledger?.[`${pinned.runId}:${pinned.stepKey}`] ?? [], next: null })
-        if (query.from === "agent.run-stop")
-            return Promise.resolve({
-                rows: pinned.leadId === LEAD ? (world.stops?.[String(pinned.state)] ?? []) : [],
-                next: null,
-            })
-        return Promise.resolve({ rows: [], next: null })
-    })
-    const nodes = mock<GraphNodeRegistryService>()
-    nodes.optionalPortOf.mockReturnValue(undefined)
+    const contacts = mock<ConversationContactsService>()
+    contacts.contactOf.mockImplementation((_workspace, id) => Promise.resolve(world.conversations?.[id] ?? null))
+    const ledger = mock<NodeEffectStore>()
+    ledger.ofStep.mockImplementation((_workspace, runId, stepKey) =>
+        Promise.resolve((world.ledger?.[`${runId}:${stepKey}`] ?? []).map(effectOf)),
+    )
+    const stops = mock<RunStopRecordsService>()
+    stops.ofContacts.mockImplementation((_workspace, ids, state) =>
+        Promise.resolve(ids.includes(CONTACT) ? (world.stops?.[state] ?? []).map(stopOfRow) : []),
+    )
+    const deliveryStore = new MemoryChannelDeliveryStore()
+    const people = mock<ContactsService>()
+    people.current.mockImplementation((_workspace, id) => Promise.resolve(id))
+    const deliveries = new ChannelDeliveriesService(deliveryStore, people)
+    for (const one of world.deliveries ?? []) {
+        await deliveries.claim(WS, {
+            sendKey: one.key,
+            routeId: one.routeId ?? "c-1",
+            contactId: CONTACT,
+            agentId: "agent-1",
+            runId: one.runId,
+            stepKey: one.stepKey,
+            text: one.text,
+            attachmentCount: 0,
+            attachmentKinds: [],
+            channel: "zalo",
+            accountId: "conn-1",
+        })
+        if (one.state === "delivered") await deliveries.mark(WS, one.key, { state: "delivered", providerMessageId: "p-1", at: new Date(AT) })
+        if (one.state === "refused") await deliveries.mark(WS, one.key, { state: "refused", reason: "outside_window" })
+        if (one.state === "unknown") await deliveries.mark(WS, one.key, { state: "unknown", reason: null })
+    }
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphTurnPolicyService,
-            { provide: EntityEngineService, useValue: engine },
-            { provide: GraphNodeRegistryService, useValue: nodes },
+            { provide: ChannelDeliveriesService, useValue: deliveries },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: ConversationContactsService, useValue: contacts },
+            { provide: RunStopRecordsService, useValue: stops },
+            { provide: NODE_EFFECT_STORE, useValue: ledger },
         ],
     }).compile()
-    return { policy: moduleRef.get(AgentGraphTurnPolicyService), engine }
+    return { policy: moduleRef.get(AgentGraphTurnPolicyService), stops, ledger }
 }
 
 describe("AgentGraphTurnPolicyService: what the customer was already told, from the effect ledger and the stops (D.1)", () => {
@@ -270,9 +210,83 @@ describe("AgentGraphTurnPolicyService: what the customer was already told, from 
         expect(turn.alreadySent).toEqual([{ text: CHECKING, at: "2026-11-10T03:01:00.000Z" }])
     })
 
+    it("after the founder's answer, the step's earlier customer line is found in the effect ledger alone (a send addressed to the person, no conversation in its arguments), with no chatbot record read", async () => {
+        const { policy, ledger } = await told({
+            ledger: {
+                [`${RUN}:answer`]: [
+                    rowOf("e-1", { effectId: "nivo.tool.customer.message.send", args: { contactId: CONTACT, text: CHECKING } }, "2026-11-10T03:01:00.000Z"),
+                ],
+            },
+        })
+
+        const turn = await policy.toldOf(ANSWERED, "chatbot", `${RUN}:answer`)
+
+        expect(turn.alreadySent).toEqual([{ text: CHECKING, at: "2026-11-10T03:01:00.000Z" }])
+        expect(ledger.ofStep).toHaveBeenCalledWith(WS, RUN, "answer", expect.anything())
+    })
+
+    describe("what the engine's own delivery ledger adds (a send the effect ledger keeps no words of)", () => {
+        /** The effect row of a send that kept no arguments (too large for the ledger's columns, or written before it kept any). */
+        const bare = rowOf("e-1", { effectId: "nivo.tool.customer.message.send" }, "2026-11-10T03:01:00.000Z")
+
+        it("tells a re-run step of a send whose effect row keeps no arguments, from the delivery ledger", async () => {
+            const { policy } = await told({
+                ledger: { [`${RUN}:answer`]: [bare] },
+                deliveries: [{ key: "k-1", runId: RUN, stepKey: "answer", text: CHECKING, state: "delivered" }],
+            })
+
+            const turn = await policy.toldOf(ANSWERED, "chatbot", `${RUN}:answer`)
+
+            expect(turn.alreadySent).toEqual([{ text: CHECKING, at: AT }])
+        })
+
+        it("tells a line present in both ledgers once", async () => {
+            const { policy } = await told({
+                ledger: { [`${RUN}:answer`]: [sendOf("e-1", CHECKING, "c-1", "2026-11-10T03:01:00.000Z")] },
+                deliveries: [{ key: "k-1", runId: RUN, stepKey: "answer", text: CHECKING, state: "delivered" }],
+            })
+
+            const turn = await policy.toldOf(ANSWERED, "chatbot", `${RUN}:answer`)
+
+            expect(turn.alreadySent).toHaveLength(1)
+            expect(turn.alreadySent?.[0]?.text).toBe(CHECKING)
+        })
+
+        it("counts a send whose outcome is unknown or still in flight as possibly told (engine-core rule 9), and a refused one as not told", async () => {
+            const { policy } = await told({
+                deliveries: [
+                    { key: "k-1", runId: RUN, stepKey: "answer", text: "Unknown line", state: "unknown" },
+                    { key: "k-2", runId: RUN, stepKey: "answer", text: "In flight line", state: "claimed" },
+                    { key: "k-3", runId: RUN, stepKey: "answer", text: "Refused line", state: "refused" },
+                ],
+            })
+
+            const turn = await policy.toldOf(ANSWERED, "chatbot", `${RUN}:answer`)
+
+            expect(turn.alreadySent?.map((line) => line.text).toSorted()).toEqual(["In flight line", "Unknown line"])
+        })
+
+        it("leaves out the delivery of another run or another step, and reads nothing on a first try", async () => {
+            const world = {
+                deliveries: [
+                    { key: "k-1", runId: OTHER_RUN, stepKey: "answer", text: "Other run", state: "delivered" },
+                    { key: "k-2", runId: RUN, stepKey: "other", text: "Other step", state: "delivered" },
+                    { key: "k-3", runId: RUN, stepKey: "answer", text: "This step", state: "delivered" },
+                ],
+            } satisfies World
+            const { policy } = await told(world)
+
+            const again = await policy.toldOf(ANSWERED, "chatbot", `${RUN}:answer`)
+            const first = await policy.toldOf(TURN, "chatbot", `${RUN}:answer`)
+
+            expect(again.alreadySent?.map((line) => line.text)).toEqual(["This step"])
+            expect(first.alreadySent).toBeUndefined()
+        })
+    })
+
     it("a NEW run of the same customer is told the lines of their open stop, and of a stop resolved within the day", async () => {
         const { policy } = await told({
-            conversations: { "c-1": LEAD },
+            conversations: { "c-1": CONTACT },
             stops: {
                 open: [
                     rowOf("s-1", {
@@ -312,7 +326,7 @@ describe("AgentGraphTurnPolicyService: what the customer was already told, from 
         ])
     })
 
-    it("finds the customer by the turn's subject when it is one, with no conversation", async () => {
+    it("finds the person by the turn's contact, with no conversation", async () => {
         const { policy } = await told({
             stops: {
                 open: [
@@ -327,7 +341,7 @@ describe("AgentGraphTurnPolicyService: what the customer was already told, from 
         })
 
         const turn = await policy.toldOf(
-            { ...TURN, conversationId: null, subject: { kind: "sales-lead", id: LEAD } },
+            { ...TURN, conversationId: null, contactId: CONTACT },
             "accounting",
             `${RUN}:match`,
         )
@@ -336,8 +350,8 @@ describe("AgentGraphTurnPolicyService: what the customer was already told, from 
     })
 
     it("on a first try, the step's own ledger records of its open stop are not read (a re-drive is told what its first try was)", async () => {
-        const { policy, engine } = await told({
-            conversations: { "c-1": LEAD },
+        const { policy, ledger } = await told({
+            conversations: { "c-1": CONTACT },
             stops: {
                 open: [rowOf("s-1", { runId: RUN, stepKey: "answer", customerLines: { lines: [] }, resolvedAt: null })],
             },
@@ -347,24 +361,16 @@ describe("AgentGraphTurnPolicyService: what the customer was already told, from 
         const turn = await policy.toldOf(TURN, "chatbot", `${RUN}:answer`)
 
         expect(turn.alreadySent).toBeUndefined()
-        expect(engine.list).not.toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({ from: "agent.node-effect" }),
-            expect.anything(),
-        )
+        expect(ledger.ofStep).not.toHaveBeenCalledWith(expect.anything(), RUN, "answer", expect.anything())
     })
 
     it("tells nothing of a customer with no stop, and reads no stop for a turn with no known customer", async () => {
-        const known = await told({ conversations: { "c-1": LEAD } })
+        const known = await told({ conversations: { "c-1": CONTACT } })
         expect((await known.policy.toldOf(TURN, "chatbot", `${RUN}:answer`)).alreadySent).toBeUndefined()
 
         const unknown = await told({ conversations: { "c-1": null } })
         expect((await unknown.policy.toldOf(TURN, "chatbot", `${RUN}:answer`)).alreadySent).toBeUndefined()
-        expect(unknown.engine.list).not.toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({ from: "agent.run-stop" }),
-            expect.anything(),
-        )
+        expect(unknown.stops.ofContacts).not.toHaveBeenCalled()
     })
 })
 
@@ -377,23 +383,24 @@ describe("AgentGraphTurnPolicyService: what THIS run step already did before its
                 [`${RUN}:check`]: [
                     sendOf("e-1", CHECKING, "c-1", AT_SEND),
                     sendOf("e-2", OUTCOME, "c-1", AT_SEND),
-                    rowOf("e-3", { effectId: "nivo.lead.care.schedule", subjectEntity: "agent-task" }),
+                    rowOf("e-3", { effectId: "nivo.tool.team.message.post", subjectEntity: "agent-task" }),
                 ],
             },
         })
 
         const turn = await policy.toldOf(ANSWERED, "sales", `${RUN}:check`)
 
-        expect(turn.alreadyDone).toEqual(["nivo.lead.care.schedule", "nivo.lead.message.send"])
+        // Sorted by effect id (the ids carry the `nivo.tool.` prefix since the flip, so `customer` comes before `team`).
+        expect(turn.alreadyDone).toEqual(["nivo.tool.customer.message.send", "nivo.tool.team.message.post"])
     })
 
     it("leaves out a refused call, an act of unknown outcome and an undone act", async () => {
         const { policy } = await told({
             ledger: {
                 [`${RUN}:check`]: [
-                    rowOf("e-1", { effectId: "nivo.lead.message.send", subjectEntity: "refused" }),
-                    rowOf("e-2", { effectId: "nivo.order.create", subjectEntity: "outcome-unknown" }),
-                    rowOf("e-3", { effectId: "nivo.order.cancel", subjectEntity: "sales.order", undoneAt: AT_SEND }),
+                    rowOf("e-1", { effectId: "nivo.tool.customer.message.send", subjectEntity: "refused" }),
+                    rowOf("e-2", { effectId: "nivo.tool.order.create", subjectEntity: "outcome-unknown" }),
+                    rowOf("e-3", { effectId: "nivo.tool.order.cancel", subjectEntity: "sales.order", undoneAt: AT_SEND }),
                 ],
             },
         })
@@ -413,16 +420,85 @@ describe("AgentGraphTurnPolicyService: what THIS run step already did before its
 
 describe("AgentGraphTurnPolicyService: the agent's tool set holds the default reads", () => {
     it("shows every agent its declared tools and the context reads, an agent with no declared search included", async () => {
-        const { policy } = await build(null)
+        const { policy } = await build()
 
-        const accounting = await policy.toldOf(TURN, "accounting", "run-1:match")
+        const chatbot = await policy.toldOf(TURN, "chatbot", "run-1:answer")
         const sales = await policy.toldOf(TURN, "sales", "run-1:consult")
 
         for (const id of [TOOL.brainSearch, TOOL.conversationMessageList, TOOL.leadOrderList]) {
-            expect(accounting.agentTools).toContain(id)
+            expect(chatbot.agentTools).toContain(id)
             expect(sales.agentTools).toContain(id)
         }
         expect(sales.agentTools).toContain(TOOL.customerMessageSend)
         expect(new Set(sales.agentTools).size).toBe(sales.agentTools?.length)
+    })
+})
+
+// D-MX-1 (live S1, 2026-11-11): the customer asked about a VAT invoice → stop 6712ee93 on the front desk's `answer`; the customer wrote
+// again (held); the founder answered "Co xuat VAT, khach gui ma so thue va email, phi 8%"; the resumed step answered right, then the held
+// line was replayed into a FRESH front-desk run that did not know the answer and told the customer the 8% was "chua co xac nhan tu tiem".
+// The founder's answers on the customer's stops are the one memory of the customer across runs: every later turn reads them.
+describe("AgentGraphTurnPolicyService: what the founder decided for the customer reaches every later turn (D-MX-1)", () => {
+    const VAT_QUESTION = "Shop co xuat hoa don VAT cho cong ty khong?"
+    const VAT_ANSWER = "Co xuat VAT, khach gui ma so thue va email, phi 8%"
+    const HOLDING = "Da em hoi lai tiem roi bao minh a"
+    const answeredStop = (state: "open" | "resolved"): PageRow =>
+        rowOf("s-vat", {
+            runId: OTHER_RUN,
+            stepKey: "answer",
+            question: VAT_QUESTION,
+            reason: "Tiem chua co thong tin hoa don VAT",
+            customerLines: { lines: [{ conversationId: "c-1", text: HOLDING, at: "2026-11-10T04:00:00.000Z" }] },
+            answers: {
+                answers: [
+                    { kind: "answer", text: VAT_ANSWER, by: "nivo-owner", at: "2026-11-10T04:10:00.000Z" },
+                    { kind: "retry", text: null, by: "nivo-owner", at: "2026-11-10T04:11:00.000Z" },
+                ],
+            },
+            resolvedAt: state === "open" ? null : "2026-11-10T04:12:00.000Z",
+        })
+
+    it.each(["open", "resolved"] as const)(
+        "LIVE S1: the replayed line's FRESH run is told the founder's answer on the stop it waited for (stop %s)",
+        async (state) => {
+            const { policy } = await told({ conversations: { "c-1": CONTACT }, stops: { [state]: [answeredStop(state)] } })
+
+            const turn = await policy.toldOf(TURN, "chatbot", `${RUN}:answer`)
+
+            expect(turn.founderDecisions).toEqual([
+                { question: VAT_QUESTION, answer: VAT_ANSWER, at: "2026-11-10T04:10:00.000Z" },
+            ])
+            expect(turn.alreadySent).toEqual([{ text: HOLDING, at: "2026-11-10T04:00:00.000Z" }])
+        },
+    )
+
+    it("a stop's own answers stay `founderAnswers` (the gate's): the resumed step itself is not told them twice", async () => {
+        const { policy } = await told({ conversations: { "c-1": CONTACT }, stops: { open: [answeredStop("open")] } })
+
+        const turn = await policy.toldOf(TURN, "chatbot", `${OTHER_RUN}:answer`)
+
+        expect(turn.founderDecisions).toBeUndefined()
+    })
+
+    it("a button is no decision in words, and a stop resolved more than a day ago no longer counts", async () => {
+        const old = rowOf("s-old", {
+            runId: "run-older",
+            stepKey: "answer",
+            question: "Cu",
+            customerLines: { lines: [] },
+            answers: { answers: [{ kind: "answer", text: "cu", by: "nivo-owner", at: "2026-11-01T00:00:00.000Z" }] },
+            resolvedAt: "2026-11-02T00:00:00.000Z",
+        })
+        const skipped = rowOf("s-skip", {
+            runId: "run-skip",
+            stepKey: "answer",
+            question: "Bo qua",
+            customerLines: { lines: [] },
+            answers: { answers: [{ kind: "skip", text: null, by: "nivo-owner", at: "2026-11-10T04:00:00.000Z" }] },
+            resolvedAt: "2026-11-10T04:00:00.000Z",
+        })
+        const { policy } = await told({ conversations: { "c-1": CONTACT }, stops: { resolved: [old, skipped] } })
+
+        expect((await policy.toldOf(TURN, "chatbot", `${RUN}:answer`)).founderDecisions).toBeUndefined()
     })
 })

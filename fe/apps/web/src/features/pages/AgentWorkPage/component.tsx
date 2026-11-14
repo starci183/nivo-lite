@@ -6,8 +6,8 @@ import type { ModuleKey } from "@/modules/catalog"
 /** The type and the instance whose work the tab draws, and the view of the url. */
 export interface AgentWorkPageBaseProps {
     readonly props: {
-        readonly module: ModuleKey
-        readonly installationId: string
+        readonly module: ModuleKey | undefined
+        readonly installationId: string | undefined
         readonly view: AgentWorkViewKey
     }
 }
@@ -17,5 +17,5 @@ export const AgentWorkPageBase = (props: AgentWorkPageBaseProps) =>
     props.props.view === "runs" ? (
         <AgentRunsPanes module={props.props.module} installationId={props.props.installationId} />
     ) : (
-        <AgentWorkPanes module={props.props.module} installationId={props.props.installationId} view={props.props.view} />
+        <AgentWorkPanes module={props.props.module} installationId={props.props.installationId} />
     )

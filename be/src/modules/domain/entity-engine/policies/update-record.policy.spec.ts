@@ -9,6 +9,9 @@ import { RECORD_RETURNING } from "./record-row.policy"
 import { mintScopedTx } from "./scoped-tx.policy"
 import { patchRecord, updateRecord } from "./update-record.policy"
 
+/** Matches the soft-delete guard TypeORM's `IsNull()` puts on `deletedAt`. */
+const IS_NULL: unknown = expect.objectContaining({ _type: "isNull" })
+
 const UPDATE_RECORD: unique symbol = Symbol("entity-engine.update-record")
 
 interface UpdateRecordPolicy {
@@ -51,7 +54,7 @@ const existing = Object.assign(new RecordEntity(), {
 })
 
 describe("patchRecord", () => {
-    it("merges the patch into data and bumps the version where the expected version still holds", async () => {
+    it("merges the patch into data and bumps the version where the expected version still holds and the record is not deleted", async () => {
         const policy = await build()
         const em = mockEntityManager()
         const [fake] = queueQueryBuilders(em, [{ execute: { raw: [returned("4")] } }])
@@ -66,7 +69,7 @@ describe("patchRecord", () => {
         expect(row?.version).toBe("4")
         expect(fake?.callsOf("update")).toEqual([[RecordEntity]])
         expect(fake?.callsOf("where")).toEqual([
-            [{ entity: "sales.lead", id: "r-1", workspaceId: WORKSPACE_ID, version: "3" }],
+            [{ entity: "sales.lead", id: "r-1", workspaceId: WORKSPACE_ID, deletedAt: IS_NULL, version: "3" }],
         ])
         expect(fake?.callsOf("setParameter")).toEqual([["patch", '{"stage":"won"}']])
         expect(fake?.callsOf("returning")).toEqual([[RECORD_RETURNING]])
@@ -91,7 +94,9 @@ describe("patchRecord", () => {
             patch: {},
         })
 
-        expect(fake?.callsOf("where")).toEqual([[{ entity: "sales.lead", id: "r-1", workspaceId: WORKSPACE_ID }]])
+        expect(fake?.callsOf("where")).toEqual([
+            [{ entity: "sales.lead", id: "r-1", workspaceId: WORKSPACE_ID, deletedAt: IS_NULL }],
+        ])
     })
 
     it("answers null when no row matched", async () => {
@@ -154,5 +159,25 @@ describe("updateRecord", () => {
                 patch: {},
             }),
         ).toEqual({ kind: "missing" })
+    })
+})
+
+describe("patchRecord (agent scope)", () => {
+    it("updates only the scope's agent's record in a scope confined to an agent", async () => {
+        const policy = await build()
+        const AGENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
+
+        const row = await policy.patchRecord(
+            mintScopedTx({ manager: em, workspaceId: WORKSPACE_ID, agent: { id: AGENT, sees: "own" } }),
+            CATALOG,
+            { entity: "sales.lead", id: "r-1", expected: null, patch: { stage: "won" } },
+        )
+
+        expect(row).toBeNull()
+        expect(fake?.callsOf("where")).toEqual([
+            [{ entity: "sales.lead", id: "r-1", workspaceId: WORKSPACE_ID, deletedAt: IS_NULL, agentId: AGENT }],
+        ])
     })
 })

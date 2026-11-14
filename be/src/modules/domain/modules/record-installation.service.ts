@@ -11,7 +11,7 @@ export class RecordInstallationService {
     constructor(@InjectRecordInstallationSources() private readonly sources: ReadonlyArray<RecordInstallationSource>) {}
 
     /**
-     * The installation that owns a work item, conversation, booking, lead flow or lead of the workspace, the first of those
+     * The installation that owns a work item or conversation of the workspace, the first of those
      * that names one. Null when the id is none of those rows, or the row names no installation.
      */
     async installationOfRecord(workspaceId: string, recordId: string): Promise<RecordInstallation> {

@@ -359,6 +359,16 @@ const registerWrite = () => {
 
         expect(evaluatedCalls(em.delete.mock.calls)).toEqual([["ConnectionSecretEntity", { connectionId: "c-1" }]])
     })
+
+    it("deletes on the caller transaction when one is supplied, never on its own manager", async () => {
+        const em = mockEntityManager({ delete: [ConnectionSecretEntity, { affected: 1 }] })
+        const tx = mockEntityManager({ delete: [ConnectionSecretEntity, { affected: 1 }] })
+
+        await (await build(em)).wipe("c-1", tx)
+
+        expect(evaluatedCalls(tx.delete.mock.calls)).toEqual([["ConnectionSecretEntity", { connectionId: "c-1" }]])
+        expect(em.delete).not.toHaveBeenCalled()
+    })
 }
 
 describe("ConnectionSecretsService", () => {

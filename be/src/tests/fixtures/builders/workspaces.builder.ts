@@ -1,3 +1,4 @@
+import type { WorkspaceEntity } from "@modules/domain/workspaces"
 import { entityRowBuilder } from "./entity-row.builder"
 
 /** A stored workspace as the workspaces table holds it. */
@@ -17,6 +18,8 @@ export interface WorkspaceRow {
     readonly billedMonthlyVnd: string | null
     readonly displayName: string | null
     readonly logoUrl: string | null
+    readonly timeZone: string
+    readonly theme: WorkspaceEntity["theme"]
     readonly deletedAt: Date | null
 }
 
@@ -36,6 +39,8 @@ type WorkspaceRowShape = {
     readonly billedMonthlyVnd?: string | null
     readonly displayName?: string | null
     readonly logoUrl?: string | null
+    readonly timeZone?: string
+    readonly theme?: WorkspaceEntity["theme"]
     readonly deletedAt?: Date | null
 }
 
@@ -56,6 +61,8 @@ export const workspaceRow: (changes?: WorkspaceRowShape) => WorkspaceRow = entit
     billedMonthlyVnd: null,
     displayName: null,
     logoUrl: null,
+    timeZone: "Asia/Ho_Chi_Minh",
+    theme: null,
     deletedAt: null,
 })
 

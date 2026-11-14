@@ -1,6 +1,5 @@
 import type { ReactElement } from "react"
-import { Cluster, Link, Progress, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Link, Meter, Stack, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { InboxCopy, InboxView } from "@/modules/types"
 
@@ -23,6 +22,18 @@ interface SideCardProps {
     readonly link?: { readonly label: string; readonly href: string }
 }
 
+/** The link at the end of a card's head, when it has one. */
+const labelEndOf = (link: SideCardProps["link"]) =>
+    link === undefined
+        ? {}
+        : {
+              labelEnd: (
+                  <Link variant="head" href={link.href}>
+                      {link.label}
+                  </Link>
+              ),
+          }
+
 /** A side card with its rows; a card with nothing in it is not drawn, so no empty sentence is said twice. */
 const SideCard = (props: SideCardProps): ReactElement | null =>
     props.rows.length === 0 ? null : (
@@ -31,9 +42,7 @@ const SideCard = (props: SideCardProps): ReactElement | null =>
             label={props.title}
             count={props.rows.length}
             isAttention
-            {...(props.link === undefined
-                ? {}
-                : { labelEnd: <Link variant="head" href={props.link.href}>{props.link.label}</Link> })}
+            {...labelEndOf(props.link)}
             items={props.rows}
             empty={null}
         />
@@ -45,21 +54,19 @@ interface ProgressingProps {
     readonly inbox: InboxView
 }
 
-/** How far the agents are: the facts in use of all of them, as a bar and its words. */
+/** How far the agents are: the facts in use of all of them, as a reading (a meter in the foreground colour: red is the one main CTA) and its words. */
 const Progressing = (props: ProgressingProps) => {
     const { copy, inbox } = props
-    const share = inbox.progress.total === 0 ? 0 : Math.round((inbox.progress.used / inbox.progress.total) * 100)
     return (
         <SurfaceCard label={copy.progressTitle} note={copy.progressNote}>
-            <Stack gap="row">
-                <Cluster gap="inline" justify="between">
-                    <Text>{copy.progressLabel}</Text>
-                    <Text isStrong tabular>
-                        {copy.progressValue}
-                    </Text>
-                </Cluster>
-                <Progress label={copy.progressLabel} value={share} valueText={copy.progressValue} />
-            </Stack>
+            <Meter
+                tone="foreground"
+                label={copy.progressLabel}
+                valueLabel={copy.progressValue}
+                value={inbox.progress.used}
+                minValue={0}
+                maxValue={Math.max(inbox.progress.total, 1)}
+            />
         </SurfaceCard>
     )
 }
@@ -97,11 +104,7 @@ export const BrainInboxRail = (props: BrainInboxRailProps) => {
     return (
         <Stack gap="section">
             <Progressing copy={copy} inbox={inbox} />
-            <SideCard
-                title={copy.asksTitle}
-                rows={asks}
-                link={{ label: copy.asksMore, href: inbox.asksMoreHref }}
-            />
+            <SideCard title={copy.asksTitle} rows={asks} link={{ label: copy.asksMore, href: inbox.asksMoreHref }} />
             <SideCard title={copy.proposalsTitle} rows={proposals} />
         </Stack>
     )

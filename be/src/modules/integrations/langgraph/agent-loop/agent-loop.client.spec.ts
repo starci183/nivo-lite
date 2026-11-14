@@ -96,21 +96,19 @@ const build = async (): Promise<AgentLoopClient> => {
 }
 
 const markPaid = defineEffect({
-    id: "nivo.payment.order.settle",
+    id: "nivo.tool.payment.order.settle",
     title: { key: "t" },
     payload: z.object({ orderId: z.string().max(40), transactionId: z.string().max(40) }),
-    rights: [],
 })
 const tellTeam = defineEffect({
     id: "agent-message.post",
     title: { key: "t" },
     payload: z.object({ text: z.string().max(200) }),
-    rights: [],
 })
 const OUTPUT = z.object({ result: z.enum(["paid", "not-paid"]), orderId: z.string().max(40) })
 const TOLD = z.object({ told: z.boolean() })
 
-const PAY = { call: { tool: "nivo.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
+const PAY = { call: { tool: "nivo.tool.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
 const TELL = { call: { tool: "agent-message.post", args: { text: "Money received" } } }
 const DONE = { done: { result: "paid", orderId: "o-1" } }
 const STUCK = { confused: { reason: "The order is closed", question: "What to do with the surplus?" } }
@@ -123,9 +121,8 @@ const settleNode = defineNode({
     params: z.object({}),
     input: z.object({ orderId: z.string().max(40), transactionId: z.string().max(40) }),
     output: OUTPUT,
-    rights: [],
-    effects: ["nivo.payment.order.settle", "agent-message.post"],
-    requires: ["nivo.payment.order.settle"],
+    effects: ["nivo.tool.payment.order.settle", "agent-message.post"],
+    requires: ["nivo.tool.payment.order.settle"],
     run: async (input, context) => {
         const decision = await context.agent.run({
             goal: "Mark the order paid with the bank transaction, then tell the team.",
@@ -142,7 +139,7 @@ const settleNode = defineNode({
             params: {},
             input: { orderId: "o-1", transactionId: "tx-1" },
             output: { result: "paid", orderId: "o-1" },
-            effects: ["nivo.payment.order.settle"],
+            effects: ["nivo.tool.payment.order.settle"],
             model: [PAY, DONE],
         },
     ],
@@ -156,7 +153,6 @@ const tellNode = defineNode({
     params: z.object({}),
     input: z.object({ orderId: z.string().max(40) }),
     output: TOLD,
-    rights: [],
     effects: ["agent-message.post"],
     run: async (input, context) => {
         const decision = await context.agent.run({ goal: "Tell the team the order is paid.", input, output: TOLD })
@@ -176,7 +172,7 @@ const tellNode = defineNode({
 })
 
 /** A turn of an agent that holds both tools, whichever step runs. */
-const AGENT_TURN: TurnRef = { ...EXAMPLE_TURN, agentTools: ["nivo.payment.order.settle", "agent-message.post"] }
+const AGENT_TURN: TurnRef = { ...EXAMPLE_TURN, agentTools: ["nivo.tool.payment.order.settle", "agent-message.post"] }
 
 /** What a script is run with: the model's turns and what each effect answers. */
 type Script = Pick<FakeNodePortsOptions, "answers"> & { readonly model: ReadonlyArray<SdkTurn> }
@@ -193,8 +189,15 @@ interface Ran {
  * Runs a node on the script: over the runner's own JSON loop (`client` absent), or with `ports.agent` bound to the loop under test
  * and the same script turned into native tool calls.
  */
-const run = (script: Script, client?: AgentLoopClient, node: typeof settleNode | typeof tellNode = settleNode): Ran => {
+const run = (
+    script: Script,
+    client?: AgentLoopClient,
+    node: typeof settleNode | typeof tellNode = settleNode,
+    clientKind?: string,
+): Ran => {
     const scripted = scriptedModel(script.model)
+    // The kind of client the agent is built over, as `_llmType()` names it (`anthropic` for the Messages route's client).
+    if (clientKind !== undefined) Object.assign(scripted.chat, { _llmType: () => clientKind })
     const fake = fakeNodePorts({ answers: script.answers, model: client === undefined ? script.model : [] })
     const loops: Array<NodeAgentLoop> = []
     const bound: Pick<NodeHostPorts, "agent"> =
@@ -212,7 +215,7 @@ const run = (script: Script, client?: AgentLoopClient, node: typeof settleNode |
             params: {},
             input: node === settleNode ? { orderId: "o-1", transactionId: "tx-1" } : { orderId: "o-1" },
             turn: AGENT_TURN,
-            grant: { rights: [] },
+            grant: { },
             effects: new Map([markPaid, tellTeam].map((effect) => [effect.id, effect])),
             tools: new Map(),
             key: `run-1:${node.id}`,
@@ -236,15 +239,15 @@ describe("AgentLoopClient: the same end as the runner's own loop, on the SDK's e
         ["calls, then the output", { model: [PAY, TELL, DONE] }],
         ["an early output refused until the required call succeeded", { model: [DONE, PAY, DONE] }],
         ["an output that does not fit, then one that does", { model: [PAY, { done: { result: "maybe" } }, DONE] }],
-        ["a tool the step does not declare, then the call", { model: [{ call: { tool: "nivo.order.create", args: {} } }, PAY, DONE] }],
+        ["a tool the step does not declare, then the call", { model: [{ call: { tool: "nivo.tool.order.create", args: {} } }, PAY, DONE] }],
         ["a confusion", { model: [PAY, STUCK] }],
         [
             "a refusal that satisfies nothing, then a confusion",
-            { model: [PAY, DONE, STUCK], answers: { "nivo.payment.order.settle": [{ kind: "refused", id: "waits_owner" }] } },
+            { model: [PAY, DONE, STUCK], answers: { "nivo.tool.payment.order.settle": [{ kind: "refused", id: "needs_owner_note" }] } },
         ],
         [
             "a send already told for the stop counts as done",
-            { model: [PAY, DONE], answers: { "nivo.payment.order.settle": [{ kind: "refused", id: "already_told_for_this_stop" }] } },
+            { model: [PAY, DONE], answers: { "nivo.tool.payment.order.settle": [{ kind: "refused", id: "already_told_for_this_stop" }] } },
         ],
         ["turns run out", { model: [TELL, TELL, TELL, TELL] }],
     ]
@@ -268,15 +271,15 @@ describe("AgentLoopClient: the same end as the runner's own loop, on the SDK's e
         const second = scripted.chat.calls[1]?.messages ?? []
         expect(sentOf(second).at(-1)).toEqual([
             "tool",
-            JSON.stringify({ ok: false, refused: { code: "REQUIRED_CALL_MISSING", message: "nivo.payment.order.settle" } }),
+            JSON.stringify({ ok: false, refused: { code: "REQUIRED_CALL_MISSING", message: "nivo.tool.payment.order.settle" } }),
         ])
         // The list only grows: what the first call was sent is the opening of what the second was sent.
         expect(sentOf(second).slice(0, 2)).toEqual(sentOf(scripted.chat.calls[0]?.messages ?? []))
     })
 
     it("returns a tool's own refusal as tool content, with its true values, and the model's next turn sees it", async () => {
-        const refused = { kind: "refused", id: "waits_owner", facts: { amountVnd: 5_000_000 } }
-        const { ran, scripted } = run({ model: [PAY, STUCK], answers: { "nivo.payment.order.settle": [refused] } }, await build())
+        const refused = { kind: "refused", id: "needs_owner_note", facts: { amountVnd: 5_000_000 } }
+        const { ran, scripted } = run({ model: [PAY, STUCK], answers: { "nivo.tool.payment.order.settle": [refused] } }, await build())
         await ran.then(
             () => null,
             (thrown: unknown) => thrown,
@@ -284,7 +287,7 @@ describe("AgentLoopClient: the same end as the runner's own loop, on the SDK's e
 
         const [kind, content] = sentOf(scripted.chat.calls[1]?.messages ?? []).at(-1) ?? ["", ""]
         expect(kind).toBe("tool")
-        expect(content).toContain('{"ok":false,"refused":{"code":"waits_owner"')
+        expect(content).toContain('{"ok":false,"refused":{"code":"needs_owner_note"')
         expect(content).toContain('"data":{"amountVnd":5000000}')
     })
 
@@ -412,7 +415,7 @@ describe("AgentLoopClient: the frame, as the model is sent it", () => {
         expect(settleSystem?.content).toBe(settle.loops[0]?.instructions)
         expect(tellSystem?.content).toBe(settleSystem?.content)
         expect(JSON.stringify(tell.scripted.bound[0]?.tools)).toBe(JSON.stringify(settle.scripted.bound[0]?.tools))
-        expect(namesOf(settle.scripted.bound[0]?.tools ?? [])).toEqual(["agent-message.post", "nivo.payment.order.settle", DONE_TOOL, CONFUSED_TOOL])
+        expect(namesOf(settle.scripted.bound[0]?.tools ?? [])).toEqual(["agent-message.post", "nivo.tool.payment.order.settle", DONE_TOOL, CONFUSED_TOOL])
         // The step is the first thing after everything shared; the system message holds none of it.
         expect(settleUser?.type).toBe("human")
         expect(settleUser?.text.startsWith(settleStep)).toBe(true)
@@ -420,6 +423,21 @@ describe("AgentLoopClient: the frame, as the model is sent it", () => {
         expect(tellStep).not.toBe(settleStep)
         expect(settleSystem?.text).not.toContain("Mark the order paid")
         expect(settleUser?.text.endsWith(JSON.stringify({ input: { orderId: "o-1", transactionId: "tx-1" } }))).toBe(true)
+    })
+
+    it("ENG1: on a client that takes cache breakpoints, marks the end of the shared system message; the text stays the runner's", async () => {
+        const client = await build()
+        const settle = run({ model: [PAY, DONE] }, client, settleNode, "anthropic")
+        const tell = run({ model: [TELL, { done: { told: true } }] }, client, tellNode, "anthropic")
+        await settle.ran
+        await tell.ran
+
+        const [settleSystem] = settle.scripted.chat.calls[0]?.messages ?? []
+        const [tellSystem] = tell.scripted.chat.calls[0]?.messages ?? []
+        const marked = [{ type: "text", text: settle.loops[0]?.instructions, cache_control: { type: "ephemeral" } }]
+        expect(settleSystem?.content).toEqual(marked)
+        expect(tellSystem?.content).toEqual(settleSystem?.content)
+        expect(settleSystem?.text).toBe(settle.loops[0]?.instructions)
     })
 
     it("keeps the tools and the opening of a step the same on every turn of it", async () => {

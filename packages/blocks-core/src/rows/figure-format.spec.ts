@@ -12,8 +12,8 @@ const EN = { locale: "en", currency: "USD" }
 const VI = { locale: "vi", currency: "VND" }
 
 describe("figureTextOf", () => {
-    it("lists the four formats", () => {
-        expect(FIGURE_FORMATS).toEqual(["number", "money", "percent", "count"])
+    it("lists the five formats (a tally: a count that may be unstated)", () => {
+        expect(FIGURE_FORMATS).toEqual(["number", "money", "percent", "count", "tally"])
     })
 
     it("draws a value with no format as text", () => {

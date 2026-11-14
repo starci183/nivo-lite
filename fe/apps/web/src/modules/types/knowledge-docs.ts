@@ -221,6 +221,8 @@ export interface KnowledgeDocsView {
         readonly ideas: DocIdeasView | null
         /** The one line that sends the owner to the queue where the facts read from the documents wait; null while none waits. */
         readonly nextReview: { readonly label: string; readonly href: string } | null
+        /** The link from the opened document to its questions ("Questions of the document (3)"); null while none are open. */
+        readonly questions: { readonly label: string; readonly href: string } | null
         /** The page's first read has no data yet: every region draws its skeleton at once. */
         readonly isWaiting: boolean
         readonly hasAside: boolean
@@ -231,7 +233,6 @@ export interface KnowledgeDocsView {
     }
     readonly on: {
         readonly selectTab: (id: string) => void
-        readonly reviewAll: () => void
         readonly select: (id: string) => void
         readonly search: (value: string) => void
         readonly setTab: (id: string) => void

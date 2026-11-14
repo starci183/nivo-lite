@@ -1,16 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger, runInScope, workInScope } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectAgentsQueue } from "@modules/queues/agents"
-import type { AgentsQueue } from "@modules/queues/agents"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, runInScope, workInScope, type Logger } from "@modules/platform/logging"
+import { InjectAgentsQueue, type AgentsQueue } from "@modules/queues/agents"
 import type {
     GenerateParams,
     GenerationContext,
@@ -32,8 +27,7 @@ import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
 import { PauseClient } from "@modules/domain/agents"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
+import { InjectAi, type AiService } from "@modules/integrations/ai"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { isRequestableKind } from "./request-kind.policy"
 import {
@@ -62,8 +56,8 @@ const record = (value: unknown): Record<string, unknown> => (isPlainObject(value
 
 @Injectable()
 /**
- * The one door for every text the app writes as a queued generation (the floating assistant, setup chat, content, video scripts,
- * brain lessons, hiring / shifts / inventory texts): it writes an `ai_generations` row and its job in one transaction, then looks at
+ * The one door for every text the app writes as a queued generation (the floating assistant, setup chat, content,
+ * brain lessons): it writes an `ai_generations` row and its job in one transaction, then looks at
  * the row until the job (run by `GenerationRunnerService` on the AI endpoint) fills it in or the caller's deadline passes. It never
  * calls a model itself, and it refuses only for the quota or a missing AI endpoint. A failure says why (`reason`) with a sentence in the request language; background callers decide for
  * themselves (retry, skip, hand to a person).

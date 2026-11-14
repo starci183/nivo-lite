@@ -61,7 +61,7 @@ export const WorkspaceLeaveOwnerDialogBase = (props: WorkspaceLeaveOwnerDialogBa
                 title={props.props.transferTitle}
                 text={props.props.transferText}
                 action={
-                    <Button endArrow intent="neutral" onPress={props.on.openTeam}>
+                    <Button intent="neutral" onPress={props.on.openTeam}>
                         {props.props.transferLabel}
                     </Button>
                 }

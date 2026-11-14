@@ -1,9 +1,7 @@
 import type { ReactNode } from "react"
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
-import { Avatar, Badge, Button, Cluster, ListBox, Stack, Text } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
-import { chosenRow, moreStateOf, selectionOf } from "../../rows/rows"
-import type { RecordRow } from "../../rows/rows"
+import { Avatar, Badge, Button, Cluster, ListBox, Stack, Text, type ListBoxItem } from "@starci/grammar/common"
+import { chosenRow, moreStateOf, selectionOf, type RecordRow } from "../../rows/rows"
 
 /** The words around the rows of a selectable list. */
 export interface SelectableRowsWords {
@@ -40,11 +38,7 @@ const trailingOf = (row: RecordRow): ReactNode => (
                 {row.meta}
             </Text>
         )}
-        {row.badge === "" ? null : (
-            <Badge tone={row.tone} isDot>
-                {row.badge}
-            </Badge>
-        )}
+        {row.badge === "" ? null : <Badge tone={row.tone}>{row.badge}</Badge>}
         {row.chips.map((chip) => (
             <Badge key={chip} tone="neutral">
                 {chip}

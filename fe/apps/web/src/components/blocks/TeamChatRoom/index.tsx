@@ -1,8 +1,8 @@
 "use client"
 
+import type { ReactNode } from "react"
 import type { PageHeaderBreadcrumbs } from "@starci/grammar/common"
-import { TeamChatRooms } from "@/components/blocks/TeamChatRooms"
-import { useInstallations } from "@/hooks/installations"
+import { useInstallations, useAgentRoute } from "@/hooks/installations"
 import { roomHandlersOf, useTeamChatRoomState, useTeamChatRoomView } from "@/hooks/teamChat"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
@@ -12,8 +12,10 @@ import { TeamChatPanesBase, teamChatRoomPartsOf } from "./component"
 /** The agent tab has no way back to the list. */
 const NO_BACK = (): void => undefined
 
-/** The words of the chat page and the room its address names, or none yet. */
-interface TeamChatPanesProps {
+/** The words of the chat page, the rooms pane the page hands in and the room its address names, or none yet. */
+interface TeamChatRoomProps {
+    /** The rooms of the viewer, drawn by the page: a block never imports a block. */
+    readonly list: ReactNode
     readonly roomId: string | null
     readonly breadcrumbs: PageHeaderBreadcrumbs
     readonly gridLabel: string
@@ -25,7 +27,7 @@ interface TeamChatPanesProps {
  * The chat page: the trail, the rooms of the viewer in one pane and the one chat room of the app in the other. The room pane holds the head
  * and the thread as its body and the composer as its fixed footer, so only the thread scrolls.
  */
-export const TeamChatPanes = (props: TeamChatPanesProps) => {
+export const TeamChatRoom = (props: TeamChatRoomProps) => {
     const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
     const room = useTeamChatRoomState({ roomId: props.roomId, withAgentId: null })
@@ -39,7 +41,7 @@ export const TeamChatPanes = (props: TeamChatPanesProps) => {
                 listLabel: props.listLabel,
                 roomLabel: props.roomLabel,
                 hasRoom: props.roomId !== null,
-                list: <TeamChatRooms />,
+                list: props.list,
                 parts: teamChatRoomPartsOf({ props: view, on: roomHandlersOf(room, back) }),
             }}
         />
@@ -48,15 +50,16 @@ export const TeamChatPanes = (props: TeamChatPanesProps) => {
 
 /** The words of the room pane of an agent page, and the instance it names. */
 interface AgentTeamChatPanesProps {
-    readonly installationId: string
+    readonly installationId?: string | undefined
     readonly gridLabel: string
     readonly roomLabel: string
 }
 
 /** The same room as the chat page, opened on the direct room with the agent that drives an instance; the room itself opens on the first message, never on a read. */
 export const AgentTeamChatPanes = (props: AgentTeamChatPanesProps) => {
+    const route = useAgentRoute(props)
     const { installations } = useInstallations()
-    const installation = installations?.find((entry) => entry.id === props.installationId)
+    const installation = installations?.find((entry) => entry.id === route.installationId)
     const agentId = installation?.agentId ?? null
     const room = useTeamChatRoomState({ roomId: null, withAgentId: agentId })
     const view = useTeamChatRoomView(room, {

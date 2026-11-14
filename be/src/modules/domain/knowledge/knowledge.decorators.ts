@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { DriveAccessSource } from "./knowledge.contracts"
 import type { KnowledgeFullOptions, KnowledgeOptions } from "./knowledge.options"
 

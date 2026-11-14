@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
@@ -33,9 +32,9 @@ export const LEAD_DETAIL_FIELDS: ReadonlyArray<keyof LeadDetail> = [
     "latestOrderAmountVnd",
 ]
 
-/** `sales.lead`: one lead with what its orders add up to; null when the workspace has no such lead. */
+/** `blocks-core.sales.api.lead.get`: one lead with what its orders add up to; null when the workspace has no such lead. */
 export const leadRead: ReadDefinition = defineRead({
-    id: "sales.lead",
+    id: "blocks-core.sales.api.lead.get",
     dataKind: "sales-lead",
     shape: "record",
     fields: LEAD_DETAIL_FIELDS,
@@ -47,9 +46,11 @@ export const leadRead: ReadDefinition = defineRead({
         const record = await leads.get(id)
         const lead = record === null ? null : leadRowOf(record)
         if (lead === null) return null
+        // The orders are the person's (the sale record's contact): a record that names no person has none.
+        if (lead.contactId === null) return leadDetailOf(lead, orderSummaryOf([]))
         const page = await orders.list({
             select: ORDER_BRIEF_FIELDS,
-            where: q.eq("leadId", id),
+            where: q.eq("contactId", lead.contactId),
             order: [
                 ["createdAt", "desc"],
                 ["id", "desc"],

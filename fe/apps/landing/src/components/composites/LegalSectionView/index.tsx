@@ -20,7 +20,7 @@ interface LegalSectionViewProps {
 /** A titled section: paragraphs, a list, closing paragraphs and, for Google data, the Limited Use statement. */
 export const LegalSectionView = (props: LegalSectionViewProps) => (
     <Section id={props.id} title={props.title}>
-        <Stack gap="row">
+        <Stack gap="inline">
             {props.paragraphs.map((paragraph) => (
                 <Text key={paragraph}>{paragraph}</Text>
             ))}

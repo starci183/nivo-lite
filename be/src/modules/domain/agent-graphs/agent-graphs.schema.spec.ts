@@ -1,7 +1,9 @@
 import { graphSpecJsonSchema, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import { LEGACY_BRANCH_MODE_MEMBER } from "@nivo-lite/agent-sdk/template"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
 import committed from "./agent-graph-spec.schema.json"
 import { conditionSchema as condition, graphDocumentSchema as graph } from "./agent-graphs.schema"
+import { snapshotHashOf } from "./policies/workflow-view.policy"
 
 const node = (key: string) => ({
     key,
@@ -33,12 +35,15 @@ describe("agent-graphs.schema", () => {
         expect(condition.safeParse({ fact: "amount", op: "known", extra: 1 }).success).toBe(false)
     })
 
-    it("accepts a graph with nodes and rights, and refuses a node of an unknown kind or a graph with a stray key", () => {
-        const rights = [{ kind: "brain", scope: "workspace", hide: [], mask: [] }]
+    it("accepts a graph with nodes, refuses a node of an unknown kind or a graph with a stray key, and reads an old row that stored rights without them", () => {
+        const legacy = [{ kind: "brain", scope: "workspace", hide: [], mask: [] }]
 
-        expect(graph.safeParse({ nodes: [node("n1")], rights }).success).toBe(true)
-        expect(graph.safeParse({ nodes: [{ ...node("n1"), kind: "other" }], rights }).success).toBe(false)
-        expect(graph.safeParse({ nodes: [node("n1")], rights, extra: 1 }).success).toBe(false)
+        expect(graph.safeParse({ nodes: [node("n1")] }).success).toBe(true)
+        expect(graph.safeParse({ nodes: [{ ...node("n1"), kind: "other" }] }).success).toBe(false)
+        expect(graph.safeParse({ nodes: [node("n1")], extra: 1 }).success).toBe(false)
+        const old = graph.safeParse({ nodes: [node("n1")], rights: legacy })
+        expect(old.success).toBe(true)
+        expect(old.success && "rights" in old.data).toBe(false)
     })
 
     it("reads a deciding node with a branch, its approver and the sources of its words", () => {
@@ -46,7 +51,7 @@ describe("agent-graphs.schema", () => {
         const branch = {
             key: "b1",
             when: "else",
-            then: "ask",
+            mode: "ask",
             next: "n2",
             approver: { group, policy: "any", timeoutMinutes: 60, onTimeout: { kind: "backup", group } },
             sources: [{ kind: "chat", messageId: "m1", quote: "ask me" }],
@@ -57,7 +62,7 @@ describe("agent-graphs.schema", () => {
             decide: { intent: "pay", facts: ["amount"], branches: [branch] },
         }
 
-        expect(graph.safeParse({ nodes: [deciding], rights: [] }).success).toBe(true)
+        expect(graph.safeParse({ nodes: [deciding] }).success).toBe(true)
     })
 
     it("reads the target of a hand-over and the sources of money a trigger accepts, and refuses them past their bounds", () => {
@@ -69,18 +74,17 @@ describe("agent-graphs.schema", () => {
             triggerSources: ["sepay", "chat_text"],
         }
 
-        expect(graph.safeParse({ nodes: [handing, trigger], rights: [] }).success).toBe(true)
-        expect(graph.safeParse({ nodes: [{ ...handing, handoverTo: "x".repeat(101) }], rights: [] }).success).toBe(
+        expect(graph.safeParse({ nodes: [handing, trigger] }).success).toBe(true)
+        expect(graph.safeParse({ nodes: [{ ...handing, handoverTo: "x".repeat(101) }] }).success).toBe(
             false,
         )
-        expect(graph.safeParse({ nodes: [{ ...trigger, triggerSources: [""] }], rights: [] }).success).toBe(false)
+        expect(graph.safeParse({ nodes: [{ ...trigger, triggerSources: [""] }] }).success).toBe(false)
         expect(
             graph.safeParse({
                 nodes: [{ ...trigger, triggerSources: Array.from({ length: 11 }, () => "sepay") }],
-                rights: [],
             }).success,
         ).toBe(false)
-        expect(graph.safeParse({ nodes: [{ ...trigger, triggerSources: ["x".repeat(41)] }], rights: [] }).success).toBe(
+        expect(graph.safeParse({ nodes: [{ ...trigger, triggerSources: ["x".repeat(41)] }] }).success).toBe(
             false,
         )
     })
@@ -106,13 +110,13 @@ describe("agent-graphs.schema the contracts of a graph", () => {
     }
 
     it("takes a graph with no contracts block and one with the business half of an intent", () => {
-        expect(graph.safeParse({ nodes: [node("a")], rights: [] }).success).toBe(true)
-        expect(graph.safeParse({ nodes: [node("a")], rights: [], contracts: [contract] }).success).toBe(true)
+        expect(graph.safeParse({ nodes: [node("a")] }).success).toBe(true)
+        expect(graph.safeParse({ nodes: [node("a")], contracts: [contract] }).success).toBe(true)
     })
 
     it("refuses a contract with a stray key, an unknown trigger, an empty limit or a source of a kind it does not know", () => {
         const refused = (patch: object) =>
-            graph.safeParse({ nodes: [node("a")], rights: [], contracts: [{ ...contract, ...patch }] }).success
+            graph.safeParse({ nodes: [node("a")], contracts: [{ ...contract, ...patch }] }).success
         const limit = (patch: object) => ({ ...contract.limits[0], ...patch })
 
         expect(refused({ extra: 1 })).toBe(false)
@@ -125,20 +129,22 @@ describe("agent-graphs.schema the contracts of a graph", () => {
     it("reads the providers and steps from the vocabulary, so a plug-in provider is accepted only once it is registered", () => {
         const withProvider = { ...node("n1"), uses: [{ provider: "ghn", tool: null, scope: "read", label: "Ship" }] }
 
-        expect(graph.safeParse({ nodes: [withProvider], rights: [] }).success).toBe(false)
+        expect(graph.safeParse({ nodes: [withProvider] }).success).toBe(false)
 
         graphVocabulary.add({ providers: ["ghn"] })
 
-        expect(graph.safeParse({ nodes: [withProvider], rights: [] }).success).toBe(true)
+        expect(graph.safeParse({ nodes: [withProvider] }).success).toBe(true)
     })
 })
 
 /** The graph shapes the seed ships, each of which the node graph schema of a document must take. */
+// No `burst` on the trigger: the time-window coalescing is deleted (no burst: one run per subject, the waiting events are the run's
+// queue), and the strict schema refuses the member, so the seeded shape carries none.
 const SEEDED = ["sales", "chatbot", "accounting"].map((moduleKey) => ({
     schema: "nivo/agent-graph@1",
     moduleKey,
-    trigger: { kind: "tag", sources: ["channel", "agent"], burst: { agent: { window: "0s" } } },
-    grant: { rights: [], tools: [], effects: [] },
+    trigger: { kind: "tag", sources: ["channel", "agent"] },
+    grant: { tools: [], effects: [] },
     nodes: [{ key: "end", kind: "output", step: "stop" }],
 }))
 
@@ -151,5 +157,52 @@ describe("agent-graph-spec.schema.json", () => {
     it("describes the seeded graphs, which the zod schema parses", () => {
         for (const spec of SEEDED) expect(graphSpecSchema.safeParse(spec).success).toBe(true)
         expect(committed).toMatchObject({ additionalProperties: false, title: "NIVO agent graph spec" })
+    })
+})
+
+describe("agent-graphs.schema: a branch stored before its member was named mode", () => {
+    const FLOW = {
+        schema: "nivo/agent-graph@1",
+        moduleKey: "sales",
+        trigger: { kind: "tag", sources: ["channel"] },
+        grant: { tools: [], effects: [] },
+        nodes: [{ key: "end", kind: "output", step: "stop" }],
+    }
+
+    /** A branch as its entries, so the stored shape is built without writing an object that holds the legacy member. */
+    const branchOf = (members: ReadonlyArray<readonly [string, string]>): unknown =>
+        Object.fromEntries([["key", "b1"], ["when", "else"], ...members, ["next", "n2"], ["approver", null], ["sources", []]])
+
+    const documentOf = (branch: unknown): unknown => ({
+        nodes: [{ ...node("n1"), kind: "condition", decide: { intent: "pay", facts: ["amount"], branches: [branch] } }],
+        flow: FLOW,
+    })
+
+    const STORED = documentOf(branchOf([[LEGACY_BRANCH_MODE_MEMBER, "ask"]]))
+    const TODAY = documentOf(branchOf([["mode", "ask"]]))
+
+    it("reads the stored branch exactly as the same graph written today, the legacy member gone", () => {
+        const stored = graph.parse(STORED)
+        expect(stored).toEqual(graph.parse(TODAY))
+        expect(stored.nodes[0]?.decide?.branches[0]?.mode).toBe("ask")
+        expect(JSON.stringify(stored)).not.toContain(`"${LEGACY_BRANCH_MODE_MEMBER}"`)
+    })
+
+    it("never rewrites what it read, and leaves the hash of the version's snapshot as it was", () => {
+        const before = JSON.stringify(STORED)
+        const stored = graph.parse(STORED)
+        expect(JSON.stringify(STORED)).toBe(before)
+        expect(stored.flow).toBeDefined()
+        if (stored.flow === undefined) return
+        expect(snapshotHashOf(stored.flow)).toBe(snapshotHashOf(graphSpecSchema.parse(FLOW)))
+        const today = graph.parse(TODAY)
+        expect(today.flow === undefined ? null : snapshotHashOf(today.flow)).toBe(snapshotHashOf(stored.flow))
+    })
+
+    it("refuses a branch that carries both members, one with neither, and a legacy member of a value mode does not take", () => {
+        const both = branchOf([[LEGACY_BRANCH_MODE_MEMBER, "auto"], ["mode", "ask"]])
+        expect(graph.safeParse(documentOf(both)).success).toBe(false)
+        expect(graph.safeParse(documentOf(branchOf([]))).success).toBe(false)
+        expect(graph.safeParse(documentOf(branchOf([[LEGACY_BRANCH_MODE_MEMBER, "later"]]))).success).toBe(false)
     })
 })

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AccountDirectory } from "./workspace-members.contracts"
 
 /** Token of the account directory the composition root hands to the workspace capabilities. */

@@ -36,9 +36,8 @@ describe("StorageBootstrapService", () => {
         expect(storage.ensureBucket.mock.calls).toEqual([
             ["nivo-avatars-public", { publicRead: true }],
             ["nivo-media", { publicRead: false }],
-            ["nivo-videos", { publicRead: false }],
-            ["nivo-hiring", { publicRead: false }],
             ["nivo-knowledge-uploads", { publicRead: false }],
+            ["nivo-records", { publicRead: false }],
         ])
     })
 })

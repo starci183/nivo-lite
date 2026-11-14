@@ -3,7 +3,7 @@ import { IsIn, IsOptional, IsString, MaxLength } from "class-validator"
 import { NullAsAbsent } from "@modules/platform/graphql"
 
 @InputType()
-/** Đồng ý or Không on a truth-graph change card. */
+/** Dong y or Khong on a truth-graph change card. */
 export class DecideBrainChangeInput {
     /** The change request on the card (`brainChange.changeId`). */
     @Field(() => ID)
@@ -12,7 +12,7 @@ export class DecideBrainChangeInput {
     changeId!: string
 
     /**
-     * `approve` (Đồng ý, the workspace owner only), `reject` (Không, the owner or a manager) or `keep_both` (Giữ cả hai, the owner
+     * `approve` (Dong y, the workspace owner only), `reject` (Khong, the owner or a manager) or `keep_both` (Giu ca hai, the owner
      * only, offered when `brainChange.canKeepBoth`).
      */
     @Field(() => String)

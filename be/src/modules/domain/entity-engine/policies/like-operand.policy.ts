@@ -3,6 +3,6 @@ const LIKE_SPECIALS = /[\\%_]/g
 
 /** The LIKE operand of a "contains" search: the text with its pattern characters escaped, between percent signs. */
 export const likeContains = (text: string): string => {
-    const escaped = text.replace(LIKE_SPECIALS, String.raw`\$&`)
+    const escaped = text.replaceAll(LIKE_SPECIALS, String.raw`\$&`)
     return `%${escaped}%`
 }

@@ -23,6 +23,10 @@ export class ZaloPageType {
     @Field(() => Boolean)
     healthy!: boolean
 
+    /** What the connection asks of its owner beyond its status: `needs_reauth` (connect again), `degraded` (connected, yet the provider cannot be read at the moment), or null. */
+    @Field(() => String, { nullable: true })
+    attention!: string | null
+
     /** The Official Account id. */
     @Field(() => String)
     oaId!: string

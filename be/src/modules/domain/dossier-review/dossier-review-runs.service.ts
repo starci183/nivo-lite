@@ -1,154 +1,65 @@
 import { Injectable } from "@nestjs/common"
-import { ArrayContains, IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
-import type { DossierEntry } from "@modules/domain/brain-dossiers"
-import { DossierSourcesService, SourceCriticStageService } from "@modules/domain/knowledge-sources"
-import type { DossierSource } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { IsNull, type EntityManager } from "typeorm"
+import { KnowledgeSourcesReadService, SourceCriticStageService } from "@modules/domain/knowledge-sources"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { eachInOrder } from "@modules/platform/primitives"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
-import { foldText, refOfSource } from "./document-state.policy"
-import type { OptionalText, ReviewDossierId, ReviewRunRecord } from "./dossier-review.contracts"
-import { DocumentCriticService } from "./document-critic.service"
-import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
-import { toRunRecord } from "./finding-record.mapper"
-import { DossierFindingEntity, DossierReviewRunEntity } from "./persistence/entities"
-import { ReviewInputsService } from "./review-inputs.service"
+import { DocumentCriticService, type CritiqueRequest } from "./document-critic.service"
+import { DossierReviewRunEntity } from "./persistence/entities"
 
-/** Who may ask for a review. */
-const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
-
-/** The prefix of the tag that files a document under a dossier, and the mark that says the review chose the dossier. */
-const DOSSIER_TAG_PREFIX = "dossier:"
-const AUTO_FILED_TAG = "dossier:auto"
-
-/** The most dossiers a deleted document re-checks. */
-const GONE_MAX = 500
-
-/** What asked for a run and about what. */
+/** What asked for a run: a document whose facts were read, or a follow-up of critiques still waiting (no document). */
 interface RunAsk {
     readonly workspaceId: string
-    readonly dossierId: string | null
-    readonly trigger: "document" | "document_gone" | "request"
     readonly triggerRef: string | null
-    readonly requestedBy: string | null
 }
 
 @Injectable()
-/** Asks for review runs: one queued run per dossier (or per workspace) at a time, written with its queue job in one transaction. */
+/**
+ * Asks for the runs that carry the shop-document critic: one queued run per workspace at a time, written with its queue job in one
+ * transaction. A run reads no dossier: it runs the critiques that wait (`DossierReviewRunnerService`).
+ */
 export class DossierReviewRunsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectIds() private readonly ids: Ids,
-        private readonly members: WorkspaceMembersService,
-        private readonly inputs: ReviewInputsService,
-        private readonly sources: DossierSourcesService,
+        private readonly sources: KnowledgeSourcesReadService,
         private readonly queue: KnowledgeQueue,
         private readonly critic: SourceCriticStageService,
         private readonly documentCritic: DocumentCriticService,
     ) {}
 
-    /** The facts of a document were read (or given up): its dossier is reviewed; a document no dossier claims is reviewed on its own with the rest of the workspace. */
-    async requestForSource(workspaceId: string, sourceId: string): Promise<void> {
-        const source = await this.sources.sourceOf(workspaceId, sourceId)
-        if (source === null) return
+    /**
+     * The facts of a document were read (or given up): its critique waits and a run of the workspace is queued. `{ resume: true }` (the
+     * upkeep tick going on with a critique that stopped) keeps the critique's count of runs without progress, and queues NOTHING when
+     * the critique does not wait again (given up, done, or still running): a resume is never a new request, and a tick never queues a
+     * run for a critique that will not run.
+     */
+    async requestForSource(workspaceId: string, sourceId: string, how: CritiqueRequest = {}): Promise<void> {
+        if ((await this.sources.briefsOf(workspaceId, [sourceId])).length === 0) return
         // The shop-document critic waits for this run (written before the run is queued, so the run always sees it).
-        await this.documentCritic.request(workspaceId, sourceId)
-        const dossier = await this.dossierFiled(workspaceId, source)
-        await this.enqueue({
-            workspaceId,
-            dossierId: dossier?.id ?? null,
-            trigger: "document",
-            triggerRef: sourceId,
-            requestedBy: null,
-        })
+        const waits = await this.documentCritic.request(workspaceId, sourceId, how)
+        if (!waits && how.resume === true) return
+        await this.enqueue({ workspaceId, triggerRef: sourceId })
         await this.critic.enter(workspaceId, sourceId)
     }
 
     /**
-     * The dossier a document files under: the one its number and category name, else the one its title, category and text point to, which
-     * is then written on the document (a `dossier:<ref>` tag and the category as topic, plus the `dossier:auto` mark) so the owner can see
-     * it and move the document by changing the tag. Undefined when no dossier clearly leads.
+     * A run ended with shop-document critiques still waiting (more than one run carries out): a follow-up run of the workspace is
+     * queued, so no critique waits for a request that may never come (the batch of a run is a job bound, never a quota). A run already
+     * queued covers it.
      */
-    private async dossierFiled(workspaceId: string, source: DossierSource): Promise<DossierEntry | undefined> {
-        const ref = refOfSource(source)
-        const named = (await this.inputs.all(workspaceId)).find(
-            (item) => item.ref === ref && foldText(item.category) === foldText(source.topic ?? ""),
-        )
-        if (named !== undefined) return named
-        const bound = await this.inputs.dossierOf(workspaceId, source)
-        if (bound === undefined) return undefined
-        const kept = source.tags.filter((tag) => !tag.startsWith(DOSSIER_TAG_PREFIX))
-        await this.sources.fileUnder(workspaceId, source.id, bound.category, [
-            ...kept,
-            `${DOSSIER_TAG_PREFIX}${bound.ref}`,
-            AUTO_FILED_TAG,
-        ])
-        return bound
+    async continueCritiques(workspaceId: string): Promise<void> {
+        await this.enqueue({ workspaceId, triggerRef: null })
     }
 
-    /** A document was deleted: every dossier with a finding citing it is reviewed again, and the dossier its title named. */
-    async requestForGoneSource(
-        workspaceId: string,
-        sourceId: string,
-        topic: OptionalText,
-        title: string,
-    ): Promise<void> {
+    /** A document was deleted: its critique and its open points go with it. */
+    async requestForGoneSource(workspaceId: string, sourceId: string): Promise<void> {
         await this.documentCritic.forget(workspaceId, sourceId)
-        const cited = await this.entityManager.find(DossierFindingEntity, {
-            select: { id: true, dossierId: true },
-            where: { workspaceId, sourceIds: ArrayContains([sourceId]) },
-            take: GONE_MAX,
-        })
-        const ref = refOfSource({ tags: [], title })
-        const named = (await this.inputs.all(workspaceId)).filter(
-            (dossier) =>
-                dossier.ref === ref && (topic === null || dossier.category.normalize("NFC") === topic.normalize("NFC")),
-        )
-        const ids = new Set([
-            ...cited.flatMap((row) => (row.dossierId === null ? [] : [row.dossierId])),
-            ...named.map((dossier) => dossier.id),
-        ])
-        await eachInOrder(
-            [...ids].sort((a, b) => a.localeCompare(b)),
-            async (dossierId) => {
-                await this.enqueue({
-                    workspaceId,
-                    dossierId,
-                    trigger: "document_gone",
-                    triggerRef: sourceId,
-                    requestedBy: null,
-                })
-            },
-        )
     }
 
-    /** An owner or manager asks for a review of one dossier, or of the whole set (null); answers the run that is queued. */
-    async request(userId: string, workspaceId: string, dossierId: ReviewDossierId): Promise<ReviewRunRecord> {
-        await this.members.require(userId, workspaceId, MANAGERS)
-        const dossiers = await this.inputs.all(workspaceId)
-        const known = dossierId === null ? dossiers.length > 0 : dossiers.some((dossier) => dossier.id === dossierId)
-        if (!known) throw new DossierReviewError({ code: DossierReviewErrorCode.NothingToReview })
-        const memberId = await this.members.idOf(userId, workspaceId)
-        return toRunRecord(
-            await this.enqueue({ workspaceId, dossierId, trigger: "request", triggerRef: null, requestedBy: memberId }),
-        )
-    }
-
-    /**
-     * Writes the run and its job in one transaction. A request while a run of the same dossier (or of the workspace) is queued writes
-     * nothing and answers the queued one; a dossier request while a workspace run is queued is covered by it.
-     */
+    /** Writes the run and its job in one transaction. A request while a run of the workspace is queued writes nothing and answers the queued one. */
     private enqueue(ask: RunAsk): Promise<DossierReviewRunEntity> {
         return this.entityManager.transaction(async (tx) => {
-            const queuedWhole = await tx.findOne(DossierReviewRunEntity, {
-                where: { workspaceId: ask.workspaceId, status: "queued", dossierId: IsNull() },
-            })
-            if (queuedWhole !== null && ask.dossierId !== null) return queuedWhole
             const id = this.ids.next()
             await tx
                 .createQueryBuilder(DossierReviewRunEntity, "r")
@@ -156,21 +67,17 @@ export class DossierReviewRunsService {
                 .values({
                     id,
                     workspaceId: ask.workspaceId,
-                    scope: ask.dossierId === null ? "workspace" : "dossier",
-                    dossierId: ask.dossierId,
-                    trigger: ask.trigger,
+                    scope: "workspace",
+                    dossierId: null,
+                    trigger: "document",
                     triggerRef: ask.triggerRef,
                     status: "queued",
-                    requestedBy: ask.requestedBy,
+                    requestedBy: null,
                 })
                 .orIgnore()
                 .execute()
             const queued = await tx.findOneOrFail(DossierReviewRunEntity, {
-                where: {
-                    workspaceId: ask.workspaceId,
-                    status: "queued",
-                    dossierId: ask.dossierId === null ? IsNull() : ask.dossierId,
-                },
+                where: { workspaceId: ask.workspaceId, status: "queued", dossierId: IsNull() },
             })
             if (queued.id === id) await this.queue.enqueueDossierReview({ runId: id, workspaceId: ask.workspaceId }, tx)
             return queued

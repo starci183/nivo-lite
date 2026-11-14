@@ -1,9 +1,7 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ListPage, ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ListPage, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
-import { needsRowsOf, overdueRowsOf, ownerRowsOf } from "../../../rules/sales/attention"
-import type { AttentionItem } from "../../../rules/sales/attention"
+import { needsRowsOf, overdueRowsOf, ownerRowsOf, type AttentionItem } from "../../../rules/sales/attention"
 import { OPEN_STAGES } from "../../../rules/sales/stage"
 import { SALES_VIEW } from "../constants"
 import { salesLeads, salesOrders, salesSettings } from "../ports"
@@ -14,12 +12,12 @@ import { waitingOrdersOf } from "./waiting-orders"
 const variables: z.ZodObject<Record<string, never>> = z.object({})
 
 /**
- * `sales.attention`: what needs the owner now besides the customers who wait and the steps that failed: the deals whose next step
+ * `blocks-core.sales.api.lead.attention`: what needs the owner now besides the customers who wait and the steps that failed: the deals whose next step
  * is past its day, the customers the assistant has a question about, and the orders over the limit. One row each, with the reason
  * as a code the block gives words to.
  */
 export const attentionRead: ReadDefinition = defineRead({
-    id: "sales.attention",
+    id: "blocks-core.sales.api.lead.attention",
     dataKind: "sales-attention",
     shape: "list",
     fields: ["id", "title", "description", "reason", "at"],
@@ -50,7 +48,7 @@ export const attentionRead: ReadDefinition = defineRead({
             rows: [
                 ...overdueRowsOf(leadRowsOf(overdue.rows)),
                 ...needsRowsOf(leadRowsOf(asking.rows)),
-                ...ownerRowsOf((await waitingOrdersOf({ orders, settings })).rows),
+                ...ownerRowsOf((await waitingOrdersOf({ leads, orders, settings })).rows),
             ],
             cursor: null,
         }

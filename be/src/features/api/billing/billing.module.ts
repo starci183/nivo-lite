@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common"
-import { BillingBankAccountHandler } from "./application/billing-bank-account.handler"
 import { BillingPlansHandler } from "./application/billing-plans.handler"
 import { BillingPlanQuoteHandler } from "./application/billing-plan-quote.handler"
 import { BillingStorageHandler } from "./application/billing-storage.handler"
@@ -16,7 +15,6 @@ import { ConfigurableModuleClass } from "./billing.module-definition"
 
 @Module({
     providers: [
-        BillingBankAccountHandler,
         BillingPlansHandler,
         BillingPlanQuoteHandler,
         BillingStorageHandler,

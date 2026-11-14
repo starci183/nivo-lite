@@ -1,4 +1,3 @@
-import { isDataConnector } from "@/hooks/connection-access"
 import { PROVIDERS } from "@/hooks/connection-providers"
 import { connectionErrorOf } from "@/hooks/connection-wizard"
 import type { Connection, Provider, RowAlert, RowDialog, RowMenuSection, RowPrimary } from "@/modules/types"
@@ -22,6 +21,9 @@ export const isBankFeed = (provider: Provider): boolean => MONEY.has(provider)
 
 /** Providers whose row shows the bank wordmark. */
 export const showsBankLogo = (provider: Provider): boolean => BANK_LOGO.has(provider)
+
+/** The data connectors every agent may read from (a database, an API, an import, a mailbox, a personal Telegram): a fact of the provider. */
+const isDataConnector = (provider: Provider): boolean => PROVIDERS[provider].kind === "data"
 
 /** Providers an agent works through (the others are the workspace's own tools: outgoing webhooks, Google, SMTP). */
 export const usesAgents = (provider: Provider): boolean => !NO_AGENTS.has(provider)
@@ -112,7 +114,8 @@ export const menuOf = (c: Connection, canManage: boolean, t: RowTranslate): Read
         (isBankFeed(c.provider) && c.status !== "pending") ||
         (c.provider === "meta" && settled)
     const commands = [
-        ...(editable && canReopen(c.provider) ? [{ id: "edit", label: t("edit") }] : []),
+        // A SePay account is edited in the form of its page (the Config tab); the drawer keeps the link to it.
+        ...(editable && canReopen(c.provider) && c.provider !== "sepay" ? [{ id: "edit", label: t("edit") }] : []),
         ...(c.provider === "sepay" && settled ? [{ id: "keys", label: t("showKey") }] : []),
     ]
     const danger = live

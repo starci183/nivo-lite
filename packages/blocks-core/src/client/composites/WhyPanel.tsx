@@ -104,7 +104,7 @@ const WhyApprover = (props: WhyBodyProps): ReactNode =>
     props.view.approver === null ? null : (
         <PaneSection>
             <Heading level={4}>{props.words.approverLabel}</Heading>
-            <Cluster gap="inline">
+            <Cluster gap="identity">
                 <Avatar name={props.view.approver.name} seed={props.view.approver.seed} size="sm" />
                 <Text size="sm" isStrong>
                     {props.view.approver.name}
@@ -135,7 +135,9 @@ export const WhyPanel = (props: WhyPanelProps): ReactNode => (
         <WhyEvidence {...props} />
         <WhyApprover {...props} />
         <PaneSection as="footer">
-            <Link href={props.view.mapHref}>{props.words.openOnMap}</Link>
+            <Link href={props.view.mapHref} variant="plain">
+                {props.words.openOnMap}
+            </Link>
         </PaneSection>
     </>
 )

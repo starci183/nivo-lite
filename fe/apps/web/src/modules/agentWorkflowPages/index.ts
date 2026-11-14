@@ -1,5 +1,5 @@
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import type { BindingView, GraphNodeView, GraphView } from "@nivo-lite/blocks-core/graph"
+import { type BindingView, type GraphNodeView, type GraphView } from "@/modules/plugin-registry"
 import { workflowRowOf, type WorkflowContext, type WorkflowWire } from "@/modules/agentWorkflows"
 import type {
     WorkflowCallParamView,
@@ -33,12 +33,12 @@ interface WorkflowContractRead {
     }>
 }
 
-/** An outcome as a chip: its words, and "> target" when a hand-off follows it. */
-const endChipOf = (read: WorkflowContractRead, outcome: OutcomeRead): string => {
+/** An outcome as a chip: its words, and the workflow it calls next when a hand-off follows it (in words, never an arrow). */
+const endChipOf = (read: WorkflowContractRead, outcome: OutcomeRead, context: WorkflowContext): string => {
     const targets = read.calls
         .filter((call) => call.outcome === outcome.key)
         .map((call) => call.workflowName ?? call.workflow)
-    return targets.length === 0 ? outcome.label : `${outcome.label} > ${targets.join(", ")}`
+    return targets.length === 0 ? outcome.label : context.t("endThenCalls", { outcome: outcome.label, targets: targets.join(", ") })
 }
 
 /** What a row of the table is made from: the workflow, the address of the list, the words and the contract read. */
@@ -59,7 +59,7 @@ export const tableRowOf = (input: TableRowInput): WorkflowTableRowView => {
         name: row.name,
         provenance: row.provenance,
         starts: read?.triggers.map((trigger) => trigger.sourceLabel) ?? [],
-        ends: read === undefined ? [] : read.outcomes.map((outcome) => endChipOf(read, outcome)),
+        ends: read === undefined ? [] : read.outcomes.map((outcome) => endChipOf(read, outcome, context)),
         entry: read?.entryLabel ?? "",
         versionLabel: row.versionLabel,
         runs7d: null,
@@ -68,19 +68,28 @@ export const tableRowOf = (input: TableRowInput): WorkflowTableRowView => {
     }
 }
 
-/** A binding as a chip: a ref bound at run time is dynamic (pink), a fixed value is plain (grey). */
-const chipOfBinding = (binding: BindingView): WorkflowChipView => ({
-    label: binding.text,
+/** The words of a member name (`contactId`): the package's vocabulary of the member, by the language of the page. */
+type MemberWords = (name: string) => string
+
+/** The member a ref reads, as its last segment (`steps.tally.output.orderId` reads `orderId`). */
+const memberOfRef = (ref: string): string => ref.split(".").at(-1) ?? ref
+
+/** A binding as a chip: a ref bound at run time is dynamic (pink) and shows the words of the member it reads, a fixed value is plain (grey). */
+const chipOfBinding = (binding: BindingView, memberWords: MemberWords): WorkflowChipView => ({
+    label: binding.ref === null ? binding.text : memberWords(memberOfRef(binding.ref)),
     isDynamic: binding.kind === "ref",
 })
 
 /** Where a ref reads from, in words: the run's trigger, the customer's memory, or the outcome of a step. */
-const sourceOf = (binding: BindingView, words: PageWords): string => {
+const sourceOf = (binding: BindingView, words: PageWords, stepTitles: ReadonlyMap<string, string>): string => {
     const ref = binding.ref
     if (ref === null) return ""
     if (ref.startsWith("trigger.")) return words("fromTrigger")
     if (ref.startsWith("lead.")) return words("fromLead")
-    if (ref.startsWith("steps.")) return words("fromStep", { step: ref.split(".")[1] ?? "" })
+    if (ref.startsWith("steps.")) {
+        const key = ref.split(".")[1] ?? ""
+        return words("fromStep", { step: stepTitles.get(key) ?? key })
+    }
     return words("fromWorkflow")
 }
 
@@ -106,7 +115,7 @@ const triggerRowsOf = (graph: GraphView): ReadonlyArray<WorkflowOverviewRowView>
         id: trigger.key,
         title: trigger.sourceLabel,
         line: trigger.conditions.map((condition) => condition.label).join(" / "),
-        chips: trigger.params.map((param) => ({ label: param.name, isDynamic: false })),
+        chips: trigger.params.map((param) => ({ label: param.label, isDynamic: false })),
         end: "",
     }))
 
@@ -117,7 +126,7 @@ const outcomeRowsOf = (graph: GraphView, words: PageWords): ReadonlyArray<Workfl
             id: outcome.key,
             title: outcome.label,
             line: "",
-            chips: outcome.outputs.map((output) => ({ label: output.name, isDynamic: false })),
+            chips: outcome.outputs.map((output) => ({ label: output.label, isDynamic: false })),
             end:
                 calls.length === 0
                     ? words("noCall")
@@ -127,17 +136,20 @@ const outcomeRowsOf = (graph: GraphView, words: PageWords): ReadonlyArray<Workfl
         }
     })
 
-const callsOf = (graph: GraphView, words: PageWords): ReadonlyArray<WorkflowCallView> =>
-    graph.nodes.flatMap((node) => {
+const callsOf = (graph: GraphView, words: PageWords, memberWords: MemberWords): ReadonlyArray<WorkflowCallView> => {
+    const stepTitles = new Map(graph.nodes.map((node) => [node.id, node.title ?? node.label]))
+    return graph.nodes.flatMap((node) => {
         const call = node.call
         if (call === undefined) return []
         const params = call.params.map((binding): WorkflowCallParamView => ({
             name: binding.name,
-            chip: chipOfBinding(binding),
-            source: sourceOf(binding, words),
+            label: binding.label,
+            chip: chipOfBinding(binding, memberWords),
+            source: sourceOf(binding, words, stepTitles),
         }))
         return [{ id: node.id, target: call.workflowLabel, version: call.versionLabel, params }]
     })
+}
 
 /** The words of each source an older spec wakes on. */
 const LEGACY_SOURCE_WORDS: Readonly<Record<string, string>> = {
@@ -162,7 +174,12 @@ const legacyTriggersOf = (spec: GraphSpec | null, words: PageWords): ReadonlyArr
  * The cards of the overview of a workflow, from the contract parts the graph read carries (`triggers`, `outcomes`, `entry`, and the
  * `call` of each hand-off). A graph without them (an older read) shows the sources its spec wakes on and its end steps.
  */
-export const overviewOf = (spec: GraphSpec | null, graph: GraphView, words: PageWords): WorkflowOverviewView => {
+export const overviewOf = (
+    spec: GraphSpec | null,
+    graph: GraphView,
+    words: PageWords,
+    memberWords: MemberWords,
+): WorkflowOverviewView => {
     const hasContract = graph.triggers !== undefined
     return {
         triggers: hasContract ? triggerRowsOf(graph) : legacyTriggersOf(spec, words),
@@ -173,6 +190,6 @@ export const overviewOf = (spec: GraphSpec | null, graph: GraphView, words: Page
             : graph.nodes
                   .filter((node) => isEnd(node))
                   .map((node) => ({ id: node.id, title: node.title ?? node.label, line: "", chips: [], end: "" })),
-        calls: callsOf(graph, words),
+        calls: callsOf(graph, words, memberWords),
     }
 }

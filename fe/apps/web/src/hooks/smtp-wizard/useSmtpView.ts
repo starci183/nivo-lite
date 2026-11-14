@@ -1,7 +1,6 @@
 "use client"
 
-import { modeOf, SMTP_PRESETS } from "@/modules/mail"
-import type { SmtpPreset } from "@/modules/mail"
+import { modeOf, SMTP_PRESETS, type SmtpPreset } from "@/modules/mail"
 import type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import type { SmtpChoice, SmtpFields } from "./smtp-wizard.shared"

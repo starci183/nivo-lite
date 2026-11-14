@@ -29,7 +29,7 @@ export class ChatMemberType {
     @Field(() => Boolean)
     muted!: boolean
 
-    /** Whether an agent holds the right to post in this group; always false for a person. */
+    /** Whether the seat may write in the room: an agent by the right to post it holds; a person everywhere but the read-only NIVO room. */
     @Field(() => Boolean)
     mayPost!: boolean
 }

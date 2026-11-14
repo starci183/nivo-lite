@@ -1,4 +1,4 @@
-import { Button, EmptyNotice, Page, Section, Stack, Text } from "@starci/grammar/common"
+import { Button, EmptyNotice, Page, Section, Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -99,7 +99,7 @@ export interface DevelopersPanelBaseProps {
     }
 }
 
-/** Draws the "Advanced" page: its header band, then in the body the outgoing events (or the forbidden notice staff see) and the sections. */
+/** Draws the "Developers" page: its header band, then in the body the outgoing events (or the forbidden notice staff see) and the sections. */
 export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
     <Page
         measure="product"
@@ -135,29 +135,25 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
                                   ),
                               }
                             : {})}
+                        caption={props.props.eventsBody}
                     >
-                        <Stack gap="row">
-                            <SlotView
-                                slot={props.props.webhooksRead}
-                                placeholder={true}
-                                labels={props.props.slotLabels}
-                                forbidden="hide"
-                                onRetry={props.on.retry}
-                                render={(_, isLoading) => (
-                                    <DevelopersWebhooks
-                                        rows={props.props.webhooks}
-                                        canManage={props.props.canManageWebhooks}
-                                        view={props.props.webhooksView}
-                                        isLoading={isLoading}
-                                        onAdd={props.on.add}
-                                        onEdit={props.on.edit}
-                                    />
-                                )}
-                            />
-                            <Text size="xs" tone="muted">
-                                {props.props.eventsBody}
-                            </Text>
-                        </Stack>
+                        <SlotView
+                            slot={props.props.webhooksRead}
+                            placeholder={true}
+                            labels={props.props.slotLabels}
+                            forbidden="hide"
+                            onRetry={props.on.retry}
+                            render={(_, isLoading) => (
+                                <DevelopersWebhooks
+                                    rows={props.props.webhooks}
+                                    canManage={props.props.canManageWebhooks}
+                                    view={props.props.webhooksView}
+                                    isLoading={isLoading}
+                                    onAdd={props.on.add}
+                                    onEdit={props.on.edit}
+                                />
+                            )}
+                        />
                     </Section>
                 )}
             />

@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { KnowledgeChunksService, passageHashOf, toVector } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { VectorSyncService } from "@modules/domain/vector-sync"
 import { EmbeddingService } from "./embedding.service"
-import { REEMBED_BATCH, REEMBED_MAX_BATCHES } from "./knowledge.contracts"
-import type { ReembedOutcome } from "./knowledge.contracts"
+import { REEMBED_BATCH, REEMBED_MAX_BATCHES, type ReembedOutcome } from "./knowledge.contracts"
 import { UsageMeterService } from "./usage-meter.service"
 
 /** How long one batch of passages may take to embed. */
@@ -17,6 +17,7 @@ export class KnowledgeReembedService {
         private readonly chunks: KnowledgeChunksService,
         private readonly embeddings: EmbeddingService,
         private readonly usage: UsageMeterService,
+        @Optional() private readonly vectorSync?: VectorSyncService,
     ) {}
 
     /** Queues the re-embedding of the workspace's stale passages with the model in use. */
@@ -31,6 +32,9 @@ export class KnowledgeReembedService {
      */
     reembed(workspaceId: string, model: string): Promise<ReembedOutcome> {
         if (!this.embeddings.configured()) return Promise.resolve("done")
+        // Vectors in the vector index: a passage whose point another model made is embedded again by the reconcile (tick
+        // `vector-reconcile`), which compares every row with its point; this job writes the pgvector column, which is not used there.
+        if (this.vectorSync?.bound() === true) return Promise.resolve("done")
         const current = this.embeddings.model()
         if (model !== "" && model !== current) return Promise.resolve("mismatch")
         return this.batchFrom(workspaceId, current, 0)

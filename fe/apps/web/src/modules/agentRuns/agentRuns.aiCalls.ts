@@ -28,7 +28,8 @@ export interface AiCallWords {
     readonly decimal: (value: number) => string
     /** US dollars with four decimals. */
     readonly usd: (value: number) => string
-    readonly purposeOf: (purpose: string) => string
+    /** The name of a call kind: its words, else the label the back end sent (null when it sent none), else the run's step. */
+    readonly purposeOf: (purpose: string, label: string | null) => string
     readonly maxTry: (count: string) => string
     readonly cached: (count: string) => string
     readonly reasoning: (count: string) => string
@@ -51,7 +52,7 @@ export const aiCallRowsOf = (calls: ReadonlyArray<AiCallWire>, words: AiCallWord
         const models = call.models.length > 0 ? call.models : call.upstreams
         return {
             id: call.purpose,
-            purpose: words.purposeOf(call.purpose),
+            purpose: words.purposeOf(call.purpose, call.label ?? null),
             finish: odd.length === 0 ? "" : words.finish(odd.join(", ")),
             calls: count(call.calls),
             callsNote: isAboveOne(call.maxTry) ? words.maxTry(count(call.maxTry)) : "",

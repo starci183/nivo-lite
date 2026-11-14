@@ -29,7 +29,7 @@ export const BillingPlansBase = (props: BillingPlansBaseProps) => {
     const link = props.props.link
     if (link === undefined) return <PlanCatalog props={props.props} on={props.on} />
     return (
-        <Link variant="head" href={link.href}>
+        <Link variant="plain" href={link.href}>
             {link.label}
         </Link>
     )

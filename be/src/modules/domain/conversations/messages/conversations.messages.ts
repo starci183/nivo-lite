@@ -4,6 +4,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const CONVERSATIONS_MESSAGES: MessageBundle = {
     vi: {
         "errors.CONVERSATIONS_NOT_ANSWERED": "Tin nhắn này không cần trả lời.",
+        "errors.CONVERSATIONS_MESSAGE_NOT_KEPT": "Tin nhắn của khách chưa được lưu nên chưa gọi ai trả lời; hệ thống sẽ thử lại.",
         "conversations.photoSent": "Khách gửi một ảnh",
         "conversations.imageLabel": "[ảnh]",
         "conversations.fileLabel": "[tệp]",
@@ -20,6 +21,7 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
     },
     en: {
         "errors.CONVERSATIONS_NOT_ANSWERED": "This message does not need an answer.",
+        "errors.CONVERSATIONS_MESSAGE_NOT_KEPT": "The customer's message was not kept, so nobody was woken for it; it will be tried again.",
         "conversations.photoSent": "The customer sent a photo",
         "conversations.imageLabel": "[image]",
         "conversations.fileLabel": "[file]",

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { RunCsvImportMutation, RunCsvImportMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `runCsvImport` mutation. */
@@ -43,7 +42,7 @@ export const mutateRunCsvImport = async ({
     request,
     signal,
 }: MutateRunCsvImportParams): Promise<ApolloClient.MutateResult<MutateRunCsvImportResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],
         variables: { input: request },

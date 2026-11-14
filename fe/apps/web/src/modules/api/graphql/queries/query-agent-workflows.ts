@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentWorkflowsQuery, AgentWorkflowsQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `agentWorkflows` query. */
@@ -11,7 +10,37 @@ type AgentWorkflowsQueryResponse = AgentWorkflowsQuery
 
 const query1: TypedDocumentNode<AgentWorkflowsQueryResponse, InputVariables<QueryAgentWorkflowsRequest>> = gql`
     query AgentWorkflows($input: AgentWorkflowsInput!) {
-        agentWorkflows(input: $input) { id key name status primary activeNumber latestNumber templateId templateVersion templateName templateLatest templateChangedSteps stepCount updatedAt }
+        agentWorkflows(input: $input) {
+            id
+            key
+            name
+            status
+            primary
+            activeNumber
+            latestNumber
+            templateId
+            templateVersion
+            templateName
+            templateLatest
+            templateChangedSteps
+            stepCount
+            updatedAt
+            readiness {
+                hidden
+                waitingFor
+                skipped
+                reconnect {
+                    provider
+                    connectionId
+                }
+                blocked {
+                    provider
+                    reason
+                    stream
+                    connectionIds
+                }
+            }
+        }
     }
 `
 
@@ -33,6 +62,6 @@ export const queryAgentWorkflows = async ({
     request,
     signal,
 }: QueryAgentWorkflowsParams): Promise<ApolloClient.QueryResult<AgentWorkflowsQueryResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

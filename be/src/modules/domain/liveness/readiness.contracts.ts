@@ -6,6 +6,11 @@ export interface ReadinessChecks {
     readonly jobs: "ok"
     /** The AI endpoint is configured (gateway address and virtual key): model calls can be made. */
     readonly ai: "ok"
+    /**
+     * The vector index: ok = it answered its last call; down = it did not (the process stays ready: search by meaning answers by
+     * words meanwhile); off = the deployment has none and vectors are read from Postgres.
+     */
+    readonly vectors: "ok" | "down" | "off"
 }
 
 /** What a successful readiness probe answers. */

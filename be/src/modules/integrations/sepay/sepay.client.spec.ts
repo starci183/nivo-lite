@@ -43,6 +43,34 @@ describe("toSepayTime", () => {
     })
 })
 
+describe("SepayClient listTransactions, the bank's facts", () => {
+    it("reads the row's bank reference and account number, trimmed", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 200,
+            body: { transactions: [row({ reference_number: " FT25308XYZ ", account_number: "525209999" })] },
+        })
+
+        const [listed] = await client.listTransactions(TOKEN, QUERY)
+
+        expect(listed).toMatchObject({ id: "92704", reference: "FT25308XYZ", account: "525209999" })
+    })
+
+    it("adds no member for a row without a reference or an account number", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 200,
+            body: { transactions: [row({ reference_number: "", account_number: null })] },
+        })
+
+        const [listed] = await client.listTransactions(TOKEN, QUERY)
+
+        expect(listed).not.toHaveProperty("reference")
+        expect(listed).not.toHaveProperty("account")
+        expect(listed?.id).toBe("92704")
+    })
+})
+
 describe("SepayClient listTransactions", () => {
     it("asks for the account in the window with the bearer token and maps the rows", async () => {
         const { client, http } = await build()
@@ -64,6 +92,7 @@ describe("SepayClient listTransactions", () => {
                 content: "BUI NGUYEN DINH chuyen tien",
                 code: null,
                 bank: "MBBank",
+                account: "0123456789",
             },
         ])
         expect(http.request).toHaveBeenCalledWith({

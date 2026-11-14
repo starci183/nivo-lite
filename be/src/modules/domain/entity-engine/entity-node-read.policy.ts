@@ -1,5 +1,4 @@
-import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
-import type { RightScope } from "@nivo-lite/agent-sdk/rights"
+import type { NodeQuery, ReadScope } from "@nivo-lite/agent-sdk/node"
 import type { EntityDefinition, IndexDef, IndexPart } from "@nivo-lite/agent-sdk/entity"
 import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
@@ -71,7 +70,7 @@ export const newestOrderOf = (entity: EntityDefinition, pinned: ReadonlyArray<st
     const wanted = [...new Set(pinned)]
     const fields = servingIndexesOf(entity).flatMap((index): ReadonlyArray<string> => {
         if (index.where !== undefined || (index.using !== undefined && index.using !== "btree")) return []
-        const columns = index.on.map(columnOf)
+        const columns = index.on.map((part) => columnOf(part))
         const head = columns.slice(0, wanted.length).map((column) => column?.name)
         const [time, last] = columns.slice(wanted.length, wanted.length + 2)
         const pinsFit = head.length === wanted.length && wanted.every((field) => head.includes(field))
@@ -91,6 +90,25 @@ export const newestOrderOf = (entity: EntityDefinition, pinned: ReadonlyArray<st
               [field, "desc"],
               ["id", "desc"],
           ]
+}
+
+/**
+ * The id order a declared index serves after the fields a read pins, when no index serves a newest-first read of them: the index whose
+ * head is exactly the pinned fields and whose next column is the id (`order (orderId, id desc)` of a credit: the credits of one order),
+ * in that index's direction. Null when none does.
+ */
+export const idOrderOf = (entity: EntityDefinition, pinned: ReadonlyArray<string>): OrderBy | null => {
+    const wanted = [...new Set(pinned)]
+    if (wanted.length === 0) return null
+    const [order] = servingIndexesOf(entity).flatMap((index): ReadonlyArray<OrderBy> => {
+        if (index.where !== undefined || (index.using !== undefined && index.using !== "btree")) return []
+        const columns = index.on.map((part) => columnOf(part))
+        const head = columns.slice(0, wanted.length).map((column) => column?.name)
+        const next = columns[wanted.length]
+        const pinsFit = head.length === wanted.length && wanted.every((field) => head.includes(field))
+        return pinsFit && next?.name === "id" ? [[["id", next.desc ? "desc" : "asc"]]] : []
+    })
+    return order ?? null
 }
 
 const SYSTEM_FIELDS: ReadonlySet<string> = new Set(["id", "version", "createdAt", "updatedAt"])
@@ -153,7 +171,7 @@ export const nodeReadPlanOf = (
     kindOfEntity: (name: string) => string | undefined,
     turn: EntityNodeTurn,
     query: NodeQuery,
-    scope: RightScope,
+    scope: ReadScope,
 ): NodeReadPlan | null => {
     const path = scope === "turn" ? turnPathOf(entity, kindOfEntity, turn) : null
     if (scope === "turn" && path === null) return null
@@ -169,7 +187,9 @@ export const nodeReadPlanOf = (
             select: selectOf(query.fields),
             ...(via === null ? {} : { join: { [via]: [] } }),
             ...condition,
-            order: isLookup(entity, pinned) ? BY_ID : (newestOrderOf(entity, pinned) ?? NEWEST_FIRST),
+            order: isLookup(entity, pinned)
+                ? BY_ID
+                : (newestOrderOf(entity, pinned) ?? idOrderOf(entity, pinned) ?? NEWEST_FIRST),
             page: { size: via === null ? limit : NODE_READ_MAX },
         },
         via,

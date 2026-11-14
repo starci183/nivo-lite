@@ -1,7 +1,6 @@
-import { gql } from "@apollo/client"
-import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { MarketplaceListingsQuery } from "../__generated__/graphql"
 
 type QueryMarketplaceListingsResponse = MarketplaceListingsQuery
@@ -68,6 +67,6 @@ export const queryMarketplaceListings = async ({
     query = QueryMarketplaceListings.Query1,
     signal,
 }: QueryParams<QueryMarketplaceListings> = {}): Promise<ApolloClient.QueryResult<QueryMarketplaceListingsResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query] })
 }

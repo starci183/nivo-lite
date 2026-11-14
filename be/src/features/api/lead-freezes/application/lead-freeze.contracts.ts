@@ -18,8 +18,10 @@ export interface LeadFreezeView {
     readonly status: string
     /** The workflow whose run stopped, the only one the freeze holds; null for a freeze that holds the customer as a whole. */
     readonly workflowId: string | null
-    /** The lead, or null. */
+    /** The lead the page asked by (the sales lead page), or null. */
     readonly leadId: string | null
+    /** The contact (the person) the hold is about, or null for a conversation no contact holds. */
+    readonly contactId: string | null
     /** The run that failed, or null. */
     readonly runId: string | null
     /** The title of the failed step, or null. */

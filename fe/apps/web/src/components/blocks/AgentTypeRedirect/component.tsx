@@ -1,6 +1,5 @@
 import { EmptyNotice, Page, SurfaceCard } from "@starci/grammar/common"
-import { WaitingLines } from "@/components/composites/WaitingLines"
-import type { WaitingLine } from "@/components/composites/WaitingLines"
+import { WaitingLines, type WaitingLine } from "@/components/composites/WaitingLines"
 
 /** The waiting lines the redirect draws while the target is found. */
 export type AgentTypeRedirectLines = ReadonlyArray<WaitingLine>

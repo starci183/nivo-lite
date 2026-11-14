@@ -5,12 +5,12 @@ import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 
 const NOW = "2026-10-13T02:00:00.000Z"
 
-/** An accounting installation in setup, for the setup chat specs. */
+/** A sales installation in setup, for the setup chat specs. */
 export const installationOf: (overrides?: Partial<InstallationRecord>) => InstallationRecord =
     builder<InstallationRecord>({
         id: "inst-1",
         workspaceId: "ws-1",
-        moduleKey: "accounting",
+        moduleKey: "sales",
         name: "Books",
         isMulti: true,
         agentId: null,

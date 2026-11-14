@@ -1,9 +1,8 @@
-import { randomUUID } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { In, IsNull, MoreThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, MoreThanOrEqual, type EntityManager } from "typeorm"
 import { factSlugOf } from "@modules/domain/brain-facts"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { BrainLessonsError, BrainLessonsErrorCode } from "./errors/brain-lessons.error"
 import { toLessonCandidate } from "./lesson-candidate.mapper"
 import type {
@@ -11,14 +10,19 @@ import type {
     LessonCandidateInput,
     LessonCandidateKept,
     LessonCandidateStatus,
+    LessonClosedStatus,
     LessonFactKey,
     LessonPlace,
+    MaybeChangeId,
 } from "./lesson-candidates.contracts"
-import { ANSWER_MAX, QUESTION_MAX, groupOf, lessonWordsOf, maskedOf } from "./lesson-candidates.policy"
+import { ANSWER_MAX, QUESTION_MAX, maskedOf } from "./lesson-candidates.policy"
 import { BrainLessonCandidateEntity } from "./persistence/entities"
 
 /** The most candidates of one place a group is looked for in. */
 const PLACE_PAGE = 100
+
+/** The truth a decided card now stands as, or null when it stands as none. */
+export type MaybeLearnedFactId = string | null
 
 /** The most candidates one card stands on. */
 const CHANGE_PAGE = 50
@@ -29,12 +33,15 @@ export const factKeySlugOf = (key: LessonFactKey): string => `${factSlugOf(key.s
 @Injectable()
 /**
  * The lesson candidates (public.brain_lesson_candidates): every stop of kind ai_report a person answered in free text, kept once per
- * answer, masked (no phone, no e-mail; no customer id at all: a lesson is about the shop's rule), grouped with the earlier candidates
- * of the same gap (same agent, workflow and step, near question words). The learning that drafts and posts a truth lives with the stops;
- * this store only keeps, groups and moves candidates through their states.
+ * answer, masked (no phone, no e-mail; no customer id at all: a lesson is about the shop's rule), read back per place (same agent,
+ * workflow and step). Which answers ask the same thing, and whether they agree, is the draft call's reading (`lessonGroupsOf`); the
+ * learning that drafts and posts a truth lives with the stops; this store only keeps and moves candidates through their states.
  */
 export class LessonCandidatesService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectIds() private readonly ids: Ids,
+    ) {}
 
     /** The answers of a stop already kept, by their time (ISO). */
     async keptOf(workspaceId: string, stopId: string): Promise<ReadonlySet<string>> {
@@ -59,14 +66,16 @@ export class LessonCandidatesService {
             order: { answeredAt: "DESC" },
             take: PLACE_PAGE,
         })
-        return rows.map(toLessonCandidate)
+        return rows.map((row) => toLessonCandidate(row))
     }
 
-    /** Keeps one answered stop in the group of its gap (the nearest recent candidate's, else a new group); the same answer once. */
-    async keep(workspaceId: string, input: LessonCandidateInput, since: Date): Promise<LessonCandidateKept> {
+    /**
+     * Keeps one answered stop, masked, the same answer once. It is kept in a group of its own: which answers of a place ask the same
+     * thing is read by the draft call's model (`lessonGroupsOf`), never by code from the words.
+     */
+    async keep(workspaceId: string, input: LessonCandidateInput): Promise<LessonCandidateKept> {
         const question = maskedOf(input.question, QUESTION_MAX)
-        const keywords = lessonWordsOf(question)
-        const groupId = groupOf(await this.recent(workspaceId, input, since), keywords) ?? randomUUID()
+        const groupId = this.ids.next()
         const inserted = await this.entityManager
             .createQueryBuilder(BrainLessonCandidateEntity, "lc")
             .insert()
@@ -78,7 +87,6 @@ export class LessonCandidatesService {
                 agentId: input.agentId,
                 workflowId: input.workflowId,
                 question,
-                keywords,
                 answer: maskedOf(input.answer, ANSWER_MAX),
                 answeredBy: input.answeredBy,
                 answeredAt: new Date(input.answeredAt),
@@ -94,11 +102,6 @@ export class LessonCandidatesService {
         if (row === null) throw new BrainLessonsError({ code: BrainLessonsErrorCode.CandidateLost })
         // The unique answer key ignored a second insert of the same answer: RETURNING then answers no row.
         return { candidate: toLessonCandidate(row), isNew: Array.isArray(inserted.raw) && inserted.raw.length > 0 }
-    }
-
-    /** Keeps the cheap judgement: whether the words state a general rule. */
-    async judged(workspaceId: string, id: string, general: boolean): Promise<void> {
-        await this.entityManager.update(BrainLessonCandidateEntity, { workspaceId, id }, { general })
     }
 
     /** Takes these candidates for one draft (candidate → proposing); true only when every one of them was free. */
@@ -130,7 +133,7 @@ export class LessonCandidatesService {
     }
 
     /** The open card of a truth's key, or null: one open card per key. */
-    async openOfKey(workspaceId: string, key: LessonFactKey): Promise<string | null> {
+    async openOfKey(workspaceId: string, key: LessonFactKey): Promise<MaybeChangeId> {
         const row = await this.entityManager.findOne(BrainLessonCandidateEntity, {
             select: { id: true, changeId: true },
             where: { workspaceId, factSlug: factKeySlugOf(key), status: "proposed" },
@@ -155,15 +158,15 @@ export class LessonCandidatesService {
             order: { answeredAt: "ASC" },
             take: CHANGE_PAGE,
         })
-        return rows.map(toLessonCandidate)
+        return rows.map((row) => toLessonCandidate(row))
     }
 
     /** The founder decided a card: its candidates are learned (with the truth in force), declined, or free again (superseded). */
     async closeChange(
         workspaceId: string,
         changeId: string,
-        to: Extract<LessonCandidateStatus, "learned" | "declined" | "candidate">,
-        factId: string | null,
+        to: LessonClosedStatus,
+        factId: MaybeLearnedFactId,
     ): Promise<number> {
         const result = await this.entityManager.update(
             BrainLessonCandidateEntity,

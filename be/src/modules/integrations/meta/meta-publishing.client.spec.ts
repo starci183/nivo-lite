@@ -9,7 +9,7 @@ import type { Logger } from "@modules/platform/logging"
 import { MetaErrorCode } from "./errors/meta.error"
 import { META_OPTIONS } from "./meta.decorators"
 import type { MetaOptions } from "./meta.options"
-import { MetaPublishingClient } from "./meta-publishing.client"
+import { MetaPagePostsClient } from "./meta-publishing.client"
 
 const OPTIONS: MetaOptions = {
     app: { appId: "app-1", appSecret: new Secret("secret-1") },
@@ -29,19 +29,19 @@ const build = async () => {
     const http = mock<HttpClient>()
     const moduleRef = await Test.createTestingModule({
         providers: [
-            MetaPublishingClient,
+            MetaPagePostsClient,
             { provide: HTTP_CLIENT, useValue: http },
             { provide: META_OPTIONS, useValue: OPTIONS },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: mock<Logger>() },
         ],
     }).compile()
-    return { client: moduleRef.get(MetaPublishingClient), http }
+    return { client: moduleRef.get(MetaPagePostsClient), http }
 }
 
 const answer = (body: unknown, status = 200) => ({ status, body })
 
-describe("MetaPublishingClient / schedulePagePost", () => {
+describe("MetaPagePostsClient / schedulePagePost", () => {
     it("uploads unpublished photos then schedules the feed post with them", async () => {
         const { client, http } = await build()
         http.request
@@ -98,7 +98,7 @@ describe("MetaPublishingClient / schedulePagePost", () => {
     })
 })
 
-describe("MetaPublishingClient / pageInsights", () => {
+describe("MetaPagePostsClient / pageInsights", () => {
     it("merges the daily reach and engagements by day, oldest first", async () => {
         const { client, http } = await build()
         http.request.mockResolvedValueOnce(
@@ -142,7 +142,7 @@ describe("MetaPublishingClient / pageInsights", () => {
     })
 })
 
-describe("MetaPublishingClient / publishedPosts", () => {
+describe("MetaPagePostsClient / publishedPosts", () => {
     it("reads the published posts of the window with their text, time, link and engagements", async () => {
         const { client, http } = await build()
         http.request.mockResolvedValueOnce(

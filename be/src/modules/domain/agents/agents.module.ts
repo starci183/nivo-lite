@@ -1,13 +1,8 @@
-import { Module } from "@nestjs/common"
-import { AGENT_TAG_RIGHTS } from "@modules/domain/agent-work"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
-import { CareScheduleEffectService } from "./care-schedule-effect.service"
-import type { DynamicModule } from "@nestjs/common"
 import { AgentsQueueModule } from "@modules/queues/agents"
-import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"
 import { AgentDirectoryModule } from "./agent-directory.module"
 import { AgentCreationService } from "./agent-creation.service"
-import { AgentDirectoryService } from "./agent-directory.service"
 import { AgentIdentityService } from "./agent-identity.service"
 import { AgentCatalogService } from "./agent-catalog.service"
 import { AgentLensesService } from "./agent-lenses.service"
@@ -17,7 +12,6 @@ import {
     AGENTS_ROOMS,
     AGENTS_INSTALLATIONS,
     AGENTS_KNOWLEDGE,
-    AGENTS_MODULES,
     AGENTS_OPTIONS,
     AGENTS_WORK,
     AGENTS_CHANNEL_OWNERS,
@@ -48,16 +42,13 @@ export class AgentsModule extends ConfigurableModuleClass {
         const shared = [
             { provide: AGENTS_OPTIONS, useValue: parsed },
             { provide: AGENTS_INSTALLATIONS, useClass: options.ports.installations },
-            { provide: AGENTS_MODULES, useClass: options.ports.modules },
             { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
             { provide: AGENTS_ROOMS, useExisting: options.ports.rooms },
-            { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
             PauseClient,
             AgentsService,
             AgentCreationService,
             AgentIdentityService,
             AgentOwnershipService,
-            { provide: AGENT_TAG_RIGHTS, useExisting: AgentOwnershipService },
         ]
         const exported = [
             AgentsQueueModule,
@@ -65,10 +56,8 @@ export class AgentsModule extends ConfigurableModuleClass {
             PauseClient,
             AgentsService,
             AgentDirectoryModule,
-            OFFICE_ROOMS_AGENTS,
             AgentIdentityService,
             AgentOwnershipService,
-            AGENT_TAG_RIGHTS,
         ]
         const full =
             options.setupOnly === true
@@ -81,7 +70,6 @@ export class AgentsModule extends ConfigurableModuleClass {
                           AgentCatalogService,
                           AgentLensesService,
                           AgentTagEffectService,
-                          CareScheduleEffectService,
                       ],
                       exports: [AGENTS_KNOWLEDGE, AgentCatalogService, AgentLensesService],
                   }

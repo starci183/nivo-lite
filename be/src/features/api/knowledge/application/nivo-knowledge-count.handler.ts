@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { NivoKnowledgeCountQuery } from "./nivo-knowledge-count.query"
 
 @QueryHandler(NivoKnowledgeCountQuery)

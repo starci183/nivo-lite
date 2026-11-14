@@ -12,7 +12,7 @@ const build = async () => {
     return moduleRef.get<{ parameterViewOf: typeof parameterViewOf; previewViewOf: typeof previewViewOf }>(SUBJECT)
 }
 
-const REPORT: PackageReport = { nodes: 3, branches: 4, brainRefs: 1, privateSources: 0, people: 2, rights: 1 }
+const REPORT: PackageReport = { nodes: 3, branches: 4, brainRefs: 1, privateSources: 0, people: 2 }
 
 describe("package-view.policy", () => {
     it("shows the default of a setting as text", async () => {
@@ -64,9 +64,6 @@ describe("package-view.policy", () => {
         })
         expect(view.package?.parameters).toEqual(
             stored.parameters.map((parameter) => subject.parameterViewOf(parameter)),
-        )
-        expect(view.package?.proposedRights).toEqual(
-            stored.proposedRights.map((right) => ({ kind: right.kind, scope: right.scope })),
         )
     })
 

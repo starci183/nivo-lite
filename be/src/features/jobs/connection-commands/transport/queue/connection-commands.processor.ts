@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { CONNECTION_COMMANDS_QUEUE } from "@modules/queues/connection-commands"
 import { RunCommandStep } from "../../steps/run-command.step"
 

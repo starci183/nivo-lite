@@ -2,16 +2,25 @@ import type {
     EffectCall,
     NodeAgentLoop,
     NodeAgentLoopEnd,
+    NodeGrant,
     NodeHostPorts,
     NodeModel,
     NodeModelRequest,
     NodeQuery,
+    ReadScope,
     SubjectRef,
     TurnRef,
 } from "@nivo-lite/agent-sdk/node"
-import type { RightScope, RightsGrant } from "@nivo-lite/agent-sdk/rights"
+import type { PluginNodeModel } from "@nivo-lite/agent-sdk/installation"
 import type { Locale } from "@modules/platform/i18n"
-import type { NodeToolApproval, NodeToolArgs, NodeToolCall, RunOrigin } from "./node-run-token.contracts"
+import type {
+    NodeStepRef,
+    NodeToolAccount,
+    NodeToolApproval,
+    NodeToolArgs,
+    NodeToolCall,
+    RunOrigin,
+} from "./node-run-token.contracts"
 
 export type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 
@@ -19,6 +28,11 @@ export type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 export interface NodeTurn extends TurnRef {
     /** The customer conversation the run serves, or null. */
     readonly conversationId: string | null
+    /**
+     * The contact (the engine's person) the run serves, from its trigger (`trigger.contactId`): absent or null for a run about nobody.
+     * The engine's own rows (memory, holds, stops, the run token) key a person by it; `subject` stays the record a module resolved.
+     */
+    readonly contactId?: string | null | undefined
     /** The language of the turn. */
     readonly locale: Locale
     /** Who the run acts for; a run that does not say is the system's. */
@@ -27,6 +41,23 @@ export interface NodeTurn extends TurnRef {
     readonly memberId?: string | null
     /** The agent that handed its conversation to this run (the wake was a hand-off tag), or null when the run was not woken by one. */
     readonly handedOffBy?: string | null
+    /**
+     * The workflow step the turn's call is made in. Only the host sets it, and only on the turn it hands an effect's executor (the node
+     * itself and its model never see it): an executor that judges a right on a connected account names its step with it.
+     */
+    readonly step?: NodeStepRef | undefined
+    /**
+     * The connected account the runner handed the effect the turn's call is made for, when it acts on one. Only the runner sets it, on
+     * the turn it hands an effect's executor: an executor that acts on an account prefers it and keeps its own pick when it is absent.
+     */
+    readonly account?: NodeToolVia | undefined
+    /**
+     * The person who approved exactly this call (the approval's fingerprint is the call's own), when it replays an approval. Only the
+     * engine sets it (the runner, the host, the effect tools of the gateway from its own approved replay), on the turn it hands an
+     * effect's executor: never anything the arguments say. An executor that holds a limit a person may lift (the order confirm above
+     * the owner threshold) reads it; absent, nobody approved the call.
+     */
+    readonly approvedBy?: string | undefined
 }
 
 /** A row a data port answers: only the fields asked. */
@@ -54,14 +85,14 @@ export interface NodeJsonAnswer {
 export type NodeJsonSchema = Parameters<NodeModel["json"]>[0]
 
 /**
- * The port of one data kind, which the module that owns the records registers. The host has already checked the rights; a `turn` read
+ * The port of one data kind, which the module that owns the records registers. The node's query states the scope; a `turn` read
  * keeps to the records the turn's subject or conversation is linked to, a `workspace` read reaches the workspace.
  */
 export interface NodeDataPort {
     /** The data kind it serves. */
     readonly kind: string
     /** Reads the rows of the query, cut to its fields. */
-    read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<NodeRows>
+    read(turn: NodeTurn, query: NodeQuery, scope: ReadScope): Promise<NodeRows>
     /** Writes one record; a kind without it refuses every write. */
     write?(turn: NodeTurn, record: NodeRow): Promise<SubjectRef>
 }
@@ -78,6 +109,12 @@ export interface NodeEffectExecutor {
     readonly effect: string
     /** Acts and answers the subject it touched. */
     execute(turn: NodeTurn, payload: NodeEffectPayload, call: EffectCall): Promise<SubjectRef>
+    /**
+     * Optional, side-effect-free: the refusal `execute` would answer for these arguments right now, or null when it would act. The tool
+     * door asks it BEFORE it raises a person's approval, so nobody is asked to approve a call that cannot go; the same rules still run in
+     * `execute`, because state can change between asking and approving. It writes nothing and calls no provider.
+     */
+    refusalFor?(turn: NodeTurn, payload: NodeEffectPayload, call: EffectCall): Promise<SubjectRef | null>
 }
 
 /**
@@ -107,6 +144,8 @@ export interface NodeDeclaredModel {
     readonly weight: "light" | "heavy"
     /** `node`: the graph's node names it (the shop's choice); `declared`: blocks-core's table; `default`: neither. */
     readonly source: "node" | "declared" | "default"
+    /** The most completion tokens one call of the step may produce, as blocks-core declares it for the step; absent: the app's cap. */
+    readonly maxOutputTokens?: number | undefined
 }
 
 /** The agents' metered model path, as the host calls it for a node: the app root binds the prompt library to it. */
@@ -139,7 +178,19 @@ export interface NodeAgentTurnsAsk {
  * Keeps the answer of one model turn of the host's loop with the run of the step, so a step that starts again from its first line is
  * handed the same answer instead of asking the model anew. `act` asks the model and resolves to plain JSON.
  */
-export type NodeTurnRecord = (call: string, act: () => Promise<unknown>) => Promise<unknown>
+export type NodeTurnRecord = (call: string, act: NodeTurnAct) => Promise<unknown>
+
+/** Asks the model for one turn of the host's loop and resolves to plain JSON. */
+export type NodeTurnAct = () => Promise<unknown>
+
+/** How the host's loop keeps its turns with the run of the step. */
+export interface NodeAgentLoopOptions {
+    /** The keeper of each model turn, or absent when the step is not replayed. */
+    readonly record?: NodeTurnRecord | undefined
+}
+
+/** The subject an effect answers instead of running, or null when it may run. */
+export type OptionalSubjectRef = SubjectRef | null
 
 /** The host's own loop for a step's agent (native tool calling): the port the app binds to the loop of its model integration. */
 export interface NodeAgentLoops {
@@ -147,7 +198,7 @@ export interface NodeAgentLoops {
     run(
         loop: NodeAgentLoop,
         model: unknown,
-        options?: { readonly record?: NodeTurnRecord | undefined },
+        options?: NodeAgentLoopOptions,
     ): Promise<NodeAgentLoopEnd>
 }
 
@@ -166,28 +217,76 @@ export interface NodeToolDoor {
      * exactly as the same tool is on the gateway: null when the effect may run (or is no provider right), the refusal fact the effect
      * answers instead of running, or the typed approval error thrown when the right asks a person first.
      */
-    effectRight?(call: NodeEffectRightCall): Promise<SubjectRef | null>
+    effectRight?(call: NodeEffectRightCall): Promise<OptionalSubjectRef>
     /**
-     * The refusal an effect answers instead of acting because it would repeat what the same step already did for its stop (one line
-     * to a customer per stop), or null when it may act. It is asked only for a call the effect ledger holds no answer for, just before
-     * the executor runs, so a call the step already made is still replayed as it was.
+     * The ONE runner of a node's calls: an effect of `context.effect` and a tool of `context.tools.call` both go through it (rights,
+     * the run's pin, the step's receipts, the once-per-key ledger, the audit line), under the same call key for the same id and
+     * arguments. A door that has none leaves the host on its own effect ledger and `call`.
      */
-    repeatGuard?(call: NodeRepeatGuardCall): Promise<SubjectRef | null>
+    run?: ((call: NodeToolRun) => Promise<NodeToolAnswer>) | undefined
 }
 
-/** One effect a step is about to perform for real, as the door is asked whether it repeats the step's earlier attempt. */
-export interface NodeRepeatGuardCall {
-    /** The effect id. */
-    readonly effect: string
-    /** The payload of the call. */
-    readonly payload: NodeToolArgs
-    /** The turn the step runs in: its workspace, and the founder's answers to the step's earlier report, when it carries any. */
-    readonly turn: NodeTurn
+/** One attempt of a run step: the step's key, and when this attempt began. */
+export interface NodeRunAttempt {
     /** The run step's key (`<run>:<step>`), the same on every attempt of the step. */
     readonly step: string
-    /** When the present attempt of the step began (ISO text): what the step did before it belongs to an earlier attempt. */
+    /** When the present attempt of the step began (ISO text). */
     readonly startedAt: string
 }
+
+/** One effect a node performs through `context.effect`, as the runner is asked to run it. */
+export interface NodeEffectRun {
+    /** The road: an effect. */
+    readonly road: "effect"
+    /** The run token the host minted. */
+    readonly token: string
+    /** The effect id. */
+    readonly effect: string
+    /** The payload, parsed by the effect's own schema. */
+    readonly payload: NodeToolArgs
+    /** The call's key and its business key (`onceBy`, today's `dedupeKey`). */
+    readonly call: EffectCall
+    /** The person's approval this call replays, or null. */
+    readonly approval: NodeToolApproval | null
+    /** The turn the node runs in. */
+    readonly turn: NodeTurn
+    /** The workflow step the engine named, when it named one; the executor is handed the turn with it. */
+    readonly workflowStep?: NodeStepRef | undefined
+    /** The attempt of the step the call is made in. */
+    readonly attempt: NodeRunAttempt
+    /**
+     * `answer` on the TEMPLATE road (as `NodeToolCall.refusals`): only a business refusal comes back as the refusal fact; a refusal of
+     * the agent's rights or of the setup (`tool_off`, `not_attached`, `ability_off`, `no_default_account`, `notice_run`) freezes the step.
+     * Absent (the `defineNode` road): every refusal of the right comes back as the refusal fact, as before.
+     */
+    readonly refusals?: "answer" | undefined
+}
+
+/** One tool a node calls through `context.tools.call`, as the runner is asked to run it. */
+export interface NodeToolCallRun extends NodeToolCall {
+    /** The road: a tool. */
+    readonly road: "tool"
+    /** The turn the node runs in: whose agent calls, in which workspace. */
+    readonly turn: NodeTurn
+    /** The workflow step the engine named, when it named one: the node whose bound accounts the call may act on. */
+    readonly workflowStep?: NodeStepRef | undefined
+}
+
+/** One call the runner is asked to run. */
+export type NodeToolRun = NodeEffectRun | NodeToolCallRun
+
+/** The account a call ran on: its provider and its connection. */
+export interface NodeToolVia {
+    /** The provider key. */
+    readonly provider: string
+    /** The connection. */
+    readonly connectionId: string
+}
+
+/** What the runner answers: the subject of an effect, or the value of a tool; `via` names the account it ran on, when one. */
+export type NodeToolAnswer =
+    | { readonly road: "effect"; readonly subject: SubjectRef; readonly via?: NodeToolVia | undefined }
+    | { readonly road: "tool"; readonly value: unknown; readonly via?: NodeToolVia | undefined }
 
 /** One effect of a node whose right the door is asked for. */
 export interface NodeEffectRightCall {
@@ -199,6 +298,10 @@ export interface NodeEffectRightCall {
     readonly payload: NodeToolArgs
     /** The person's approval this call replays, or null. */
     readonly approval: NodeToolApproval | null
+    /** The connected account the runner handed the effect, when it acts on one: it is judged on that account alone. */
+    readonly account?: NodeToolAccount | undefined
+    /** `answer` on the template road: a refusal of the right is then thrown (`GRAPH_NODES_TOOL_NOT_GRANTED`), never answered. */
+    readonly refusals?: "answer" | undefined
 }
 
 /** One run of an installed node. */
@@ -211,10 +314,16 @@ export interface NodeRunInput {
     readonly input: unknown
     /** The turn. */
     readonly turn: NodeTurn
-    /** What the agent holds. */
-    readonly grant: RightsGrant
+    /** The NIVO MCP tools the run may call, by name. */
+    readonly grant: NodeGrant
     /** The run step's idempotency key. */
     readonly key: string
+    /**
+     * The workflow step this run is: the node's key in its graph, the pinned version and its workflow. An engine that runs a pinned
+     * version passes it; the host signs it into every run token of the node and names it to the effect executors, so the audit and the
+     * rights know which step called. Absent, the calls of the run name no step. It changes nothing a call may do.
+     */
+    readonly step?: NodeStepRef | undefined
     /**
      * The model the graph's node names (`GraphSpecNode.model`: `auto` or a model id, the shop's choice in the node drawer); absent,
      * blocks-core's declaration for the node's step, else the default model.
@@ -222,6 +331,18 @@ export interface NodeRunInput {
     readonly model?: string | undefined
     /** A person's approval of a tool call the node makes, carried into the run of the node it was asked for. */
     readonly approval?: NodeToolApproval
+    /**
+     * Whether a person declined the approval of exactly the call of this fingerprint in this step (the decision is kept where the
+     * approvals live: the owner's item and the step's approval stop). A TEMPLATE node's call that asks again for a declined fingerprint
+     * is answered `{ ok: false, refusal: "declined" }` and asks nobody; a `defineNode` node never reads it. Absent: nothing was declined.
+     */
+    readonly declined?: ((fingerprint: string) => Promise<boolean>) | undefined
+    /**
+     * The approval a person gave in this step to exactly the call of this fingerprint, or null (read where the approvals live). A call
+     * of the node that asks for an approval of a fingerprint a person already approved in this step (the replay of an approved write,
+     * LangGraph re-running the node on resume) runs as approved: its receipt answers it, nothing is asked again. Absent: none.
+     */
+    readonly approved?: ((fingerprint: string) => Promise<NodeToolApproval | null>) | undefined
     /**
      * Wraps the ports of this run before the node runs on them: the hook of an engine that keeps the answers of a step's model, effect
      * and tool calls and hands them back when the step is run again from its first line (a thread engine's replay), so a call already
@@ -234,7 +355,18 @@ export interface NodeRunInput {
      * that starts again a turn already answered is not asked again. Absent, every turn asks the model.
      */
     readonly record?: NodeTurnRecord
+    /**
+     * Inside a for-each body: the item this iteration works on, by its identity (the loop's `itemKey` member, or its index as text)
+     * and its position from 0; a template node reads it as `ctx.run.item`. Absent outside every loop.
+     */
+    readonly item?: { readonly key: string; readonly index: number } | undefined
 }
 
 /** Wraps the ports of one node run; what it answers is what the node runs on. */
 export type NodePortsWrap = (ports: NodeHostPorts) => NodeHostPorts
+
+/** The model the graph's node names (the shop's choice), or undefined when it names none. */
+export type OptionalNodeModelName = string | undefined
+
+/** The kinds of work a node's calls may be booked as instead of plain node work (`chat_turn`: an answer to a person in the team chat). */
+export type NodeWorkKind = NonNullable<PluginNodeModel["work"]>

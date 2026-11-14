@@ -1,9 +1,7 @@
 import type { ReactNode } from "react"
-import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import type { DataSlot } from "@nivo-lite/agent-sdk/client"
+import { SlotView, useBlockHost, type DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle, ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import type { salesAttentionCardBlock } from "../../blocks/sales/attention-card.block"
 import { recordsView } from "../../rows/rows"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
@@ -13,8 +11,9 @@ import {
     attentionEntriesOf,
     attentionListOf,
     parkedEntriesOf,
+    type AttentionCommand,
+    type AttentionEntry,
 } from "../../rules/sales/attention-list"
-import type { AttentionCommand, AttentionEntry } from "../../rules/sales/attention-list"
 import { combinedSlots } from "../../slots/combine"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -66,6 +65,10 @@ interface AttentionListProps {
     readonly items: ReadonlyArray<ListRowData>
 }
 
+/** The count chip of the card and its attention mark, when something waits. */
+const attentionOf = (count: number | null): { readonly count?: number; readonly isAttention?: boolean } =>
+    count === null || count === 0 ? {} : { count, isAttention: true }
+
 /** The list card with its count of what waits; once read and empty, the same card in the same place holds the empty notice, so the card never comes and goes. */
 const AttentionList = (props: AttentionListProps): ReactNode =>
     props.count === 0 && !props.isLoading ? (
@@ -77,7 +80,7 @@ const AttentionList = (props: AttentionListProps): ReactNode =>
             kind="list"
             label={props.label}
             headingLevel={3}
-            {...(props.count === null || props.count === 0 ? {} : { count: props.count, isAttention: true })}
+            {...attentionOf(props.count)}
             isLoading={props.isLoading}
             items={props.items}
             empty={<EmptyNotice message={props.empty} />}
@@ -159,7 +162,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
                     emptyHint={word("attention_empty_hint")}
                     count={count}
                     isLoading={isLoading}
-                    items={items.map(rowOf)}
+                    items={items.map((item) => rowOf(item))}
                 />
             )}
         />

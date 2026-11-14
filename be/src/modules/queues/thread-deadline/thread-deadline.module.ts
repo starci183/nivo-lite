@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { ConfigurableModuleClass } from "./thread-deadline.module-definition"
 import { ThreadDeadlineQueue } from "./thread-deadline.queue"
 
 @Module({
@@ -6,4 +7,4 @@ import { ThreadDeadlineQueue } from "./thread-deadline.queue"
     exports: [ThreadDeadlineQueue],
 })
 /** The thread-deadline queue: its typed producer, imported by the one domain module that owns it (agent-threads). */
-export class ThreadDeadlineQueueModule {}
+export class ThreadDeadlineQueueModule extends ConfigurableModuleClass {}

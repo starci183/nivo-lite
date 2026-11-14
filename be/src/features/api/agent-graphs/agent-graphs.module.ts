@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { AgentGraphReadService, AgentModelPickerService } from "@modules/domain/agent-pages"
 import { GetAgentGraphHandler } from "./application/get-agent-graph.handler"
 import { ListAgentGraphVersionsHandler } from "./application/list-agent-graph-versions.handler"
 import { SaveAgentGraphDraftHandler } from "./application/save-agent-graph-draft.handler"
@@ -8,16 +9,16 @@ import { SetAgentGraphModeHandler } from "./application/set-agent-graph-mode.han
 import { DeclineAgentGraphProposalHandler } from "./application/decline-agent-graph-proposal.handler"
 import { ConfirmAgentGraphProposalHandler } from "./application/confirm-agent-graph-proposal.handler"
 import { GetAgentGraphRunHandler } from "./application/get-agent-graph-run.handler"
-import { ListAgentGraphRunsHandler } from "./application/list-agent-graph-runs.handler"
 import { ListAgentGraphCoverageHandler } from "./application/list-agent-graph-coverage.handler"
 import { GetAiModelPickerHandler } from "./application/get-ai-model-picker.handler"
 import { ConfigurableModuleClass } from "./agent-graphs.module-definition"
 
 @Module({
     providers: [
+        AgentGraphReadService,
+        AgentModelPickerService,
         ConfirmAgentGraphProposalHandler,
         GetAgentGraphRunHandler,
-        ListAgentGraphRunsHandler,
         ListAgentGraphCoverageHandler,
         GetAgentGraphHandler,
         ListAgentGraphVersionsHandler,

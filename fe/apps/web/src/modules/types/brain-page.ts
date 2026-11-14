@@ -16,7 +16,7 @@ export interface BrainTabItemView {
     readonly isAttention?: boolean
 }
 
-/** The chips of the knowledge tab: the documents, the facts, the dossiers and the lessons, each a link to its page. */
+/** The chips of the knowledge tab: the documents, the facts and the lessons, each a link to its page. */
 export interface BrainChipsView {
     readonly label: string
     readonly selectedKey: string
@@ -42,15 +42,8 @@ export interface BrainPageHeaderView {
             readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
             readonly value: string
         }
-        readonly review: {
-            /** The label of the options menu that holds the review command. */
-            readonly menuLabel: string
-            readonly label: string
-            readonly isRunning: boolean
-            readonly isPending: boolean
-            readonly runningLabel: string
-        } | null
-        readonly add: { readonly label: string; readonly href: string } | null
+        /** The way to add documents; disabled while the documents limit is used up. */
+        readonly add: { readonly label: string; readonly href: string; readonly isDisabled?: boolean } | null
     }
 }
 

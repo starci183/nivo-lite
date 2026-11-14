@@ -48,7 +48,7 @@
     {
       "id": "run-1092",
       "module": "sales",
-      "subjectKind": "sales.order",
+      "subjectKind": "blocks-core.sales.order",
       "subjectId": "order-1092",
       "step": "Xuất hóa đơn",
       "errorCode": "invoice_unreachable",

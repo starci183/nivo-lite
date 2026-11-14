@@ -1,14 +1,12 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateDeleteWorkspace,
     type mutateDeleteWorkspace as MutateDeleteWorkspaceOperation,
 } from "@/modules/api/graphql/mutations/mutation-delete-workspace"
 import { answeredData } from "@/hooks/workspaceread"
-import { GraphQLHeadersKey } from "@/modules/api"
-import type { DeleteWorkspaceMutation } from "@/modules/api"
+import { GraphQLHeadersKey, type DeleteWorkspaceMutation } from "@/modules/api"
 
 /** The SWR key of the deleteWorkspace mutation. */
 export const MUTATE_DELETE_WORKSPACE_SWR_KEY = "MUTATE_DELETE_WORKSPACE_SWR"

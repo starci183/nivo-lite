@@ -54,7 +54,7 @@ export const useZaloSetupSteps = (connectionId: string): UseZaloSetupStepsResult
     const { steps, toggle } = useZaloSteps(connectionId)
     const { reconnect, notice, isOwner } = useZaloHead(connectionId)
     const { slot } = useZaloPage(connectionId)
-    const [isAuthorizing, setAuthorizing] = useState(false)
+    const [isAuthorizing, setIsAuthorizing] = useState(false)
     const isAuthorized = steps.find((step) => step.id === "authorize")?.isDone === true
     const hintOf = (id: ZaloStepId): string => {
         if (id === "authorize") {
@@ -63,6 +63,8 @@ export const useZaloSetupSteps = (connectionId: string): UseZaloSetupStepsResult
         }
         return t(`${TITLE_KEYS[id]}Hint`)
     }
+    const authorizeLabel = isAuthorized ? t("reconnect") : t("authorize")
+    const hasItems = ("items" in slot ? slot.items : undefined) !== undefined
     return {
         stepsLabel: t("stepsLabel"),
         steps: steps.map((step, index) => ({
@@ -79,16 +81,16 @@ export const useZaloSetupSteps = (connectionId: string): UseZaloSetupStepsResult
         openZalo: { label: t("openZalo"), href: PROVIDERS.zalo_oa.dashboard.live ?? "" },
         /** Sends the owner to Zalo to grant the OA; absent for everyone else, whom the back end refuses. */
         authorize:
-            isOwner && ("items" in slot ? slot.items : undefined) !== undefined
+            isOwner && hasItems
                 ? {
-                      label: isAuthorized ? t("reconnect") : t("authorize"),
+                      label: authorizeLabel,
                       isPending: isAuthorizing,
                       isNext: !isAuthorized,
                   }
                 : undefined,
         runAuthorize: (): void => {
-            setAuthorizing(true)
-            void reconnect().then(() => setAuthorizing(false))
+            setIsAuthorizing(true)
+            void reconnect().then(() => setIsAuthorizing(false))
         },
         toggle,
     }

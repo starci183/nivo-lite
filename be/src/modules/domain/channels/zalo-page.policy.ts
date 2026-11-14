@@ -1,5 +1,4 @@
-import type { ZaloInboxFactsRow } from "./channels.port"
-import type { ChatFollower } from "@modules/domain/chat-records"
+import type { ZaloInboxFactsRow, ZaloWriter } from "./channels.port"
 import type { ZaloCheckRow, ZaloRecipient, ZaloSendBlock, ZaloTokenState, ZaloAccessView } from "./zalo-page.contracts"
 import type { ZaloSecret } from "./channels.contracts"
 
@@ -10,12 +9,6 @@ const MASK = "\u2022".repeat(4)
 export const maskTail = (secret: string): string | null => {
     if (secret.length === 0) return null
     return secret.length <= 4 ? MASK : `${MASK}${secret.slice(-4)}`
-}
-
-/** The Zalo user id of a conversation's external id; an archived conversation carries `<id>:<timestamp>`. */
-export const zaloUserIdOf = (externalId: string): string => {
-    const cut = externalId.indexOf(":")
-    return cut < 0 ? externalId : externalId.slice(0, cut)
 }
 
 const refreshLive = (secret: ZaloSecret, nowMs: number): boolean => {
@@ -110,13 +103,12 @@ export const checksOf = (facts: ZaloCheckFacts): ReadonlyArray<ZaloCheckRow> => 
     webhookRow(facts),
 ]
 
-/** The followers who wrote lately, one per Zalo user, newest first. */
-export const recipientsOf = (followers: ReadonlyArray<ChatFollower>): ReadonlyArray<ZaloRecipient> => {
+/** The people who wrote lately, one per Zalo user, newest first. */
+export const recipientsOf = (writers: ReadonlyArray<ZaloWriter>): ReadonlyArray<ZaloRecipient> => {
     const byUser = new Map<string, ZaloRecipient>()
-    for (const follower of followers) {
-        const userId = zaloUserIdOf(follower.externalId)
-        if (userId === "" || byUser.has(userId)) continue
-        byUser.set(userId, { userId, name: follower.name, lastMessageAt: new Date(follower.lastAt).toISOString() })
+    for (const writer of writers) {
+        if (writer.userId === "" || byUser.has(writer.userId)) continue
+        byUser.set(writer.userId, { userId: writer.userId, name: writer.name, lastMessageAt: new Date(writer.lastAt).toISOString() })
     }
     return [...byUser.values()].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
 }

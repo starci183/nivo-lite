@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { thrownFailureOf } from "../tests/thrown-failure"
 import { defineNode } from "./node"
 import { NodeVocabulary, VocabularyError } from "./vocabulary"
 
@@ -43,7 +44,7 @@ describe("NodeVocabulary", () => {
         const vocabulary = new NodeVocabulary()
 
         expect(() => vocabulary.add({ steps: { dream: ["nap"] } })).toThrow(VocabularyError)
-        expect(() => vocabulary.add({ steps: { dream: ["nap"] } })).toThrow("KIND_UNKNOWN: dream")
+        expect(thrownFailureOf(() => vocabulary.add({ steps: { dream: ["nap"] } }))).toEqual({ code: "KIND_UNKNOWN", at: "dream" })
     })
 
     it("registers a kind with its steps, facts and checks, and reads them back", () => {
@@ -75,7 +76,7 @@ describe("NodeVocabulary", () => {
 
         expect(vocabulary.factsOf("trigger")).toEqual({})
         expect(vocabulary.checksOf("trigger")).toEqual([])
-        expect(() => vocabulary.registerKind(registration)).toThrow("KIND_DUPLICATE: ship")
+        expect(thrownFailureOf(() => vocabulary.registerKind(registration))).toEqual({ code: "KIND_DUPLICATE", at: "ship" })
         expect(() => vocabulary.registerKind({ ...registration, kind: "output" })).toThrow(VocabularyError)
     })
 
@@ -88,7 +89,6 @@ describe("NodeVocabulary", () => {
             params: z.object({}),
             input: z.object({}),
             output: z.object({}),
-            rights: [],
             effects: [],
             run: () => Promise.resolve({}),
             examples: [{ name: "one", params: {}, input: {}, output: {}, effects: [] }],

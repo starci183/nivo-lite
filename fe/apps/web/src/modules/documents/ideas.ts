@@ -1,5 +1,4 @@
-import { MODULE_KEYS } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
+import { MODULE_KEYS, type ModuleKey } from "@/modules/catalog"
 
 /** A suggestion to add something to the knowledge, never a requirement; its words live in the catalog (`knowledge` namespace). */
 export interface DocumentIdea {
@@ -23,25 +22,17 @@ export const DOCUMENT_IDEAS: ReadonlyArray<DocumentIdea> = [
     },
     { key: "who_handles", modules: ["chatbot", "sales"] },
     { key: "qualification", modules: ["sales"] },
-    { key: "approval_process", modules: ["sales", "accounting"] },
-    { key: "payment_methods", modules: ["accounting", "chatbot"] },
-    { key: "invoicing_tax", modules: ["accounting"] },
+    { key: "approval_process", modules: ["sales"] },
+    { key: "payment_methods", modules: ["sales", "chatbot"] },
+    { key: "invoicing_tax", modules: ["sales"] },
     { key: "booking_services", modules: ["booking"] },
     { key: "booking_cancellation", modules: ["booking"] },
     { key: "booking_resources", modules: ["booking"] },
     { key: "booking_exceptions", modules: ["booking"] },
-    { key: "loyalty_points", modules: ["loyalty"] },
-    { key: "loyalty_rewards", modules: ["loyalty"] },
-    { key: "loyalty_tiers", modules: ["loyalty"] },
-    { key: "loyalty_expiry", modules: ["loyalty"] },
-    { key: "inventory_suppliers", modules: ["inventory"] },
-    { key: "inventory_reorder", modules: ["inventory"] },
-    { key: "inventory_units", modules: ["inventory"] },
-    { key: "inventory_counts", modules: ["inventory"] },
-    { key: "shifts_positions", modules: ["shifts"] },
-    { key: "shifts_rules", modules: ["shifts"] },
-    { key: "shifts_leave", modules: ["shifts"] },
-    { key: "shifts_busy_periods", modules: ["shifts"] },
+    { key: "loyalty_points", modules: ["sales"] },
+    { key: "loyalty_rewards", modules: ["sales"] },
+    { key: "loyalty_tiers", modules: ["sales"] },
+    { key: "loyalty_expiry", modules: ["sales"] },
     { key: "hiring_roles", modules: ["hiring"] },
     { key: "hiring_process", modules: ["hiring"] },
     { key: "hiring_benefits", modules: ["hiring"] },

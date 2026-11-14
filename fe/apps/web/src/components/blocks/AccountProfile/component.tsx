@@ -68,7 +68,7 @@ const PictureBand = (props: BandProps) => (
 /** The form of the card: the picture with its live preview, the display name and the failure or done note; the save command is in the card's foot. */
 const ProfileForm = (props: BandProps) => (
     <Form id="account-profile-form" label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-        <Stack gap="section">
+        <Stack gap="row">
             <PictureBand {...props} />
             <Input
                 id="account-name"

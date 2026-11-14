@@ -1,16 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { StaffDirectoryService, StaffService } from "@modules/domain/staff"
-import type { StaffWrite } from "@modules/domain/staff"
+import { StaffDirectoryService, StaffService, type StaffWrite } from "@modules/domain/staff"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ok, refused, unwrapOutcome } from "@modules/platform/primitives"
 import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 import { WorkspaceMemberEntity } from "./persistence/entities"
-import { admitMember, isManagerRole, judgeSeatChange, presentedRole } from "./role.policy"
+import { admitMember, isManagerRole, judgeSeatChange, presentedRole, type PresentedRole } from "./role.policy"
 import { seatStatusWrite } from "./seat-status.policy"
-import type { PresentedRole } from "./role.policy"
 import type {
     AccountDirectory,
     JoinEntry,

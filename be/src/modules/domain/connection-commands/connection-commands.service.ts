@@ -1,20 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { ChannelFrontDoorService } from "@modules/domain/agent-instances"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ConnectionLifecycleService } from "@modules/domain/connection-lifecycle"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionActor } from "@modules/domain/connections"
 import { GoogleConnectionsService } from "@modules/domain/google-connections"
 import { MetaConnectionsService } from "@modules/domain/meta-connections"
 import { WebhookConnectionsService } from "@modules/domain/webhook-connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectErrorsService } from "@modules/platform/errors"
-import type { ErrorsService } from "@modules/platform/errors"
+import { InjectErrorsService, type ErrorsService } from "@modules/platform/errors"
 import { isConnectionCommandPayload } from "@modules/queues/connection-commands"
 import type { CommandFailed, CommandOutcome } from "./connection-commands.contracts"
 import { toConnectionCommand } from "./connection-commands.mapper"
-import { runCommand } from "./connection-commands.policy"
+import { connectedChannelOf, runCommand } from "./connection-commands.policy"
 import { ConnectionCommandEntity } from "./persistence/entities"
 
 @Injectable()
@@ -30,6 +29,7 @@ export class ConnectionCommandsService {
         private readonly google: GoogleConnectionsService,
         private readonly meta: MetaConnectionsService,
         private readonly lifecycle: ConnectionLifecycleService,
+        private readonly frontDoor: ChannelFrontDoorService,
     ) {}
 
     /** Runs the command a claimed job names; a payload that is not a connection-commands payload is left alone. */
@@ -77,6 +77,9 @@ export class ConnectionCommandsService {
                 kind,
                 input,
             )
+            // A customer channel that just connected has its front door attached (a failure fails the command, as the connect handlers do).
+            const channelId = connectedChannelOf(kind, input, value)
+            if (channelId !== null) await this.frontDoor.ensureForConnection(actor, channelId)
             return { ok: true, value }
         } catch (cause) {
             return this.failed(cause)

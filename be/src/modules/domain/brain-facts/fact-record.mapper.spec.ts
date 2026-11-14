@@ -2,6 +2,14 @@ import { Test } from "@nestjs/testing"
 import { isoOf, toFactRecord } from "./fact-record.mapper"
 import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 import type { StoredFact } from "./fact-record.mapper"
+import {
+    DONG_VI,
+    PRICE_12K_TIGHT_VI,
+    PRICE_30K_PER_ORDER_VI,
+    PRICE_30K_TIGHT_VI,
+    PRICE_32K_PER_ORDER_VI,
+    UNIT_STEM_VI,
+} from "@tests/fixtures/i18n/brain-facts-spec.messages"
 const SUBJECT = Symbol("fact-record.mapper")
 
 const build = async () => {
@@ -59,7 +67,8 @@ describe("fact records", () => {
             subjectLabel: "Combo",
             attribute: "price",
             attributeLabel: "Price",
-            value: "650000 VND",
+            // The stored value also said its unit: it reads in the one normal form, the unit kept apart once.
+            value: "650000",
             valueNumber: 650000,
             unit: "VND",
             scope: "restricted",
@@ -143,5 +152,33 @@ describe("fact-record.mapper review flags (BG2)", () => {
         expect(toFactRecord({ ...facts.rowOf(), reviewFlags: [] })).not.toHaveProperty("flags")
         expect(toFactRecord({ ...facts.rowOf(), reviewFlags: null })).not.toHaveProperty("flags")
         expect(toFactRecord(facts.rowOf())).toEqual(facts.factOf())
+    })
+})
+
+describe("fact records: value and unit in the one normal form (D-T5-1)", () => {
+    it("a row stored with the unit inside its value AND apart reads with the unit once (the live 0415ae99 proposal)", async () => {
+        const subject = await build()
+
+        expect(subject.toFactRecord(row({ value: PRICE_32K_PER_ORDER_VI, unit: DONG_VI }))).toMatchObject({
+            value: PRICE_32K_PER_ORDER_VI,
+            unit: null,
+        })
+        expect(subject.toFactRecord(row({ value: PRICE_30K_TIGHT_VI, unit: DONG_VI }))).toMatchObject({
+            value: "30.000",
+            unit: DONG_VI,
+        })
+    })
+
+    it("a row already in the normal form reads as stored", async () => {
+        const subject = await build()
+
+        expect(subject.toFactRecord(row({ value: PRICE_12K_TIGHT_VI, unit: UNIT_STEM_VI }))).toMatchObject({
+            value: PRICE_12K_TIGHT_VI,
+            unit: UNIT_STEM_VI,
+        })
+        expect(subject.toFactRecord(row({ value: PRICE_30K_PER_ORDER_VI, unit: null }))).toMatchObject({
+            value: PRICE_30K_PER_ORDER_VI,
+            unit: null,
+        })
     })
 })

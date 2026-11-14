@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { SALES_MANAGE } from "../constants"
@@ -28,5 +27,5 @@ export const respondAction: ActionDefinition = defineAction({
         const written = await leads.update(lead.id, lead.version, { awaitingSince: null })
         return written.ok ? { ok: true } : writeRefusal(written)
     },
-    refreshes: ["sales.awaiting-reply", "sales.attention", "sales.leads", "sales.lead"],
+    refreshes: ["blocks-core.sales.api.lead.awaiting-reply", "blocks-core.sales.api.lead.attention", "blocks-core.sales.api.lead.list", "blocks-core.sales.api.lead.get"],
 })

@@ -1,23 +1,19 @@
 "use client"
 
 import useSWR from "swr"
-import { workspaceArgumentKey, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
+import { useWorkspaceKey } from "@/hooks/workspaceKey"
+import { answeredData, type ReadResponse } from "@/hooks/workspaceread"
 import { queryWebsiteSite } from "@/modules/api/graphql/queries/query-website-site"
 import type { WebsiteSiteQuery } from "@/modules/api"
 
-/** The identity of the website intake cache. */
+/** The SWR key of the website intake of the workspace. */
 export const QUERY_WEBSITE_SITE_SWR_KEY = "QUERY_WEBSITE_SITE_SWR"
 
-/** Reads the website intake once the drawer that shows it is open (the first read issues the key); `isOpen` false reads nothing. */
-export const useQueryWebsiteSiteSwr = (
-    workspaceId: string | undefined,
-    isOpen: boolean,
-): ReadResponse<WebsiteSiteQuery["websiteSite"]> =>
+/** The website intake of the workspace (the back end `websiteSite` query); the first read issues the site key. */
+export const useQueryWebsiteSiteSwr = (): ReadResponse<WebsiteSiteQuery["websiteSite"]> =>
     useSWR(
-        workspaceArgumentKey(QUERY_WEBSITE_SITE_SWR_KEY, workspaceId, isOpen ? true : undefined),
-        async ([, scope]: WorkspaceReadKey<boolean>) => {
-            const result = await queryWebsiteSite({ headers: { "X-Workspace-Id": scope } })
-            if (!result.data) throw new Error("websiteSite answered no data")
-            return result.data.websiteSite
-        },
+        useWorkspaceKey(QUERY_WEBSITE_SITE_SWR_KEY, []),
+        async ({ signal }: { signal?: AbortSignal } = {}) =>
+            answeredData(await queryWebsiteSite({ signal }), "websiteSite").websiteSite,
+        { errorRetryCount: 1, revalidateOnFocus: false },
     )

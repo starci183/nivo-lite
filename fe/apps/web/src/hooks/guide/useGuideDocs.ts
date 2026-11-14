@@ -2,12 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { GUIDE_ENTRIES, guideKeyOf, indexKeyOf, pagesFor } from "@/modules/guide"
-import type { GuideDoc, GuideSignals } from "@/modules/guide"
+import { GUIDE_ENTRIES, guideKeyOf, indexKeyOf, pagesFor, type GuideDoc, type GuideSignals } from "@/modules/guide"
+import { stringsOf } from "./guide.shared"
 import type { GuideGrantable } from "./useGuideData"
-
-const stringsOf = (value: unknown): ReadonlyArray<string> =>
-    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : []
 
 /** How many steps of a guide the row shows. */
 const STEPS_SHOWN = 3

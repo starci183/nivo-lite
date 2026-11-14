@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateSaveAgentGraphLayout, type MutateSaveAgentGraphLayoutRequest } from "@/modules/api/graphql/mutations/mutation-save-agent-graph-layout"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveAgentGraphLayoutMutation } from "@/modules/api"
 
 /** What the SaveAgentGraphLayout mutation is triggered with. */

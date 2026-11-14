@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useWebsiteForm } from "@/hooks/websiteForm"
+import { WebsiteTheme } from "@/components/providers/WorkspaceTheme"
 import { WebsiteFormBase } from "./component"
 
 /** The key of the hosted form, passed by the server page. */
@@ -19,6 +20,7 @@ export const WebsiteForm = (props: WebsiteFormProps) => {
     return (
         <WebsiteFormBase
             props={{
+                theme: <WebsiteTheme siteKey={props.siteKey} />,
                 copy: {
                     title: t("title"),
                     intro: t("intro"),

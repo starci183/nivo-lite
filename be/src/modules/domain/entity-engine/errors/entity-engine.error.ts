@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the entity engine runtime. */
 export enum EntityEngineErrorCode {
@@ -45,6 +44,8 @@ export enum EntityEngineErrorCode {
     NotDeletable = "ENTITY_ENGINE_NOT_DELETABLE",
     /** A statement answered no row where it must answer one. */
     ResultMissing = "ENTITY_ENGINE_RESULT_MISSING",
+    /** A write for a module (a job, a seed, a person's action) found no installed agent of the module in the workspace to stamp it with. */
+    AgentMissing = "ENTITY_ENGINE_AGENT_MISSING",
 }
 
 /** How each entity engine code travels. */
@@ -70,6 +71,7 @@ export const ENTITY_ENGINE_ERROR_KINDS: Record<EntityEngineErrorCode, ErrorKind>
     [EntityEngineErrorCode.PositionMismatch]: "invalid",
     [EntityEngineErrorCode.NotDeletable]: "forbidden",
     [EntityEngineErrorCode.ResultMissing]: "internal",
+    [EntityEngineErrorCode.AgentMissing]: "forbidden",
 }
 
 /** The one error class of the entity engine capability. */

@@ -1,11 +1,12 @@
 import { z } from "zod"
 import { defineRead } from "../block/block"
 import { SdkDefinitionError } from "../block/definition-error"
-import type { CountsResult, ListFilter, ListPage, ListQuery, ListShape, TimeWindow } from "../block/list.types"
+import type { CountsResult, ListFilter, ListPage, ListQuery, ListShape, ListSource, TimeWindow } from "../block/list.types"
 import { isTimeToken, timeWindowOf } from "../block/time-token"
 import { KEY_MAX } from "../schema/bounds"
-import type { CountsReadConfig, ListReadConfig, ListReadDefinition } from "./declaration-list.types"
+import type { CountsReadConfig, ListJoinPorts, ListReadConfig, ListReadDefinition } from "./declaration-list.types"
 import type { ReadDefinition } from "../block/block.types"
+import type { PortMap } from "../port/port.types"
 
 /** The longest search text a list read accepts. */
 const LIST_SEARCH_MAX = 200
@@ -77,14 +78,18 @@ export const listQueryOf = (list: ListShape, defaultSort: string, variables: Lis
 
 /**
  * Defines a list read: the derived variables, a `run` that parses them into a `ListQuery` and asks the port for a page, and the
- * shape `list` at path `rows`. Throws `SdkDefinitionError` `LIST_SHAPE_INVALID` for a shape it cannot serve.
+ * shape `list` at path `rows`; with a `join`, each page's rows go through it (the page and cursor stay the source's). Throws
+ * `SdkDefinitionError` `LIST_SHAPE_INVALID` for a shape it cannot serve, `LIST_JOIN_PORT_RESERVED` for a join port named `source`.
  */
-export const listRead = <T>(config: ListReadConfig<T>): ListReadDefinition => {
+export const listRead = <T, P extends PortMap = PortMap>(config: ListReadConfig<T, P>): ListReadDefinition => {
     const extra = config.variables?.shape ?? {}
     const [defaultSort] = Object.keys(config.list.sort)
     if (defaultSort === undefined || !isSound(config.list, Object.keys(extra)))
         throw new SdkDefinitionError("LIST_SHAPE_INVALID", config.id)
-    const read = defineRead({
+    const join = config.join
+    if (join !== undefined && Object.hasOwn(join.ports, "source"))
+        throw new SdkDefinitionError("LIST_JOIN_PORT_RESERVED", config.id)
+    const common = {
         id: config.id,
         dataKind: config.dataKind,
         shape: "list",
@@ -92,10 +97,25 @@ export const listRead = <T>(config: ListReadConfig<T>): ListReadDefinition => {
         paths: { rows: "list" },
         variables: z.object({ ...extra, ...derivedShape(config.list) }),
         permission: config.permission,
-        ports: { source: config.source },
-        run: ({ source }, variables, context): Promise<ListPage<T>> =>
-            source.page(config.list, listQueryOf(config.list, defaultSort, variables, context.now)),
-    })
+    } as const
+    const pageOf = (source: ListSource<T>, variables: Readonly<Record<string, unknown>>, now: Date): Promise<ListPage<T>> =>
+        source.page(config.list, listQueryOf(config.list, defaultSort, variables, now))
+    const joinedPorts: ListJoinPorts<T, P> | null = join === undefined ? null : { ...join.ports, source: config.source }
+    const read =
+        join === undefined || joinedPorts === null
+            ? defineRead({
+                  ...common,
+                  ports: { source: config.source },
+                  run: ({ source }, variables, context): Promise<ListPage<T>> => pageOf(source, variables, context.now),
+              })
+            : defineRead({
+                  ...common,
+                  ports: joinedPorts,
+                  run: async (ports, variables, context): Promise<ListPage<unknown>> => {
+                      const page = await pageOf(ports.source, variables, context.now)
+                      return { rows: await join.rows(ports, page.rows, context), cursor: page.cursor }
+                  },
+              })
     return { ...read, listing: { kind: "list", shape: config.list, defaultSort, source: config.source } }
 }
 

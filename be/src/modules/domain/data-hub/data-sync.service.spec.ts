@@ -20,7 +20,6 @@ import { DataHubService } from "./data-hub.service"
 import { DataSyncService } from "./data-sync.service"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { ImapSyncService } from "./imap-sync.service"
-import { OpenApiSyncService } from "./openapi-sync.service"
 import { TelegramUserSyncService } from "./telegram-user-sync.service"
 
 const actor = { principalId: "u-1", workspaceId: "ws-1" }
@@ -61,7 +60,6 @@ const buildKit = async (registerCsv = true) => {
     const csv = mock<CsvImportSyncService>(registerCsv ? { provider: "csv_import" } : {})
     const database = mock<DatabaseSyncService>({ provider: "database" })
     const imap = mock<ImapSyncService>({ provider: "imap" })
-    const openapi = mock<OpenApiSyncService>({ provider: "openapi" })
     const telegramUser = mock<TelegramUserSyncService>({ provider: "telegram_user" })
     hub.owner.mockResolvedValue({ role: "owner", displayName: "Owner" })
     hub.own.mockResolvedValue(connectionOf())
@@ -87,7 +85,6 @@ const buildKit = async (registerCsv = true) => {
             { provide: CsvImportSyncService, useValue: csv },
             { provide: DatabaseSyncService, useValue: database },
             { provide: ImapSyncService, useValue: imap },
-            { provide: OpenApiSyncService, useValue: openapi },
             { provide: TelegramUserSyncService, useValue: telegramUser },
         ],
     }).compile()
@@ -106,7 +103,6 @@ const buildKit = async (registerCsv = true) => {
         csv,
         database,
         imap,
-        openapi,
         telegramUser,
     }
 }
@@ -273,13 +269,12 @@ describe("DataSyncService", () => {
         expect(logger.error).not.toHaveBeenCalled()
     })
 
-    it.each(DATA_PROVIDERS)("dispatches %s with an empty missing credential and no result meta", async (provider) => {
+    it.each(DATA_PROVIDERS.filter((provider) => provider !== "openapi"))("dispatches %s with an empty missing credential and no result meta", async (provider) => {
         const kit = await buildKit()
         const connector = {
             csv_import: kit.csv,
             database: kit.database,
             imap: kit.imap,
-            openapi: kit.openapi,
             telegram_user: kit.telegramUser,
         }[provider]
         kit.hub.own.mockResolvedValue(connectionOf(provider))
@@ -380,5 +375,24 @@ describe("DataSyncService", () => {
         expect(catalog.get).toHaveBeenCalledWith("errors.DATA_HUB_SYNC_FAILED", {}, "vi")
         expect(runs.finish).toHaveBeenCalledWith("run-1", "failed", 0, "Try again")
         expect(hub.own).not.toHaveBeenCalled()
+    })
+})
+
+describe("DataSyncService: a mailbox", () => {
+    it("keeps a mailbox's mails as the IMAP account's own data, never in the hub, and counts only the new ones", async () => {
+        const { service, hub, records, imap, runs } = await buildKit()
+        const mails = [{ externalId: "INBOX:7:1", data: { folder: "INBOX", uid: 1 } }]
+        hub.own.mockResolvedValue(connectionOf("imap"))
+        imap.keep.mockResolvedValue(1)
+        imap.sync.mockImplementation(async (context) => {
+            await expect(context.upsert("message", mails)).resolves.toBe(1)
+            return { rows: 1 }
+        })
+
+        await expect(service.run(payload)).resolves.toBeUndefined()
+
+        expect(imap.keep).toHaveBeenCalledWith("c-1", mails)
+        expect(records.upsert).not.toHaveBeenCalled()
+        expect(runs.finish).toHaveBeenCalledWith("run-1", "ok", 1, null)
     })
 })

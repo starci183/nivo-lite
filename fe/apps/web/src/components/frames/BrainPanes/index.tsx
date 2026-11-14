@@ -5,8 +5,7 @@ import { brainHeaderSubTabs } from "@/components/composites/BrainKnowledgeChips"
 import { PaneBlank } from "@/components/composites/PaneBlank"
 import { PaneHead } from "@/components/composites/PaneHead"
 import { BrainNotice } from "@/components/composites/BrainNotice"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import type { BrainHeadView, BrainPageHeaderView, DataSlot, PaneGridLayout, SlotLabels } from "@/modules/types"
 
 /** The words of the panes of a list tab. */
@@ -32,7 +31,6 @@ interface BrainPanesEntry {
 
 /** What the panes do. */
 interface BrainPanesOn {
-    readonly reviewAll: () => void
     readonly selectTab: (id: string) => void
     readonly back: () => void
     readonly retry: () => void
@@ -116,12 +114,13 @@ export const BrainPanes = <Entry extends BrainPanesEntry>(props: BrainPanesProps
         : (items.find((one) => one.id === props.selectedId) ?? null)
     const actions = "isError" in slot ? { review: null, add: null } : props.header.actions
     const grid = props.grid
+    const emptyAction = actions.add === null ? {} : { emptyAction: { label: copy.emptyAction, onAction: props.on.add } }
     return (
         <Page
             chrome="panes"
             header={{
                 ...props.header.heading,
-                actions: <BrainHeaderActions review={actions.review} add={actions.add} onReview={props.on.reviewAll} />,
+                actions: <BrainHeaderActions add={isWhole ? null : actions.add} />,
                 tabs: brainHeaderTabs({ tabs: props.header.tabs, onSelect: props.on.selectTab }),
                 ...brainHeaderSubTabs(props.header.chips),
             }}
@@ -136,16 +135,15 @@ export const BrainPanes = <Entry extends BrainPanesEntry>(props: BrainPanesProps
                 rows={grid.rows}
             >
                 {isWhole ? (
-                    <Pane area="main" surface label={copy.detail}>
+                    <Pane area="main" scroll label={copy.detail}>
                         <BrainNotice
+                            ariaLabel={copy.detail}
                             slot={slot}
                             placeholder={props.placeholder}
                             labels={props.slotLabels}
                             errorBody={copy.errorBody}
                             emptyBody={copy.emptyBody}
-                            {...(actions.add === null
-                                ? {}
-                                : { emptyAction: { label: copy.emptyAction, onAction: props.on.add } })}
+                            {...emptyAction}
                             onRetry={props.on.retry}
                         />
                     </Pane>

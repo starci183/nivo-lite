@@ -13,8 +13,13 @@ const NODE_RETRY_TIMEOUT_DEFAULT_MS = 45_000
 const NODE_REASONING_DEFAULT: NodeReasoning = "low"
 const NODE_REASONINGS: ReadonlyArray<NodeReasoning> = ["off", "minimal", "low", "medium", "high", "default"]
 
+/** A declared cap: its number, or nothing. */
+interface DeclaredCap {
+    readonly value?: number
+}
+
 /** A positive whole number the environment declares, or nothing: a cap that is absent, zero or malformed is not sent. */
-const capOf = (declared: string | undefined): { readonly value?: number } => {
+const capOf = (declared: string | undefined): DeclaredCap => {
     const value = Number(declared)
     return declared !== undefined && Number.isInteger(value) && value > 0 ? { value } : {}
 }

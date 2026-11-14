@@ -248,6 +248,7 @@ export const directMessageCalls = (
             eventId: inbound.event_key,
         },
         manager,
+        expect.any(Function),
     ],
 ]
 

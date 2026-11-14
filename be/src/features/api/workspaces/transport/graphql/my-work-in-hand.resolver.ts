@@ -2,8 +2,7 @@ import type { QueryBus } from "@nestjs/cqrs"
 import { Int, Query, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
-import { InjectQueryBus } from "@modules/platform/cqrs"
-import type { Principal } from "@modules/platform/cqrs"
+import { InjectQueryBus, type Principal } from "@modules/platform/cqrs"
 import { MyWorkInHandQuery } from "../../application/my-work-in-hand.query"
 
 @Resolver()

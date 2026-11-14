@@ -2,12 +2,10 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { keyGroupsOf, pickGroupOf } from "@/modules/brain"
-import type { FactKey, FactPickWords, PickGrouping } from "@/modules/brain"
+import { keyGroupsOf, pickGroupOf, type FactKey, type FactPickWords, type PickGrouping } from "@/modules/brain"
 import type { FactPickGroupView, PickConfirmView, PickSelectionBarView } from "@/modules/types"
-import { useFactBatch } from "./useFactBatch"
+import { useFactBatch, type FactOperation } from "./useFactBatch"
 import { useFailureToast } from "./useFailureToast"
-import type { FactOperation } from "./useFactBatch"
 
 /** What the ticked rows are read against. */
 export interface FactPickInput {
@@ -98,7 +96,7 @@ export const useFactPick = (input: FactPickInput): FactPick => {
                   cancelLabel: t("cancel"),
               }
     const run = (kind: "approve" | "reject") => {
-        const operations = kind === "approve" ? chosen.map(approveOf) : chosen.flatMap(rejectOf)
+        const operations = kind === "approve" ? chosen.map((entry) => approveOf(entry)) : chosen.flatMap((entry) => rejectOf(entry))
         const done = (passed: number) => t(kind === "approve" ? "approvedMany" : "rejectedMany", { count: passed })
         batch
             .run(operations, done)

@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { DataSyncService } from "@modules/domain/data-hub"
 import type { DataSyncRun } from "@modules/domain/data-sync-runs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DataSyncRunQuery } from "./data-sync-run.query"
 
 @QueryHandler(DataSyncRunQuery)

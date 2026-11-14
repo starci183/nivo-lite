@@ -1,10 +1,8 @@
-import { refusedToken, request, target, zaloTarget } from "@tests/fixtures/builders/channel-delivery.builder"
-import { builder, mock } from "@starci/jest-preset"
+import { refusedToken, target, zaloTarget } from "@tests/fixtures/builders/channel-delivery.builder"
+import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { ConnectionSecretReadsService } from "@modules/domain/connections"
-import { TELEGRAM, TelegramError, TelegramErrorCode } from "@modules/integrations/telegram"
+import { TELEGRAM } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
 import { ZALO } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
@@ -19,22 +17,11 @@ import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
 import { ZaloDeliveryService } from "./zalo-delivery.service"
 import { TelegramPicturesService } from "./telegram-pictures.service"
 
-const REJECTED = { delivered: false, outcome: "rejected", failure: null }
 const ACKNOWLEDGED = { delivered: true, outcome: "acknowledged", failure: null }
 const AMBIGUOUS = { delivered: false, outcome: "ambiguous", failure: null }
+const REJECTED = { delivered: false, outcome: "rejected", failure: null }
 
-const build = async (found: ChatConversationTarget | null = target()) => {
-    const conversations = mock<ChatConversationsService>()
-    conversations.targetOf.mockResolvedValue(
-        found === null ? { kind: "refused", code: ChatRecordsErrorCode.NotFound } : { kind: "ok", value: found },
-    )
-    const messages = mock<ChatMessagesService>()
-    messages.claimDelivery.mockResolvedValue("send")
-    messages.find.mockResolvedValue({
-        kind: "ok",
-        value: { id: "msg-1", role: "agent", body: "Hello", deliveryStatus: null },
-    })
-    messages.markDelivery.mockResolvedValue(undefined)
+const build = async () => {
     const telegram = mock<TelegramClient>()
     telegram.sendMessage.mockResolvedValue(undefined)
     telegram.sendTyping.mockResolvedValue(true)
@@ -52,8 +39,6 @@ const build = async (found: ChatConversationTarget | null = target()) => {
             { provide: ZALO, useValue: zalo },
             { provide: CHANNEL_SENDER_REGISTRY, useValue: senders },
             { provide: LOGGER, useValue: logger },
-            { provide: ChatConversationsService, useValue: conversations },
-            { provide: ChatMessagesService, useValue: messages },
             { provide: ConnectionSecretReadsService, useValue: secrets },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZaloDeliveryService, useValue: zaloDelivery },
@@ -63,7 +48,6 @@ const build = async (found: ChatConversationTarget | null = target()) => {
     }).compile()
     return {
         service: moduleRef.get(ChannelDeliveryService),
-        messages,
         telegram,
         zalo,
         logger,
@@ -75,229 +59,6 @@ const build = async (found: ChatConversationTarget | null = target()) => {
         pictures: moduleRef.get(TelegramPicturesService),
     }
 }
-
-describe("ChannelDeliveryService", () => {
-    it("reports no delivery for a conversation that does not exist, and marks nothing", async () => {
-        const { service, messages } = await build(null)
-
-        await expect(service.deliver(request)).resolves.toEqual(REJECTED)
-        expect(messages.markDelivery).not.toHaveBeenCalled()
-    })
-
-    it("refuses a missing scoped message before a delivery claim or send", async () => {
-        const { service, messages, senders } = await build()
-        messages.find.mockResolvedValue(builder({ kind: "refused" as const, code: ChatRecordsErrorCode.NotFound })())
-        const receipt = await service.deliver(request)
-        expect(receipt).toEqual(REJECTED)
-        expect(messages.find).toHaveBeenCalledWith("ws-1", "conv-1", "msg-1")
-        expect([messages.claimDelivery.mock.calls, messages.markDelivery.mock.calls]).toEqual([[], []])
-        expect(senders.get).not.toHaveBeenCalled()
-    })
-
-    describe("telegram", () => {
-        it.each([
-            { label: "plain", externalId: "555", recipient: "555" },
-            { label: "archive with extra separator", externalId: "555:archive:extra", recipient: "555" },
-            {
-                label: "long incomplete final line",
-                externalId: "555:" + ":".repeat(20_000) + "\n",
-                recipient: "555:" + ":".repeat(20_000) + "\n",
-            },
-            { label: "archived final line", externalId: "prefix\n555:archive", recipient: "prefix\n555" },
-        ])("preserves the channel recipient for $label", async ({ externalId, recipient }) => {
-            const { service, telegram, secrets } = await build(target({ externalId }))
-            secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })
-            await service.deliver(request)
-            expect(telegram.sendMessage).toHaveBeenCalledWith("123:token", recipient, "Hello")
-        })
-    })
-})
-
-describe("ChannelDeliveryService telegram", () => {
-    it("hands the pictures to the picture sender once the text went out", async () => {
-        const { service, secrets, pictures } = await build()
-        secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })
-        const images = [{ url: "https://api/1.jpg", caption: "Basket" }]
-        await service.deliver({ ...request, images })
-        expect(pictures.send).toHaveBeenCalledWith(target(), "123:token", "555", images)
-    })
-
-    it("sends to the chat of the conversation, ignoring the archive suffix, and marks the message sent", async () => {
-        const { service, messages, telegram, secrets } = await build()
-        secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })
-
-        await expect(service.deliver(request)).resolves.toEqual(ACKNOWLEDGED)
-
-        expect(secrets.botToken).toHaveBeenCalledWith("ws-1", "c-1")
-        expect(telegram.sendMessage).toHaveBeenCalledWith("123:token", "555", "Hello")
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", true, undefined)
-    })
-
-    it("fails and records the verdict when no bot is connected or when Telegram refuses", async () => {
-        const gone = await build()
-        gone.secrets.botToken.mockResolvedValue(refusedToken)
-        const refused = await build()
-        refused.secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })
-        refused.telegram.sendMessage.mockRejectedValue(new TelegramError({ code: TelegramErrorCode.Rejected }))
-
-        await expect(gone.service.deliver(request)).resolves.toEqual(REJECTED)
-        await expect(refused.service.deliver(request)).resolves.toEqual(REJECTED)
-
-        expect(gone.messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "delivery_rejected")
-        expect(gone.logger.error).not.toHaveBeenCalled()
-        expect(refused.logger.error).toHaveBeenCalledTimes(1)
-    })
-
-    it("fails without a lookup when the conversation has no connection", async () => {
-        const { service, secrets } = await build(target({ connectionId: null }))
-
-        await expect(service.deliver(request)).resolves.toEqual(REJECTED)
-        expect(secrets.botToken).not.toHaveBeenCalled()
-    })
-
-    it(
-        "counts a website conversation as delivered on the page and sends nothing for a Telegram one " +
-            "without an external id, kept as not linked",
-        async () => {
-            const website = await build(target({ channel: "website" }))
-            const anonymous = await build(target({ externalId: null }))
-
-            await expect(website.service.deliver(request)).resolves.toEqual(ACKNOWLEDGED)
-            await expect(anonymous.service.deliver(request)).resolves.toEqual(REJECTED)
-            expect(website.telegram.sendMessage).not.toHaveBeenCalled()
-            expect(anonymous.telegram.sendMessage).not.toHaveBeenCalled()
-            expect(website.messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", true, undefined)
-            expect(anonymous.messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "recipient_not_linked")
-            expect(anonymous.logger.info).toHaveBeenCalledWith("channels.delivery.recipient_not_linked", {
-                conversationId: "conv-1",
-                channel: "telegram",
-            })
-        },
-    )
-})
-
-describe("ChannelDeliveryService", () => {
-    it("sends nothing for a channel that has no sender", async () => {
-        const { service, telegram, senders } = await build(target({ channel: "sms" }))
-
-        await expect(service.deliver(request)).resolves.toEqual(REJECTED)
-        expect(senders.get).toHaveBeenCalledWith("sms")
-        expect(telegram.sendMessage).not.toHaveBeenCalled()
-    })
-})
-
-describe("ChannelDeliveryService other channels", () => {
-    it("hands the reply to the sender registered for the channel", async () => {
-        const { service, senders } = await build(target({ channel: "facebook" }))
-        const send = jest.fn().mockResolvedValue(true)
-        senders.get.mockReturnValue({ channels: ["facebook"], send })
-
-        await expect(service.deliver(request)).resolves.toEqual(ACKNOWLEDGED)
-
-        expect(send).toHaveBeenCalledWith(target({ channel: "facebook" }), "Hello")
-    })
-
-    it("reports a refusal of the registered sender", async () => {
-        const { service, senders, messages } = await build(target({ channel: "facebook" }))
-        senders.get.mockReturnValue({ channels: ["facebook"], send: () => Promise.resolve(false) })
-
-        await expect(service.deliver(request)).resolves.toEqual(AMBIGUOUS)
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "delivery_outcome_unknown")
-    })
-})
-
-describe("ChannelDeliveryService zalo", () => {
-    it("hands the reply to the Zalo route with the customer's id and writes its verdict on the message", async () => {
-        const { service, zaloDelivery, messages } = await build(zaloTarget({ externalId: "user-1:1730000000" }))
-        zaloDelivery.send.mockResolvedValue({
-            delivered: false,
-            outcome: "rejected",
-            failure: "zalo_window_expired",
-            note: "zns_no_phone",
-        })
-
-        await expect(service.deliver(request)).resolves.toEqual({
-            delivered: false,
-            outcome: "rejected",
-            failure: "zalo_window_expired",
-            note: "zns_no_phone",
-        })
-
-        expect(zaloDelivery.send).toHaveBeenCalledWith(
-            zaloTarget({ externalId: "user-1:1730000000" }),
-            "user-1",
-            request,
-        )
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "zalo_window_expired")
-    })
-
-    it("hands no customer id when the conversation has none, and marks a delivery sent", async () => {
-        const { service, zaloDelivery, messages } = await build(zaloTarget({ externalId: null }))
-        zaloDelivery.send.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null, via: "zns" })
-
-        await expect(service.deliver(request)).resolves.toEqual({
-            delivered: true,
-            outcome: "acknowledged",
-            failure: null,
-            via: "zns",
-        })
-
-        expect(zaloDelivery.send).toHaveBeenCalledWith(zaloTarget({ externalId: null }), null, request)
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", true, undefined)
-    })
-
-    it.each(["zalo_recipient", "zalo_unfollowed", "zalo_window_expired", "zalo_error"] as const)(
-        "stores the classified Zalo failure %s on the message, not a generic refusal",
-        async (failure) => {
-            const { service, zaloDelivery, messages } = await build(zaloTarget())
-            zaloDelivery.send.mockResolvedValue({ delivered: false, failure, outcome: "rejected" })
-
-            await service.deliver(request)
-
-            expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, failure)
-        },
-    )
-})
-
-describe("ChannelDeliveryService zalo plan notice", () => {
-    it("stores channel_plan and tells the owner once per refusal of the plan, and tells nobody of another failure", async () => {
-        const { service, zaloDelivery, messages, planNotice } = await build(zaloTarget())
-        zaloDelivery.send.mockResolvedValueOnce({ delivered: false, failure: "channel_plan", outcome: "rejected" })
-        zaloDelivery.send.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
-
-        await service.deliver(request)
-        expect(messages.markDelivery).toHaveBeenLastCalledWith("ws-1", "msg-1", false, "channel_plan")
-        expect(planNotice.planBlocked).toHaveBeenCalledWith(zaloTarget())
-
-        await service.deliver(request)
-        expect(planNotice.planBlocked).toHaveBeenCalledTimes(1)
-    })
-
-    it("closes the plan notice of the connection when a reply is delivered on it, and not when it failed or the chat has no connection", async () => {
-        const { service, zaloDelivery, planNotice } = await build(zaloTarget())
-        zaloDelivery.send.mockResolvedValueOnce({ delivered: true, failure: null, outcome: "acknowledged" })
-        zaloDelivery.send.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
-
-        await service.deliver(request)
-        expect(planNotice.recovered).toHaveBeenCalledWith(zaloTarget())
-
-        await service.deliver(request)
-        expect(planNotice.recovered).toHaveBeenCalledTimes(1)
-
-        const website = await build(target({ channel: "website", connectionId: null }))
-        await website.service.deliver(request)
-        expect(website.planNotice.recovered).not.toHaveBeenCalled()
-    })
-
-    it("lets the caller retry when another worker is renewing the token", async () => {
-        const { service, zaloDelivery, messages } = await build(zaloTarget())
-        const busy = new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy })
-        zaloDelivery.send.mockRejectedValue(busy)
-
-        await expect(service.deliver(request)).rejects.toBe(busy)
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "delivery_rejected")
-    })
-})
 
 describe("ChannelDeliveryService sendToPerson", () => {
     const person = {
@@ -383,118 +144,119 @@ describe("ChannelDeliveryService customerName", () => {
     })
 })
 
-describe("ChannelDeliveryService unresolved acknowledgements", () => {
-    it("leaves network failure ambiguous and never reports it as an explicit rejection", async () => {
-        const { service, secrets, telegram, messages } = await build()
-        secrets.botToken.mockResolvedValue({ kind: "ok", value: "synthetic-token" })
-        telegram.sendMessage.mockRejectedValue(new TelegramError({ code: TelegramErrorCode.Unavailable }))
-        await expect(service.deliver(request)).resolves.toEqual({
-            delivered: false,
-            failure: null,
-            outcome: "ambiguous",
-        })
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "delivery_outcome_unknown")
+describe("ChannelDeliveryService.deliverToPerson", () => {
+    const person = {
+        workspaceId: "ws-1",
+        routeId: "route-1",
+        channel: "telegram",
+        accountId: "c-1",
+        userId: "555",
+        sendKey: "run:1",
+        text: "Hello",
+    }
+
+    it("sends to the person's identity and answers the receipt", async () => {
+        const { service, telegram, secrets, planNotice } = await build()
+        secrets.botToken.mockResolvedValue({ kind: "ok", value: "token-1" })
+
+        await expect(service.deliverToPerson(person)).resolves.toEqual(ACKNOWLEDGED)
+
+        expect(telegram.sendMessage).toHaveBeenCalledWith("token-1", "555", "Hello")
+        expect(planNotice.recovered).toHaveBeenCalledWith(expect.objectContaining({ id: "route-1", connectionId: "c-1" }))
     })
 
-    it("does not resend an earlier unknown send or overwrite its durable fence", async () => {
-        const { service, telegram, messages } = await build()
-        messages.claimDelivery.mockResolvedValue("ambiguous")
-        await expect(service.deliver(request)).resolves.toMatchObject({ outcome: "ambiguous", delivered: false })
-        expect(telegram.sendMessage).not.toHaveBeenCalled()
-        expect(messages.markDelivery).not.toHaveBeenCalled()
-    })
+    it("hands Zalo the route as the target, the person's id, and the caller's word that the window was judged", async () => {
+        const { service, zaloDelivery } = await build()
+        zaloDelivery.send.mockResolvedValue({ delivered: true, failure: null, outcome: "acknowledged", via: "consultation" })
 
-    it("retries a definite Telegram rejection using the same stored message", async () => {
-        const { service, secrets, telegram, messages } = await build()
-        secrets.botToken.mockResolvedValue({ kind: "ok", value: "synthetic-token" })
-        telegram.sendMessage.mockRejectedValueOnce(new TelegramError({ code: TelegramErrorCode.Rejected }))
-        await expect(service.deliver(request)).resolves.toMatchObject({ outcome: "rejected" })
-        await expect(service.deliver(request)).resolves.toMatchObject({ outcome: "acknowledged" })
-        expect(messages.claimDelivery.mock.calls).toEqual([
-            ["ws-1", "conv-1", "msg-1"],
-            ["ws-1", "conv-1", "msg-1"],
-        ])
-        expect(telegram.sendMessage).toHaveBeenCalledTimes(2)
-    })
-})
-
-describe("ChannelDeliveryService stored message authority", () => {
-    it("delivers the stored body rather than a changed retry body", async () => {
-        const { service, secrets, telegram } = await build()
-        secrets.botToken.mockResolvedValue({ kind: "ok", value: "synthetic-token" })
-        await service.deliver({ ...request, text: "Changed after the original was stored" })
-        expect(telegram.sendMessage).toHaveBeenCalledWith("synthetic-token", "555", "Hello")
-    })
-})
-
-describe("ChannelDeliveryService durable claims and bare Zalo receipts", () => {
-    it.each(["acknowledged", "missing"] as const)("sends nothing for an earlier %s claim", async (claim) => {
-        const { service, messages, telegram } = await build()
-        messages.claimDelivery.mockResolvedValue(claim)
-        await expect(service.deliver(request)).resolves.toEqual({
-            delivered: claim === "acknowledged",
-            outcome: claim === "acknowledged" ? "acknowledged" : "rejected",
-            failure: null,
-        })
-        expect(telegram.sendMessage).not.toHaveBeenCalled()
-        expect(messages.markDelivery).not.toHaveBeenCalled()
-    })
-
-    it("records a definite refusal before propagating a busy Zalo token refresh", async () => {
-        const { service, messages, zaloDelivery } = await build(zaloTarget())
-        const busy = new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy })
-        zaloDelivery.send.mockRejectedValue(busy)
-        await expect(service.deliver(request)).rejects.toBe(busy)
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "delivery_rejected")
-    })
-
-    it.each([true, false])(
-        "classifies the bare Zalo acknowledgement %s without guessing acceptance",
-        async (delivered) => {
-            const { service, messages, zaloDelivery } = await build(zaloTarget())
-            zaloDelivery.send.mockResolvedValue({ delivered, failure: null })
-            await expect(service.deliver(request)).resolves.toEqual({
-                delivered,
-                failure: null,
-                outcome: delivered ? "acknowledged" : "ambiguous",
-            })
-            expect(messages.markDelivery).toHaveBeenCalledWith(
-                "ws-1",
-                "msg-1",
-                delivered,
-                delivered ? undefined : "delivery_outcome_unknown",
-            )
-        },
-    )
-})
-
-describe("ChannelDeliveryService durable boundary outcomes", () => {
-    it("acknowledges the stored website message without claiming an external send", async () => {
-        const { service, messages, senders, telegram, zaloDelivery } = await build(target({ channel: "website" }))
-        await expect(service.deliver(request)).resolves.toEqual({
+        await expect(service.deliverToPerson({ ...person, channel: "zalo", accountId: "z1", userId: "123", windowChecked: true })).resolves.toEqual({
             delivered: true,
             failure: null,
             outcome: "acknowledged",
+            via: "consultation",
         })
-        expect(messages.claimDelivery).not.toHaveBeenCalled()
-        expect(senders.get).not.toHaveBeenCalled()
-        expect(telegram.sendMessage).not.toHaveBeenCalled()
-        expect(zaloDelivery.send).not.toHaveBeenCalled()
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", true, undefined)
+
+        expect(zaloDelivery.send).toHaveBeenCalledWith(
+            { id: "route-1", workspaceId: "ws-1", channel: "zalo", externalId: "123", connectionId: "z1" },
+            "123",
+            expect.objectContaining({ conversationId: "route-1", messageId: "run:1", windowChecked: true }),
+        )
     })
 
-    it("keeps a thrown registered-channel send unresolved and records its durable fence", async () => {
-        const { service, senders, messages, logger } = await build(target({ channel: "facebook" }))
-        const cause = new Error("Remote acknowledgement lost")
-        const send = jest.fn().mockRejectedValue(cause)
-        senders.get.mockReturnValue({ channels: ["facebook"], send })
-        await expect(service.deliver(request)).resolves.toEqual({
-            delivered: false,
-            failure: null,
-            outcome: "ambiguous",
+    it("answers a plan refusal with the owner's notice, and a thrown channel as an unknown outcome, with no line written", async () => {
+        const { service, zaloDelivery, planNotice, senders } = await build()
+        zaloDelivery.send.mockResolvedValue({ delivered: false, failure: "channel_plan", outcome: "rejected" })
+        await expect(service.deliverToPerson({ ...person, channel: "zalo", accountId: "z1" })).resolves.toMatchObject({ outcome: "rejected" })
+        expect(planNotice.planBlocked).toHaveBeenCalled()
+
+        senders.get.mockReturnValue({ channels: ["facebook"], send: jest.fn().mockRejectedValue(new Error("lost")) })
+        await expect(service.deliverToPerson({ ...person, channel: "facebook" })).resolves.toEqual(AMBIGUOUS)
+    })
+
+    it("rethrows a busy Zalo token refresh for the caller to settle, marking nothing", async () => {
+        const { service, zaloDelivery } = await build()
+        zaloDelivery.send.mockRejectedValue(new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy }))
+
+        await expect(service.deliverToPerson({ ...person, channel: "zalo", accountId: "z1" })).rejects.toMatchObject({
+            code: ChannelsErrorCode.ZaloRefreshBusy,
         })
-        expect(send).toHaveBeenCalledWith(target({ channel: "facebook" }), "Hello")
-        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", false, "delivery_outcome_unknown")
-        expect(logger.error.mock.calls[0]?.[1]).toBe(cause)
+    })
+
+    it("reads the website chat in the page: delivered with no push and no outage notice", async () => {
+        const { service, planNotice, telegram } = await build()
+
+        await expect(service.deliverToPerson({ ...person, channel: "website", accountId: "site-1" })).resolves.toEqual(ACKNOWLEDGED)
+        expect(telegram.sendMessage).not.toHaveBeenCalled()
+        expect(planNotice.recovered).not.toHaveBeenCalled()
+    })
+})
+
+describe("ChannelDeliveryService.deliverToPerson channels", () => {
+    const person = {
+        workspaceId: "ws-1",
+        routeId: "route-1",
+        channel: "telegram",
+        accountId: "c-1",
+        userId: "555",
+        sendKey: "line-1",
+        text: "Hello",
+    }
+
+    it("hands the pictures to the picture sender once the text went out", async () => {
+        const { service, secrets, pictures } = await build()
+        secrets.botToken.mockResolvedValue({ kind: "ok", value: "token-1" })
+        const images = [{ url: "https://example.test/a.png", caption: "A" }]
+
+        await expect(service.deliverToPerson({ ...person, images })).resolves.toEqual(ACKNOWLEDGED)
+
+        expect(pictures.send).toHaveBeenCalledWith(expect.objectContaining({ id: "route-1" }), "token-1", "555", images)
+    })
+
+    it("answers a rejection when no bot is connected, and an unknown outcome when Telegram fails without a verdict", async () => {
+        const { service, secrets, telegram } = await build()
+        secrets.botToken.mockResolvedValue(refusedToken)
+        await expect(service.deliverToPerson(person)).resolves.toEqual(REJECTED)
+
+        secrets.botToken.mockResolvedValue({ kind: "ok", value: "token-1" })
+        telegram.sendMessage.mockRejectedValue(new Error("network"))
+        await expect(service.deliverToPerson(person)).resolves.toEqual(AMBIGUOUS)
+    })
+
+    it("hands the text to the sender registered for another channel, and answers its refusal as unknown", async () => {
+        const { service, senders } = await build()
+        const send = jest.fn().mockResolvedValue(true)
+        senders.get.mockReturnValue({ channels: ["facebook"], send })
+        await expect(service.deliverToPerson({ ...person, channel: "facebook" })).resolves.toEqual(ACKNOWLEDGED)
+        expect(send).toHaveBeenCalledWith(expect.objectContaining({ channel: "facebook", externalId: "555" }), "Hello")
+
+        send.mockResolvedValue(false)
+        await expect(service.deliverToPerson({ ...person, channel: "facebook" })).resolves.toEqual(AMBIGUOUS)
+    })
+
+    it("sends nothing for a channel that has no sender", async () => {
+        const { service, telegram, senders } = await build()
+        senders.get.mockReturnValue(undefined)
+        await expect(service.deliverToPerson({ ...person, channel: "instagram" })).resolves.toEqual(REJECTED)
+        expect(telegram.sendMessage).not.toHaveBeenCalled()
     })
 })

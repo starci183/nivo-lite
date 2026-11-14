@@ -2,19 +2,17 @@ import type * as SubjectModule from "./openapi-config.policy"
 import { Test } from "@nestjs/testing"
 import type { OpenApiAuth, OpenApiConfig } from "@modules/integrations/data-sources"
 import {
-    cleanAuth,
     credentialOf,
     mergeAuth,
     normalizeConfig,
     parseAuth,
     parseConfig,
-    summaryOf,
 } from "./openapi-config.policy"
 
 const SUBJECT = Symbol("openapi-config.policy")
 type Subject = Pick<
     typeof SubjectModule,
-    "normalizeConfig" | "parseConfig" | "summaryOf" | "parseAuth" | "mergeAuth" | "credentialOf" | "cleanAuth"
+    "normalizeConfig" | "parseConfig" | "parseAuth" | "mergeAuth" | "credentialOf"
 >
 
 const buildSubject = async () => {
@@ -22,7 +20,7 @@ const buildSubject = async () => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { normalizeConfig, parseConfig, summaryOf, parseAuth, mergeAuth, credentialOf, cleanAuth },
+                useValue: { normalizeConfig, parseConfig, parseAuth, mergeAuth, credentialOf },
             },
         ],
     }).compile()
@@ -213,32 +211,24 @@ describe("normalizeConfig", () => {
     })
 })
 
-describe("parseConfig and summaryOf", () => {
+describe("parseConfig", () => {
     it.each([undefined, null, "", "{", "null", "[]", '"value"'])("returns null for unusable JSON (%p)", async (raw) => {
         const subject = await buildSubject()
 
         expect(subject.parseConfig(raw)).toBeNull()
     })
 
-    it("normalizes a stored object and describes the pull and tool counts", async () => {
+    it("normalizes a stored object", async () => {
         const subject = await buildSubject()
 
         expect(subject.parseConfig('{"baseUrl":"https://api.example/"}')).toEqual({
             ...emptyConfig,
             baseUrl: "https://api.example",
         })
-        const config = subject.normalizeConfig({
-            ops: [{ id: "list", method: "GET", path: "/records" }],
-            pulls: [{ opId: "list" }, { opId: "list" }],
-            tools: ["list"],
-        })
-
-        expect(subject.summaryOf(config)).toBe("2 API k\u00e9o d\u1eef li\u1ec7u \u00b7 1 API cho agent")
-        expect(subject.summaryOf(emptyConfig)).toBe("0 API k\u00e9o d\u1eef li\u1ec7u \u00b7 0 API cho agent")
     })
 })
 
-describe("parseAuth and cleanAuth", () => {
+describe("parseAuth", () => {
     it.each(["{", "null", "[]", "1", "{}", '{"type":"unknown","value":4,"user":false,"password":null}'])(
         "defaults broken or missing credential fields (%s)",
         async (raw) => {
@@ -262,22 +252,6 @@ describe("parseAuth and cleanAuth", () => {
                 }),
             ),
         ).toEqual({ type: "basic", name: "n".repeat(100), value: " key ", user: " user ", password: " pass " })
-        expect(
-            subject.cleanAuth({ type: " bearer ", name: " Authorization ", value: " token ", user: "", password: "" }),
-        ).toEqual({
-            type: "bearer",
-            name: "Authorization",
-            value: " token ",
-            user: "",
-            password: "",
-        })
-        expect(subject.cleanAuth({ type: "invalid", name: " key ", value: "secret", user: "", password: "" })).toEqual({
-            type: "none",
-            name: "key",
-            value: "secret",
-            user: "",
-            password: "",
-        })
     })
 })
 

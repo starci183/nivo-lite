@@ -22,11 +22,11 @@ interface RecordCardListProps {
     readonly footer?: { readonly label: string; readonly href: string } | undefined
 }
 
-/** The marks of a row: its badge with a status dot and the tone of its value, then its first further chip. */
+/** The marks of a row: its badge in the tone of its value (a result, so no dot), then its first further chip. */
 const badgesOf = (row: RecordRow): { readonly badges?: readonly [BadgeData] | readonly [BadgeData, BadgeData] } => {
     const chip = row.chips[0]
     if (row.badge === "") return chip === undefined ? {} : { badges: [{ label: chip, tone: "neutral" }] }
-    const status: BadgeData = { label: row.badge, tone: row.tone, isDot: true }
+    const status: BadgeData = { label: row.badge, tone: row.tone }
     return chip === undefined ? { badges: [status] } : { badges: [status, { label: chip, tone: "neutral" }] }
 }
 
@@ -55,6 +55,16 @@ export const RecordCardList = (props: RecordCardListProps): ReactNode => {
     const empty = <EmptyNotice message={props.empty} />
     if (props.isHeadless === true)
         return <Section kind="list" ariaLabel={props.title} isLoading={props.isLoading} items={items} empty={empty} />
+    const labelEnd =
+        props.footer === undefined
+            ? {}
+            : {
+                  labelEnd: (
+                      <Link variant="head" href={props.footer.href}>
+                          {props.footer.label}
+                      </Link>
+                  ),
+              }
     return props.isCard ? (
         <SurfaceCard
             kind="list"
@@ -63,15 +73,7 @@ export const RecordCardList = (props: RecordCardListProps): ReactNode => {
             isLoading={props.isLoading}
             items={items}
             empty={empty}
-            {...(props.footer === undefined
-                ? {}
-                : {
-                      labelEnd: (
-                          <Link variant="head" href={props.footer.href}>
-                              {props.footer.label}
-                          </Link>
-                      ),
-                  })}
+            {...labelEnd}
         />
     ) : (
         <Section

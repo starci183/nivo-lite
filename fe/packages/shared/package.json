@@ -1,0 +1,68 @@
+{
+  "name": "@nivo-lite/fe-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./toast": {
+      "types": "./dist/toast.d.ts",
+      "default": "./dist/toast.js"
+    },
+    "./use-theme-switch": {
+      "types": "./dist/hooks/use-theme-switch.d.ts",
+      "default": "./dist/hooks/use-theme-switch.js"
+    },
+    "./use-locale-switch": {
+      "types": "./dist/hooks/use-locale-switch.d.ts",
+      "default": "./dist/hooks/use-locale-switch.js"
+    },
+    "./route-error": {
+      "types": "./dist/route-error.d.ts",
+      "default": "./dist/route-error.js"
+    },
+    "./app-layout-base": {
+      "types": "./dist/app-layout-base.d.ts",
+      "default": "./dist/app-layout-base.js"
+    },
+    "./app-error-page": {
+      "types": "./dist/app-error-page.d.ts",
+      "default": "./dist/app-error-page.js"
+    },
+    "./app-global-error-page-base": {
+      "types": "./dist/app-global-error-page-base.d.ts",
+      "default": "./dist/app-global-error-page-base.js"
+    },
+    "./use-slot-labels": {
+      "types": "./dist/hooks/use-slot-labels.d.ts",
+      "default": "./dist/hooks/use-slot-labels.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@heroicons/react": "2.2.0",
+    "@heroui/react": "3.2.6",
+    "@nivo-lite/agent-sdk": "*",
+    "@nivo-lite/i18n": "*",
+    "@starci/grammar": "0.39.0",
+    "@starci/next-data": "0.1.0",
+    "next-intl": "4.13.6",
+    "next-themes": "0.4.6",
+    "react-aria-components": "1.21.1",
+    "swr": "2.4.2"
+  },
+  "peerDependencies": {
+    "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "typescript": "5.9.3"
+  }
+}

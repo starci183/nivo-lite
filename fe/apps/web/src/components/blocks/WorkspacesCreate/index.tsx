@@ -7,6 +7,6 @@ import { WorkspacesCreateBase } from "./component"
 /** The connected create action of the workspaces page header: offered once the person has workspaces. */
 export const WorkspacesCreate = () => {
     const t = useTranslations("onboarding")
-    const { status } = useWorkspaceCards()
-    return status === "ready" ? <WorkspacesCreateBase props={{ label: t("createNew") }} /> : null
+    const { slot } = useWorkspaceCards()
+    return "items" in slot ? <WorkspacesCreateBase props={{ label: t("createNew") }} /> : null
 }

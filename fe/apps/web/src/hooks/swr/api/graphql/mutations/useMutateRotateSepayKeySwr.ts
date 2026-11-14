@@ -4,9 +4,8 @@ import {
     mutateRotateSepayKey,
     type mutateRotateSepayKey as MutateRotateSepayKeyOperation,
 } from "@/modules/api/graphql/mutations/mutation-rotate-sepay-key"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RotateSepayKeyMutation } from "@/modules/api"
 
 /** The SWR key of the rotateSepayKey mutation. */

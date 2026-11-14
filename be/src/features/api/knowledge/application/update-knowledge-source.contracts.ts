@@ -12,6 +12,6 @@ export interface UpdateKnowledgeSourceRequest {
     readonly tags?: Array<string> | undefined
     /** A new module; an empty text means every module. */
     readonly module?: string | undefined
-    /** `public` or `internal`. */
+    /** The area to move the document to, `public` or `internal` (its passages and truths follow). */
     readonly visibility?: string | undefined
 }

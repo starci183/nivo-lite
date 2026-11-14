@@ -66,7 +66,7 @@ const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecor
     const directory = mock<AgentDirectoryService>()
     directory.cardsOf.mockImplementation((_workspaceId, ids) =>
         Promise.resolve(
-            facts.agents.filter((agent) => ids.includes(agent.id)).map((agent) => ({ ...agent, canTagAgentIds: [] })),
+            facts.agents.filter((agent) => ids.includes(agent.id)).map((agent) => ({ ...agent })),
         ),
     )
     const bindings = mock<AgentBindingsService>()
@@ -99,7 +99,15 @@ const build = async (em: MockEntityManager, found: ReadonlyArray<ConnectionRecor
             { provide: AgentAccessLogService, useValue: accessLog },
         ],
     }).compile()
-    return { service: moduleRef.get(ConnectionGrantsService), tx, connections, bindings, accessLog, directory }
+    return {
+        service: moduleRef.get(ConnectionGrantsService),
+        tx,
+        connections,
+        bindings,
+        accessLog,
+        directory,
+        members,
+    }
 }
 
 /** A grant write receives the transaction view, which is not the outer manager. */
@@ -110,6 +118,42 @@ const expectInTransaction = <Args extends Array<unknown>>(spy: jest.Mock<unknown
 
 const agentId = "11111111-1111-4111-8111-111111111111"
 const uuidAgent = [{ ...AGENT, id: agentId }]
+
+describe("ConnectionGrantsService > bindableAgents", () => {
+    it("lists the active agents whose module the installation lets use the provider, each with its purpose", async () => {
+        const { service, directory } = await build(mockEntityManager())
+        directory.activeModuleRefsOf.mockResolvedValue([
+            { id: "a1", module: "webdesk" },
+            { id: "a2", module: "chatbot" },
+            { id: "a3", module: "booking" },
+        ])
+
+        await expect(service.bindableAgents("owner-1", "ws-1", "zalo_oa")).resolves.toEqual([
+            { agentId: "a1", purpose: "inbound_chat" },
+            { agentId: "a2", purpose: "inbound_chat" },
+            { agentId: "a3", purpose: "outbound_chat" },
+        ])
+        expect(directory.activeModuleRefsOf).toHaveBeenCalledWith("ws-1", 200)
+    })
+
+    it("offers every active agent a data connector and none a provider no installed module lists", async () => {
+        const { service, directory } = await build(mockEntityManager())
+        directory.activeModuleRefsOf.mockResolvedValue([{ id: "a1", module: "chatbot" }])
+
+        await expect(service.bindableAgents("owner-1", "ws-1", "database")).resolves.toEqual([
+            { agentId: "a1", purpose: "data_source" },
+        ])
+        await expect(service.bindableAgents("owner-1", "ws-1", "no_such_provider")).resolves.toEqual([])
+    })
+
+    it("answers nothing to a caller who is not a member", async () => {
+        const { service, directory, members } = await build(mockEntityManager())
+        members.require.mockRejectedValue(new Error("not a member"))
+
+        await expect(service.bindableAgents("stranger", "ws-1", "zalo_oa")).rejects.toThrow("not a member")
+        expect(directory.activeModuleRefsOf).not.toHaveBeenCalled()
+    })
+})
 
 describe("ConnectionGrantsService > candidates", () => {
     it("lists every grantable connection and whether the agent is bound to it", async () => {
@@ -154,9 +198,12 @@ describe("ConnectionGrantsService > candidatesOf", () => {
             connection({ id: "c2", provider: "sepay", meta: { account_masked: "****1234" } }),
         ])
 
-        const found = await service.candidatesOf("ws-1", agentId, "accounting")
+        const found = await service.candidatesOf("ws-1", agentId, "sales")
 
-        expect(found.map((one) => [one.id, one.purpose, one.bound])).toEqual([["c2", "bank_feed", false]])
+        expect(found.map((one) => [one.id, one.purpose, one.bound])).toEqual([
+            ["c1", "outbound_chat", true],
+            ["c2", "bank_feed", false],
+        ])
     })
 })
 

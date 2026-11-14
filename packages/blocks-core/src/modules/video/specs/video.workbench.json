@@ -1,0 +1,765 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "video",
+  "params": {
+    "status": {
+      "type": "enum",
+      "of": [
+        "all",
+        "draft",
+        "scripted",
+        "rendering",
+        "review",
+        "published",
+        "failed",
+        "archived"
+      ],
+      "url": "status",
+      "default": "all"
+    },
+    "project": {
+      "type": "string",
+      "url": "project"
+    },
+    "render": {
+      "type": "string",
+      "url": "render"
+    }
+  },
+  "views": [
+    {
+      "id": "projects",
+      "label": {
+        "key": "tab_projects"
+      },
+      "root": {
+        "id": "projects-master",
+        "block": "core.master-detail",
+        "props": {
+          "emptyTitle": {
+            "key": "project_idle_title"
+          },
+          "emptyBody": {
+            "key": "project_idle_body"
+          }
+        },
+        "children": [
+          {
+            "id": "projects-pane",
+            "block": "core.list-card",
+            "props": {
+              "label": {
+                "key": "projects_title"
+              },
+              "empty": {
+                "key": "projects_empty"
+              },
+              "idPath": "id",
+              "titlePath": "title",
+              "descriptionPath": "brief",
+              "badgePath": "status",
+              "selectParam": "project",
+              "badgeTones": {
+                "draft": "muted",
+                "scripted": "info",
+                "rendering": "info",
+                "review": "warning",
+                "published": "success",
+                "failed": "danger",
+                "archived": "muted"
+              },
+              "labels": {
+                "status": {
+                  "draft": {
+                    "key": "status_draft"
+                  },
+                  "scripted": {
+                    "key": "status_scripted"
+                  },
+                  "rendering": {
+                    "key": "status_rendering"
+                  },
+                  "review": {
+                    "key": "status_review"
+                  },
+                  "published": {
+                    "key": "status_published"
+                  },
+                  "failed": {
+                    "key": "status_failed"
+                  },
+                  "archived": {
+                    "key": "status_archived"
+                  }
+                }
+              },
+              "search": false,
+              "filterParam": "status",
+              "filterLabel": {
+                "key": "status_label"
+              },
+              "filterAll": {
+                "key": "filter_all"
+              },
+              "filters": [
+                {
+                  "value": "draft",
+                  "label": {
+                    "key": "status_draft"
+                  }
+                },
+                {
+                  "value": "scripted",
+                  "label": {
+                    "key": "status_scripted"
+                  }
+                },
+                {
+                  "value": "rendering",
+                  "label": {
+                    "key": "status_rendering"
+                  }
+                },
+                {
+                  "value": "review",
+                  "label": {
+                    "key": "status_review"
+                  },
+                  "attention": true
+                },
+                {
+                  "value": "published",
+                  "label": {
+                    "key": "status_published"
+                  }
+                },
+                {
+                  "value": "failed",
+                  "label": {
+                    "key": "status_failed"
+                  },
+                  "attention": true
+                },
+                {
+                  "value": "archived",
+                  "label": {
+                    "key": "status_archived"
+                  }
+                }
+              ]
+            },
+            "bind": {
+              "rows": {
+                "read": "blocks-core.video.api.project.list",
+                "variables": {
+                  "status": "$status"
+                }
+              }
+            }
+          },
+          {
+            "id": "project-pane",
+            "block": "core.stack",
+            "props": {
+              "gap": "section"
+            },
+            "children": [
+              {
+                "id": "project-detail",
+                "block": "core.detail",
+                "props": {
+                  "label": {
+                    "key": "project_label"
+                  },
+                  "titlePath": "title",
+                  "closeParam": "project",
+                  "labels": {
+                    "status": {
+                      "draft": {
+                        "key": "status_draft"
+                      },
+                      "scripted": {
+                        "key": "status_scripted"
+                      },
+                      "rendering": {
+                        "key": "status_rendering"
+                      },
+                      "review": {
+                        "key": "status_review"
+                      },
+                      "published": {
+                        "key": "status_published"
+                      },
+                      "failed": {
+                        "key": "status_failed"
+                      },
+                      "archived": {
+                        "key": "status_archived"
+                      }
+                    },
+                    "goal": {
+                      "service": {
+                        "key": "goal_service"
+                      },
+                      "offer": {
+                        "key": "goal_offer"
+                      },
+                      "testimonial": {
+                        "key": "goal_testimonial"
+                      },
+                      "behind_scenes": {
+                        "key": "goal_behind_scenes"
+                      },
+                      "hiring": {
+                        "key": "goal_hiring"
+                      },
+                      "custom": {
+                        "key": "goal_custom"
+                      }
+                    }
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_status"
+                      },
+                      "path": "status",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_goal"
+                      },
+                      "path": "goal"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_aspect"
+                      },
+                      "path": "aspect"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_seconds"
+                      },
+                      "path": "targetSeconds",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_scenes"
+                      },
+                      "path": "sceneCount",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_error"
+                      },
+                      "path": "lastError"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_published"
+                      },
+                      "path": "publishedAt",
+                      "format": "dateTime"
+                    }
+                  ],
+                  "timeline": {
+                    "title": {
+                      "key": "script_title"
+                    },
+                    "listPath": "scenes",
+                    "textPath": "caption",
+                    "notePath": "voiceover"
+                  }
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.video.api.project.get",
+                    "variables": {
+                      "id": "$project"
+                    }
+                  },
+                  "secondary": {
+                    "action": "blocks-core.video.project-archive"
+                  }
+                }
+              },
+              {
+                "id": "project-edit",
+                "block": "core.form",
+                "props": {
+                  "label": {
+                    "key": "edit_title"
+                  },
+                  "submitLabel": {
+                    "key": "edit_submit"
+                  },
+                  "successNotice": {
+                    "key": "edit_done"
+                  },
+                  "requireRecord": true,
+                  "idle": {
+                    "key": "project_idle_body"
+                  },
+                  "fields": [
+                    {
+                      "name": "title",
+                      "label": {
+                        "key": "field_title"
+                      },
+                      "kind": "text",
+                      "required": true,
+                      "max": 500
+                    },
+                    {
+                      "name": "goal",
+                      "label": {
+                        "key": "field_goal"
+                      },
+                      "kind": "choice",
+                      "required": true,
+                      "options": [
+                        {
+                          "value": "service",
+                          "label": {
+                            "key": "goal_service"
+                          }
+                        },
+                        {
+                          "value": "offer",
+                          "label": {
+                            "key": "goal_offer"
+                          }
+                        },
+                        {
+                          "value": "testimonial",
+                          "label": {
+                            "key": "goal_testimonial"
+                          }
+                        },
+                        {
+                          "value": "behind_scenes",
+                          "label": {
+                            "key": "goal_behind_scenes"
+                          }
+                        },
+                        {
+                          "value": "hiring",
+                          "label": {
+                            "key": "goal_hiring"
+                          }
+                        },
+                        {
+                          "value": "custom",
+                          "label": {
+                            "key": "goal_custom"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "aspect",
+                      "label": {
+                        "key": "field_aspect"
+                      },
+                      "kind": "choice",
+                      "required": true,
+                      "options": [
+                        {
+                          "value": "9:16",
+                          "label": {
+                            "key": "aspect_9_16"
+                          }
+                        },
+                        {
+                          "value": "16:9",
+                          "label": {
+                            "key": "aspect_16_9"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "targetSeconds",
+                      "label": {
+                        "key": "field_seconds"
+                      },
+                      "hint": {
+                        "key": "field_seconds_hint"
+                      },
+                      "kind": "number",
+                      "required": true,
+                      "max": 90
+                    },
+                    {
+                      "name": "brief",
+                      "label": {
+                        "key": "field_brief"
+                      },
+                      "hint": {
+                        "key": "field_brief_hint"
+                      },
+                      "kind": "textarea",
+                      "max": 2000
+                    }
+                  ]
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.video.api.project.get",
+                    "variables": {
+                      "id": "$project"
+                    }
+                  },
+                  "submit": {
+                    "action": "blocks-core.video.project-save"
+                  }
+                },
+                "when": {
+                  "permission": "video.manage"
+                }
+              },
+              {
+                "id": "project-renders",
+                "block": "core.list-card",
+                "props": {
+                  "label": {
+                    "key": "renders_title"
+                  },
+                  "empty": {
+                    "key": "renders_empty"
+                  },
+                  "idPath": "id",
+                  "titlePath": "createdAt",
+                  "descriptionPath": "error",
+                  "metaPath": "clipCount",
+                  "badgePath": "state",
+                  "selectParam": "render",
+                  "badgeTones": {
+                    "generating": "info",
+                    "composing": "info",
+                    "done": "success",
+                    "failed": "danger"
+                  },
+                  "labels": {
+                    "state": {
+                      "generating": {
+                        "key": "render_generating"
+                      },
+                      "composing": {
+                        "key": "render_composing"
+                      },
+                      "done": {
+                        "key": "render_done"
+                      },
+                      "failed": {
+                        "key": "render_failed"
+                      }
+                    }
+                  },
+                  "search": false
+                },
+                "bind": {
+                  "rows": {
+                    "read": "blocks-core.video.api.render.list",
+                    "variables": {
+                      "projectId": "$project"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "render-output",
+                "block": "core.file-preview",
+                "props": {
+                  "label": {
+                    "key": "render_output_title"
+                  },
+                  "type": "blocks-core.video.render",
+                  "field": "output",
+                  "empty": {
+                    "key": "render_output_empty"
+                  },
+                  "surface": "card"
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.video.api.render.get",
+                    "variables": {
+                      "id": "$render"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "render-clips",
+                "block": "core.file-preview",
+                "props": {
+                  "label": {
+                    "key": "render_clips_title"
+                  },
+                  "type": "blocks-core.video.render",
+                  "field": "clips",
+                  "empty": {
+                    "key": "render_clips_empty"
+                  },
+                  "surface": "card"
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.video.api.render.get",
+                    "variables": {
+                      "id": "$render"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "render-voice",
+                "block": "core.file-preview",
+                "props": {
+                  "label": {
+                    "key": "render_voice_title"
+                  },
+                  "type": "blocks-core.video.render",
+                  "field": "voice",
+                  "empty": {
+                    "key": "render_voice_empty"
+                  },
+                  "surface": "card"
+                },
+                "bind": {
+                  "record": {
+                    "read": "blocks-core.video.api.render.get",
+                    "variables": {
+                      "id": "$render"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "new",
+      "label": {
+        "key": "tab_new"
+      },
+      "root": {
+        "id": "new-form",
+        "block": "core.form",
+        "props": {
+          "label": {
+            "key": "new_title"
+          },
+          "submitLabel": {
+            "key": "new_submit"
+          },
+          "successNotice": {
+            "key": "new_done"
+          },
+          "fields": [
+            {
+              "name": "title",
+              "label": {
+                "key": "field_title"
+              },
+              "kind": "text",
+              "required": true,
+              "max": 500
+            },
+            {
+              "name": "goal",
+              "label": {
+                "key": "field_goal"
+              },
+              "kind": "choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "service",
+                  "label": {
+                    "key": "goal_service"
+                  }
+                },
+                {
+                  "value": "offer",
+                  "label": {
+                    "key": "goal_offer"
+                  }
+                },
+                {
+                  "value": "testimonial",
+                  "label": {
+                    "key": "goal_testimonial"
+                  }
+                },
+                {
+                  "value": "behind_scenes",
+                  "label": {
+                    "key": "goal_behind_scenes"
+                  }
+                },
+                {
+                  "value": "hiring",
+                  "label": {
+                    "key": "goal_hiring"
+                  }
+                },
+                {
+                  "value": "custom",
+                  "label": {
+                    "key": "goal_custom"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "aspect",
+              "label": {
+                "key": "field_aspect"
+              },
+              "kind": "choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "9:16",
+                  "label": {
+                    "key": "aspect_9_16"
+                  }
+                },
+                {
+                  "value": "16:9",
+                  "label": {
+                    "key": "aspect_16_9"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "targetSeconds",
+              "label": {
+                "key": "field_seconds"
+              },
+              "hint": {
+                "key": "field_seconds_hint"
+              },
+              "kind": "number",
+              "required": true,
+              "max": 90
+            },
+            {
+              "name": "brief",
+              "label": {
+                "key": "field_brief"
+              },
+              "hint": {
+                "key": "field_brief_hint"
+              },
+              "kind": "textarea",
+              "max": 2000
+            }
+          ]
+        },
+        "bind": {
+          "submit": {
+            "action": "blocks-core.video.project-save"
+          }
+        },
+        "when": {
+          "permission": "video.manage"
+        }
+      }
+    },
+    {
+      "id": "brand",
+      "label": {
+        "key": "tab_brand"
+      },
+      "root": {
+        "id": "brand-stack",
+        "block": "core.stack",
+        "props": {
+          "gap": "section"
+        },
+        "children": [
+          {
+            "id": "brand-form",
+            "block": "core.form",
+            "props": {
+              "label": {
+                "key": "brand_title"
+              },
+              "submitLabel": {
+                "key": "brand_submit"
+              },
+              "successNotice": {
+                "key": "brand_done"
+              },
+              "fields": [
+                {
+                  "name": "shopName",
+                  "label": {
+                    "key": "field_shop"
+                  },
+                  "kind": "text",
+                  "required": true,
+                  "max": 500
+                },
+                {
+                  "name": "primaryColor",
+                  "label": {
+                    "key": "field_primary"
+                  },
+                  "hint": {
+                    "key": "field_color_hint"
+                  },
+                  "kind": "text",
+                  "max": 7
+                },
+                {
+                  "name": "secondaryColor",
+                  "label": {
+                    "key": "field_secondary"
+                  },
+                  "hint": {
+                    "key": "field_color_hint"
+                  },
+                  "kind": "text",
+                  "max": 7
+                },
+                {
+                  "name": "voiceId",
+                  "label": {
+                    "key": "field_voice"
+                  },
+                  "hint": {
+                    "key": "field_voice_hint"
+                  },
+                  "kind": "text",
+                  "max": 200
+                }
+              ]
+            },
+            "bind": {
+              "record": {
+                "read": "blocks-core.video.api.brand-kit.get"
+              },
+              "submit": {
+                "action": "blocks-core.video.brand-kit-save"
+              }
+            },
+            "when": {
+              "permission": "video.manage"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

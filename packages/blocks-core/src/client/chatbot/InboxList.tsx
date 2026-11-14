@@ -105,6 +105,29 @@ interface InboxHeadProps {
     readonly search: SearchFields | null
 }
 
+/** What the search band takes. */
+interface InboxSearchProps {
+    readonly search: SearchFields
+}
+
+/** The search band under the heading. */
+const InboxSearch = (props: InboxSearchProps): ReactNode => {
+    const { search } = props
+    return (
+        <PaneSection>
+            <SearchField
+                label={search.label}
+                isLabelHidden
+                {...(search.placeholder === undefined ? {} : { placeholder: search.placeholder })}
+                {...(search.clearLabel === undefined ? {} : { clearLabel: search.clearLabel })}
+                value={search.value}
+                onValueChange={search.onChange}
+                onClear={() => search.onChange("")}
+            />
+        </PaneSection>
+    )
+}
+
 /** The bands over the rows: the heading, the filter tabs with their counts and the search. */
 const InboxHead = (props: InboxHeadProps): ReactNode => {
     const { filter, search, label } = props
@@ -116,19 +139,7 @@ const InboxHead = (props: InboxHeadProps): ReactNode => {
                     {...(props.total === null ? {} : { status: <Badge tone="neutral">{String(props.total)}</Badge> })}
                 />
             </PaneSection>
-            {search === null ? null : (
-                <PaneSection>
-                    <SearchField
-                        label={search.label}
-                        isLabelHidden
-                        {...(search.placeholder === undefined ? {} : { placeholder: search.placeholder })}
-                        {...(search.clearLabel === undefined ? {} : { clearLabel: search.clearLabel })}
-                        value={search.value}
-                        onValueChange={search.onChange}
-                        onClear={() => search.onChange("")}
-                    />
-                </PaneSection>
-            )}
+            {search === null ? null : <InboxSearch search={search} />}
             <PaneSection>
                 <Tabs
                     kind="filter"
@@ -181,7 +192,7 @@ export const InboxList = (props: InboxListProps): ReactNode => {
                     labels={labels}
                     placeholder={[]}
                     onRetry={read.retry}
-                    frame={(notice: ReactNode) => <>{notice}</>}
+                    frame={(notice: ReactNode) => notice}
                     render={(items, isLoading) => (
                         <ListBox
                             label={label}

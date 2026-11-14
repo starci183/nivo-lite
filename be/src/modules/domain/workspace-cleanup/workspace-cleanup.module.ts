@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { CLEANUP_ACCOUNTS } from "./workspace-cleanup.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspace-cleanup.module-definition"
 import { WorkspaceCleanupService } from "./workspace-cleanup.service"

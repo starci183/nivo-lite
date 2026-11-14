@@ -1,6 +1,6 @@
 import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { PaymentOrdersQuery } from "../__generated__/graphql"
 
 type QueryPaymentOrdersResponse = PaymentOrdersQuery
@@ -53,7 +53,7 @@ export const queryPaymentOrders = async ({
     query = QueryPaymentOrders.Query1,
     signal,
 }: QueryParams<QueryPaymentOrders> = {}): Promise<ApolloClient.QueryResult<QueryPaymentOrdersResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
     })

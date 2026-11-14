@@ -10,6 +10,7 @@ export {
 export { useAskKnowledge } from "./useAskKnowledge"
 export { useKnowledgeSource } from "./useKnowledgeSource"
 export { useKnowledgeSources } from "./useKnowledgeSources"
+export type { KnowledgeSourcesView } from "./useKnowledgeSources"
 export { useKnowledgeProgressViewOf } from "./useKnowledgeProgressViewOf"
 export { useLibraryCommands } from "./useLibraryCommands"
 export { useNivoKnowledge } from "./useNivoKnowledge"

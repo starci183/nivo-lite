@@ -25,8 +25,10 @@ export const MODEL_PROFILES = {
 export type ModelProfile = (typeof MODEL_PROFILES)[keyof typeof MODEL_PROFILES]
 
 /** One candidate of a model profile: which provider, and which of the pool's models on it. */
-interface ProfileSeat {
+export interface ProfileSeat {
+    /** The provider of the seat. */
     readonly provider: typeof ANTHROPIC_PROVIDER
+    /** Which of the pool's models: the cheap one (`work`) or the strong one. */
     readonly model: keyof Pick<AiGatewayModels, "work" | "strong">
 }
 
@@ -40,6 +42,46 @@ const SEATS: Readonly<Record<ModelProfile, ReadonlyArray<ProfileSeat>>> = {
     [MODEL_PROFILES.haiku]: [CHEAP],
     [MODEL_PROFILES.autoLight]: [CHEAP, STRONG],
     [MODEL_PROFILES.autoHeavy]: [STRONG, CHEAP],
+}
+
+/** The candidates of the app's fixed chat tasks (`work`): the cheap model, Sonnet when it has no usable lane. Claude only. */
+export const WORK_SEATS: ReadonlyArray<ProfileSeat> = [CHEAP, STRONG]
+
+/** The profile that asks for each seat's model and nothing else. */
+const SINGLE_PROFILE: Readonly<Record<ProfileSeat["model"], ModelProfile>> = {
+    work: MODEL_PROFILES.haiku,
+    strong: MODEL_PROFILES.sonnet,
+}
+
+/** One model a chat profile may be served by, and the single-model profile that asks for exactly it. */
+export interface ChatProfileRoute {
+    /** The model id. */
+    readonly model: string
+    /** The profile that serves this model and nothing else. */
+    readonly profile: string
+}
+
+/** Each chat profile with its routes, in the pool's order. */
+export interface ChatProfileRoutes {
+    /** The routes of one profile, by its name. */
+    readonly [profile: string]: ReadonlyArray<ChatProfileRoute>
+}
+
+/**
+ * Every chat profile with the models that may serve it, in the pool's order, each with the single-model profile that asks for it: the
+ * table the AI client builds a call's body by (a profile whose models take different bodies is pinned to one of them). The same seats
+ * the pool is declared from, so the two cannot drift.
+ */
+export const chatProfileRoutesOf = (
+    workProfile: string,
+    models: Pick<AiGatewayModels, "work" | "strong">,
+): ChatProfileRoutes => {
+    const routesOf = (seats: ReadonlyArray<ProfileSeat>): ReadonlyArray<ChatProfileRoute> =>
+        seats.map((seat) => ({ model: models[seat.model], profile: SINGLE_PROFILE[seat.model] }))
+    return {
+        [workProfile]: routesOf(WORK_SEATS),
+        ...Object.fromEntries(Object.values(MODEL_PROFILES).map((name) => [name, routesOf(SEATS[name])])),
+    }
 }
 
 /** A model profile as the pool declares it: its name and its candidates (provider id, model id), the absent providers cut out. */

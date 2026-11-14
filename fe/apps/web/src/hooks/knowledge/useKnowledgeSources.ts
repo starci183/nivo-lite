@@ -3,10 +3,10 @@
 import { useMemo } from "react"
 import { useQueryKnowledgeSourcesSwr, useSubscribeKnowledgeProgressSwr } from "@/hooks/swr"
 import { slotOfSwr } from "@/hooks/slot"
-import { liveOf, overlayPush, toKnowledgeDocument, type LiveProgress } from "@/modules/documents"
+import { liveOf, overlayPush, toDocumentTruths, toKnowledgeDocument, type LiveProgress } from "@/modules/documents"
 import type { ModuleKey } from "@/modules/catalog"
 import { readError } from "@/hooks/workspaceread"
-import type { KnowledgeDocument, DataSlot } from "@/modules/types"
+import type { DataSlot, DocumentTruths, KnowledgeDocument } from "@/modules/types"
 
 /** How often the list is read while the stream is open: a check for a frame the stream lost. */
 const LIVE_POLL_MS = 15_000
@@ -17,6 +17,8 @@ export interface KnowledgeSourcesView {
     live: {
         [k: string]: LiveProgress
     }
+    /** Where the truths work of each document stands, by document id; null until the document is indexed. */
+    truths: { [k: string]: DocumentTruths | null }
     error: unknown
     isLoading: boolean
     slot: DataSlot<KnowledgeDocument[]>
@@ -52,7 +54,11 @@ export const useKnowledgeSources = (module?: ModuleKey | "all"): KnowledgeSource
             ),
         [sources, pushed],
     )
+    const truths = useMemo(
+        () => Object.fromEntries((data ?? []).map((row) => [row.id, toDocumentTruths(row.truths)])),
+        [data],
+    )
     const slot = slotOfSwr({ data: sources, error: swrRead.error, isLoading })
     const reload = () => void swrRead.mutate()
-    return { sources, live, error, isLoading, slot, reload }
+    return { sources, live, truths, error, isLoading, slot, reload }
 }

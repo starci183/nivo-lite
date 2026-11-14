@@ -1,5 +1,5 @@
-import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
-import type { SceneWorkspace } from "../../fixtures/builders/accounting-scene.builder"
+import { workspacesEntities } from "@modules/domain/workspaces"
+import type { SceneWorkspace } from "../../fixtures/builders/door-scene.builder"
 import { currentRole } from "../../world/backend-role-sandbox.service"
 import { zoneReaderOf } from "../../world/workspace-time-zone-world.service"
 import { useTestWorld } from "../../world/use-test-world"
@@ -17,13 +17,11 @@ const openWorkspace = async (): Promise<SceneWorkspace> => {
     return workspace
 }
 
+const [WorkspaceEntity] = workspacesEntities
+
 const saveZone = async (workspace: SceneWorkspace, timeZone: string): Promise<void> => {
-    const engine = world.resolve(EntityEngineService)
-    const api = world
-        .resolve(EntityPortsService)
-        .entitiesApi((use) => engine.scoped(workspace.workspaceId, use), "action")
-    const saved = await api.upsert("workspace.settings", "workspace_key", { key: "workspace", timeZone })
-    expect(saved.ok).toBe(true)
+    const saved = await world.db.primary.update(WorkspaceEntity, { id: workspace.workspaceId }, { timeZone })
+    expect(saved.affected).toBe(1)
 }
 
 describe("the workspace time zone, as the back-end role", () => {

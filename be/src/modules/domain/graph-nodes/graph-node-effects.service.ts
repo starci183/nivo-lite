@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { isRefused, type EffectCall, type SubjectRef } from "@nivo-lite/agent-sdk/node"
-import { cursorScopeOf, type Query } from "@nivo-lite/agent-sdk/query"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
 import { isDomainError } from "@modules/platform/errors"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import {
@@ -15,8 +13,10 @@ import {
 } from "./errors/graph-nodes.error"
 import type { EffectAct } from "./graph-nodes.contracts"
 import { GraphNodesLogEvent } from "./graph-nodes.log-events"
+import { InjectNodeEffectStore } from "./graph-nodes.decorators"
+import type { EffectInsert, NodeEffectStore, StoredEffect } from "./node-effect-store.port"
 
-/** The longest key the ledger keeps (`agent.node-effect.effectKey`). */
+/** The longest key the ledger keeps (`agent_node_effects.effect_key`). */
 const KEY_MAX = 200
 
 /**
@@ -27,12 +27,6 @@ export const ledgerKeyOf = (call: EffectCall): string => {
     const key = call.dedupeKey === null ? `call:${call.key}` : `dedupe:${call.dedupeKey}`
     return key.length <= KEY_MAX ? key : `digest:${createHash("sha256").update(key).digest("hex")}`
 }
-
-/** The entity of the ledger. */
-const LEDGER = "agent.node-effect"
-
-/** The cursor scope of the ledger lookup (it never pages past its one row). */
-const LOOKUP_SCOPE = cursorScopeOf("graph-nodes.effect", {}, "id")
 
 /** The kind a ledger record names as its subject when its act ended with an outcome nobody knows (see `OUTCOME_UNKNOWN_CODES`). */
 export const OUTCOME_UNKNOWN_KIND = "outcome-unknown"
@@ -57,7 +51,7 @@ export const placeOf = (callKey: string): CallPlace | null => {
     return runId === undefined || stepKey === undefined || stepKey.length > KEY_MAX ? null : { runId, stepKey }
 }
 
-/** The bounds the ledger's JSON fields hold (`agent.node-effect.args` / `facts`, blocks-core `boundedRecord`). */
+/** The bounds the ledger's JSON columns hold (`agent_node_effects.args` / `facts`). */
 const JSON_TEXT_MAX = 20_000
 const JSON_ENTRIES_MAX = 1_000
 const JSON_DEPTH_MAX = 24
@@ -74,12 +68,17 @@ const fits = (value: unknown, depth: number): value is JsonValue => {
     if (Array.isArray(value)) return value.length <= JSON_ENTRIES_MAX && value.every((item) => fits(item, depth + 1))
     if (typeof value !== "object") return false
     const entries = Object.entries(value)
-    return entries.length <= JSON_ENTRIES_MAX && entries.every(([name, item]) => name.length <= KEY_MAX && fits(item, depth + 1))
+    return (
+        entries.length <= JSON_ENTRIES_MAX &&
+        entries.every(([name, item]) => name.length <= KEY_MAX && fits(item, depth + 1))
+    )
 }
 
 /** The plain record of a value, or null. */
 const recordOf = (value: unknown): Readonly<Record<string, unknown>> | null =>
-    typeof value === "object" && value !== null && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : null
+    typeof value === "object" && value !== null && !Array.isArray(value)
+        ? Object.fromEntries(Object.entries(value))
+        : null
 
 /** A value that cannot be kept as JSON (a function, a symbol, a big integer, a cycle too deep). */
 const NOT_JSON: unique symbol = Symbol("not-json")
@@ -93,7 +92,9 @@ const jsonOf = (value: unknown, depth: number): JsonValue | undefined | typeof N
     if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString()
     if (Array.isArray(value)) {
         const items = value.map((item) => jsonOf(item, depth + 1))
-        return items.includes(NOT_JSON) ? NOT_JSON : items.map((item) => (item === undefined || item === NOT_JSON ? null : item))
+        return items.includes(NOT_JSON)
+            ? NOT_JSON
+            : items.map((item) => (item === undefined || item === NOT_JSON ? null : item))
     }
     const record = recordOf(value)
     if (record === null) return NOT_JSON
@@ -131,44 +132,14 @@ interface Kept {
     readonly subject: SubjectRef
 }
 
-/** What a ledger record kept, or null for a record that holds no subject. */
-const keptOf = (data: Readonly<Record<string, unknown>>): Kept | null => {
-    if (typeof data.effectId !== "string" || typeof data.subjectEntity !== "string" || typeof data.subjectId !== "string")
-        return null
-    const facts = recordOf(data.facts)
-    const subject: SubjectRef = { kind: data.subjectEntity, id: data.subjectId }
-    return { effect: data.effectId, subject: facts === null ? subject : { ...subject, facts } }
+/** What a ledger row kept. */
+const keptOf = (row: StoredEffect): Kept => {
+    const subject: SubjectRef = { kind: row.subjectEntity, id: row.subjectId }
+    return { effect: row.effectId, subject: row.facts === null ? subject : { ...subject, facts: row.facts } }
 }
-
-/** The lookup of one ledger key. */
-const lookupOf = (ledgerKey: string): Query => ({
-    from: LEDGER,
-    select: ["effectId", "subjectEntity", "subjectId", "facts"],
-    where: { op: "eq", field: "effectKey", value: ledgerKey },
-    order: [["id", "asc"]],
-    page: { size: 1 },
-})
 
 /** The most records of one run step the ledger reads back (a step makes a handful of calls). */
 export const STEP_RECORDS_READ = 100
-
-/** The cursor scope of the read of a run step's records. */
-const STEP_SCOPE = cursorScopeOf("graph-nodes.effect-step", {}, "id")
-
-/** The read of a run step's records, oldest first, served by the ledger's `run_step` index (run, step, id). */
-const stepQueryOf = (place: CallPlace): Query => ({
-    from: LEDGER,
-    select: ["effectId", "subjectEntity", "subjectId", "args", "facts"],
-    where: {
-        op: "and",
-        of: [
-            { op: "eq", field: "runId", value: place.runId },
-            { op: "eq", field: "stepKey", value: place.stepKey },
-        ],
-    },
-    order: [["id", "asc"]],
-    page: { size: STEP_RECORDS_READ },
-})
 
 /** One effect a run step made, as the ledger kept it: what ran, with what, what it touched and answered, and when. */
 export interface LedgerRecord {
@@ -207,9 +178,9 @@ type UnknownKept = { readonly kept: true } | { readonly kept: false; readonly ca
 
 @Injectable()
 /**
- * The ledger that makes a node's effect act once, kept as `agent.node-effect` records through the entity engine. Before acting, a key
- * already written answers its subject and the facts it answered; the act itself runs outside any transaction (an effect may call a
- * door, BE-PERSISTENCE-6); after acting, the subject is written once under the entity's unique key, with the run, the step, the
+ * The ledger that makes a node's effect act once, kept as rows of the core table `agent_node_effects` (`NODE_EFFECT_STORE`). Before
+ * acting, a key already written answers its subject and the facts it answered; the act itself runs outside any transaction (an effect may
+ * call a door, BE-PERSISTENCE-6); after acting, the subject is written once under the unique key (insert or nothing), with the run, the step, the
  * arguments and the facts of the call (D.1: what a step already did is read back from here, across conversations and attempts), and
  * when two runs raced, both answer the subject of the record that won. A refusal (`{ kind: "refused" }`) is never written: it changed
  * nothing, and a kept refusal would be replayed for ever. An act that ends with an outcome nobody knows is written as such and answers
@@ -218,8 +189,7 @@ type UnknownKept = { readonly kept: true } | { readonly kept: false; readonly ca
  */
 export class GraphNodeEffectsService {
     constructor(
-        private readonly engine: EntityEngineService,
-        private readonly mutations: EntityMutationService,
+        @InjectNodeEffectStore() private readonly store: NodeEffectStore,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -247,11 +217,12 @@ export class GraphNodeEffectsService {
         }
         const place = record.place ?? placeOf(call.key)
         const args = ledgerJsonOf(record.args)
-        const values: LedgerJson = {
+        const values: Omit<EffectInsert, "subjectEntity" | "subjectId" | "facts"> = {
             effectKey: ledgerKey,
             effectId: effect,
-            ...(place === null ? {} : { runId: place.runId, stepKey: place.stepKey }),
-            ...(args === null ? {} : { args }),
+            runId: place?.runId ?? null,
+            stepKey: place?.stepKey ?? null,
+            args,
         }
         const subject = await act().catch(async (cause: unknown) => {
             const code = unknownCodeOf(cause)
@@ -261,24 +232,15 @@ export class GraphNodeEffectsService {
         // A refusal is an answer, not an act: nothing is kept under the key, so the call asked again later is really made again.
         if (isRefused(subject)) return subject
         const facts = ledgerJsonOf(subject.facts)
-        const written = await this.engine.scoped(workspaceId, (tx) =>
-            this.mutations.mutate(
-                tx,
-                {
-                    op: "insert",
-                    entity: LEDGER,
-                    values: {
-                        ...values,
-                        subjectEntity: subject.kind,
-                        subjectId: subject.id,
-                        ...(facts === null ? {} : { facts }),
-                    },
-                },
-                "job",
-            ),
-        )
-        if (written.ok) return subject
-        const winner = written.reason === "taken" ? await this.recorded(workspaceId, ledgerKey) : null
+        const written = await this.store.insert(workspaceId, {
+            ...values,
+            subjectEntity: subject.kind,
+            subjectId: subject.id,
+            facts,
+        })
+        if (written) return subject
+        // Another try wrote the key first: both answer the subject of the row that won.
+        const winner = await this.recorded(workspaceId, ledgerKey)
         if (winner?.effect !== effect) {
             throw new GraphNodesError({ code: GraphNodesErrorCode.EffectNotRecorded, params: { effect } })
         }
@@ -295,22 +257,19 @@ export class GraphNodeEffectsService {
         place: CallPlace,
         effects: ReadonlyArray<string>,
     ): Promise<ReadonlyArray<LedgerRecord>> {
-        const page = await this.engine.scoped(workspaceId, (tx) => this.engine.list(tx, stepQueryOf(place), STEP_SCOPE))
-        return page.rows.flatMap(({ row }) => {
-            const kept = keptOf(row.data)
-            return kept === null || !effects.includes(kept.effect)
+        const rows = await this.store.ofStep(workspaceId, place.runId, place.stepKey, STEP_RECORDS_READ)
+        return rows.flatMap((row) => {
+            const kept = keptOf(row)
+            return !effects.includes(kept.effect)
                 ? []
-                : [{ effect: kept.effect, args: recordOf(row.data.args), subject: kept.subject, at: row.createdAt }]
+                : [{ effect: kept.effect, args: row.args, subject: kept.subject, at: row.createdAt }]
         })
     }
 
     /** What the ledger kept for a key, or null when the key is not written. */
     private async recorded(workspaceId: string, ledgerKey: string): Promise<Kept | null> {
-        const page = await this.engine.scoped(workspaceId, (tx) =>
-            this.engine.list(tx, lookupOf(ledgerKey), LOOKUP_SCOPE),
-        )
-        const [first] = page.rows
-        return first === undefined ? null : keptOf(first.row.data)
+        const row = await this.store.byKey(workspaceId, ledgerKey)
+        return row === null ? null : keptOf(row)
     }
 
     /**
@@ -318,19 +277,13 @@ export class GraphNodeEffectsService {
      * error is what the caller gets either way (a failed keep is answered, not thrown, so it never hides that error); a key another
      * attempt wrote meanwhile keeps what that attempt wrote.
      */
-    private keepUnknown(workspaceId: string, values: LedgerJson, code: string): Promise<UnknownKept> {
-        return this.engine
-            .scoped(workspaceId, (tx) =>
-                this.mutations.mutate(
-                    tx,
-                    {
-                        op: "insert",
-                        entity: LEDGER,
-                        values: { ...values, subjectEntity: OUTCOME_UNKNOWN_KIND, subjectId: code, facts: { code } },
-                    },
-                    "job",
-                ),
-            )
+    private keepUnknown(
+        workspaceId: string,
+        values: Omit<EffectInsert, "subjectEntity" | "subjectId" | "facts">,
+        code: string,
+    ): Promise<UnknownKept> {
+        return this.store
+            .insert(workspaceId, { ...values, subjectEntity: OUTCOME_UNKNOWN_KIND, subjectId: code, facts: { code } })
             .then(
                 (): UnknownKept => ({ kept: true }),
                 (cause: unknown): UnknownKept => ({ kept: false, cause }),

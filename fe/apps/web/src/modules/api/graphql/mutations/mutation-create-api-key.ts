@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { CreateApiKeyMutation, CreateApiKeyMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `createApiKey` mutation. */
@@ -21,6 +20,11 @@ const mutation1: TypedDocumentNode<MutateCreateApiKeyResponse, InputVariables<Mu
                 createdAt
                 lastUsedAt
                 revokedAt
+                agentId
+                kind
+                endpointUrl
+                holderId
+                holderName
             }
         }
     }
@@ -46,7 +50,7 @@ export const mutateCreateApiKey = async ({
     request,
     signal,
 }: MutateCreateApiKeyParams): Promise<ApolloClient.MutateResult<MutateCreateApiKeyResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],
         variables: { input: request },

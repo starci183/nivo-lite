@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common"
 import { DataHubApiModule } from "../../data-hub.module"
 import { ConfigurableModuleClass } from "./data-hub-graphql.module-definition"
 import { RequestDataSyncResolver } from "./request-data-sync.resolver"
-import { SetSyncScheduleResolver } from "./set-sync-schedule.resolver"
 import { DataSyncRunResolver } from "./data-sync-run.resolver"
 import { PreviewCsvSourceResolver } from "./preview-csv-source.resolver"
 import { LoadCsvImportResolver } from "./load-csv-import.resolver"
@@ -15,10 +14,9 @@ import { LoadDatabaseConnectionResolver } from "./load-database-connection.resol
 import { TestImapConnectionResolver } from "./test-imap-connection.resolver"
 import { SaveImapConnectionResolver } from "./save-imap-connection.resolver"
 import { LoadImapConnectionResolver } from "./load-imap-connection.resolver"
-import { LoadOpenApiSpecResolver } from "./load-open-api-spec.resolver"
-import { TestOpenApiOperationResolver } from "./test-open-api-operation.resolver"
-import { LoadOpenApiConnectionResolver } from "./load-open-api-connection.resolver"
-import { SaveOpenApiConnectionResolver } from "./save-open-api-connection.resolver"
+import { SaveCrmConnectionResolver } from "./save-crm-connection.resolver"
+import { LoadCrmTemplatesResolver } from "./load-crm-templates.resolver"
+import { LoadCrmConnectionResolver } from "./load-crm-connection.resolver"
 import { TelegramUserReadyResolver } from "./telegram-user-ready.resolver"
 import { LoadTelegramUserSetupResolver } from "./load-telegram-user-setup.resolver"
 import { StartTelegramLoginResolver } from "./start-telegram-login.resolver"
@@ -33,7 +31,6 @@ import { SaveTelegramUserSetupResolver } from "./save-telegram-user-setup.resolv
     imports: [DataHubApiModule.register({})],
     providers: [
         RequestDataSyncResolver,
-        SetSyncScheduleResolver,
         DataSyncRunResolver,
         PreviewCsvSourceResolver,
         LoadCsvImportResolver,
@@ -46,10 +43,9 @@ import { SaveTelegramUserSetupResolver } from "./save-telegram-user-setup.resolv
         TestImapConnectionResolver,
         SaveImapConnectionResolver,
         LoadImapConnectionResolver,
-        LoadOpenApiSpecResolver,
-        TestOpenApiOperationResolver,
-        LoadOpenApiConnectionResolver,
-        SaveOpenApiConnectionResolver,
+        SaveCrmConnectionResolver,
+        LoadCrmTemplatesResolver,
+        LoadCrmConnectionResolver,
         TelegramUserReadyResolver,
         LoadTelegramUserSetupResolver,
         StartTelegramLoginResolver,

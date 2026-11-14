@@ -1,7 +1,6 @@
 export { useConsoleNav } from "./useConsoleNav"
 export { useSignOut } from "./useSignOut"
 export { useConsoleSession } from "./useConsoleSession"
-export { useConsoleSessionRead } from "./useConsoleSessionRead"
 export { useCurrentConsoleSession } from "./useCurrentConsoleSession"
 export { useConsoleGate } from "./useConsoleGate"
 export { useRailCollapsed } from "./useRailCollapsed"

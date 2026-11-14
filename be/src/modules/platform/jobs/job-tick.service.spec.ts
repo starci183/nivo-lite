@@ -5,7 +5,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { JobsErrorCode } from "./errors/jobs.error"
+import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import { JOB_TICKS } from "./job-ticks.contracts"
 import type { JobTick } from "./job-ticks.contracts"
 import { JOB_TICK_SCHEDULER, JOBS_MANAGERS } from "./jobs.decorators"
@@ -122,7 +122,7 @@ describe("JobTickService", () => {
 
     it("logs a failed firing by the name of the tick", async () => {
         const { ticks, logger, scheduler } = await build(true)
-        const cause = new Error("redis down")
+        const cause = new JobsError({ code: JobsErrorCode.ConnectionMissing })
         ticks.onApplicationBootstrap()
         const [, , onError] = scheduler.schedule.mock.calls[0] ?? []
 
@@ -133,9 +133,9 @@ describe("JobTickService", () => {
 })
 
 describe("JOB_TICKS", () => {
-    it("holds the 14 ticks, each with a unique name and a five-field UTC cron expression", () => {
-        expect(JOB_TICKS).toHaveLength(14)
-        expect(new Set(JOB_TICKS.map((tick) => tick.name)).size).toBe(14)
+    it("holds the 12 ticks, each with a unique name and a five-field UTC cron expression", () => {
+        expect(JOB_TICKS).toHaveLength(12)
+        expect(new Set(JOB_TICKS.map((tick) => tick.name)).size).toBe(12)
         for (const tick of JOB_TICKS) {
             expect(tick.timeZone).toBe("UTC")
             expect(tick.cron.split(" ")).toHaveLength(5)
@@ -160,7 +160,7 @@ describe("cronSchedulerOf", () => {
 
     it("hands a failed firing to the error handler", async () => {
         const registry = mock<SchedulerRegistry>()
-        const cause = new Error("redis down")
+        const cause = new JobsError({ code: JobsErrorCode.ConnectionMissing })
         const onError = jest.fn()
 
         cronSchedulerOf(registry).schedule(TICK, () => Promise.reject(cause), onError)

@@ -1,6 +1,5 @@
 import type { AiFailure } from "@modules/integrations/ai"
-import { AiTasksError } from "./errors/ai-tasks.error"
-import type { AiTasksErrorCode } from "./errors/ai-tasks.error"
+import { AiTasksError, type AiTasksErrorCode } from "./errors/ai-tasks.error"
 
 /**
  * The tries one model call gets in all, the first included: an AI failure (the deadline, a cut or empty answer, the provider, an
@@ -46,11 +45,17 @@ export const triesRemain = (tries: Tries): boolean => tries.made < MODEL_TRIES
 export const failedTries = (code: AiTasksErrorCode, tries: Tries): AiTasksError =>
     new AiTasksError({ code, params: { tries: tries.made, failures: tries.failures.join(", ") } })
 
+/** The fallback ask of a try: `fallback: true` when it takes the next protocol, nothing when it keeps its client. */
+export interface FallbackAsk {
+    /** True when the try takes its name's client through the next protocol; absent when it keeps its client. */
+    readonly fallback?: true
+}
+
 /**
  * Whether a try takes its name's client through the next protocol (`AiTurnRequest.fallback`): only a retry whose previous try failed
  * at the provider or ran out of time. A profile whose candidates speak one protocol has no next one, and the try keeps its client.
  */
-export const fallbackOf = (tries: Tries): { readonly fallback?: true } => {
+export const fallbackOf = (tries: Tries): FallbackAsk => {
     const last = tries.failures.at(-1)
     return last === "provider" || last === "timeout" ? { fallback: true } : {}
 }

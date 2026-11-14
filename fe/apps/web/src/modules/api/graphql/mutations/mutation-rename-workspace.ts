@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { RenameWorkspaceMutation, RenameWorkspaceMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `renameWorkspace` mutation. */
@@ -33,7 +32,7 @@ type MutateRenameWorkspaceParams = MutateParams<MutationRenameWorkspace, MutateR
 export const mutateRenameWorkspace = (
     params: MutateRenameWorkspaceParams,
 ): Promise<ApolloClient.MutateResult<MutateRenameWorkspaceResponse>> =>
-    createAuthApolloClient({ signal: params.signal, headers: params.headers }).mutate({
+    createAuthApolloClient(webApiTransport, { signal: params.signal, headers: params.headers }).mutate({
         mutation: mutationMap[params.mutation ?? MutationRenameWorkspace.Mutation1],
         variables: { input: params.request },
     })

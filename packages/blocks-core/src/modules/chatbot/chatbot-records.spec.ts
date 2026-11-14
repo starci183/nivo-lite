@@ -1,18 +1,11 @@
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { conversationEntity } from "../../entities/chat/conversation.entity"
-import { messageEntity } from "../../entities/chat/message.entity"
 import { chatSettingsEntity } from "../../entities/chat/settings.entity"
-import { leadEntity } from "../../entities/sales/lead.entity"
-import {
-    CONVERSATION_FIELDS,
-    LEAD_FIELDS,
-    MESSAGE_FIELDS,
-    leadFactsOf,
-    SETTINGS_FIELDS,
-    messageRecordOf,
-    settingsOf,
-    threadRowOf,
-} from "./chatbot-records"
+import { CONVERSATION_FIELDS, SETTINGS_FIELDS, settingsOf, threadRowOf } from "./chatbot-records"
+
+// Design change (owner ruling R26, MESSAGES-PLAN section 4): the chatbot keeps no line record (`blocks-core.chatbot.message` is gone) and
+// the chat keeps no tail (`lastText`, `lastRole`, `messageCount`): the words are the engine's.
+// Design change (ruling R43): the chat keeps no holder (`handledBy`, `handledAt`): the staff hold is the engine's route.
 
 const recordOf = (data: Readonly<Record<string, unknown>>): RecordRow => ({
     id: "r1",
@@ -26,30 +19,13 @@ const recordOf = (data: Readonly<Record<string, unknown>>): RecordRow => ({
 const CONVERSATION = {
     name: "Minh Anh",
     channel: "zalo",
-    externalId: "849",
+    contactId: null,
+    routeId: null,
+    startedAt: "2026-11-05T00:00:00.000Z",
     status: "needs",
     waiting: true,
     unanswered: true,
-    handledBy: null,
-    handledAt: null,
-    lastText: "Hello",
-    lastRole: "user",
     lastAt: "2026-11-05T00:00:00.000Z",
-    messageCount: 3,
-}
-
-const LINE = {
-    conversationId: "c1",
-    role: "agent",
-    text: "Hi",
-    sentAt: "2026-11-05T00:00:00.000Z",
-    authorKind: "human",
-    authorName: "Ha",
-    authorUserId: "m1",
-    status: "posted",
-    deliveryStatus: "sent",
-    deliveryError: null,
-    sentBy: "agent-1",
 }
 
 describe("threadRowOf", () => {
@@ -58,93 +34,24 @@ describe("threadRowOf", () => {
     })
 
     it("reads a nullable field the engine left out as null", () => {
-        const { externalId, handledBy, handledAt, lastRole, lastAt, ...required } = CONVERSATION
-        expect([externalId, handledBy, handledAt, lastRole, lastAt]).toHaveLength(5)
+        const { startedAt, lastAt, ...required } = CONVERSATION
+        expect([startedAt, lastAt]).toHaveLength(2)
         expect(threadRowOf(recordOf(required))).toMatchObject({
-            externalId: null,
-            handledBy: null,
-            handledAt: null,
-            lastRole: null,
+            startedAt: null,
             lastAt: null,
         })
     })
 
     it("answers null for fields that are not a conversation's", () => {
         expect(threadRowOf(recordOf({ ...CONVERSATION, channel: "mail" }))).toBeNull()
-        expect(threadRowOf(recordOf({ ...CONVERSATION, messageCount: -1 }))).toBeNull()
+        expect(threadRowOf(recordOf({ ...CONVERSATION, waiting: "yes" }))).toBeNull()
         expect(threadRowOf(recordOf({}))).toBeNull()
     })
 })
 
-describe("messageRecordOf", () => {
-    it("reads the fields of a line record with its id and version", () => {
-        expect(messageRecordOf(recordOf(LINE))).toEqual({ id: "r1", version: "4", ...LINE })
-    })
-
-    it("reads a nullable field the engine left out as null", () => {
-        const { authorKind, authorName, authorUserId, deliveryStatus, deliveryError, sentBy, ...required } = LINE
-        expect([authorKind, authorName, authorUserId, deliveryStatus, deliveryError, sentBy]).toHaveLength(6)
-        const { status, ...withoutStatus } = required
-        expect(status).toBe("posted")
-        expect(messageRecordOf(recordOf(withoutStatus))).toMatchObject({
-            status: "posted",
-            authorKind: null,
-            authorName: null,
-            authorUserId: null,
-            deliveryStatus: null,
-            deliveryError: null,
-            sentBy: null,
-        })
-    })
-
-    it("reads the pictures kept in an object as a list, and the order card as the order of the line", () => {
-        const files = [{ id: "file-1", url: "https://api/p/1/image", name: "Pot", contentType: "image/jpeg" }]
-        const orderCard = {
-            orderNo: "DH-1",
-            lines: [{ name: "Pot", qty: 1, imageUrl: "https://api/p/1/image" }],
-            amountText: "1.000",
-            address: "",
-            paid: false,
-        }
-        const read = messageRecordOf(recordOf({ ...LINE, files: { items: files }, orderCard }))
-        expect(read?.files).toEqual(files)
-        expect(read?.order).toEqual(orderCard)
-        expect(read).not.toHaveProperty("orderCard")
-        const plain = messageRecordOf(recordOf({ ...LINE, files: null, orderCard: null }))
-        expect(plain?.files).toBeUndefined()
-        expect(plain).not.toHaveProperty("order")
-    })
-
-    it("answers null for fields that are not a line's", () => {
-        expect(messageRecordOf(recordOf({ ...LINE, role: "robot" }))).toBeNull()
-    })
-})
-
-describe("leadFactsOf", () => {
-    const joined = { id: "l1", data: { contactName: "Minh Anh", stage: "new", company: "Lotus" } }
-
-    it("reads the facts of a joined customer, the missing ones as null", () => {
-        expect(leadFactsOf(joined)).toEqual({
-            contactName: "Minh Anh",
-            stage: "new",
-            company: "Lotus",
-            need: null,
-            phone: null,
-            email: null,
-        })
-    })
-
-    it("answers null when there is no link or the fields are not a customer's", () => {
-        expect(leadFactsOf(null)).toBeNull()
-        expect(leadFactsOf({ id: "l1", data: { contactName: 5 } })).toBeNull()
-    })
-})
-
 describe("the selected fields", () => {
-    it("name declared fields of the entities, so a query selects only what exists", () => {
+    it("name declared fields of the entity, so a query selects only what exists", () => {
         expect(CONVERSATION_FIELDS.filter((name) => !(name in conversationEntity.fields))).toEqual([])
-        expect(MESSAGE_FIELDS.filter((name) => !(name in messageEntity.fields))).toEqual([])
-        expect(LEAD_FIELDS.filter((name) => !(name in leadEntity.fields))).toEqual([])
     })
 })
 

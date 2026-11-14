@@ -2,6 +2,16 @@ import { EnvSource } from "@modules/platform/config"
 import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { agentLoopNodesOf, parseAgentLoopConfig } from "./graph-nodes.config"
 
+/** What `run` throws, or undefined when it does not throw. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 describe("AGENT_LOOP", () => {
     it("names no node when it is not set or blank: the JSON loop runs every step", () => {
         expect(agentLoopNodesOf(undefined)).toEqual({ kind: "ok", nodes: [] })
@@ -26,7 +36,7 @@ describe("AGENT_LOOP", () => {
         ["a bare id", "chatbot.answer", "chatbot.answer"],
     ])("refuses %s, naming it, so the app does not start half switched", (_what, value, name) => {
         expect(agentLoopNodesOf(value)).toEqual({ kind: "invalid", name })
-        expect(() => parseAgentLoopConfig(new EnvSource({ AGENT_LOOP: value }))).toThrow(
+        expect(thrownBy(() => parseAgentLoopConfig(new EnvSource({ AGENT_LOOP: value })))).toEqual(
             expect.objectContaining({ code: GraphNodesErrorCode.AgentLoopFlagInvalid, params: { name } }),
         )
     })

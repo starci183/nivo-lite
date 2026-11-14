@@ -80,6 +80,20 @@ export interface UsageInput {
     readonly reported?: boolean | undefined
 }
 
+/** The call facts the knowledge meter books through its SQL writer (`workFactsJsonOf`); each absent one is booked null. */
+export interface MeterCallFacts {
+    /** Which try of the call this was, from one. */
+    readonly tryNumber?: number | null
+    /** The wall time of the try, milliseconds. */
+    readonly durationMs?: number | null
+    /** The call kind. */
+    readonly purpose?: string | null
+    /** The upstream of the endpoint that served the try. */
+    readonly upstream?: string | null
+    /** Why the model stopped (`end_turn`, `stop`, `max_tokens`). */
+    readonly finishReason?: string | null
+}
+
 /** What one model call was and how it went, beside what it cost: what the run page shows per call kind. */
 export interface UsageCallFacts {
     /** The call kind: `<node id>:<tag>` of a graph node's call (e.g. `accounting.match-payment:agent`); null for a fixed task. */
@@ -143,7 +157,7 @@ export interface RunCallKindUsage {
     readonly slowestMs: number | null
     /** The exact cost of the answers in USD. */
     readonly costUsd: number
-    /** The credits of the answers as a fraction (`creditsExact`): never rounded per call. */
+    /** The credits of the answers as a fraction (`creditsOf`): never rounded per call. */
     readonly credits: number
     /** The credits of the failed tries as a fraction (estimated, not billed today). */
     readonly failedCredits: number
@@ -343,4 +357,24 @@ export interface RunAiTotals {
     readonly failedCostUsd: number
     /** The credits of the failed tries, a fraction. */
     readonly failedCredits: number
+}
+
+/** One plain notice to the founder: the words, and the key that makes a repeat of the same month and level one line. */
+export interface UsageNoticeLine {
+    /** What the notice is about and which episode: the same key is the same line, written once. */
+    readonly key: string
+    /** The words, already in the founder's language. */
+    readonly body: string
+}
+
+/** How a notice went: posted now, already posted for its key, or not posted (the workspace has no owner). */
+export type UsageNoticePosted = "posted" | "already" | "no_owner"
+
+/**
+ * Where the founder is told the allowance runs short: the app binds NIVO's own notice in /chat (the team chat's notices) at composition,
+ * so this capability never imports the chat.
+ */
+export interface UsageNoticeDoor {
+    /** Tells the founder of a workspace one plain line, once per key. */
+    postNotice(workspaceId: string, notice: UsageNoticeLine): Promise<UsageNoticePosted>
 }

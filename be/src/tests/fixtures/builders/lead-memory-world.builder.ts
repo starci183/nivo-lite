@@ -34,20 +34,20 @@ export interface LeadMemoryWorld {
 /** The memory namespace of the Sales consult workflow. */
 const CONSULT_NAMESPACE = "sales.consult"
 
-const LEAD_KEY = "lead:"
+const CONTACT_KEY = "contact:"
 const CONVERSATION_KEY = "conversation:"
 
-/** The keys a customer's entries may sit under: their lead, then their conversation. */
+/** The keys a person's entries may sit under: their contact, then their conversation. */
 const keysOf = (subject: MemorySubject): ReadonlyArray<string> => [
     subject.key,
-    ...(subject.leadId === null ? [] : [`${LEAD_KEY}${subject.leadId}`]),
+    ...(subject.contactId === null ? [] : [`${CONTACT_KEY}${subject.contactId}`]),
     ...(subject.conversationId === null ? [] : [`${CONVERSATION_KEY}${subject.conversationId}`]),
 ]
 
-/** The facts the lead record itself holds, as the engine's lead memory reads them: the name; never a delivery detail of the record. */
+/** The facts the contact itself holds, as the engine's memory reads them: the name; never a delivery detail. */
 const factsOfLead = (lead: NodeRow | undefined): Readonly<Partial<Record<LeadFact, JsonValue>>> => {
     if (lead === undefined) return {}
-    const wanted: ReadonlyArray<[LeadFact, unknown]> = [["name", lead.contactName]]
+    const wanted: ReadonlyArray<[LeadFact, unknown]> = [["name", lead.displayName]]
     return Object.fromEntries(wanted.filter(([, value]) => typeof value === "string" && value !== ""))
 }
 
@@ -57,7 +57,7 @@ const seededEntriesOf = (store: Record<string, Array<NodeRow>>): Array<Entry> =>
         typeof lead.consultStage === "string" && typeof lead.id === "string"
             ? [
                   {
-                      subjectKey: `${LEAD_KEY}${lead.id}`,
+                      subjectKey: `${CONTACT_KEY}${lead.id}`,
                       namespace: CONSULT_NAMESPACE,
                       nodeKey: "consult",
                       memory: {
@@ -73,6 +73,19 @@ const seededEntriesOf = (store: Record<string, Array<NodeRow>>): Array<Entry> =>
             : [],
     )
 
+/**
+ * The facts a world seeded straight into the memory table (`store["agent-lead-memory"]`, rows of `entryKey` + `output.value`) under a
+ * subject key: what a facts entry the engine wrote before the run holds.
+ */
+const seededFactsOf = (store: Record<string, Array<NodeRow>>, subjectKey: string): Record<string, JsonValue> =>
+    (store["agent-lead-memory"] ?? [])
+        .filter((row) => row.entryKey === `${subjectKey}|$lead|$facts`)
+        .reduce<Record<string, JsonValue>>((all, row) => {
+            const output = row.output
+            const value: unknown = typeof output === "object" && output !== null ? Reflect.get(output, "value") : undefined
+            return typeof value === "object" && value !== null && !Array.isArray(value) ? { ...all, ...(value as Record<string, JsonValue>) } : all
+        }, {})
+
 /** The snapshot of a customer: the facts (the lead record's under the ones nodes proved) and the latest outcome of each node. */
 const snapshotOf = (
     store: Record<string, Array<NodeRow>>,
@@ -81,11 +94,11 @@ const snapshotOf = (
     subject: MemorySubject,
 ): LeadMemorySnapshot | null => {
     const keys = keysOf(subject)
-    const lead = (store["sales-lead"] ?? []).find((row) => row.id === subject.leadId)
+    const lead = (store["contact"] ?? []).find((row) => row.id === subject.contactId)
     const own = entries.filter((entry) => keys.includes(entry.subjectKey))
     const proved = keys
         .toReversed()
-        .reduce<Record<string, JsonValue>>((all, key) => ({ ...all, ...facts.get(key) }), {})
+        .reduce<Record<string, JsonValue>>((all, key) => ({ ...all, ...seededFactsOf(store, key), ...facts.get(key) }), {})
     if (own.length === 0 && lead === undefined && Object.keys(proved).length === 0) return null
     // Entries under the lead win over the ones still under the conversation: write the conversation's first.
     const ordered = own.toSorted(
@@ -118,7 +131,7 @@ const writeTo = (entries: Array<Entry>, facts: Facts, one: MemoryWrite): void =>
 /** Moves the entries and facts of a conversation to the lead it became; the lead's own entries win. */
 const adoptInto = (entries: Array<Entry>, facts: Facts, conversationId: string, leadId: string): void => {
     const from = `${CONVERSATION_KEY}${conversationId}`
-    const to = `${LEAD_KEY}${leadId}`
+    const to = `${CONTACT_KEY}${leadId}`
     for (const entry of entries.filter((held) => held.subjectKey === from)) {
         entries.splice(entries.indexOf(entry), 1)
         const taken = entries.some(

@@ -75,15 +75,15 @@ export class AgentRunStepType {
 
     /** What it was given. */
     @Field(() => [AgentRunFactType])
-    input!: Array<AgentRunFactType>
+    input!: ReadonlyArray<AgentRunFactType>
 
     /** What it stored. */
     @Field(() => [AgentRunFactType])
-    output!: Array<AgentRunFactType>
+    output!: ReadonlyArray<AgentRunFactType>
 
     /** The door calls it made. */
     @Field(() => [AgentRunCallType])
-    calls!: Array<AgentRunCallType>
+    calls!: ReadonlyArray<AgentRunCallType>
 }
 
 @ObjectType()
@@ -111,7 +111,7 @@ export class AgentRunItemType {
 
     /** What the proposal carried as evidence. */
     @Field(() => [AgentRunFactType])
-    evidence!: Array<AgentRunFactType>
+    evidence!: ReadonlyArray<AgentRunFactType>
 
     /** The failure, or null. */
     @Field(() => String, { nullable: true })
@@ -125,11 +125,18 @@ export class AgentRunAiCallType {
     @Field(() => String, { nullable: true })
     stepKey!: string | null
 
-    /** Every try booked: the answers and the failed tries ("Lượt"). */
+    /**
+     * The words of the call kind in the reader's language, from blocks-core (a node's call by its step's title, the engine's own call
+     * by its words); null when blocks-core has none (the page then uses its own words, never the raw kind).
+     */
+    @Field(() => String, { nullable: true })
+    label!: string | null
+
+    /** Every try booked: the answers and the failed tries (the "tries" column). */
     @Field(() => Int)
     tries!: number
 
-    /** The failed tries (timeout, provider error, cut, empty, not JSON), booked estimated and never billed ("Thử lại"). */
+    /** The failed tries (timeout, provider error, cut, empty, not JSON), booked estimated and never billed (the "retries" column). */
     @Field(() => Int)
     failedTries!: number
 
@@ -155,11 +162,11 @@ export class AgentRunAiCallType {
 
     /** The failure codes of the failed tries, sorted, without repeats. */
     @Field(() => [String])
-    failures!: Array<string>
+    failures!: ReadonlyArray<string>
 
     /** The kinds of work the calls served (`node`, `engine_core`), sorted, without repeats. */
     @Field(() => [String])
-    workKinds!: Array<string>
+    workKinds!: ReadonlyArray<string>
 
     /** The call kind: a node's `<node id>:<tag>` (`accounting.match-payment:agent`), or the usage kind of a fixed task. */
     @Field()
@@ -203,27 +210,27 @@ export class AgentRunAiCallType {
 
     /** The upstreams that served them, sorted, without repeats. */
     @Field(() => [String])
-    upstreams!: Array<string>
+    upstreams!: ReadonlyArray<string>
 
     /** Why the model stopped, sorted, without repeats. */
     @Field(() => [String])
-    finishReasons!: Array<string>
+    finishReasons!: ReadonlyArray<string>
 
     /** The models that served the calls, sorted, without repeats. */
     @Field(() => [String])
-    models!: Array<string>
+    models!: ReadonlyArray<string>
 
     /** What the node declared (`auto` or a model id), sorted, without repeats; empty for a fixed task. */
     @Field(() => [String])
-    declaredModels!: Array<string>
+    declaredModels!: ReadonlyArray<string>
 
     /** The providers of the models that served them, sorted, without repeats. */
     @Field(() => [String])
-    modelProviders!: Array<string>
+    modelProviders!: ReadonlyArray<string>
 
     /** Why the calls went to those models, sorted, without repeats. */
     @Field(() => [String])
-    modelReasons!: Array<string>
+    modelReasons!: ReadonlyArray<string>
 }
 
 @ObjectType()
@@ -279,6 +286,34 @@ export class AgentRunAiTotalsType {
 }
 
 @ObjectType()
+/** One truth a read of the truth graph served during a run: the fact and the version the agent read. */
+export class AgentRunTruthFactType {
+    /** The fact. */
+    @Field(() => ID)
+    factId!: string
+
+    /** Its version when it was read, or null when the store never numbered it. */
+    @Field(() => Int, { nullable: true })
+    version!: number | null
+}
+
+@ObjectType()
+/** One read of the truth graph a run's agent made (the "read" list): the tool, when, and the truths it served, in answer order. */
+export class AgentRunTruthReadType {
+    /** The full tool name (`nivo.tool.brain.search`, `nivo.tool.brain.fact.get`...). */
+    @Field()
+    tool!: string
+
+    /** When it read, ISO 8601. */
+    @Field()
+    at!: string
+
+    /** The truths it served. */
+    @Field(() => [AgentRunTruthFactType])
+    facts!: ReadonlyArray<AgentRunTruthFactType>
+}
+
+@ObjectType()
 /** One run with its steps and the work item it is about. */
 export class AgentRunDetailType {
     /** The run as the list draws it. */
@@ -287,7 +322,7 @@ export class AgentRunDetailType {
 
     /** The steps in order. */
     @Field(() => [AgentRunStepType])
-    steps!: Array<AgentRunStepType>
+    steps!: ReadonlyArray<AgentRunStepType>
 
     /** The work item the run is about, or null. */
     @Field(() => AgentRunItemType, { nullable: true })
@@ -307,9 +342,13 @@ export class AgentRunDetailType {
 
     /** Its model calls per step and call kind, in the order of their first call. */
     @Field(() => [AgentRunAiCallType])
-    aiCalls!: Array<AgentRunAiCallType>
+    aiCalls!: ReadonlyArray<AgentRunAiCallType>
 
     /** The run's model use in total. */
     @Field(() => AgentRunAiTotalsType)
     aiTotals!: AgentRunAiTotalsType
+
+    /** What the run's agents read of the truth graph, oldest first; empty when none (or before the record existed). */
+    @Field(() => [AgentRunTruthReadType])
+    truthReads!: ReadonlyArray<AgentRunTruthReadType>
 }

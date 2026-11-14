@@ -12,9 +12,10 @@ import {
     workflowStoppedKind,
     type AgentMessageKind,
     type ApprovalDecisionPayload,
-} from "../../agent-message/agent-message-kinds"
+} from "@nivo-lite/agent-sdk/team-chat"
 import { keyedRows } from "../../agent-message/agent-message-rows"
 import { AgentMessageFacts } from "./AgentMessageFacts"
+import { ApprovalDecisionBody, PreviewOf } from "./ApprovalDecisionBody"
 import type { AgentMessageWords } from "./agent-message-words"
 
 /** What a view is given besides the payload: the message it belongs to and the words of the viewer's language. */
@@ -23,6 +24,8 @@ export interface AgentMessageViewContext {
     readonly record: AgentMessageRecord
     /** The words of the card. */
     readonly words: AgentMessageWords
+    /** Every view the card may use: a preview a package registered is drawn by the view of its kind. */
+    readonly views: ReadonlyArray<AgentMessageView>
 }
 
 /** What the editor of a payload is given: the payload, its words, and the two ways out. */
@@ -58,6 +61,8 @@ export interface AgentMessageView {
     readonly connectionHref?: (payload: unknown) => string
     /** The editor of a kind whose edit mode is `inline`. */
     readonly editor?: (props: AgentMessageEditorProps) => ReactNode
+    /** True when the way to the message's work stands in the head of the card as a link, not as a button under the content (a notice about one record, such as an order). */
+    readonly workInHead?: boolean
 }
 
 /**
@@ -106,12 +111,12 @@ const rowsPreview = (payload: unknown): ReactNode => {
         <Stack gap="inline">
             {columns.length === 0 ? null : (
                 <Text size="sm" tone="muted">
-                    {columns.join(" · ")}
+                    {columns.join(" \u00b7 ")}
                 </Text>
             )}
             {keyedRows(rows).map((row) => (
                 <Text key={row.key} size="sm">
-                    {row.cells.join(" · ")}
+                    {row.cells.join(" \u00b7 ")}
                 </Text>
             ))}
         </Stack>
@@ -128,6 +133,14 @@ const wordsPreview =
         return words === "" ? null : <Text size="sm">{words}</Text>
     }
 
+/** The approval: the brief, the bordered list of what is asked, the preview a package drew and the technical fold. */
+const approvalPreview = (payload: unknown, context: AgentMessageViewContext): ReactNode => {
+    const parsed = approvalDecisionKind.payload.safeParse(payload)
+    const data: ApprovalDecisionPayload = parsed.success ? parsed.data : {}
+    const brief = (data.text ?? "") === "" ? context.record.summary : (data.text ?? "")
+    return <ApprovalDecisionBody payload={data} brief={brief} context={context} />
+}
+
 /** The stopped workflow: the reason, the question, then the engine's facts folded (raw values only under the technical fold). The suggestions are the card's reply buttons. */
 const stoppedPreview = (payload: unknown, context: AgentMessageViewContext): ReactNode => {
     const parsed = workflowStoppedKind.payload.safeParse(payload)
@@ -137,6 +150,7 @@ const stoppedPreview = (payload: unknown, context: AgentMessageViewContext): Rea
         <Stack gap="inline">
             <Text size="sm">{reason}</Text>
             {question === null ? null : <Text size="sm">{question}</Text>}
+            <PreviewOf preview={parsed.data.preview} context={context} />
             <AgentMessageFacts facts={facts} words={context.words} fallbackLabel={context.record.title} />
         </Stack>
     )
@@ -164,7 +178,7 @@ const connectionOf = (payload: unknown): string => {
 export const coreAgentMessageViews: ReadonlyArray<AgentMessageView> = [
     { kind: messageTextKind, preview: textPreview, editor: TextEditor },
     { kind: recordsRowsKind, preview: rowsPreview },
-    { kind: approvalDecisionKind, preview: wordsPreview(approvalDecisionKind), connectionHref: connectionOf },
+    { kind: approvalDecisionKind, preview: approvalPreview, connectionHref: connectionOf },
     { kind: reportRunKind, preview: wordsPreview(reportRunKind) },
     { kind: workflowStoppedKind, preview: stoppedPreview },
     { kind: reportFactsKind, preview: reportFactsPreview },

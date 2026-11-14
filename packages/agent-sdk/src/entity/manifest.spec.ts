@@ -22,7 +22,7 @@ describe("manifestOf", () => {
                     entity: "sales.lead",
                     partition: "records_sales_lead",
                     view: "v_records_sales_lead",
-                    checks: ["records_sales_lead_name_chk", "records_sales_lead_no_overlap"],
+                    checks: ["records_sales_lead_agent_scope_chk", "records_sales_lead_name_chk", "records_sales_lead_no_overlap"],
                     indexes: ["records_sales_lead_name_trgm_idx", "records_sales_lead_recent_idx"],
                 },
             ],
@@ -32,6 +32,10 @@ describe("manifestOf", () => {
     it("omits what an entity does not have and sorts entities by name", () => {
         const manifest = manifestOf([lead, bare])
         expect(manifest.entities.map((entry) => entry.entity)).toEqual(["chat.message", "sales.lead"])
-        expect(manifest.entities[0]).toEqual({ entity: "chat.message", partition: "records_chat_message" })
+        expect(manifest.entities[0]).toEqual({
+            entity: "chat.message",
+            partition: "records_chat_message",
+            checks: ["records_chat_message_agent_scope_chk"],
+        })
     })
 })

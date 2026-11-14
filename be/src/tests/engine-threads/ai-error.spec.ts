@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { AiTasksService } from "@modules/domain/ai-tasks"
 import type { NodeModelDoor } from "@modules/domain/graph-nodes"
 import { AI, type AiService } from "@modules/integrations/ai"
@@ -12,6 +12,7 @@ import type { AiTaskMeter } from "../../modules/domain/ai-tasks/ai-tasks.port"
 import { NodeImagesService } from "../../modules/domain/ai-tasks/node-images.service"
 import { NotesService } from "../../modules/domain/ai-tasks/notes.service"
 import {
+    ANSWER_NODE,
     AGENT_FIRST_TRY_MS,
     AGENT_RETRY_MS,
     ANSWER,
@@ -26,6 +27,17 @@ import {
     stopsOf,
     threadDbOf,
 } from "./thread-world"
+
+// The world's desk installed beside the core: an agent step that acts itself, on the template road (`thread-desk-plugin.builder.ts`).
+jest.mock("@nivo-lite/plugin-registry", () => {
+    const parts: typeof import("@tests/fixtures/builders/installation-parts.builder") = jest.requireActual(
+        "@tests/fixtures/builders/installation-parts.builder",
+    )
+    const desk: typeof import("@tests/fixtures/builders/thread-desk-plugin.builder") = jest.requireActual(
+        "@tests/fixtures/builders/thread-desk-plugin.builder",
+    )
+    return { installed: parts.installationWith([desk.DESK_PLUGIN], "world-desk") }
+})
 
 // Package 0-9, item 7: the AI's own failure on a thread, through the REAL tries policy (`AiTasksService.nodeJson`: three tries in
 // total) over a scripted AI endpoint. Three failed tries: exactly one engine-written stop of kind `ai_error` with the tries, and the AI
@@ -110,7 +122,7 @@ describe("the AI fails on a thread", () => {
         const model = await aiTasksOver([
             "fails",
             "fails",
-            { answer: { branch: "question", summary: "Lan: gio mo cua" } },
+            { done: { branch: "question", summary: "Lan: gio mo cua" } },
             { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: "Shop mo cua 8h-21h a." } } },
             { done: { reply: "Shop mo cua 8h-21h a." } },
         ])
@@ -130,12 +142,12 @@ describe("the AI fails on a thread", () => {
 // prebuilt agent gets three tries in total through the REAL tries policy (`AiTasksService.nodeAgentTurns` over the REAL `AiService`),
 // 90 s for the first and 45 s for each retry, then the engine's common "AI failed" stop. Nothing the turn failed on reaches the model.
 describe("the AI fails on a turn of the prebuilt agent loop", () => {
-    const ANSWERS = "chatbot.answer"
+    const ANSWERS = ANSWER_NODE
     const timeout = (): Error => Object.assign(new Error("deadline"), { name: "TimeoutError" })
 
     it("three failed tries of one turn: one ai_error stop with the tries and each failure; no fourth call, no AI-core call", async () => {
         const db = threadDbOf()
-        db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+        db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
         db.model.script(ANSWER, timeout(), new Error("502 from the upstream"), { cut: true }, { done: { reply: "never" } })
         const process = await processOf(db, { agentLoop: [ANSWERS] })
 
@@ -163,7 +175,7 @@ describe("the AI fails on a turn of the prebuilt agent loop", () => {
 
     it("two failed tries, then an answer: the turn goes on with that answer and the step completes, no stop", async () => {
         const db = threadDbOf()
-        db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
+        db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
         const reply = "Shop mo cua 8h-21h a."
         db.model.script(
             ANSWER,

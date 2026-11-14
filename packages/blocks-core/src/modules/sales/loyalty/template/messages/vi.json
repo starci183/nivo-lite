@@ -1,0 +1,20 @@
+{
+  "gates.earn_rules.label": "Cách tích điểm",
+  "gates.earn_rules.hint": "Mua bao nhiêu được bao nhiêu điểm, hành động nào khác được điểm.",
+  "gates.tiers.label": "Hạng thành viên",
+  "gates.tiers.hint": "Có hạng nào (ví dụ Đồng, Bạc, Vàng), chi tiêu bao nhiêu thì lên hạng, mỗi hạng được quyền lợi gì.",
+  "gates.rewards.label": "Danh mục quà",
+  "gates.rewards.hint": "Đổi được những gì, mỗi món cần bao nhiêu điểm và giá trị quy đổi.",
+  "gates.limits.label": "Hạn mức tự đổi quà",
+  "gates.limits.hint": "Giá trị quà tối đa trợ lý được tự đổi, trên mức đó thì hỏi bạn.",
+  "gates.expiry.label": "Hạn dùng điểm",
+  "gates.expiry.hint": "Điểm có hết hạn không, khi nào, báo khách thế nào.",
+  "gates.birthday.label": "Quà sinh nhật",
+  "gates.birthday.hint": "Có tặng quà hay điểm vào sinh nhật khách không, tặng gì.",
+  "gates.promo_rules.label": "Quy tắc gửi khuyến mãi",
+  "gates.promo_rules.hint": "Ai được nhận, gửi tối đa bao nhiêu tin mỗi tháng, giờ được gửi.",
+  "gates.prohibited.label": "Điều không được hứa",
+  "gates.prohibited.hint": "Quà, giảm giá, hạng thành viên bot không được tự cam kết.",
+  "gates.tone.label": "Giọng điệu",
+  "gates.tone.hint": "Cách xưng hô và phong cách khi nhắn tin."
+}

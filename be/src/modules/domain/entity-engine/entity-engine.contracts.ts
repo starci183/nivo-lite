@@ -25,6 +25,10 @@ export interface JobPorts {
 export interface JobDoorBinding {
     /** The workspace the job runs for. */
     readonly workspaceId: string
+    /** The run of the job (its claimed delivery): what a call the job makes names as the turn it is made in. */
+    readonly jobId: string
+    /** The installed agent of the job's module, when the job reaches records (the agent its records are stamped with); absent for a job that reaches none. */
+    readonly agentId?: string | undefined
     /** The job's claim key for a step: the same on every retry of the delivery. */
     readonly effectKey: (step: string) => string
     /** Whether an engine scope (an open transaction) is open now; a door call is refused while it is. */

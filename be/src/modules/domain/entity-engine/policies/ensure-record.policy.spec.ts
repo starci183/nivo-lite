@@ -106,6 +106,7 @@ describe("ensureRecord (2)", () => {
                     id: ID,
                     workspaceId: WORKSPACE_ID,
                     entity: "sales.contact",
+                    agentId: null,
                     data: ANY_FUNCTION,
                 },
             ],

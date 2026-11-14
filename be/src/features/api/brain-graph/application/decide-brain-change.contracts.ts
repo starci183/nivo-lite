@@ -1,4 +1,4 @@
-/** What the DecideBrainChange operation takes: Đồng ý or Không on a truth-graph change card. */
+/** What the DecideBrainChange operation takes: Dong y or Khong on a truth-graph change card. */
 export interface DecideBrainChangeRequest {
     /** The workspace the caller names in X-Workspace-Id; the service proves their membership and role. */
     readonly workspaceId: string

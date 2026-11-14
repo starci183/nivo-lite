@@ -1,14 +1,16 @@
 import { Test } from "@nestjs/testing"
 import { passageTextHashOf } from "@modules/domain/knowledge-chunks"
-import { embeddingIdentityOf } from "@nivo-lite/blocks-core"
-import { factEmbedHashOf as realFactEmbedHashOf, factEmbedTextOf as realFactEmbedTextOf, needsEmbedding as realNeedsEmbedding, sameIdentity as realSameIdentity } from "./embedding-standard.policy"
+import { embeddingIdentityOf } from "@nivo-lite/agent-sdk/models"
+import {
+    factEmbedHashOf as realFactEmbedHashOf,
+    factEmbedTextOf as realFactEmbedTextOf,
+    needsEmbedding as realNeedsEmbedding,
+    sameIdentity as realSameIdentity,
+} from "./embedding-standard.policy"
 
 const IDENTITY = { model: "embed", dimensions: 3 }
 
-
 const SUBJECT = Symbol("embedding-standard.policy")
-
-
 
 describe("embedding-standard.policy as a Nest value", () => {
     let factEmbedHashOf: typeof realFactEmbedHashOf
@@ -18,9 +20,24 @@ describe("embedding-standard.policy as a Nest value", () => {
 
     beforeAll(async () => {
         const moduleRef = await Test.createTestingModule({
-            providers: [{ provide: SUBJECT, useValue: { factEmbedHashOf: realFactEmbedHashOf, factEmbedTextOf: realFactEmbedTextOf, needsEmbedding: realNeedsEmbedding, sameIdentity: realSameIdentity } }],
+            providers: [
+                {
+                    provide: SUBJECT,
+                    useValue: {
+                        factEmbedHashOf: realFactEmbedHashOf,
+                        factEmbedTextOf: realFactEmbedTextOf,
+                        needsEmbedding: realNeedsEmbedding,
+                        sameIdentity: realSameIdentity,
+                    },
+                },
+            ],
         }).compile()
-        const subject = moduleRef.get<{ factEmbedHashOf: typeof realFactEmbedHashOf; factEmbedTextOf: typeof realFactEmbedTextOf; needsEmbedding: typeof realNeedsEmbedding; sameIdentity: typeof realSameIdentity }>(SUBJECT)
+        const subject = moduleRef.get<{
+            factEmbedHashOf: typeof realFactEmbedHashOf
+            factEmbedTextOf: typeof realFactEmbedTextOf
+            needsEmbedding: typeof realNeedsEmbedding
+            sameIdentity: typeof realSameIdentity
+        }>(SUBJECT)
         factEmbedHashOf = subject.factEmbedHashOf
         factEmbedTextOf = subject.factEmbedTextOf
         needsEmbedding = subject.needsEmbedding
@@ -66,6 +83,8 @@ describe("the identity across the switch of embeddings to OpenAI", () => {
 
         expect(realSameIdentity({ model: "embed", dimensions: 1536 }, identity)).toBe(false)
         expect(realNeedsEmbedding({ model: "embed", dimensions: 1536, hash }, hash, identity)).toBe(true)
-        expect(realNeedsEmbedding({ model: "text-embedding-3-small@1536", dimensions: 1536, hash }, hash, identity)).toBe(false)
+        expect(
+            realNeedsEmbedding({ model: "text-embedding-3-small@1536", dimensions: 1536, hash }, hash, identity),
+        ).toBe(false)
     })
 })

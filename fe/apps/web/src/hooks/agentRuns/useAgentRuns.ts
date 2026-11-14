@@ -30,7 +30,7 @@ const isBusy = (latest: { readonly runningCount: number; readonly queuedCount: n
 /** The runs of one agent instance, in words, with the filters of the page (workflow, status tab, source and text). */
 export const useAgentRuns = (module: string, installationId: string): AgentRunsData => {
     const context = useRunContext(module, installationId)
-    const [filter, setFilterState] = useState<RunsFilter>(NO_FILTER)
+    const [filter, setFilter] = useState<RunsFilter>(NO_FILTER)
     const read = useQueryAgentRunsSwr(
         { installationId },
         { refreshInterval: (latest: Parameters<typeof isBusy>[0]) => (isBusy(latest) ? BUSY_MS : IDLE_MS) },
@@ -58,7 +58,7 @@ export const useAgentRuns = (module: string, installationId: string): AgentRunsD
     return {
         slot: slotOfSwr<RunsView>({ data: view, error: read.error, isLoading: read.isLoading || isPinning }),
         filter,
-        setFilter: (next) => setFilterState((current) => ({ ...current, ...next })),
+        setFilter: (next) => setFilter((current) => ({ ...current, ...next })),
         reload: () => void read.mutate(),
     }
 }

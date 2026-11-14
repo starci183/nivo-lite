@@ -4,11 +4,16 @@ import { join } from "node:path"
 import type { Provider } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { isRefused } from "@nivo-lite/agent-sdk/node"
-import type { EffectPayload, NodeModelRequest, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import { coreDataKinds, coreEffects, coreNodes, coreTools, TOOL } from "@nivo-lite/blocks-core"
+import { graphSpecSchema, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import {
+    isRefused,
+    type EffectPayload,
+    type NodeModelRequest,
+    type NodeQuery,
+    type SubjectRef,
+} from "@nivo-lite/agent-sdk/node"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import {
@@ -16,9 +21,7 @@ import {
     AgentGraphFreezeGateService,
     AgentGraphRunNoticesService,
     AgentGraphsService,
-    GRAPH_FLOW_TRIGGER_MESSAGES,
 } from "@modules/domain/agent-graphs"
-import type { FlowTriggerMessages } from "@modules/domain/agent-graphs"
 import {
     GRAPH_NODE_MODEL,
     GRAPH_NODE_TOOL_DOOR,
@@ -26,20 +29,20 @@ import {
     GraphNodeEffectsService,
     GraphNodeHostService,
     GraphNodeRegistryService,
+    type NodeModelDoor,
+    type NodeRow,
+    type NodeToolDoor,
+    type NodeTurn,
 } from "@modules/domain/graph-nodes"
-import type { NodeModelDoor, NodeRow, NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { LOGGER, type Logger } from "@modules/platform/logging"
 import { LeadMemoryService } from "@modules/domain/lead-memory"
 import { AgentGraphStepMemoryService } from "../../../modules/domain/agent-graphs/agent-graph-step-memory.service"
 import { AgentGraphCallGuardService } from "../../../modules/domain/agent-graphs/agent-graph-call-guard.service"
 import { AgentWorkflowRecordsService } from "../../../modules/domain/agent-graphs/agent-workflow-records.service"
 import { AgentWorkflowRunsService } from "../../../modules/domain/agent-graphs/agent-workflow-runs.service"
-import type { ConversationHoldsWorld } from "./conversation-holds-world.builder"
-import { AgentGraphConversationHoldsService } from "../../../modules/domain/agent-graphs/agent-graph-conversation-holds.service"
 import type { LeadMemoryWorld } from "./lead-memory-world.builder"
 import type { WorkflowWorld } from "./workflow-world.builder"
 import { stateOf } from "./agent-graph.builder"
@@ -54,14 +57,14 @@ const quietRuns = (): AgentRunsService => mock<AgentRunsService>()
 const SEEDS_DIR = "../../../../../.starcistacks/dev/seeds/data/graphs"
 
 /** The name of a graph the seed ships. */
-export type SeededGraphName = "accounting" | "chatbot" | "sales"
+export type SeededGraphName = "chatbot" | "sales"
 
 /** The graph a seed file could not give: it holds no nodes and names the cause in its module key, so a spec that runs it fails on it. */
 const unreadableSeed = (name: string, cause: unknown): GraphSpec => ({
     schema: "nivo/agent-graph@1",
     moduleKey: `unreadable seed ${name}: ${String(cause)}`,
     trigger: { kind: "tag", sources: [] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [],
 })
 
@@ -70,7 +73,7 @@ export const NO_FLOW: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "none",
     trigger: { kind: "tag", sources: [] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [],
 }
 
@@ -101,17 +104,10 @@ export interface FlowWorld {
     readonly execute: (effect: string, payload: EffectPayload, turn?: NodeTurn) => Promise<SubjectRef>
     /** Reads rows of a data kind from the store. */
     readonly read: (kind: string, query: NodeQuery) => Promise<ReadonlyArray<NodeRow>>
-    /** The customer messages of the store. */
-    readonly conversation: FlowTriggerMessages
 }
 
 /** The kinds of subject the effects of the fake world answer. */
 const SUBJECT_KINDS: Readonly<Record<string, string>> = {
-    [TOOL.orderRecord]: "order",
-    [TOOL.orderConfirm]: "order",
-    [TOOL.paymentClaimRecord]: "payment-claim",
-    [TOOL.leadEnsure]: "sales-lead",
-    [TOOL.workItemRaise]: "work-item",
     [TOOL.customerMessageSend]: "message",
 }
 
@@ -121,17 +117,7 @@ export const flowWorldOf = (store: Record<string, Array<NodeRow>>, failOn: strin
     const execute = (effect: string, payload: EffectPayload): Promise<SubjectRef> => {
         if (effect === failOn) return Promise.reject(new Error(`${effect} is down`))
         const kind = SUBJECT_KINDS[effect] ?? effect
-        // An effect on a record that is there answers that record (confirming an order answers the order), else a new one.
-        const named = typeof payload.orderId === "string" && kind === "order" ? payload.orderId : null
-        const subject = { kind, id: named ?? `${kind}-${ran.length + 1}` }
-        if (effect === TOOL.orderRecord) {
-            const rows = (store.order ??= [])
-            rows.push({ id: subject.id, orderNo: "DH001", status: "draft", ...payload })
-        }
-        if (effect === TOOL.orderConfirm) {
-            for (const row of store.order ?? [])
-                if (row.id === payload.orderId) Object.assign(row, { status: "confirmed" })
-        }
+        const subject = { kind, id: `${kind}-${ran.length + 1}` }
         ran.push({ effect, payload, subject })
         return Promise.resolve(subject)
     }
@@ -144,22 +130,7 @@ export const flowWorldOf = (store: Record<string, Array<NodeRow>>, failOn: strin
                 .map((row) => Object.fromEntries(query.fields.map((field) => [field, row[field]]))),
         )
     }
-    /** The conversation the customer wrote in, as the store answers a channel wake: the words, the times and the files. */
-    const conversation: FlowTriggerMessages = {
-        messagesOf: (_workspace, _conversation, ids) =>
-            Promise.resolve(
-                (store.messages ?? [])
-                    .filter((row) => ids.includes(String(row.id)))
-                    .map((row) => ({
-                        id: String(row.id),
-                        text: String(row.body),
-                        at: String(row.at),
-                        attachments: [],
-                    })),
-            ),
-        conversationOf: () => Promise.resolve({ leadId: "lead-1", channel: "zalo" }),
-    }
-    return { ran, execute, read, conversation }
+    return { ran, execute, read }
 }
 
 /** The tool door of the fake world: the bank account a payment request quotes. */
@@ -195,8 +166,6 @@ export interface FlowEngine {
      * the version id of its workflow. Absent, the `graph` given is the agent's only graph.
      */
     readonly workflows?: WorkflowWorld
-    /** The conversations the Sales consult keeps between turns: a customer's line to another agent is sent on to the keeper. */
-    readonly holds?: ConversationHoldsWorld
     /** True to run the engine's guards on a hand-off (depth, cycle, a standing duplicate) at the start of every run; needs `workflows`. */
     readonly guarded?: boolean
     /** The lead memory the steps read and write: one per customer across workflows. Absent, refs read the run and the trigger only. */
@@ -232,22 +201,22 @@ const graphStoreOf = (graph: GraphSpec, workflows: WorkflowWorld | undefined): A
     const graphOf = (versionId: string): GraphSpec => workflows?.graphs.get(versionId) ?? graph
     return mock<AgentGraphsService>({
         documentOf: (_workspace: string, _agent: string, versionId?: string) =>
-            Promise.resolve({ nodes: [], rights: [], flow: graphOf(versionId ?? "") }),
+            Promise.resolve({ nodes: [], flow: graphOf(versionId ?? "") }),
         stateOfAgent: () =>
             Promise.resolve(
                 workflows === undefined
-                    ? stateOf({ activeVersionId: "version-1", active: { nodes: [], rights: [], flow: graph } })
+                    ? stateOf({ activeVersionId: "version-1", active: { nodes: [], flow: graph } })
                     : null,
             ),
         runGrantOf: (_workspace: string, _agent: string, versionId?: string) => {
             const grant = graphOf(versionId ?? "").grant
-            return Promise.resolve({ rights: grant.rights, tools: grant.tools, effects: null })
+            return Promise.resolve({ tools: grant.tools, effects: null })
         },
     })
 }
 
 /** The providers a spec swaps in around the graphs: the gate of the freezes, the routing, the guards and the lead memory. */
-const engineProvidersOf = (engine: FlowEngine, graphs: AgentGraphsService): ReadonlyArray<Provider> => {
+const engineProvidersOf = (engine: FlowEngine): ReadonlyArray<Provider> => {
     const { workflows, memory, gate } = engine
     const guards =
         workflows === undefined || engine.guarded !== true
@@ -262,14 +231,6 @@ const engineProvidersOf = (engine: FlowEngine, graphs: AgentGraphsService): Read
         ...(gate === undefined ? [] : [{ provide: AgentGraphFreezeGateService, useValue: gate }]),
         ...(workflows === undefined ? [] : [{ provide: AgentWorkflowRunsService, useValue: workflows.service }]),
         ...guards,
-        ...(engine.holds === undefined
-            ? []
-            : [
-                  {
-                      provide: AgentGraphConversationHoldsService,
-                      useValue: engine.holds.serviceOver(graphs, engine.workflows),
-                  },
-              ]),
         ...(memory === undefined
             ? []
             : [AgentGraphStepMemoryService, { provide: LeadMemoryService, useValue: memory.service }]),
@@ -310,7 +271,7 @@ export const flowServicesOf = async (
             {
                 provide: GRAPH_NODES_OPTIONS,
                 useValue: {
-                    install: { nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds },
+                    install: INSTALLED.nodeInstall(),
                 },
             },
             { provide: LOGGER, useValue: mock<Logger>() },
@@ -320,21 +281,20 @@ export const flowServicesOf = async (
             { provide: GRAPH_NODE_TOOL_DOOR, useValue: door },
             { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
             { provide: AgentGraphsService, useValue: graphs },
-            ...engineProvidersOf(engine, graphs),
+            ...engineProvidersOf(engine),
             { provide: AgentWorkHandlersService, useValue: mock<AgentWorkHandlersService>() },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: { transaction: (work: (tx: object) => unknown) => work({}) } },
-            { provide: GRAPH_FLOW_TRIGGER_MESSAGES, useValue: world.conversation },
             { provide: MESSAGE_CATALOG, useValue: { get: (key: string) => key } },
         ],
     }).compile()
     const registry = moduleRef.get(GraphNodeRegistryService)
-    for (const kind of coreDataKinds) {
+    for (const kind of INSTALLED.nodeInstall().dataKinds) {
         registry.addDataPort({
             kind: kind.kind,
             read: (_turn: NodeTurn, query: NodeQuery) => world.read(kind.kind, query),
         })
     }
-    for (const effect of coreEffects) {
+    for (const effect of INSTALLED.nodeInstall().effects) {
         registry.addExecutor({ effect: effect.id, execute: (turn, payload) => world.execute(effect.id, payload, turn) })
     }
     return { flows: moduleRef.get(AgentGraphFlowRunsService) }

@@ -22,7 +22,7 @@ const recorded = { sourceId: "s1", title: "Delivery policy", contentHash: "h1" }
 const state = (over: Partial<SourceState>): SourceState => ({
     id: "s1",
     title: "Delivery policy",
-    visibility: "internal",
+    visibility: "public",
     status: "ready",
     contentHash: "h1",
     ...over,
@@ -34,7 +34,7 @@ describe("hasChanged", () => {
         ["a new hash", state({ contentHash: "h2" }), true],
         ["a text being read again", state({ contentHash: null, status: "indexing" }), false],
         ["a source that is gone", undefined, true],
-        ["a source that became public", state({ visibility: "public" }), true],
+        ["a source moved to the internal area", state({ visibility: "internal" }), true],
     ])("%s", async (_name, current, changed) => {
         const subject = await buildSubject()
 
@@ -84,6 +84,6 @@ describe("reviewed source baseline", () => {
         expect([...subject.changedReviewSourceIds(absent, [state({})])]).toEqual(["s1"])
         const present = subject.reviewedSourcesOf([recorded], [state({})])
         expect([...subject.changedReviewSourceIds(present, [])]).toEqual(["s1"])
-        expect([...subject.changedReviewSourceIds(present, [state({ visibility: "public" })])]).toEqual(["s1"])
+        expect([...subject.changedReviewSourceIds(present, [state({ visibility: "internal" })])]).toEqual(["s1"])
     })
 })

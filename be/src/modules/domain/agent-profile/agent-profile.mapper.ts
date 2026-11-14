@@ -1,6 +1,5 @@
 import { storedAvatarAddress } from "@modules/integrations/object-storage"
-import type { DepartmentRuleLine } from "@modules/domain/authority-rules"
-import type { AgentHead, AppliedRule, RecentWork } from "./agent-profile.contracts"
+import type { AgentHead, RecentWork } from "./agent-profile.contracts"
 import type { AgentHeadRead, RecentWorkRead } from "./agent-profile-reads.contracts"
 
 /** An agent row as the header of its page. */
@@ -14,15 +13,6 @@ export const headOf = (row: AgentHeadRead): AgentHead => ({
     avatarUrl: storedAvatarAddress(row.avatarUrl),
     roomName: row.roomName,
     operatingMode: row.operatingMode,
-})
-
-/** A stored rule row as the read-only line of the agent's page. */
-export const ruleLineOf = (rule: DepartmentRuleLine): AppliedRule => ({
-    action: rule.action,
-    department: rule.department,
-    mode: rule.mode,
-    limitVnd: rule.limitVnd,
-    note: rule.note,
 })
 
 /** A work item row as one line of recent work; a missing summary or customer is an empty text. */

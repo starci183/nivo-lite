@@ -1,4 +1,4 @@
-import type { SWRConfiguration, SWRResponse } from "swr"
+import type { SWRConfiguration } from "swr"
 
 /** The failure of a read whose response carried no data. */
 export const noData = (name: string): never => {
@@ -14,9 +14,6 @@ interface GraphQLAnswer<T> {
 export type OperationData<Operation extends (params: never) => Promise<GraphQLAnswer<object>>> = NonNullable<
     Awaited<ReturnType<Operation>>["data"]
 >
-
-/** The SWR response of a read hook: its data, the `Error` it fails with, and the options it takes, so an option callback is typed by the data. */
-export type ReadResponse<Data> = SWRResponse<Data, Error, SWRConfiguration<Data, Error>>
 
 /** The data of a GraphQL answer; a missing one is a failure named after the operation. */
 export const answeredData = <T>(result: GraphQLAnswer<T>, operation: string): T => {
@@ -84,10 +81,3 @@ export const readField = async <Request, Data, Field extends keyof Data>(
 /** The success/error callbacks accepted while a queued job is observed. */
 export type JobStatusCallbacks<Status> = Pick<SWRConfiguration<Status, Error>, "onSuccess" | "onError">
 
-/** The part of an SWR read that carries its failure. */
-interface SwrFailing {
-    readonly error?: unknown
-}
-
-/** The failure of an SWR read, as `unknown`: SWR types a read's error as `any`, which may not flow on untyped. */
-export const readError = (read: SwrFailing): unknown => read.error

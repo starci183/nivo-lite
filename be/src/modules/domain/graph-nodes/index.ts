@@ -1,4 +1,10 @@
-export { GRAPH_NODES_ERROR_KINDS, GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
+export {
+    EffectOutcomeUnknownError,
+    GRAPH_NODES_ERROR_KINDS,
+    GraphNodesError,
+    GraphNodesErrorCode,
+    isOutcomeUnknownCode,
+} from "./errors/graph-nodes.error"
 export { GRAPH_NODES_MESSAGES } from "./messages/graph-nodes.messages"
 export {
     GRAPH_EFFECT_ONCE,
@@ -9,32 +15,44 @@ export {
     InjectGraphEffectOnce,
 } from "./graph-nodes.decorators"
 export { GraphNodesModule } from "./graph-nodes.module"
-export { AGENT_LOOP_FLAG, agentLoopNodesOf, parseAgentLoopConfig } from "./graph-nodes.config"
-export type { AgentLoopConfig } from "./graph-nodes.config"
+export { parseAgentLoopConfig } from "./graph-nodes.config"
 export { GraphNodeHostService } from "./graph-node-host.service"
-export { GraphNodeEffectsService, ledgerKeyOf } from "./graph-node-effects.service"
+export { GraphNodeEffectsService, OUTCOME_UNKNOWN_KIND, ledgerKeyOf } from "./graph-node-effects.service"
+export { NODE_EFFECT_STORE } from "./node-effect-store.port"
+export type { NodeEffectStore, StoredEffect } from "./node-effect-store.port"
+
+export { graphNodesEntities } from "./persistence/entities"
 export { GraphNodeRegistryService } from "./graph-node-registry.service"
-export { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
+export { GraphNodeRunTokensService, runLeadOf } from "./graph-node-run-tokens.service"
+
 export { toolFingerprintOf } from "./node-run-token.policy"
 export { declaredModelOf } from "./node-model.policy"
-export type { NodeRunClaims, NodeToolApproval, NodeToolCall } from "./node-run-token.contracts"
+export type {
+    NodeAccountChoice,
+    NodeRunClaims,
+    NodeStepRef,
+    NodeToolAccount,
+    NodeToolApproval,
+    NodeToolCall,
+} from "./node-run-token.contracts"
 export type {
     EffectOnce,
-    NodeAgentLoops,
-    NodeTurnRecord,
     NodeDataPort,
     NodeEffectExecutor,
+    NodeEffectPayload,
     NodeInstall,
     NodeModelDoor,
     NodeRow,
     NodeEffectRightCall,
-    NodePortsWrap,
-    NodeRepeatGuardCall,
+    NodeEffectRun,
     NodeRunInput,
+    NodeToolAnswer,
     NodeToolDoor,
+    NodeToolRun,
+    NodeToolVia,
     NodeTurn,
 } from "./graph-nodes.contracts"
-export { rowsAnswering } from "./node-rows.policy"
+
 export {
     PROBE_COUNT,
     PROBE_INPUT,
@@ -47,3 +65,4 @@ export {
     PROBE_UNPING_PAYLOAD,
 } from "./graph-node-probe.schema"
 export type { ProbeSchema } from "./graph-node-probe.schema"
+export { resolvedConditionHolds, storedExprProblems } from "./template-condition.policy"

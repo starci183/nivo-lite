@@ -10,11 +10,11 @@ const dataOf = async (state = sampleState([])): Promise<unknown> => {
     return result?.ok === true ? result.data : result
 }
 
-describe("sales.decisions", () => {
+describe("blocks-core.sales.api.order.decisions", () => {
     it("draws the waiting order as a decision with approve and reject", async () => {
         expect(await dataOf()).toMatchObject({
             count: "1",
-            rows: [{ id: "order-1", amount: "6.000.000\u00a0₫", primary: { id: "approve" }, menu: [{ id: "reject" }] }],
+            rows: [{ id: "order-1", amount: "6.000.000\u00a0\u20ab", primary: { id: "approve" }, menu: [{ id: "reject" }] }],
         })
     })
 

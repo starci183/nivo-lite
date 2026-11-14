@@ -1,11 +1,11 @@
 import type { ModuleKey } from "@/modules/catalog"
 import { AGENTS_ROUTE } from "@/modules/routes"
 
-/** A tab of one agent instance; `performance` (the weekly report) belongs to the AI Marketing (content) agent only. */
-export type AgentTab = "workbench" | "work" | "graph" | "workflows" | "chat" | "connections" | "knowledge" | "performance" | "setup"
+/** A tab of one agent instance. */
+export type AgentTab = "workbench" | "work" | "graph" | "workflows" | "chat" | "connections" | "knowledge" | "setup"
 
 /**
- * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/work|/chat|/connections|/knowledge|/performance|/setup][?query].
+ * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/work|/chat|/connections|/knowledge|/setup][?query].
  * Without a tab it is the landing of the instance, which opens Setup for an agent that is not set up and the workbench otherwise.
  * Without an installation id it is the type-level URL (/agents/<type>[/tab]), which redirects to the only instance, or to the instance
  * that owns `?focus=`, or to the list.

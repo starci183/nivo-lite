@@ -1,10 +1,13 @@
 import { Alert, Button, Form, Input, Page, Stack, SurfaceCard, Textarea } from "@starci/grammar/common"
+import type { ReactNode } from "react"
 import { PublicShell } from "@/components/frames/PublicShell"
 import type { WebsiteFormStatus, WebsiteFormValues } from "@/modules/types"
 
 /** Props for {@link WebsiteFormBase}. */
 export interface WebsiteFormBaseProps {
     readonly props: {
+        /** The shop's own theme, drawn inside the page (nothing for the NIVO default). */
+        readonly theme: ReactNode
         readonly copy: {
             readonly title: string
             readonly intro: string
@@ -61,6 +64,7 @@ export const WebsiteFormBase = (props: WebsiteFormBaseProps) => {
                 language={props.props.language}
                 onChooseLanguage={props.on.chooseLanguage}
             >
+            {props.props.theme}
             {status === "sent" ? (
                 <SurfaceCard label={copy.title} note={copy.intro}>
                     <Stack gap="row">

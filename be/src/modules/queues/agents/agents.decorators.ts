@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentsQueue } from "./agents.queue"
 
 /** Token of the agents queue producer, for the capabilities that enqueue sync or generate jobs. */

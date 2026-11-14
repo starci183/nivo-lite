@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { WorkspaceLobbyService } from "@modules/domain/workspaces"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RenameWorkspaceCommand } from "./rename-workspace.command"
 
 @CommandHandler(RenameWorkspaceCommand)

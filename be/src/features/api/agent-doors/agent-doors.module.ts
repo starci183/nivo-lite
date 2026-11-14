@@ -5,5 +5,5 @@ import { ReleaseConversationHandler } from "./application/release-conversation.h
 import { SetCareOptOutHandler } from "./application/set-care-opt-out.handler"
 
 @Module({ providers: [ReadCareOptOutHandler, SetCareOptOutHandler, ReleaseConversationHandler] })
-/** The owner's doors on a customer: the shop's care opt-out, and "hand back to the agent" for a held conversation. */
+/** The owner's doors on a customer: the shop's care opt-out and "hand back to the agent" for a held conversation. */
 export class AgentDoorsApiModule extends ConfigurableModuleClass {}

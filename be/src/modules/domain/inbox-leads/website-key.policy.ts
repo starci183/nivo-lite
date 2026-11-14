@@ -21,13 +21,21 @@ export const presented = (value: string | null): string | null => {
     return trimmed === "" ? null : trimmed
 }
 
+const VISITOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+/** The anonymous id the hosted form keeps for a browser: a UUID in its lower-case form, or null for a missing or malformed one (the submission then stands alone). */
+export const visitorIdOf = (value: string | null): string | null => {
+    const id = presented(value)?.toLowerCase() ?? null
+    return id !== null && VISITOR_ID.test(id) ? id : null
+}
+
 /** Whether the visitor sent anything a person can answer: a phone, an email or a message. */
 export const isAnswerable = (submission: Submission): boolean =>
     [submission.phone, submission.email, submission.message].some((value) => presented(value) !== null)
 
-/** The group an input lands under before any lead exists: the phone, else the email, else the visitor, else the one input. */
+/** The group an input lands under: the phone, else the email, else the visitor, else the one input. */
 export const customerKeyOf = (submission: Submission, visitor: string | null, fallback: string): string => {
-    const phone = submission.phone?.replace(/\D/g, "") ?? ""
+    const phone = submission.phone?.replaceAll(/\D/g, "") ?? ""
     if (phone !== "") return `phone:${phone}`
     const email = submission.email?.trim().toLowerCase() ?? ""
     if (email !== "") return `email:${email}`

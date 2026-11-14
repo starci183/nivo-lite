@@ -1,16 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AuthError, normalizeEmail } from "@modules/integrations/passport"
-import type { AuthPasswords, AuthSessions } from "@modules/integrations/passport"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { AuthError, normalizeEmail, type AuthPasswords, type AuthSessions } from "@modules/integrations/passport"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { InjectIds, type Ids } from "@modules/platform/ids"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { IdentityAuthenticatorService } from "./authenticator.service"
 import { refusing } from "./auth-refusal.policy"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
@@ -60,6 +55,12 @@ export type OptionalUserId = string | null
 const httpsOf = (value: unknown): string | null =>
     typeof value === "string" && value.startsWith("https://") ? value : null
 
+/** The part of an email before the "@" as the display name; "Owner" when it is empty. */
+const localPartOf = (email: string): string => {
+    const local = email.split("@")[0]
+    return local === undefined || local === "" ? "Owner" : local
+}
+
 const isoOf = (value: Date | string | null): string | null => (value === null ? null : new Date(value).toISOString())
 
 @Injectable()
@@ -87,7 +88,7 @@ export class IdentityAccountsService {
         return ok({
             email,
             lastSignInAt: isoOf(user.last_sign_in_at),
-            displayName: typeof named === "string" ? named : email.split("@")[0] || "Owner",
+            displayName: typeof named === "string" ? named : localPartOf(email),
             avatarUrl: uploaded ?? (typeof user.meta.avatar_url === "string" ? user.meta.avatar_url : null),
             uploadedAvatarUrl: uploaded,
         })

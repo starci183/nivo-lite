@@ -1,5 +1,8 @@
-/** The lists of an installation part, by the key of `InstallationPart`. */
-export type RegistryListKey = "modules" | "blocks" | "nodes" | "jobs" | "entities"
+/**
+ * The lists of an installation part, by the key of `InstallationPart`; `plugin` is the whole part, the ONE value a package built with
+ * `definePlugin` exports (its other lists are then read from it, and a `blocks` list beside it only feeds the client renderers).
+ */
+export type RegistryListKey = "plugin" | "modules" | "blocks" | "nodes" | "jobs" | "entities"
 
 /** One export of a package that holds a list of the installation. */
 export interface RegistryList {
@@ -21,6 +24,8 @@ export interface RegistryRenderers {
 
 /** One installed package as the generator found it: the lists it exports and the renderers of its blocks. */
 export interface RegistryPackage {
+    /** The plugin key of a package that exports named lists and no `plugin` value (its package name without the scope); absent: none. */
+    readonly key?: string | undefined
     /** The lists the package contributes, in the order of the part. */
     readonly lists: ReadonlyArray<RegistryList>
     /** The renderers of the package's blocks; null for a package that draws nothing. */

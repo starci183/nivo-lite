@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { InviteCommandsService } from "./invite-commands.service"
 import { InviteSupportService } from "./invite-support.service"
 import { MyInvitesService } from "./my-invites.service"

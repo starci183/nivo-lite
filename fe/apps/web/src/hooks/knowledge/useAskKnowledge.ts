@@ -63,7 +63,7 @@ export const useAskKnowledge = (
                     audience,
                     ...(installationId === null ? {} : { installationId }),
                 })
-                setResults(passages.map(toRetrievedPassage))
+                setResults(passages.map((entry) => toRetrievedPassage(entry)))
             } catch (error_) {
                 setResults(null)
                 setError(error_ instanceof Error ? error_.message : null)

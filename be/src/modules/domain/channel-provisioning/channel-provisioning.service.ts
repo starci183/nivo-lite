@@ -2,8 +2,14 @@ import { Injectable } from "@nestjs/common"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-grants"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, Provider } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type Provider,
+} from "@modules/domain/connections"
+import { installedFrontDoorsOf } from "@modules/domain/installed-plugins"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
@@ -106,7 +112,7 @@ export class ChannelProvisioningService {
         await this.bind(actor, id, "zalo_oa", flags)
     }
 
-    /** With --bind, gives every agent of the workspace that can use the provider access to the connection. */
+    /** With --bind, gives every agent of the workspace that can use the provider access to the connection (one front door per stream). */
     private async bind(
         actor: ConnectionActor,
         connectionId: string,
@@ -115,7 +121,15 @@ export class ChannelProvisioningService {
     ): Promise<void> {
         if (flags.bind !== true) return
         const agents = await this.agents.moduleRefsOf(actor.workspaceId, AGENT_LIMIT)
-        const eligible = agents.filter((agent) => purposeFor(agent.module, provider) !== null)
+        // A stream has ONE front door: of the agents that answer it inbound only the best (the installation's front-door order) is bound.
+        const inbound = agents.filter((agent) => purposeFor(agent.module, provider) === "inbound_chat")
+        const front = installedFrontDoorsOf(provider)
+            .map((module) => inbound.find((agent) => agent.module === module))
+            .find((agent) => agent !== undefined)
+        const eligible = agents.filter((agent) => {
+            const purpose = purposeFor(agent.module, provider)
+            return purpose !== null && (purpose !== "inbound_chat" || agent === front)
+        })
         await this.grants.setConnectionAgents(
             actor,
             connectionId,

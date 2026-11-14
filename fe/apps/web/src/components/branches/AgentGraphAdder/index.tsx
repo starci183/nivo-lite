@@ -16,7 +16,7 @@ interface AgentGraphAdderProps {
 export const AgentGraphAdder = (props: AgentGraphAdderProps) => {
     const { view } = props
     return (
-        <Section headingLevel={3} title={view.title} description={view.hint} isLoading={props.isLoading}>
+        <Section headingLevel={3} title={view.title} caption={view.hint} isLoading={props.isLoading}>
             {view.blocked === "" ? (
                 <>
                     <Grid kind="form" columns={1}>

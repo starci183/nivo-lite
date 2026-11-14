@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { BrainPageService } from "@modules/domain/brain"
-import type { BrainOverview } from "@modules/domain/brain"
+import { BrainPageService, type BrainOverview } from "@modules/domain/brain"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetBrainQuery } from "./get-brain.query"
 
 @QueryHandler(GetBrainQuery)
@@ -17,6 +15,6 @@ export class GetBrainHandler extends ICQRSHandler<GetBrainQuery, BrainOverview> 
     }
 
     protected override process(query: GetBrainQuery): Promise<BrainOverview> {
-        return this.page.overview(query.params.principal.id, query.params.request.workspaceId)
+        return this.page.overview(query.params.principal.id, query.params.request.workspaceId, query.params.request.facts)
     }
 }

@@ -19,5 +19,8 @@ export type PropsSchema = z.ZodObject<z.ZodRawShape>
 export type JsonValue =
     string | number | boolean | null | ReadonlyArray<JsonValue> | { readonly [key: string]: JsonValue }
 
+/** A JSON object: the shape of a tool's args and answer, and of a trigger's args and supplies, until each has its own typed signature. */
+export type JsonObject = { readonly [key: string]: JsonValue }
+
 /** The product languages. */
 export type SpecLocale = "vi" | "en"

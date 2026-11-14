@@ -3,22 +3,10 @@ import type { SourceState } from "@modules/domain/knowledge-sources"
 /** Where a public document stands. A published one is live for customers; archived and failed ones are not. */
 export type PublicDocumentStatus = "drafting" | "draft" | "published" | "archived" | "failed"
 
-/** How a public document began: NIVO drafted it from internal documents, the owner wrote it, or NIVO proposed an answer to a customer question. */
+/** How a public document began: NIVO drafted it from public-area documents, the owner wrote it, or NIVO proposed an answer to a customer question. */
 export type PublicDocumentKind = "drafted" | "written" | "answer"
 
-/** The kinds of content that are never proposed for the public, whoever asks. */
-export type ExclusionReason = "salary" | "id_number" | "contract" | "capital" | "internal_discount"
-
-/** The reasons, in the order they are reported. */
-export const EXCLUSION_REASONS: ReadonlyArray<ExclusionReason> = [
-    "salary",
-    "id_number",
-    "contract",
-    "capital",
-    "internal_discount",
-]
-
-/** The most internal documents one draft may be written from. */
+/** The most public-area documents one draft may be written from. */
 export const MAX_DRAFT_SOURCES = 5
 
 /** The longest title of a public document. */
@@ -27,12 +15,16 @@ export const MAX_TITLE_CHARS = 160
 /** The longest text of a public document. */
 export const MAX_BODY_CHARS = 40_000
 
-/** One piece of the internal text NIVO left out of a draft, named so the owner can see it without the text being kept whole. */
+/**
+ * A piece left out of a draft, as the document's `left_out` column and its GraphQL type still carry it. Nothing is left out by
+ * drafting any more (the AREA of a document is its audience, and drafting reads the public area only), so drafting writes an empty
+ * list; the field stays for the contract and for rows written before.
+ */
 export interface LeftOut {
-    /** A short label of the piece: its first words, with long digit runs masked. */
+    /** A short label of the piece. */
     readonly label: string
-    /** Why it was left out. */
-    readonly reason: ExclusionReason
+    /** Why it was left out, as the older row recorded it. */
+    readonly reason: string
 }
 
 /** An internal document a public document was drafted from, as the owner sees it. */
@@ -123,7 +115,7 @@ export interface ApproveRequest {
     readonly reviewedChanges?: boolean | undefined
 }
 
-/** One internal document as the draft reads it. */
+/** One document's text as it is read: by the draft (a public-area document) or by the internal reader. */
 export interface InternalText {
     /** The document. */
     readonly sourceId: string
@@ -133,6 +125,18 @@ export interface InternalText {
     readonly contentHash: string
     /** Its text, clipped. */
     readonly text: string
+}
+
+/** One public-area document as the draft call shows it: its title and its text within the call's bound. */
+export interface DraftSource {
+    /** The document. */
+    readonly sourceId: string
+    /** Its title. */
+    readonly title: string
+    /** Its text as shown, cut at the document's share of the call's bound. */
+    readonly text: string
+    /** True when the text was cut: what lies beyond is not shown and is never written from. */
+    readonly cut: boolean
 }
 
 /** What the model is given to draft a public text. */
@@ -145,18 +149,9 @@ export interface PublicDraftBrief {
     readonly question: string | null
     /** The owner's note, or null. */
     readonly instructions: string | null
-    /** The internal text left after the hard exclusions. */
-    readonly sources: ReadonlyArray<{ readonly title: string; readonly text: string }>
+    /** The public-area documents, each within its share of the call's bound. */
+    readonly sources: ReadonlyArray<DraftSource>
 }
-
-/** The text a model wrote for customers. */
-export interface DraftText {
-    /** The text. */
-    readonly body: string
-}
-
-/** What drafting a public text gave: the text the model wrote, or null when the model is unavailable. */
-export type MaybeDraftText = DraftText | null
 
 /** The row of a public document and its sources as the service reads them. */
 export interface SourceRecordRef {

@@ -9,6 +9,7 @@ import type {
     SpecText,
 } from "../schema/schema.types"
 import type { PortMap, PortProvider, PortsOf, RunContext } from "../port/port.types"
+import type { FileRef } from "../entity/file-ref"
 import type { DataSlot } from "../slot/slot.types"
 import type { ReadListing } from "./list.types"
 
@@ -58,6 +59,12 @@ export interface BlockConfig<P extends PropsSchema, S extends BlockSlots> {
      * object prop, `sort.param`); a spec is refused when one names no param.
      */
     readonly params?: ReadonlyArray<string>
+    /**
+     * The name of the prop whose string value is a record type the block's slots reach (a file block's `type`): every read and action a
+     * spec binds to a slot of the block must declare that type's entity port, or the spec is refused (`SPEC_BINDING_ENTITY`). The door
+     * grants the block's file calls by exactly that declaration.
+     */
+    readonly reaches?: string
     /**
      * How the block stands in a view: `cards` (default) floats it in the pink well; `panes` is a grid of its own panes (a master-detail inbox), which takes the whole main
      * pane full-bleed, flush with the chrome, and scrolls inside each pane.
@@ -157,6 +164,11 @@ export interface ActionConfig {
     readonly operation: string
     /** The member permission a viewer needs to run the action. */
     readonly permission: string
+    /**
+     * Set to `true` when a staff member may run the action: by default only an owner or a manager runs an action (every member may
+     * VIEW every read). The mark is the module's own statement; no action carries it unless its module says so.
+     */
+    readonly staff?: true
     /** The words on the control that runs the action. */
     readonly label: SpecText
 }
@@ -189,6 +201,11 @@ export interface RunActionConfig<I extends PropsSchema, P extends PortMap> {
     readonly id: Namespaced
     /** The member permission a viewer needs to run the action. */
     readonly permission: string
+    /**
+     * Set to `true` when a staff member may run the action: by default only an owner or a manager runs an action (every member may
+     * VIEW every read). The mark is the module's own statement; no action carries it unless its module says so.
+     */
+    readonly staff?: true
     /** The words on the control that runs the action. */
     readonly label: SpecText
     /** The payload the door accepts; an unknown key is refused. */
@@ -331,6 +348,72 @@ export interface ParamHandle {
     readonly setMany: (entries: Readonly<Record<string, string | null>>) => void
 }
 
+/** What a block may ask while a file goes up. */
+export interface FileUploadOptions {
+    /** Called with the share of the bytes sent so far, from 0 to 1, while the bytes go to the store. */
+    readonly onProgress?: (share: number) => void
+}
+
+/** A short-lived address that reads one stored file. */
+export interface SignedFileUrl {
+    /** The signed address; it stops working at `expiresAt`, so a block asks again instead of keeping it. */
+    readonly url: string
+    /** The moment the address stops working, an ISO 8601 instant. */
+    readonly expiresAt: string
+}
+
+/**
+ * The file store as a block reaches it: one file of one record field, named by the record type, the record and the field (the
+ * store's key law ties the object to exactly those). A host answers a refusal (a type or size the field does not accept, a record
+ * the viewer may not change, a store that is down) by rejecting; the block words it, never the port.
+ */
+export interface BlockFiles {
+    /**
+     * Puts `file` on the field of the record and returns the reference the record now holds: asks the store for an upload ticket,
+     * sends the bytes to it, confirms the upload (the store checks size and type against the field's declaration) and links the
+     * confirmed object to the field. A single field takes it in place of the file it held; a list field (`field.file({ many: true })`)
+     * appends it while it holds fewer than its maximum, and rejects when it is full.
+     */
+    readonly upload: (
+        recordType: string,
+        recordId: string,
+        field: string,
+        file: File,
+        options?: FileUploadOptions,
+    ) => Promise<FileRef>
+    /**
+     * A short-lived signed address that reads the file now on the field. A list field names the file by its object key (`FileRef.key`),
+     * which is required for it; a single field takes no key.
+     */
+    readonly url: (recordType: string, recordId: string, field: string, key?: string) => Promise<SignedFileUrl>
+    /**
+     * Removes the file from the field and deletes its object. A list field removes the one file `key` names (required for it) and keeps
+     * the others in their order; a single field takes no key.
+     */
+    readonly remove: (recordType: string, recordId: string, field: string, key?: string) => Promise<void>
+}
+
+/**
+ * The file store as a HOST implements it: the calls of {@link BlockFiles}, each made for the read or action (`via`, a registry id) whose
+ * permission and entity ports grant it. A block never sees `via`: the renderer closes the store over the bindings of the block's own
+ * node (`filesVia`).
+ */
+export interface BlockFileStore {
+    /** `BlockFiles.upload`, for the action `via`. */
+    readonly upload: (
+        via: string,
+        recordType: string,
+        recordId: string,
+        field: string,
+        file: File,
+        options?: FileUploadOptions,
+    ) => Promise<FileRef>
+    /** `BlockFiles.url`, for the read or action `via`. */
+    readonly url: (via: string, recordType: string, recordId: string, field: string, key?: string) => Promise<SignedFileUrl>
+    /** `BlockFiles.remove`, for the action `via`. */
+    readonly remove: (via: string, recordType: string, recordId: string, field: string, key?: string) => Promise<void>
+}
+
 /** The ports a block may use; the renderer's provider implements them. */
 export interface BlockHost {
     /** The translator of one message namespace: a key through the catalogue, inline words in the viewer's language. */
@@ -343,6 +426,12 @@ export interface BlockHost {
     readonly notify: (tone: "success" | "danger" | "default", message: string) => void
     /** Reports a contract defect (a bound path missing in ready data) instead of drawing a blank block. */
     readonly report: (code: string, at: string) => void
+    /**
+     * The file store, as the host implements it (the calls carry the `via` of the node that makes them). Absent on a host with no
+     * store behind it (a prototype over fixtures); a block that needs it then reports `BLOCK_FILES_MISSING` and draws no control that
+     * would do nothing. A block reaches it through `useNodeFiles`, as {@link BlockFiles}.
+     */
+    readonly files?: BlockFileStore
 }
 
 /** The typed props of a block, as its zod schema parses them. */

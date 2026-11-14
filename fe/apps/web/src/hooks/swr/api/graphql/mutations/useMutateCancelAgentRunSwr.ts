@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateCancelAgentRun,
     type MutateCancelAgentRunRequest,
 } from "@/modules/api/graphql/mutations/mutation-cancel-agent-run"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { CancelAgentRunMutation } from "@/modules/api"
 
 /** What the CancelAgentRun mutation is triggered with. */

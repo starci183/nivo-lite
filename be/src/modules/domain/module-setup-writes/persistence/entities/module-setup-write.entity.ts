@@ -1,13 +1,7 @@
 import { Column, Entity } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
-import type {
-    BranchCardPayload,
-    CardResult,
-    CardStatus,
-    FactCardPayload,
-    RuleCardPayload,
-} from "../../module-setup-writes.contracts"
+import type { CardResult, CardStatus, FactCardPayload } from "../../module-setup-writes.contracts"
 
 @Entity({ schema: "public", name: "module_setup_writes" })
 /** One confirm card of the setup chat: one row of `public.module_setup_writes`. */
@@ -28,17 +22,17 @@ export class ModuleSetupWriteEntity extends UuidAbstractEntity {
     @Column({ name: "gate_key", type: "text" })
     gateKey!: string
 
-    /** Fact, rule or branch. */
+    /** The kind of card; the setup chat writes facts only. */
     @Column({ name: "kind", type: "text" })
-    kind!: "fact" | "rule" | "branch"
+    kind!: string
 
     /** The target: one waiting card per target. */
     @Column({ name: "target_key", type: "text" })
     targetKey!: string
 
-    /** The fact, the rule or the branch proposed. */
+    /** The fact proposed. */
     @Column({ name: "payload", type: "jsonb" })
-    payload!: FactCardPayload | RuleCardPayload | BranchCardPayload
+    payload!: FactCardPayload
 
     /** Where the card stands. */
     @Column({ name: "status", type: "text", default: () => "'proposed'" })

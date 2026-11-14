@@ -3,10 +3,10 @@ import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, brainStripTabOf, workspaceHref } from "@/modules/routes"
-import type { BrainStripTab, BrainTab } from "@/modules/routes"
-import { BrainPageBase } from "./component"
-import type { BrainPageBaseProps } from "./component"
+import { CONSOLE_ROUTES, FIRST_PAGE, brainStripTabOf, workspaceHref, type BrainStripTab, type BrainTab } from "@/modules/routes"
+import type { BrainPageHeading } from "@/modules/types"
+import { BrainAddressBody } from "./AddressBody"
+import { BrainPageBase, type BrainPageBaseProps } from "./component"
 
 /** The document title of the page. */
 export const brainMetadata = async (): Promise<Metadata> => {
@@ -14,7 +14,7 @@ export const brainMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** What the page reads from the address: the tab and the view inside it, the fact being written, a fact to give a new value, a question to answer, the dossier, the finding, the draft, the node on the map and the public document forms. */
+/** What the page reads from the address: the tab and the view inside it, the fact being written, a fact to give a new value, a question to answer and the public document forms. */
 interface BrainPageProps {
     /** The workspace of the address. */
     readonly workspaceId: string
@@ -26,13 +26,11 @@ interface BrainPageProps {
     readonly edit: string | undefined
     readonly answer: string | undefined
     readonly lesson: string | undefined
-    readonly dossier: string | undefined
-    readonly finding: string | undefined
-    readonly draft: string | undefined
-    readonly node: string | undefined
     readonly compose: string | undefined
     readonly title: string | undefined
     readonly doc: string | undefined
+    /** The shop rule open in the drawer of the policies tab. */
+    readonly policy: string | undefined
 }
 
 type Translate = Awaited<ReturnType<typeof getTranslations<"brain">>>
@@ -42,8 +40,11 @@ type SecondBrainTranslate = Awaited<ReturnType<typeof getTranslations<"secondBra
 type Copy = Pick<BrainPageBaseProps["props"], "header">
 
 /** The supporting line under the heading of each tab of the strip. */
-const INTRO_KEY: Readonly<Record<BrainStripTab, "intro" | "introKnowledge" | "introPublic" | "introAsk">> = {
+const INTRO_KEY: Readonly<
+    Record<BrainStripTab, "intro" | "introPolicies" | "introKnowledge" | "introPublic" | "introAsk">
+> = {
     todo: "intro",
+    policies: "introPolicies",
     knowledge: "introKnowledge",
     public: "introPublic",
     ask: "introAsk",
@@ -95,38 +96,25 @@ export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> =>
                 edit: props.edit,
                 answer: props.answer,
                 lesson: props.lesson,
-                dossier: props.dossier,
-                finding: props.finding,
-                draft: props.draft,
-                node: props.node,
                 compose: composeOf(props.compose),
                 composeTitle: props.title ?? "",
                 publicDoc: props.doc,
+                policy: props.policy,
             }}
         />
     )
 }
 
-/** The same page while it loads: the blocks draw their own skeletons. */
+/** The same page while it loads: a boundary knows no address, so every tab's heading is translated and the browser's address picks the tab; the blocks draw their own skeletons. */
 export const BrainLoadingPage = async (): Promise<ReactElement> => {
     const [t, brain] = await Promise.all([getTranslations("brain"), getTranslations("secondBrain")])
-    return (
-        <BrainPageBase
-            props={{
-                ...copyOf(t, brain, "todo"),
-                tab: "todo",
-                fact: undefined,
-                edit: undefined,
-                answer: undefined,
-                lesson: undefined,
-                dossier: undefined,
-                finding: undefined,
-                draft: undefined,
-                node: undefined,
-                compose: undefined,
-                composeTitle: "",
-                publicDoc: undefined,
-            }}
-        />
-    )
+    const headingOf = (tab: BrainStripTab): BrainPageHeading => copyOf(t, brain, FIRST_PAGE[tab]).header
+    const headings: Record<BrainStripTab, BrainPageHeading> = {
+        todo: headingOf("todo"),
+        policies: headingOf("policies"),
+        knowledge: headingOf("knowledge"),
+        public: headingOf("public"),
+        ask: headingOf("ask"),
+    }
+    return <BrainAddressBody headings={headings} />
 }

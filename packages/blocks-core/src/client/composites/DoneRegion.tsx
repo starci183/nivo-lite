@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { Badge, Cluster, EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
+import { countChipOf } from "../../rows/count-chip"
 import type { ItemsRegionView } from "../../views/views.types"
 
 /** Copy and view of the done region while the data is read. */
@@ -16,21 +17,17 @@ export const DoneRegion = (props: DoneRegionProps): ReactNode => (
         kind="list"
         label={props.label}
         isLoading={props.isLoading}
+        {...countChipOf(props.view.count)}
         labelEnd={
-            <Cluster gap="row">
-                {props.view.count === null ? null : (
-                    <Badge tone="success" isDot isLoading={props.isLoading}>
-                        {props.view.count}
-                    </Badge>
-                )}
-                <Link href={props.view.linkHref}>{props.view.linkLabel}</Link>
-            </Cluster>
+            <Link variant="head" href={props.view.linkHref}>
+                {props.view.linkLabel}
+            </Link>
         }
         items={props.view.rows.map((row) => ({
             id: row.id,
             title: row.title,
             description: row.description,
-            action: { label: row.title, href: row.href },
+            href: row.href,
         }))}
         empty={<EmptyNotice message={props.emptyMessage} />}
     />

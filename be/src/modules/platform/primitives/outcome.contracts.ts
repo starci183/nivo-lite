@@ -16,6 +16,8 @@ export interface OutcomeRefused<C extends string> {
     readonly code: C
     /** Values for the placeholders of the display text. */
     readonly params?: ErrorParams | undefined
+    /** The failure that caused the refusal, kept for the log; absent when the refusal has no failure behind it. */
+    readonly cause?: unknown
 }
 
 /** The result of an operation that can be refused for an expected business reason: returned, never thrown. */

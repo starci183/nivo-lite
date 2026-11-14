@@ -1,4 +1,6 @@
 export { BankFeedInboxModule } from "./bank-feed-inbox.module"
 export { BankFeedReceiptService } from "./bank-feed-inbox.service"
-export type { FeedReceiptPayload, IncomingCredit } from "./bank-feed-inbox.contracts"
-export { bankFeedInboxEntities } from "./persistence/entities"
+export { BANK_FEED_DATA_TYPES } from "./bank-feed.data-types"
+export { feedTransactionRowsOf } from "./bank-feed.normalise.policy"
+export type { FeedReceiptPayload, IncomingCredit, PendingBankFeedInboxReceipt } from "./bank-feed-inbox.contracts"
+export { bankTransactionTriggerFor } from "./bank-transaction.trigger"

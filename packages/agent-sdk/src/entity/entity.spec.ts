@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { thrownFailureOf } from "../tests/thrown-failure"
 import { defineEntity, field } from "./entity"
 import { EntityDefinitionError } from "./entity-error"
 import type { EntityConfig, FieldDef, FieldMap } from "./entity.types"
@@ -86,7 +87,7 @@ describe("defineEntity", () => {
     it("refuses a reserved field name and says where", () => {
         const reserved: EntityConfig<FieldMap> = { name: "sales.lead", dataKind: "x", fields: { version: field.int() } }
         expect(() => defineEntity(reserved)).toThrow(EntityDefinitionError)
-        expect(() => defineEntity(reserved)).toThrow("ENTITY_FIELD_RESERVED: sales.lead.fields.version")
+        expect(thrownFailureOf(() => defineEntity(reserved))).toEqual({ code: "ENTITY_FIELD_RESERVED", at: "sales.lead.fields.version" })
     })
 
     it("reports every local problem", () => {

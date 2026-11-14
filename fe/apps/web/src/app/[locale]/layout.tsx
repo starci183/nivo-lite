@@ -1,5 +1,4 @@
-import { createLocaleLayout } from "@nivo-lite/i18n/layout"
-import type { LocaleLayoutProps } from "@nivo-lite/i18n/layout"
+import { createLocaleLayout, type LocaleLayoutProps } from "@nivo-lite/i18n/layout"
 import type { Metadata } from "next"
 import type { ReactElement } from "react"
 import { AppLayout, appLayoutMetadata } from "@/features/layouts/AppLayout"

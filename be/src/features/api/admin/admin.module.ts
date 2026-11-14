@@ -7,6 +7,7 @@ import { GetPlatformHealthHandler } from "./application/get-platform-health.hand
 import { ExtendSubscriptionHandler } from "./application/extend-subscription.handler"
 import { SetWorkspaceStatusHandler } from "./application/set-workspace-status.handler"
 import { SetWorkspacePlanHandler } from "./application/set-workspace-plan.handler"
+import { SetWorkspaceEnterpriseKeyHandler } from "./application/set-workspace-enterprise-key.handler"
 import { ResendWorkspaceInviteHandler } from "./application/resend-workspace-invite.handler"
 
 @Module({
@@ -18,6 +19,7 @@ import { ResendWorkspaceInviteHandler } from "./application/resend-workspace-inv
         ExtendSubscriptionHandler,
         SetWorkspaceStatusHandler,
         SetWorkspacePlanHandler,
+        SetWorkspaceEnterpriseKeyHandler,
         ResendWorkspaceInviteHandler,
     ],
 })

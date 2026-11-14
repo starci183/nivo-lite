@@ -1,8 +1,7 @@
 "use client"
 
 import { useCallback } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
 
 /** What a Google consent is asked for: the Sheets connection (no purpose) or the spreadsheets access of the ledger. */

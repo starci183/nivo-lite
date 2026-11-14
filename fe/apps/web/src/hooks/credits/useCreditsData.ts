@@ -58,13 +58,9 @@ export const useCreditsData = (contactHref: string): CreditsDataView => {
         ])
     }, [workspace, catalog, packs, quota, recent, ledger])
 
+    // The first failure that says something wins (an empty one is none); the ledger's own failure is the last word.
     const error =
-        readError(workspace) ||
-        readError(catalog) ||
-        readError(packs) ||
-        readError(quota) ||
-        readError(recent) ||
-        ledger.error
+        [workspace, catalog, packs, quota, recent].map((read) => readError(read)).find(Boolean) ?? ledger.error
     const workspaceData = workspace.data
     const planData = catalog.plans
     const packData = packs.data

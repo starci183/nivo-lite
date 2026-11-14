@@ -36,22 +36,3 @@ export const AUTO_DONE_COLUMNS: AutoDoneColumnsShape = {
     reasons: "CASE WHEN CAST(:path AS text) = 'auto' THEN ARRAY['routine'] ELSE reasons END",
     missingFields: [],
 }
-
-type StillWaitingColumnsShape = {
-    status: string
-    proposal: Proposal
-    missingFields: Array<string>
-    reason: string
-    reasons: Array<string>
-    leasedAt: Date
-}
-
-/** The columns putting an item back to waiting for a decision while the field `need` is still missing writes. */
-export const STILL_WAITING_COLUMNS: StillWaitingColumnsShape = {
-    status: "waiting_decision",
-    proposal,
-    missingFields: ["need"],
-    reason: "missing_data",
-    reasons: ["missing_data"],
-    leasedAt: AT,
-}

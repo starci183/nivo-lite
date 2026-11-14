@@ -46,8 +46,6 @@ export type {
     RunBranchView,
     RunChipView,
     RunDecisionView,
-    RunFactView,
-    RunFieldView,
     RunFigureView,
     RunHeadView,
     RunLogLineView,

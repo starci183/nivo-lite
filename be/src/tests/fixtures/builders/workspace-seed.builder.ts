@@ -85,37 +85,6 @@ export const OWNED_SEED: OwnedSeedShape = {
     ownerId: SEED_OWNER,
 }
 
-/** The endpoint the private profile input gives the profile's connector. */
-export const CONNECTOR_URL = "https://mcp.example.test/mcp"
-
-type ProfileWireOfResultConnectorsPart1Shape = {
-    url: string
-}
-
-type ProfileWireOfResultConnectorsShape = {
-    [x: string]: ProfileWireOfResultConnectorsPart1Shape
-}
-
-type ProfileWireOfResultShape = {
-    schema: string
-    connectors: ProfileWireOfResultConnectorsShape
-}
-
-/** A private profile input with the endpoint of a connector of the given key. */
-export const profileWireOf = (key: string, url: string = CONNECTOR_URL): ProfileWireOfResultShape => ({
-    schema: "nivo/workspace-profile-input@1",
-    connectors: { [key]: { url } },
-})
-
-/** A remote connector a run registers, with its endpoint. */
-export const REMOTE_CONNECTOR = {
-    key: "remote-a",
-    name: "Remote A",
-    needsCredential: true,
-    contractVersion: "remote-a@1",
-    url: "https://a.example.test/mcp",
-}
-
 /** An installation of SEED_WS a profile run keeps, still in setup before its first applied version. */
 export const seedInstallationOf: (overrides?: Partial<InstallationRecord>) => InstallationRecord =
     builder<InstallationRecord>({

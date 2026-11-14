@@ -3,10 +3,8 @@ import { canvasOf, pathViewOf, runViewOf, stepOfNode } from "./agentRuns.canvas"
 import type { StepsLocale } from "@/modules/workflowSteps"
 import { durationOf, runSourceOf, runStatusOf, shortIdOf, statusToneOf, stepStatusOf, stepToneOf } from "./agentRuns.format"
 import { recoveredKindOf, resultOf, sentOf } from "./agentRuns.facts"
-import { inputsOf, outputsOf, wireMemoryOf } from "./agentRuns.params"
-import type { RunMemorySource } from "./agentRuns.params"
-import { humanLabelOf, mapOfRun } from "./agentRuns.graph"
-import type { RunGraph } from "./agentRuns.graph"
+import { inputsOf, outputsOf, wireMemoryOf, type RunMemorySource } from "./agentRuns.params"
+import { humanLabelOf, mapOfRun, type RunGraph } from "./agentRuns.graph"
 import { runTitleOf, workflowLabelOf } from "./agentRuns.list"
 import type {
     AgentRunStepWire,

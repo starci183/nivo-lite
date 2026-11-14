@@ -8,9 +8,9 @@ import { navigation } from "@/modules/i18n"
 import { AGENTS_ROUTE, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ConnectionProviderBase } from "./component"
 
-/** The provider page the address names: its segment under Connections. */
+/** The provider page the address names: its segment under Connections; none on the `[provider]` loading route, which reads the address. */
 interface ConnectionProviderProps {
-    readonly segment: string
+    readonly segment?: string | undefined
 }
 
 /**
@@ -46,9 +46,7 @@ export const ConnectionProvider = (props: ConnectionProviderProps) => {
                         account: t("providerColAccount"),
                         status: t("providerColStatus"),
                         agents: t("providerColAgents"),
-                        action: t("providerColAction"),
                     },
-                    open: t("providerOpen"),
                     agentsNone: t("providerAgentsNone"),
                     agentsGrant: t("providerAgentsGrant"),
                     agentsHref: workspaceHref(workspaceId, AGENTS_ROUTE),

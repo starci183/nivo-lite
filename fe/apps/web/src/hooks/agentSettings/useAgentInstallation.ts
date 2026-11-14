@@ -6,8 +6,7 @@ import { slotOfSwr } from "@/hooks/slot"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import type { Installation } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
-import { toAgentInstallationView } from "./agentSettings.shared"
-import type { AgentInstallationView } from "./agentSettings.shared"
+import { toAgentInstallationView, type AgentInstallationView } from "./agentSettings.shared"
 
 /**
  * One installed agent of the active workspace, from the installations the other screens share. An instance that does not exist, or that

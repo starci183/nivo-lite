@@ -1,4 +1,5 @@
 import { RecordLinkEntity } from "../persistence/entities"
+import { getRecord } from "./get-record.policy"
 import { entityOf, relationOf } from "./catalog-access.policy"
 import type { EntityCatalog } from "./compiler.contracts"
 import type { ScopedTx } from "./scoped-tx.contracts"
@@ -13,6 +14,20 @@ export interface LinkInput {
     readonly relation: string
     /** The target record id (of the relation's target entity). */
     readonly toId: string
+}
+
+/**
+ * Whether the target a link names is a LIVE record: a record that does not exist, is soft-deleted (owner order 2026-11-14: nothing is
+ * hard-deleted, and a deleted record is `not_found` for a link as it is for an update) or is another agent's in a scope confined to one
+ * agent is not linkable. The caller refuses before it writes anything.
+ */
+export const linkTargetIsLive = async (
+    tx: ScopedTx,
+    catalog: EntityCatalog,
+    input: { readonly entity: string; readonly relation: string; readonly toId: string },
+): Promise<boolean> => {
+    const relation = relationOf(entityOf(catalog, input.entity), input.relation)
+    return (await getRecord(tx, relation.target, input.toId)) !== null
 }
 
 /**

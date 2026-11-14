@@ -3,11 +3,11 @@ import { Field, Float, Int, ObjectType } from "@nestjs/graphql"
 @ObjectType()
 /** The model use of one kind of work on a document, exact (credits are fractions, never rounded per call). */
 export class KnowledgeAiWorkCostType {
-    /** Answered calls ("Lượt"). */
+    /** Answered calls ("Luot"). */
     @Field(() => Int)
     calls!: number
 
-    /** Failed tries ("Thử lại"), estimated and never billed. */
+    /** Failed tries ("Thu lai"), estimated and never billed. */
     @Field(() => Int)
     failedTries!: number
 
@@ -53,5 +53,5 @@ export class KnowledgeDocumentAiCostType {
 
     /** The models that served its calls ("Model"). */
     @Field(() => [String])
-    models!: Array<string>
+    models!: ReadonlyArray<string>
 }

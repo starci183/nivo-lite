@@ -117,57 +117,13 @@ describe("CredentialGuard", () => {
     })
 })
 
-describe("CredentialGuard posting admission", () => {
-    it.each([{ input: { ws: "shop", job: "cashier" } }, { input: { ws: 1, job: 2 } }, {}])(
-        "extracts the posting resource before validation (%p)",
-        async (args) => {
-            const metadata: CredentialMetadata = { kind: "posting", workflow: "apply-to-hiring-job" }
-            const { guard, context, authenticator, request } = await build(metadata, "Bearer session")
-            context.getType.mockReturnValue("graphql")
-            context.getArgs.mockReturnValue([undefined, args, { req: request }, undefined])
-            const answer: CredentialPrincipal = { kind: "posting", subject: "job-1", workspaceId: "ws-1" }
-            authenticator.authenticate.mockResolvedValue(answer)
-            await expect(guard.canActivate(context)).resolves.toBe(true)
-            expect(authenticator.authenticate).toHaveBeenCalledWith(
-                metadata,
-                typeof args.input?.ws === "string" ? args.input.ws : "",
-                typeof args.input?.job === "string" ? args.input.job : "",
-            )
-            expect(request.credentialPrincipal).toEqual(answer)
-        },
-    )
-
-    it.each<CredentialPrincipal>([
-        principal,
-        { kind: "posting", subject: "", workspaceId: "ws-1" },
-        { kind: "posting", subject: "job-1", workspaceId: "" },
-    ])("refuses incomplete posting identities (%p)", async (answer) => {
-        const { guard, context, authenticator, request } = await build({ kind: "posting" })
-        context.getType.mockReturnValue("graphql")
-        context.getArgs.mockReturnValue([undefined, {}, { req: request }, undefined])
-        authenticator.authenticate.mockResolvedValue(answer)
-        await expect(guard.canActivate(context)).rejects.toMatchObject({ code: IdentityErrorCode.Unauthenticated })
-        expect(request.credentialPrincipal).toBeUndefined()
-    })
-
-    it("propagates posting refusal codes and never establishes a principal", async () => {
-        const { guard, context, authenticator, request } = await build({ kind: "posting" })
-        context.getType.mockReturnValue("graphql")
-        context.getArgs.mockReturnValue([undefined, {}, { req: request }, undefined])
-        const refusal = new CredentialRefusal({ code: "HIRING_JOB_NOT_OPEN" })
-        authenticator.authenticate.mockRejectedValue(refusal)
-        await expect(guard.canActivate(context)).rejects.toBe(refusal)
-        expect(request.credentialPrincipal).toBeUndefined()
-    })
-})
-
 describe("CredentialGuard credential owners", () => {
-    const kinds: Array<CredentialMetadata["kind"]> = ["api-key", "tool-token", "link-token", "posting"]
+    const kinds: Array<CredentialMetadata["kind"]> = ["api-key", "tool-token", "link-token"]
 
     it.each(kinds)("stamps a valid %s identity", async (kind) => {
         const { guard, context, request, authenticator } = await build({ kind }, "Bearer raw")
         context.getType.mockReturnValue("http")
-        context.getArgs.mockReturnValue([undefined, { input: { token: "raw", ws: "shop", job: "job" } }])
+        context.getArgs.mockReturnValue([undefined, { input: { token: "raw" } }])
         const answer: CredentialPrincipal = { kind, subject: "stored-id", workspaceId: "stored-ws" }
         authenticator.authenticate.mockResolvedValue(answer)
         await expect(guard.canActivate(context)).resolves.toBe(true)
@@ -177,32 +133,25 @@ describe("CredentialGuard credential owners", () => {
     it.each(kinds)("preserves the exact invalid and missing %s refusals", async (kind) => {
         for (const authorization of ["invalid", undefined]) {
             const { guard, context, request, authenticator } = await build({ kind }, authorization)
-            context.getArgs.mockReturnValue([undefined, { input: { token: authorization, ws: authorization } }])
-            const refusal = new CredentialRefusal({ code: "HIRING_PUBLIC_NOT_FOUND" })
+            context.getArgs.mockReturnValue([undefined, { input: { token: authorization } }])
+            const refusal = new CredentialRefusal({ code: "WORKSPACE_INVITES_INVALID" })
             request.credentialPrincipal = principal
             authenticator.authenticate.mockRejectedValue(refusal)
             await expect(guard.canActivate(context)).rejects.toBe(refusal)
             expect(request.credentialPrincipal).toBeUndefined()
-            expect(authenticator.authenticate).toHaveBeenCalledWith(
-                { kind },
-                authorization ?? "",
-                kind === "posting" ? "" : undefined,
-            )
+            expect(authenticator.authenticate).toHaveBeenCalledWith({ kind }, authorization ?? "", undefined)
         }
     })
 })
 
 describe("CredentialGuard domain refusals", () => {
-    it.each(["HIRING_PUBLIC_NOT_FOUND", "HIRING_JOB_NOT_OPEN", "HIRING_JOB_EXPIRED", "WORKSPACE_INVITES_INVALID"])(
-        "preserves %s with its parameters and original cause",
-        async (code) => {
-            const { guard, context, authenticator } = await build({ kind: "api-key" })
-            const cause = new Error("original")
-            const refusal = new CredentialRefusal({ code, params: { detail: "retained" }, cause })
-            authenticator.authenticate.mockRejectedValue(refusal)
-            await expect(guard.canActivate(context)).rejects.toBe(refusal)
-            expect(refusal.cause).toBe(cause)
-            expect(refusal.params).toEqual({ detail: "retained" })
-        },
-    )
+    it.each(["WORKSPACE_INVITES_INVALID"])("preserves %s with its parameters and original cause", async (code) => {
+        const { guard, context, authenticator } = await build({ kind: "api-key" })
+        const cause = new Error("original")
+        const refusal = new CredentialRefusal({ code, params: { detail: "retained" }, cause })
+        authenticator.authenticate.mockRejectedValue(refusal)
+        await expect(guard.canActivate(context)).rejects.toBe(refusal)
+        expect(refusal.cause).toBe(cause)
+        expect(refusal.params).toEqual({ detail: "retained" })
+    })
 })

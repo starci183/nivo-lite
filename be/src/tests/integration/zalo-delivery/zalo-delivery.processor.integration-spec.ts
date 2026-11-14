@@ -3,8 +3,12 @@ import { ZaloDeliveryQueueModule } from "../../../features/jobs/zalo-delivery/tr
 import { useTestWorld } from "../../world/use-test-world"
 import {
     RECEIPT_DELIVERY_MODULES,
+    ZALO_PROOF_BODY,
+    ZALO_PROOF_EVENT,
+    persistZaloAccount,
     zaloDeliveryBuilder as build,
     zaloDeliveryState,
+    zaloPublicationBuilder,
     registerZaloDelivery,
 } from "../../world/zalo-delivery-proof.service"
 import { cleanupJobs, jobSnapshot } from "../../world/proof-database.service"
@@ -61,6 +65,28 @@ describe("ZaloDeliveryProcessor", () => {
         await expect(processor.process(job)).rejects.toBe(failure)
         const state = await zaloDeliveryState(world, message.deliveryId)
         expect(state.receipts[0]?.processed_at).toBeNull()
+    })
+})
+
+describe("ZaloInboxService receipts in the account", () => {
+    const world = useTestWorld({ modules: [...RECEIPT_DELIVERY_MODULES, ZaloDeliveryQueueModule.register({})] })
+    beforeAll(() => world.cleanup(() => cleanupJobs(world.db.primary, world.prefix)))
+    afterEach(() => jest.restoreAllMocks())
+    it("a redelivery writes no second account_data row and queues no second job", async () => {
+        const { service, message } = zaloPublicationBuilder(world)
+        const [connection = ""] = message.deliveryId.split(":")
+        await persistZaloAccount(world, connection)
+        await service.acceptZaloDelivery(ZALO_PROOF_BODY, connection)
+        const first = await zaloDeliveryState(world, message.deliveryId)
+        await service.acceptZaloDelivery(ZALO_PROOF_BODY, connection)
+        expect(first.receipts).toHaveLength(1)
+        expect(first.receipts[0]?.payload).toEqual({
+            eventId: "m-1",
+            event: "user_send_text",
+            raw: ZALO_PROOF_EVENT,
+        })
+        expect(first.jobs).toHaveLength(1)
+        expect(await zaloDeliveryState(world, message.deliveryId)).toEqual(first)
     })
 })
 

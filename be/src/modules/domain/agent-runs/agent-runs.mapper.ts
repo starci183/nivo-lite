@@ -1,9 +1,9 @@
 import { isRecord } from "@modules/platform/primitives"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import type { AgentRunStatus, AgentStepStatus, StepEffect, StepJson } from "./agent-runs.contracts"
 import type { RunView } from "./agent-runs-engine.contracts"
 import type { RunRecord, StepRecord } from "./agent-runs-records.contracts"
+import type { StoredRun, StoredStep } from "./agent-runs-rows.contracts"
 import type { RunEngine } from "./agent-runs-view.contracts"
 import { DEFAULT_DEADLINE_MS } from "./policies/agent-runs.policy"
 
@@ -32,7 +32,10 @@ const STEP_STATUSES: ReadonlyArray<AgentStepStatus> = [
 
 const rejected = (): AgentRunsError => new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })
 
-type Data = RecordRow["data"]
+type Data = Readonly<Record<string, unknown>>
+
+/** The members of a stored row, by name. */
+const membersOf = (row: StoredRun | StoredStep): Data => Object.fromEntries(Object.entries(row))
 
 const textOf = (data: Data, key: string): string => {
     const value = data[key]
@@ -107,58 +110,63 @@ const codeOf = (data: Data): string | null => {
     return error !== null && typeof error.code === "string" ? error.code : null
 }
 
-/** A run record read from the engine's row. */
-export const runRecordOf = (row: RecordRow): RunRecord => ({
-    id: row.id,
-    workspaceId: row.workspaceId,
-    version: row.version,
-    agentId: textOf(row.data, "agentId"),
-    wakeId: textOf(row.data, "wakeId"),
-    trigger: textOf(row.data, "trigger"),
-    graphVersionId: textOrNull(row.data, "graphVersionId"),
-    planning: flagOf(row.data, "planning"),
-    status: enumOf(row.data, "status", RUN_STATUSES),
-    engine: runEngineOf(row),
-    context: jsonOf(row.data, "context"),
-    errorCode: codeOf(row.data),
-    deadLetteredAt: dateOrNull(row.data, "deadLetteredAt"),
-    parkedBuild: textOrNull(row.data, "parkedBuild"),
-    resumeAttempts: intOf(row.data, "resumeAttempts"),
-    resumeNotBefore: dateOrNull(row.data, "resumeNotBefore"),
-    endedAt: dateOrNull(row.data, "endedAt"),
-    startedAt: dateOrNull(row.data, "startedAt"),
-    stepSeq: intOf(row.data, "stepSeq"),
-    cancelledAt: dateOrNull(row.data, "cancelledAt"),
-    cancelledBy: textOrNull(row.data, "cancelledBy"),
-})
+/** A run record read from its stored row. */
+export const runRecordOf = (row: StoredRun): RunRecord => {
+    const data = membersOf(row)
+    return {
+        id: row.id,
+        workspaceId: row.workspaceId,
+        version: row.version,
+        agentId: textOf(data, "agentId"),
+        wakeId: textOf(data, "wakeId"),
+        trigger: textOf(data, "trigger"),
+        graphVersionId: textOrNull(data, "graphVersionId"),
+        planning: flagOf(data, "planning"),
+        status: enumOf(data, "status", RUN_STATUSES),
+        engine: runEngineOf(row),
+        context: jsonOf(data, "context"),
+        errorCode: codeOf(data),
+        deadLetteredAt: dateOrNull(data, "deadLetteredAt"),
+        parkedBuild: textOrNull(data, "parkedBuild"),
+        resumeAttempts: intOf(data, "resumeAttempts"),
+        resumeNotBefore: dateOrNull(data, "resumeNotBefore"),
+        endedAt: dateOrNull(data, "endedAt"),
+        startedAt: dateOrNull(data, "startedAt"),
+        stepSeq: intOf(data, "stepSeq"),
+        cancelledAt: dateOrNull(data, "cancelledAt"),
+        cancelledBy: textOrNull(data, "cancelledBy"),
+    }
+}
 
-/** The engine a run is on: `legacy` for a row that names none (every run opened before the field existed), else the one it names. */
-export const runEngineOf = (row: RecordRow): RunEngine =>
-    row.data.engine === null || row.data.engine === undefined ? "legacy" : enumOf(row.data, "engine", RUN_ENGINES)
+/** The engine a run is on, as its row names it. */
+export const runEngineOf = (row: StoredRun): RunEngine => enumOf(membersOf(row), "engine", RUN_ENGINES)
 
-/** A step record read from the engine's row. */
-export const stepRecordOf = (row: RecordRow): StepRecord => ({
-    id: row.id,
-    version: row.version,
-    runId: textOf(row.data, "runId"),
-    ordinal: intOf(row.data, "ordinal"),
-    stepKey: textOf(row.data, "stepKey"),
-    nodeKey: textOf(row.data, "nodeKey"),
-    kind: textOf(row.data, "kind"),
-    effect: effectOf(row.data),
-    input: jsonOf(row.data, "input"),
-    result: jsonOrNull(row.data, "result"),
-    status: enumOf(row.data, "status", STEP_STATUSES),
-    attempt: intOf(row.data, "attempt"),
-    maxAttempts: intOf(row.data, "maxAttempts"),
-    deadlineMs: deadlineOf(row.data),
-    claimedUntil: dateOrNull(row.data, "claimedUntil"),
-    notBefore: dateOrNull(row.data, "notBefore"),
-    waitItemId: textOrNull(row.data, "waitItemId"),
-    workItemId: textOrNull(row.data, "workItemId"),
-    compAttempts: intOf(row.data, "compAttempts"),
-    errorCode: textOrNull(row.data, "errorCode"),
-})
+/** A step record read from its stored row. */
+export const stepRecordOf = (row: StoredStep): StepRecord => {
+    const data = membersOf(row)
+    return {
+        id: row.id,
+        version: row.version,
+        runId: textOf(data, "runId"),
+        ordinal: intOf(data, "ordinal"),
+        stepKey: textOf(data, "stepKey"),
+        nodeKey: textOf(data, "nodeKey"),
+        kind: textOf(data, "kind"),
+        effect: effectOf(data),
+        input: jsonOf(data, "input"),
+        result: jsonOrNull(data, "result"),
+        status: enumOf(data, "status", STEP_STATUSES),
+        attempt: intOf(data, "attempt"),
+        maxAttempts: intOf(data, "maxAttempts"),
+        deadlineMs: deadlineOf(data),
+        claimedUntil: dateOrNull(data, "claimedUntil"),
+        notBefore: dateOrNull(data, "notBefore"),
+        waitItemId: textOrNull(data, "waitItemId"),
+        workItemId: textOrNull(data, "workItemId"),
+        compAttempts: intOf(data, "compAttempts"),
+        errorCode: textOrNull(data, "errorCode"),
+    }
+}
 
 /** A run as its readers read it. */
 export const runViewOf = (run: RunRecord): RunView => ({

@@ -1,340 +1,589 @@
 {
-    "baseline": "Old engine (step handler, playOld) at tree aa40f9655, recorded 2026-11-11 by package X1 from the twin walk before its old half was removed.",
-    "buy": {
-        "path": [
-            "understand",
-            "to-consult"
-        ],
-        "outputs": {
-            "understand": {
-                "branch": "buy",
-                "summary": "Lan: buy"
-            },
-            "to-consult": {
-                "agent": "sales",
+  "baseline": "Re-recorded 2026-11-12 by X3 after the flip, on chatbot.front-desk version 7 (template graph). Supersedes the old engine's baseline (tree aa40f9655, package X1); every business fact of the old one was checked against this trace: the same acts, customer lines, team posts, effect-ledger rows and step outputs, under the renamed tool ids (nivo.tool.*). Changed by design: the complaint step is split (complaint-reply, complaint-notify), the agents no longer act inside their turns (one model call fewer on the complaint and question routes), the hand-off to the reconcile carries no channel (its v7 input contract), a template step keeps its fixed instant and day in the ledger (engine.step-instant / engine.step-day). Re-recorded 2026-11-13 by K1 after the declined ruling (F1): the front desk's ask-able steps carry `declined` (false here) and an `if` step after them (`complaint-declined`, `answer-declined`, branch no); the acts, customer lines, team posts, ledger rows and model calls are unchanged (ledger: path +1 if step on complaint and question; outputs + `declined:false` on complaint-reply and answer; the fake clock reads complaint-notify's fixed instant one step later, 10:00:38 for 10:00:32; acts, lines, team, effect rows and asked equal). Re-recorded 2026-11-13 by CL after the hand-off input follows the coordinator's decisions (`leadId` -> `contactId`: the front desk's hand-off to sales passes `contactId` in the callee's params and the tag payload carries no `leadId`; other agents get the conversation through callWorkflow input): on routes buy and paid the call-workflow act and its ledger row carry params.contactId `contact-1` instead of params.leadId `lead-1`, the tag payload no longer has a top-level `leadId`, and the act key (a hash of the payload) follows; path, outputs, lines, team posts, other ledger rows and model calls are unchanged. Re-recorded 2026-11-13 by CL again after front desk version 12 (the coordinator's decision: other agents get the conversation through callWorkflow input; LG-REQUESTS front-desk section): the `understand` step's output gains `recentLines` (one user line per route, the customer's words at 10:00:01); every other recorded fact (path, acts, lines, team posts, ledger, model calls) is unchanged. On routes buy and paid the hand-off params (the call-workflow act, its ledger row) also carry the same `recentLines`, and the act key (a hash of the payload) follows. Re-recorded 2026-11-13 by ENGINE-FIX after the ToolRunner hands the ledger the attempt's place (run and step) itself instead of the ledger parsing it from a uuid-only call key: the five ToolRunner ledger rows (the call-workflow tag on buy and paid, the customer sends and the team note) now carry `runId` `run-1` and their `stepKey`, as every live row with a uuid run id already did; the receipts of a step that runs again are read from them. Nothing else changed. Re-recorded 2026-11-14 by R4-WORLDS after the chat flip (front desk version 19, DECOUPLE lane): the world's customer now comes in through the REAL channel intake (the real contact, route and raw row; the contact is the contacts store's uuid, no more `contact-1`), and every difference of the old trace is the settled design: (1) the first step `hear` of the chatbot's own records, whose output is the chat id and the stored line (`written` true, `recentLines`), and its two step-instant / step-day ledger rows (`call:run-1:hear:at`, `call:run-1:hear:day`); the later step-instants follow the extra clock reads (+23 s on understand, answer, complaint-reply's instants); (2) the `recentLines` of the customer's line carry the stamp's microsecond tail of the stored chat line (`...01.000970Z`, `message-stamp.policy`), in `understand`'s output and in the hand-off params of buy and paid, and the act key (a hash of the payload) follows; (3) the customer send addresses the person: its payload no longer carries `conversationId` (the route is the run's own; the ledger row's receipt names it as `routeId`), the act key follows; the effect-ledger row of the send keeps the receipt as its facts (`state` delivered, `contactId`, `channel`, `accountId`, `routeId`, `sendKey`, `at`) and its subject id is the send key (it was the chat line id `m-1`), and the line's `channelRef` is `line:<send key>` as before. Path after `hear`, outputs of the other steps, team posts, acts' effects and order, and every model call are unchanged (asked 1 / 1 / 3 / 3). Re-recorded 2026-11-14 by S5 after chatbot.hear (Opus-3, front desk version 20) hands on `channel` and `messages` (the words and pictures it stored, one entry per line of the run, queue included): on every route the output of `hear` gains `channel` (zalo) and `messages` (the one line, no attachments); every other recorded fact (path, the other outputs, acts, lines, team posts, ledger rows, model calls) is unchanged, read from the diff of the four routes. Re-recorded 2026-11-14 by S5 after the sale rework (Opus-3): the hand-off to the Sales consult no longer carries `recentLines` (the consult reads the conversation itself, ruling R16), on route buy: the call-workflow act params and its ledger args lose them and the act key (a hash of the payload) follows; route paid, the other steps and every model call are unchanged. Re-recorded 2026-11-14 by S5b after the conversation became ENGINE data (owner ruling R26, MESSAGES-PLAN): `chatbot.hear` stores no copy of the words, so its output loses `recentLines` and `written` and gains `startedAt` (the chat's start, ms); the thread the model reads (`understand`'s `recentLines`, the hand-off params of route paid and their act key, a hash of the payload) is the engine's own, so a line's `at` is the channel's time in milliseconds (the chatbot's microsecond stamp tail is gone); the clock reads 8 s fewer before the later step instants (hear no longer writes records), so those instants and the complaint's note time moved earlier. Path, acts and their effects, customer lines, team posts, other ledger facts and model calls (asked 1 / 1 / 3 / 3) are unchanged, read from the diff of the four routes. Re-recorded 2026-11-14 by S5c after the hand-off tag payload lost its `visibility` member (packages rebuilt 06:16): on routes buy and paid the call-workflow act and its ledger args no longer carry `visibility: chat`, and the act key (a hash of the payload) follows; path, outputs, lines, team posts, other ledger rows and model calls are unchanged, read from the diff of the two routes. Re-recorded 2026-11-14 (S5d, R45): `hear` no longer outputs `held` (the staff hold is the route's, enforced by the engine at delivery and at the send door; hear's 'a person holds it' end is deleted). Nothing else moved: the four `held: false` members of hear's output were removed, and the team post of the complaint and question routes is one clock read earlier (10:00:45 -> 10:00:44, and the complaint's subjectId 10:01:02 -> 10:01:01): hear no longer reads the hold (every clock read is one second in the worlds). Re-recorded 2026-11-14 (S5d, front desk v25, packages 07:08): on route buy the hand-off to the Sales consult gains `since` (the visit's start, `steps.hear.output.startedAt`: the consult reads the engine's thread from there), in the call-workflow act params and its ledger args; on route paid the hand-off to `sales.payment` no longer carries the unread `recentLines`; the two act keys (a hash of the payload) follow. Path, outputs, lines, team posts, other ledger rows and model calls are unchanged, read from the diff of the two routes.",
+  "buy": {
+    "path": [
+      "hear",
+      "understand",
+      "to-consult"
+    ],
+    "outputs": {
+      "hear": {
+        "route": "go",
+        "conversationId": "chat-0001",
+        "channel": "zalo",
+        "text": "Shop oi cho minh dat 1 bo hoa hong",
+        "startedAt": "2026-11-10T10:00:01.000Z",
+        "messages": [
+          {
+            "text": "Shop oi cho minh dat 1 bo hoa hong",
+            "attachments": []
+          }
+        ]
+      },
+      "understand": {
+        "branch": "buy",
+        "summary": "Lan: buy",
+        "recentLines": [
+          {
+            "role": "user",
+            "text": "Shop oi cho minh dat 1 bo hoa hong",
+            "at": "2026-11-10T10:00:01.000Z"
+          }
+        ]
+      },
+      "to-consult": {
+        "agent": "sales",
+        "workflow": "consult",
+        "version": "latest",
+        "tag": {
+          "kind": "nivo.tool.agent.tag",
+          "id": "nivo.tool.agent.tag-1"
+        }
+      }
+    },
+    "outcome": {
+      "acts": [
+        {
+          "effect": "nivo.tool.agent.tag",
+          "payload": {
+            "toModuleKey": "sales",
+            "text": "Shop oi cho minh dat 1 bo hoa hong",
+            "conversationId": "conv-1",
+            "channel": "zalo",
+            "context": {
+              "workflowCall": {
                 "workflow": "consult",
-                "version": "latest",
-                "tag": {
-                    "kind": "nivo.agent.tag",
-                    "id": "nivo.agent.tag-1"
-                }
+                "version": "latest"
+              },
+              "params": {
+                "conversationId": "conv-1",
+                "text": "Shop oi cho minh dat 1 bo hoa hong",
+                "channel": "zalo",
+                "contactId": "00000000-0000-4000-8000-000000000001",
+                "since": "2026-11-10T10:00:01.000Z"
+              },
+              "caller": {
+                "runId": "run-1"
+              }
             }
+          },
+          "key": "run-1:to-consult:580c27790c84c147",
+          "dedupeKey": "call-workflow:run-1:sales.consult"
+        }
+      ],
+      "lines": [],
+      "team": [],
+      "ledger": [
+        {
+          "effectKey": "call:run-1:hear:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:11.000Z"
         },
-        "outcome": {
-            "acts": [
-                {
-                    "effect": "nivo.agent.tag",
-                    "payload": {
-                        "toModuleKey": "sales",
-                        "text": "Shop oi cho minh dat 1 bo hoa hong",
-                        "conversationId": "conv-1",
-                        "leadId": "lead-1",
-                        "channel": "zalo",
-                        "context": {
-                            "workflowCall": {
-                                "workflow": "consult",
-                                "version": "latest"
-                            },
-                            "params": {
-                                "conversationId": "conv-1",
-                                "text": "Shop oi cho minh dat 1 bo hoa hong",
-                                "channel": "zalo",
-                                "leadId": "lead-1"
-                            },
-                            "caller": {
-                                "runId": "run-1"
-                            }
-                        },
-                        "visibility": "chat"
-                    },
-                    "key": "run-1:to-consult:4256642e6af6d12f",
-                    "dedupeKey": "call-workflow:run-1:sales.consult"
-                }
-            ],
-            "lines": [],
-            "team": [],
-            "ledger": [
-                {
-                    "effectKey": "dedupe:call-workflow:run-1:sales.consult",
-                    "effectId": "nivo.agent.tag",
-                    "args": {
-                        "toModuleKey": "sales",
-                        "text": "Shop oi cho minh dat 1 bo hoa hong",
-                        "conversationId": "conv-1",
-                        "leadId": "lead-1",
-                        "channel": "zalo",
-                        "context": {
-                            "workflowCall": {
-                                "workflow": "consult",
-                                "version": "latest"
-                            },
-                            "params": {
-                                "conversationId": "conv-1",
-                                "text": "Shop oi cho minh dat 1 bo hoa hong",
-                                "channel": "zalo",
-                                "leadId": "lead-1"
-                            },
-                            "caller": {
-                                "runId": "run-1"
-                            }
-                        },
-                        "visibility": "chat"
-                    },
-                    "subjectEntity": "nivo.agent.tag",
-                    "subjectId": "nivo.agent.tag-1"
-                }
-            ],
-            "modelAsked": [
-                "chatbot.understand:understand"
-            ]
+        {
+          "effectKey": "call:run-1:hear:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
         },
-        "asked": 1
+        {
+          "effectKey": "call:run-1:understand:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:24.000Z"
+        },
+        {
+          "effectKey": "call:run-1:understand:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "dedupe:call-workflow:run-1:sales.consult",
+          "effectId": "nivo.tool.agent.tag",
+          "runId": "run-1",
+          "stepKey": "to-consult",
+          "args": {
+            "toModuleKey": "sales",
+            "text": "Shop oi cho minh dat 1 bo hoa hong",
+            "conversationId": "conv-1",
+            "channel": "zalo",
+            "context": {
+              "workflowCall": {
+                "workflow": "consult",
+                "version": "latest"
+              },
+              "params": {
+                "conversationId": "conv-1",
+                "text": "Shop oi cho minh dat 1 bo hoa hong",
+                "channel": "zalo",
+                "contactId": "00000000-0000-4000-8000-000000000001",
+                "since": "2026-11-10T10:00:01.000Z"
+              },
+              "caller": {
+                "runId": "run-1"
+              }
+            }
+          },
+          "subjectEntity": "nivo.tool.agent.tag",
+          "subjectId": "nivo.tool.agent.tag-1"
+        }
+      ],
+      "modelAsked": [
+        "chatbot.understand:agent"
+      ]
     },
-    "paid": {
-        "path": [
-            "understand",
-            "to-reconcile"
-        ],
-        "outputs": {
-            "understand": {
-                "branch": "paid",
-                "summary": "Lan: paid"
-            },
-            "to-reconcile": {
-                "agent": "accounting",
-                "workflow": "reconcile",
-                "version": "latest",
-                "tag": {
-                    "kind": "nivo.agent.tag",
-                    "id": "nivo.agent.tag-1"
-                }
-            }
-        },
-        "outcome": {
-            "acts": [
-                {
-                    "effect": "nivo.agent.tag",
-                    "payload": {
-                        "toModuleKey": "accounting",
-                        "text": "Minh chuyen khoan roi nhe",
-                        "conversationId": "conv-1",
-                        "leadId": "lead-1",
-                        "channel": "zalo",
-                        "context": {
-                            "workflowCall": {
-                                "workflow": "reconcile",
-                                "version": "latest"
-                            },
-                            "params": {
-                                "conversationId": "conv-1",
-                                "text": "Minh chuyen khoan roi nhe",
-                                "channel": "zalo",
-                                "leadId": "lead-1"
-                            },
-                            "caller": {
-                                "runId": "run-1"
-                            }
-                        },
-                        "visibility": "chat"
-                    },
-                    "key": "run-1:to-reconcile:0b008363e2305819",
-                    "dedupeKey": "call-workflow:run-1:accounting.reconcile"
-                }
-            ],
-            "lines": [],
-            "team": [],
-            "ledger": [
-                {
-                    "effectKey": "dedupe:call-workflow:run-1:accounting.reconcile",
-                    "effectId": "nivo.agent.tag",
-                    "args": {
-                        "toModuleKey": "accounting",
-                        "text": "Minh chuyen khoan roi nhe",
-                        "conversationId": "conv-1",
-                        "leadId": "lead-1",
-                        "channel": "zalo",
-                        "context": {
-                            "workflowCall": {
-                                "workflow": "reconcile",
-                                "version": "latest"
-                            },
-                            "params": {
-                                "conversationId": "conv-1",
-                                "text": "Minh chuyen khoan roi nhe",
-                                "channel": "zalo",
-                                "leadId": "lead-1"
-                            },
-                            "caller": {
-                                "runId": "run-1"
-                            }
-                        },
-                        "visibility": "chat"
-                    },
-                    "subjectEntity": "nivo.agent.tag",
-                    "subjectId": "nivo.agent.tag-1"
-                }
-            ],
-            "modelAsked": [
-                "chatbot.understand:understand"
-            ]
-        },
-        "asked": 1
+    "asked": 1
+  },
+  "paid": {
+    "path": [
+      "hear",
+      "understand",
+      "to-payment"
+    ],
+    "outputs": {
+      "hear": {
+        "route": "go",
+        "conversationId": "chat-0001",
+        "channel": "zalo",
+        "text": "Minh chuyen khoan roi nhe",
+        "startedAt": "2026-11-10T10:00:01.000Z",
+        "messages": [
+          {
+            "text": "Minh chuyen khoan roi nhe",
+            "attachments": []
+          }
+        ]
+      },
+      "understand": {
+        "branch": "paid",
+        "summary": "Lan: paid",
+        "recentLines": [
+          {
+            "role": "user",
+            "text": "Minh chuyen khoan roi nhe",
+            "at": "2026-11-10T10:00:01.000Z"
+          }
+        ]
+      },
+      "to-payment": {
+        "agent": "sales",
+        "workflow": "payment",
+        "version": "latest",
+        "tag": {
+          "kind": "nivo.tool.agent.tag",
+          "id": "nivo.tool.agent.tag-1"
+        }
+      }
     },
-    "complaint": {
-        "path": [
-            "understand",
-            "complaint",
-            "to-owner"
-        ],
-        "outputs": {
-            "understand": {
-                "branch": "complaint",
-                "summary": "Lan: hoa heo"
-            },
-            "complaint": {
-                "reply": "Shop xin loi, shop kiem tra ngay.",
-                "posted": true,
-                "summary": "Lan phan nan hoa heo"
-            },
-            "to-owner": {
-                "outcome": "owner",
-                "values": {
-                    "summary": "Lan phan nan hoa heo"
-                }
+    "outcome": {
+      "acts": [
+        {
+          "effect": "nivo.tool.agent.tag",
+          "payload": {
+            "toModuleKey": "sales",
+            "text": "Minh chuyen khoan roi nhe",
+            "conversationId": "conv-1",
+            "context": {
+              "workflowCall": {
+                "workflow": "payment",
+                "version": "latest"
+              },
+              "params": {
+                "conversationId": "conv-1",
+                "text": "Minh chuyen khoan roi nhe",
+                "contactId": "00000000-0000-4000-8000-000000000001"
+              },
+              "caller": {
+                "runId": "run-1"
+              }
             }
+          },
+          "key": "run-1:to-payment:1a04bb9c94c34d4c",
+          "dedupeKey": "call-workflow:run-1:sales.payment"
+        }
+      ],
+      "lines": [],
+      "team": [],
+      "ledger": [
+        {
+          "effectKey": "call:run-1:hear:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:11.000Z"
         },
-        "outcome": {
-            "acts": [
-                {
-                    "effect": "nivo.lead.message.send",
-                    "payload": {
-                        "conversationId": "conv-1",
-                        "text": "Shop xin loi, shop kiem tra ngay."
-                    },
-                    "key": "run-1:complaint:6bf03839c93a7075",
-                    "dedupeKey": null
-                },
-                {
-                    "effect": "nivo.team.message.post",
-                    "payload": {
-                        "kind": "message.text",
-                        "intent": "notify",
-                        "title": "Khieu nai",
-                        "text": "Lan: hoa heo",
-                        "audience": "own"
-                    },
-                    "key": "run-1:complaint:42cc3c108aac462a",
-                    "dedupeKey": null
-                }
-            ],
-            "lines": [
-                {
-                    "conversationId": "conv-1",
-                    "text": "Shop xin loi, shop kiem tra ngay.",
-                    "channelRef": "line:run-1:complaint:6bf03839c93a7075"
-                }
-            ],
-            "team": [
-                {
-                    "key": "run-1:complaint:42cc3c108aac462a",
-                    "versions": [
-                        {
-                            "kind": "message.text",
-                            "intent": "notify",
-                            "title": "Khieu nai",
-                            "text": "Lan: hoa heo",
-                            "audience": "own"
-                        }
-                    ]
-                }
-            ],
-            "ledger": [
-                {
-                    "effectKey": "call:run-1:complaint:6bf03839c93a7075",
-                    "effectId": "nivo.lead.message.send",
-                    "args": {
-                        "conversationId": "conv-1",
-                        "text": "Shop xin loi, shop kiem tra ngay."
-                    },
-                    "subjectEntity": "message",
-                    "subjectId": "m-1"
-                },
-                {
-                    "effectKey": "call:run-1:complaint:42cc3c108aac462a",
-                    "effectId": "nivo.team.message.post",
-                    "args": {
-                        "kind": "message.text",
-                        "intent": "notify",
-                        "title": "Khieu nai",
-                        "text": "Lan: hoa heo",
-                        "audience": "own"
-                    },
-                    "subjectEntity": "chat-message",
-                    "subjectId": "chat-1"
-                }
-            ],
-            "modelAsked": [
-                "chatbot.understand:understand",
-                "chatbot.complaint:complaint",
-                "chatbot.complaint:complaint",
-                "chatbot.complaint:complaint"
-            ]
+        {
+          "effectKey": "call:run-1:hear:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
         },
-        "asked": 4
+        {
+          "effectKey": "call:run-1:understand:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:24.000Z"
+        },
+        {
+          "effectKey": "call:run-1:understand:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "dedupe:call-workflow:run-1:sales.payment",
+          "effectId": "nivo.tool.agent.tag",
+          "runId": "run-1",
+          "stepKey": "to-payment",
+          "args": {
+            "toModuleKey": "sales",
+            "text": "Minh chuyen khoan roi nhe",
+            "conversationId": "conv-1",
+            "context": {
+              "workflowCall": {
+                "workflow": "payment",
+                "version": "latest"
+              },
+              "params": {
+                "conversationId": "conv-1",
+                "text": "Minh chuyen khoan roi nhe",
+                "contactId": "00000000-0000-4000-8000-000000000001"
+              },
+              "caller": {
+                "runId": "run-1"
+              }
+            }
+          },
+          "subjectEntity": "nivo.tool.agent.tag",
+          "subjectId": "nivo.tool.agent.tag-1"
+        }
+      ],
+      "modelAsked": [
+        "chatbot.understand:agent"
+      ]
     },
-    "question": {
-        "path": [
-            "understand",
-            "answer"
-        ],
-        "outputs": {
-            "understand": {
-                "branch": "question",
-                "summary": "Lan: gio mo cua"
-            },
-            "answer": {
-                "reply": "Shop mo cua tu 8h den 21h a."
+    "asked": 1
+  },
+  "complaint": {
+    "path": [
+      "hear",
+      "understand",
+      "complaint-reply",
+      "complaint-declined",
+      "complaint-notify",
+      "to-owner"
+    ],
+    "outputs": {
+      "hear": {
+        "route": "go",
+        "conversationId": "chat-0001",
+        "channel": "zalo",
+        "text": "Hoa giao bi heo het roi",
+        "startedAt": "2026-11-10T10:00:01.000Z",
+        "messages": [
+          {
+            "text": "Hoa giao bi heo het roi",
+            "attachments": []
+          }
+        ]
+      },
+      "understand": {
+        "branch": "complaint",
+        "summary": "Lan: hoa heo",
+        "recentLines": [
+          {
+            "role": "user",
+            "text": "Hoa giao bi heo het roi",
+            "at": "2026-11-10T10:00:01.000Z"
+          }
+        ]
+      },
+      "complaint-reply": {
+        "reply": "Shop xin loi, shop kiem tra ngay.",
+        "orderCode": null,
+        "summary": "Lan phan nan hoa heo",
+        "declined": false
+      },
+      "complaint-declined": {
+        "branch": "no"
+      },
+      "complaint-notify": {
+        "posted": true,
+        "refusal": null
+      },
+      "to-owner": {
+        "outcome": "owner",
+        "values": {
+          "summary": "Lan phan nan hoa heo"
+        }
+      }
+    },
+    "outcome": {
+      "acts": [
+        {
+          "effect": "nivo.tool.customer.message.send",
+          "payload": {
+            "text": "Shop xin loi, shop kiem tra ngay."
+          },
+          "key": "run-1:complaint-reply:fd2827cccd83e91c",
+          "dedupeKey": null
+        },
+        {
+          "effect": "nivo.tool.team.message.post",
+          "payload": {
+            "kind": "message.text",
+            "intent": "notify",
+            "title": "Khieu nai",
+            "text": "Lan: hoa heo",
+            "audience": "own"
+          },
+          "key": "run-1:complaint-notify:f103f391f63db115",
+          "dedupeKey": null
+        }
+      ],
+      "lines": [
+        {
+          "conversationId": "conv-1",
+          "text": "Shop xin loi, shop kiem tra ngay.",
+          "channelRef": "line:run-1:complaint-reply:fd2827cccd83e91c"
+        }
+      ],
+      "team": [
+        {
+          "key": "run-1:complaint-notify:f103f391f63db115",
+          "versions": [
+            {
+              "kind": "message.text",
+              "intent": "notify",
+              "title": "Khieu nai",
+              "text": "Lan: hoa heo",
+              "audience": "own"
             }
+          ]
+        }
+      ],
+      "ledger": [
+        {
+          "effectKey": "call:run-1:hear:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:11.000Z"
         },
-        "outcome": {
-            "acts": [
-                {
-                    "effect": "nivo.lead.message.send",
-                    "payload": {
-                        "conversationId": "conv-1",
-                        "text": "Shop mo cua tu 8h den 21h a."
-                    },
-                    "key": "run-1:answer:ab85200d1bfd81bb",
-                    "dedupeKey": null
-                }
-            ],
-            "lines": [
-                {
-                    "conversationId": "conv-1",
-                    "text": "Shop mo cua tu 8h den 21h a.",
-                    "channelRef": "line:run-1:answer:ab85200d1bfd81bb"
-                }
-            ],
-            "team": [],
-            "ledger": [
-                {
-                    "effectKey": "call:run-1:answer:ab85200d1bfd81bb",
-                    "effectId": "nivo.lead.message.send",
-                    "args": {
-                        "conversationId": "conv-1",
-                        "text": "Shop mo cua tu 8h den 21h a."
-                    },
-                    "subjectEntity": "message",
-                    "subjectId": "m-1"
-                }
-            ],
-            "modelAsked": [
-                "chatbot.understand:understand",
-                "chatbot.answer:answer",
-                "chatbot.answer:answer",
-                "chatbot.answer:answer"
-            ]
+        {
+          "effectKey": "call:run-1:hear:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
         },
-        "asked": 4
-    }
+        {
+          "effectKey": "call:run-1:understand:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:24.000Z"
+        },
+        {
+          "effectKey": "call:run-1:understand:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "call:run-1:complaint-reply:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:36.000Z"
+        },
+        {
+          "effectKey": "call:run-1:complaint-reply:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "call:run-1:complaint-reply:fd2827cccd83e91c",
+          "effectId": "nivo.tool.customer.message.send",
+          "runId": "run-1",
+          "stepKey": "complaint-reply",
+          "args": {
+            "text": "Shop xin loi, shop kiem tra ngay."
+          },
+          "subjectEntity": "message",
+          "subjectId": "run-1:complaint-reply:fd2827cccd83e91c",
+          "facts": {
+            "delivered": true,
+            "state": "delivered",
+            "reason": null,
+            "contactId": "00000000-0000-4000-8000-000000000001",
+            "channel": "zalo",
+            "accountId": "zalo-1",
+            "routeId": "conv-1",
+            "providerMessageId": null,
+            "at": "2026-11-10T10:00:44.000Z",
+            "sendKey": "run-1:complaint-reply:fd2827cccd83e91c"
+          }
+        },
+        {
+          "effectKey": "call:run-1:complaint-notify:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:01:01.000Z"
+        },
+        {
+          "effectKey": "call:run-1:complaint-notify:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "call:run-1:complaint-notify:f103f391f63db115",
+          "effectId": "nivo.tool.team.message.post",
+          "runId": "run-1",
+          "stepKey": "complaint-notify",
+          "args": {
+            "kind": "message.text",
+            "intent": "notify",
+            "title": "Khieu nai",
+            "text": "Lan: hoa heo",
+            "audience": "own"
+          },
+          "subjectEntity": "chat-message",
+          "subjectId": "chat-1"
+        }
+      ],
+      "modelAsked": [
+        "chatbot.understand:agent",
+        "chatbot.complaint-reply:agent",
+        "chatbot.complaint-notify:agent"
+      ]
+    },
+    "asked": 3
+  },
+  "question": {
+    "path": [
+      "hear",
+      "understand",
+      "answer",
+      "answer-declined"
+    ],
+    "outputs": {
+      "hear": {
+        "route": "go",
+        "conversationId": "chat-0001",
+        "channel": "zalo",
+        "text": "Shop mo cua may gio?",
+        "startedAt": "2026-11-10T10:00:01.000Z",
+        "messages": [
+          {
+            "text": "Shop mo cua may gio?",
+            "attachments": []
+          }
+        ]
+      },
+      "understand": {
+        "branch": "question",
+        "summary": "Lan: gio mo cua",
+        "recentLines": [
+          {
+            "role": "user",
+            "text": "Shop mo cua may gio?",
+            "at": "2026-11-10T10:00:01.000Z"
+          }
+        ]
+      },
+      "answer": {
+        "reply": "Shop mo cua tu 8h den 21h a.",
+        "declined": false
+      },
+      "answer-declined": {
+        "branch": "no"
+      }
+    },
+    "outcome": {
+      "acts": [
+        {
+          "effect": "nivo.tool.customer.message.send",
+          "payload": {
+            "text": "Shop mo cua tu 8h den 21h a."
+          },
+          "key": "run-1:answer:143770cab31b2624",
+          "dedupeKey": null
+        }
+      ],
+      "lines": [
+        {
+          "conversationId": "conv-1",
+          "text": "Shop mo cua tu 8h den 21h a.",
+          "channelRef": "line:run-1:answer:143770cab31b2624"
+        }
+      ],
+      "team": [],
+      "ledger": [
+        {
+          "effectKey": "call:run-1:hear:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:11.000Z"
+        },
+        {
+          "effectKey": "call:run-1:hear:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "call:run-1:understand:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:24.000Z"
+        },
+        {
+          "effectKey": "call:run-1:understand:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "call:run-1:answer:at",
+          "effectId": "engine.step-instant",
+          "subjectEntity": "instant",
+          "subjectId": "2026-11-10T10:00:36.000Z"
+        },
+        {
+          "effectKey": "call:run-1:answer:day",
+          "effectId": "engine.step-day",
+          "subjectEntity": "day",
+          "subjectId": "2026-11-10"
+        },
+        {
+          "effectKey": "call:run-1:answer:143770cab31b2624",
+          "effectId": "nivo.tool.customer.message.send",
+          "runId": "run-1",
+          "stepKey": "answer",
+          "args": {
+            "text": "Shop mo cua tu 8h den 21h a."
+          },
+          "subjectEntity": "message",
+          "subjectId": "run-1:answer:143770cab31b2624",
+          "facts": {
+            "delivered": true,
+            "state": "delivered",
+            "reason": null,
+            "contactId": "00000000-0000-4000-8000-000000000001",
+            "channel": "zalo",
+            "accountId": "zalo-1",
+            "routeId": "conv-1",
+            "providerMessageId": null,
+            "at": "2026-11-10T10:00:44.000Z",
+            "sendKey": "run-1:answer:143770cab31b2624"
+          }
+        }
+      ],
+      "modelAsked": [
+        "chatbot.understand:agent",
+        "chatbot.answer:agent",
+        "chatbot.answer:agent"
+      ]
+    },
+    "asked": 3
+  }
 }

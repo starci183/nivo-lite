@@ -1,8 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TOOL, workflowStoppedPayload } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { workflowStoppedPayload } from "@nivo-lite/agent-sdk/team-chat"
 import { GraphNodeRegistryService, type NodeEffectExecutor } from "@modules/domain/graph-nodes"
 import { MESSAGE_CATALOG, type MessageCatalog } from "@modules/platform/i18n"
+import { DO_NOT_SEND_VI, SEND_QR_REASON_VI } from "@tests/fixtures/i18n/agent-threads-spec.messages"
 import type { RunStop, StopCardContext } from "./run-stop.contracts"
 import { StopCardsService, stopCardKeyOf, stopCardStateOf } from "./stop-cards.service"
 
@@ -15,7 +17,7 @@ const STOP: RunStop = {
     stepKey: "match",
     agentId: "agent-1",
     workflowId: null,
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_report",
     state: "open",
@@ -104,6 +106,15 @@ describe("StopCardsService posts the card of a stop", () => {
         })
     })
 
+    it("posts nothing where the app serves no team post", async () => {
+        const { cards, post } = await build(false)
+        await expect(cards.posted("ws-1", STOP, CONTEXT, NOW)).resolves.toBeNull()
+        await cards.rewritten("ws-1", STOP, "vi")
+        expect(post.execute).not.toHaveBeenCalled()
+    })
+})
+
+describe("StopCardsService posts the card of a permission request or a failure", () => {
     it("asks a verdict on a permission request, and names an AI failure and an engine stop as NIVO's report", async () => {
         const { cards, payloadOf } = await build()
 
@@ -158,12 +169,36 @@ describe("StopCardsService posts the card of a stop", () => {
             "text",
         ])
     })
+})
 
-    it("posts nothing where the app serves no team post", async () => {
-        const { cards, post } = await build(false)
-        await expect(cards.posted("ws-1", STOP, CONTEXT, NOW)).resolves.toBeNull()
-        await cards.rewritten("ws-1", STOP, "vi")
-        expect(post.execute).not.toHaveBeenCalled()
+describe("StopCardsService carries the approval card the engine built before the write (team-chat rule 9)", () => {
+    const CARD = {
+        step: { nodeId: "sales.payment-qr", title: "Make QR", description: "" },
+        call: { tool: "nivo.tool.payment.transfer.create", account: "SePay · MB 5252" },
+        facts: [{ name: "amountVnd", value: "250000" }],
+        text: "Tạo mã QR 250.000đ.",
+        preview: { kind: "sales.order.summary", payload: { orderNo: "DH-7" } },
+    }
+    const ASKING: RunStop = { ...STOP, kind: "approval", detail: { ...STOP.detail, approvalCard: CARD } }
+
+    it("posts it as the decision of the permission request, its preview on the card, and keeps it on every rewrite", async () => {
+        const { cards, payloadOf } = await build()
+
+        await cards.posted("ws-1", ASKING, CONTEXT, NOW)
+        await cards.rewritten("ws-1", ASKING, "vi")
+
+        expect(memberOf(payloadOf(0), "decision")).toEqual(CARD)
+        expect(memberOf(memberOf(payloadOf(0), "card"), "preview")).toEqual(CARD.preview)
+        expect(memberOf(payloadOf(1), "decision")).toEqual(CARD)
+    })
+
+    it("a stop with no approval card posts none", async () => {
+        const { cards, payloadOf } = await build()
+
+        await cards.posted("ws-1", STOP, CONTEXT, NOW)
+
+        expect(payloadOf(0)).not.toHaveProperty("decision")
+        expect(memberOf(payloadOf(0), "card")).not.toHaveProperty("preview")
     })
 })
 
@@ -175,7 +210,7 @@ describe("StopCardsService rewrites the card of a stop in place", () => {
         await cards.rewritten("ws-1", { ...STOP, answers: [answer], decision: answer }, "vi")
 
         expect(post.execute.mock.calls[0]?.[2]).toEqual({
-            key: "run-stuck:run-1:match:answered:2:1",
+            key: "run-stuck:run-1:match:answered:2:1:f1",
             dedupeKey: "run-stuck:run-1:match",
         })
         expect(memberOf(payloadOf(0), "kind")).toBe("workflow.stopped")
@@ -202,6 +237,48 @@ describe("StopCardsService rewrites the card of a stop in place", () => {
         await cards.resolved("ws-1", { ...STOP, cardMessageId: null }, "vi", NOW)
         await cards.rewritten("ws-1", { ...STOP, cardMessageId: null }, "vi")
         expect(post.execute).not.toHaveBeenCalled()
+    })
+})
+
+describe("StopCardsService: a rewrite carries what the record says about the engine's holding line", () => {
+    const keyOf = (post: Awaited<ReturnType<typeof build>>["post"], nth: number): string => String(post.execute.mock.calls[nth]?.[2].key)
+
+    it("hands the two raw line facts when the stop has them, and the key ends with the reason", async () => {
+        const { cards, post, payloadOf } = await build()
+        const facts = [
+            { name: "amount", value: "1,000" },
+            { name: "customerLine", value: "not_told" },
+            { name: "customerLineReason", value: "ability_off" },
+        ]
+
+        await cards.rewritten("ws-1", { ...STOP, detail: { ...STOP.detail, facts } }, "vi")
+
+        expect(memberOf(memberOf(payloadOf(0), "rewrite"), "lineFacts")).toEqual([
+            { name: "customerLine", value: "not_told" },
+            { name: "customerLineReason", value: "ability_off" },
+        ])
+        expect(keyOf(post, 0)).toMatch(/^run-stuck:run-1:match:[a-z_]+:2:0:f3:ability_off$/)
+    })
+
+    it("hands an empty list and keys no reason when the stop says nothing of the line; a second reason is another key", async () => {
+        const { cards, post, payloadOf } = await build()
+
+        await cards.rewritten("ws-1", STOP, "vi")
+        const notTold = (reason: string) => ({
+            ...STOP,
+            detail: {
+                ...STOP.detail,
+                facts: [...STOP.detail.facts, { name: "customerLine", value: "not_told" }, { name: "customerLineReason", value: reason }],
+            },
+        })
+        await cards.rewritten("ws-1", notTold("ability_off"), "vi")
+        await cards.rewritten("ws-1", notTold("not_attached"), "vi")
+
+        expect(memberOf(memberOf(payloadOf(0), "rewrite"), "lineFacts")).toEqual([])
+        expect(keyOf(post, 0)).toMatch(/:f1$/)
+        expect(keyOf(post, 1)).toMatch(/:f3:ability_off$/)
+        expect(keyOf(post, 2)).toMatch(/:f3:not_attached$/)
+        expect(new Set([keyOf(post, 0), keyOf(post, 1), keyOf(post, 2)]).size).toBe(3)
     })
 })
 
@@ -237,5 +314,37 @@ describe("stopCardStateOf", () => {
             needs: { answer: true, decisions: ["retry", "skip"], verdicts: [] },
             takenOver: true,
         })
+    })
+})
+
+// D-MX-10: the owner's verdict on a permission request is read in the card's own trace (who, what, when), so no line is posted beside it.
+describe("StopCardsService: a verdict on a permission request is in the card's trace (D-MX-10)", () => {
+    const approval = (answers: RunStop["answers"]): RunStop => ({
+        ...STOP,
+        kind: "approval",
+        reason: SEND_QR_REASON_VI,
+        detail: { suggestions: [], facts: [{ name: "workItemId", value: "item-7" }] },
+        answers,
+        decision: answers.at(-1) ?? null,
+    })
+
+    it("approved: the trace says approve, by the owner, at the time", async () => {
+        const { cards } = await build()
+        const section = cards.sectionOf(approval([{ kind: "retry", text: null, by: "seat-owner", at: NOW }]), "vi")
+        expect(section.replies).toEqual([{ kind: "approve", text: null, by: "seat-owner", at: NOW }])
+    })
+
+    it("refused: the trace says refuse with the owner's words; a deadline stays a timeout", async () => {
+        const { cards } = await build()
+        const refused = cards.sectionOf(approval([{ kind: "answer", text: DO_NOT_SEND_VI, by: "seat-owner", at: NOW }]), "vi")
+        expect(refused.replies).toEqual([{ kind: "refuse", text: DO_NOT_SEND_VI, by: "seat-owner", at: NOW }])
+        const late = cards.sectionOf(approval([{ kind: "timeout", text: null, by: "deadline", at: NOW }]), "vi")
+        expect(late.replies.map((reply) => reply.kind)).toEqual(["timeout"])
+    })
+
+    it("any other stop keeps its replies as they were", async () => {
+        const { cards } = await build()
+        const section = cards.sectionOf({ ...STOP, answers: [{ kind: "retry", text: null, by: "seat-1", at: NOW }] }, "vi")
+        expect(section.replies.map((reply) => reply.kind)).toEqual(["retry"])
     })
 })

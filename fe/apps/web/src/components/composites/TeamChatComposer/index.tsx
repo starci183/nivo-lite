@@ -24,7 +24,7 @@ export const TeamChatComposer = (props: TeamChatComposerProps) => {
                     <Alert tone="negative" title={props.error.title} description={props.error.text} />
                 )}
                 {props.reply === null ? null : (
-                    <Cluster gap="inline" align="center" wrap={false}>
+                    <Cluster gap="identity" align="center" wrap={false}>
                         <Quote source={props.reply.title} text={props.reply.body} />
                         <IconButton
                             intent="neutral"
@@ -36,7 +36,7 @@ export const TeamChatComposer = (props: TeamChatComposerProps) => {
                     </Cluster>
                 )}
                 {props.suggestions.length === 0 ? null : (
-                    <Cluster gap="inline">
+                    <Cluster gap="identity">
                         {props.suggestions.map((party) => (
                             <Button
                                 key={`${party.kind}:${party.id}`}
@@ -54,7 +54,7 @@ export const TeamChatComposer = (props: TeamChatComposerProps) => {
                         {props.typing}
                     </Text>
                 )}
-                {props.file === null || props.file.name === null ? null : (
+                {props.file?.name == null ? null : (
                     <ChatFileChosen
                         name={props.file.name}
                         removeLabel={props.file.removeLabel}
@@ -62,7 +62,7 @@ export const TeamChatComposer = (props: TeamChatComposerProps) => {
                         onRemove={props.onFileClear}
                     />
                 )}
-                <Cluster gap="inline" align="end" wrap={false}>
+                <Cluster gap="identity" align="end" wrap={false}>
                     {props.file === null ? null : (
                         <ChatFilePicker
                             label={props.file.label}

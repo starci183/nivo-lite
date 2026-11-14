@@ -1,30 +1,16 @@
-import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
-
 /** The periods the dashboard switches between; each reads the same data over a different window. */
 export type DashboardPeriod = "today" | "last_7_days" | "last_30_days" | "this_month"
 
-/** One day of the chart, in Vietnam time. */
-export interface DashboardDay {
-    /** The day, YYYY-MM-DD. */
-    readonly day: string
-    /** The first instant of the day. */
-    readonly from: Date
-    /** The first instant after the day. */
-    readonly to: Date
-}
-
-/** The window of a period: the period, the one before it of the same length, and the days the chart draws. */
+/** The window of a period: the period and the one before it of the same length. */
 export interface DashboardWindow {
     /** The period asked. */
     readonly period: DashboardPeriod
     /** The first instant of the period. */
     readonly from: Date
-    /** The first instant after the period (the start of tomorrow, Vietnam time). */
+    /** The first instant after the period (the start of tomorrow in the workspace's time zone). */
     readonly to: Date
     /** The first instant of the period before it, of the same length. */
     readonly previousFrom: Date
-    /** The days of the chart: the period, and at least the last seven days. */
-    readonly days: ReadonlyArray<DashboardDay>
 }
 
 /** A figure in the period and in the period before it. */
@@ -43,18 +29,6 @@ export interface Rate {
     readonly previous: number | null
 }
 
-/** The sales funnel of the period. */
-export interface Funnel {
-    /** Leads created. */
-    readonly visitors: number
-    /** Leads taken beyond the first stage. */
-    readonly consulted: number
-    /** Orders placed. */
-    readonly ordered: number
-    /** Orders placed that are paid. */
-    readonly paid: number
-}
-
 /** The items that wait for the owner: how many wait in all and the oldest few. */
 export interface ApprovalList {
     /** Every item that waits. */
@@ -63,57 +37,19 @@ export interface ApprovalList {
     readonly items: ReadonlyArray<ApprovalRow>
 }
 
-/** What one per-day statement measures: a sum of a field or a count, over the records its base filters keep. */
-export interface PerDayFigure {
-    /** Sum a field, or count. */
-    readonly kind: "sum" | "count"
-    /** The field summed; none for a count. */
-    readonly field?: string
-    /** The conditions every record of the figure meets. */
-    readonly base: ReadonlyArray<FilterExpr>
-}
-
-/** One channel customers came through. */
-export interface ChannelFacts {
-    /** The channel key of the lead (telegram, zalo, facebook, instagram, website). */
-    readonly channel: string
-    /** Leads created in the period. */
-    readonly leads: number
-    /** What the paid orders of those channels' leads came to in the period, VND. */
-    readonly revenueVnd: number
-}
-
-/** One day of the chart. */
-export interface DayFacts {
-    /** The day, YYYY-MM-DD, Vietnam time. */
-    readonly day: string
-    /** Matched payments received that day, VND. */
-    readonly revenueVnd: number
-    /** Orders placed that day. */
-    readonly orders: number
-}
-
-/** What the records (the entity engine) say about the period. */
+/** What the engine's records (conversations, runs) say about the period. */
 export interface RecordsFacts {
-    /** Matched credits (SePay and the other bank feeds), VND. */
-    readonly revenueVnd: Compared
-    /** Matched credits received in the period. */
-    readonly matchedPayments: number
-    /** Orders placed: confirmed, invoiced or paid. */
-    readonly ordersPlaced: Compared
-    /** Orders placed that are paid. */
-    readonly ordersPaid: Compared
-    /** Leads created. */
-    readonly leads: Compared
-    /** Leads created that were taken beyond the first stage. */
-    readonly leadsConsulted: Compared
-    /** Leads and revenue per channel, the most leads first. */
-    readonly channels: ReadonlyArray<ChannelFacts>
-    /** The chart days, oldest first. */
-    readonly days: ReadonlyArray<DayFacts>
+    /** Conversations with a line said in the period. */
+    readonly conversations: Compared
+    /** New contacts: conversations opened in the period, one per channel identity. */
+    readonly newContacts: Compared
+    /** Runs that finished (done or compensated). */
+    readonly runsDone: Compared
+    /** Runs that failed or were handed to a person. */
+    readonly runsFailed: Compared
     /** Replies an agent posted to customers. */
     readonly messagesAnswered: number
-    /** Runs that failed or were handed to a person, by agent id. */
+    /** Runs that failed or were handed to a person in the period, by agent id. */
     readonly failedRunsByAgent: ReadonlyMap<string, number>
 }
 
@@ -177,43 +113,33 @@ export interface SavingsFacts {
     readonly minutesSaved: number
     /** The lines of that sum, the largest first. */
     readonly lines: ReadonlyArray<SavingLine>
-    /** Minutes an action not in the table is worth. */
+    /** Minutes one finished item is worth. */
     readonly defaultMinutes: number
     /** Replies an agent posted to customers. */
     readonly messagesAnswered: number
-    /** Orders placed. */
-    readonly ordersCreated: number
-    /** Matched payments. */
-    readonly paymentsMatched: number
     /** Credits used this month. */
     readonly creditsUsed: number
     /** The credits of the month, with the carry-over; null is unlimited. */
     readonly creditsLimit: number | null
 }
 
-/** Every figure of the workspace dashboard. */
+/** Every figure of the workspace dashboard: the engine's own, no module's records. */
 export interface WorkspaceDashboardData {
     /** The window read. */
     readonly window: DashboardWindow
-    /** Revenue, VND. */
-    readonly revenue: Compared
-    /** Orders placed. */
-    readonly orders: Compared
-    /** Leads created. */
-    readonly newCustomers: Compared
-    /** Paid orders over leads, 0..1; null while there are no leads. */
-    readonly closeRate: Rate
+    /** Conversations with a line said. */
+    readonly conversations: Compared
+    /** New contacts. */
+    readonly newContacts: Compared
+    /** Runs that finished. */
+    readonly runsDone: Compared
+    /** Runs that failed or were handed to a person. */
+    readonly runsFailed: Compared
     /** Items finished by policy alone over items finished, 0..1; null while none finished. */
     readonly agentAutoRate: Rate
-    /** The chart days. */
-    readonly days: ReadonlyArray<DayFacts>
-    /** The funnel: leads, consulted, ordered, paid. */
-    readonly funnel: Funnel
-    /** Leads and revenue per channel. */
-    readonly channels: ReadonlyArray<ChannelFacts>
-    /** The items that wait for the owner. */
+    /** The items that wait for the owner (the stops). */
     readonly approvals: ApprovalList
-    /** What the agents did. */
+    /** What the agents did: minutes saved, credits used. */
     readonly savings: SavingsFacts
     /** The installed agents. */
     readonly agents: ReadonlyArray<AgentRow>

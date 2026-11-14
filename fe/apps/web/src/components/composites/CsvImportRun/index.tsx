@@ -1,5 +1,8 @@
 import { Alert, Select, Text } from "@starci/grammar/common"
 
+/** The `isLoading` prop, spread only when the caller states it (an absent flag stays absent). */
+const loadingOf = (isLoading: boolean | undefined) => (isLoading === undefined ? {} : { isLoading })
+
 /** What the import step draws and reports. */
 interface CsvImportRunProps {
     readonly isLoading?: boolean
@@ -23,7 +26,7 @@ export const CsvImportRun = (props: CsvImportRunProps) => (
         <Text size="sm">{props.intro}</Text>
         {props.schedule === null ? null : (
             <Select
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loadingOf(props.isLoading)}
                 label={props.schedule.label}
                 isDisabled={props.isDisabled || props.done !== null}
                 value={props.schedule.value}
@@ -33,7 +36,7 @@ export const CsvImportRun = (props: CsvImportRunProps) => (
         )}
         {props.done === null ? null : (
             <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loadingOf(props.isLoading)}
                 tone="affirmative"
                 title={props.done.title}
                 description={props.done.description}
@@ -41,7 +44,7 @@ export const CsvImportRun = (props: CsvImportRunProps) => (
         )}
         {props.done?.skipped ? (
             <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loadingOf(props.isLoading)}
                 tone="informative"
                 title={props.done.skipped}
             />

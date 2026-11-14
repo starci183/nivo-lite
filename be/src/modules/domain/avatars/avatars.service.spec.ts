@@ -12,6 +12,16 @@ import { AVATARS_ACCOUNTS, AVATARS_STORAGE } from "./avatars.decorators"
 import { AvatarsService } from "./avatars.service"
 import { AvatarsErrorCode } from "./errors/avatars.error"
 
+/** What `run` throws, or undefined when it does not throw. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 /** The statement `callDbFunction` sends to allocate a picture object name. */
 const NEW_AVATAR_OBJECT_ID = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 const ID = "0f8fad5b-d9cb-469f-a165-70867728950e"
@@ -154,5 +164,31 @@ describe("AvatarsService > an agent's picture", () => {
             code: AvatarsErrorCode.PathInvalid,
         })
         expect(identity.setAvatar).not.toHaveBeenCalled()
+    })
+})
+
+describe("AvatarsService > a workspace logo", () => {
+    it("issues a logo upload address in the workspaces folder to a manager only", async () => {
+        const { service, members, storage } = await build()
+
+        await expect(service.requestWorkspaceUpload("u1", "w1", PNG)).resolves.toMatchObject({
+            path: `workspaces/${ID}.png`,
+            publicUrl: `${PUBLIC_BASE}/workspaces/${ID}.png`,
+        })
+        expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
+
+        const refusal = new Error("staff")
+        members.require.mockRejectedValueOnce(refusal)
+        await expect(service.requestWorkspaceUpload("u2", "w1", PNG)).rejects.toBe(refusal)
+        expect(storage.signedUpload).toHaveBeenCalledTimes(1)
+    })
+
+    it("answers the public HTTPS address of an issued workspace path and refuses any other folder's path", async () => {
+        const { service } = await build()
+
+        expect(service.workspaceLogoAddressOf(`workspaces/${ID}.webp`)).toBe(`${PUBLIC_BASE}/workspaces/${ID}.webp`)
+        expect(thrownBy(() => service.workspaceLogoAddressOf(`people/${ID}.png`))).toEqual(
+            expect.objectContaining({ code: AvatarsErrorCode.PathInvalid }),
+        )
     })
 })

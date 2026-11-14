@@ -16,12 +16,10 @@ export interface SetCareOptOutRequest {
     readonly optOut: boolean
 }
 
-/** What releaseConversation takes: the conversation and which hold to clear. */
+/** What releaseConversation takes: the conversation (its route). */
 export interface ReleaseConversationRequest {
     /** The workspace. */
     readonly workspaceId: string
-    /** The conversation. */
+    /** The conversation: its route. */
     readonly conversationId: string
-    /** `person`, `agent` or `both` (absent: both). */
-    readonly hold?: string | null | undefined
 }

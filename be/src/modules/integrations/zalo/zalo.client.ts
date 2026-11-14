@@ -1,19 +1,18 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
-import { RENEWAL_GRANT_FIELD } from "./zalo.contracts"
-import type {
-    ZaloChatMessage,
-    ZaloData,
-    ZaloMethod,
-    ZaloOaProfile,
-    ZaloTokens,
-    ZaloUserProfile,
-    ZnsMessage,
-    ZnsReceipt,
+import {
+    RENEWAL_GRANT_FIELD,
+    type ZaloChatMessage,
+    type ZaloData,
+    type ZaloMethod,
+    type ZaloOaProfile,
+    type ZaloTokens,
+    type ZaloUserProfile,
+    type ZnsMessage,
+    type ZnsReceipt,
 } from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
 import { zaloErrorCodeOf } from "./zalo-failure.policy"
@@ -112,6 +111,12 @@ export class ZaloClient {
             [RENEWAL_GRANT_FIELD]: renewalToken,
             app_id: appId,
             grant_type: "refresh_token",
+        }).catch((cause: unknown) => {
+            // Zalo answered with its numeric refusal (not a network failure, not a bad gateway): it is the credential's, so the poll classifies it as an auth failure.
+            if (cause instanceof ZaloError && cause.code === ZaloErrorCode.Rejected && typeof cause.params.zaloCode === "number") {
+                throw new ZaloError({ code: ZaloErrorCode.TokenRefreshRefused, params: cause.params, cause })
+            }
+            throw cause
         })
     }
 
@@ -176,7 +181,7 @@ export class ZaloClient {
 
     /**
      * What Zalo says of the OA the token belongs to (Open API v2.0 `getoa`): its id and display name, each trimmed, an empty text when
-     * Zalo does not say. The name labels the connected account ("Tiệm hoa NIVO"); any failure is a ZaloError like every call.
+     * Zalo does not say. The name labels the connected account ("Tiem hoa NIVO"); any failure is a ZaloError like every call.
      */
     async oaProfile(accessToken: string): Promise<ZaloOaProfile> {
         const data = await this.call(accessToken, "GET", OA_PROFILE_PATH)

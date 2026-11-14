@@ -1,26 +1,7 @@
-import type {
-    McpCallRequest,
-    McpEndpoint,
-    McpRemoteResult,
-    McpRemoteTool,
-    McpReply,
-    McpServeRequest,
-} from "./mcp.contracts"
+import type { McpHttpResponse, McpServeRequest } from "./mcp.contracts"
 
-/** The client side of MCP: the remote servers a gateway's connectors call. */
-export interface McpRemote {
-    /** The tools the server lists. */
-    listTools(endpoint: McpEndpoint, timeoutMs: number): Promise<ReadonlyArray<McpRemoteTool>>
-    /** Checks that the server answers MCP at all (`ping`). */
-    ping(endpoint: McpEndpoint, timeoutMs: number): Promise<void>
-    /** Whether a server address may be connected to at all: an http(s) URL whose host resolves to public addresses only. */
-    isReachable(url: string): Promise<boolean>
-    /** Calls one tool by its remote name. */
-    call(request: McpCallRequest): Promise<McpRemoteResult>
-}
-
-/** The server side of MCP: one JSON-RPC message of a stateless endpoint answered over a caller's tools. */
+/** The server side of MCP: one HTTP request of a stateless Streamable HTTP endpoint answered over a caller's tools. */
 export interface McpServing {
-    /** Answers one message; null body for a notification. */
-    answer(request: McpServeRequest): Promise<McpReply>
+    /** Answers one HTTP request (initialize, ping, tools/list, tools/call, notifications, batches; GET / DELETE: 405). */
+    serve(request: McpServeRequest): Promise<McpHttpResponse>
 }

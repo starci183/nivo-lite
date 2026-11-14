@@ -5,5 +5,5 @@ interface WebsiteFormPageProps {
     readonly siteKey: string
 }
 
-/** The public page of a shop's website form: the block is its root. */
+/** The public page of a shop's website form: the block is its root and draws the shop's theme inside its page. */
 export const WebsiteFormPage = (props: WebsiteFormPageProps) => <WebsiteForm siteKey={props.siteKey} />

@@ -21,11 +21,18 @@ type ContextTextKey = {
  */
 const CONTEXT_TEXT_KEY_SET: Readonly<Record<Exclude<ContextTextKey, "locale">, true>> = {
     conversationId: true,
+    contactId: true,
+    connectionId: true,
+    externalId: true,
+    agentId: true,
+    visitor: true,
+    messageKey: true,
+    filesJson: true,
+    resume: true,
     messageId: true,
     channelEventId: true,
     room: true,
     threadId: true,
-    mergedMessageIds: true,
     tagContext: true,
     text: true,
     subject: true,
@@ -42,6 +49,16 @@ const CONTEXT_TEXT_KEY_SET: Readonly<Record<Exclude<ContextTextKey, "locale">, t
     probeKey: true,
     intent: true,
     inbound: true,
+    verb: true,
+    eventId: true,
+    declaration: true,
+    workflowId: true,
+    keyPath: true,
+    rawType: true,
+    rawRowId: true,
+    dataJson: true,
+    handedBackJson: true,
+    waitOnly: true,
 }
 
 const isContextTextKey = (key: string): key is Exclude<ContextTextKey, "locale"> => key in CONTEXT_TEXT_KEY_SET
@@ -78,6 +95,7 @@ export const storedWakeContextOf = (value: unknown): AgentWakeContext => {
     return {
         ...Object.fromEntries(texts),
         ...(typeof value.lookupName === "boolean" ? { lookupName: value.lookupName } : {}),
+        ...(typeof value.isStart === "boolean" ? { isStart: value.isStart } : {}),
         ...(locale === undefined ? {} : { locale }),
     }
 }
@@ -200,6 +218,6 @@ const dueOf = (row: unknown): AgentWorkDue | null => {
 
 /** Reads the rows of `agent_work_due`; null when any row is of the wrong shape, so a half-read sweep never drives half of the work. */
 export const parseDue = (rows: ReadonlyArray<unknown>): ReadonlyArray<AgentWorkDue> | null => {
-    const due = rows.map(dueOf)
+    const due = rows.map((item) => dueOf(item))
     return due.every((entry) => entry !== null) ? due : null
 }

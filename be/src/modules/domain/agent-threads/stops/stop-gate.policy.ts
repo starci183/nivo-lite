@@ -1,12 +1,11 @@
 import { z } from "zod"
-import type { RunStopAnswer, RunStopCustomerLine } from "@nivo-lite/blocks-core/entities"
+import type { RunStopAnswer, RunStopCustomerLine } from "./run-stop.shapes"
 import type {
     FounderAnswerJson,
     RunStop,
     StopDecision,
     StopQuestion,
     StopRoute,
-    StopSendRefusal,
 } from "./run-stop.contracts"
 
 /** The node key that ends a thread (`THREAD_END` of the LangGraph port). */
@@ -88,23 +87,6 @@ export const stopQuestionOf = (stop: RunStop): StopQuestion => ({
     reason: stop.reason,
     question: stop.question,
 })
-
-/**
- * The per-stop guard of a customer send: refused while the stop is open, the conversation already got a line from this stopped step,
- * and no answer in words came after that line. It reads no business: only "same stop, same conversation, no new answer". A button or a
- * deadline is no new answer; the founder's words are (the step may then tell the outcome). Null when the send may go.
- */
-export const stopSendRefusalOf = (
-    stop: Pick<RunStop, "state" | "customerLines" | "answers"> | null,
-    conversationId: string,
-): StopSendRefusal | null => {
-    if (stop === null || stop.state !== "open") return null
-    const told = stop.customerLines.filter((line) => line.conversationId === conversationId)
-    const last = told.at(-1)
-    if (last === undefined) return null
-    const answeredSince = stop.answers.some((answer) => answer.kind === "answer" && answer.at > last.at)
-    return answeredSince ? null : { code: "already_told_for_this_stop", line: last }
-}
 
 /**
  * The line the customer was already told for this stop, in any conversation, or null: the newest of the stop's customer lines (the

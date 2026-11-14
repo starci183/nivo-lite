@@ -75,6 +75,14 @@ export interface InternalEventFact {
     readonly subjectId: string
 }
 
+/** The agent that owns a task, with the workspace it lives in. */
+export interface TimerOwner {
+    /** The workspace the agent lives in. */
+    readonly workspaceId: string
+    /** The agent that owns the task. */
+    readonly agentId: string
+}
+
 /** An installation that changed. */
 export interface InstallationChange {
     /** The workspace. */
@@ -97,12 +105,4 @@ export interface TimerPress {
     readonly memberId: string
     /** When, as the engine's clock read it. */
     readonly at: Date
-}
-
-/** The agent a care timer belongs to, in its workspace. */
-export interface CareTimerOwner {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The agent that holds the timer. */
-    readonly agentId: string
 }

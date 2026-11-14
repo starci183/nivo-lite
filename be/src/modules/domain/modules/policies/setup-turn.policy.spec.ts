@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import type { DraftSnapshot, GateEvidence } from "@modules/domain/module-context-versions"
-import { ACCOUNTING_MODULE } from "../accounting.contracts"
 import type { ModuleDefinition } from "../modules.contracts"
 import {
     mergeSetupTurn as realMergeSetupTurn,
@@ -9,6 +8,9 @@ import {
     setupPromptOf as realSetupPromptOf,
 } from "./setup-turn.policy"
 import type { SetupTurnInput } from "./setup-turn.policy"
+import { catalogModuleOf } from "../modules.testing"
+
+const SALES_MODULE = catalogModuleOf("sales")
 
 const SUBJECT = Symbol("setup-turn.policy")
 
@@ -36,7 +38,7 @@ const buildSubject = async () => {
 }
 
 const MODULE: ModuleDefinition = {
-    ...ACCOUNTING_MODULE,
+    ...SALES_MODULE,
     purpose: "answer questions about the shop",
     gates: [
         {
@@ -55,7 +57,6 @@ const MODULE: ModuleDefinition = {
             hint_en: "How to speak?",
         },
     ],
-    authorityActions: [],
 }
 
 const inputOf = (changes: Partial<SetupTurnInput> = {}): SetupTurnInput => ({
@@ -105,7 +106,7 @@ describe("setupPromptOf", () => {
         ])
         expect(prompt).toContain("Write the reply in English.")
         expect(prompt).toContain(
-            "What each gate can write for real (Second Brain facts and the authority of the agent). The owner " +
+            "What each gate can write for real (Second Brain facts). The owner " +
                 "confirms every write on a card before it happens:\n- gate hours: fact | subjectType business | " +
                 'attribute "Hours" | audience public',
         )

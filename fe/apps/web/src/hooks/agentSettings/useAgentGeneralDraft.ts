@@ -1,14 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { AGENT_NAME_MAX, AGENT_NAME_MIN, HOLDING_MAX } from "./agentSettings.shared"
-import type { AgentInstallationView } from "./agentSettings.shared"
+import { AGENT_NAME_MAX, AGENT_NAME_MIN, HOLDING_MAX, type AgentInstallationView } from "./agentSettings.shared"
 import { useAgentRights } from "./useAgentRights"
 import { useSaveAgentName } from "./useSaveAgentName"
 import { useSaveReply } from "./useSaveReply"
 import { useWorkingHours } from "./useWorkingHours"
-import { sameWeek } from "@/modules/workingHours"
-import type { WeekSlots } from "@/modules/workingHours"
+import { sameWeek, type WeekSlots } from "@/modules/workingHours"
 
 /** The fields of the general form as the owner is editing them, and what pressing the one save button would do. */
 export interface AgentGeneralDraftView {
@@ -54,7 +52,6 @@ export const useAgentGeneralDraft = (
     const { saved, save: saveHours, isSaving: isSavingHours } = useWorkingHours(installationId, agent?.workingHours ?? null)
     const [drafts, setDrafts] = useState<Drafts>(CLEAN)
     const patch = (change: Partial<Drafts>): void => setDrafts((current) => ({ ...current, ...change }))
-    const hasReply = hasReplyLimits && agent !== undefined
     const savedName = agent?.name ?? ""
     const savedHolding = agent?.holdingMessage ?? ""
     const name = drafts.name ?? savedName
@@ -65,7 +62,7 @@ export const useAgentGeneralDraft = (
     const hoursChanged =
         (drafts.week !== null && !sameWeek(week, saved.week)) ||
         (drafts.afterHours !== null && drafts.afterHours !== saved.afterHours)
-    const holdingChanged = hasReply && drafts.holding !== null && holding.trim() !== savedHolding.trim()
+    const holdingChanged = hasReplyLimits && drafts.holding !== null && holding.trim() !== savedHolding.trim()
     const isDirty = nameChanged || hoursChanged || holdingChanged
     const canSave = canEdit && isDirty && (!nameChanged || name.trim().length >= AGENT_NAME_MIN)
     const save = async (): Promise<void> => {
@@ -79,7 +76,8 @@ export const useAgentGeneralDraft = (
         week,
         afterHours,
         holding,
-        hasReply,
+        // The reply limits rest as themselves while the agent is read (STATE-8), so the form keeps its height when the data lands.
+        hasReply: hasReplyLimits,
         isDisabled: !canEdit || isSavingName || isSavingReply || isSavingHours,
         isPending: isSavingName || isSavingReply || isSavingHours,
         isDirty,

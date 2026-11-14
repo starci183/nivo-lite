@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateResumeAgentRun,
     type MutateResumeAgentRunRequest,
 } from "@/modules/api/graphql/mutations/mutation-resume-agent-run"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ResumeAgentRunMutation } from "@/modules/api"
 
 /** What the ResumeAgentRun mutation is triggered with. */

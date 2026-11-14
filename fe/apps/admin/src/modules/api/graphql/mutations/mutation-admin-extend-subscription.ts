@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { adminApiTransport } from "@/modules/api-transport"
 import type {
     AdminExtendSubscriptionMutation,
     AdminExtendSubscriptionMutationVariables,
@@ -47,7 +46,7 @@ export const mutateAdminExtendSubscription = async ({
     request,
     signal,
 }: MutateAdminExtendSubscriptionParams): Promise<ApolloClient.MutateResult<MutateAdminExtendSubscriptionResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(adminApiTransport, { signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],
         variables: { input: request },

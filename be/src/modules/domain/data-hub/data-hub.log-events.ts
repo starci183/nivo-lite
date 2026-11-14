@@ -4,4 +4,6 @@ export enum DataHubLogEvent {
     SyncFailed = "data_hub.sync_failed",
     /** The failure of a sync could not be written to the connection. */
     SyncCrashed = "data_hub.sync_crashed",
+    /** An operator pinned (or found already pinned) an OpenAPI document on an API account from the terminal: who, the account, the namespace, the sha256 and the counts. */
+    OpenApiPinned = "data_hub.openapi_pinned",
 }

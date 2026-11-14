@@ -13,7 +13,7 @@ const nodeOf = (purpose: string): string => (purpose.includes(":") ? purpose.sli
 
 /**
  * The AI calls of one run as table rows, read apart from the page's own read. A call kind is named by its words when the app has
- * them, else by the run's step it belongs to (`stepLabels`, node key → title), else by its bare tag; never the raw kind. Empty while it is read, when it failed (a back end
+ * them, else by the label the back end sent, else by the run's step it belongs to (`stepLabels`, node key → title), else by its bare tag; never the raw kind. Empty while it is read, when it failed (a back end
  * without `aiCalls`) or when the run called no AI: the page then leaves the section out.
  */
 export const useAgentRunAiCalls = (
@@ -37,9 +37,10 @@ export const useAgentRunAiCalls = (
                         minimumFractionDigits: 4,
                         maximumFractionDigits: 4,
                     }),
-                purposeOf: (purpose) => {
+                purposeOf: (purpose, label) => {
                     const key = `aiPurpose_${tagOf(purpose)}`
                     if (t.has(key)) return t(key)
+                    if (label !== null && label !== "") return label
                     return stepLabels.get(tagOf(purpose)) ?? stepLabels.get(nodeOf(purpose)) ?? tagOf(purpose)
                 },
                 maxTry: (count) => t("aiMaxTry", { count }),

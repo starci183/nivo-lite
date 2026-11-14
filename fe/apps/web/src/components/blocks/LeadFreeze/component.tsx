@@ -1,4 +1,4 @@
-import { Badge, Button, Cluster, Stack, Sublabel, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, PaneSection, Sublabel, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** The words and the state of the card of a frozen customer. */
 export interface LeadFreezeBaseProps {
@@ -28,14 +28,15 @@ export interface LeadFreezeBaseProps {
 }
 
 /**
- * Draws a customer who waits for the owner to handle a failed run: the status chip, the failed step, what waits, and the three answers
- * (retry as the one primary, take over and skip neutral), with what each will do as the caption under the card.
+ * Draws, in a pane section of its own (the gutters of the page), a customer who waits for the owner to handle a failed run: the status chip, the failed step, what waits, and the three answers
+ * (retry as the one primary, take over and skip neutral; only the answers still open are drawn, so once a person holds the customer
+ * there is no take over), with what each will do as the caption under the card.
  */
 export const LeadFreezeBase = (props: LeadFreezeBaseProps) => {
     const { props: view, on } = props
     const held = view.heldBy === null ? [] : [{ id: "held", term: view.heldTerm, description: view.heldBy }]
     return (
-        <Stack gap="inline">
+        <PaneSection gap="inline">
             <Sublabel>{view.title}</Sublabel>
             <SurfaceCard
                 kind="details"
@@ -54,9 +55,11 @@ export const LeadFreezeBase = (props: LeadFreezeBaseProps) => {
                                 <Button intent="commit" isPending={view.isAnswering} onPress={on.retry}>
                                     {view.retryLabel}
                                 </Button>
-                                <Button intent="neutral" isDisabled={view.isAnswering} onPress={on.takeOver}>
-                                    {view.takeOverLabel}
-                                </Button>
+                                {view.heldBy === null ? (
+                                    <Button intent="neutral" isDisabled={view.isAnswering} onPress={on.takeOver}>
+                                        {view.takeOverLabel}
+                                    </Button>
+                                ) : null}
                                 <Button intent="neutral" isDisabled={view.isAnswering} onPress={on.skip}>
                                     {view.skipLabel}
                                 </Button>
@@ -68,6 +71,6 @@ export const LeadFreezeBase = (props: LeadFreezeBaseProps) => {
             <Text size="sm" tone="muted">
                 {view.caption}
             </Text>
-        </Stack>
+        </PaneSection>
     )
 }

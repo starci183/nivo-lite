@@ -10,7 +10,6 @@ const voidOrder = defineEffect({
     id: "order.void",
     title: { key: "v" },
     payload: z.object({ id: z.string().max(200) }),
-    rights: [],
 })
 const record = defineEffect({ ...voidOrder, id: "order.record", compensation: "order.void" })
 const send = defineEffect({ ...voidOrder, id: "channel.send" })
@@ -20,7 +19,6 @@ const look = defineTool({
     args: z.object({}),
     result: z.object({}),
     mutates: false,
-    rights: [],
 })
 const charge = defineTool({ ...look, id: "order.charge", mutates: true })
 
@@ -36,7 +34,6 @@ const nodeOf = (
             params: z.object({}),
             input: z.object({}),
             output: z.object({}),
-            rights: [],
             effects,
             tools,
             run: () => Promise.resolve({}),

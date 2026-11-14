@@ -1,15 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
-import type { OriginSource } from "@modules/domain/knowledge-sources"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
+import { KnowledgeSourcesReadService, type OriginSource } from "@modules/domain/knowledge-sources"
+import {
+    type ToolJson,
+    type NativeToolFamily,
+    type NativeCaller,
+    type ToolManifest,
+    argumentsOf,
+    unknownTool,
+} from "@modules/domain/tools"
 import {
     DRIVE_SOURCES_LIST_INPUT_SCHEMA,
     DRIVE_SOURCES_LIST_SCHEMA,
     DRIVE_STATUS_INPUT_SCHEMA,
     DRIVE_STATUS_SCHEMA,
+    type DriveSourcesListInput,
 } from "./drive-native.schema"
-import type { DriveSourcesListInput } from "./drive-native.schema"
+import { soleAccountOf } from "./native-account.policy"
 import { emailMasked } from "./native-masking.policy"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
@@ -27,12 +33,15 @@ const SOURCES_WINDOW = 500
 /** The stages of a source that mean it failed to be read. */
 const FAILED: ReadonlySet<string> = new Set(["failed", "blocked_credits"])
 
-/** The Google Drive native connector: whether the grant holds and what the Drive fed into the Brain. Internal use only. */
-export const DRIVE_MANIFEST: NativeConnectorManifest = {
+/**
+ * The Drive connector: whether the grant holds and what the Drive fed into the Brain, internal use only. Its tools are the platform's
+ * purposes `nivo.tool.drive.status.get` and `nivo.tool.drive.source.list` (`TOOL.driveSourceList`), the Google Drive grant their one adapter;
+ * the connector row key stays `drive`, which also gives its reads the data kind `documents`.
+ */
+export const DRIVE_MANIFEST: ToolManifest = {
     key: "drive",
-    namespace: "google.drive",
+    namespace: "nivo.tool.drive",
     name: "Google Drive",
-    kind: "native",
     contractVersion: "drive-native@1",
     tools: [
         {
@@ -74,10 +83,10 @@ const countsOf = (sources: ReadonlyArray<OriginSource>): SourceCounts => ({
 @Injectable()
 /**
  * Runs the Drive tools. Drive content is never read live through a tool: it enters the Brain as sources and is read with
- * `nivo.brain.search`. These tools say whether the grant holds and where the files fed in stand; the account leaves masked.
+ * `nivo.tool.brain.search`. These tools say whether the grant holds and where the files fed in stand; the account leaves masked.
  */
-export class DriveNativeService implements NativeAdapter {
-    readonly manifest: NativeConnectorManifest = DRIVE_MANIFEST
+export class DriveNativeService implements NativeToolFamily {
+    readonly manifest: ToolManifest = DRIVE_MANIFEST
 
     constructor(
         private readonly views: NativeViewService,
@@ -86,11 +95,11 @@ export class DriveNativeService implements NativeAdapter {
     ) {}
 
     /** Runs one Drive tool. */
-    async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
+    async invoke(workspaceId: string, tool: string, args: ToolJson, caller: NativeCaller): Promise<ToolJson> {
         await this.views.internalOf(workspaceId, caller)
         if (tool === "status.get") {
             argumentsOf(tool, DRIVE_STATUS_SCHEMA, args)
-            return this.status(workspaceId)
+            return this.status(workspaceId, caller)
         }
         if (tool === "source.list") {
             return this.list(workspaceId, argumentsOf(tool, DRIVE_SOURCES_LIST_SCHEMA, args))
@@ -98,8 +107,15 @@ export class DriveNativeService implements NativeAdapter {
         throw unknownTool(tool)
     }
 
-    private async status(workspaceId: string): Promise<GatewayJson> {
-        const [grant] = await this.tools.connectionsOf(workspaceId, PROVIDER)
+    /**
+     * The state of the Drive grant, never the first grant's by accident (ARCH-REVIEW 2026-11-12 S7): the grant the tool runner handed
+     * (`not_connected` when it is not there); else the ONE grant of the workspace (`soleAccountOf`: several are `not_selected`).
+     */
+    private async status(workspaceId: string, caller: NativeCaller): Promise<ToolJson> {
+        const grants = await this.tools.connectionsOf(workspaceId, PROVIDER)
+        const handed = caller.connectionId
+        const grant =
+            handed === undefined ? soleAccountOf(grants) : grants.find((one) => one.id === handed)
         if (grant === undefined) throw nativeRefusal("not_connected")
         const sources = await this.sources.ofOrigin(workspaceId, ORIGIN, SOURCES_WINDOW)
         return {
@@ -110,7 +126,7 @@ export class DriveNativeService implements NativeAdapter {
         }
     }
 
-    private async list(workspaceId: string, input: DriveSourcesListInput): Promise<GatewayJson> {
+    private async list(workspaceId: string, input: DriveSourcesListInput): Promise<ToolJson> {
         await this.tools.connectionsOf(workspaceId, PROVIDER)
         const sources = await this.sources.ofOrigin(workspaceId, ORIGIN, SOURCES_WINDOW)
         return {

@@ -3,19 +3,28 @@ import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { ApiKnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
 import type { ClaimedJob, JobClaims, JobFenceService } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { PublicApiQueueJob, PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import { parsePublicApiBody, parsePublicApiJob } from "./public-api-job.policy"
 import type { PublicApiJob } from "./public-api-job.contracts"
+import type { PendingMessageDelivery } from "./public-api.contracts"
 import { PublicApiLedgerService } from "./public-api-ledger.service"
+import { PublicMessageDeliveryService } from "./public-message-delivery.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
 
+/** Where a fenced write leaves the delivery it owes. */
+interface PendingOut {
+    pending: PendingMessageDelivery | null
+}
+
 @Injectable()
-/** Fulfills API admissions with inbox dedupe, domain writes and downstream jobs in one fence-held transaction. */
+/**
+ * Fulfills API admissions with inbox dedupe, domain writes and downstream jobs in one fence-held transaction; the line a message stored
+ * is sent to its channel after that transaction (the delivery ledger's claim keeps a retry from sending it twice).
+ */
 export class PublicApiProcessingService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -24,6 +33,7 @@ export class PublicApiProcessingService {
         private readonly messages: PublicMessageFulfillmentService,
         private readonly events: EventsService,
         private readonly ledger: PublicApiLedgerService,
+        private readonly delivery: PublicMessageDeliveryService,
     ) {}
 
     /** Both historical implicit names and current named requests route through this queue's processor. */
@@ -41,18 +51,23 @@ export class PublicApiProcessingService {
             expectedFencingToken: job.fencingToken,
             step: "public-api",
         })
-        await fence.write(job, (tx) => this.process(job.payload, tx))
+        const out: PendingOut = { pending: null }
+        await fence.write(job, async (tx) => {
+            out.pending = await this.process(job.payload, tx)
+        })
+        if (out.pending !== null) await this.delivery.send(out.pending)
     }
 
-    /** The caller owns the live fence and supplies its transaction; no nested transaction may outlive it. */
-    async process(payload: object, tx: EntityManager): Promise<void> {
+    /**
+     * The caller owns the live fence and supplies its transaction; no nested transaction may outlive it. Answers the send a message
+     * owes, for the caller to make after commit.
+     */
+    async process(payload: object, tx: EntityManager): Promise<PendingMessageDelivery | null> {
         const job = parsePublicApiJob(payload)
-        if (job.format === "ledger") {
-            await this.processRequest(job.workspaceId, job.requestId, tx)
-            return
-        }
-        if (!(await this.inbox.claim(PUBLIC_API_QUEUE, `${job.workspaceId}:${job.format}:${job.identity}`, tx))) return
-        await this.processLegacy(job, tx)
+        if (job.format === "ledger") return this.processRequest(job.workspaceId, job.requestId, tx)
+        if (!(await this.inbox.claim(PUBLIC_API_QUEUE, `${job.workspaceId}:${job.format}:${job.identity}`, tx)))
+            return null
+        return this.processLegacy(job, tx)
     }
 
     /** Records terminal failure evidence while the standard transport retains and archives the original job. */
@@ -83,14 +98,19 @@ export class PublicApiProcessingService {
         })
     }
 
-    private async processRequest(workspaceId: string, requestId: string, tx: EntityManager): Promise<void> {
+    private async processRequest(
+        workspaceId: string,
+        requestId: string,
+        tx: EntityManager,
+    ): Promise<PendingMessageDelivery | null> {
         const row = await this.ledger.lock(workspaceId, requestId, tx)
         if (row === null) throw new PublicApiError({ code: PublicApiErrorCode.RequestNotFound })
-        if (row.processedAt !== null) return
+        if (row.processedAt !== null) return null
         const request = parsePublicApiBody(row.kind, row.payload)
         if (!(await this.inbox.claim(PUBLIC_API_QUEUE, `${workspaceId}:${requestId}`, tx))) {
             throw new PublicApiError({ code: PublicApiErrorCode.InboxInconsistent })
         }
+        let pending: PendingMessageDelivery | null = null
         switch (request.kind) {
             case "knowledge":
                 await this.knowledge.addText(
@@ -114,19 +134,33 @@ export class PublicApiProcessingService {
                 )
                 break
             case "message":
-                await this.messages.fulfill(workspaceId, requestId, request.body, row.createdAt, tx)
+                pending = await this.messages.fulfill(
+                    workspaceId,
+                    requestId,
+                    request.body,
+                    row.createdAt,
+                    row.keyId,
+                    tx,
+                )
                 break
         }
         await this.ledger.complete(workspaceId, requestId, tx)
+        return pending
     }
 
-    private async processLegacy(job: Exclude<PublicApiJob, { format: "ledger" }>, tx: EntityManager): Promise<void> {
+    private async processLegacy(
+        job: Exclude<PublicApiJob, { format: "ledger" }>,
+        tx: EntityManager,
+    ): Promise<PendingMessageDelivery | null> {
         switch (job.format) {
             case "knowledge":
                 await this.knowledge.indexExisting(job.workspaceId, job.sourceId, tx)
-                return
+                return null
             case "message":
-                await this.messages.fulfill(job.workspaceId, job.identity, job.body, null, tx, job.dedupeKey, false)
+                return this.messages.fulfill(job.workspaceId, job.identity, job.body, null, null, tx, {
+                    dedupeKey: job.dedupeKey,
+                    recordEvidence: false,
+                })
         }
     }
 }

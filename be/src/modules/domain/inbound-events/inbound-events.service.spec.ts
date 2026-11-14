@@ -10,10 +10,8 @@ import {
     INBOUND_NOW as NOW,
     INSERTED,
     NOT_BUMPED,
-    bankPaymentEvent,
     eventEntity,
     inboundInput,
-    runField,
 } from "@tests/fixtures/builders/inbound-events-service.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { In } from "typeorm"
@@ -35,62 +33,6 @@ const build = async (stubs: MockEntityManager = mockEntityManager()) => {
     return { events: moduleRef.get(InboundEventsService), tx, inbox }
 }
 
-describe("InboundEventsService recordBankPayment", () => {
-    it("records the credit as one inbound payment event keyed by its trimmed event id", async () => {
-        const { events, tx } = await build()
-        const [insert] = queueQueryBuilders(tx.em, [INSERTED("event-1")])
-
-        await expect(events.recordBankPayment(bankPaymentEvent(tx.em))).resolves.toEqual({
-            duplicate: false,
-            inboundEventId: "event-1",
-        })
-
-        expect(insert?.callsOf("insert")).toEqual([[]])
-        expect(insert?.callsOf("values")).toEqual([
-            [
-                {
-                    workspaceId: "ws-1",
-                    channel: "bank",
-                    kind: "payment",
-                    senderName: null,
-                    body: "ACB credit",
-                    amountVnd: 150000,
-                    externalRef: "NIVO8F3K2",
-                    eventId: "casso:7",
-                    dedupeKey: "bank:payment:casso:7",
-                },
-            ],
-        ])
-        expect(insert?.callsOf("orIgnore")).toHaveLength(1)
-        expect(tx.em.createQueryBuilder).toHaveBeenCalledTimes(1)
-    })
-
-    it("counts a repeated credit on the event it repeats and records nothing new", async () => {
-        const { events, tx } = await build()
-        const [, bump] = queueQueryBuilders(tx.em, [IGNORED, BUMPED("event-1")])
-
-        await expect(events.recordBankPayment(bankPaymentEvent(tx.em))).resolves.toEqual({
-            duplicate: true,
-            inboundEventId: "event-1",
-        })
-
-        expect(bump?.callsOf("update")).toEqual([[]])
-        expect(runField(bump?.callsOf("set")[0]?.[0], "duplicateCount")).toBe("duplicate_count + 1")
-        expect(bump?.callsOf("set")[0]?.[0]).toMatchObject({ lastDuplicateAt: new Date(NOW) })
-        expect(bump?.callsOf("where")).toEqual([
-            ["workspace_id = :workspaceId AND dedupe_key = :key", { workspaceId: "ws-1", key: "bank:payment:casso:7" }],
-        ])
-    })
-
-    it("fails when the first record of a repeat cannot be read back", async () => {
-        const { events, tx } = await build()
-        queueQueryBuilders(tx.em, [IGNORED, NOT_BUMPED])
-
-        await expect(events.recordBankPayment(bankPaymentEvent(tx.em))).rejects.toMatchObject({
-            code: InboundEventsErrorCode.Unreadable,
-        })
-    })
-})
 describe("InboundEventsService keepForOwner", () => {
     it("keeps a message that came too late for an agent as an event the owner decides on", async () => {
         const { events, tx } = await build()
@@ -209,19 +151,6 @@ describe("InboundEventsService keepUnrouted", () => {
             ],
         ])
         expect(insert?.callsOf("orIgnore")).toHaveLength(1)
-    })
-})
-describe("InboundEventsService holdForOwnerCheck", () => {
-    it("holds the event for the owner", async () => {
-        const { events, tx } = await build(mockEntityManager({ update: [InboundEventEntity, { affected: 1 }] }))
-
-        await events.holdForOwnerCheck("event-1")
-
-        expect(tx.em.update).toHaveBeenCalledWith(
-            InboundEventEntity,
-            { id: "event-1", status: "received" },
-            { status: "needs_decision" },
-        )
     })
 })
 describe("InboundEventsService recordInput", () => {
@@ -375,9 +304,8 @@ describe("InboundEventsService mark", () => {
         const callers = mockEntityManager({ update: [InboundEventEntity, { affected: 1 }] })
 
         await events.mark("ws-1", "event-1", "processed", null, callers)
-        await events.holdForOwnerCheck("event-1", callers)
 
-        expect(callers.update).toHaveBeenCalledTimes(2)
+        expect(callers.update).toHaveBeenCalledTimes(1)
         expect(tx.em.update).not.toHaveBeenCalled()
     })
 
@@ -386,115 +314,5 @@ describe("InboundEventsService mark", () => {
 
         await expect(events.mark("ws-1", "event-1", null, null)).resolves.toBeUndefined()
         expect(tx.em.update).not.toHaveBeenCalled()
-    })
-})
-describe("InboundEventsService handOffOrder", () => {
-    it.each([
-        ["a newly recorded order", INSERTED("event-order-1"), true],
-        ["an order already recorded", IGNORED, false],
-    ] as const)("answers whether %s was created in the caller's transaction", async (_, answer, created) => {
-        const { events, tx } = await build()
-        const manager = mockEntityManager()
-        const [insert] = queueQueryBuilders(manager, [answer])
-
-        await expect(
-            events.handOffOrder(
-                {
-                    workspaceId: "ws-1",
-                    sender: "Mai",
-                    contact: "84912345678",
-                    body: "Haircut",
-                    amountVnd: 200000,
-                    ref: "booking:b-1",
-                    leadId: "lead-1",
-                },
-                manager,
-            ),
-        ).resolves.toBe(created)
-
-        expect(manager.createQueryBuilder).toHaveBeenCalledTimes(1)
-        expect(insert?.callsOf("values")).toEqual([
-            [
-                {
-                    workspaceId: "ws-1",
-                    channel: "manual",
-                    kind: "order",
-                    senderName: "Mai",
-                    senderContact: "84912345678",
-                    body: "Haircut",
-                    amountVnd: 200000,
-                    externalRef: "booking:b-1",
-                    dedupeKey: "order:booking:b-1",
-                    leadId: "lead-1",
-                },
-            ],
-        ])
-        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
-    })
-})
-
-describe("InboundEventsService consumer transaction", () => {
-    const input = inboundInput({ channel: "manual", externalRef: "api:CRM", eventId: "request-1" })
-
-    it("keeps the input and its inbox receipt in the supplied transaction", async () => {
-        const { events, tx, inbox } = await build()
-        const manager = mockEntityManager()
-        const [insert] = queueQueryBuilders(manager, [INSERTED("event-1")])
-        const claim = jest.spyOn(inbox, "claim")
-
-        await expect(events.recordInputInTransaction(input, manager)).resolves.toEqual({
-            duplicate: false,
-            inboundEventId: "event-1",
-        })
-
-        expect(claim).toHaveBeenCalledWith("manual", "ws-1:manual:lead:request-1", manager)
-        expect(insert?.callsOf("values")[0]?.[0]).toMatchObject({
-            workspaceId: "ws-1",
-            channel: "manual",
-            kind: "lead",
-            externalRef: "api:CRM",
-            eventId: "request-1",
-            dedupeKey: "manual:lead:request-1",
-        })
-        expect(tx.em.createQueryBuilder).not.toHaveBeenCalled()
-    })
-})
-
-describe("InboundEventsService repeated transaction input", () => {
-    it("resolves a row committed with the original claim through the supplied transaction", async () => {
-        const { events, tx, inbox } = await build()
-        inbox.seen("manual", "ws-1:manual:lead:request-1")
-        const manager = mockEntityManager({ findOne: [InboundEventEntity, eventEntity({ id: "original-event" })] })
-        const claim = jest.spyOn(inbox, "claim")
-
-        await expect(
-            events.recordInputInTransaction(
-                inboundInput({ channel: "manual", externalRef: "api:CRM", eventId: "request-1" }),
-                manager,
-            ),
-        ).resolves.toEqual({ duplicate: true, inboundEventId: "original-event" })
-
-        expect(claim).toHaveBeenCalledWith("manual", "ws-1:manual:lead:request-1", manager)
-        expect(manager.findOne).toHaveBeenCalledTimes(1)
-        expect(manager.findOne).toHaveBeenCalledWith(InboundEventEntity, {
-            select: { id: true },
-            where: { workspaceId: "ws-1", dedupeKey: "manual:lead:request-1" },
-        })
-        expect(tx.em.findOne).not.toHaveBeenCalled()
-    })
-
-    it("refuses an unreadable repeat instead of returning an empty id to intake callers", async () => {
-        const { events, tx, inbox } = await build(mockEntityManager({ findOne: [InboundEventEntity, null] }))
-        inbox.seen("facebook", "ws-1:facebook:message:evt-1")
-
-        await expect(events.recordInput(inboundInput({ channel: "facebook", kind: "message" }))).rejects.toMatchObject({
-            code: InboundEventsErrorCode.Unreadable,
-        })
-
-        expect(tx.outcomes).toEqual(["rollback"])
-        expect(tx.em.findOne).toHaveBeenCalledWith(InboundEventEntity, {
-            select: { id: true },
-            where: { workspaceId: "ws-1", dedupeKey: "facebook:message:evt-1" },
-        })
     })
 })

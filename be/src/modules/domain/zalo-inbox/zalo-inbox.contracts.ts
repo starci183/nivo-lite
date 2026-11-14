@@ -4,30 +4,8 @@ export type { ZaloDeliveryRecorded } from "@modules/queues/zalo-delivery"
 /** The transport may have no retained raw bytes. */
 export type ZaloRawDelivery = Buffer | undefined
 
-/** A pending durable receipt read under its consumer lock. */
-export interface PendingZaloReceipt {
-    /** The row completed after processing succeeds. */
-    readonly id: string
-    /** The original connection and raw delivery bytes. */
-    readonly payload: ZaloReceiptPayload
-}
-
-/** The immutable payload stored at receipt intake. */
-export interface ZaloReceiptPayload {
-    /** The connection that accepted the provider message. */
-    readonly connection: string
-    /** The original delivery decoded as UTF-8. */
-    readonly rawBody: string
-    /** `poll` when the reconcile job read the message back from Zalo because the webhook never delivered it; `manual_import` for a row the owner imported (its attachments may name local files); absent for a webhook delivery. */
-    readonly source?: "poll" | "manual_import"
-}
-
-/**
- * Where a Zalo inbox row stands. `received` is stored and owed an answer; `handled` went to the agent turn of its conversation or to the person
- * who owns it (an event nothing is owed on is handled too); `failed` is a processing attempt that threw, retried by the queue; `expired` is a
- * polled message past the reply window or the stale age, kept for the owner and never answered by an agent.
- */
-export type ZaloInboxState = "received" | "handled" | "failed" | "expired"
+/** The door a Zalo event came through when it was not the webhook: `poll` (a reconcile run read it back) or `manual_import` (an owner's import, whose attachments may name local files). */
+export type ZaloEventSource = "poll" | "manual_import"
 
 /** The Zalo user message a reconcile run read back, in the terms the inbox stores. */
 export interface PolledZaloMessage {
@@ -35,6 +13,8 @@ export interface PolledZaloMessage {
     readonly messageId: string
     /** The Zalo id of the customer who wrote. */
     readonly userId: string
+    /** The name the OA's listing shows for the customer (`from_display_name`), or an empty text. */
+    readonly userName: string
     /** What the customer wrote. */
     readonly text: string
     /** When the customer wrote it, in epoch milliseconds. */
@@ -51,15 +31,25 @@ export interface PolledZaloIntake {
     readonly stale: boolean
 }
 
-/** What the inbox knows of a connection; null when the inbox has no row of it. */
+/** A Zalo user who wrote to the OA lately, from the stored inbound messages. */
+export interface ZaloWriter {
+    /** The Zalo user id. */
+    readonly userId: string
+    /** The name Zalo gave, or an empty text. */
+    readonly name: string
+    /** When they last wrote, ISO 8601. */
+    readonly lastAt: string
+}
+
+/** What the account knows of a connection's events; null when it keeps no event, message or follower of it. */
 export type OptionalZaloInboxFacts = ZaloInboxFactsRow | null
 
-/** What the inbox knows of a connection. */
+/** What the account knows of a connection's events. */
 export interface ZaloInboxFactsRow {
-    /** When the latest event arrived. */
+    /** When the latest event or customer message arrived, ISO text. */
     readonly last_at: string | null
-    /** A customer text arrived. */
+    /** A customer message arrived. */
     readonly has_text: boolean
-    /** A follow event arrived. */
+    /** A person follows the OA. */
     readonly has_follow: boolean
 }

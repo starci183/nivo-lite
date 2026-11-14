@@ -1,11 +1,16 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, type SetStateAction, type Dispatch } from "react"
 import { useQueryListTelegramChatsSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import { chatKindOf, MAX_CHATS } from "@/hooks/telegram-chats"
-import type { ChatChoice, PickedChat, SinceDays, TelegramInitial } from "@/hooks/telegram-chats"
-import type { SetStateAction, Dispatch } from "react"
+import {
+    chatKindOf,
+    MAX_CHATS,
+    type ChatChoice,
+    type PickedChat,
+    type SinceDays,
+    type TelegramInitial,
+} from "@/hooks/telegram-chats"
 
 /** Fresh chats on every visit; a failure is shown with a retry, not retried by itself. */
 const FRESH = { revalidateOnFocus: false, revalidateOnReconnect: false, shouldRetryOnError: false } as const

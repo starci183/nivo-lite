@@ -1,9 +1,9 @@
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
-import type { ProposalView, ThreadView } from "../../modules/chatbot/chatbot.types"
+import type { ThreadView } from "../../modules/chatbot/chatbot.types"
 import type { ChatbotSettings } from "../../rules/chatbot/settings"
 import data from "./inbox.data.json"
 
-/** One conversation as `chatbot.threads` yields it: the fields the list reads. */
+/** One conversation as `blocks-core.chatbot.api.chat.list` yields it: the fields the list reads. */
 export interface ThreadFixtureRecord {
     /** The id of the conversation. */
     readonly id: string
@@ -23,13 +23,13 @@ export interface ThreadFixtureRecord {
     readonly lastAt: string
 }
 
-/** The contact of an open conversation as `chatbot.thread` yields it; the status is the text of the record. */
+/** The contact of an open conversation as `blocks-core.chatbot.api.chat.get` yields it; the status is the text of the record. */
 export interface ContactFixtureRecord extends Omit<ThreadView, "status"> {
     /** Where the conversation stands, as the text of the record. */
     readonly status: string
 }
 
-/** The counts of the tabs of the inbox, as `chatbot.thread-counts` yields them. */
+/** The counts of the tabs of the inbox, as `blocks-core.chatbot.api.chat.status-counts` yields them. */
 export interface ThreadCountsFixture {
     /** The conversations per tab. */
     readonly counts: Readonly<Record<string, number>>
@@ -42,9 +42,6 @@ export const THREAD_RECORDS: ReadonlyArray<ThreadFixtureRecord> = data.threads
 
 /** The contact of the first conversation. */
 export const THREAD_CONTACT: ContactFixtureRecord = data.contact
-
-/** The reply the AI drafted for the first conversation. */
-export const PROPOSAL: ProposalView = data.proposal
 
 /** The settings the owner saved. */
 export const SETTINGS: ChatbotSettings = data.settings
@@ -80,9 +77,6 @@ export const THREAD_LIST_FIXTURES: InboxStates<ReadonlyArray<ThreadFixtureRecord
 
 /** Every state of the contact of the open conversation. */
 export const CONTACT_FIXTURES: InboxStates<ContactFixtureRecord> = statesOf(THREAD_CONTACT)
-
-/** Every state of the approval card: a draft waits, none waits (the card draws nothing), loading, failed, refused. */
-export const APPROVAL_FIXTURES: InboxStates<ProposalView> = statesOf(PROPOSAL)
 
 /** Every state of the rules form. */
 export const RULES_FIXTURES: InboxStates<ChatbotSettings> = statesOf(SETTINGS)

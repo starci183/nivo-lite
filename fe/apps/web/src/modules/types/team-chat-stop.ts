@@ -1,3 +1,5 @@
+import type { ReactNode } from "react"
+import type { AgentMessagePreview } from "@nivo-lite/agent-sdk/team-chat"
 import type { TeamChatMarkView } from "./team-chat-room"
 
 /** What a run stop card is about: the AI asks, NIVO reports an AI failure, or a step asks leave to use an ability. */
@@ -18,6 +20,15 @@ export type TeamChatStopReplyKind = "answer" | "approve" | "refuse" | "retry" | 
 /** One name/value line of a stop (an engine fact, an argument of a leave request). */
 export interface TeamChatStopFact {
     readonly name: string
+    readonly value: string
+    /** A raw value (a code, an id): folded away, never drawn as content. */
+    readonly technical?: boolean | null | undefined
+}
+
+/** One piece of what a person approves, in full: the words of the message, or the address of a picture or file it sends. */
+export interface TeamChatStopContent {
+    readonly name: string
+    readonly kind: string
     readonly value: string
 }
 
@@ -57,6 +68,14 @@ export interface TeamChatStop {
         readonly args: ReadonlyArray<TeamChatStopFact>
     } | null
     readonly revision: number
+    /** The conversation the step talks in (a taken-over card hands it back); null when the stop is not about one. */
+    readonly conversationId?: string | null | undefined
+    /** The card of the call a person approves; its `content` is the whole message the agent wants to send. Null or absent when none. */
+    readonly decision?: { readonly content: ReadonlyArray<TeamChatStopContent> } | null | undefined
+    /**
+     * A package's preview of what the step was doing (`workflow.stopped` payload `preview`); null when the stop carries none.
+     */
+    readonly preview?: AgentMessagePreview | null | undefined
 }
 
 /** The tone of the state chip of a stop card, from Grammar's Badge tones. */
@@ -84,7 +103,12 @@ export interface TeamChatStopLabels {
     readonly send: string
     readonly approve: string
     readonly refuse: string
+    /** The name of the fold of the raw facts ("Technical details"). */
     readonly details: string
+    /** The head of a stop: "{this} · {workflow} › {step}". */
+    readonly title: string
+    /** The name of the row that says how many times and when the step stopped. */
+    readonly stopsRow: string
     readonly answerLabel: string
     readonly answerPlaceholder: string
     readonly contextPlaceholder: string
@@ -92,6 +116,11 @@ export interface TeamChatStopLabels {
     readonly traceLabel: string
     readonly factsLabel: string
     readonly approvalLabel: string
+    /** The name of the row that holds the message the customer will get, and of the one that lists its files. */
+    readonly messageLabel: string
+    readonly filesLabel: string
+    /** Hand the customer back to the agent. */
+    readonly handBack: string
     readonly suggestionsLabel: string
     readonly decisionsLabel: string
 }
@@ -107,7 +136,7 @@ export interface TeamChatStopCardView {
     readonly mark: TeamChatMarkView
     /** Grows with every rewrite: a new revision clears what the viewer typed. */
     readonly revision: number
-    /** The muted line under the agent: the workflow, the step, the time, and how many times it stopped. */
+    /** The muted line under the card: the time, and how many times it stopped. */
     readonly meta: string
     readonly chip: { readonly label: string; readonly tone: TeamChatStopChipTone }
     readonly headline: string
@@ -121,9 +150,22 @@ export interface TeamChatStopCardView {
     readonly decisions: ReadonlyArray<TeamChatStopDecision>
     readonly verdicts: ReadonlyArray<TeamChatStopVerdict>
     /** The work item of a leave request and its lines (account, ability, the call's arguments); null for any other card. */
-    readonly approval: { readonly workItemId: string; readonly lines: ReadonlyArray<TeamChatStopLineView> } | null
-    /** The engine facts, folded behind "Details" (they may carry raw codes). */
+    readonly approval: {
+        readonly workItemId: string
+        /** The message as the customer will get it, one entry per line (empty when the call sends no words). */
+        readonly messageLines: ReadonlyArray<string>
+        /** The addresses of the pictures and files it sends. */
+        readonly files: ReadonlyArray<string>
+        readonly lines: ReadonlyArray<TeamChatStopLineView>
+    } | null
+    /** The conversation the viewer holds while the card is taken over: the card offers "hand back" for it; null otherwise. */
+    readonly heldConversationId: string | null
+    /** The worded facts (and the row of how many times it stopped): the bordered list the card draws. */
     readonly facts: ReadonlyArray<TeamChatStopLineView>
+    /** The raw facts (codes, ids): folded under "Technical details", closed. */
+    readonly technical: ReadonlyArray<TeamChatStopLineView>
+    /** A package's preview, already drawn by the registered view of its kind; nothing when the door sent none or the kind is not drawable. */
+    readonly preview: ReactNode
     readonly replies: ReadonlyArray<TeamChatStopReplyView>
     readonly labels: TeamChatStopLabels
 }
@@ -133,6 +175,7 @@ export type TeamChatStopAction =
     | { readonly kind: "answer"; readonly text: string }
     | { readonly kind: "decision"; readonly decision: TeamChatStopDecision }
     | { readonly kind: "verdict"; readonly verdict: TeamChatStopVerdict }
+    | { readonly kind: "hand_back"; readonly conversationId: string }
 
 /** What the thread does with the stop cards: who may approve, which card is in flight, and the one handler. */
 export interface TeamChatStopHandlers {

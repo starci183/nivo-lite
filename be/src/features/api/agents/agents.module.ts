@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { AgentToolLinesService } from "@modules/domain/agent-pages"
 import { ConfigurableModuleClass } from "./agents.module-definition"
 import { AgentConnectionCandidatesHandler } from "./application/agent-connection-candidates.handler"
 import { AskGuideHandler } from "./application/ask-guide.handler"
@@ -26,6 +27,7 @@ import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
 
 @Module({
     providers: [
+        AgentToolLinesService,
         AgentConnectionCandidatesHandler,
         AskGuideHandler,
         CreateAgentHandler,

@@ -12,8 +12,8 @@ import {
     lessonFilterTabsOf,
     lessonPlaceholderOf,
     lessonWordsOf,
+    type MineOutcome,
 } from "@/modules/brain"
-import type { MineOutcome } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { toast } from "@/modules/toast"
@@ -34,7 +34,6 @@ interface BrainLessonsInput {
 
 /** What the lessons tab does. */
 interface BrainLessonsCommands {
-    readonly reviewAll: () => void
     readonly selectTab: (id: string) => void
     readonly setFilter: (id: string) => void
     readonly setAgent: (value: string | null) => void
@@ -164,7 +163,6 @@ export const useBrainLessons = (input: BrainLessonsInput): BrainLessonsPage => {
         view,
         drawer,
         on: {
-            reviewAll: header.on.reviewAll,
             selectTab: header.on.selectTab,
             setFilter: pick.setFilter,
             setAgent: (value) => setAgent(value ?? agent),

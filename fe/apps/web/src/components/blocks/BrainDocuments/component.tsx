@@ -1,6 +1,5 @@
 import {
     AlertDialog,
-    Badge,
     Button,
     Cluster,
     Drawer,
@@ -8,28 +7,46 @@ import {
     Section,
     Stack,
     Stepper,
-    SurfaceCard,
     Text,
+    type ListRowData,
 } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { ReactNode } from "react"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { BrainKnowledgeFrame } from "@/components/frames/BrainKnowledgeFrame"
-import type { BrainDocDrawerView, BrainDocRowView, BrainDocsCopy, BrainDocsView, BrainPageHeaderView, SlotLabels } from "@/modules/types"
+import { DocTruthCard } from "@/components/frames/DocTruthCard"
+import { DocUsageCard } from "@/components/frames/DocUsageCard"
+import type {
+    BrainDocDrawerView,
+    BrainDocsCopy,
+    BrainDocsView,
+    BrainPageHeaderView,
+    DataSlot,
+    DocTruthControlView,
+    DocTruthRowView,
+    SlotLabels,
+    UsageLimitsView,
+} from "@/modules/types"
 
 /** Props for {@link BrainDocumentsBase}. */
 export interface BrainDocumentsBaseProps {
-    readonly props: BrainDocsView & {
+    readonly props: Omit<BrainDocsView, "slot" | "placeholder"> & {
+        /** The documents as the reads of the list and of the brain settled. */
+        readonly slot: DataSlot<ReadonlyArray<DocTruthRowView>>
+        readonly placeholder: ReadonlyArray<DocTruthRowView>
+        /** The usage block: its meters as the usage read settled, and the same meters with no figures while it loads. */
+        readonly usage: DataSlot<UsageLimitsView>
+        readonly usagePlaceholder: UsageLimitsView
+        readonly truthsCopy: { readonly usageLabel: string; readonly docsLabel: string; readonly view: string }
         readonly copy: BrainDocsCopy
         readonly labels: SlotLabels
         /** The knowledge tab's header: the page heading, its four tabs and the chips. */
         readonly header: BrainPageHeaderView
     }
     readonly on: {
-        readonly reviewAll: () => void
         readonly selectTab: (id: string) => void
         readonly open: (id: string) => void
+        readonly view: (id: string) => void
+        readonly control: (id: string, kind: DocTruthControlView["kind"]) => void
         readonly close: () => void
         readonly askApprove: (id: string) => void
         readonly cancelApprove: () => void
@@ -37,110 +54,6 @@ export interface BrainDocumentsBaseProps {
         readonly retry: () => void
         readonly add: () => void
     }
-}
-
-/** What the name, status and date cells draw: the row, and whether it is a placeholder. */
-interface CellProps {
-    readonly row: BrainDocRowView
-    readonly isLoading: boolean
-}
-
-/** What the facts cell draws: the row, the words for no facts, and whether the row is a placeholder. */
-interface FactsCellProps extends CellProps {
-    readonly none: string
-}
-
-/** The facts column: what waits for the owner, then what is approved; the words for none when the document gave nothing. */
-const FactsCell = (props: FactsCellProps) => {
-    const { row, isLoading } = props
-    if (row.proposed === null && row.approved === null)
-        return (
-            <Text size="sm" tone="muted" isLoading={isLoading}>
-                {props.none}
-            </Text>
-        )
-    return (
-        <Cluster gap="inline" align="center">
-            {row.proposed === null ? null : (
-                <Badge tone="warning" isLoading={isLoading}>
-                    {row.proposed}
-                </Badge>
-            )}
-            {row.approved === null ? null : (
-                <Text size="sm" tone="muted" isLoading={isLoading}>
-                    {row.approved}
-                </Text>
-            )}
-        </Cluster>
-    )
-}
-
-/** The name column: the document with its kind under it. */
-const NameCell = (props: CellProps) => (
-    <Stack gap="inline">
-        <Text isStrong isLoading={props.isLoading}>
-            {props.row.title}
-        </Text>
-        <Text size="sm" tone="muted" isLoading={props.isLoading}>
-            {props.row.kind}
-        </Text>
-    </Stack>
-)
-
-/** One cell of the table, by column. */
-const cellOf = (columnId: string, cell: CellProps, none: string): ReactNode => {
-    if (columnId === "facts") return <FactsCell row={cell.row} none={none} isLoading={cell.isLoading} />
-    if (columnId === "status")
-        return (
-            <Badge tone={cell.row.statusTone} isLoading={cell.isLoading}>
-                {cell.row.status}
-            </Badge>
-        )
-    if (columnId === "updated")
-        return (
-            <Text size="sm" tone="muted" isLoading={cell.isLoading}>
-                {cell.row.updated}
-            </Text>
-        )
-    return <NameCell {...cell} />
-}
-
-/** The columns of the table, in order. */
-const COLUMN_IDS = ["name", "facts", "status", "updated"]
-
-/** What the table draws. */
-interface TableProps {
-    readonly rows: ReadonlyArray<BrainDocRowView>
-    readonly isLoading: boolean
-    readonly copy: BrainDocsCopy
-    readonly emptyTitle: string
-    readonly onOpen: (id: string) => void
-}
-
-/** The table of documents as one card, full width, one row each; a row opens the drawer. */
-const Table = (props: TableProps) => {
-    const { copy } = props
-    return (
-        <SurfaceCard
-            kind="table"
-            ariaLabel={copy.tableLabel}
-            isLoading={props.isLoading}
-            columns={[
-                { id: "name", label: copy.columns.name },
-                { id: "facts", label: copy.columns.facts },
-                { id: "status", label: copy.columns.status, priority: "low" },
-                { id: "updated", label: copy.columns.updated, priority: "low" },
-            ]}
-            rows={props.rows.map((row) => ({
-                id: row.id,
-                cells: Object.fromEntries(
-                    COLUMN_IDS.map((columnId) => [columnId, cellOf(columnId, { row, isLoading: props.isLoading }, copy.noFacts)]),
-                ),
-            }))}
-            onRowAction={props.onOpen}
-            empty={<EmptyNotice message={props.emptyTitle} iconSource={nivoIconSource("document", "leading")} description={copy.emptyBody} />}
-        />
-    )
 }
 
 /** The rows of the facts list: the fact and the words of the document, its value at the end, its state and trust. */
@@ -256,9 +169,22 @@ const ApproveDialog = (props: ApproveProps) => (
  * the one command that approves the safe ones together after a question. A read that fails or finds nothing is one notice.
  */
 export const BrainDocumentsBase = (props: BrainDocumentsBaseProps) => {
-    const { copy, labels, slot, placeholder, drawer, confirm, canAdd } = props.props
+    const { copy, labels, slot, placeholder, usage, usagePlaceholder, drawer, confirm, canAdd } = props.props
     return (
-        <BrainKnowledgeFrame header={props.props.header} onReviewAll={props.on.reviewAll} onSelectTab={props.on.selectTab}>
+        <BrainKnowledgeFrame
+            header={props.props.header}
+           
+            onSelectTab={props.on.selectTab}
+        >
+            <SlotView
+                slot={usage}
+                placeholder={usagePlaceholder}
+                labels={labels}
+                errorDescription={copy.errorBody}
+                emptyDescription={copy.emptyBody}
+                onRetry={props.on.retry}
+                render={(limits, isLoading) => <DocUsageCard limits={limits} isLoading={isLoading} />}
+            />
             <SlotView
                 slot={slot}
                 placeholder={placeholder}
@@ -269,12 +195,18 @@ export const BrainDocumentsBase = (props: BrainDocumentsBaseProps) => {
                 {...(canAdd ? { emptyAction: { label: copy.emptyAction, onAction: props.on.add } } : {})}
                 onRetry={props.on.retry}
                 render={(rows, isLoading) => (
-                    <Table
+                    <DocTruthCard
                         rows={rows}
                         isLoading={isLoading}
-                        copy={copy}
-                        emptyTitle={labels.empty}
+                        copy={{
+                            label: props.props.truthsCopy.docsLabel,
+                            view: props.props.truthsCopy.view,
+                            emptyTitle: labels.empty,
+                            emptyBody: copy.emptyBody,
+                        }}
+                        onView={props.on.view}
                         onOpen={props.on.open}
+                        onControl={props.on.control}
                     />
                 )}
             />

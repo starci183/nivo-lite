@@ -1,5 +1,6 @@
 import type { AgentMessageIntent } from "../../agent-message/agent-message-item"
-import type { AgentMessageState } from "../../agent-message/agent-message-kinds"
+import type { AgentMessageState } from "@nivo-lite/agent-sdk/team-chat"
+import type { ApprovalRowWords } from "../../agent-message/agent-message-approval"
 
 /** The words the kinds of the message draw in their bodies: the key/value rows of an order and the way to the connections. */
 export interface AgentMessageKindWords {
@@ -56,6 +57,8 @@ export interface AgentMessageWords {
      * inside it (a fold within the details fold). Absent, the card draws the worded facts as rows and never a technical one.
      */
     readonly facts?: { readonly details: string; readonly technical: string } | undefined
+    /** The names of the rows of an approval card (the step, the account) and of its technical rows (the tool, the node). */
+    readonly approval?: ApprovalRowWords | undefined
 }
 
 /** The values an edited payload is approved with. */

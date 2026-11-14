@@ -16,7 +16,7 @@ Each subpath is one entry of the `exports` of the package manifest; a side impor
 | `@nivo-lite/agent-sdk/block`          | React-free           | `defineBlock`, `defineRead`, `defineAction`, the read and action handles a block receives, `BlockHost`, `SdkDefinitionError`                                                                        |
 | `@nivo-lite/agent-sdk/node`           | React-free           | `defineNode`, the node context, `NodeVocabulary`, `RightsDeniedError`, `VocabularyError`                                                                                                            |
 | `@nivo-lite/agent-sdk/spec`           | React-free           | the spec document (`nivo/workbench-spec@1`): `specDocumentSchema`, `specProblems`, `renderPlan`, `viewOf`                                                                                           |
-| `@nivo-lite/agent-sdk/module`         | React-free           | `ModuleTemplate`, `ModuleServer`, the module document (`nivo/module@1`) with `moduleDocumentSchema` and `moduleProblems`, `templatesOf`                                                             |
+| `@nivo-lite/agent-sdk/module`         | React-free           | `ModuleTemplate`, `ModuleServer`, `defineModule` and the module declaration types, `templatesOf`                                                             |
 | `@nivo-lite/agent-sdk/template`       | React-free           | the agent template package: `previewPackage`, `instantiate`, `resolveValues`, `updateUnits`, `applyUnits`, `canonicalJson`                                                                          |
 | `@nivo-lite/agent-sdk/testing`        | React-free           | the doubles and builders a spec of a block, a node or a template uses                                                                                                                               |
 | `@nivo-lite/agent-sdk/client`         | React (Grammar only) | the spec renderer: `SpecWorkbench`, `WorkbenchHostProvider`, `SlotView`, `defineRenderer`, the data slots, and the English and Vietnamese message catalogues of the renderer under the same subpath |
@@ -55,7 +55,7 @@ const figures = defineBlock({
 - A node (`defineNode`) is an executable step of an agent graph. It declares the rights it needs and the effect kinds it may record, and
   it reaches records only through a data port that checks every call against the agent's grant. Without a right the call is refused
   with `RightsDeniedError`.
-- Every refusal the SDK throws derives from `SdkError` and carries a stable code and the id or word it is about.
+- Every refusal the SDK throws is a `DomainError` of `@starci/common` and carries a stable code (`code`) and the id or word it is about (`params.at`); its message is the code.
 
 ## The spec (data)
 
@@ -116,10 +116,7 @@ message library, no app path.
 
 ## Modules
 
-- A module is data: a module document (`nivo/module@1`) holds the catalogue entry, the agent template (gates, authority actions,
-  accepted commands, triggers and the data rights an agent of the type is seeded with), the contracts of its turns (limits, members,
-  signals, claims, outcome rules and intents) and its default workbenches by route. `moduleDocumentSchema` reads its structure and
-  `moduleProblems` judges what needs the installed blocks or crosses members.
+- A module is declared with `defineModule` (`ModuleDeclaration`): its reads, actions, permissions, seed specs and, when it has an agent, the agent's tool set. The agent's words are the module's craft, held by its package (the plugin's `guidance` function), not by the declaration.
 - `ModuleTemplate` and `ModuleServer` are the catalogue entry as React-free code, so a back end loads it; `templatesOf` lists them in
   catalogue order and throws `ModuleListError` for a list with a duplicate key, a key that does not match its template, an action
   defined twice or a command that names an action the module does not govern.

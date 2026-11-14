@@ -27,29 +27,36 @@ export interface FilterGroupChoice {
     readonly moreLabel?: string
 }
 
+/** One filter tab: its value, its label and its count when the list knows it. */
+const tabOf = (option: FilterGroupOption) =>
+    option.count === undefined
+        ? { id: option.value, label: option.label }
+        : { id: option.value, label: option.label, count: option.count }
+
 /** What the filter group draws: either control, or both. */
 interface FilterGroupProps {
     readonly search?: FilterGroupSearch
     readonly choice?: FilterGroupChoice
-    /** The options are still being read: the search draws as its skeleton. */
+    /** The options are still being read: the search stays real text with its placeholder and only marks its results pending (page-loading-own-shape). */
     readonly isLoading?: boolean
 }
 
 /**
  * The one filter group of every list: a search field over the single-choice filter row, drawn as filter tabs; the ones that do not fit
- * fold into a "+n" menu. The search keeps its box while the read waits, so the head of a list never shifts when the options land.
+ * fold into a "+n" menu. The search is real text while the read waits, so the head of a list never shifts or blinks when the options land.
  */
 export const FilterGroup = (props: FilterGroupProps) => {
     const template = props.choice?.moreLabel
     const moreLabel =
         template === undefined ? undefined : (count: number): string => template.replace("{count}", String(count))
+    const moreProp = moreLabel === undefined ? {} : { moreLabel }
     return (
         <Stack gap="row">
             {props.search === undefined ? null : (
                 <SearchField
                     label={props.search.label}
                     isLabelHidden
-                    isLoading={props.isLoading === true}
+                    isPending={props.isLoading === true}
                     placeholder={props.search.placeholder}
                     clearLabel={props.search.clearLabel}
                     value={props.search.value}
@@ -63,12 +70,8 @@ export const FilterGroup = (props: FilterGroupProps) => {
                     label={props.choice.label}
                     selectedKey={props.choice.value}
                     onSelect={props.choice.onChange}
-                    items={props.choice.options.map((option) => ({
-                        id: option.value,
-                        label: option.label,
-                        ...(option.count === undefined ? {} : { count: option.count }),
-                    }))}
-                    {...(moreLabel === undefined ? {} : { moreLabel })}
+                    items={props.choice.options.map((option) => tabOf(option))}
+                    {...moreProp}
                 />
             )}
         </Stack>

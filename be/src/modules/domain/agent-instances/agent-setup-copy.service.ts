@@ -6,14 +6,11 @@ import {
     AgentGraphsService,
     AgentWorkflowsService,
 } from "@modules/domain/agent-graphs"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import type { Locale } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentInstancesLogEvent } from "./agent-instances.log-events"
 import { copiedGrantsOf } from "./agent-instances.policy"
 import { AgentKnowledgeCopyService } from "./agent-knowledge-copy.service"
@@ -37,9 +34,8 @@ export interface CopyOutcome {
 
 @Injectable()
 /**
- * "Copy the setup of <agent>": a new agent of a role starts where a sibling of the same role is. It takes the sibling's settings and
- * operating mode, its applied setup version, its permission levels (every rule that lists the sibling lists the new agent too), its
- * graph version (under the same checks as any publish), and the shared connections it uses. It never takes a channel: a channel the
+ * "Copy the setup of <agent>": a new agent of a role starts where a sibling of the same role is. It takes the sibling's settings, its
+ * applied setup version, its graph version (under the same checks as any publish), and the shared connections it uses. It never takes a channel: a channel the
  * sibling answers stays the sibling's, since each channel has one agent per role. The knowledge view of the role is shared already; the
  * knowledge kept for the sibling alone is copied as the new agent's own private knowledge (see AgentKnowledgeCopyService).
  */
@@ -47,7 +43,6 @@ export class AgentSetupCopyService {
     constructor(
         private readonly installations: InstallationRecordsService,
         private readonly versions: ContextVersionsService,
-        private readonly rules: AuthorityRulesService,
         private readonly graphs: AgentGraphsService,
         private readonly seed: AgentGraphSeedService,
         private readonly publish: AgentGraphPublishService,
@@ -66,21 +61,19 @@ export class AgentSetupCopyService {
     ): Promise<CopyOutcome> {
         const { workspaceId } = source
         await this.installations.saveSettings(workspaceId, target.installationId, source.settings)
-        await this.installations.setOperatingMode(workspaceId, target.installationId, source.operatingMode)
         const contextVersion = await this.copyVersion(source, target)
         const knowledge = await this.knowledge.copy(source, target.installationId, by)
         const sourceAgentId = source.agentId
         if (sourceAgentId === null) {
             return {
-                copied: { fromInstallationId: source.id, settings: true, contextVersion, rules: 0, graph: "none", ...knowledge },
+                copied: { fromInstallationId: source.id, settings: true, contextVersion, graph: "none", ...knowledge },
                 grants: [],
             }
         }
-        const rules = await this.rules.extendToAgent(workspaceId, source.moduleKey, sourceAgentId, target.agentId)
         const graph = await this.copyGraph(source, sourceAgentId, target, by, locale)
         const sibling = await this.grants.candidatesOf(workspaceId, sourceAgentId, source.moduleKey)
         return {
-            copied: { fromInstallationId: source.id, settings: true, contextVersion, rules, graph, ...knowledge },
+            copied: { fromInstallationId: source.id, settings: true, contextVersion, graph, ...knowledge },
             grants: copiedGrantsOf(sibling),
         }
     }
@@ -117,7 +110,8 @@ export class AgentSetupCopyService {
         if (state?.active === null || state?.active === undefined || state.activeKind === "seed") return "none"
         await this.seed.ensureFor(target.installationId, locale)
         try {
-            await this.publish.publishCopy(source.workspaceId, target.agentId, state.active, by)
+            // The target was made in this call: what its flow asks beyond what is agreed waits for the owner, never refuses.
+            await this.publish.publishCopy(source.workspaceId, target.agentId, state.active, by, [], "wait")
             await this.workflows.copyWorkflows(
                 source.workspaceId,
                 { fromInstallationId: source.id, toInstallationId: target.installationId },

@@ -1,14 +1,13 @@
 import { createHash } from "node:crypto"
 import { Document } from "@langchain/core/documents"
-import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages"
-import type { BaseMessage } from "@langchain/core/messages"
+import { AIMessage, HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages"
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts"
 import { BaseRetriever } from "@langchain/core/retrievers"
 import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables"
 import { parseJsonMarkdown } from "@langchain/core/output_parsers"
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
+import { attempt } from "@modules/platform/primitives"
 import type {
     ChainReply,
     AiBudget,
@@ -16,6 +15,7 @@ import type {
     AiEmbedRequest,
     AiFetch,
     AiMessage,
+    AiOutputSchema,
     AiChatModel,
     AiRunner,
     AiTurnRequest,
@@ -25,8 +25,8 @@ import type {
 } from "./ai.contracts"
 import { InjectAiEndpointOptions } from "./ai.decorators"
 import type { AiEndpoint } from "./ai.options"
-import { ANY_OBJECT } from "./ai.schema"
-import type { AiSchema } from "./ai.schema"
+import { ANY_OBJECT, type AiSchema } from "./ai.schema"
+import { thinkingAskOf } from "./anthropic-thinking.policy"
 import { automaticCacheFieldsOf, CACHE_MARK_KINDS, markedContentOf, withinMarkLimit } from "./cache-marks.policy"
 import { gatewayRoutedModels } from "./routed-models.adapter"
 import { fieldOf, notesBlock, textOf, withNotes } from "./reply.policy"
@@ -68,14 +68,25 @@ const JSON_OBJECT_FORMAT = { response_format: { type: "json_object" } }
  * parse that keeps the raw message gives, so the caller's loose parse and its tries decide what happens next.
  */
 export const parsedOf = (text: string, schema: AiSchema): unknown => {
-    try {
-        // Fences stripped, then a strict parse: half an object is no answer.
-        const value: unknown = parseJsonMarkdown(text, JSON.parse)
-        const checked = schema.safeParse(value)
-        return checked.success ? checked.data : null
-    } catch {
-        return null
-    }
+    // Fences stripped, then a strict parse: half an object is no answer.
+    const read = attempt((): unknown => parseJsonMarkdown(text, JSON.parse))
+    if (!read.ok) return null
+    const checked = schema.safeParse(read.value)
+    return checked.success ? checked.data : null
+}
+
+/**
+ * The Anthropic constructor field of a call's structured output: `outputConfig.format` of type `json_schema` merged with the effort
+ * the call already carries there (`anthropic-thinking.policy`), so neither replaces the other. Nothing when the call names no schema.
+ */
+export const structuredFieldsOf = (
+    effort: Readonly<Record<string, unknown>>,
+    schema: AiOutputSchema | undefined,
+): Readonly<Record<string, unknown>> => {
+    if (schema === undefined) return {}
+    const current: unknown = effort["outputConfig"]
+    const base = typeof current === "object" && current !== null ? current : {}
+    return { outputConfig: { ...base, format: { type: "json_schema", schema } } }
 }
 
 /** The sampling temperature of every chat call whose model takes one: the same prompt gives the same answer as far as it can. */
@@ -88,7 +99,8 @@ const TEMPERATURE = 0
  */
 export const reasoningFieldOf = (budget: AiBudget): Readonly<Record<string, unknown>> => {
     if (budget.effort === "off") return { reasoning: { enabled: false } }
-    const bound = budget.reasoningMaxTokens === undefined ? { effort: budget.effort } : { max_tokens: budget.reasoningMaxTokens }
+    const bound =
+        budget.reasoningMaxTokens === undefined ? { effort: budget.effort } : { max_tokens: budget.reasoningMaxTokens }
     return { reasoning: { ...bound, exclude: true } }
 }
 
@@ -124,7 +136,11 @@ const messageOf = (message: AiMessage, marks: boolean): BaseMessage => {
     if (message.role === "system") return systemOf(message, marks)
     if (message.role === "assistant") return new AIMessage(message.content)
     const images = message.images ?? []
-    if (images.length === 0) return new HumanMessage(message.content)
+    if (images.length === 0) {
+        // A marked user message is the end of a cacheable layer that is data, not instructions (a document the calls after it share).
+        const content = markedContentOf(message.content, message.cacheMark === true, marks)
+        return typeof content === "string" ? new HumanMessage(content) : new HumanMessage({ content: [...content] })
+    }
     return new HumanMessage({
         content: [
             { type: "text", text: message.content },
@@ -204,17 +220,26 @@ export class AiClient implements AiRunner {
      * (`fallback`), the name's client through its next protocol when it has one. Each protocol's own fields ride under its kind and
      * reach only that kind's client: for `openai`, temperature 0 where every provider of the name takes one, the upstream's own fields
      * (reasoning, cache affinity, upstream routing) where an OpenAI-compatible upstream serves it, and JSON mode for a JSON call; for
-     * `anthropic`, the automatic cache breakpoint.
+     * `anthropic`, the automatic cache breakpoint and the call's effort in the fields of the MODEL that serves it
+     * (`anthropic-thinking.policy` `thinkingAskOf`: a profile whose models take different bodies is pinned to one of them, the next one
+     * on a `fallback` try, with the body built again for it).
      */
-    private async routedOf(request: AiTurnRequest & { readonly json?: boolean }): Promise<RoutedChat> {
+    private async routedOf(request: AiTurnRequest & { readonly json?: boolean; readonly outputSchema?: AiOutputSchema }): Promise<RoutedChat> {
         const { target } = request
-        const routed = await this.routed.chat(target?.name ?? this.endpoint.chatModel, {
+        const asked = thinkingAskOf(
+            target?.name ?? this.endpoint.chatModel,
+            request.budget,
+            request.fallback === true,
+            this.endpoint.profileRoutes ?? {},
+        )
+        const name = asked.name
+        const routed = await this.routed.chat(name, {
             timeoutMs: request.timeoutMs,
             ...(request.budget?.maxTokens === undefined ? {} : { maxTokens: request.budget.maxTokens }),
             // A call with no target asks the endpoint's chat profile (`work`), Claude only since 2026-11-11 (Haiku 5.5 and Sonnet 5.5
             // refuse a non-default temperature; OpenRouter's fields mean nothing there): it gets neither.
             fields: {
-                ...automaticCacheFieldsOf(),
+                anthropic: { ...automaticCacheFieldsOf().anthropic, ...asked.fields, ...structuredFieldsOf(asked.fields, request.outputSchema) },
                 openai: {
                     ...(target?.sampling === true ? { temperature: TEMPERATURE } : {}),
                     // The raw answer rides along so the upstream that served the call can be read (the prompt cache is per upstream).
@@ -235,7 +260,8 @@ export class AiClient implements AiRunner {
             const headers = new Headers(init?.headers)
             // The catalog read is a GET with no body; every model call a POST of the bytes the client wrote.
             const asked = init?.method ?? (input instanceof Request ? input.method : undefined)
-            const method = (asked ?? (init?.body === undefined ? "GET" : "POST")).toUpperCase() === "GET" ? "GET" : "POST"
+            const withoutAsked = init?.body === undefined ? "GET" : "POST"
+            const method = (asked ?? withoutAsked).toUpperCase() === "GET" ? "GET" : "POST"
             const answer = await this.http.request({
                 method,
                 url: urlOf(input),

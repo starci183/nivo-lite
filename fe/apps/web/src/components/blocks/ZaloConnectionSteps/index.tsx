@@ -9,7 +9,7 @@ interface ZaloConnectionStepsProps {
     readonly connectionId: string
 }
 
-/** The connected setup of a Zalo OA connection: one joined list of five steps, each with its own body and its mark. */
+/** The connected setup of a Zalo OA connection: one joined list of the four steps the form does not cover, each with its own body and its mark. */
 export const ZaloConnectionSteps = (props: ZaloConnectionStepsProps) => {
     const views = useZaloStepViews(props.connectionId)
     const refusal = useConnectionRefusal()
@@ -19,7 +19,6 @@ export const ZaloConnectionSteps = (props: ZaloConnectionStepsProps) => {
             props={{
                 stepsLabel: views.stepsLabel,
                 steps: views.steps,
-                app: views.app,
                 paste: views.paste,
                 authorize: {
                     notice: views.authorize.notice,

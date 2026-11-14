@@ -3,7 +3,7 @@ import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
 import { sampleState } from "./fixtures/sales.data"
 import { salesContextOf } from "./fixtures/sales.context"
 import { memoryProvider } from "./memory"
-import { salesSettings } from "./ports"
+import { salesLeads, salesSettings } from "./ports"
 import { saveSettings, settingsOf } from "./settings-store"
 import { waitingFilterOf, waitingOrdersOf } from "./reads/waiting-orders"
 import { salesOrders } from "./ports"
@@ -11,7 +11,7 @@ import { settingsRead } from "./reads/settings.read"
 import { saveSettingsAction } from "./actions/save-settings.action"
 
 const portsFor = (state = sampleState([])) =>
-    portsOf(memoryProvider(state), { settings: salesSettings, orders: salesOrders })
+    portsOf(memoryProvider(state), { leads: salesLeads, settings: salesSettings, orders: salesOrders })
 
 describe("the sales settings of a workspace", () => {
     it("are the defaults before the first save", async () => {
@@ -58,7 +58,7 @@ describe("the orders that wait for the owner", () => {
 
 const CONTEXT = salesContextOf()
 
-describe("sales.settings and sales.save-settings", () => {
+describe("blocks-core.sales.settings and sales.save-settings", () => {
     it("read the defaults and then what was saved", async () => {
         const state = sampleState([])
         const provider = memoryProvider(state)

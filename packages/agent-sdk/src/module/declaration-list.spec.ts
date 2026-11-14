@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { SdkDefinitionError } from "../block/definition-error"
 import type { ListShape } from "../block/list.types"
+import { definePort } from "../port"
+import type { PortProvider } from "../port/port.types"
 import { countsRead, listQueryOf, listRead } from "./declaration-list"
 import { CONTEXT, LEADS, LEADS_PORT, LEADS_SHAPE, LEAD_COUNTS, leadsProvider } from "./declaration.fixture"
 import type { SourceCalls } from "./declaration.fixture"
@@ -111,6 +113,33 @@ describe("listRead", () => {
         expect(calls.pages).toEqual([])
     })
 
+    it("joins each page's rows from its own ports, keeping the source's cursor", async () => {
+        const STAGES = definePort<{ readonly of: (id: string) => string }>("sales.stages")
+        const joined = listRead({
+            ...BASE,
+            list: LEADS_SHAPE,
+            join: {
+                ports: { stages: STAGES },
+                rows: (ports, rows) => Promise.resolve(rows.map((row) => ({ ...row, stage: ports.stages.of(row.id) }))),
+            },
+        })
+        expect(joined.ports).toEqual({ stages: STAGES, source: LEADS_PORT })
+        const calls = callsOf()
+        const leads = leadsProvider(calls)
+        const provider: PortProvider = {
+            implementationOf: (port) => (port.id === STAGES.id ? { of: (id: string) => `stage-of-${id}` } : leads.implementationOf(port)),
+        }
+        const result = await joined.execute?.(provider, {}, CONTEXT)
+        expect(result).toEqual({ ok: true, data: { rows: [{ id: "l1", name: "An", stage: "stage-of-l1" }], cursor: "next" } })
+    })
+
+    it("refuses a join port named source, the list's own", () => {
+        const error = captured(() =>
+            listRead({ ...BASE, list: LEADS_SHAPE, join: { ports: { source: LEADS_PORT }, rows: (_ports, rows) => Promise.resolve(rows) } }),
+        )
+        expect(error).toMatchObject({ code: "LIST_JOIN_PORT_RESERVED", params: { at: "sales.leads" } })
+    })
+
     it.each<[string, ListShape, ReadonlyArray<string>]>([
         ["no sort", { ...LEADS_SHAPE, sort: {} }, []],
         ["a zero page", { ...LEADS_SHAPE, page: { size: 0 } }, []],
@@ -133,7 +162,7 @@ describe("listRead", () => {
         const variables = z.object(Object.fromEntries(extra.map((name) => [name, z.string().max(5).optional()])))
         const error = captured(() => listRead({ ...BASE, list, variables }))
         expect(error).toBeInstanceOf(SdkDefinitionError)
-        expect(error).toMatchObject({ code: "LIST_SHAPE_INVALID", at: "sales.leads" })
+        expect(error).toMatchObject({ code: "LIST_SHAPE_INVALID", params: { at: "sales.leads" } })
     })
 })
 
@@ -223,7 +252,7 @@ describe("countsRead", () => {
 
     it("refuses a filter the list does not have", () => {
         const error = captured(() => countsRead({ id: "sales.lead-counts", of: LEADS, by: "owner" }))
-        expect(error).toMatchObject({ code: "COUNTS_BY_UNKNOWN", at: "sales.lead-counts" })
+        expect(error).toMatchObject({ code: "COUNTS_BY_UNKNOWN", params: { at: "sales.lead-counts" } })
     })
 
     it("refuses any filter of a list that has none", () => {

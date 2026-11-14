@@ -1,8 +1,5 @@
-import { defineModule } from "@nivo-lite/agent-sdk/module"
-import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
-import { TOOL } from "../../vocabulary/tool-ids"
-import { guidanceOf, vndOf } from "../agent-policy"
-import { DEFAULT_THRESHOLD_VND } from "../../rules/sales/settings"
+import { defineModule, type ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { cancelOrderAction } from "./actions/cancel-order.action"
 import { decideAction } from "./actions/decide.action"
 import { confirmOrderAction } from "./actions/confirm-order.action"
@@ -22,19 +19,23 @@ import { orderRead } from "./reads/order.read"
 import { orderCountsRead, ordersRead } from "./reads/orders.read"
 import { ordersWaitingRead } from "./reads/orders-waiting.read"
 import { settingsRead } from "./reads/settings.read"
+import { LOYALTY_ACTIONS, LOYALTY_READS } from "./loyalty/declaration"
+import { LEDGER_ACTIONS, LEDGER_AGENT_TOOLS, LEDGER_READS, LEDGER_TOOLS } from "./ledger/declaration"
 import { SALES_WORKBENCH_SPEC } from "./specs/sales.workbench"
 
-/** Hours after the payment details went out when the customer is reminded: the default of the policy value `paymentReminderHours`. */
-const PAYMENT_REMINDER_HOURS = 2
-
-/** Hours after the payment details went out when an unpaid order is looked at again: the default of `paymentStaleHours`. */
-const PAYMENT_STALE_HOURS = 24
-
-/**
- * Whether a confirmed order wins the customer's deal: the default of the policy value `autoWon`, which the shop's own Sales setting of
- * the same name overrides. The order tool moves no deal; the create-order step does, through `nivo.lead.stage.update`.
- */
-const AUTO_WON = true
+/** The tools the Sales steps call, before the ledger's are added (the ledger adds only those it does not share). */
+const OWN_AGENT_TOOLS: ReadonlyArray<string> = [
+    TOOL.customerMessageSend,
+    TOOL.leadCareGet,
+    TOOL.contactMemoryRemember,
+    TOOL.leadOrderList,
+    TOOL.orderGet,
+    TOOL.teamMessagePost,
+    // The money in: the one bank movement the trigger names (any of the three feeds), and the transfer QR of an order.
+    TOOL.paymentCreditGet,
+    TOOL.paymentTransferCreate,
+    TOOL.brainChangePropose,
+]
 
 /** The module key of Sales: every read and action id starts with it. */
 export const SALES_MODULE_KEY = "sales"
@@ -48,46 +49,14 @@ export const salesModule: ModuleDeclaration = defineModule({
     key: SALES_MODULE_KEY,
     namespace: "sales",
     agent: {
+        // The tools of EVERY Sales node, consult (slice B) and care (slice C) merged at consolidation 2026-11-12, and the truth reads its
+        // agents may make. The kinds/abilities table that stood here goes: the node `accounts` (providers in order, a mode per tool) are
+        // the whole reach (contract C1/C3).
         tools: [
-            TOOL.customerMessageSend,
-            TOOL.careSchedule,
-            TOOL.leadEnsure,
-            TOOL.brainSearch,
-            TOOL.brainFactGet,
-            TOOL.brainFactRelated,
-            TOOL.brainChangePropose,
-            TOOL.leadOrderList,
-            TOOL.leadUpdate,
-            TOOL.leadStageUpdate,
-            TOOL.orderRecord,
-            TOOL.orderConfirm,
-            TOOL.paymentQrCreate,
-            TOOL.teamMessagePost,
+            ...OWN_AGENT_TOOLS,
+            // The books of the sale (the ledger area), each tool once.
+            ...LEDGER_AGENT_TOOLS.filter((tool) => !OWN_AGENT_TOOLS.includes(tool)),
         ],
-        abilities: {
-            kinds: {
-                messaging: { "customer.send": "auto" },
-                payment: { "qr.create": "auto" },
-            },
-        },
-        policy: {
-            limits: {
-                approvalThresholdVnd: DEFAULT_THRESHOLD_VND,
-                paymentReminderHours: PAYMENT_REMINDER_HOURS,
-                paymentStaleHours: PAYMENT_STALE_HOURS,
-                autoWon: AUTO_WON,
-            },
-            guidance: guidanceOf({
-                vi:
-                    `Đơn có tổng từ ngưỡng duyệt của tiệm trở lên (mặc định ${vndOf(DEFAULT_THRESHOLD_VND, "vi")}; con số của tiệm là thresholdVnd trong kết quả tạo đơn) cần chủ tiệm duyệt: hỏi chủ tiệm ở /chat trước khi xác nhận đơn. ` +
-                    "Giá chỉ lấy từ danh mục, không tự tính tổng, phí hay giảm giá; thanh toán bằng chuyển khoản theo mã QR tiệm gửi. " +
-                    "Khi quy trình đang dừng: chỉ nói một câu giữ chỗ, không xác nhận đã nhận tiền, hoàn tiền hay giao hàng.",
-                en:
-                    `An order whose total reaches the shop's approval threshold (default ${vndOf(DEFAULT_THRESHOLD_VND, "en")}; the shop's own figure is thresholdVnd in the order tool's answer) needs the founder's approval: ask the founder in /chat before confirming it. ` +
-                    "Prices come only from the catalogue: never compute a total, a fee or a discount; payment is a bank transfer by the shop's QR. " +
-                    "While the workflow is frozen: say one holding line only, never confirm payment, a refund or a delivery.",
-            }),
-        },
     },
     permissions: SALES_PERMISSIONS,
     reads: [
@@ -103,6 +72,8 @@ export const salesModule: ModuleDeclaration = defineModule({
         attentionRead,
         decisionsRead,
         awaitingReplyRead,
+        ...LEDGER_READS,
+        ...LOYALTY_READS,
     ],
     actions: [
         moveStageAction,
@@ -113,6 +84,9 @@ export const salesModule: ModuleDeclaration = defineModule({
         respondAction,
         followAction,
         replyAction,
+        ...LEDGER_ACTIONS,
+        ...LOYALTY_ACTIONS,
     ],
+    tools: [...LEDGER_TOOLS],
     specs: [SALES_WORKBENCH_SPEC],
 })

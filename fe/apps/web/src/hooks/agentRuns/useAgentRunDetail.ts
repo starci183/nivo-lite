@@ -17,7 +17,6 @@ import type { DataSlot, RunDetailView } from "@/modules/types"
 import { useLeadFreeze } from "@/hooks/leadFreeze"
 import { useRunContext } from "./useRunContext"
 import { useRunDecision } from "./useRunDecision"
-import { useRunEntityContext } from "./useRunEntityContext"
 import { useRunGraphSource } from "./useRunGraphSource"
 
 /** A run that is being driven is read again every 3 seconds, so its steps and its map move while the page is open. */
@@ -59,30 +58,23 @@ export const useAgentRunDetail = (module: string, installationId: string, runId:
         },
     )
     const runs = useQueryAgentRunsSwr({ installationId })
-    const leadId = read.data?.steps.flatMap((step) => step.input).find((fact) => fact.key === "leadId")?.value ?? null
-    const entityContext = useRunEntityContext(baseContext, leadId)
-    const context = useMemo(() => ({ ...entityContext, isFrozen: freeze.freeze !== null }), [entityContext, freeze.freeze])
+    const context = useMemo(() => ({ ...baseContext, isFrozen: freeze.freeze !== null }), [baseContext, freeze.freeze])
     const pins = useQueryAgentRunWorkflowsSwr({ installationId, runIds: [runId] })
     const pin = pins.data?.[0]
     const source = useRunGraphSource(installationId, pin, pins.data !== undefined)
     const nodes = useMemo(() => runGraphOf(source, locale, (key) => (t.has(`nodeName_${key}`) ? t(`nodeName_${key}`) : undefined)), [source, locale, t])
     const view = useMemo(
-        () =>
-            read.data === undefined || read.data === null
-                ? undefined
-                : runDetailViewOf(
-                      pin === undefined
-                          ? read.data
-                          : {
-                                ...read.data,
-                                row: { ...read.data.row, versionNumber: pin.version, workflowName: pin.workflowName },
-                            },
-                      nodes,
-                      selection,
-                      runs.data,
-                      context,
-                      locale,
-                  ),
+        () => {
+            if (read.data === undefined || read.data === null) return undefined
+            const detail =
+                pin === undefined
+                    ? read.data
+                    : {
+                          ...read.data,
+                          row: { ...read.data.row, versionNumber: pin.version, workflowName: pin.workflowName },
+                      }
+            return runDetailViewOf(detail, nodes, selection, runs.data, context, locale)
+        },
         [read.data, pin, nodes, selection, runs.data, context, locale],
     )
     const { mutate } = read

@@ -6,7 +6,7 @@ export { nextId, linkProblemOf } from "./link-rows"
 export type { LinkInput } from "./link-rows"
 export { splitLinks } from "./links"
 export { ARCHIVE_MAX_ENTRIES, canRetry, typedLinks } from "./queue"
-export type { BatchMeta, QueueActions, QueueItem } from "./queue"
+export type { BatchMeta, EnqueueItem, EnqueueOutcome, QueueActions, QueueItem } from "./queue"
 export {
     AGENT_MODULES,
     DOCUMENT_STATUS_TONE,
@@ -58,3 +58,8 @@ export {
     nivoRowOf,
 } from "./docs-rows"
 export { docsCopyOf, docsListViewOf, docsMainViewOf, docsNivoSlotOf, docsTailOf, docsTrailOf } from "./docs-screen"
+export { docTruthRowOf, toDocumentTruths } from "./truths"
+export { FACTS_PAGE_SIZE, FACT_STATUS_FILTERS, isIn, serverStatusesOf, shownKeysOf } from "./facts-filter"
+export type { FactStatusFilter } from "./facts-filter"
+export { limitLevelOf, quotaFailureOf, refusalBeforeUpload, usageLimitsOf } from "./limits"
+export { refusalNoticeOf } from "./limits"

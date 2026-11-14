@@ -8,6 +8,9 @@ import {
     deliveryVerdict,
 } from "./webhook-signing.policy"
 
+/** The available event ids a caller hands the policy (fixture data: the policy knows no event by name). */
+const AVAILABLE = ["lead.created", "deal.won", "order.confirmed", "payment.received", "handoff.requested", "decision.made"]
+
 const SUBJECT = Symbol("webhook-signing.policy")
 type Subject = {
     isWebhookEvent: typeof isWebhookEvent
@@ -43,7 +46,7 @@ describe("webhook signing policy isWebhookEvent", () => {
         async (event) => {
             const policy = await build()
 
-            expect(policy.isWebhookEvent(event)).toBe(true)
+            expect(policy.isWebhookEvent(event, AVAILABLE)).toBe(true)
         },
     )
 
@@ -62,7 +65,7 @@ describe("webhook signing policy isWebhookEvent", () => {
             {},
             [],
         ]) {
-            expect(policy.isWebhookEvent(value)).toBe(false)
+            expect(policy.isWebhookEvent(value, AVAILABLE)).toBe(false)
         }
     })
 })
@@ -72,24 +75,27 @@ describe("webhook signing policy pickEvents", () => {
         const policy = await build()
 
         expect(
-            policy.pickEvents([
-                "unknown",
-                "decision.made",
-                "lead.created",
-                "decision.made",
-                " lead.created ",
-                "payment.received",
-                "lead.created",
-                "order.confirmed",
-            ]),
+            policy.pickEvents(
+                [
+                    "unknown",
+                    "decision.made",
+                    "lead.created",
+                    "decision.made",
+                    " lead.created ",
+                    "payment.received",
+                    "lead.created",
+                    "order.confirmed",
+                ],
+                AVAILABLE,
+            ),
         ).toEqual(["decision.made", "lead.created", "payment.received", "order.confirmed"])
     })
 
     it("returns no events for an empty list or a list containing only invalid events", async () => {
         const policy = await build()
 
-        expect(policy.pickEvents([])).toEqual([])
-        expect(policy.pickEvents(["unknown", "", "LEAD.CREATED"])).toEqual([])
+        expect(policy.pickEvents([], AVAILABLE)).toEqual([])
+        expect(policy.pickEvents(["unknown", "", "LEAD.CREATED"], AVAILABLE)).toEqual([])
     })
 })
 
@@ -98,18 +104,21 @@ describe("webhook signing policy eventsOf", () => {
         const policy = await build()
 
         expect(
-            policy.eventsOf({
-                events: " deal.won , ,lead.created, unknown, deal.won ,\tpayment.received\n",
-                host: "hooks.example.com",
-            }),
+            policy.eventsOf(
+                {
+                    events: " deal.won , ,lead.created, unknown, deal.won ,\tpayment.received\n",
+                    host: "hooks.example.com",
+                },
+                AVAILABLE,
+            ),
         ).toEqual(["deal.won", "lead.created", "payment.received"])
     })
 
     it("returns no events when the fact is absent or empty", async () => {
         const policy = await build()
 
-        expect(policy.eventsOf({})).toEqual([])
-        expect(policy.eventsOf({ events: "" })).toEqual([])
+        expect(policy.eventsOf({}, AVAILABLE)).toEqual([])
+        expect(policy.eventsOf({ events: "" }, AVAILABLE)).toEqual([])
     })
 })
 
@@ -176,5 +185,16 @@ describe("webhook signing policy deliveryVerdict", () => {
         const policy = await build()
 
         expect(policy.deliveryVerdict(status)).toBe(expected)
+    })
+})
+
+describe("webhook signing policy with a different set of available events", () => {
+    it("accepts only the ids the caller offers", async () => {
+        const policy = await build()
+
+        expect(policy.isWebhookEvent("lead.created", ["ticket.opened"])).toBe(false)
+        expect(policy.pickEvents(["ticket.opened", "lead.created"], ["ticket.opened"])).toEqual(["ticket.opened"])
+        expect(policy.eventsOf({ events: "ticket.opened,lead.created" }, ["ticket.opened"])).toEqual(["ticket.opened"])
+        expect(policy.pickEvents(["lead.created"], [])).toEqual([])
     })
 })

@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from "@nestjs/graphql"
+import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
 /** Who of the shop set or cleared a customer's opt-out, when, and what it came to. */
@@ -55,11 +55,7 @@ export class ConversationReleaseType {
     @Field(() => String)
     outcome!: string
 
-    /** The person whose take-over was cleared, or null. */
-    @Field(() => String, { nullable: true })
-    person!: string | null
-
-    /** The agent whose consult hold was cleared, or null. */
-    @Field(() => ID, { nullable: true })
-    agentId!: string | null
+    /** How many agents the resume event woke; 0 when none. */
+    @Field(() => Int)
+    answered!: number
 }

@@ -1,8 +1,8 @@
-import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import { ChannelSendExecutorService } from "../../../modules/domain/chat-node-ports/channel-send-executor.service"
+import { ChannelDeliveriesService, CustomerRoutesService } from "@modules/domain/customer-routes"
+import { ContactsService } from "@modules/domain/contacts"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { ChannelSendExecutorService } from "../../../modules/domain/chat-node-ports/channel-send-executor.service"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox } from "../../world/backend-role-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
@@ -32,30 +32,29 @@ beforeAll(async () => {
     })
 })
 
-/** A conversation of the agent on a channel, with the customer's first line, and the turn that answers it. */
-const conversationOn = async (
+/**
+ * A person the workspace met on a channel entrance, their route there, and the turn of the agent that answers them (the one send tool
+ * addresses the PERSON: the engine keeps no conversation record, the route and the delivery ledger are what a send leaves).
+ */
+const personOn = async (
     channel: "website" | "zalo",
-    customerId: string,
-): Promise<{ readonly conversationId: string; readonly turn: NodeTurn }> => {
-    const met = await world.resolve(ChatConversationsService).meet({
-        workspaceId: who.workspaceId,
-        agentId: who.agentId,
-        channel,
-        customerId,
-        visitor: "Cuong",
-        connectionId: world.id(),
-    })
-    await world
-        .resolve(ChatMessagesService)
-        .storeCustomer(who.workspaceId, met.conversation.id, "Cho minh dat 1 gio hoa nho", null, null)
+    channelUserId: string,
+): Promise<{ readonly routeId: string; readonly contactId: string; readonly turn: NodeTurn }> => {
+    const accountId = world.id()
+    const contactId = await world
+        .resolve(ContactsService)
+        .meetChannel(who.workspaceId, { channel, account: accountId, userId: channelUserId, name: "Cuong" })
+    const { routeId } = await world.resolve(CustomerRoutesService).ensure(who.workspaceId, { contactId, channel, accountId })
     return {
-        conversationId: met.conversation.id,
+        routeId,
+        contactId,
         turn: {
             turnId: world.id(),
             workspaceId: who.workspaceId,
             agentId: who.agentId,
             subject: null,
-            conversationId: met.conversation.id,
+            conversationId: routeId,
+            contactId,
             locale: "vi",
             origin: "customer",
             memberId: null,
@@ -63,52 +62,41 @@ const conversationOn = async (
     }
 }
 
-const send = (turn: NodeTurn, conversationId: string, key: string) =>
-    world.resolve(ChannelSendExecutorService).execute(turn, { conversationId, text: TEXT }, { key, dedupeKey: key })
+const send = (turn: NodeTurn, key: string) =>
+    world.resolve(ChannelSendExecutorService).execute(turn, { text: TEXT }, { key, dedupeKey: key })
 
-/** The agent lines of the conversation that say `TEXT`. */
-const sentLines = async (conversationId: string): Promise<number> =>
-    (await world.resolve(ChatMessagesService).transcript(who.workspaceId, conversationId)).filter(
-        (line) => line.role === "agent" && line.body === TEXT,
-    ).length
+/** The delivery ledger row of a send key: the engine's one record of what was said and how it ended. */
+const ledgerRowOf = (key: string) => world.resolve(ChannelDeliveriesService).byKey(who.workspaceId, key)
 
-describe("the channel.send step: store the message, deliver it, settle it", () => {
-    it("stores the reply on the conversation, delivers it and settles it as sent: the channel has taken it", async () => {
-        const { conversationId, turn } = await conversationOn("website", world.id())
-
-        const stored = await send(turn, conversationId, `reply:${turn.turnId}`)
-
-        expect(stored.kind).toBe("message")
-        expect(await sentLines(conversationId)).toBe(1)
-        await expect(
-            world.resolve(ChatMessagesService).claimDelivery(who.workspaceId, conversationId, stored.id),
-        ).resolves.toBe("acknowledged")
-    })
-
-    it("does not send twice when the step runs again (a resume or a replay of the same effect call): one stored message, one delivery", async () => {
-        const { conversationId, turn } = await conversationOn("website", world.id())
+describe("the customer send: claim in the delivery ledger, deliver, settle", () => {
+    it("claims the send in the ledger, delivers it and settles it as delivered: the website chat has taken it", async () => {
+        const { turn } = await personOn("website", `visitor:${world.id()}`)
         const key = `reply:${turn.turnId}`
 
-        const first = await send(turn, conversationId, key)
-        const again = await send(turn, conversationId, key)
+        const receipt = await send(turn, key)
+
+        expect(receipt.kind).toBe("message")
+        expect(await ledgerRowOf(key)).toMatchObject({ sendKey: key, text: TEXT, state: "delivered" })
+    })
+
+    it("does not send twice when the step runs again (a resume or a replay of the same effect call): the same receipt, one ledger row", async () => {
+        const { turn } = await personOn("website", `visitor:${world.id()}`)
+        const key = `reply:${turn.turnId}`
+
+        const first = await send(turn, key)
+        const again = await send(turn, key)
 
         expect(again).toEqual(first)
-        expect(await sentLines(conversationId)).toBe(1)
+        expect(await ledgerRowOf(key)).toMatchObject({ sendKey: key, state: "delivered" })
     })
 
-    it("keeps a message that cannot leave in the conversation and answers the refusal, so the step's required send did not succeed", async () => {
-        const { conversationId, turn } = await conversationOn("zalo", "import-cuong:1730000000")
+    it("answers a message that cannot leave as a refusal fact the step reads (the account is gone), the same on a replay, and sends nothing", async () => {
+        const { turn } = await personOn("zalo", "import-cuong:1730000000")
         const key = `reply:${turn.turnId}`
 
-        await expect(send(turn, conversationId, key)).resolves.toMatchObject({
-            kind: "refused",
-            id: "recipient_not_linked",
-        })
-        await expect(send(turn, conversationId, key)).resolves.toMatchObject({
-            kind: "refused",
-            id: "recipient_not_linked",
-        })
+        await expect(send(turn, key)).resolves.toMatchObject({ kind: "refused", id: "connection_missing" })
+        await expect(send(turn, key)).resolves.toMatchObject({ kind: "refused", id: "connection_missing" })
 
-        expect(await sentLines(conversationId)).toBe(1)
+        expect(await ledgerRowOf(key)).not.toMatchObject({ state: "delivered" })
     })
 })

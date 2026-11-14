@@ -1,8 +1,10 @@
 import { z } from "zod"
-import { defineAgentMessageKind } from "../../agent-message/agent-message-kinds"
-import type { AgentMessageKind } from "../../agent-message/agent-message-kinds"
+import { defineAgentMessageKind, type AgentMessageKind } from "@nivo-lite/agent-sdk/team-chat"
 
 const T = 500
+
+/** The most credits one paid card lists (an order paid in parts is a few transfers). */
+const MAX_CREDITS = 20
 
 /** One ordered item as the notice draws it: its name, how many, the price of one and of the line, in words, and the photo of the catalogue item. */
 export interface OrderSummaryLine {
@@ -36,8 +38,10 @@ export interface OrderSummaryPayload {
 export interface PaymentReceivedPayload {
     /** The order number. */
     readonly orderNo: string
-    /** The amount that was received, with its currency. */
+    /** The amount that was received, with its currency: the TOTAL of the order's credits when it was paid in several. */
     readonly amountText: string
+    /** Each credit that paid the order, with its currency, oldest first; present only when there were several. */
+    readonly credits?: ReadonlyArray<string> | undefined
     /** The items of the order that was paid. */
     readonly lines?: ReadonlyArray<OrderSummaryLine> | undefined
     /** The customer, when known. */
@@ -73,6 +77,7 @@ export const paymentReceivedKind: AgentMessageKind<z.ZodType<PaymentReceivedPayl
     payload: z.object({
         orderNo: z.string().max(T),
         amountText: z.string().max(T),
+        credits: z.array(z.string().max(T)).max(MAX_CREDITS).optional(),
         lines: z.array(lineSchema).max(50).optional(),
         customer: z.string().max(T).optional(),
         address: z.string().max(T).optional(),

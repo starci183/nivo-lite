@@ -1,10 +1,8 @@
 import type { DynamicModule } from "@nestjs/common"
-import { EnvSource } from "@modules/platform/config"
-import type { Secret } from "@modules/platform/config"
+import { EnvSource, type Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { JobsModule } from "@modules/platform/jobs"
-import { QueueModule } from "@modules/platform/queue"
-import type { QueueOptions } from "@modules/platform/queue"
+import { QueueModule, type QueueOptions } from "@modules/platform/queue"
 import { queueOptions } from "./test-capabilities.options"
 
 /** The password of the private Redis when it demands one; none when the variable is not set. */

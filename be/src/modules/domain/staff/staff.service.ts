@@ -8,7 +8,7 @@ import { StaffEntity } from "./persistence/entities"
 /** The most staff rows one workspace lists. */
 const STAFF_ROWS_MAX = 500
 
-/** Maps an entity to the staff contract the accounting and shifts capabilities read. */
+/** Maps an entity to the staff contract the accounting capability reads. */
 const rowOf = (staff: StaffEntity): StaffRow => ({
     id: staff.id,
     workspace_id: staff.workspaceId,
@@ -20,7 +20,7 @@ const rowOf = (staff: StaffEntity): StaffRow => ({
 })
 
 /** A name with its spaces collapsed. */
-const collapsed = (value: string): string => value.trim().replace(/\s+/g, " ")
+const collapsed = (value: string): string => value.trim().replaceAll(/\s+/g, " ")
 
 /** An email with its spaces removed, or null when there is none. */
 const emailOf = (value: string | null | undefined): string | null => {
@@ -41,7 +41,7 @@ export class StaffService {
             order: { active: "DESC", createdAt: "ASC", id: "ASC" },
             take: STAFF_ROWS_MAX,
         })
-        return staff.map(rowOf)
+        return staff.map((item) => rowOf(item))
     }
 
     /** The name of one staff row of the workspace, or null when there is none. */

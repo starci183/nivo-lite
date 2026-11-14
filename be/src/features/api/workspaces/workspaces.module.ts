@@ -25,6 +25,9 @@ import { RenameWorkspaceHandler } from "./application/rename-workspace.handler"
 import { ListDeclinedInvitesHandler } from "./application/list-declined-invites.handler"
 import { MyWorkInHandHandler } from "./application/my-work-in-hand.handler"
 import { RestoreWorkspaceHandler } from "./application/restore-workspace.handler"
+import { ReadWorkspaceSettingsHandler } from "./application/read-workspace-settings.handler"
+import { RequestWorkspaceLogoUploadHandler } from "./application/request-workspace-logo-upload.handler"
+import { UpdateWorkspaceSettingsHandler } from "./application/update-workspace-settings.handler"
 import { ConfigurableModuleClass } from "./workspaces.module-definition"
 
 @Module({
@@ -55,6 +58,9 @@ import { ConfigurableModuleClass } from "./workspaces.module-definition"
         ListDeclinedInvitesHandler,
         MyWorkInHandHandler,
         RestoreWorkspaceHandler,
+        ReadWorkspaceSettingsHandler,
+        UpdateWorkspaceSettingsHandler,
+        RequestWorkspaceLogoUploadHandler,
     ],
 })
 /** The workspaces feature: the handlers of its application. */

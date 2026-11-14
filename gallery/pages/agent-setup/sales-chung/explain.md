@@ -53,12 +53,10 @@ Vì sao: noun titles, description under the title, switch at the right; each act
 Luật: surfacecard-select-subtitle.md (Switch rows, nouns).
 Grammar: `Switch` in `FieldBlock trailing`.
 
-## Chế độ vận hành
-Vì sao: a group of options is a choice list (its title is the card label, no description above): checkbox rows, full-width dividers, single selection; the note under it is about the card's data (authority is shared per type).
-Luật: surfacecard-select-subtitle.md.
-Grammar: `SurfaceCard kind="select" selectionMode="single"` (`dist/core/surfaceCardData.d.ts`, `SelectData`).
-
 ## Gỡ agent
 Vì sao: noun title + description, danger button (verb) at the right, flat; the confirmation is a dialog.
+Dialog body (read BEFORE `removeAgent`, query `agentDeletionImpact`): the plain confirmation when the agent wrote no record; otherwise one line per record type with its count (the product's own words per type id, the back end's English title only when the catalogue has none), the files that leave the store, "cannot be undone". Neutral text, no red inside the dialog: the one danger button is the confirm. Workflows, runs and conversation history are not counted (the contract excludes them), and the history is said to stay.
 Luật: ui-laws.md (Buttons keep verbs), surfacecard-select-subtitle.md.
 Grammar: `AlertDialog`, `Button intent="destructive" step="entry" size="sm"` (`dist/core/frame/AlertDialog`).
+
+Retired 2026-11-13: the "Chế độ vận hành" card (assist / autopilot) is gone from this page; the engine reads a node's own mode alone (rights rule 9) and the back end refuses the old switch.

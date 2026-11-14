@@ -10,7 +10,7 @@ export const ACCOUNTING_CLOSE_PROBE = "accounting_close"
  * report too), and the last evening of the month adds the reconciliation. Nothing is looked at here; the graph reads the books itself.
  */
 export class AccountingCloseProbeService implements AgentProbe {
-    readonly key = ACCOUNTING_CLOSE_PROBE
+    readonly key: typeof ACCOUNTING_CLOSE_PROBE = ACCOUNTING_CLOSE_PROBE
 
     /** Always answers that there is work. */
     check(): Promise<ProbeAnswer> {

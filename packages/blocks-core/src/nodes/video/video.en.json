@@ -1,0 +1,20 @@
+{
+  "nodeVideoScriptTitle": "Write the video script",
+  "nodeVideoVoiceTitle": "Narrate the video",
+  "nodeVideoScenesTitle": "Generate a video scene",
+  "nodeVideoResultTitle": "Wait for the video scenes",
+  "nodeVideoKeepTitle": "Keep video clips",
+  "nodeVideoLinksTitle": "Link the files to compose",
+  "nodeVideoComposeTitle": "Compose the video",
+  "nodeVideoRenderCheckTitle": "Check the video render",
+  "nodeVideoOutputTitle": "Keep the composed video",
+  "nodeVideoReviewTitle": "Send the video for review",
+  "nodeVideoPublishTitle": "Publish the video",
+  "nodeVideoStuckTitle": "Report a video that could not be made",
+  "videoReviewHeading": "Video waits for review",
+  "videoReviewLine": "The video \"{title}\" is ready: one video joined from {clips} clips, with captions (no narration), stored with the project. Open it on the Video workbench, then approve to publish.",
+  "videoReviewLineWithVoice": "The video \"{title}\" is ready: one video joined from {clips} clips, with narration and captions, stored with the project. Open it on the Video workbench, then approve to publish.",
+  "videoStuckHeading": "A video could not be made",
+  "videoStuckLine": "The video \"{title}\" could not be made: {why}.",
+  "videoStuckTimedOut": "it was still not done after several waits"
+}

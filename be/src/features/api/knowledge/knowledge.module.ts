@@ -1,19 +1,21 @@
 import { Module } from "@nestjs/common"
+import { BrainFactDecisionService, KnowledgeSourcesListingService } from "@modules/domain/brain"
+import { KnowledgeSourceReadService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesHandler } from "./application/knowledge-sources.handler"
 import { KnowledgeUsageHandler } from "./application/knowledge-usage.handler"
 import { KnowledgeCategoriesHandler } from "./application/knowledge-categories.handler"
-import { BrainDossiersHandler } from "./application/brain-dossiers.handler"
-import { ImportBrainDossiersHandler } from "./application/import-brain-dossiers.handler"
 import { KnowledgeSourceHandler } from "./application/knowledge-source.handler"
 import { NivoKnowledgeCountHandler } from "./application/nivo-knowledge-count.handler"
 import { NivoKnowledgeHandler } from "./application/nivo-knowledge.handler"
 import { KnowledgeSuggestionsHandler } from "./application/knowledge-suggestions.handler"
 import { AskKnowledgeHandler } from "./application/ask-knowledge.handler"
+import { ProbeAgentSearchHandler } from "./application/probe-agent-search.handler"
 import { DriveLinkedFolderHandler } from "./application/drive-linked-folder.handler"
 import { DrivePickedFolderHandler } from "./application/drive-picked-folder.handler"
 import { EnqueueKnowledgeSourceHandler } from "./application/enqueue-knowledge-source.handler"
 import { RetryKnowledgeSourceHandler } from "./application/retry-knowledge-source.handler"
 import { ReindexKnowledgeSourceHandler } from "./application/reindex-knowledge-source.handler"
+import { SetKnowledgeSourceNatureHandler } from "./application/set-knowledge-source-nature.handler"
 import { UpdateKnowledgeSourceHandler } from "./application/update-knowledge-source.handler"
 import { DeleteKnowledgeSourceHandler } from "./application/delete-knowledge-source.handler"
 import { SetKnowledgeSuggestionStateHandler } from "./application/set-knowledge-suggestion-state.handler"
@@ -39,21 +41,24 @@ import { ConfigurableModuleClass } from "./knowledge.module-definition"
 
 @Module({
     providers: [
+        KnowledgeSourcesListingService,
+        KnowledgeSourceReadService,
+        BrainFactDecisionService,
         KnowledgeSourcesHandler,
         KnowledgeSourceHandler,
         KnowledgeUsageHandler,
         KnowledgeCategoriesHandler,
-        BrainDossiersHandler,
-        ImportBrainDossiersHandler,
         NivoKnowledgeCountHandler,
         NivoKnowledgeHandler,
         KnowledgeSuggestionsHandler,
         AskKnowledgeHandler,
+        ProbeAgentSearchHandler,
         DriveLinkedFolderHandler,
         DrivePickedFolderHandler,
         EnqueueKnowledgeSourceHandler,
         RetryKnowledgeSourceHandler,
         ReindexKnowledgeSourceHandler,
+        SetKnowledgeSourceNatureHandler,
         UpdateKnowledgeSourceHandler,
         DeleteKnowledgeSourceHandler,
         SetKnowledgeSuggestionStateHandler,

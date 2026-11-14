@@ -1,13 +1,12 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, slotOfReads, useSlotLabels } from "@/hooks/slot"
 
-import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { useCopyLabels, useWizardPhases } from "@/hooks/connection-wizard"
-import { useWebhookWizard, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
-import type { WebhookEvent } from "@/hooks/webhook-wizard"
+import { useQueryWebhookEventsSwr } from "@/hooks/swr"
+import { useWebhookWizard, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
 import type { WebhookTestVerdict } from "@/modules/types"
 import { WebhookWizardBase } from "./component"
 
@@ -26,18 +25,18 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const phases = useWizardPhases("webhook")
     const copy = useCopyLabels()
+    const locale = useLocale()
+    // The picker lists what the back end offers (the installed plugins' events and the engine's own); the name comes from the declaration.
+    const available = useQueryWebhookEventsSwr()
+    const eventOptions = (available.data ?? []).map((event) => ({
+        value: event.id,
+        label: locale === "en" ? event.label.en : event.label.vi,
+    }))
     const wizard = useWebhookWizard({
         defaultName: t("defaultName"),
+        availableEvents: eventOptions.map((option) => option.value),
         onClose: props.onClose,
     })
-    const eventLabels: Readonly<Record<WebhookEvent, string>> = {
-        "lead.created": t("event_lead_created"),
-        "deal.won": t("event_deal_won"),
-        "order.confirmed": t("event_order_confirmed"),
-        "payment.received": t("event_payment_received"),
-        "handoff.requested": t("event_handoff_requested"),
-        "decision.made": t("event_decision_made"),
-    }
     const testOf = (result: WebhookTestVerdict) => {
         const took = t("testTook", { ms: result.durationMs })
         if (result.ok) return { isOk: true, title: t("testOk", { status: result.status ?? "" }), description: took }
@@ -57,7 +56,7 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
                 step: wizard.step,
                 form: wizard.form,
                 events: wizard.events,
-                eventOptions: WEBHOOK_EVENTS.map((event) => ({ value: event, label: eventLabels[event] })),
+                eventOptions,
                 signingSecret: wizard.signingSecret,
                 copy,
                 n8nSteps: [t("n8nStep1"), t("n8nStep2"), t("n8nStep3")],

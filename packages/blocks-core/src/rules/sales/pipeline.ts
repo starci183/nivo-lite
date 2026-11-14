@@ -1,8 +1,7 @@
 import { numberOf } from "../../rows/cell-format"
 import type { TabCounts } from "../../rows/filter-tabs"
 import { textOf, valueAt } from "../../slots/paths"
-import { LEAD_STAGES } from "./stage"
-import type { LeadStage } from "./stage"
+import { LEAD_STAGES, type LeadStage } from "./stage"
 
 /** One card of the pipeline as the board draws it. */
 export interface PipelineCard {

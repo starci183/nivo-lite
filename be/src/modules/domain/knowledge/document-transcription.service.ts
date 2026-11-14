@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
+import { InjectAi, spendOf, type AiService } from "@modules/integrations/ai"
 import type { PageImage, TranscriptOutcome, Transcriber } from "@modules/integrations/document-readers"
 import { ok, refused } from "@modules/platform/primitives"
 import {
@@ -60,41 +59,36 @@ export class DocumentTranscriptionService {
         return this.tried(workspaceId, request, TRANSCRIPTION_PROMPT.length + ask.length, 1)
     }
 
-    /** One try of the call and, while it failed and tries remain, the next; every try is metered (a failed one estimated). */
+    /**
+     * One try of the call and, while it failed and tries remain, the next. The credit pool is checked before EVERY try (owner: the pool
+     * is the only limit); a try that returned tokens is booked with what it spent, a cut or empty one included (`spendOf`), and a try
+     * that returned nothing is booked estimated, never billed (U1): each try exactly once.
+     */
     private async tried(
         workspaceId: string,
         request: ChatRequest,
         promptChars: number,
         attempt: number,
     ): Promise<TranscriptOutcome> {
+        if (attempt > 1 && (await this.usage.blockedBy(workspaceId, "brain", false))) return refused("no_credits")
         const answer = await this.ai.attempt(request)
-        if (answer.ok) {
-            await this.usage.record({
-                workspaceId,
-                kind: "brain",
-                module: "knowledge",
-                model: answer.answer.model,
-                usage: answer.answer.usage,
-                promptChars,
-                completionChars: answer.answer.text.length,
-                tryNumber: attempt,
-            })
-            return ok(transcriptOf(answer.answer.text))
-        }
-        if (answer.failure === "unconfigured") return refused("unavailable")
-        // A failed try may still be charged by the provider: booked estimated from the prompt's text (the picture is not counted),
-        // never billed (U1). The model it asked for is the endpoint's chat profile.
-        await this.usage.record({
-            workspaceId,
-            kind: "brain",
-            module: "knowledge",
-            model: TRANSCRIPTION_MODEL,
-            usage: null,
-            promptChars,
-            completionChars: 0,
-            failure: answer.failure,
-            tryNumber: attempt,
-        })
+        if (!answer.ok && answer.failure === "unconfigured") return refused("unavailable")
+        const booked = { workspaceId, kind: "brain" as const, module: "knowledge", promptChars, tryNumber: attempt }
+        const spend = spendOf(answer)
+        // A try that returned nothing may still be charged by the provider: booked estimated from the prompt's text (the picture is
+        // not counted), never billed (U1). The model it asked for is the endpoint's chat profile.
+        await this.usage.record(
+            spend !== null
+                ? { ...booked, ...spend }
+                : {
+                      ...booked,
+                      model: TRANSCRIPTION_MODEL,
+                      usage: null,
+                      completionChars: 0,
+                      failure: answer.ok ? undefined : answer.failure,
+                  },
+        )
+        if (answer.ok) return ok(transcriptOf(answer.answer.text))
         return attempt >= TRANSCRIPTION_TRIES
             ? refused("failed")
             : this.tried(workspaceId, request, promptChars, attempt + 1)

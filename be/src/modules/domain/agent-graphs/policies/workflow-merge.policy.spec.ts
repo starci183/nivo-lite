@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
-import { latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
+import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import { mergeTemplate, minimumGrantOf } from "./workflow-merge.policy"
 import { templateRequired } from "./workflow-view.policy"
 
@@ -26,7 +26,7 @@ const graph = (nodes: ReadonlyArray<GraphSpecNode>, extra: Partial<GraphSpec> = 
     schema: "nivo/agent-graph@1",
     moduleKey: "accounting",
     trigger: { kind: "tag", sources: ["channel"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes,
     ...extra,
 })
@@ -107,14 +107,12 @@ describe("mergeTemplate: trigger and grant", () => {
         const theirs = graph(BASE.nodes, {
             trigger: { kind: "tag", sources: ["channel", "schedule"] },
             grant: {
-                rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["amountVnd"] }],
-                tools: ["nivo.ledger.entry.append"],
+                tools: ["nivo.tool.ledger.entry.append"],
                 effects: [],
             },
         })
         const ours = graph(BASE.nodes, {
             grant: {
-                rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["id"] }],
                 tools: [],
                 effects: ["channel.send"],
             },
@@ -124,8 +122,7 @@ describe("mergeTemplate: trigger and grant", () => {
 
         expect(merged.trigger.sources).toEqual(["channel", "schedule"])
         expect(merged.grant).toEqual({
-            rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["id", "amountVnd"] }],
-            tools: ["nivo.ledger.entry.append"],
+            tools: ["nivo.tool.ledger.entry.append"],
             effects: ["channel.send"],
         })
     })
@@ -134,23 +131,17 @@ describe("mergeTemplate: trigger and grant", () => {
 describe("minimumGrantOf", () => {
     it("cuts a wide grant to what the installed steps need, and never adds to it", async () => {
         const subject = await build()
-        const index = nodeIndexOf({
-            nodes: coreNodes,
-            effects: coreEffects,
-            tools: coreTools,
-            dataKinds: coreDataKinds,
-        })
-        const reports = latestTemplateVersion(templateRequired("accounting.reports")).graph
-        const reconcile = latestTemplateVersion(templateRequired("accounting.reconcile")).graph.grant
+        // The install the engine judges by (`GraphNodeRegistry.installed()` is built from it), the templates as installed.
+        const index = nodeIndexOf(INSTALLED.nodeInstall())
+        const narrow = latestTemplateVersion(templateRequired("booking.remind")).graph
+        const other = latestTemplateVersion(templateRequired("hiring.digest")).graph.grant
         const wide = {
-            rights: [...reconcile.rights, ...reports.grant.rights],
-            tools: [...reconcile.tools, ...reports.grant.tools],
-            effects: [...reconcile.effects, ...reports.grant.effects],
+            tools: [...other.tools, ...narrow.grant.tools],
+            effects: [...other.effects, ...narrow.grant.effects],
         }
 
-        expect(subject.minimumGrantOf({ ...reports, grant: wide }, index)).toEqual(reports.grant)
-        expect(subject.minimumGrantOf({ ...reports, grant: { rights: [], tools: [], effects: [] } }, index)).toEqual({
-            rights: [],
+        expect(subject.minimumGrantOf({ ...narrow, grant: wide }, index)).toEqual(narrow.grant)
+        expect(subject.minimumGrantOf({ ...narrow, grant: { tools: [], effects: [] } }, index)).toEqual({
             tools: [],
             effects: [],
         })

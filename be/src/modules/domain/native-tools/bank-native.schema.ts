@@ -1,7 +1,7 @@
 import { z } from "zod"
-import type { GatewayJson } from "@modules/domain/mcp-gateway"
+import type { ToolJson } from "@modules/domain/tools"
 
-/** What `nivo.bank.transaction.list` is asked for. */
+/** What `nivo.tool.bank.transaction.list` is asked for. */
 export type BankTransactionsArgs = {
     /** Only transactions at or after this instant, ISO 8601. */
     readonly since?: string | undefined
@@ -11,7 +11,7 @@ export type BankTransactionsArgs = {
     readonly limit: number
 }
 
-/** The bounded arguments of `nivo.bank.transaction.list`. */
+/** The bounded arguments of `nivo.tool.bank.transaction.list`. */
 export const BANK_TRANSACTIONS_SCHEMA: z.ZodType<BankTransactionsArgs> = z
     .object({
         since: z.iso.datetime({ offset: true }).max(40).optional(),
@@ -20,5 +20,5 @@ export const BANK_TRANSACTIONS_SCHEMA: z.ZodType<BankTransactionsArgs> = z
     })
     .strict()
 
-/** The schema `nivo.bank.transaction.list` announces, generated from its argument validator. */
-export const BANK_TRANSACTIONS_INPUT_SCHEMA: GatewayJson = z.toJSONSchema(BANK_TRANSACTIONS_SCHEMA, { io: "input" })
+/** The schema `nivo.tool.bank.transaction.list` announces, generated from its argument validator. */
+export const BANK_TRANSACTIONS_INPUT_SCHEMA: ToolJson = z.toJSONSchema(BANK_TRANSACTIONS_SCHEMA, { io: "input" })

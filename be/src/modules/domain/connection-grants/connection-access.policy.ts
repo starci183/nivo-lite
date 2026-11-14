@@ -1,29 +1,11 @@
 import type { Purpose } from "@modules/domain/agent-connections"
-
-/** module:provider -> purpose. A pair that is not listed cannot be granted. */
-const PURPOSE: Readonly<Record<string, Purpose>> = {
-    "chatbot:telegram": "inbound_chat",
-    "chatbot:zalo_oa": "inbound_chat",
-    // Booking and Loyalty can also listen on a chat connection (the chatbot stays the front door and hands over by intent).
-    "booking:telegram": "inbound_chat",
-    "booking:zalo_oa": "inbound_chat",
-    "loyalty:telegram": "inbound_chat",
-    "loyalty:zalo_oa": "inbound_chat",
-    // Facebook Pages + Instagram (meta): DMs, comments and mentions reach the same front doors; lead ads go to the lead sources.
-    "chatbot:meta": "inbound_chat",
-    "booking:meta": "inbound_chat",
-    "loyalty:meta": "inbound_chat",
-    "lead_gen:meta": "lead_source",
-    "sales:meta": "lead_source",
-    // Shifts speaks to staff only through the connections bound to it; none bound = Office only.
-    "shifts:telegram": "outbound_chat",
-    "shifts:zalo_oa": "outbound_chat",
-    "sales:telegram": "outbound_chat",
-    "sales:zalo_oa": "outbound_chat",
-    "accounting:sepay": "bank_feed",
-    "accounting:payos": "bank_feed",
-    "accounting:casso": "bank_feed",
-}
+import {
+    INSTALLED,
+    bankFeedProviders,
+    customerChannelProviders,
+    inboundChannelsOf,
+    type ChannelAgent,
+} from "@modules/domain/installed-plugins"
 
 /** Data connectors every agent may read from (a database, an API, an import, a mailbox, a personal Telegram). */
 const DATA_PROVIDERS: ReadonlySet<string> = new Set(["database", "openapi", "csv_import", "imap", "telegram_user"])
@@ -44,14 +26,26 @@ export const isDataProvider = (provider: string): boolean => DATA_PROVIDERS.has(
 /** The purpose a grant has, or null when that agent cannot use that provider. */
 export type PairPurpose = Purpose | null
 
-/** The purpose a grant of `provider` to an agent of `module` has, or null when that agent cannot use that provider. */
-export const purposeFor = (module: string, provider: string): PairPurpose => {
-    const direct = Object.hasOwn(PURPOSE, `${module}:${provider}`) ? PURPOSE[`${module}:${provider}`] : undefined
-    if (direct !== undefined) return direct
+/**
+ * The pairs that can be bound are read from the installation, never listed by hand: a template agent that lists the provider among its
+ * `accounts` may be bound to a connection of it, and the purpose follows from what its graphs declare. It answers the connection's inbound
+ * chat when a graph wakes on a customer message of that provider (`inbound_chat`); a customer channel it only lists is one it writes on
+ * (`outbound_chat`); a bank feed it lists is `bank_feed`. Anything else it lists is attached through its provider rights, not bound here.
+ * The data connectors every agent may read from are a fact of the provider, not of a module.
+ */
+export const purposeOfAgent = (agent: ChannelAgent | null, provider: string): PairPurpose => {
+    if (agent?.accounts.includes(provider) === true) {
+        if (inboundChannelsOf(agent).has(provider)) return "inbound_chat"
+        if (customerChannelProviders().has(provider)) return "outbound_chat"
+        if (bankFeedProviders().has(provider)) return "bank_feed"
+    }
     if (!DATA_PROVIDERS.has(provider)) return null
-    if (provider === "openapi") return "tool"
-    return "data_source"
+    return provider === "openapi" ? "tool" : "data_source"
 }
+
+/** The purpose a grant of `provider` to an agent of `module` has, or null when that agent cannot use that provider. */
+export const purposeFor = (module: string, provider: string): PairPurpose =>
+    purposeOfAgent(INSTALLED.templateAgentOf(module), provider)
 
 /** Turns "exactly these" into changes: every wanted id is bound, every current id that is not wanted is removed. */
 export const planExactly = (

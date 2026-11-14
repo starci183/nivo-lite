@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { argumentKey, answeredData } from "@/hooks/workspaceread"
 import { queryMyWorkInHand } from "@/modules/api/graphql/queries/query-my-work-in-hand"
 import { GraphQLHeadersKey } from "@/modules/api"

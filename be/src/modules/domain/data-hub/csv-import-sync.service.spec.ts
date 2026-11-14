@@ -1,3 +1,4 @@
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { DataRecordsService } from "@modules/domain/data-records"
@@ -72,6 +73,7 @@ const build = async (meta: Readonly<Record<string, string>> = { config: JSON.str
     const moduleRef = await Test.createTestingModule({
         providers: [
             CsvImportSyncService,
+            { provide: WorkspaceTimeZoneService, useValue: mock<WorkspaceTimeZoneService>({ timeZoneOf: jest.fn().mockResolvedValue("Asia/Ho_Chi_Minh") }) },
             { provide: DataRecordsService, useValue: records },
             { provide: TABLE, useValue: table },
         ],

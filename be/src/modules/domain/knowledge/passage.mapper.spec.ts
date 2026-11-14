@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import type { PassageFound } from "./passage-retrieval.contracts"
 import { UNREVIEWED_MARK, businessPassage, nivoPassage, rankPassages, tsqueryOf } from "./passage.mapper"
 
 const SUBJECT = Symbol("passage.mapper")
@@ -16,15 +17,20 @@ const build = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const chunk = {
+const chunk: PassageFound = {
     id: "c1",
     sourceId: "s1",
-    module: "chatbot",
-    content: "Open 8 to 21",
-    score: 0.5,
-    visibility: "public",
+    title: "Hours",
+    updatedAt: "2026-11-02T00:00:00.000Z",
+    documentPassages: 4,
     order: 2,
-    unreviewed: false,
+    place: null,
+    module: "chatbot",
+    visibility: "public",
+    customerReady: true,
+    legs: ["words"],
+    score: 0.5,
+    content: "Open 8 to 21",
 }
 const item = { id: "n1", module: "core", kind: "tone", title: "Tone", content: "Be kind", score: 0.7 }
 
@@ -52,7 +58,7 @@ describe("passage mapping", () => {
         const subject = await build()
 
         expect(
-            subject.businessPassage({ ...chunk, unreviewed: true }, { id: "s1", kind: "faq", title: "Hours", topic: null }),
+            subject.businessPassage({ ...chunk, customerReady: false }, { id: "s1", kind: "faq", title: "Hours", topic: null }),
         ).toMatchObject({ content: `${UNREVIEWED_MARK} Open 8 to 21`, unreviewed: true })
     })
 

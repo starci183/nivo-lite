@@ -1,14 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { coreNodes } from "@nivo-lite/blocks-core"
-import { latestTemplateVersion, workflowTemplateOf } from "@nivo-lite/blocks-core/modules"
 import { AgentGraphFlowRunsService, AgentGraphsService, AgentWorkflowRunsService } from "@modules/domain/agent-graphs"
 import type { FlowThreadRun } from "@modules/domain/agent-graphs"
 import { AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
-import { AgentTagService, AgentWakeService, AgentWorkReadService } from "@modules/domain/agent-work"
+import type { RunDetail } from "@modules/domain/agent-runs"
+import { AgentWakeService, AgentWorkReadService } from "@modules/domain/agent-work"
 import type { AgentTurnView, AgentWake } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { latestGraphOf } from "@modules/domain/installed-plugins/installed-plugins.testing"
 import { GRAPH_THREADS, LanggraphError, LanggraphErrorCode, THREAD_END } from "@modules/integrations/langgraph"
 import type {
     GraphThreads,
@@ -37,7 +38,10 @@ import { stopAnswerOf, stopRouteOf } from "./stops/stop-gate.policy"
 import { FREEZE_NODE, stepExitOf } from "./template-compiler.policy"
 import { ThreadGraphsService } from "./thread-graphs.service"
 import { ThreadProjectionService } from "./thread-projection.service"
-import { THREAD_DRIVE_EVENT, THREAD_RESUME_EVENT, THREAD_WAKE_SOURCE, ThreadRunsService } from "./thread-runs.service"
+import { RunStopRecordsService } from "./stops/run-stop-records.service"
+import { ThreadResumeRequestsService } from "./thread-resume-requests.service"
+import { THREAD_DRIVE_EVENT, ThreadRunsService } from "./thread-runs.service"
+import { THREAD_RESUME_EVENT, THREAD_WAKE_SOURCE } from "./thread-wakes.policy"
 import { ThreadStepService } from "./thread-step.service"
 import type { ThreadGateNode, ThreadStepNode } from "./thread-step.service"
 
@@ -47,12 +51,8 @@ const FRONT_DESK = "chatbot.front-desk"
 const V1 = "version-1"
 const V2 = "version-2"
 
-/** The front desk as blocks-core ships it: understand, then four routes. */
-const frontDesk = (): GraphSpec => {
-    const template = workflowTemplateOf(FRONT_DESK)
-    if (template === null) throw new Error("front-desk template missing")
-    return latestTemplateVersion(template).graph
-}
+/** The front desk as blocks-core ships it (v20): hear, then understand and its routes. */
+const frontDesk = (): GraphSpec => latestGraphOf(FRONT_DESK)
 
 /** A later version of the front desk whose answer step was renamed: a thread pinned to the first version must never run it. */
 const renamed = (): GraphSpec => {
@@ -215,6 +215,18 @@ type Script = Readonly<Record<string, unknown>>
 
 const STOP = Symbol("stop")
 
+/**
+ * What the shipped `*-declined` checks (`core.if` on the step's `declined`) answer when the step before them did not decline: `no`. The
+ * scripted steps never decline (their outputs carry no `declined: true`), so the checks answer as the real `core.if` would; a spec that
+ * scripts a decline sets the check's output itself.
+ */
+const NOT_DECLINED: Script = {
+    // The front desk's first step (v20): `chatbot.hear` keeps the line and routes on `route`; `go` is a line to answer.
+    hear: { route: "go" },
+    "complaint-declined": { branch: "no" },
+    "answer-declined": { branch: "no" },
+}
+
 /** What a spec changes of the world. */
 interface World {
     /** No threads port composed. */
@@ -240,7 +252,7 @@ const build = async (world: World = {}) => {
     const steps = mock<ThreadStepService>({
         run: jest.fn((at: ThreadStepNode, state: ThreadState) => {
             ran.push({ step: at.step.key, answers: state.founderAnswers, at })
-            const output = script.outputs[at.step.key] ?? {}
+            const output = script.outputs[at.step.key] ?? NOT_DECLINED[at.step.key] ?? {}
             if (output === STOP) {
                 stop = {
                     ...(stop ?? { answers: [], repeats: 0 }),
@@ -274,10 +286,11 @@ const build = async (world: World = {}) => {
     const versions: Record<string, GraphSpec> = { [V1]: frontDesk(), [V2]: renamed() }
     const graphs = mock<AgentGraphsService>({
         versionAt: jest.fn((_workspaceId: string, _agentId: string, versionId: string) =>
-            Promise.resolve({ version: 1, document: { nodes: [], rights: [], flow: versions[versionId] } }),
+            Promise.resolve({ version: 1, document: { nodes: [], flow: versions[versionId] } }),
         ),
     })
-    const installed = world.installed ?? coreNodes.map((node) => node.id)
+    // The registry's `defineNode` nodes (the control nodes since the flip); the thread graphs add every template step themselves.
+    const installed = world.installed ?? INSTALLED.nodeInstall().nodes.map((node) => node.id)
     const nodes = mock<GraphNodeRegistryService>({
         installed: jest.fn(() => ({ nodes: new Map(installed.map((id) => [id, {}])) }) as never),
     })
@@ -286,8 +299,19 @@ const build = async (world: World = {}) => {
         runOf: jest.fn().mockResolvedValue(run),
         runIdOfWake: jest.fn().mockResolvedValue(run.id),
     })
+    // The run's row as the projection keeps it: waiting while its thread is stopped at an open stop.
     const view = mock<AgentRunsViewService>({
-        detail: jest.fn().mockResolvedValue({ run: {}, engine: world.engine ?? "langgraph", steps: [] }),
+        detail: jest.fn(() =>
+            Promise.resolve({
+                run: { status: stop?.state === "open" ? "waiting" : "running" },
+                engine: world.engine ?? "langgraph",
+                steps: [],
+            } as unknown as RunDetail),
+        ),
+    })
+    const records = mock<RunStopRecordsService>({
+        byRunStep: jest.fn(() => Promise.resolve(stop)),
+        ofRun: jest.fn(() => Promise.resolve(stop === null ? [] : [stop])),
     })
     const written: Array<AgentWake> = []
     const wakes = mock<AgentWakeService>({
@@ -306,12 +330,12 @@ const build = async (world: World = {}) => {
         workflowKeyOfRun: jest.fn().mockResolvedValue("front-desk"),
         pinsOf: jest.fn().mockResolvedValue([{ runId: "run-1", workflowId: "wf-1", workflowName: "Front desk", version: 4 }]),
     })
-    const tags = mock<AgentTagService>()
     const logger = mock<Logger>()
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadRunsService,
+            ThreadResumeRequestsService,
             ThreadGraphsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: AGENT_THREADS_OPTIONS, useValue: {} },
@@ -325,14 +349,16 @@ const build = async (world: World = {}) => {
             { provide: AgentWakeService, useValue: wakes },
             { provide: ThreadStepService, useValue: steps },
             { provide: RunStopsService, useValue: stops },
+            { provide: RunStopRecordsService, useValue: records },
             { provide: ThreadProjectionService, useValue: projection },
             { provide: AgentWorkflowRunsService, useValue: workflows },
-            { provide: AgentTagService, useValue: tags },
             { provide: AgentWorkReadService, useValue: wakeReader },
             ...(world.portless === true ? [] : [{ provide: GRAPH_THREADS, useValue: port }]),
         ],
     }).compile()
     const service = moduleRef.get(ThreadRunsService)
+    /** The resume requests: a decision is recorded there (from the stores) and applied by the drain's wake here. */
+    const requests = moduleRef.get(ThreadResumeRequestsService)
     /** The run the flow opened for the customer's wake. */
     const opened = (over: Partial<FlowThreadRun> = {}): FlowThreadRun => ({
         turn: agentTurnViewOf(),
@@ -359,7 +385,7 @@ const build = async (world: World = {}) => {
         })
     }
     const live = new AbortController().signal
-    return { service, port, script, ran, steps, stops, projection, flows, graphs, runs, view, wakes, written, tags, opened, turnOfWake, live }
+    return { service, requests, port, script, ran, steps, stops, projection, flows, graphs, runs, view, wakes, written, opened, turnOfWake, live }
 }
 
 const path = (ran: ReadonlyArray<{ step: string }>): ReadonlyArray<string> => ran.map((one) => one.step)
@@ -369,10 +395,12 @@ const DECISION_AT = "2026-11-10T10:05:00.000Z"
 describe("ThreadRunsService", () => {
     describe("start → steps → end, under the lease of the wake", () => {
         it.each([
-            ["buy", ["understand", "to-consult"]],
-            ["paid", ["understand", "to-reconcile"]],
-            ["complaint", ["understand", "complaint", "to-owner"]],
-            ["question", ["understand", "answer"]],
+            ["buy", ["hear", "understand", "to-consult"]],
+            ["paid", ["hear", "understand", "to-payment"]],
+            // The flip split the complaint step: reply to the customer, then tell the team, then the outcome; the reply and the answer
+            // pass their `*-declined` check (a declined send is a decision, the owner's rule of 2026-11-12).
+            ["complaint", ["hear", "understand", "complaint-reply", "complaint-declined", "complaint-notify", "to-owner"]],
+            ["question", ["hear", "understand", "answer", "answer-declined"]],
         ])("walks the front desk's %s route to its end and closes the run as done", async (branch, steps) => {
             const world = await build()
             world.script.outputs = { understand: { branch } }
@@ -416,19 +444,30 @@ describe("ThreadRunsService", () => {
 
             const graph = start.mock.calls[0]?.[1]
             expect(graph?.version).toBe(V1)
-            expect(graph?.entry).toBe("understand")
+            expect(graph?.entry).toBe("hear")
             expect(graph?.nodes.every((node) => node.next === undefined)).toBe(true)
+            // Front desk v25 (Opus-3h, R45): `fresh-visit` is deleted; a Telegram `/start` with no words goes on `go` with text "" and the
+            // model greets (no coded greeting step).
             expect(graph?.nodes.map((node) => node.key)).toEqual([
+                "hear",
+                "nothing-to-answer",
                 "understand",
                 "to-consult",
-                "to-reconcile",
-                "complaint",
+                "to-booking",
+                "to-payment",
+                "complaint-reply",
+                "complaint-declined",
+                "complaint-declined-notice",
+                "complaint-notify",
                 "to-owner",
                 "answer",
+                "answer-declined",
+                "answer-declined-notice",
+                "declined",
                 FREEZE_NODE,
             ])
             expect(graph?.nodes.find((node) => node.key === "understand")?.ends).toEqual(
-                expect.arrayContaining(["to-consult", "to-reconcile", "complaint", "answer", FREEZE_NODE]),
+                expect.arrayContaining(["to-consult", "to-booking", "to-payment", "complaint-reply", "answer", FREEZE_NODE]),
             )
         })
 
@@ -458,7 +497,7 @@ describe("ThreadRunsService", () => {
             expect(ending.status).toBe("done")
             expect(world.port.calls).toEqual(["start", "drive"])
             expect(world.port.leases[1]).toEqual({ fence: 4, signal: world.live })
-            expect(path(world.ran)).toEqual(["understand", "complaint", "to-owner"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "complaint-reply", "complaint-declined", "complaint-notify", "to-owner"])
         })
     })
 
@@ -506,7 +545,7 @@ describe("ThreadRunsService", () => {
             world.script.outputs = { understand: { branch: "question" }, answer: STOP }
 
             await world.service.started(world.opened(), world.live)
-            await world.service.resume(REF, { kind: "skip", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "skip", by: "member-1", at: DECISION_AT })
             await world.service.woken(world.turnOfWake(6), world.live)
 
             expect(settled).toEqual(["run-1", "run-1"])
@@ -515,7 +554,7 @@ describe("ThreadRunsService", () => {
         it("writes its wakes under the engine's own `thread` source, and still runs one written under `internal` before it", async () => {
             const { world } = await stopped()
 
-            await world.service.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
 
             expect(THREAD_WAKE_SOURCE).toBe("thread")
             expect(world.written.map((wake) => wake.source)).toEqual(["thread"])
@@ -528,7 +567,7 @@ describe("ThreadRunsService", () => {
             const { world } = await stopped()
             const decision = { kind: "answer", text: "Quote 120k", by: "member-1", at: DECISION_AT }
 
-            await expect(world.service.resume(REF, decision)).resolves.toEqual({ kind: "admitted", fresh: true })
+            await expect(world.requests.resume(REF, decision)).resolves.toEqual({ kind: "admitted", fresh: true })
 
             expect(world.written).toEqual([
                 {
@@ -553,7 +592,7 @@ describe("ThreadRunsService", () => {
 
         it("resumes with an answer: the step runs again with the founder's words and the run ends as done", async () => {
             const { world } = await stopped()
-            await world.service.resume(REF, { kind: "answer", text: "Quote 120k", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "answer", text: "Quote 120k", by: "member-1", at: DECISION_AT })
             world.script.outputs = { answer: { sent: true } }
 
             const ending = await world.service.woken(world.turnOfWake(5), world.live)
@@ -561,7 +600,9 @@ describe("ThreadRunsService", () => {
             expect(ending.status).toBe("done")
             expect(world.port.calls).toEqual(["start", "resume"])
             expect(world.port.leases[1]).toEqual({ fence: 5, signal: world.live })
-            expect(world.ran.at(-1)).toMatchObject({
+            // The answer step ran again with the words; its `answer-declined` check ran after it and ended the run.
+            expect(world.ran.at(-1)?.step).toBe("answer-declined")
+            expect(world.ran.at(-2)).toMatchObject({
                 step: "answer",
                 answers: [{ text: "Quote 120k", at: DECISION_AT }],
                 at: { agentId: "agent-1", versionId: V1, namespace: FRONT_DESK, workflowId: "wf-1" },
@@ -571,47 +612,46 @@ describe("ThreadRunsService", () => {
 
         it("retries: the step runs again with no words added", async () => {
             const { world } = await stopped()
-            await world.service.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
             world.script.outputs = { answer: { sent: true } }
 
             await world.service.woken(world.turnOfWake(5), world.live)
 
-            expect(world.ran.at(-1)).toMatchObject({ step: "answer", answers: [] })
+            expect(world.ran.at(-1)?.step).toBe("answer-declined")
+            expect(world.ran.at(-2)).toMatchObject({ step: "answer", answers: [] })
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "ended" })
         })
 
-        it("skips: the thread ends, the gate's own closing stands, and the right to speak is given back", async () => {
+        it("skips: the thread ends and the gate's own closing stands", async () => {
             const { world } = await stopped()
-            await world.service.resume(REF, { kind: "skip", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "skip", by: "member-1", at: DECISION_AT })
 
             const ending = await world.service.woken(world.turnOfWake(5), world.live)
 
             expect(ending.status).toBe("done")
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "ended" })
-            expect(path(world.ran)).toEqual(["understand", "answer"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer"])
             expect(world.projection.runEnded).not.toHaveBeenCalled()
-            expect(world.tags.release).toHaveBeenCalledWith("ws-1", "conv-1", "agent-1")
         })
 
         it("takes over: the thread stays at the gate, stopped, and no step runs", async () => {
             const { world } = await stopped()
-            await world.service.resume(REF, { kind: "take_over", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "take_over", by: "member-1", at: DECISION_AT })
 
             const ending = await world.service.woken(world.turnOfWake(5), world.live)
 
             expect(ending.status).toBe("done")
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "stopped", stop: { node: FREEZE_NODE } })
-            expect(path(world.ran)).toEqual(["understand", "answer"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer"])
             expect(world.projection.runEnded).not.toHaveBeenCalled()
-            expect(world.tags.release).not.toHaveBeenCalled()
         })
 
         it("applies a decision once: its wake tried again, and a second decision for the same stop, never answer a later stop", async () => {
             const { world } = await stopped()
             const retry = { kind: "retry", by: "member-1", at: DECISION_AT }
-            await world.service.resume(REF, retry)
+            await world.requests.resume(REF, retry)
             // The same decision for the same stop is the same wake: nothing new is written.
-            await expect(world.service.resume(REF, retry)).resolves.toEqual({ kind: "admitted", fresh: false })
+            await expect(world.requests.resume(REF, retry)).resolves.toEqual({ kind: "admitted", fresh: false })
             // The retry runs and the step stops again: a new stop state (one answer kept).
             await world.service.woken(world.turnOfWake(5), world.live)
             expect(world.port.calls).toEqual(["start", "resume"])
@@ -620,7 +660,7 @@ describe("ThreadRunsService", () => {
             await world.service.woken(world.turnOfWake(6), world.live)
 
             expect(world.port.calls).toEqual(["start", "resume", "drive"])
-            expect(path(world.ran)).toEqual(["understand", "answer", "answer"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer"])
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "stopped" })
         })
 
@@ -629,12 +669,12 @@ describe("ThreadRunsService", () => {
             const words = { kind: "answer", text: "Quote 120k", by: "member-1", at: DECISION_AT }
             const skip = { kind: "skip", by: "member-2", at: DECISION_AT }
 
-            const [first, second] = await Promise.all([world.service.resume(REF, words), world.service.resume(REF, skip)])
+            const [first, second] = await Promise.all([world.requests.resume(REF, words), world.requests.resume(REF, skip)])
 
             expect(first).toEqual({ kind: "admitted", fresh: true })
             expect(second).toEqual({ kind: "refused", code: "already_answered" })
             expect(world.written).toHaveLength(1)
-            await expect(world.service.resume(REF, words)).resolves.toEqual({ kind: "admitted", fresh: false })
+            await expect(world.requests.resume(REF, words)).resolves.toEqual({ kind: "admitted", fresh: false })
 
             await world.service.woken(world.turnOfWake(7), world.live)
             await world.service.woken(world.turnOfWake(8), world.live)
@@ -648,14 +688,14 @@ describe("ThreadRunsService", () => {
             const { world } = await stopped()
             const member = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b"
 
-            await world.service.resume(REF, { kind: "retry", by: member, at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "retry", by: member, at: DECISION_AT })
             const first = world.written.at(-1)
 
             expect(first?.actorMemberId).toBe(member)
             const timeout = await build()
             timeout.script.outputs = { understand: { branch: "question" }, answer: STOP }
             await timeout.service.started(timeout.opened(), timeout.live)
-            await timeout.service.resume(REF, { kind: "skip", by: "engine:approvals", at: DECISION_AT })
+            await timeout.requests.resume(REF, { kind: "skip", by: "engine:approvals", at: DECISION_AT })
             const engine = timeout.written.at(-1)
             expect(engine?.actorMemberId).toBeNull()
             expect(engine?.context.tagContext).toContain('"by":"engine:approvals"')
@@ -663,7 +703,7 @@ describe("ThreadRunsService", () => {
 
         it("refuses what is no decision, and a thread that waits for nobody, with nothing written", async () => {
             const { world } = await stopped()
-            await expect(world.service.resume(REF, { kind: "approve" })).resolves.toEqual({
+            await expect(world.requests.resume(REF, { kind: "approve" })).resolves.toEqual({
                 kind: "refused",
                 code: "decision_invalid",
             })
@@ -671,7 +711,7 @@ describe("ThreadRunsService", () => {
             const ended = await build()
             await ended.service.started(ended.opened(), ended.live)
             await expect(
-                ended.service.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT }),
+                ended.requests.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT }),
             ).resolves.toEqual({ kind: "refused", code: "thread_not_stopped" })
             await expect(ended.service.redrive(REF, "sweep-1")).resolves.toEqual({ kind: "refused", code: "thread_ended" })
             expect(world.written).toEqual([])
@@ -692,12 +732,12 @@ describe("ThreadRunsService", () => {
             })
             await world.service.woken(world.turnOfWake(7), world.live)
             expect(world.port.calls).toEqual(["start", "drive"])
-            expect(path(world.ran)).toEqual(["understand", "answer"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer-declined"])
 
             const { world: frozen } = await stopped()
             await frozen.service.redrive(REF, "sweep-1")
             await frozen.service.woken(frozen.turnOfWake(7), frozen.live)
-            expect(path(frozen.ran)).toEqual(["understand", "answer"])
+            expect(path(frozen.ran)).toEqual(["hear", "understand", "answer"])
             await expect(frozen.port.stateOf(REF)).resolves.toMatchObject({ status: "stopped" })
         })
     })
@@ -762,14 +802,14 @@ describe("ThreadRunsService", () => {
             const world = await build()
             world.script.outputs = { understand: { branch: "question" }, answer: STOP }
             await world.service.started(world.opened(), world.live)
-            await world.service.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
             world.script.outputs = { answer: { sent: true } }
             const resume = jest.spyOn(world.port, "resume")
 
             await world.service.woken(world.turnOfWake(5), world.live)
 
             expect(resume.mock.calls[0]?.[1].version).toBe(V1)
-            expect(path(world.ran)).toEqual(["understand", "answer", "answer"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer", "answer-declined"])
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "ended", version: V1 })
         })
 
@@ -783,14 +823,14 @@ describe("ThreadRunsService", () => {
             await world.service.started(world.opened({ versionId: V2, flow: renamed() }), world.live)
 
             expect(drive.mock.calls[0]?.[1].version).toBe(V1)
-            expect(path(world.ran)).toEqual(["understand", "answer"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer-declined"])
         })
 
         it("reads a version it has not built by its id, and builds each version once", async () => {
             const world = await build()
             world.script.outputs = { understand: { branch: "question" }, answer: STOP }
             await world.service.started(world.opened(), world.live)
-            await world.service.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
+            await world.requests.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT })
             await world.service.woken(world.turnOfWake(5), world.live)
             // Built at the start from the routed flow: the resume found it by version id and read nothing.
             expect(world.graphs.versionAt).not.toHaveBeenCalled()
@@ -838,7 +878,7 @@ describe("ThreadRunsService", () => {
             const world = await build({ engine: "legacy" })
 
             await expect(
-                world.service.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT }),
+                world.requests.resume(REF, { kind: "retry", by: "member-1", at: DECISION_AT }),
             ).resolves.toEqual({ kind: "refused", code: "run_not_thread" })
             await expect(world.service.redrive(REF, "sweep-1")).resolves.toEqual({ kind: "refused", code: "run_not_thread" })
             const wake = agentTurnViewOf({

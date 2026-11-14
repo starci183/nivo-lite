@@ -1,17 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull, LessThan, Like } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import {
-    CONVERSATION_SCOPE_PREFIX,
-    IDLE_LEASE_RETENTION_MS,
-    SKIPPED_WAKE_RETENTION_MS,
-    WAKE_RETENTION_MS,
-} from "./agent-work.policy"
-import { AgentWakeEntity, AgentWorkLeaseEntity } from "./persistence/entities"
+import { In, LessThan, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
+import { IDLE_LEASE_RETENTION_MS, SKIPPED_WAKE_RETENTION_MS, WAKE_RETENTION_MS } from "./agent-work.policy"
+import { AgentWakeEntity } from "./persistence/entities"
 import type { AgentWakeStatus } from "./agent-work.contracts"
+
+/** One row a database function answered: the value sits under the function's own name. */
+type FunctionRow = Readonly<Record<string, unknown>>
 
 /** The endings a wake can be kept in once it is over; a pending or running wake is never removed. */
 const ENDED: ReadonlyArray<AgentWakeStatus> = ["done", "held", "failed", "dead"]
@@ -48,22 +44,14 @@ export class AgentWakeRetentionService {
         return removed.affected ?? 0
     }
 
-    /** A conversation's lease row is made again by the next wake of that conversation, so an idle one is only dead weight. */
+    /**
+     * A conversation's lease row is made again by the next wake of that conversation, so an idle one is only dead weight. The lease rows
+     * are written by the database functions only (the back end holds SELECT on them), so the removal is `agent_work_leases_expire`: it
+     * keeps a row whose turn runs or whose scope still has a pending or running wake, and skips a row another worker holds.
+     */
     private async expireLeases(before: Date, batch: number): Promise<number> {
-        const rows = await this.entityManager.find(AgentWorkLeaseEntity, {
-            select: { agentId: true, scopeKey: true },
-            where: {
-                scopeKey: Like(`${CONVERSATION_SCOPE_PREFIX}%`),
-                runningTurnId: IsNull(),
-                updatedAt: LessThan(before),
-            },
-            order: { updatedAt: "ASC" },
-            take: batch,
-        })
-        if (rows.length === 0) return 0
-        const removed = await Promise.all(
-            rows.map(({ agentId, scopeKey }) => this.entityManager.delete(AgentWorkLeaseEntity, { agentId, scopeKey })),
-        )
-        return removed.reduce((sum, result) => sum + (result.affected ?? 0), 0)
+        const [row] = await callDbFunction<FunctionRow>(this.entityManager, "public.agent_work_leases_expire", [before, batch])
+        const removed = row?.agent_work_leases_expire
+        return typeof removed === "number" && Number.isInteger(removed) && removed > 0 ? removed : 0
     }
 }

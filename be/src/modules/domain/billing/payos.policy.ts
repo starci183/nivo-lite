@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto"
+import { bankFactsOf, type BankFacts } from "./bank-facts.policy"
 import { sameText } from "./channel-secret.policy"
-import { isJsonObject, fieldTextOf } from "./webhook-body.policy"
-import type { JsonObject } from "./webhook-body.policy"
+import { isJsonObject, fieldTextOf, type JsonObject } from "./webhook-body.policy"
 
 /** The body payOS posts: a code, a success flag, the payment `data` and the `signature` over it. */
 export interface PayosBody {
@@ -15,9 +15,21 @@ export interface PayosBody {
     readonly signature?: string | undefined
 }
 
+/** A paid payOS order as a credit, with the bank's facts of it (`reference`, `accountNumber`, `transactionDateTime`) when given. */
+export interface PayosCreditReading extends BankFacts {
+    /** A credit. */
+    readonly kind: "credit"
+    /** The paid amount in VND. */
+    readonly amount: number
+    /** The transfer content. */
+    readonly content: string
+    /** `payos:<reference>`, or `payos:<orderCode>` when there is no reference. */
+    readonly eventId: string
+}
+
 /** The result of reading a payOS delivery after it was proven. */
 export type PayosReading =
-    | { readonly kind: "credit"; readonly amount: number; readonly content: string; readonly eventId: string }
+    | PayosCreditReading
     | { readonly kind: "ignored"; readonly reason: "sample" | "not_paid" | "no_amount" }
 
 /** payOS's own webhook confirmation sends a sample order with this code; it is acknowledged and never booked. */
@@ -51,7 +63,10 @@ export const isPayosAuthentic = (body: PayosBody, checksumKey: string): boolean 
 export const isPayosSample = (data: Readonly<Record<string, unknown>>): boolean =>
     Number(data.orderCode) === SAMPLE_ORDER_CODE
 
-/** Reads a proven delivery: a paid order with an amount and a reference is a credit, anything else is ignored. */
+/**
+ * Reads a proven delivery: a paid order with an amount and a reference is a credit, anything else is ignored. The bank's reference is
+ * `data.reference` only: an order code is payOS's, so a delivery with only an order code carries no bank reference.
+ */
 export const readPayosDelivery = (body: PayosBody): PayosReading => {
     const data = body.data ?? {}
     if (isPayosSample(data)) return { kind: "ignored", reason: "sample" }
@@ -59,7 +74,13 @@ export const readPayosDelivery = (body: PayosBody): PayosReading => {
     const amount = Number(data.amount ?? 0)
     const reference = text(data.reference) || text(data.orderCode)
     if (!Number.isFinite(amount) || amount <= 0 || !reference) return { kind: "ignored", reason: "no_amount" }
-    return { kind: "credit", amount, content: text(data.description).trim(), eventId: `payos:${reference}` }
+    return {
+        kind: "credit",
+        amount,
+        content: text(data.description).trim(),
+        eventId: `payos:${reference}`,
+        ...bankFactsOf(data.reference, data.accountNumber, data.transactionDateTime),
+    }
 }
 
 /** The fields of a parsed payOS delivery the proof and the reading use; a field of the wrong type counts as absent. */

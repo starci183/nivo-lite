@@ -9,12 +9,5 @@ export { ChannelOwnersService } from "./channel-owners.service"
 export { isChannelPurpose } from "./channel-ownership.policy"
 export { AgentConnectionsModule } from "./agent-connections.module"
 export { PURPOSES } from "./agent-bindings.policy"
-export type {
-    BoundAgent,
-    BoundConnection,
-    ConnectionGrant,
-    Purpose,
-    OptionalResumeKeep,
-    ResumeKeep,
-} from "./agent-connections.contracts"
+export type { BoundConnection, ConnectionGrant, Purpose, OptionalResumeKeep, ResumeKeep } from "./agent-connections.contracts"
 export { agentConnectionsEntities } from "./persistence/entities"

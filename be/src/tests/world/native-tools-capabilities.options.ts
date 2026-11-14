@@ -1,18 +1,16 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentGraphsModule } from "@modules/domain/agent-graphs"
-import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
-import { BrainDossiersModule } from "@modules/domain/brain-dossiers"
+import { AgentConnectionsModule } from "@modules/domain/agent-connections"
+import { AGENTS_INSTALLATIONS, AgentDirectoryService } from "@modules/domain/agents"
 import { BrainFactsModule } from "@modules/domain/brain-facts"
-import { ChatRecordsModule } from "@modules/domain/chat-records"
+import { chatRecordsModules } from "./chat-records-modules"
 import { ConnectionsModule } from "@modules/domain/connections"
-import { DossierReviewModule } from "@modules/domain/dossier-review"
 import { KnowledgeModule } from "@modules/domain/knowledge"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesModule } from "@modules/domain/knowledge-sources"
 import { ProviderRegistryModule } from "@modules/domain/provider-registry"
-import { McpCallLogModule } from "@modules/domain/mcp-call-log"
-import { McpGatewayModule } from "@modules/domain/mcp-gateway"
+import { ToolCallLogModule } from "@modules/domain/tool-call-log"
+import { ToolsModule } from "@modules/domain/tools"
 import { NativeToolsModule, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { AiModule } from "@modules/integrations/ai"
@@ -24,7 +22,7 @@ import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
 class NativeToolsProofInstallationsModule {}
 
 /** True for the gateway the credential composition registers, which the native-tools composition replaces with one that has natives. */
-const isGateway = (entry: DynamicModule): boolean => entry.module === McpGatewayModule
+const isGateway = (entry: DynamicModule): boolean => entry.module === ToolsModule
 
 /**
  * The mcp app's composition with the native tools: the credential composition of the endpoint, the readers behind the tools in their
@@ -45,18 +43,16 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     NivoKnowledgeModule.register({ isGlobal: true, searchOnly: true, folders: [] }),
     KnowledgeModule.register({ isGlobal: true, searchOnly: true }),
     BrainFactsModule.register({ isGlobal: true }),
-    BrainDossiersModule.register({ isGlobal: true, readOnly: true }),
-    DossierReviewModule.register({ isGlobal: true, readOnly: true }),
     ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     { module: NativeToolsProofInstallationsModule, global: true },
-    ChatRecordsModule.register({ isGlobal: true }),
+    AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
+    ...chatRecordsModules(),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),
     ProviderRegistryModule.register({ isGlobal: true }),
-    McpCallLogModule.register({ isGlobal: true }),
-    McpGatewayModule.register({
+    ToolCallLogModule.register({ isGlobal: true }),
+    ToolsModule.register({
         isGlobal: true,
-        remote: { clientName: "nivo-mcp-gateway" },
         defaultTimeoutMs: 4000,
         natives: NATIVE_TOOL_ADAPTERS,
     }),

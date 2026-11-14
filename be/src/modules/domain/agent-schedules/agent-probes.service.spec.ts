@@ -5,25 +5,24 @@ import type { Logger } from "@modules/platform/logging"
 import { QUEUE_TIMEOUT } from "@modules/platform/queue"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { AgentProbesService } from "./agent-probes.service"
+import { AgentSchedulesError, AgentSchedulesErrorCode } from "./errors/agent-schedules.error"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
-import { InvoicesDueProbeService } from "./probes/invoices-due-probe.service"
 import { AccountingCloseProbeService } from "./probes/accounting-close-probe.service"
-import { MoneyInProbeService } from "./probes/money-in-probe.service"
 import { NewDocumentsProbeService } from "./probes/new-documents-probe.service"
 import { TasksDueProbeService } from "./probes/tasks-due-probe.service"
 import type { ProbeAnswer } from "./agent-schedules.contracts"
 
 const AGENT = { workspaceId: "ws-1", agentId: "agent-1" }
 
-const FOUND: ProbeAnswer = { work: true, brief: "Invoices past due: INV-1.", subjectIds: ["inv-1"] }
+const FOUND: ProbeAnswer = { work: true, brief: "New documents: Menu.pdf.", subjectIds: ["doc-1"] }
 
 const build = async (answer: Promise<ProbeAnswer> = Promise.resolve(FOUND)) => {
     const tasksDue = mock<TasksDueProbeService>({
         key: "tasks_due",
         check: jest.fn().mockResolvedValue({ work: false }),
     })
-    const invoicesDue = mock<InvoicesDueProbeService>({
-        key: "invoices_due",
+    const newDocuments = mock<NewDocumentsProbeService>({
+        key: "new_documents",
         check: jest.fn().mockReturnValue(answer),
     })
     const cancel = jest.fn()
@@ -35,20 +34,18 @@ const build = async (answer: Promise<ProbeAnswer> = Promise.resolve(FOUND)) => {
             { provide: QUEUE_TIMEOUT, useValue: timeout },
             { provide: LOGGER, useValue: logger },
             { provide: TasksDueProbeService, useValue: tasksDue },
-            { provide: InvoicesDueProbeService, useValue: invoicesDue },
-            { provide: NewDocumentsProbeService, useValue: mock<NewDocumentsProbeService>({ key: "new_documents" }) },
-            { provide: MoneyInProbeService, useValue: mock<MoneyInProbeService>({ key: "money_in" }) },
+            { provide: NewDocumentsProbeService, useValue: newDocuments },
             {
                 provide: AccountingCloseProbeService,
                 useValue: mock<AccountingCloseProbeService>({ key: "accounting_close" }),
             },
         ],
     }).compile()
-    return { service: container.get(AgentProbesService), invoicesDue, tasksDue, timeout, cancel, logger }
+    return { service: container.get(AgentProbesService), newDocuments, tasksDue, timeout, cancel, logger }
 }
 
 describe("AgentProbesService.decide, the probes it knows", () => {
-    it("brings tasks_due as well as the probes of invoices, documents and money", async () => {
+    it("brings tasks_due as well as the probes of documents and of the evening close", async () => {
         const { service, tasksDue } = await build()
 
         await expect(service.decide(AGENT, { probeKey: "tasks_due" })).resolves.toEqual({
@@ -61,34 +58,34 @@ describe("AgentProbesService.decide, the probes it knows", () => {
 
 describe("AgentProbesService.decide, what the probe found", () => {
     it("runs the wake with the brief of what its probe found", async () => {
-        const { service, invoicesDue } = await build()
+        const { service, newDocuments } = await build()
 
-        await expect(service.decide(AGENT, { probeKey: "invoices_due" })).resolves.toEqual({
+        await expect(service.decide(AGENT, { probeKey: "new_documents" })).resolves.toEqual({
             kind: "run",
-            brief: "Invoices past due: INV-1.",
-            subjectIds: ["inv-1"],
+            brief: "New documents: Menu.pdf.",
+            subjectIds: ["doc-1"],
         })
-        expect(invoicesDue.check).toHaveBeenCalledWith(AGENT)
+        expect(newDocuments.check).toHaveBeenCalledWith(AGENT)
     })
 
     it("skips the wake as no work when the probe finds none", async () => {
         const { service } = await build(Promise.resolve({ work: false }))
 
-        await expect(service.decide(AGENT, { probeKey: "invoices_due" })).resolves.toEqual({
+        await expect(service.decide(AGENT, { probeKey: "new_documents" })).resolves.toEqual({
             kind: "skip",
             reason: "no_work",
         })
     })
 
     it("needs no probe for a wake that carries a task", async () => {
-        const { service, invoicesDue } = await build()
+        const { service, newDocuments } = await build()
 
-        await expect(service.decide(AGENT, { taskId: "task-1", probeKey: "invoices_due" })).resolves.toEqual({
+        await expect(service.decide(AGENT, { taskId: "task-1", probeKey: "new_documents" })).resolves.toEqual({
             kind: "run",
             brief: null,
             subjectIds: ["task-1"],
         })
-        expect(invoicesDue.check).not.toHaveBeenCalled()
+        expect(newDocuments.check).not.toHaveBeenCalled()
     })
 
     it.each([{ triggerId: "trigger-1", slot: "1" }, { eventName: "bank_credit_booked" }])(
@@ -109,19 +106,19 @@ describe("AgentProbesService.decide, what the probe found", () => {
 
 describe("AgentProbesService.decide, a probe that fails", () => {
     it("skips the wake as a failed probe when the probe throws, and says so", async () => {
-        const { service, logger } = await build(Promise.reject(new Error("db down")))
+        const { service, logger } = await build(Promise.reject(new AgentSchedulesError({ code: AgentSchedulesErrorCode.DrainPayloadInvalid })))
 
-        await expect(service.decide(AGENT, { probeKey: "invoices_due" })).resolves.toEqual({
+        await expect(service.decide(AGENT, { probeKey: "new_documents" })).resolves.toEqual({
             kind: "skip",
             reason: "probe_failed",
         })
         expect(logger.error).toHaveBeenCalledWith(AgentSchedulesLogEvent.ProbeFailed, expect.any(Error), {
             agentId: "agent-1",
-            probeKey: "invoices_due",
+            probeKey: "new_documents",
         })
         expect(logger.warn).toHaveBeenCalledWith(AgentSchedulesLogEvent.ProbeSkipped, {
             agentId: "agent-1",
-            probeKey: "invoices_due",
+            probeKey: "new_documents",
         })
     })
 
@@ -141,7 +138,7 @@ describe("AgentProbesService.decide, a probe that fails", () => {
             return jest.fn()
         })
 
-        await expect(service.decide(AGENT, { probeKey: "invoices_due" })).resolves.toEqual({
+        await expect(service.decide(AGENT, { probeKey: "new_documents" })).resolves.toEqual({
             kind: "skip",
             reason: "probe_failed",
         })
@@ -151,7 +148,7 @@ describe("AgentProbesService.decide, a probe that fails", () => {
     it("cancels the deadline once the probe answered", async () => {
         const { service, cancel } = await build()
 
-        await service.decide(AGENT, { probeKey: "invoices_due" })
+        await service.decide(AGENT, { probeKey: "new_documents" })
 
         expect(cancel).toHaveBeenCalledTimes(1)
     })

@@ -89,9 +89,9 @@ const AGENT_HANDLE_MAX = 32
 const slugOf = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/\u0111/gu, "d")
+        .replaceAll(String.fromCodePoint(0x111), "d")
         .normalize("NFD")
-        .replace(/\p{M}+/gu, "")
+        .replaceAll(/\p{M}+/gu, "")
         .split(/[^a-z0-9]+/u)
         .filter((part) => part !== "")
         .join("-")

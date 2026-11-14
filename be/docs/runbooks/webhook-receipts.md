@@ -1,50 +1,59 @@
-# Deferred webhook receipt rollout
+# Webhook receipts
 
-Apply the webhook receipt queues migration (folded into the baseline) and
-the webhook receipt backfill migration (folded into the baseline) before starting the new API workers.
-The API hosts all six receipt consumers; the CLI runs producers only and disables workers.
-Keep the existing `meta_inbound` consumer: Meta receipt processing publishes its downstream jobs there.
+Every provider webhook (Telegram, Zalo OA, Meta, SePay, Casso, PayOS) and every poll is received into
+`public.account_data` (migration `20261112022700_account-data.sql`, one partition per declared type generated into
+`20261112022900_account-data-types.sql`). The door resolves the connection and hands the provider's rows to the one
+intake: each row is a declared type (`telegram.update`, `zalo_oa.event`, `meta.event`, `sepay.delivery`, ...), keyed by
+the provider's own id (`key`), its value validated against the type's declaration. The unique key
+`(type, connection_id, key)` IS the dedupe: an insert that writes a row is a new delivery, one that writes nothing is a
+redelivery and queues nothing.
 
-The backfill uses the same `public.job_enqueue` transaction and dedupe identities as live intake.
-It queues pending receipts only and preserves completed receipts and existing outbox rows.
-A repeated backfill does not resend an existing job. Use the existing jobs retry operation for a
-failed outbox job after fixing its cause; see [jobs operations](jobs-operations.md).
+A row of a type that wakes (`wakes: true` in its declaration: the event and delivery types) is the consumer's work
+row: `processed_at IS NULL` means pending. The queue messages keep `{ deliveryId }` = `<connection uuid>:<key>`; the
+consumer locks the pending row of its event type and completes it in the same transaction as its business effects.
 
-## Inspect pending legacy receipts before deployment
+The API hosts every receipt consumer; the CLI runs producers only and disables workers. Keep the existing
+`meta_inbound` consumer: Meta receipt processing publishes its downstream jobs there. Use the existing jobs retry
+operation for a failed outbox job after fixing its cause; see [jobs operations](jobs-operations.md).
 
-Run this read-only inventory using the deployment database connection. It returns identities and
-payload readiness, without exposing payloads or credentials:
+## Inspect pending receipts
+
+Run this read-only inventory with the deployment database connection. It returns identities only, never values or
+credentials:
 
 ```sql
-SELECT 'telegram' AS provider, id, delivery_id, received_at,
-    jsonb_typeof(payload -> 'rawBody') = 'string'
-        AND jsonb_typeof(payload -> 'connection') = 'string'
-        AND length(payload ->> 'connection') > 0 AS ready
-FROM public.telegram_inbox WHERE processed_at IS NULL
-UNION ALL
-SELECT 'zalo', id, delivery_id, received_at,
-    jsonb_typeof(payload -> 'rawBody') = 'string'
-        AND jsonb_typeof(payload -> 'connection') = 'string'
-        AND length(payload ->> 'connection') > 0
-FROM public.zalo_inbox WHERE processed_at IS NULL;
+SELECT type, provider, connection_id, key, occurred_at, created_at
+FROM public.account_data
+WHERE processed_at IS NULL
+  AND type IN ('telegram.update', 'zalo_oa.event', 'meta.event', 'sepay.delivery', 'casso.delivery', 'payos.delivery')
+ORDER BY created_at;
 ```
 
-Treat `ready IS NOT TRUE` as requiring recovery. Older atomic intakes stored only message/update IDs;
-the message body cannot be reconstructed from those receipt rows. Do not queue these rows, mark them
-processed, delete them, or replace their delivery identity. The backfill deliberately skips them.
-Recover the original verified delivery bytes and connection from the provider's retained delivery
-record, then have an operator review a narrowly scoped, parameterized update of that pending row's
-payload to `{ "connection": "<original connection>", "rawBody": "<original JSON text>" }`.
-Recheck that the decoded connection-prefixed update/message ID equals the existing `delivery_id`.
-If the provider no longer retains the delivery, record the unresolved receipt identity for manual
-recovery; its IDs alone are insufficient to replay the original message safely.
+The pending count per account and type:
 
-After recovery, rerun the matching SELECT from the backfill migration in a transaction. Its dedupe
-key is `<queue>:<delivery_id>`; bank-feed keys also include `<provider>:` before the delivery ID.
-Do not change a dedupe key to force a second successful effect. Monitor pending counts, job failures
-and completion timestamps until the recoverable backlog drains. Consumers lock pending receipt rows
-and commit their business effects with completion, so successful replays perform no second effect.
+```sql
+SELECT type, connection_id, count(*) AS pending, min(created_at) AS oldest
+FROM public.account_data
+WHERE processed_at IS NULL
+  AND type IN ('telegram.update', 'zalo_oa.event', 'meta.event', 'sepay.delivery', 'casso.delivery', 'payos.delivery')
+GROUP BY type, connection_id
+ORDER BY oldest;
+```
 
-Meta and SePay legacy receipts retain their original payload and are queued by the migration.
-Bank-feed receipts are newly introduced by this rollout. This edit-only change does
-not execute any migrations or recover production data; the deployment operator owns this inventory.
+The list of waking types is the catalog's (`be/src/modules/domain/account-data-catalog`): a type whose declaration
+does not wake never has a pending row (its `processed_at` stays null and means nothing).
+
+A pending row whose queue job failed is retried through the jobs operations; its dedupe key is
+`<queue>:<delivery_id>` (bank feeds: `<queue>:<provider>:<delivery_id>`), where `delivery_id` is
+`<connection>:<key>`. Do not change a dedupe key to force a second successful effect. Consumers lock the pending row
+and commit their business effects with its completion, so a successful replay performs no second effect. A row is
+never edited by hand: its value is the provider's own body as it was received.
+
+## Retention
+
+The end-of-day tick `account-data-retention` (`45 16 * * *` UTC, queue `account_data_retention`, payload
+`{ batch: 1000 }`) runs the fenced job `sweep-account-data`. Retention is per declared type: rows older than the type's
+`retention.days` are deleted (a waking type: completed rows only, a pending row is never deleted), rows older than the
+type's `ttlMs` are deleted, and a type declared `retention: "keep"` without a ttl is never touched. Deletes run in
+bounded batches per type, oldest first, the job's fence asked before every batch; a type stops after its batch budget
+and the next pass continues. `cli jobs tick account-data-retention` sends the same tick by hand.

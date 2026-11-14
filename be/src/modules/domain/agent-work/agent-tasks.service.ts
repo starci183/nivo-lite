@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, IsNull, Not, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -10,13 +8,25 @@ import { toTaskRecord } from "./agent-work.mapper"
 import { boundedWakeAt } from "./agent-work.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTaskEntity } from "./persistence/entities"
-import type { AgentTaskOp, AgentTaskRecord } from "./agent-work.contracts"
+import type { AgentTaskData, AgentTaskOp, AgentTaskRecord } from "./agent-work.contracts"
 
 /** The most tasks a list shows. */
 const TASKS_MAX = 100
 
 /** The longest title a task keeps. */
 const TITLE_MAX = 200
+
+/** A generic timer as `armTimer` takes it: its task key, its title, the wake time and the data it carries back. */
+export interface TimerArm {
+    /** The task key of the timer. */
+    readonly key: string
+    /** The task title, which carries the real due instant. */
+    readonly title: string
+    /** When the task wakes the sweep. */
+    readonly wakeAt: Date
+    /** What the timer carries back; null clears what an earlier arm kept. */
+    readonly data: AgentTaskData | null
+}
 
 @Injectable()
 /**
@@ -37,7 +47,7 @@ export class AgentTasksService {
             order: { nextActionAt: { direction: "ASC", nulls: "LAST" }, createdAt: "ASC" },
             take: TASKS_MAX,
         })
-        return rows.map(toTaskRecord)
+        return rows.map((item) => toTaskRecord(item))
     }
 
     /** One task by its id, or null when there is none. */
@@ -57,6 +67,56 @@ export class AgentTasksService {
      */
     async markWoken(tx: EntityManager, taskId: string, at: Date): Promise<void> {
         await tx.update(AgentTaskEntity, { id: taskId, nextActionAt: at }, { nextActionAt: null })
+    }
+
+    /**
+     * Arms the task of a generic timer (`timer-task.policy.ts`): its key, a title that carries the real due instant, the wake time the
+     * caller computed (NOT bounded here: a timer may be due in a minute, and the sweep moves a farther one forward), and the data it
+     * carries back (null clears what an earlier arm kept). Arming a key again moves the same task and reopens it.
+     */
+    async armTimer(workspaceId: string, agentId: string, timer: TimerArm): Promise<void> {
+        await this.entityManager.upsert(
+            AgentTaskEntity,
+            {
+                workspaceId,
+                agentId,
+                dedupeKey: timer.key,
+                title: timer.title.slice(0, TITLE_MAX),
+                status: "open",
+                waitingOn: null,
+                nextActionAt: timer.wakeAt,
+                doneAt: null,
+                data: timer.data,
+            },
+            ["agentId", "dedupeKey"],
+        )
+    }
+
+    /** Cancels an armed timer of the agent by its key: true when one was armed (open and waiting for its time), false when none was. */
+    async cancelTimer(agentId: string, key: string): Promise<boolean> {
+        const cancelled = await this.entityManager.update(
+            AgentTaskEntity,
+            { agentId, dedupeKey: key, status: "open", nextActionAt: Not(IsNull()) },
+            { status: "done", doneAt: this.clock.now(), nextActionAt: null },
+        )
+        return (cancelled.affected ?? 0) > 0
+    }
+
+    /** Moves the wake time of a task forward, only when it is still the time it was read at (a timer farther than seven days away). */
+    async moveWake(taskId: string, from: Date, to: Date): Promise<void> {
+        await this.entityManager.update(AgentTaskEntity, { id: taskId, nextActionAt: from }, { nextActionAt: to })
+    }
+
+    /**
+     * Closes the task of a timer once the wake it asked for was written, in the transaction that wrote it: its time is cleared and it is
+     * done (arming the key again reopens it). A task moved to another time meanwhile is left alone.
+     */
+    async markFired(tx: EntityManager, taskId: string, at: Date): Promise<void> {
+        await tx.update(
+            AgentTaskEntity,
+            { id: taskId, nextActionAt: at },
+            { nextActionAt: null, status: "done", doneAt: this.clock.now() },
+        )
     }
 
     /** Drops a task. Owner or manager; the task must be the agent's. */
@@ -96,6 +156,7 @@ export class AgentTasksService {
                 originWakeId: op.originWakeId ?? null,
                 workItemId: op.workItemId ?? null,
                 doneAt: null,
+                ...(op.data === undefined ? {} : { data: op.data }),
             },
             ["agentId", "dedupeKey"],
         )

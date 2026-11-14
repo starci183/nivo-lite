@@ -1,5 +1,6 @@
 import { moduleListProblems, seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import { coreBlocks } from "../blocks/core-blocks"
+import { workbenchSpecProblems } from "./workbench-spec-problems"
 import { MODULE_DECLARATIONS } from "./module-declarations"
 import { MODULE_FIXTURES } from "./module-fixtures"
 import { MODULE_MESSAGES } from "./module-messages"
@@ -12,7 +13,15 @@ describe("the module registry", () => {
     })
 
     it("lists the key of every server", () => {
-        expect(REGISTERED_MODULE_KEYS).toEqual(["loyalty"])
+        expect(REGISTERED_MODULE_KEYS).toEqual([
+            "chatbot",
+            "lead_gen",
+            "sales",
+            "booking",
+            "video",
+            "content",
+            "hiring",
+        ])
     })
 })
 
@@ -21,6 +30,17 @@ describe("MODULE_DECLARATIONS", () => {
         expect(
             MODULE_DECLARATIONS.flatMap((declaration) =>
                 seedSpecProblems(declaration, coreBlocks, MODULE_DECLARATIONS),
+            ),
+        ).toEqual([])
+    })
+
+    it("opens every agent's workbench on its desk and keeps raw records on data pages (the workbench rule)", () => {
+        expect(
+            MODULE_DECLARATIONS.flatMap((declaration) =>
+                workbenchSpecProblems(declaration, coreBlocks, MODULE_DECLARATIONS).map((problem) => ({
+                    module: declaration.key,
+                    ...problem,
+                })),
             ),
         ).toEqual([])
     })

@@ -1,13 +1,14 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { BrainChangeMessagesService } from "@modules/domain/brain/brain-change-messages.service"
-import type { BrainChangeDecision } from "@modules/domain/brain/brain-change-messages.service"
+import {
+    BrainChangeMessagesService,
+    type BrainChangeDecision,
+} from "@modules/domain/brain"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DecideBrainChangeCommand } from "./decide-brain-change.command"
 
 @CommandHandler(DecideBrainChangeCommand)
-/** Decides a truth-graph change card: Đồng ý (the founder) or Không; the card is rewritten in place. */
+/** Decides a truth-graph change card: Dong y (the founder) or Khong; the card is rewritten in place. */
 export class DecideBrainChangeHandler extends ICQRSHandler<DecideBrainChangeCommand, BrainChangeDecision> {
     constructor(
         @InjectLogger() logger: Logger,

@@ -28,3 +28,6 @@ export const AgentSetupPage = (props: AgentSetupPageProps) => {
         />
     )
 }
+
+/** The same Setup tab while the route loads: the panes read the agent from the address and draw their own skeletons. */
+export const AgentSetupLoadingPage = () => <AgentSetupPageBase props={{ module: undefined, installationId: undefined }} />

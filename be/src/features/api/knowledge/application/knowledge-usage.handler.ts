@@ -1,22 +1,20 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { SourceQuotaService } from "@modules/domain/knowledge-sources"
-import type { KnowledgeUsage } from "@modules/domain/knowledge-sources"
+import { TruthCeilingService, type KnowledgeUsageView } from "@modules/domain/brain"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KnowledgeUsageQuery } from "./knowledge-usage.query"
 
 @QueryHandler(KnowledgeUsageQuery)
-/** Answers the raw document bytes the workspace holds and the most it may hold. */
-export class KnowledgeUsageHandler extends ICQRSHandler<KnowledgeUsageQuery, KnowledgeUsage> {
+/** Answers what the workspace holds of its raw document allowance, and its truths in force against their ceiling. */
+export class KnowledgeUsageHandler extends ICQRSHandler<KnowledgeUsageQuery, KnowledgeUsageView> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly quota: SourceQuotaService,
+        private readonly ceiling: TruthCeilingService,
     ) {
         super(logger)
     }
 
-    protected override process(query: KnowledgeUsageQuery): Promise<KnowledgeUsage> {
-        return this.quota.usage(query.params.principal.id, query.params.request.workspaceId)
+    protected override process(query: KnowledgeUsageQuery): Promise<KnowledgeUsageView> {
+        return this.ceiling.usageOf(query.params.principal.id, query.params.request.workspaceId)
     }
 }

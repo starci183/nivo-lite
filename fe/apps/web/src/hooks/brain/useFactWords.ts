@@ -1,8 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { FACT_SOURCE_KEY, TRUST_LEVEL_KEY, TYPE_KEY } from "@/modules/brain"
-import type { FactDrawerWords, FactPickWords } from "@/modules/brain"
+import { FACT_SOURCE_KEY, TRUST_LEVEL_KEY, TYPE_KEY, type FactDrawerWords, type FactPickWords } from "@/modules/brain"
 
 /** The resolved words of the tables of facts and of their two drawers. */
 export interface FactWords {

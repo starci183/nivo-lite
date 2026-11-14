@@ -1,21 +1,19 @@
 import { graphVocabulary } from "@modules/domain/intent-contracts"
-import { dataKindOfTool } from "@modules/domain/mcp-gateway"
-import { MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "../agent-graphs.contracts"
-import type {
-    CeilingRule,
-    DecidePoint,
-    GraphBranch,
-    GraphContext,
-    GraphDocument,
-    GraphNode,
-    GraphProblem,
-    NodeAnswerKey,
+import {
+    MAX_DOES_LENGTH,
+    MAX_GRAPH_NODES,
+    MAX_TITLE_LENGTH,
+    type DecidePoint,
+    type GraphBranch,
+    type GraphContext,
+    type GraphDocument,
+    type GraphNode,
+    type GraphProblem,
+    type NodeAnswerKey,
 } from "../agent-graphs.contracts"
 import { conditionProblems } from "./condition.policy"
-import { contractProblems } from "./contract-problems.policy"
 import { successorsOf } from "./graph-successors.policy"
-import { amountFactOf, boundaryFindings, intervalOf, numericFactsOf, topOf } from "./interval.policy"
-import type { Interval } from "./interval.policy"
+import { boundaryFindings, numericFactsOf } from "./interval.policy"
 
 export { successorsOf }
 
@@ -117,29 +115,13 @@ const cycles = (graph: GraphDocument, byKey: ReadonlyMap<string, GraphNode>): Re
 const elseProblems = (nodeKey: string, decide: DecidePoint): ReadonlyArray<GraphProblem> => {
     const last = decide.branches.at(-1)
     if (last?.when !== "else") return [problem("no_else", nodeKey)]
-    return last.then === "auto" ? [problem("else_auto", nodeKey, last.key)] : []
+    return last.mode === "auto" ? [problem("else_auto", nodeKey, last.key)] : []
 }
 
-const approverProblems = (
-    nodeKey: string,
-    decide: DecidePoint,
-    branch: GraphBranch,
-    context: GraphContext,
-): ReadonlyArray<GraphProblem> => {
-    if (branch.then !== "ask") return []
+const approverProblems = (nodeKey: string, branch: GraphBranch): ReadonlyArray<GraphProblem> => {
+    if (branch.mode !== "ask") return []
     if (branch.approver === null) return [problem("approver_missing", nodeKey, branch.key)]
-    const covered = context.approverCovers(decide.intent, branch.approver.group, topOfBranch(decide, branch, context))
-    return [
-        ...(branch.approver.onTimeout.kind === "unset" ? [problem("on_timeout_unset", nodeKey, branch.key)] : []),
-        ...(covered ? [] : [problem("approver_no_grant", nodeKey, branch.key)]),
-    ]
-}
-
-/** The top of the amounts a branch covers, null when it has none. */
-const topOfBranch = (decide: DecidePoint, branch: GraphBranch, context: GraphContext): number | null => {
-    const fact = amountFactOf(decide, context.facts)
-    const interval = fact === null ? null : intervalOf(branch.when, fact)
-    return interval === null ? null : topOf(interval)
+    return branch.approver.onTimeout.kind === "unset" ? [problem("on_timeout_unset", nodeKey, branch.key)] : []
 }
 
 const boundaryProblems = (nodeKey: string, decide: DecidePoint, context: GraphContext): ReadonlyArray<GraphProblem> =>
@@ -163,38 +145,11 @@ const decideProblems = (node: GraphNode, context: GraphContext): ReadonlyArray<G
         ...elseProblems(node.key, decide),
         ...conditionIssues(node.key, decide, context),
         ...boundaryProblems(node.key, decide, context),
-        ...decide.branches.flatMap((branch) => approverProblems(node.key, decide, branch, context)),
+        ...decide.branches.flatMap((branch) => approverProblems(node.key, branch)),
     ]
 }
 
-/** True when the branch lets an amount run alone that the rule does not: the branch's stretch reaches past the rule's own. */
-const exceedsRule = (branch: GraphBranch, interval: Interval | null, rule: CeilingRule): boolean => {
-    if (branch.then !== "auto") return false
-    if (rule.mode !== "auto" || rule.maxMode !== null) return true
-    const top = interval === null ? null : topOf(interval)
-    if (rule.autoMax !== null) return top === null || top > rule.autoMax
-    if (rule.limitVnd === null) return false
-    return top === null || top > rule.limitVnd || (top === rule.limitVnd && interval?.hiOpen === false)
-}
-
-/**
- * A branch `auto` where the workspace rule or its `max_mode` caps the action: the graph decides inside the ceiling, never above it.
- * The branch's stretch of the amount is read against the rule's bounds, with the code's two meanings kept apart: `limit_vnd`
- * is strictly below, `auto_max` is inclusive.
- */
-export const ceilingProblems = (graph: GraphDocument, context: GraphContext): ReadonlyArray<GraphProblem> =>
-    graph.nodes.flatMap((node) => {
-        const decide = node.decide
-        const rule = context.ceilings.find((entry) => entry.action === decide?.intent)
-        if (decide === undefined || rule === undefined) return []
-        const fact = amountFactOf(decide, context.facts)
-        return decide.branches.flatMap((branch) => {
-            const interval = fact === null || branch.when === "else" ? null : intervalOf(branch.when, fact)
-            return exceedsRule(branch, interval, rule) ? [problem("ceiling", node.key, branch.key, rule.action)] : []
-        })
-    })
-
-/** The tools a node uses that the agent holds no grant on, those that do not exist yet but are drawn live, and the data it reads without a right. */
+/** The tools a node uses that the agent holds no grant on, those that do not exist yet but are drawn live. */
 export const rightsProblems = (graph: GraphDocument, context: GraphContext): ReadonlyArray<GraphProblem> =>
     graph.nodes.flatMap((node) => [
         ...node.uses.flatMap((use) => {
@@ -202,35 +157,19 @@ export const rightsProblems = (graph: GraphDocument, context: GraphContext): Rea
             if (use.tool === null) return []
             return context.isGranted(use.tool) ? [] : [problem("no_right", node.key, null, use.tool)]
         }),
-        ...node.uses.flatMap((use) => {
-            const kind = use.tool === null ? null : dataKindOfTool(use.tool)
-            return kind === null || graph.rights.some((right) => right.kind === kind)
-                ? []
-                : [problem("no_data_right", node.key, null, kind)]
-        }),
     ])
-
-/** An agent that faces outsiders is always narrow: a customer can talk it into repeating what it can read. */
-const outsiderProblems = (graph: GraphDocument, context: GraphContext): ReadonlyArray<GraphProblem> =>
-    context.facesCustomers
-        ? graph.rights
-              .filter((right) => right.scope === "workspace")
-              .map((right) => problem("outsider_wide", "", null, right.kind))
-        : []
 
 const blankProblems = (graph: GraphDocument): ReadonlyArray<GraphProblem> =>
     graph.nodes.flatMap((node) => blankAnswers(node).map((answer) => problem("blank_answer", node.key, null, answer)))
 
 /**
  * Everything the owner must fix before a graph is published, run on every save: shape (cycle, dead end, size), the `else`, the
- * conditions, gaps and overlaps, the ceiling of the rules, rights, the approvers' grants, the outsider limit and blank answers.
+ * conditions, gaps and overlaps, tools without a grant and blank answers. No authority rule caps a branch and no grant of an
+ * approver is checked: the rules decide nothing (2026-11-13).
  */
 export const graphProblems = (graph: GraphDocument, context: GraphContext): ReadonlyArray<GraphProblem> => [
     ...structure(graph),
     ...graph.nodes.flatMap((node) => decideProblems(node, context)),
-    ...ceilingProblems(graph, context),
     ...rightsProblems(graph, context),
-    ...outsiderProblems(graph, context),
     ...blankProblems(graph),
-    ...(context.hasFrame === undefined ? [] : contractProblems(graph, context.hasFrame)),
 ]

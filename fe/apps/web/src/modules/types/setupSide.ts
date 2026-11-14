@@ -15,8 +15,6 @@ export interface SetupSideGate {
     readonly statusLabel: string
     readonly statusTone: "neutral" | "warning" | "success"
     readonly evidence: string
-    /** What the agent does about this item: on its own, only after asking, or never. */
-    readonly group: "auto" | "ask" | "never"
 }
 
 /** The checklist, its progress, the apply command and what the last apply said. */
@@ -86,7 +84,6 @@ export interface AgentSetupCopy {
     readonly askingLabel: string
     readonly sideTitle: string
     readonly understandingTitle: string
-    readonly groupLabels: Readonly<Record<"auto" | "ask" | "never", string>>
     readonly understandingEmpty: string
     readonly versionNone: string
     readonly mapTitle: string

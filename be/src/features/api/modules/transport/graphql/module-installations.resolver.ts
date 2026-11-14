@@ -2,11 +2,11 @@ import type { QueryBus } from "@nestjs/cqrs"
 import { Query, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
-import { InjectQueryBus } from "@modules/platform/cqrs"
-import type { Principal } from "@modules/platform/cqrs"
+import { InjectQueryBus, type Principal } from "@modules/platform/cqrs"
 import { ListInstallationsQuery } from "../../application/list-installations.query"
 import { ModuleInstallationType } from "./dto/module-installation.type"
-import { toListInstallationsRequest, toModuleInstallationsType } from "./modules.mapper"
+import { toModuleInstallationsType } from "./module-lists.mapper"
+import { toListInstallationsRequest } from "./modules.mapper"
 
 @Resolver()
 /** GraphQL door of the installed agents. */

@@ -41,14 +41,14 @@ interface Piece {
 export const normalizeText = (text: string): string =>
     text
         .normalize("NFC")
-        .replace(/\r\n?|\u2028|\u2029/gu, "\n")
-        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, "")
-        .replace(/[\u200b-\u200d\u2060\ufeff\u00ad]/gu, "")
-        .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/gu, " ")
-        .replace(/([.\-_=*~\u00b7\u2022])\1{4,}/gu, "$1$1$1")
-        .replace(/[ \t]+/gu, " ")
-        .replace(/ ?\n ?/gu, "\n")
-        .replace(/\n{3,}/gu, "\n\n")
+        .replaceAll(/\r\n?|\u2028|\u2029/gu, "\n")
+        .replaceAll(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, "")
+        .replaceAll(/[\u200b-\u200d\u2060\ufeff\u00ad]/gu, "")
+        .replaceAll(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/gu, " ")
+        .replaceAll(/([.\-_=*~\u00b7\u2022])\1{4,}/gu, "$1$1$1")
+        .replaceAll(/[ \t]+/gu, " ")
+        .replaceAll(/ ?\n ?/gu, "\n")
+        .replaceAll(/\n{3,}/gu, "\n\n")
         .trim()
 
 /** What makes two pieces "the same" for de-duplication: case, accents and punctuation ignored. */
@@ -57,8 +57,8 @@ const sameKey = (text: string): string =>
         .toLowerCase()
         .replaceAll(D_STROKE, "d")
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/[^a-z0-9]+/gu, " ")
+        .replaceAll(/\p{Diacritic}/gu, "")
+        .replaceAll(/[^a-z0-9]+/gu, " ")
         .trim()
 
 /** Never cut between the two halves of a surrogate pair. */
@@ -196,7 +196,7 @@ const sectionsOf = (body: string): Array<string> => {
     }
     for (const block of body.split(/\n{2,}/u)) {
         const lines = block.split("\n")
-        if (delimiterOf(lines) !== null && !lines.slice(1).some(isHeading)) {
+        if (delimiterOf(lines) !== null && !lines.slice(1).some((item) => isHeading(item))) {
             add(block, "\n\n")
             hasBody = true
             continue
@@ -289,7 +289,7 @@ export const chunkLocated = (parts: ReadonlyArray<LocatedText>, size: number = C
         if (body === "") return []
         return sectionsOf(body).flatMap((section) =>
             packed(piecesOf(section, size, seenBlocks), size)
-                .filter(isNew)
+                .filter((item) => isNew(item))
                 .map((piece): LocatedText => ({ place: part.place, text: piece.text })),
         )
     })

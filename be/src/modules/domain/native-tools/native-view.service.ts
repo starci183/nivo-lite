@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { AgentViewScopeService } from "@modules/domain/agents"
-import type { NativeCaller } from "@modules/domain/mcp-gateway"
+import type { NativeCaller } from "@modules/domain/tools"
 import { nativeRefusal } from "./native-refusal.policy"
-import { viewOfCall } from "./native-view.policy"
-import type { NativeView } from "./native-view.policy"
+import { viewOfCall, type NativeView } from "./native-view.policy"
 
 @Injectable()
 /** Reads the view one native call answers for from the caller's agent: its module and instance, and the audience its lens allows. */

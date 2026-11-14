@@ -10,15 +10,19 @@ import { JOB_TICKS } from "./job-tick.policy"
 import { JobOpsTickService } from "./job-ops-tick.service"
 
 const EXPECTED = [
-    ["accounting-desk-morning", "accounting_desk", "accounting_desk.morning", {}, 1440],
+    [
+        "account-data-retention",
+        "account_data_retention",
+        "account_data_retention",
+        { batch: 1000 },
+        1440,
+    ],
     ["agent-work-sweep", "agent_turn", "agent-turn.sweep", {}, 1],
+    ["brain-upkeep", "knowledge", "brain.command", { upkeep: "brain" }, 5],
     ["connection-health-tick", "connection_health", "connection_health", { silentAfterHours: 72 }, 15],
     ["connection-poll-due-tick", "connection-poll", "poll-due-connections", {}, 1],
-    ["content-tick", "content_tick", "content_tick", {}, 15],
     ["data-sync-tick", "data_sync", "data_sync", { tick: true }, 1],
-    ["marketing-tick", "marketing_tick", "marketing_tick", {}, 15],
     ["realtime-retention-tick", "realtime_retention", "realtime_retention", { tick: true }, 1],
-    ["shifts-tick", "shifts_alerts", "shifts.tick", { kind: "tick" }, 1],
     [
         "system-history-retention",
         "system_history_retention",
@@ -26,6 +30,7 @@ const EXPECTED = [
         { doneDays: 1, failedDays: 7, batch: 5000 },
         1440,
     ],
+    ["vector-reconcile", "vector_sync", "vector.reconcile", {}, 5],
     ["zalo-refresh-tick", "zalo_refresh", "zalo_refresh", { withinMs: 25_200_000 }, 360],
 ] as const
 
@@ -71,7 +76,7 @@ describe("JobOpsTickService", () => {
         },
     )
 
-    it.each(["", "unknown", "toString", "__proto__", "constructor", "content-tick ", " content-tick"])(
+    it.each(["", "unknown", "toString", "__proto__", "constructor", "data-sync-tick ", " data-sync-tick"])(
         "rejects invalid id %j before accessing the database",
         async (id) => {
             const em = mockEntityManager()
@@ -107,7 +112,7 @@ describe("JobOpsTickService", () => {
         const { ticks, outbox } = await build(tx.em)
         const failure = new Error("queue unavailable")
         outbox.failNext("write", failure)
-        await expect(ticks.tick("shifts-tick")).rejects.toBe(failure)
+        await expect(ticks.tick("realtime-retention-tick")).rejects.toBe(failure)
         expect(tx.commits).toBe(0)
     })
 })

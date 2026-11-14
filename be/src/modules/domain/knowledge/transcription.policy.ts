@@ -1,5 +1,5 @@
 /** What the model answers when a picture holds no writing at all. */
-export const NOTHING_WRITTEN = "[TRỐNG]"
+export const NOTHING_WRITTEN = "[TR\u1ed0NG]"
 
 /** How long one transcription call may take, milliseconds. */
 export const TRANSCRIPTION_TIMEOUT_MS = 60_000
@@ -14,7 +14,7 @@ export const TRANSCRIPTION_TRIES = 3
  * The instructions of one transcription call: write down what is on the picture and nothing else. A shop's photo of a hand-written price
  * list must become the text written on it, never a guess at what it should say.
  */
-export const TRANSCRIPTION_PROMPT = [
+export const TRANSCRIPTION_PROMPT: string = [
     "You transcribe ONE picture of a page from a shop's document (a photo of a hand-written price list, a menu, a scanned page). The text is usually Vietnamese.",
     "Rules:",
     "1. Write down exactly what is written, in reading order, line by line. Keep the language, the accents, the spelling, the numbers, the prices, the units and the currency exactly as written.",

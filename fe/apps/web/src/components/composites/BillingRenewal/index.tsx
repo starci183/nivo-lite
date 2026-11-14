@@ -9,7 +9,7 @@ interface BillingRenewalProps {
 export const BillingRenewal = (props: BillingRenewalProps) => (
     <Stack gap="row" align="start">
         <Button
-            intent="commit"
+            intent="neutral"
             isPending={props.props.isPending}
             isDisabled={props.props.isPending}
             onPress={props.on.renew}

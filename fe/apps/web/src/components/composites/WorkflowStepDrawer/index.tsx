@@ -18,6 +18,7 @@ import {
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { StepAction, StepDrawerView, StepFieldValue, StepFieldView } from "@/modules/types"
+import { StepAccountsPanel } from "@/components/composites/StepAccountsPanel"
 import { StepBindings, StepCall, StepOutputs, StepPicker, StepTriggers } from "./StepContract"
 
 /** What the drawer of a step draws and what it does. */
@@ -126,7 +127,8 @@ const StepField = (props: StepFieldProps) => {
  */
 const StepFields = (props: WorkflowStepDrawerProps) => {
     const { view } = props
-    if (view.fields.length === 0 && (view.triggers.length > 0 || view.call !== null || view.bindings.length > 0)) return null
+    if (view.fields.length === 0 && (view.triggers.length > 0 || view.call !== null || view.bindings.length > 0))
+        return null
     return (
         <Stack gap="row">
             <Sublabel>{view.fieldsTitle}</Sublabel>
@@ -138,7 +140,12 @@ const StepFields = (props: WorkflowStepDrawerProps) => {
                 ) : (
                     <Stack gap="row">
                         {view.fields.map((field) => (
-                            <StepField key={field.name} field={field} isReadOnly={view.isReadOnly} onAction={props.onAction} />
+                            <StepField
+                                key={field.name}
+                                field={field}
+                                isReadOnly={view.isReadOnly}
+                                onAction={props.onAction}
+                            />
                         ))}
                     </Stack>
                 )}
@@ -153,20 +160,20 @@ const StepBranches = (props: StepBranchesProps) =>
         <Stack gap="row">
             <Sublabel>{props.view.branchesTitle}</Sublabel>
             <SurfaceCard
-            kind="list"
-            ariaLabel={props.view.branchesTitle}
-            empty={null}
-            items={props.view.branches.map((branch) => ({
-                id: branch.id,
-                title: "",
-                detail: (
-                    <Cluster gap="inline" align="center" wrap={false}>
-                        <Badge tone="neutral">{branch.output}</Badge>
-                        <Icon source={nivoIconSource("next", "chip")} usage="chip" />
-                        <Text>{branch.step}</Text>
-                    </Cluster>
-                ),
-            }))}
+                kind="list"
+                ariaLabel={props.view.branchesTitle}
+                empty={null}
+                items={props.view.branches.map((branch) => ({
+                    id: branch.id,
+                    title: "",
+                    detail: (
+                        <Cluster gap="inline" align="center" wrap={false}>
+                            <Badge tone="neutral">{branch.output}</Badge>
+                            <Icon source={nivoIconSource("next", "chip")} usage="chip" />
+                            <Text>{branch.step}</Text>
+                        </Cluster>
+                    ),
+                }))}
             />
         </Stack>
     )
@@ -214,7 +221,7 @@ export const WorkflowStepDrawer = (props: WorkflowStepDrawerProps) => {
                 onSubmit={() => props.onAction({ kind: "save" })}
                 isPending={view.isSaving}
             >
-                <Stack gap="section">
+                <Stack gap="row">
                     {view.isReadOnly ? (
                         <Text size="sm" tone="muted">
                             {view.readOnlyNote}
@@ -224,6 +231,9 @@ export const WorkflowStepDrawer = (props: WorkflowStepDrawerProps) => {
                     <StepTriggers {...props} />
                     <StepCall {...props} />
                     <StepFields {...props} />
+                    {view.accounts === undefined ? null : (
+                        <StepAccountsPanel view={view.accounts} onAction={props.onAction} />
+                    )}
                     <StepBindings {...props} />
                     <StepOutputs {...props} />
                     <StepBranches view={view} />

@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Stable refusals of the team chat. A door answers them as data; the codes are the doors' `refusal` values. */
 export enum TeamChatErrorCode {

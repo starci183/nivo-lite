@@ -4,10 +4,11 @@ import { ConfigurableModuleClass } from "./agent-runs-graphql.module-definition"
 import { CancelAgentRunResolver } from "./cancel-agent-run.resolver"
 import { DecideRunStopResolver } from "./decide-run-stop.resolver"
 import { ResumeAgentRunResolver } from "./resume-agent-run.resolver"
+import { RunStopsResolver } from "./run-stops.resolver"
 
 @Module({
     imports: [AgentRunsApiModule.register({})],
-    providers: [ResumeAgentRunResolver, CancelAgentRunResolver, DecideRunStopResolver],
+    providers: [ResumeAgentRunResolver, CancelAgentRunResolver, DecideRunStopResolver, RunStopsResolver],
 })
 /** The GraphQL transport of the agent-runs feature. */
 export class AgentRunsGraphqlModule extends ConfigurableModuleClass {}

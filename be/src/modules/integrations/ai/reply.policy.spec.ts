@@ -64,8 +64,8 @@ describe("withNotes", () => {
     it("prompt cache: keeps the opening system text the same whatever notes the question found", async () => {
         const subject = await buildSubject()
         const opening = [{ role: "system" as const, content: "You are Mai." }, { role: "system" as const, content: "Rules." }]
-        const first = subject.withNotes([...opening, { role: "user", content: "giờ mở cửa?" }], "NOTES about hours")
-        const second = subject.withNotes([...opening, { role: "user", content: "có ship không?" }], "NOTES about delivery")
+        const first = subject.withNotes([...opening, { role: "user", content: "gi\u1EDD m\u1EDF c\u1EEDa?" }], "NOTES about hours")
+        const second = subject.withNotes([...opening, { role: "user", content: "c\u00F3 ship kh\u00F4ng?" }], "NOTES about delivery")
 
         expect(first.slice(0, 2)).toEqual(opening)
         expect(second.slice(0, 2)).toEqual(opening)

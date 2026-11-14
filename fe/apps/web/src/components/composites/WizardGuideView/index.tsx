@@ -74,7 +74,7 @@ export const WizardGuideView = (props: WizardGuideViewProps) => (
     <Stack gap="section">
         {props.screens.map((screen) => (
             <Section key={screen.id} title={screen.heading} headingLevel={4}>
-                <Stack gap="row">{screen.fields.map((field) => fieldOf(field, props))}</Stack>
+                <Stack gap="inline">{screen.fields.map((field) => fieldOf(field, props))}</Stack>
             </Section>
         ))}
     </Stack>

@@ -1,7 +1,6 @@
 import type { useFormatter, useTranslations } from "next-intl"
-import { AGENT_MODULES, batchBytesOf, queueRowOf } from "@/modules/documents"
+import { AGENT_MODULES, batchBytesOf, queueRowOf, type InstanceOption } from "@/modules/documents"
 import type { AddDocumentsView, AddMode, BatchOptions, FaqEntry } from "@/hooks/knowledgeAddTypes"
-import type { InstanceOption } from "@/modules/documents"
 
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
 
@@ -131,14 +130,10 @@ export type BuildOptionsViewResult = {
         ...(
             | {
                   id:
-                      | "accounting"
                       | "chatbot"
                       | "lead_gen"
                       | "sales"
-                      | "shifts"
                       | "booking"
-                      | "inventory"
-                      | "loyalty"
                       | "video"
                       | "content"
                       | "hiring"

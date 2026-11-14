@@ -2,7 +2,7 @@ import type { ProviderUsage, UsageFigures, UsageInput } from "./ai-usage-events.
 
 /**
  * A credit is defined in dollars of token usage: 1 credit = 0.00113 USD of model token cost (= 1/885). Mirrors
- * billing_config.credit_usd_value, which ai_credit_period divides by. Derived as
+ * billing_config.credit_usd_value, which ai_credit_period divides by (each call books cost / this, exactly). Derived as
  *     min revenue per included credit (49 VND = Start 490,000 / 10,000) x (1 - 0.40 target margin) / 26,000 VND per USD = 0.001131
  * so every plan keeps a 40% gross margin on token cost. The inputs (margin, exchange rate) are only documentation: change the
  * definition in billing_config and here together.
@@ -28,12 +28,19 @@ const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; reado
     { match: "text-embedding-3-small", in: 0.02, out: 0 },
     { match: "text-embedding-3-large", in: 0.13, out: 0 },
 ]
+/** The USD price of a million tokens of a model: prompt, answer and (where the table names one) the cached part of the prompt. */
+interface ModelPrice {
+    readonly in: number
+    readonly out: number
+    readonly cachedIn?: number
+}
+
 const DEFAULT_PRICE = { in: 0.3, out: 1.2 }
 
 /** Cost in USD from the price table; `cachedTokens` (a part of the prompt) at the cached price where the table names one. */
-export const priceOf = (model: string, promptTokens: number, completionTokens: number, cachedTokens = 0): number => {
-    const price: { readonly in: number; readonly out: number; readonly cachedIn?: number } = PRICES.find((entry) => model.toLowerCase().includes(entry.match)) ?? DEFAULT_PRICE
-    const cached = price.cachedIn === undefined ? 0 : Math.min(cachedTokens, promptTokens)
+export const priceOf = (model: string, promptTokens: number, completionTokens: number, cachedTokens?: number): number => {
+    const price: ModelPrice = PRICES.find((entry) => model.toLowerCase().includes(entry.match)) ?? DEFAULT_PRICE
+    const cached = price.cachedIn === undefined ? 0 : Math.min(cachedTokens ?? 0, promptTokens)
     const cachedPrice = price.cachedIn ?? price.in
     return ((promptTokens - cached) * price.in + cached * cachedPrice + completionTokens * price.out) / 1_000_000
 }
@@ -41,8 +48,12 @@ export const priceOf = (model: string, promptTokens: number, completionTokens: n
 /** Rough token count when the provider sent none (Vietnamese is about 3 characters per token). */
 export const estimateTokens = (chars: number): number => Math.max(1, Math.ceil(chars / 3))
 
-/** Credits a model cost spends: tokens x the model's USD price per token (costUsd) over the USD value of a credit, rounded up like the database. */
-export const creditsOf = (costUsd: number): number => Math.ceil(costUsd / CREDIT_USD_VALUE)
+/**
+ * Credits a model cost spends: the cost over the USD value of a credit, EXACTLY (6 decimals), never rounded up. A fraction of a
+ * credit is real: the credits of calls add up to what they cost, and only the sum is ever shown as a whole number.
+ */
+export const creditsOf = (costUsd: number): number =>
+    Number.isFinite(costUsd) && costUsd > 0 ? Number((costUsd / CREDIT_USD_VALUE).toFixed(6)) : 0
 
 const countOf = (value: number | undefined): number | null =>
     typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null

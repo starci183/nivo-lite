@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSaveDatabaseConnection,
     type MutateSaveDatabaseConnectionRequest,
 } from "@/modules/api/graphql/mutations/mutation-save-database-connection"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveDatabaseConnectionMutation } from "@/modules/api"
 
 /** What the saveDatabaseConnection mutation is triggered with. */

@@ -28,7 +28,6 @@ const full = (): GraphDocument => {
             }),
             ...base.nodes.slice(1),
         ],
-        rights: [],
     }
 }
 
@@ -189,7 +188,7 @@ describe("updateUnits: the remaining edges", () => {
                           decide: {
                               ...node.decide,
                               branches: node.decide.branches.map((branch) =>
-                                  branch.key === "small" ? { ...branch, then: "stop" as const } : branch,
+                                  branch.key === "small" ? { ...branch, mode: "stop" as const } : branch,
                               ),
                           },
                       },
@@ -246,7 +245,7 @@ describe("the edges of conditions, wording and empty branch lists", () => {
         )
 
         expect(end?.title).toHaveLength(28)
-        expect(end?.title.endsWith("…")).toBe(true)
+        expect(end?.title.endsWith("\u2026")).toBe(true)
         expect(end?.does).toHaveLength(200)
     })
 

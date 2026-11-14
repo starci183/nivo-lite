@@ -1,3 +1,4 @@
+import { unitFormOf } from "./fact-input.policy"
 import type {
     BrainSubjectType,
     Evidence,
@@ -76,8 +77,8 @@ export const isoOf = (value: Instant): string => (value instanceof Date ? value.
 /** An optional instant as ISO text. */
 const maybeIso = (value: Instant | null): string | null => (value === null ? null : isoOf(value))
 
-/** A fact as the callers read it, from the row the database answers. */
-export const toFactRecord = (row: StoredFact): FactRecord => ({
+/** The columns of a row as the record names them. */
+const factOf = (row: StoredFact): FactRecord => ({
     id: row.id,
     subjectType: row.subjectType,
     subjectKey: row.subjectKey,
@@ -106,4 +107,13 @@ export const toFactRecord = (row: StoredFact): FactRecord => ({
     decisionNote: row.decisionNote,
     ...(row.version === null || row.version === undefined ? {} : { version: Number(row.version) }),
     ...((row.reviewFlags ?? []).length === 0 ? {} : { flags: [...(row.reviewFlags ?? [])] }),
+})
+
+/**
+ * A fact as the callers read it, from the row the database answers. Its value and unit are read in the one normal form
+ * (`unitFormOf`), so a row stored before that form (a value that also said its unit) never shows the unit twice.
+ */
+export const toFactRecord = (row: StoredFact): FactRecord => ({
+    ...factOf(row),
+    ...unitFormOf(row),
 })

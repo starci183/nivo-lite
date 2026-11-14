@@ -27,6 +27,6 @@ export const wakeOriginOf = ({ source, context, actorMemberId }: WakeOriginInput
     if (context.authorAgentId !== undefined) return "agent"
     if (context.tagSource !== undefined) return "event"
     if (actorMemberId !== null || context.authorUserId !== undefined) return "person"
-    if (source === "customer" || context.conversationId !== undefined) return "channel"
+    if (context.conversationId !== undefined) return "channel"
     return "agent"
 }

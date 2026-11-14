@@ -1,6 +1,13 @@
 import { Test } from "@nestjs/testing"
 import type { Evidence } from "./brain-facts.contracts"
-import { EVIDENCE_MAX, mergeEvidence, normalFact } from "./fact-input.policy"
+import {
+    EVIDENCE_MAX,
+    mergeEvidence,
+    normalFact,
+    shopInstantOf,
+    unitFormOf,
+    valueLineOf,
+} from "./fact-input.policy"
 
 type Subject = {
     normalFact: typeof normalFact
@@ -124,5 +131,75 @@ describe("fact inputs", () => {
             { kind: "note", ref: "n20", label: "Note 20" },
         ])
         expect(subject.mergeEvidence([], [])).toEqual([])
+    })
+})
+
+describe("the one normal form of a value and its unit (D-T5-1)", () => {
+    it.each([
+        // The live case: Sales filed "32.000 d mot don" with unit "d"; the card read "... -> 32.000 d mot don d".
+        [
+            "32.000 \u0111 m\u1ed9t \u0111\u01a1n",
+            "\u0111",
+            { value: "32.000 \u0111 m\u1ed9t \u0111\u01a1n", unit: null },
+        ],
+        ["30.000 \u0111", "\u0111", { value: "30.000", unit: "\u0111" }],
+        ["30.000\u0111", " \u0111 ", { value: "30.000", unit: "\u0111" }],
+        ["30.000", "\u0111", { value: "30.000", unit: "\u0111" }],
+        ["\u0110\u01a1n t\u1eeb 500.000 \u0111", "\u0111", { value: "\u0110\u01a1n t\u1eeb 500.000", unit: "\u0111" }],
+        [
+            "trong 7 ng\u00e0y sau khi nh\u1eadn h\u00e0ng",
+            "ng\u00e0y",
+            { value: "trong 7 ng\u00e0y sau khi nh\u1eadn h\u00e0ng", unit: null },
+        ],
+        ["12.000\u0111", "c\u00e0nh", { value: "12.000\u0111", unit: "c\u00e0nh" }],
+        [
+            "giao trong ng\u00e0y, \u0111\u01a1n tr\u00ean 2 \u0111\u01a1n",
+            "\u0111",
+            { value: "giao trong ng\u00e0y, \u0111\u01a1n tr\u00ean 2 \u0111\u01a1n", unit: "\u0111" },
+        ],
+        ["5 KG", "kg", { value: "5", unit: "kg" }],
+        [" 30.000 \u0111 m\u1ed9t \u0111\u01a1n ", null, { value: "30.000 \u0111 m\u1ed9t \u0111\u01a1n", unit: null }],
+        ["30.000", "  ", { value: "30.000", unit: null }],
+        ["\u0111", "\u0111", { value: "\u0111", unit: null }],
+        [
+            "20.000 \u0111 ho\u1eb7c 30.000 \u0111",
+            "\u0111",
+            { value: "20.000 \u0111 ho\u1eb7c 30.000 \u0111", unit: null },
+        ],
+    ])("%j with unit %j is kept as %j", (value, unit, form) => {
+        expect(unitFormOf({ value, unit })).toEqual(form)
+    })
+
+    it("reads a value with its unit once, whichever form it was stored in", () => {
+        expect(valueLineOf({ value: "32.000 \u0111 m\u1ed9t \u0111\u01a1n", unit: "\u0111" })).toBe(
+            "32.000 \u0111 m\u1ed9t \u0111\u01a1n",
+        )
+        expect(valueLineOf({ value: "32.000", unit: "\u0111" })).toBe("32.000 \u0111")
+        expect(valueLineOf({ value: "32.000 \u0111", unit: "\u0111" })).toBe("32.000 \u0111")
+        expect(valueLineOf({ value: "M\u1edf c\u1eeda 8h", unit: null })).toBe("M\u1edf c\u1eeda 8h")
+    })
+})
+
+describe("fact-input.policy: a date means the start of that day in the shop's clock (D-BR-16)", () => {
+    it.each([
+        // The walk's A6: saveBrainFact validFrom "2026-12-01" was stored as 00:00Z (07:00 in the shop).
+        ["2026-12-01", "2026-11-30T17:00:00.000Z"],
+        [" 2027-02-12 ", "2027-02-11T17:00:00.000Z"],
+        ["2026-12-01T00:00:00+07:00", "2026-12-01T00:00:00+07:00"],
+        ["2026-12-01T10:06:00.000Z", "2026-12-01T10:06:00.000Z"],
+    ])("reads %s as %s", (stated, instant) => {
+        expect(shopInstantOf(stated, "Asia/Ho_Chi_Minh")).toBe(instant)
+    })
+
+    it("keeps an absent bound absent", () => {
+        expect([shopInstantOf(null, "Asia/Ho_Chi_Minh"), shopInstantOf(undefined, "Asia/Ho_Chi_Minh")]).toEqual([null, undefined])
+    })
+
+    it.each([
+        ["2026-12-01", "Europe/London", "2026-12-01T00:00:00.000Z"],
+        ["2026-07-01", "Europe/London", "2026-06-30T23:00:00.000Z"],
+        ["2026-12-01", "America/New_York", "2026-12-01T05:00:00.000Z"],
+    ])("reads %s in the workspace's zone %s as %s", (stated, zone, instant) => {
+        expect(shopInstantOf(stated, zone)).toBe(instant)
     })
 })

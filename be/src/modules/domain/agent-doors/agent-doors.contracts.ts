@@ -46,8 +46,8 @@ export interface DoorActor {
     readonly name: string
 }
 
-/** What a scheduled item is: a care step's timer, another agent task, the next slot of a clock trigger, or the deadline of a stop. */
-export type ScheduledItemKind = "care" | "task" | "schedule" | "deadline"
+/** What a scheduled item is: an agent task, the next slot of a clock trigger, or the deadline of a stop. */
+export type ScheduledItemKind = "task" | "schedule" | "deadline"
 
 /** The record a scheduled item is about. */
 export interface ScheduledSubject {
@@ -85,7 +85,7 @@ export interface ScheduledItem {
     readonly subject: ScheduledSubject
     /** When it fires. */
     readonly dueAt: Date
-    /** For a care step: the moment the step is really due (later than `dueAt` when the timer wakes early and re-arms), else null. */
+    /** The moment an item is really due when that is later than `dueAt` (a timer that wakes early and re-arms); no scheduled item holds one today, so always null. */
     readonly realDueAt: Date | null
     /** The workflow it will wake, or null when none of the agent's active workflows takes it. */
     readonly workflow: ScheduledWorkflow | null

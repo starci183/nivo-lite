@@ -30,6 +30,7 @@ const STORED = JSON.stringify({
 
 /** A moment given as Vietnam's clock (UTC+7). */
 const vn = (iso: string): Date => new Date(`${iso}+07:00`)
+const HCM = "Asia/Ho_Chi_Minh"
 
 describe("working-hours.policy: the stored shape", () => {
     it("reads the web's JSON text, merging and ordering the ranges of a day, and writes it back the same way", async () => {
@@ -78,10 +79,10 @@ describe("working-hours.policy: on duty", () => {
         const hours = workingHoursOf(STORED)
         expect(hours).not.toBeNull()
         if (hours === null) return
-        expect(onDutyAt(hours, vn("2026-11-09T09:00:00"))).toBe(true)
-        expect(onDutyAt(hours, vn("2026-11-09T20:00:00"))).toBe(false)
-        expect(onDutyAt(hours, vn("2026-11-14T11:59:00"))).toBe(true)
-        expect(onDutyAt(hours, vn("2026-11-15T10:00:00"))).toBe(false)
+        expect(onDutyAt(hours, vn("2026-11-09T09:00:00"), HCM)).toBe(true)
+        expect(onDutyAt(hours, vn("2026-11-09T20:00:00"), HCM)).toBe(false)
+        expect(onDutyAt(hours, vn("2026-11-14T11:59:00"), HCM)).toBe(true)
+        expect(onDutyAt(hours, vn("2026-11-15T10:00:00"), HCM)).toBe(false)
     })
 
     it("finds the next working hour: later the same day, the next day, or past a day off", async () => {
@@ -89,25 +90,25 @@ describe("working-hours.policy: on duty", () => {
         const hours = workingHoursOf(STORED)
         expect(hours).not.toBeNull()
         if (hours === null) return
-        expect(nextOnDutyAt(hours, vn("2026-11-09T06:30:00"))).toEqual(vn("2026-11-09T08:00:00"))
-        expect(nextOnDutyAt(hours, vn("2026-11-09T21:15:00"))).toEqual(vn("2026-11-10T08:00:00"))
-        expect(nextOnDutyAt(hours, vn("2026-11-14T13:00:00"))).toEqual(vn("2026-11-16T08:00:00"))
+        expect(nextOnDutyAt(hours, vn("2026-11-09T06:30:00"), HCM)).toEqual(vn("2026-11-09T08:00:00"))
+        expect(nextOnDutyAt(hours, vn("2026-11-09T21:15:00"), HCM)).toEqual(vn("2026-11-10T08:00:00"))
+        expect(nextOnDutyAt(hours, vn("2026-11-14T13:00:00"), HCM)).toEqual(vn("2026-11-16T08:00:00"))
         expect(
-            nextOnDutyAt({ afterHours: false, days: [[], [], [], [], [], [], []] }, vn("2026-11-09T06:30:00")),
+            nextOnDutyAt({ afterHours: false, days: [[], [], [], [], [], [], []] }, vn("2026-11-09T06:30:00"), HCM),
         ).toBeNull()
     })
 
     it("holds a customer only off duty, with hours kept and answering after hours off", async () => {
         const { holdsCustomerAt, workingHoursOf } = await buildPolicy()
         const hours = workingHoursOf(STORED)
-        expect(holdsCustomerAt(hours, vn("2026-11-09T21:00:00"))).toBe(true)
-        expect(holdsCustomerAt(hours, vn("2026-11-09T10:00:00"))).toBe(false)
-        expect(holdsCustomerAt(hours === null ? null : { ...hours, afterHours: true }, vn("2026-11-09T21:00:00"))).toBe(
+        expect(holdsCustomerAt(hours, vn("2026-11-09T21:00:00"), HCM)).toBe(true)
+        expect(holdsCustomerAt(hours, vn("2026-11-09T10:00:00"), HCM)).toBe(false)
+        expect(holdsCustomerAt(hours === null ? null : { ...hours, afterHours: true }, vn("2026-11-09T21:00:00"), HCM)).toBe(
             false,
         )
-        expect(holdsCustomerAt(null, vn("2026-11-09T21:00:00"))).toBe(false)
+        expect(holdsCustomerAt(null, vn("2026-11-09T21:00:00"), HCM)).toBe(false)
         expect(
-            holdsCustomerAt({ afterHours: false, days: [[], [], [], [], [], [], []] }, vn("2026-11-09T21:00:00")),
+            holdsCustomerAt({ afterHours: false, days: [[], [], [], [], [], [], []] }, vn("2026-11-09T21:00:00"), HCM),
         ).toBe(false)
     })
 })

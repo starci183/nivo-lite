@@ -13,6 +13,15 @@ export const APPROVAL_FACT = { workItem: "workItemId", verdict: "verdict" } as c
  */
 export const APPROVAL_WITHDRAWN = "withdrawn"
 
+/**
+ * The verdict a stop keeps when its item was DECLINED: the value the approval door keeps for the owner's decline, and the one a
+ * take-over keeps (a take-over of a permission request IS its decline, by the person who takes the conversation).
+ */
+export const APPROVAL_DECLINED = "refused"
+
+/** The note the item of a permission request keeps when a take-over declined it: who took over is the item's decider. */
+export const DECLINED_BY_TAKEOVER = "declined_by_takeover"
+
 /** The value of a fact of a stop, or null. */
 const factOf = (stop: RunStop, name: string): string | null =>
     stop.detail.facts.find((fact) => fact.name === name)?.value ?? null
@@ -27,8 +36,11 @@ export const approvalItemWaitingOf = (stop: RunStop | null): string | null => {
     return workItemId === null || workItemId === "" ? null : workItemId
 }
 
-/** The stop's facts with the verdict `withdrawn` kept (any earlier verdict replaced). */
-export const withdrawnFactsOf = (stop: RunStop): RunStop["detail"]["facts"] => [
+/** The stop's facts with a verdict kept (any earlier verdict replaced). */
+export const verdictFactsOf = (stop: RunStop, verdict: string): RunStop["detail"]["facts"] => [
     ...stop.detail.facts.filter((fact) => fact.name !== APPROVAL_FACT.verdict),
-    { name: APPROVAL_FACT.verdict, value: APPROVAL_WITHDRAWN },
+    { name: APPROVAL_FACT.verdict, value: verdict },
 ]
+
+/** The stop's facts with the verdict `withdrawn` kept (any earlier verdict replaced). */
+export const withdrawnFactsOf = (stop: RunStop): RunStop["detail"]["facts"] => verdictFactsOf(stop, APPROVAL_WITHDRAWN)

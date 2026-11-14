@@ -1,3 +1,5 @@
+import { isRecord } from "@modules/platform/primitives"
+
 /** The queue name: the contract between the producers and the processors of the generate-with-agent and setup-turn jobs (the durable queue name). */
 export const AGENTS_QUEUE = "agents"
 
@@ -28,8 +30,6 @@ export interface SetupTurnPayload {
     /** The language of the reply. */
     readonly locale: "vi" | "en"
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
 /** True when a job payload is the payload of a generate job. */
 export const isGenerateWithAgentPayload = (value: unknown): value is GenerateWithAgentPayload =>

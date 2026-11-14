@@ -1,9 +1,7 @@
-import { Injectable } from "@nestjs/common"
-import type { MessageEvent } from "@nestjs/common"
+import { Injectable, type MessageEvent } from "@nestjs/common"
 import type { Observable } from "rxjs"
 import { eventStream } from "./event-stream.mapper"
-import { RealtimeSubscriptionsPolicy } from "./realtime-subscriptions.policy"
-import type { Replay } from "./realtime-subscriptions.policy"
+import { RealtimeSubscriptionsPolicy, type Replay } from "./realtime-subscriptions.policy"
 import type { EventFrame, RealtimeHub, RealtimeSubscribeOptions, RealtimeTopic } from "./realtime.port"
 
 /** The string `id` a frame carries, or undefined: only a frame with an id can be resumed after. */

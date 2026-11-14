@@ -1,4 +1,4 @@
-import { firstResponseMinutes, medianOf, responseMedianOf, vietnamDayStart } from "./metrics"
+import { firstResponseMinutes, medianOf, responseMedianOf, shopDayStartOf } from "./metrics"
 
 describe("medianOf", () => {
     it("is null for no values", () => {
@@ -42,16 +42,30 @@ describe("responseMedianOf", () => {
     })
 })
 
-describe("vietnamDayStart", () => {
+describe("shopDayStartOf", () => {
+    const VN = "Asia/Ho_Chi_Minh"
+
     it("is 17:00 UTC of the day before for an instant after midnight in Vietnam", () => {
-        expect(new Date(vietnamDayStart(Date.parse("2026-11-05T02:00:00.000Z"))).toISOString()).toBe(
+        expect(new Date(shopDayStartOf(Date.parse("2026-11-05T02:00:00.000Z"), VN)).toISOString()).toBe(
             "2026-11-04T17:00:00.000Z",
         )
     })
 
     it("stays on the same Vietnam day until 17:00 UTC", () => {
-        expect(new Date(vietnamDayStart(Date.parse("2026-11-04T16:59:00.000Z"))).toISOString()).toBe(
+        expect(new Date(shopDayStartOf(Date.parse("2026-11-04T16:59:00.000Z"), VN)).toISOString()).toBe(
             "2026-11-03T17:00:00.000Z",
+        )
+    })
+
+    it("a workspace in another zone starts its day at its own midnight, summer time included", () => {
+        expect(new Date(shopDayStartOf(Date.parse("2026-11-05T02:00:00.000Z"), "Europe/Berlin")).toISOString()).toBe(
+            "2026-11-04T23:00:00.000Z",
+        )
+        expect(new Date(shopDayStartOf(Date.parse("2026-07-05T02:00:00.000Z"), "Europe/Berlin")).toISOString()).toBe(
+            "2026-07-04T22:00:00.000Z",
+        )
+        expect(new Date(shopDayStartOf(Date.parse("2026-11-05T02:00:00.000Z"), "America/New_York")).toISOString()).toBe(
+            "2026-11-04T05:00:00.000Z",
         )
     })
 })

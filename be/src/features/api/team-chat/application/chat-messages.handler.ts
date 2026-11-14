@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
-import type { MessagePage } from "@modules/domain/team-chat"
+import { TeamChatRoomsService, type MessagePage } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ChatMessagesQuery } from "./chat-messages.query"
 
 @QueryHandler(ChatMessagesQuery)

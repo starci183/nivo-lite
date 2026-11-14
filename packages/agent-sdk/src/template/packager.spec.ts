@@ -41,7 +41,6 @@ describe("previewPackage: the allowlist", () => {
     it("counts what it removed, for the preview the creator reads", () => {
         const { report } = previewPackage(leakyGraph(), draftOf())
 
-        expect(report).toEqual(expect.objectContaining({ rights: 1 }))
         expect(report.brainRefs).toBeGreaterThanOrEqual(2)
         expect(report.privateSources).toBeGreaterThanOrEqual(5)
         expect(report.people).toBeGreaterThanOrEqual(4)
@@ -73,15 +72,6 @@ describe("previewPackage: the allowlist", () => {
 
         expect(middle?.approver?.group).toEqual({ roles: ["manager"], rooms: [], members: [] })
         expect(decide?.knows).toEqual([{ kind: "brain_fact", ref: "", label: "Gia noi bo" }])
-    })
-
-    it("never carries a data right: the rights become proposals the buyer turns on one by one", () => {
-        const pkg = previewPackage(leakyGraph(), draftOf()).package
-
-        expect(pkg?.graph.rights).toEqual([])
-        expect(pkg?.proposedRights).toEqual([
-            { kind: "customers", scope: "workspace", hide: ["cost"], mask: ["phone"] },
-        ])
     })
 
     it("empties the sources of the business half of the contracts and keeps the task and the limits", () => {
@@ -199,8 +189,8 @@ describe("previewPackage: bindings", () => {
     })
 
     it("packages a graph that has no contracts", () => {
-        const { nodes, rights } = leakyGraph()
-        const preview = previewPackage({ nodes, rights }, draftOf())
+        const { nodes } = leakyGraph()
+        const preview = previewPackage({ nodes }, draftOf())
 
         expect(preview.problems).toEqual([])
         expect(preview.package?.graph.contracts).toBeUndefined()

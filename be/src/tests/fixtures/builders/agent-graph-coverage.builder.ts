@@ -1,22 +1,6 @@
 import { proposalRow } from "./agent-graph.builder"
 import type { ProposalRecord } from "@modules/domain/agent-graphs"
 
-type ClosedGraphDecisionsOfResultShape = {
-    id: string
-    branchKey: string
-    closedAs: "approved"
-    amount: number
-}
-
-/** A deterministic approval history whose evidence identities are stable across proposal examples. */
-export const closedGraphDecisionsOf = (count: number, branchKey = "middle"): Array<ClosedGraphDecisionsOfResultShape> =>
-    Array.from({ length: count }, (_unused, index) => ({
-        id: `d${index}`,
-        branchKey,
-        closedAs: "approved" as const,
-        amount: 6_000_000,
-    }))
-
 const CONFLICT = { oldFactId: "old", newFactId: "new", newValueHash: "hash" }
 
 type GraphConflictCasesShape = {

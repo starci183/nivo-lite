@@ -1,26 +1,13 @@
-import type { CareOptOutAnswer, CareOptOutView } from "@modules/domain/agent-doors"
-import type { ConversationRelease } from "@modules/domain/agent-graphs"
+import type { CareOptOutAnswer, CareOptOutView, ConversationRelease } from "@modules/domain/agent-doors"
 import type { CareOptOutType, ConversationReleaseType, SetCareOptOutType } from "./dto/agent-doors.type"
 
-/** Maps a customer's opt-out to the GraphQL type. */
-export const toCareOptOutType = (view: CareOptOutView): CareOptOutType => ({
-    leadId: view.leadId,
-    optedOut: view.optedOut,
-    lastPress:
-        view.lastPress === null
-            ? null
-            : {
-                  memberId: view.lastPress.memberId,
-                  memberName: view.lastPress.memberName,
-                  outcome: view.lastPress.outcome,
-                  at: view.lastPress.at,
-              },
-})
+/** Maps a customer's opt-out to the GraphQL type (its shape already is the type's); null when the workspace has no such customer. */
+export const toCareOptOutType = (view: CareOptOutView | null): CareOptOutType | null => view
 
 /** Maps what setting the opt-out did to the GraphQL type. */
 export const toSetCareOptOutType = (answer: CareOptOutAnswer): SetCareOptOutType => ({
     outcome: answer.outcome,
-    careOptOut: answer.view === null ? null : toCareOptOutType(answer.view),
+    careOptOut: answer.view,
 })
 
 /** Maps what handing a conversation back did to the GraphQL type. */

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { CsvImportWizardService } from "@modules/domain/data-hub"
-import type { CsvImportResult } from "@modules/domain/data-hub"
+import { CsvImportWizardService, type CsvImportResult } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RunDocumentImportCommand } from "./run-document-import.command"
 
 @CommandHandler(RunDocumentImportCommand)

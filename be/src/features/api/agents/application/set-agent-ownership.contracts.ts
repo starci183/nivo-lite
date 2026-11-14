@@ -12,6 +12,4 @@ export interface SetAgentOwnershipRequest {
     readonly assignableRoles: ReadonlyArray<string>
     /** The department room keys whose members may hand the agent work. */
     readonly assignableRooms: ReadonlyArray<string>
-    /** The other agents it may pass work to. */
-    readonly canTagAgentIds: ReadonlyArray<string>
 }

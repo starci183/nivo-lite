@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { CommentNote, CommentReplyState, PageComment } from "./meta-comments.contracts"
 import { MetaCommentEntity } from "./persistence/entities"

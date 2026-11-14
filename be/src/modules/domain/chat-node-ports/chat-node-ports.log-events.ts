@@ -8,8 +8,4 @@ export enum ChatNodePortsLogEvent {
     Refused = "chat_node_ports.refused",
     /** A customer send hit a channel that is not taking messages for now, so the step is tried again: the turn and the reason. */
     SendFailed = "chat_node_ports.send_failed",
-    /** A customer send was stored as a draft for the owner (the channel's access mode is "ask"): the turn and the draft. */
-    Drafted = "chat_node_ports.drafted",
-    /** The catalogue could not be read for the photos of an order card, so the card was stored without them: the turn, never the words. */
-    OrderPhotosUnavailable = "chat_node_ports.order_photos_unavailable",
 }

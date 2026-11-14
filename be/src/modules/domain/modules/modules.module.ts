@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ModuleContextVersionsModule } from "@modules/domain/module-context-versions"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { ModuleSetupMessagesModule } from "@modules/domain/module-setup-messages"
@@ -14,13 +13,12 @@ import { InstallationChangesService } from "./installation-changes.service"
 import { InstallationDirectoryService } from "./installation-directory.service"
 import { InstallationFactsService } from "./installation-facts.service"
 import { ModuleInstallService } from "./module-install.service"
-import { ModuleTagGrantsService } from "./module-tag-grants.service"
+import { ModuleAccessService } from "./module-access.service"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { RECORD_INSTALLATION_SOURCES } from "./modules.decorators"
 import type { RecordInstallationSource } from "./modules.port"
 import { ModulesService } from "./modules.service"
 import { RecordInstallationService } from "./record-installation.service"
-import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { SetupCardsService } from "./setup-cards.service"
 import { SetupGraphService } from "./setup-graph.service"
 import { SetupChatService } from "./setup-chat.service"
@@ -47,10 +45,8 @@ export class ModulesModule extends ConfigurableModuleClass {
             ModuleReadinessService,
             InstallationDirectoryService,
             InstallationChangesService,
-            ModuleTagGrantsService,
             SetupChatService,
             SetupCardsService,
-            SetupBranchCardsService,
             SetupGraphService,
         ]
         const providers =
@@ -62,6 +58,7 @@ export class ModulesModule extends ConfigurableModuleClass {
                       AgentRenameService,
                       AgentRemovalService,
                       ModuleInstallService,
+                      ModuleAccessService,
                       InstallationFactsService,
                       RecordInstallationService,
                       SetupTurnService,

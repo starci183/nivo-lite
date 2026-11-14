@@ -35,8 +35,8 @@ describe("knowledge view lanes", () => {
 
         expect(subject.lanesOfView("chatbot")).toEqual(PUBLIC_ONLY)
         expect(subject.lanesOfView("content", "internal")).toEqual(PUBLIC_ONLY)
-        expect(subject.lanesOfView("accounting", "customer")).toEqual(PUBLIC_ONLY)
-        expect(subject.lanesOfView("accounting")).toEqual({
+        expect(subject.lanesOfView("sales", "customer")).toEqual(PUBLIC_ONLY)
+        expect(subject.lanesOfView("sales")).toEqual({
             documentPublic: true,
             documentInternal: true,
             factPublic: true,

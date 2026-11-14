@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { thrownFailureOf } from "../../tests/thrown-failure"
 import { defineBlock } from "../../block/block"
 import { defineRenderer } from "./define-renderer"
 import { RendererError } from "./renderer-error"
@@ -20,6 +21,6 @@ describe("rendererOf", () => {
 
     it("refuses a package that lists no renderer for the block, naming the block", () => {
         expect(() => rendererOf(RENDERERS, "test.other")).toThrow(RendererError)
-        expect(() => rendererOf([], "test.other")).toThrow("RENDERER_MISSING: test.other")
+        expect(thrownFailureOf(() => rendererOf([], "test.other"))).toEqual({ code: "RENDERER_MISSING", at: "test.other" })
     })
 })

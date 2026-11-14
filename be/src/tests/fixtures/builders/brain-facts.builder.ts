@@ -1,15 +1,20 @@
-import type {
-    Evidence,
-    FactInput,
-    FactRecord,
-    BrainSubjectType,
-    Scope,
-    FactStatus,
-    FactSource,
-    FactProposalKind,
+import { Test } from "@nestjs/testing"
+import { FakeClock, builder, mock, type MockOf } from "@starci/jest-preset"
+import {
+    BrainChangeRequestsService,
+    BrainFactsService,
+    brainFactsEntities,
+    type BrainSubjectType,
+    type Evidence,
+    type FactInput,
+    type FactProposalKind,
+    type FactRecord,
+    type FactSource,
+    type FactStatus,
+    type ReasonedChangeRequest,
+    type Scope,
 } from "@modules/domain/brain-facts"
-import { builder } from "@starci/jest-preset"
-import { brainFactsEntities } from "@modules/domain/brain-facts"
+import { CLOCK } from "@modules/platform/clock"
 import { entityRowBuilder } from "./entity-row.builder"
 
 const BrainFactEntity: (typeof brainFactsEntities)[0] = brainFactsEntities[0]
@@ -368,3 +373,35 @@ export const conflictingActive: BrainFactEntity = rowOf({
     modules: ["sales"],
     unit: "hour",
 })
+
+/** The id of the team-chat message the change requests quote. */
+export const MESSAGE = "44444444-4444-4444-8444-444444444444"
+
+/** A change request as an agent files it, with the reason; override what a case changes. */
+export const changeRequestOf = (changes: Partial<ReasonedChangeRequest> = {}): ReasonedChangeRequest => ({
+    subjectLabel: "Shop",
+    attributeLabel: "Hours",
+    value: "9h",
+    room: "direct",
+    messageId: MESSAGE,
+    quote: "  from Monday we open at 9  ",
+    reason: "The owner said we open at 9 from Monday instead of 8; no end was said.",
+    proposedBy: "sales",
+    agentId: "a1",
+    installationId: null,
+    ...changes,
+})
+
+/** The change-requests service built over a mocked facts store that has no fact of any key. */
+export const buildChangeRequests = async (): Promise<{ requests: BrainChangeRequestsService; facts: MockOf<BrainFactsService> }> => {
+    const service = mock<BrainFactsService>()
+    service.byKey.mockResolvedValue([])
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            BrainChangeRequestsService,
+            { provide: BrainFactsService, useValue: service },
+            { provide: CLOCK, useValue: new FakeClock(AT) },
+        ],
+    }).compile()
+    return { requests: moduleRef.get(BrainChangeRequestsService), facts: service }
+}

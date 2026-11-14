@@ -15,9 +15,18 @@ export const identOf = (text: string): string => text.slice(0, IDENT_MAX)
 /** Snake case of a name: `sales.lead` is `sales_lead`, `updatedAt` is `updated_at`. */
 export const snakeOf = (text: string): string =>
     text
-        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replaceAll(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .replaceAll(/[^a-zA-Z0-9]+/g, "_")
         .toLowerCase()
+
+/**
+ * The name of the CHECK that makes `agent_id` NOT NULL on a partition: no record exists without an agent, as a database fact (records.md).
+ * (Not `<partition>_agent_id_chk`, which a declared field `agentId` already owns.)
+ */
+export const agentCheckNameOf = (partition: string): string => identOf(`${partition}_agent_scope_chk`)
+
+/** The name of the foreign key from a partition's `agent_id` to the agents: an agent's records die with it (ON DELETE CASCADE). */
+export const agentForeignKeyNameOf = (partition: string): string => identOf(`${partition}_agent_fk`)
 
 /** The typed view of a partition: `v_<partition>`. */
 export const viewNameOf = (partition: string): string => identOf(`v_${partition}`)
@@ -50,6 +59,8 @@ export const PG_TYPE: Readonly<Record<FieldKind, string>> = {
     enum: "text",
     money_vnd: "bigint",
     sequence: "text",
+    file: "jsonb",
+    contact: "uuid",
 }
 
 /** The type name of a `format_type` text without its modifier; `character varying` reads as `text`. */
@@ -69,16 +80,16 @@ const OPCLASS = /\s(?:gin_trgm_ops|gist_trgm_ops|jsonb_path_ops|jsonb_ops|text_p
 export const normalizeSql = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/(?:public|extensions)\./g, "")
-        .replace(CAST, "")
-        .replace(CAST_WORDS, "")
-        .replace(/\[\]/g, "")
-        .replace(OPCLASS, "")
-        .replace(/["()\s]/g, "")
+        .replaceAll(/(?:public|extensions)\./g, "")
+        .replaceAll(CAST, "")
+        .replaceAll(CAST_WORDS, "")
+        .replaceAll('[]', "")
+        .replaceAll(OPCLASS, "")
+        .replaceAll(/["()\s]/g, "")
 
 /** The quoted literals of a CHECK definition: the values an enum field may take. */
 export const literalsOf = (definition: string): ReadonlyArray<string> =>
-    (definition.match(/'(?:[^']|'')*'/g) ?? []).map((quoted) => quoted.slice(1, -1).replace(/''/g, "'"))
+    (definition.match(/'(?:[^']|'')*'/g) ?? []).map((quoted) => quoted.slice(1, -1).replaceAll('\'\'', "'"))
 
 /** The `<= n` bound of a CHECK definition (a text length), or null. */
 export const limitOf = (definition: string): number | null => {

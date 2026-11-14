@@ -3,10 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import { INPUT_BOUNDS, inputBoundsIssues } from "@/modules/api"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The editable snapshot the owner has reviewed. */
 export interface PublicDocumentEditValues {

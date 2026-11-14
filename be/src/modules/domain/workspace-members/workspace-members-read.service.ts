@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 import type { MemberName, MemberRow, MemberSeat } from "./workspace-members-read.contracts"

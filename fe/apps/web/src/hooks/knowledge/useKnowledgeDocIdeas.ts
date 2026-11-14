@@ -60,6 +60,7 @@ export const useKnowledgeDocIdeas = (onFailed: () => void): DocIdeas => {
         menu: [{ id: "restore", label: t("suggestRestore") }],
     })
     const shown = isExpanded ? ideas.open : ideas.open.slice(0, VISIBLE_IDEAS)
+    const moreKey = isExpanded ? "suggestFewer" : "suggestMore"
     return {
         isLoading: ideas.isLoading,
         view: ideas.canWrite
@@ -73,7 +74,7 @@ export const useKnowledgeDocIdeas = (onFailed: () => void): DocIdeas => {
                   skippedTitle: t("suggestSkipped"),
                   moreLabel:
                       ideas.open.length > VISIBLE_IDEAS
-                          ? t(isExpanded ? "suggestFewer" : "suggestMore", { count: ideas.open.length - VISIBLE_IDEAS })
+                          ? t(moreKey, { count: ideas.open.length - VISIBLE_IDEAS })
                           : null,
                   emptyLabel: t("suggestAllDone"),
               }

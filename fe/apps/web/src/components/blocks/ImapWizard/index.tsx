@@ -1,11 +1,10 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { useFormatter, useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import type { AgentOption, SlotLabels, WizardPhases } from "@/modules/types"
 import {
     IMAP_EVERY,
@@ -186,7 +185,7 @@ const buildImapWizardView = ({
         agentStep: {
             title: t("agentTitle"),
             notice: null,
-            agents: agentChoicesOf(props.agents, "imap", tw),
+            agents: agentChoicesOf(props.agents, tw),
             value: wizard.agentIds,
             hint: tw("agentHint"),
             none: tw("agentNone"),

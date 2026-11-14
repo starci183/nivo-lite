@@ -1,5 +1,4 @@
-import { renderTransactional } from "@modules/integrations/mail"
-import type { MailLanguage, RenderedMail } from "@modules/integrations/mail"
+import { renderTransactional, type MailLanguage, type RenderedMail } from "@modules/integrations/mail"
 
 /** What an invitation mail to a person who already has an account is drawn from. */
 export interface InviteMailInput {

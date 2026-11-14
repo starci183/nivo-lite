@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateUndoBrainFactBatch,
     type MutateUndoBrainFactBatchRequest,
 } from "@/modules/api/graphql/mutations/mutation-undo-brain-fact-batch"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UndoBrainFactBatchMutation } from "@/modules/api"
 
 /** What the UndoBrainFactBatch mutation is triggered with. */

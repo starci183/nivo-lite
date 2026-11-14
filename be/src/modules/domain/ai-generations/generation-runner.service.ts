@@ -1,19 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
-import { InjectClock } from "@modules/platform/clock"
-import { InjectEventBus } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
+import { In, type EntityManager } from "typeorm"
+import { InjectAi, spendOf, type AiService } from "@modules/integrations/ai"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { ClaimedJob } from "@modules/platform/jobs"
-import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { isGenerateWithAgentPayload } from "@modules/queues/agents"
-import { AiGenerationCompletedEvent } from "@modules/events/api"
-import type { AiGenerationCompletedPayload } from "@modules/events/api"
 import type { GenerationRunStatus, QueuedGeneration, TurnAttempt } from "./ai-generations.contracts"
 import { InjectUsage } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
@@ -44,6 +36,10 @@ const meteringOf = (raw: unknown): Metering | undefined => {
 /** Why a generation has no text, as the row keeps it. */
 const NOT_CONFIGURED = "ai_not_configured"
 const NO_ANSWER = "no_answer"
+/** The credit pool of the workspace is empty: no call was made; the caller may ask again once credits return. */
+const NO_CREDITS = "no_credits"
+/** The language of the allowance's block message, which the runner never shows (it only asks whether the pool is empty). */
+const BLOCK_LOCALE = "vi"
 /** The model a failed try is booked with: the endpoint's chat profile was asked, its model was never told. */
 const UNTOLD_MODEL = "work"
 
@@ -56,9 +52,7 @@ const promptCharsOf = (input: QueuedGeneration["input"]): number =>
  * Runs one queued generation: the prompt the app wrote goes once to the AI endpoint (`AiService.chat`, a plain model answer: no
  * tools, no history, nothing carried between requests) and the text lands on the `ai_generations` row the caller is looking at. It never
  * retries: the caller waits a bounded time and gives up on its own, so any failure is written on the row as the answer. A row the
- * caller already cancelled is left alone, and only text that was delivered is metered. The end of a generation is published as
- * `ai_generation_completed` in the transaction that writes it, so the capability that asked (content, video) applies the result
- * from the bus, retried until it holds, and a crash between the two loses nothing.
+ * caller already cancelled is left alone, and only text that was delivered is metered.
  */
 export class GenerationRunnerService {
     constructor(
@@ -67,10 +61,9 @@ export class GenerationRunnerService {
         @InjectLogger() private readonly logger: Logger,
         @InjectUsage() private readonly usage: UsageGate,
         @InjectAi() private readonly ai: AiService,
-        @InjectEventBus() private readonly bus: EventBus,
     ) {}
 
-    /** Runs the generation the job names; the run publishes its end to the bus itself. */
+    /** Runs the generation the job names; */
     async runJob(job: ClaimedJob): Promise<void> {
         await this.run(job.payload)
     }
@@ -106,14 +99,17 @@ export class GenerationRunnerService {
     }
 
     /**
-     * One call of the model within the caller's deadline. The endpoint never throws: it answers nothing when the call failed, the
-     * deadline passed or the text is empty, so a missing answer at or after the deadline is the timeout and any other is a failure.
+     * One call of the model within the caller's deadline, after the credit pool is checked (owner: the pool is the only limit; out of
+     * credits the row says `no_credits` and no call is made). A try that got no text is a failure; one that still returned tokens (cut
+     * at its cap, or empty) carries what it spent, which `fail` books. A missing answer at or after the deadline is the timeout.
      */
     private async attempt(generation: QueuedGeneration, startedAt: number): Promise<TurnAttempt> {
         if (!this.ai.available())
             return { text: null, usage: null, timings: {}, reason: NOT_CONFIGURED, timedOut: false }
+        if ((await this.usage.blockedBy(generation.workspaceId, generation.usageKind, BLOCK_LOCALE)) !== null)
+            return { text: null, usage: null, timings: {}, reason: NO_CREDITS, timedOut: false }
         const timeoutMs = turnTimeoutOf(generation.input.timeoutMs)
-        const answer = await this.ai.chat({
+        const tried = await this.ai.attempt({
             messages: promptOf(generation.input),
             json: generation.input.responseFormat === "json",
             schema: null,
@@ -122,11 +118,19 @@ export class GenerationRunnerService {
             affinity: generation.workspaceId,
         })
         const modelMs = this.clock.now().getTime() - startedAt
-        if (answer === null) {
-            const timedOut = modelMs >= timeoutMs
+        const spend = spendOf(tried)
+        if (!tried.ok) {
+            const timedOut = spend === null && modelMs >= timeoutMs
             this.logger.warn(AiGenerationsLogEvent.GenerationUnanswered, { purpose: generation.purpose, timedOut })
-            return { text: null, usage: null, timings: { model_ms: modelMs }, reason: NO_ANSWER, timedOut }
+            return {
+                text: null,
+                usage: spend === null ? null : runUsageOf(spend.usage, spend.model),
+                timings: { model_ms: modelMs },
+                reason: NO_ANSWER,
+                timedOut,
+            }
         }
+        const answer = tried.answer
         return {
             text: answer.text,
             usage: runUsageOf(answer.usage, answer.model),
@@ -157,7 +161,6 @@ export class GenerationRunnerService {
                 .returning("usage_kind, module")
                 .execute()
             const written = meteringOf(result.raw)
-            if (written !== undefined) await this.announce(tx, generation, "done")
             return written
         })
         if (row === undefined) return "dropped"
@@ -197,10 +200,22 @@ export class GenerationRunnerService {
                     },
                 )
             }
-            await this.announce(tx, generation, attempt.timedOut ? "cancelled" : "error")
         })
-        // A try the model was asked and did not answer may still be charged: booked estimated from the prompt, never billed (U1).
-        if (attempt.reason !== NOT_CONFIGURED) {
+        // A try that gave no usable answer is never billed (concept.tokens-and-credits): one that returned tokens (cut at its cap, or
+        // empty) is booked with what it spent, one the model was asked and did not answer is booked estimated from the prompt. Each
+        // try exactly once.
+        if (attempt.usage !== null) {
+            await this.usage.record({
+                workspaceId: generation.workspaceId,
+                kind: generation.usageKind,
+                module: generation.module,
+                usage: attempt.usage,
+                completionChars: 0,
+                failure: "no_answer",
+                reported: true,
+                ...this.meteringOf(generation),
+            })
+        } else if (attempt.reason !== NOT_CONFIGURED && attempt.reason !== NO_CREDITS) {
             await this.usage.record({
                 workspaceId: generation.workspaceId,
                 kind: generation.usageKind,
@@ -220,21 +235,6 @@ export class GenerationRunnerService {
     private meteringOf(generation: QueuedGeneration): Pick<GenerationUsageRecord, "runId" | "work"> {
         const { runId, work } = generation.input
         return { ...(runId == null ? {} : { runId }), ...(work == null ? {} : { work }) }
-    }
-
-    /** Publishes the end of the generation in the transaction that wrote it; consumers read the row, so the status is a hint. */
-    private async announce(
-        tx: EntityManager,
-        generation: QueuedGeneration,
-        status: AiGenerationCompletedPayload["status"],
-    ): Promise<void> {
-        const event = AiGenerationCompletedEvent.create({
-            generationId: generation.id,
-            workspaceId: generation.workspaceId,
-            purpose: generation.purpose,
-            status,
-        })
-        await this.bus.publish(event, tx, event.eventId)
     }
 
     private timingsOf(attempt: TurnAttempt, startedAt: number): Readonly<Record<string, number>> {

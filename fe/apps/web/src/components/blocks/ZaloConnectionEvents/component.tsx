@@ -1,6 +1,9 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { CONNECTION_EVENTS_PLACEHOLDER, ConnectionEventsCard } from "@/components/composites/ConnectionEventsCard"
-import type { ConnectionEventLine } from "@/components/composites/ConnectionEventsCard"
+import {
+    CONNECTION_EVENTS_PLACEHOLDER,
+    ConnectionEventsCard,
+    type ConnectionEventLine,
+} from "@/components/composites/ConnectionEventsCard"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The words, the read and the retry of the live rail of a Zalo OA connection. */

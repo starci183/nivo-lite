@@ -15,9 +15,8 @@ describe("core vocabulary", () => {
         expect(agentTagEffect.payload.safeParse({ toModuleKey: "sales", text: "hi" }).success).toBe(true)
         expect(agentTagEffect.payload.safeParse({ text: "hi" }).success).toBe(false)
         expect(agentTagEffect.payload.safeParse({ toAgentId: "a", toModuleKey: "s", text: "hi" }).success).toBe(false)
-        expect(agentTagEffect.payload.safeParse({ toAgentId: "a", text: "hi", visibility: "redirect" }).success).toBe(
-            true,
-        )
-        expect(agentTagEffect.payload.safeParse({ toAgentId: "a", text: "hi", visibility: "page" }).success).toBe(false)
+        // `visibility` is deleted (R28: the speaker machinery that read it is gone, Opus-1c): the payload carries no such member.
+        expect(agentTagEffect.payload.safeParse({ toAgentId: "a", text: "hi", visibility: "page" })).toMatchObject({ success: true, data: { toAgentId: "a", text: "hi" } })
+        expect(agentTagEffect.payload.parse({ toAgentId: "a", text: "hi", visibility: "page" })).not.toHaveProperty("visibility")
     })
 })

@@ -2,8 +2,9 @@ import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./api-keys.module-definition"
 import { CreateApiKeyHandler } from "./application/create-api-key.handler"
 import { ListApiKeysHandler } from "./application/list-api-keys.handler"
+import { RenameApiKeyHandler } from "./application/rename-api-key.handler"
 import { RevokeApiKeyHandler } from "./application/revoke-api-key.handler"
 
-@Module({ providers: [CreateApiKeyHandler, ListApiKeysHandler, RevokeApiKeyHandler] })
+@Module({ providers: [CreateApiKeyHandler, ListApiKeysHandler, RenameApiKeyHandler, RevokeApiKeyHandler] })
 /** The api-keys feature: the handlers of its application. */
 export class ApiKeysApiModule extends ConfigurableModuleClass {}

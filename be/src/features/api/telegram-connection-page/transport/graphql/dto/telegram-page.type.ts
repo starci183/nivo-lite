@@ -19,6 +19,10 @@ export class TelegramPageType {
     @Field(() => Boolean)
     healthy!: boolean
 
+    /** What the connection asks of its owner beyond its status: `needs_reauth` (connect again), `degraded` (connected, yet the provider cannot be read at the moment), or null. */
+    @Field(() => String, { nullable: true })
+    attention!: string | null
+
     /** The bot's username, or an empty text. */
     @Field(() => String)
     botUsername!: string

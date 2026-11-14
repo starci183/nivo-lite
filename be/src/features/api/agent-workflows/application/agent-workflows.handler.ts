@@ -1,25 +1,25 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentWorkflowsAdminService } from "@modules/domain/agent-graphs"
-import type { WorkflowWire } from "@modules/domain/agent-graphs"
+import { AgentWorkflowListService, type WorkflowListWire } from "@modules/domain/agent-pages"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentWorkflowsQuery } from "./agent-workflows.query"
 
 @QueryHandler(AgentWorkflowsQuery)
-/** Lists the workflows of the agent of one installation, the primary one first adopted from its graph. The admin service checks the seat and that the workflow is the agent's. */
-export class AgentWorkflowsHandler extends ICQRSHandler<AgentWorkflowsQuery, ReadonlyArray<WorkflowWire>> {
+/** Lists the workflows of the agent of one installation, the primary one first adopted from its graph, each with its readiness. */
+export class AgentWorkflowsHandler extends ICQRSHandler<AgentWorkflowsQuery, ReadonlyArray<WorkflowListWire>> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly admin: AgentWorkflowsAdminService,
+        private readonly workflows: AgentWorkflowListService,
     ) {
         super(logger)
     }
 
-    protected override process(command: AgentWorkflowsQuery): Promise<ReadonlyArray<WorkflowWire>> {
-        return this.admin.list(
-            { workspaceId: command.params.request.workspaceId, principalId: command.params.principal.id },
-            command.params.request,
+    protected override process(query: AgentWorkflowsQuery): Promise<ReadonlyArray<WorkflowListWire>> {
+        return this.workflows.list(
+            query.params.principal.id,
+            query.params.request.workspaceId,
+            query.params.request.installationId,
+            query.params.request.locale,
         )
     }
 }

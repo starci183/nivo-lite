@@ -125,7 +125,7 @@ const showPicker = async (settings: PickerSettings): Promise<PickedChoice | null
             if (action === member(actions, "CANCEL")) return resolve(null)
             if (action !== member(actions, "PICKED")) return
             const docs = member(data, "docs")
-            resolve({ token, docs: Array.isArray(docs) ? docs.map(docOf) : [] })
+            resolve({ token, docs: Array.isArray(docs) ? docs.map((entry) => docOf(entry)) : [] })
         })
         call(call(builder, "build"), "setVisible", true)
     })

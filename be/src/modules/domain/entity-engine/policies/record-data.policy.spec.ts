@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { insertStampOf, leadEntityOf } from "@tests/fixtures/builders/entity-engine-compiler.builder"
 import { mock } from "@starci/jest-preset"
+import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
 import type { MetaShape } from "@tests/fixtures/builders/entity-engine-compiler.builder"
 import { EntityEngineErrorCode } from "../errors/entity-engine.error"
 import { dataOf, defaultsOf, scalarOf, sequenceFieldsOf } from "./record-data.policy"
@@ -68,6 +69,43 @@ describe("dataOf", () => {
         )
     })
 
+})
+
+describe("dataOf of file fields", () => {
+    it("stores a file reference the field accepts and refuses one off its types or size", async () => {
+        const policy = await build()
+        const project = defineEntity({
+            name: "fixture.project",
+            dataKind: "fixture-project",
+            fields: { cover: field.file({ accept: ["image/*"], maxBytes: 100 }) },
+        })
+        const cover = { key: "w/fixture.project/r/cover/o", mime: "image/png", size: 100, name: "a.png" }
+
+        expect(policy.dataOf(project, { cover })).toEqual({ cover })
+        expect(policy.dataOf(project, { cover: null })).toEqual({ cover: null })
+        expect(() => policy.dataOf(project, { cover: { ...cover, mime: "video/mp4" } })).toThrow(
+            EntityEngineErrorCode.ValueInvalid,
+        )
+        expect(() => policy.dataOf(project, { cover: { ...cover, size: 101 } })).toThrow(EntityEngineErrorCode.ValueInvalid)
+    })
+
+    it("stores a list of file references in order, refuses one past its max, a repeated object or one off its types, and takes the empty list", async () => {
+        const policy = await build()
+        const set = defineEntity({
+            name: "fixture.photo-set",
+            dataKind: "fixture-photo-set",
+            fields: { photos: field.file({ accept: ["image/*"], maxBytes: 100, many: true, max: 2 }) },
+        })
+        const item = (n: number, mime = "image/png") => ({ key: `w/fixture.photo-set/r/photos/o${n}`, mime, size: 10, name: `p${n}.png` })
+
+        expect(policy.dataOf(set, { photos: [item(2), item(1)] })).toEqual({ photos: [item(2), item(1)] })
+        expect(policy.dataOf(set, { photos: [] })).toEqual({ photos: [] })
+        expect(() => policy.dataOf(set, { photos: [item(1), item(2), item(3)] })).toThrow(EntityEngineErrorCode.ValueInvalid)
+        expect(() => policy.dataOf(set, { photos: [item(1), item(1)] })).toThrow(EntityEngineErrorCode.ValueInvalid)
+        expect(() => policy.dataOf(set, { photos: [item(1, "video/mp4")] })).toThrow(EntityEngineErrorCode.ValueInvalid)
+        expect(() => policy.dataOf(set, { photos: item(1) })).toThrow(EntityEngineErrorCode.ValueInvalid)
+    })
+
     it.each(["ghost", "workspaceId", "constructor"])(
         "refuses the key %s that is not a declared field",
         async (name) => {
@@ -91,6 +129,19 @@ describe("defaultsOf", () => {
             note: "",
             meta: {},
         })
+    })
+})
+
+describe("defaultsOf: a list file field", () => {
+    it("starts empty: an empty list, never a text", async () => {
+        const policy = await build()
+        const set = defineEntity({
+            name: "fixture.photo-set",
+            dataKind: "fixture-photo-set",
+            fields: { photos: field.file({ accept: ["image/*"], maxBytes: 100, many: true, max: 2 }) },
+        })
+
+        expect(policy.defaultsOf(set, insertStampOf())).toEqual({ photos: [] })
     })
 })
 

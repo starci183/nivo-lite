@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentScheduleFireService } from "@modules/domain/agent-schedules"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the slot that came up becomes one schedule wake on the one road. */

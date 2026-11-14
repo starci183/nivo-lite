@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { LEAD_STAGES, MAX_REASON_CHARS, planMove } from "../../../rules/sales/stage"
@@ -50,6 +49,6 @@ export const moveStageAction: ActionDefinition = defineAction({
         })
         return written.ok ? { ok: true, data: { stage: plan.stage } } : writeRefusal(written)
     },
-    refreshes: ["sales.leads", "sales.lead-counts", "sales.lead"],
+    refreshes: ["blocks-core.sales.api.lead.list", "blocks-core.sales.api.lead.counts", "blocks-core.sales.api.lead.get"],
     optimistic: true,
 })

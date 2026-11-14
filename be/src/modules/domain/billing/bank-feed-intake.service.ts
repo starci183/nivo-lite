@@ -14,7 +14,7 @@ export class BankFeedIntakeService {
         private readonly schedule: PollScheduleService,
     ) {}
 
-    /** Records one verified delivery of a provider for deferred booking, then marks the connection's webhook as having delivered. */
+    /** Records one verified delivery of a provider as a receipt (its rows and trigger follow when the job runs), then marks the connection's webhook as having delivered. */
     async acceptDelivery(rawBody: RawBody, connection: string, provider: string): Promise<void> {
         await this.feed.acceptFeedDelivery(rawBody, connection, provider)
         await this.schedule.recordWebhook(connection)

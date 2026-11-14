@@ -3,6 +3,7 @@ import type { AnyEntityDefinition } from "./entity-any.types"
 import { EntityDefinitionError } from "./entity-error"
 import { entityLocalProblems } from "./entity-problems"
 import type {
+    ContactDeleteRule,
     CustomKeyDef,
     EntityConfig,
     EntityDefinition,
@@ -130,6 +131,71 @@ function sequence(options: SequenceOptions): FieldDef<"sequence", false> {
     return { ...built("sequence"), ...options, nullable: false }
 }
 
+/** Options of a file field. */
+interface FileOptions {
+    /** The content types accepted, exact (`image/png`) or a family (`image/*`). */
+    readonly accept: readonly [string, ...Array<string>]
+    /** The largest object accepted, in bytes. */
+    readonly maxBytes: number
+}
+
+/** Options of a list file field: the file options and the most files the list holds. */
+interface FileListOptions extends FileOptions {
+    /** The field holds an ordered list of references. */
+    readonly many: true
+    /** The most references the list holds. */
+    readonly max: number
+}
+
+/** The list form of a file field: never null, an empty list when nothing is attached. */
+type FileListField = FieldDef<"file", false> & { readonly many: true }
+
+/**
+ * A reference to one object of the core's file store (`FileRef`: key, content type, size, name), never its bytes. Always nullable
+ * and with no default: the object is uploaded for a record that exists, so a record is created without it and the confirmed
+ * reference is written after. With `many: true` and `max` the field holds an ordered list of references (`FileRef[]`, at most `max`,
+ * each object once), never null and an empty list by default.
+ */
+function file(options: FileListOptions): FileListField
+function file(options: FileOptions): FieldDef<"file", true>
+function file(options: FileOptions | FileListOptions): FieldDef<"file", true> | FileListField {
+    if ("many" in options) {
+        return {
+            kind: "file",
+            nullable: false,
+            accept: options.accept,
+            maxBytes: options.maxBytes,
+            many: true,
+            max: options.max,
+            default: "empty",
+        }
+    }
+    return { kind: "file", nullable: true, accept: options.accept, maxBytes: options.maxBytes }
+}
+
+/** Options of a contact field. */
+interface ContactOptions<N extends boolean> {
+    /** The record may point at no contact. */
+    readonly nullable?: N
+    /** What deleting the contact does to the record: `erase` it (the default), or `clear` the field (a nullable field only). */
+    readonly onContactDelete?: ContactDeleteRule
+}
+
+function contact(options: ContactOptions<true> & { readonly nullable: true }): FieldDef<"contact", true>
+function contact(options?: ContactOptions<false>): FieldDef<"contact", false>
+/**
+ * The id of a core contact (`contacts`, never a record): the engine proves on every write that the contact is one of the workspace's
+ * (and stores the id it stands for now), erases or clears the record when the contact is deleted, and a filter on it follows a merge
+ * (the ids merged into the contact match too). No default: the id is always the caller's.
+ */
+function contact(options?: ContactOptions<boolean>): FieldDef<"contact", boolean> {
+    return {
+        kind: "contact",
+        nullable: options?.nullable === true,
+        ...(options?.onContactDelete === undefined ? {} : { onContactDelete: options.onContactDelete }),
+    }
+}
+
 /** The field builders `field` exposes. */
 interface FieldBuilders {
     /** A uuid value. */
@@ -154,6 +220,10 @@ interface FieldBuilders {
     readonly moneyVnd: typeof moneyVnd
     /** A per-workspace counter with a display format. */
     readonly sequence: typeof sequence
+    /** A reference to one stored file, with the content types and size it accepts. */
+    readonly file: typeof file
+    /** The id of a core contact, erased or cleared with the contact. */
+    readonly contact: typeof contact
 }
 
 /** The field builders: `field.text({ maxLength: 200 })`; add `nullable: true` for a nullable field. A field has no column: it lives in `data`. */
@@ -169,16 +239,25 @@ export const field: FieldBuilders = {
     enum: enumeration,
     moneyVnd,
     sequence,
+    file,
+    contact,
 }
 
 const freezeAll = (entity: AnyEntityDefinition): void => {
-    for (const declared of Object.values(entity.fields)) Object.freeze(declared)
+    for (const declared of Object.values(entity.fields)) {
+        if (declared.accept !== undefined) Object.freeze(declared.accept)
+        Object.freeze(declared)
+    }
     Object.freeze(entity.fields)
     for (const list of [entity.indexes, entity.constraints, entity.matchKeys]) {
         if (list !== undefined) Object.freeze(list)
     }
     for (const part of [entity.relations, entity.projection]) {
         if (part !== undefined) Object.freeze(part)
+    }
+    if (entity.states !== undefined) {
+        Object.freeze(entity.states.transitions)
+        Object.freeze(entity.states)
     }
     Object.freeze(entity)
 }
@@ -196,3 +275,9 @@ export const defineEntity = <F extends FieldMap>(config: EntityConfig<F>): Entit
     freezeAll(entity)
     return entity
 }
+
+/**
+ * The records frame's name of the record type builder (`<package>.<agent>.<domain>`): the SAME function as `defineEntity`, one
+ * implementation. New declarations use `defineRecordType`; existing ones keep `defineEntity` (no churn for a synonym).
+ */
+export const defineRecordType: typeof defineEntity = defineEntity

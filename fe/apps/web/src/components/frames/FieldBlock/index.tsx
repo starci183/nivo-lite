@@ -18,8 +18,8 @@ interface FieldBlockProps {
  * on the left of the title row and an optional switch or button on the right, then the content below.
  */
 export const FieldBlock = (props: FieldBlockProps) => (
-    <Stack gap="inline">
-        <Cluster gap="inline" justify="between" wrap={false}>
+    <Stack gap="row">
+        <Cluster gap="identity" justify="between" wrap={false}>
             <Stack gap="identity">
                 <Text isStrong>{props.title}</Text>
                 {props.description === undefined ? null : (

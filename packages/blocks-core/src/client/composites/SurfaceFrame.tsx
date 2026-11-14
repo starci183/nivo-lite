@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Section, SurfaceCard } from "@starci/grammar/common"
+import { useInCard } from "./CardScope"
 
 /** What the frame of a block is given. */
 interface SurfaceFrameProps {
@@ -10,11 +11,12 @@ interface SurfaceFrameProps {
     readonly children: ReactNode
 }
 
-/** The frame of a record block: a card on a page, a titled section inside a side pane, nothing at all when the sub-tab already names it. */
+/** The frame of a record block: a card on a page, a titled section inside a side pane or inside a card that already stands, nothing at all when the sub-tab already names it. */
 export const SurfaceFrame = (props: SurfaceFrameProps): ReactNode => {
+    const inCard = useInCard()
     const loading = props.isLoading === true ? { isLoading: true } : {}
     if (props.surface === "plain") return props.children
-    if (props.surface === "section")
+    if (props.surface === "section" || inCard)
         return (
             <Section title={props.label} headingLevel={2} {...loading}>
                 {props.children}

@@ -4,16 +4,16 @@ import { IsOptional, IsString, MaxLength, MinLength, ValidateNested } from "clas
 import { NullAsAbsent } from "@modules/platform/graphql"
 
 @InputType()
-/** The truth as the person writes it on the "Ghi vào Second Brain" form. */
+/** The truth as the person writes it on the "Ghi vao Second Brain" form. */
 export class ChatTruthFactInput {
-    /** What the truth is about ("Giao hàng"). */
+    /** What the truth is about ("Giao hang"). */
     @Field(() => String)
     @IsString()
     @MinLength(1)
     @MaxLength(160)
     subjectLabel!: string
 
-    /** Which property of it ("Phí ship nội thành"). */
+    /** Which property of it ("Phi ship noi thanh"). */
     @Field(() => String)
     @IsString()
     @MinLength(1)
@@ -54,7 +54,7 @@ export class ChatTruthFactInput {
 }
 
 @InputType()
-/** "Ghi vào Second Brain" on one message of the team chat. */
+/** "Ghi vao Second Brain" on one message of the team chat. */
 export class CaptureChatTruthInput {
     /** The person's message (`chatMessages.nodes.id`). */
     @Field(() => ID)

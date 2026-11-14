@@ -4,7 +4,8 @@ const GOOD = { holdingMessage: "Please wait a moment." }
 
 describe("CHATBOT_SETTINGS_DEFAULTS", () => {
     it("holds a holding message that fits", () => {
-        expect(CHATBOT_SETTINGS_DEFAULTS).toEqual({ holdingMessage: expect.any(String) })
+        const anyText: unknown = expect.any(String)
+        expect(CHATBOT_SETTINGS_DEFAULTS).toEqual({ holdingMessage: anyText })
         expect(settingsProblemsOf(CHATBOT_SETTINGS_DEFAULTS)).toEqual([])
     })
 })

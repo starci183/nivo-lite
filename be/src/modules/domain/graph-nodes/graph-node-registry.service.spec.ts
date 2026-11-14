@@ -3,6 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { echo, emptyPing as ping, record } from "@tests/fixtures/builders/graph-node-probe.builder"
 import { EntityNodePortsService } from "@modules/domain/entity-engine"
 import type { EntityNodePort } from "@modules/domain/entity-engine"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
@@ -11,7 +12,7 @@ import { GRAPH_NODES_OPTIONS } from "./graph-nodes.decorators"
 import type { NodeDataPort, NodeEffectExecutor, NodeInstall } from "./graph-nodes.contracts"
 import { readFileSync, readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
-import { coreEffects, coreNodes, TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { seededGraphOf } from "@tests/fixtures/builders/flow-f-world.builder"
 import type { SeededGraphName } from "@tests/fixtures/builders/flow-f-world.builder"
 
@@ -122,7 +123,7 @@ describe("GraphNodeRegistryService", () => {
  */
 
 const SOURCE_ROOT = join(__dirname, "..", "..")
-const SEEDED: ReadonlyArray<SeededGraphName> = ["accounting", "chatbot", "sales"]
+const SEEDED: ReadonlyArray<SeededGraphName> = ["chatbot", "sales"]
 
 const sourcesUnder = (folder: string): ReadonlyArray<string> =>
     readdirSync(folder).flatMap((name) => {
@@ -131,10 +132,13 @@ const sourcesUnder = (folder: string): ReadonlyArray<string> =>
         return name.endsWith(".ts") && !name.endsWith(".spec.ts") ? [path] : []
     })
 
-/** The core effects by the name the vocabulary exports them under (`agentTagEffect` serves `nivo.agent.tag`: the prefix is not in it). */
+/**
+ * The core effects by the name the vocabulary exports them under (`agentTagEffect` serves `nivo.tool.agent.tag`: neither the `nivo.`
+ * prefix nor the `tool.` of the renamed ids is in it).
+ */
 const effectBySymbol = new Map(
-    coreEffects.map((effect) => [
-        `${effect.id.replace(/^nivo\./u, "").replace(/[.-](\w)/g, (_all, letter: string) => letter.toUpperCase())}Effect`,
+    INSTALLED.nodeInstall().effects.map((effect) => [
+        `${effect.id.replace(/^nivo\.(tool\.)?/u, "").replace(/[.-](\w)/g, (_all, letter: string) => letter.toUpperCase())}Effect`,
         effect.id,
     ]),
 )
@@ -145,7 +149,7 @@ const servedEffects = (): ReadonlySet<string> => {
     for (const path of sourcesUnder(SOURCE_ROOT)) {
         const text = readFileSync(path, "utf8")
         if (!text.includes("addExecutor(") || path.includes("graph-node-registry.service")) continue
-        for (const effect of coreEffects) if (text.includes(`"${effect.id}"`)) served.add(effect.id)
+        for (const effect of INSTALLED.nodeInstall().effects) if (text.includes(`"${effect.id}"`)) served.add(effect.id)
         for (const [symbol, id] of effectBySymbol) if (text.includes(`${symbol}.id`)) served.add(id)
         for (const [name, id] of Object.entries(TOOL)) if (new RegExp(`\\bTOOL\\.${name}\\b`).test(text)) served.add(id)
     }
@@ -154,14 +158,23 @@ const servedEffects = (): ReadonlySet<string> => {
 
 /** Every effect a seeded graph's nodes may run, and the undo of each that has one. */
 const seededEffects = (): ReadonlySet<string> => {
-    const nodes = new Map<string, (typeof coreNodes)[number]>(coreNodes.map((node) => [node.id, node]))
+    // A step runs effects two ways since the flip: a control node (`defineNode`) declares them; a template node's tool call of an
+    // effect id is run by that effect's executor (the node host's `templateCall`).
+    const effectIds = new Set(INSTALLED.nodeInstall().effects.map((effect) => effect.id))
+    const nodes = new Map<string, ReadonlyArray<string>>([
+        ...INSTALLED.nodeInstall().nodes.map((node): readonly [string, ReadonlyArray<string>] => [node.id, node.effects]),
+        ...INSTALLED.templateNodes().map((node): readonly [string, ReadonlyArray<string>] => [
+            node.id,
+            node.tools.filter((tool) => effectIds.has(tool)),
+        ]),
+    ])
     const compensations = new Map<string, string | undefined>(
-        coreEffects.map((effect) => [effect.id, effect.compensation]),
+        INSTALLED.nodeInstall().effects.map((effect) => [effect.id, effect.compensation]),
     )
     const effects = new Set<string>()
     for (const name of SEEDED) {
         for (const node of seededGraphOf(name).nodes) {
-            for (const effect of nodes.get(node.step)?.effects ?? []) {
+            for (const effect of nodes.get(node.step) ?? []) {
                 effects.add(effect)
                 const undo = compensations.get(effect)
                 if (undo !== undefined) effects.add(undo)
@@ -173,18 +186,15 @@ const seededEffects = (): ReadonlySet<string> => {
 
 describe("the effects of the seeded graphs are served", () => {
     it("reads the seeded graphs and the back end's executors", () => {
-        expect(seededEffects().size).toBeGreaterThan(5)
+        // Three effects (the agent tag, the customer message, the team message): the money left the engine (owner decision, wave 4: its order,
+        // payment and report effects are gone) and the accounting module's seeded graph with it (the module was dropped; ledger TOOLS-LEAD F2:
+        // `SEEDED` follows the seed files that exist, chatbot and sales, so the threshold fell from 3 to 2 more than none).
+        expect(seededEffects().size).toBeGreaterThan(2)
         expect(servedEffects()).toContain(TOOL.customerMessageSend)
     })
 
     it("has an executor for every effect a seeded graph may run, and for its undo", () => {
         const served = servedEffects()
         expect([...seededEffects()].filter((effect) => !served.has(effect)).sort()).toEqual([])
-    })
-
-    it("serves the payment effects the live Zalo order died on", () => {
-        expect([...servedEffects()]).toEqual(
-            expect.arrayContaining([TOOL.paymentMarkPaid, TOOL.paymentClaimRecord, TOOL.paymentClaimWithdraw]),
-        )
     })
 })

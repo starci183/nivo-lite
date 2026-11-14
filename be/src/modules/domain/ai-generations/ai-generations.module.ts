@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AI_GENERATIONS_OPTIONS, AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-generations.module-definition"
 import { DirectGenerationService } from "./direct-generation.service"

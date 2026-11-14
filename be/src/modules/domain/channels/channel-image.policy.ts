@@ -10,15 +10,14 @@ export const TELEGRAM_CAPTION_MAX = 1024
 const PICTURE_CHANNELS: ReadonlySet<string> = new Set(["zalo", "telegram"])
 
 /**
- * How the pictures of a reply go out on a channel. Zalo lays several into one collage image when a collage can be built, else sends them one
- * by one; Telegram sends several as one album with a caption on each; one picture is sent as itself. A channel that shows no pictures gets none
- * here (its replies carry them as links).
+ * How the pictures of a reply go out on a channel. Zalo sends several one by one; Telegram sends several as one album with a caption on each;
+ * one picture is sent as itself. A channel that shows no pictures gets none here (its replies carry them as links).
  */
-export const imageRouteOf = (channel: string, count: number, collageReady: boolean): ImageRoute => {
+export const imageRouteOf = (channel: string, count: number): ImageRoute => {
     if (count <= 0 || !PICTURE_CHANNELS.has(channel)) return "none"
     if (count === 1) return "single"
     if (channel === "telegram") return "album"
-    return collageReady ? "collage" : "each"
+    return "each"
 }
 
 /** True when a channel shows the pictures of a reply as pictures. */

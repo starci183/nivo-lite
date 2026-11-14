@@ -1,14 +1,16 @@
-import { INBOX_STATUSES, inboxStatusOf, unansweredOf } from "./conversation-status"
+import { CHAT_MARKS, INBOX_STATUSES, chatMarkOf, inboxStatusOf } from "./conversation-status"
 
+// Design change (owner ruling R26): `unansweredOf` is gone with the chat's line tail; `unanswered` is the chatbot's own stored mark.
+// Design change (ruling R43): the holder is the engine's route hold, so the facts say `held` (from the route), not a stored name.
 describe("inboxStatusOf", () => {
     it("lists a waiting customer first, even when a person holds the conversation", () => {
-        expect(inboxStatusOf({ waiting: true, handledBy: null })).toBe("needs")
-        expect(inboxStatusOf({ waiting: true, handledBy: "Ha" })).toBe("needs")
+        expect(inboxStatusOf({ waiting: true, held: false })).toBe("needs")
+        expect(inboxStatusOf({ waiting: true, held: true })).toBe("needs")
     })
 
     it("lists a held conversation as handled and the rest as the AI's", () => {
-        expect(inboxStatusOf({ waiting: false, handledBy: "Ha" })).toBe("handled")
-        expect(inboxStatusOf({ waiting: false, handledBy: null })).toBe("ai")
+        expect(inboxStatusOf({ waiting: false, held: true })).toBe("handled")
+        expect(inboxStatusOf({ waiting: false, held: false })).toBe("ai")
     })
 
     it("offers the three statuses in the inbox order", () => {
@@ -16,15 +18,10 @@ describe("inboxStatusOf", () => {
     })
 })
 
-describe("unansweredOf", () => {
-    it("is true when the customer wrote last and a person is needed or holds the conversation", () => {
-        expect(unansweredOf({ waiting: true, handledBy: null, lastRole: "user" })).toBe(true)
-        expect(unansweredOf({ waiting: false, handledBy: "Ha", lastRole: "user" })).toBe(true)
-    })
-
-    it("is false when the AI answers, or the agent wrote last, or nobody spoke", () => {
-        expect(unansweredOf({ waiting: false, handledBy: null, lastRole: "user" })).toBe(false)
-        expect(unansweredOf({ waiting: true, handledBy: "Ha", lastRole: "agent" })).toBe(false)
-        expect(unansweredOf({ waiting: true, handledBy: "Ha", lastRole: null })).toBe(false)
+describe("chatMarkOf", () => {
+    it("stores only the open question: handled is never a stored mark", () => {
+        expect(chatMarkOf(true)).toBe("needs")
+        expect(chatMarkOf(false)).toBe("ai")
+        expect(CHAT_MARKS).toEqual(["needs", "ai"])
     })
 })

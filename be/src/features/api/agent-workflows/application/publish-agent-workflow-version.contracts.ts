@@ -1,3 +1,5 @@
+import type { AgreedRightRequest } from "@modules/domain/agent-graphs"
+
 /** What publishAgentWorkflowVersion takes. */
 export interface PublishAgentWorkflowVersionRequest {
     /** The workspace the request is made in. */
@@ -12,4 +14,6 @@ export interface PublishAgentWorkflowVersionRequest {
     readonly note: string
     /** The newest version number the caller read; a newer one refuses the change. */
     readonly expectedLatest?: number | null
+    /** The operations on connected accounts the owner agrees this activation may bring; absent when nothing was asked of the owner. */
+    readonly agreedRights?: ReadonlyArray<AgreedRightRequest> | null
 }

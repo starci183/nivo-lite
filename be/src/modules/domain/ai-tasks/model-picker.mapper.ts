@@ -1,4 +1,5 @@
-import { DEFAULT_MODEL, MODEL_ENTRIES, NODE_MODELS } from "@nivo-lite/blocks-core"
+import { DEFAULT_MODEL, MODEL_ENTRIES } from "@nivo-lite/agent-sdk/models"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import type { Locale } from "@modules/platform/i18n"
 import type { ConfiguredProviders } from "./ai-tasks.contracts"
 
@@ -20,7 +21,7 @@ export interface ModelPickerChoice {
 
 /** What blocks-core declares for one node step that calls AI: the drawer's preselected choice when the node names none. */
 export interface ModelPickerNode {
-    /** The node step id (`accounting.match-payment`). */
+    /** The node step id (`sales.payment-short`). */
     readonly nodeId: string
     /** `auto` or a model id. */
     readonly model: string
@@ -49,7 +50,7 @@ export const modelPickerOf = (locale: Locale, providers: ConfiguredProviders): M
         available: entry.provider === null || providers[entry.provider],
     })),
     defaultModel: DEFAULT_MODEL,
-    nodes: Object.entries(NODE_MODELS)
+    nodes: Object.entries(INSTALLED.nodeModels())
         .map(([nodeId, row]) => ({ nodeId, model: row.model, weight: row.weight }))
         .sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
 })

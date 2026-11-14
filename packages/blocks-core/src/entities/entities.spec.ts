@@ -8,43 +8,40 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the thirty-three entities once each", () => {
+    it("declares the thirty-two entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
-            "sales.lead",
-            "sales.order",
-            "sales.settings",
-            "chat.conversation",
-            "chat.message",
-            "chat.settings",
-            "payment.transaction",
-            "payment.claim",
-            "accounting.invoice",
-            "accounting.adjustment",
-            "accounting.book-entry",
-            "accounting.question",
-            "accounting.settings",
-            "loyalty.member",
-            "loyalty.ledger-entry",
-            "loyalty.reward",
-            "loyalty.program",
-            "loyalty.campaign",
-            "loyalty.decision",
-            "agent.run",
-            "agent.run-step",
-            "agent.node-effect",
-            "agent.graph",
-            "agent.graph-version",
-            "agent.graph-source",
-            "agent.graph-proposal",
-            "agent.graph-decision",
-            "agent.workflow",
-            "agent.workflow-version",
-            "agent.run-workflow",
-            "agent.lead-freeze",
-            "agent.conversation-hold",
-            "agent.run-stop",
-            "agent.lead-memory",
-            "workspace.settings",
+            "blocks-core.sales.lead",
+            "blocks-core.sales.order",
+            "blocks-core.sales.settings",
+            "blocks-core.chatbot.chat",
+            "blocks-core.chatbot.note",
+            "blocks-core.chatbot.reply",
+            "blocks-core.chatbot.settings",
+            "blocks-core.sales.transaction",
+            "blocks-core.sales.claim",
+            "blocks-core.sales.invoice",
+            "blocks-core.sales.ledger-adjustment",
+            "blocks-core.sales.ledger-entry",
+            "blocks-core.sales.ledger-question",
+            "blocks-core.sales.ledger-settings",
+            "blocks-core.sales.loyalty-member",
+            "blocks-core.sales.loyalty-ledger-entry",
+            "blocks-core.sales.loyalty-reward",
+            "blocks-core.sales.loyalty-program",
+            "blocks-core.sales.loyalty-campaign",
+            "blocks-core.sales.loyalty-decision",
+            "blocks-core.booking.service",
+            "blocks-core.booking.resource",
+            "blocks-core.booking.hours",
+            "blocks-core.booking.booking",
+            "blocks-core.booking.settings",
+            "blocks-core.video.project",
+            "blocks-core.video.render",
+            "blocks-core.video.brand-kit",
+            "blocks-core.hiring.job",
+            "blocks-core.hiring.candidate",
+            "blocks-core.content.brand",
+            "blocks-core.content.post",
         ])
         expect(catalog.size).toBe(FLOW_F_ENTITIES.length)
         expect(new Set(FLOW_F_ENTITIES.map((entity) => entity.dataKind)).size).toBe(FLOW_F_ENTITIES.length)
@@ -55,7 +52,7 @@ describe("flow F entity declarations", () => {
     })
 
     it("sorts the loyalty members by the last purchase with those who never bought last", () => {
-        const member = entityNamed("loyalty.member")
+        const member = entityNamed("blocks-core.sales.loyalty-member")
         expect(member?.fields["lastActivityAt"]).toMatchObject({
             kind: "timestamptz",
             nullable: false,
@@ -69,24 +66,36 @@ describe("flow F entity declarations", () => {
 
     it("keeps the graph node kinds of today", () => {
         expect(Object.fromEntries(FLOW_F_ENTITIES.map((entity) => [entity.name, entity.dataKind]))).toMatchObject({
-            "sales.lead": "sales-lead",
-            "sales.order": "order",
-            "chat.conversation": "conversation",
-            "chat.message": "message",
-            "chat.settings": "chatbot-settings",
-            "payment.transaction": "bank-transaction",
-            "payment.claim": "payment-claim",
-            "loyalty.member": "loyalty-member",
-            "loyalty.ledger-entry": "loyalty-ledger",
-            "loyalty.reward": "loyalty-reward",
-            "loyalty.program": "loyalty-program",
-            "loyalty.campaign": "loyalty-campaign",
-            "loyalty.decision": "loyalty-decision",
+            "blocks-core.sales.lead": "sales-lead",
+            "blocks-core.sales.order": "order",
+            "blocks-core.chatbot.chat": "conversation",
+            "blocks-core.chatbot.reply": "chat-reply",
+            "blocks-core.chatbot.settings": "chatbot-settings",
+            "blocks-core.sales.transaction": "bank-transaction",
+            "blocks-core.sales.claim": "payment-claim",
+            "blocks-core.sales.loyalty-member": "loyalty-member",
+            "blocks-core.sales.loyalty-ledger-entry": "loyalty-ledger",
+            "blocks-core.sales.loyalty-reward": "loyalty-reward",
+            "blocks-core.sales.loyalty-program": "loyalty-program",
+            "blocks-core.sales.loyalty-campaign": "loyalty-campaign",
+            "blocks-core.sales.loyalty-decision": "loyalty-decision",
         })
     })
 
+    it("keeps one video brand kit per workspace, the clips of a render as a list of file references and its narration as one", () => {
+        expect(entityNamed("blocks-core.video.brand-kit")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["key"], refusal: "brand-kit-exists" }),
+        )
+        expect(entityNamed("blocks-core.video.render")?.fields["clips"]).toMatchObject({ kind: "file", many: true, max: 12 })
+        expect(entityNamed("blocks-core.video.render")?.fields["voice"]).toMatchObject({ kind: "file", nullable: true })
+        expect(entityNamed("blocks-core.video.render")?.fields["video"]).toBeUndefined()
+        expect(entityNamed("blocks-core.video.project")?.fields["script"]?.shape?.safeParse({ scenes: [{ role: "intro" }] }).success).toBe(
+            false,
+        )
+    })
+
     it("mints the order number per day as DH-yyyymmdd-nnnn", () => {
-        expect(entityNamed("sales.order")?.fields["orderNo"]).toMatchObject({
+        expect(entityNamed("blocks-core.sales.order")?.fields["orderNo"]).toMatchObject({
             kind: "sequence",
             format: "DH-{yyyy}{mm}{dd}-{n:4}",
             resets: "day",
@@ -94,26 +103,34 @@ describe("flow F entity declarations", () => {
     })
 
     it("finds a lead by phone or email and keeps each unique per workspace", () => {
-        const lead = entityNamed("sales.lead")
+        const lead = entityNamed("blocks-core.sales.lead")
         expect(lead?.matchKeys).toEqual([
             { name: "phone", on: ["phone"] },
             { name: "email", on: ["email"] },
         ])
-        expect(lead?.constraints?.map((constraint) => constraint.name)).toEqual(["phone_key", "email_key"])
+        expect(lead?.constraints?.map((constraint) => constraint.name)).toEqual(["contact_key", "phone_key", "email_key"])
         expect(lead?.fields["stage"]?.of).toEqual(["new", "qualified", "proposal", "won", "lost"])
     })
 
-    it("links a message to its conversation, required", () => {
-        expect(entityNamed("chat.message")?.relations?.["conversation"]).toEqual({
+    // Design change (owner ruling R26): the chatbot's line record `blocks-core.chatbot.message` is gone (the lines are the engine's); its
+    // note and the reply work item a member typed hang on the conversation instead.
+    it("links a note and a reply to their conversation, required", () => {
+        expect(entityNamed("blocks-core.chatbot.note")?.relations?.["conversation"]).toEqual({
             kind: "toOne",
-            target: "chat.conversation",
+            target: "blocks-core.chatbot.chat",
+            required: true,
+            onDelete: "cascade",
+        })
+        expect(entityNamed("blocks-core.chatbot.reply")?.relations?.["conversation"]).toEqual({
+            kind: "toOne",
+            target: "blocks-core.chatbot.chat",
             required: true,
             onDelete: "cascade",
         })
     })
 
     it("lets one transaction settle at most one claim", () => {
-        const unique = entityNamed("payment.claim")?.constraints?.find(
+        const unique = entityNamed("blocks-core.sales.claim")?.constraints?.find(
             (constraint) => constraint.name === "settled_transaction_key",
         )
         expect(unique).toMatchObject({
@@ -124,110 +141,39 @@ describe("flow F entity declarations", () => {
     })
 
     it("projects the books from transactions, invoices and adjustments", () => {
-        const book = entityNamed("accounting.book-entry")
+        const book = entityNamed("blocks-core.sales.ledger-entry")
         expect(book?.projection?.sources).toEqual([
-            "payment.transaction",
-            "accounting.invoice",
-            "accounting.adjustment",
+            "blocks-core.sales.transaction",
+            "blocks-core.sales.invoice",
+            "blocks-core.sales.ledger-adjustment",
         ])
         expect(book?.view).toBe(true)
     })
 
-    it("opens one run per wake and planning flag, and one step per run and step key", () => {
-        expect(entityNamed("agent.run")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["wakeId", "planning"], refusal: "run-already-open" }),
-        )
-        expect(entityNamed("agent.run-step")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["runId", "stepKey"], refusal: "step-already-written" }),
-        )
-        expect(entityNamed("agent.run-step")?.relations?.["run"]).toMatchObject({ kind: "toOne", required: true })
-    })
-
-    it("keeps the effect ledger unique per key and never deletable", () => {
-        const ledger = entityNamed("agent.node-effect")
-        expect(ledger?.constraints).toContainEqual(expect.objectContaining({ on: ["effectKey"] }))
-        expect(ledger?.deletable).toBeUndefined()
-    })
-
-    it("keeps one graph per agent, one version number per agent and one proposal per cause", () => {
-        expect(entityNamed("agent.graph")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["agentId"], refusal: "graph-exists" }),
-        )
-        expect(entityNamed("agent.graph-version")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["agentId", "number"], refusal: "version-taken" }),
-        )
-        expect(entityNamed("agent.graph-proposal")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["agentId", "dedupeKey"], refusal: "proposal-raised" }),
-        )
-        expect(entityNamed("agent.graph-proposal")?.fields["evidence"]?.shape?.safeParse({ ids: [1] }).success).toBe(
-            false,
-        )
-    })
-
-    it("keeps one workflow per agent and key, one version number per workflow, and pins a run to its workflow version", () => {
-        expect(entityNamed("agent.workflow")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["agentId", "key"], refusal: "workflow-exists" }),
-        )
-        expect(entityNamed("agent.workflow-version")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["workflowId", "number"], refusal: "version-taken" }),
-        )
-        expect(entityNamed("agent.workflow-version")?.fields["document"]?.nullable).toBe(false)
-        expect(entityNamed("agent.run-workflow")?.constraints).toContainEqual(
-            expect.objectContaining({ kind: "unique", on: ["runId"], refusal: "run-pinned" }),
-        )
-        expect(entityNamed("agent.run")?.fields["workflowId"]).toBeUndefined()
-    })
-
-    it("records a graph decision once per work item or per dedupe key, and never without either", () => {
-        const decision = entityNamed("agent.graph-decision")
-        expect(decision?.matchKeys).toEqual([
-            { name: "work_item", on: ["workItemId"] },
-            { name: "dedupe", on: ["dedupeKey"] },
+    it("indexes the notes of a conversation, keeps a reply once per send key, and one transaction and one invoice per order", () => {
+        expect(entityNamed("blocks-core.chatbot.note")?.indexes).toEqual([
+            { name: "conversation_at", on: ["conversationId", { desc: "at" }, { desc: "id" }] },
         ])
-        expect(decision?.constraints?.filter((constraint) => constraint.kind === "unique")).toHaveLength(2)
-        expect(decision?.constraints).toContainEqual(expect.objectContaining({ kind: "check", name: "once_check" }))
-        expect(decision?.fields["path"]?.shape?.parse({ keys: ["a"] })).toEqual({ keys: ["a"] })
-    })
-
-    it("parses the step effect and door call shapes", () => {
-        const step = entityNamed("agent.run-step")
-        expect(step?.fields["effect"]?.shape?.parse({ kind: "compensable", compensation: "undo" })).toEqual({
-            kind: "compensable",
-            compensation: "undo",
-        })
-        expect(step?.fields["effect"]?.shape?.safeParse({ kind: "other" }).success).toBe(false)
-        expect(
-            step?.fields["doorCalls"]?.shape?.parse({ calls: [{ tool: "nivo.chat.send", ok: true, effectKey: "k" }] }),
-        ).toEqual({ calls: [{ tool: "nivo.chat.send", ok: true, effectKey: "k" }] })
-    })
-
-    it("indexes the messages of a conversation and keeps one transaction and one invoice per order", () => {
-        expect(entityNamed("chat.message")?.indexes).toEqual([
-            { name: "conversation_sent", on: ["conversationId", { desc: "sentAt" }, { desc: "id" }] },
-            {
-                name: "conversation_status_sent",
-                on: ["conversationId", "status", { desc: "sentAt" }, { desc: "id" }],
-            },
-            { name: "conversation_role_sent", on: ["conversationId", "role", { desc: "sentAt" }, { desc: "id" }] },
-            { name: "conversation_status_created", on: ["conversationId", "status", { desc: "createdAt" }, { desc: "id" }] },
-            { name: "channel_ref", on: ["channelRef", "id"] },
-            { name: "reply_of", on: ["conversationId", "inReplyTo", { desc: "sentAt" }, { desc: "id" }] },
-            { name: "role_recent", on: ["role", { desc: "sentAt" }, { desc: "id" }] },
+        expect(entityNamed("blocks-core.chatbot.reply")?.constraints).toEqual([
+            { kind: "unique", name: "send_key", on: ["key"], refusal: "reply-exists" },
         ])
-        for (const name of ["payment.transaction", "accounting.invoice"]) {
-            expect(entityNamed(name)?.constraints).toContainEqual(
-                expect.objectContaining({
-                    kind: "unique",
-                    name: "order_key",
-                    on: ["orderId"],
-                    where: { op: "notNull", field: "orderId" },
-                }),
-            )
-        }
+        expect(entityNamed("blocks-core.sales.invoice")?.constraints).toContainEqual(
+            expect.objectContaining({
+                kind: "unique",
+                name: "order_key",
+                on: ["orderId"],
+                where: { op: "notNull", field: "orderId" },
+            }),
+        )
+        // D-MX-3: an order may be paid by several credits (a customer who pays in parts); the order's credits are read by index.
+        expect(entityNamed("blocks-core.sales.transaction")?.constraints).not.toContainEqual(
+            expect.objectContaining({ name: "order_key" }),
+        )
+        expect(entityNamed("blocks-core.sales.transaction")?.indexes).toContainEqual({ name: "order", on: ["orderId", { desc: "id" }] })
     })
 
     it("numbers invoices per month as HD-yyyymm-nnnn", () => {
-        expect(entityNamed("accounting.invoice")?.fields["invoiceNo"]).toMatchObject({
+        expect(entityNamed("blocks-core.sales.invoice")?.fields["invoiceNo"]).toMatchObject({
             kind: "sequence",
             format: "HD-{yyyy}{mm}-{n:4}",
             resets: "month",
@@ -235,7 +181,7 @@ describe("flow F entity declarations", () => {
     })
 
     it("parses the declared jsonb shapes", () => {
-        const names = entityNamed("payment.claim")?.fields["names"]?.shape
+        const names = entityNamed("blocks-core.sales.claim")?.fields["names"]?.shape
         expect(names?.parse({ values: ["Dinh"] })).toEqual({ values: ["Dinh"] })
     })
 
@@ -254,10 +200,10 @@ describe("flow F entity declarations", () => {
         })
 
         it("names the indexes and checks the drift compares", () => {
-            const lead = manifestOf(FLOW_F_ENTITIES).entities.find((entry) => entry.entity === "sales.lead")
-            expect(lead?.partition).toBe("records_sales_lead")
+            const lead = manifestOf(FLOW_F_ENTITIES).entities.find((entry) => entry.entity === "blocks-core.sales.lead")
+            expect(lead?.partition).toBe("records_blocks_core_sales_lead")
             expect(lead?.indexes).toEqual(
-                expect.arrayContaining(["records_sales_lead_recent", "records_sales_lead_phone_key"]),
+                expect.arrayContaining(["records_blocks_core_sales_lead_recent", "records_blocks_core_sales_lead_phone_key"]),
             )
         })
     })

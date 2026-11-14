@@ -1,0 +1,5 @@
+# Agent chưa cài đặt xong: thông báo ở trang agent
+
+Khi `lifecycle` là `needs_setup` hoặc `setting_up` (agent chưa có bản ngữ cảnh đang dùng: nó KHÔNG trả lời khách), khung trang của agent hiện MỘT `Alert tone="neutral"`: "Agent này chưa trả lời khách", dòng "Đã xong N/total phần cài đặt" (từ `setupProgress` của installation) + "Còn lại: …" (các gate của module chưa `confirmed` trong `gateEvidence` của phiên cài đặt, theo nhãn của danh mục module), và MỘT action "Hoàn tất cài đặt" mở tab Thiết lập có sẵn. Không hiện ở chính tab Thiết lập (sẽ trỏ vào chính nó).
+Tín hiệu cũ được dùng lại, không thêm tín hiệu thứ hai: chip trạng thái ở đầu trang ("Chưa thiết lập" / "Đang thiết lập") giữ nguyên; thông báo "chưa chạy lượt nào, hãy hoàn tất phần Thiết lập" của tab Làm việc (warning) đã bỏ vì thông báo này nói cùng việc kèm hành động.
+Quy tắc: `toast-alert.md` `toast-alert.choose.owner` hàng "page" (việc cần người đọc chú ý: Alert trên nền trang, trước nội dung); trạng thái vẫn là Badge (`chip.choose.role`). Không đỏ (tông neutral). Ảnh: dữ liệu mẫu; dòng "đầu trang" chỉ vẽ tên + thông báo, không có khung trang thật.

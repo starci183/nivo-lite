@@ -1,13 +1,11 @@
-import { useState } from "react"
-import type { ComponentProps, ReactNode } from "react"
+import { useState, type ComponentProps, type ReactNode } from "react"
 import { Badge, Pane, PaneGrid, PaneHeader, PaneSection, SurfaceCard } from "@starci/grammar/common"
 import type { ParamHandle, ReadDefinition } from "../../block/block.types"
 import { wordsOf } from "../../schema/namespaced"
 import type { PlanNode } from "../../spec/render-plan"
 import type { SpecAsideSummary } from "../../spec/spec.types"
 import { resolveVariables, textOf, valueAt } from "../../spec/spec-value"
-import { AsideHeadProvider } from "./aside-head"
-import type { AsideHead } from "./aside-head"
+import { AsideHeadProvider, type AsideHead } from "./aside-head"
 import { isOpenedBySelection } from "./show-when"
 import { useIsNarrow } from "./useIsNarrow"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
@@ -71,14 +69,16 @@ interface NarrowAsideProps {
 }
 
 /** The aside content on a narrow screen: a titled card with the count, or the bare blocks. */
-const NarrowAside = (props: NarrowAsideProps): ReactNode =>
-    props.hasTitle ? (
-        <SurfaceCard label={props.label} headingLevel={2} {...(props.count === "" ? {} : { fact: props.count })}>
+const NarrowAside = (props: NarrowAsideProps): ReactNode => {
+    const fact = props.count === "" ? {} : { fact: props.count }
+    return props.hasTitle ? (
+        <SurfaceCard label={props.label} headingLevel={2} {...fact}>
             {props.children}
         </SurfaceCard>
     ) : (
-        <>{props.children}</>
+        props.children
     )
+}
 
 /** The head of the aside pane as the Grammar takes it: the title, the muted line, and the close button when the block gave both its action and its name. */
 const paneHeadOf = (head: AsideHead): PaneHeadSlot => ({
@@ -171,6 +171,9 @@ const AsidePanes = (props: AsidePanesProps): ReactNode => {
     /** A summary that reads zero means nothing waits: the aside would hold only its empty notice, so it is not drawn and its column collapses. */
     const hasAside = !props.isEmpty
     const grid = gridOf(hasTabs, hasAside, props.isChosen)
+    const mainBody = props.isPanes ? props.main : <PaneSection>{props.main}</PaneSection>
+    const asideHead = props.head === null ? {} : { head: paneHeadOf(props.head) }
+    const countStatus = props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> }
     return (
         <PaneGrid label={props.label} areas={grid.areas} columns={grid.columns} rows={grid.rows}>
             {hasTabs ? (
@@ -179,7 +182,7 @@ const AsidePanes = (props: AsidePanesProps): ReactNode => {
                 </Pane>
             ) : null}
             <Pane area="main" label={props.namespace} {...PANES_PANE[String(props.isPanes)]}>
-                {props.isPanes ? props.main : <PaneSection>{props.main}</PaneSection>}
+                {mainBody}
             </Pane>
             {hasAside && props.isNarrow ? (
                 <Pane area="aside" label={props.label}>
@@ -191,18 +194,10 @@ const AsidePanes = (props: AsidePanesProps): ReactNode => {
                 </Pane>
             ) : null}
             {hasAside && !props.isNarrow ? (
-                <Pane
-                    area="aside"
-                    surface
-                    label={props.label}
-                    {...(props.head === null ? {} : { head: paneHeadOf(props.head) })}
-                >
+                <Pane area="aside" surface label={props.label} {...asideHead}>
                     {props.hasTitle && props.head === null ? (
                         <PaneSection align="center">
-                            <PaneHeader
-                                title={props.label}
-                                {...(props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> })}
-                            />
+                            <PaneHeader title={props.label} {...countStatus} />
                         </PaneSection>
                     ) : null}
                     <PaneSection grow>{props.aside}</PaneSection>

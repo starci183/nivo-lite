@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { audienceOfModule, viewOf, knowledgeFolderOf } from "./knowledge-view.policy"
+import { audienceOfModule, viewOf } from "./knowledge-view.policy"
 
 const SUBJECT = Symbol("knowledge-view.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { audienceOfModule, viewOf, knowledgeFolderOf } }],
+        providers: [{ provide: SUBJECT, useValue: { audienceOfModule, viewOf } }],
     }).compile()
     return moduleRef.get<typeof import("./knowledge-view.policy")>(SUBJECT)
 }
@@ -18,15 +18,15 @@ describe("knowledge view policy", () => {
         expect(subject.audienceOfModule("content")).toBe("customer")
         expect(subject.audienceOfModule("video")).toBe("customer")
         expect(subject.audienceOfModule("unknown")).toBe("customer")
-        expect(subject.audienceOfModule("accounting")).toBe("internal")
+        expect(subject.audienceOfModule("sales")).toBe("internal")
     })
 
     it("keeps the module's audience when no narrower audience is requested", async () => {
         const subject = await build()
 
-        expect(subject.viewOf({ workspaceId: "ws-1", module: "accounting" })).toEqual({
+        expect(subject.viewOf({ workspaceId: "ws-1", module: "sales" })).toEqual({
             workspaceId: "ws-1",
-            module: "accounting",
+            module: "sales",
             audience: "internal",
             installationId: null,
         })
@@ -44,27 +44,19 @@ describe("knowledge view policy", () => {
         expect(
             subject.viewOf({
                 workspaceId: "ws-1",
-                module: "accounting",
+                module: "sales",
                 audience: "customer",
                 installationId: "agent-1",
             }),
         ).toEqual({
             workspaceId: "ws-1",
-            module: "accounting",
+            module: "sales",
             audience: "customer",
             installationId: "agent-1",
         })
         expect(
-            subject.viewOf({ workspaceId: "ws-1", module: "accounting", audience: "internal", installationId: null }),
-        ).toEqual({ workspaceId: "ws-1", module: "accounting", audience: "internal", installationId: null })
-    })
-
-    it("looks up known knowledge folders and answers null for unknown modules", async () => {
-        const subject = await build()
-
-        expect(subject.knowledgeFolderOf("chatbot")).toBe("chatbot")
-        expect(subject.knowledgeFolderOf("accounting")).toBe("accounting")
-        expect(subject.knowledgeFolderOf("unknown")).toBeNull()
+            subject.viewOf({ workspaceId: "ws-1", module: "sales", audience: "internal", installationId: null }),
+        ).toEqual({ workspaceId: "ws-1", module: "sales", audience: "internal", installationId: null })
     })
 })
 

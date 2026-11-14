@@ -17,7 +17,7 @@ export interface TelegramWebhookInfo {
 }
 
 /** What the payOS confirm-webhook call needs. */
-export interface PayosCredential {
+export interface PayosConfirmCredential {
     /** The channel's client id. */
     readonly clientId: string
     /** The channel's API key. */

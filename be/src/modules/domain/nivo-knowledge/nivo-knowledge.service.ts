@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {

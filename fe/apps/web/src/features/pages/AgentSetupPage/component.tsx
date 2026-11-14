@@ -4,8 +4,8 @@ import type { ModuleKey } from "@/modules/catalog"
 /** The Setup tab of an agent: the type and the instance of the url. */
 export interface AgentSetupPageBaseProps {
     readonly props: {
-        readonly module: ModuleKey
-        readonly installationId: string
+        readonly module: ModuleKey | undefined
+        readonly installationId: string | undefined
     }
 }
 

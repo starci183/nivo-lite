@@ -1,14 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { Raw } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Raw, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BrainFactsReadService } from "./brain-facts-read.service"
 import type { FactRecord, MaintenanceResult, WithdrawnFacts } from "./brain-facts.contracts"
 import { BrainFactsError, BrainFactsErrorCode } from "./errors/brain-facts.error"
 import { RETURNED, returnedFacts } from "./fact-columns.policy"
-import { NOTHING_STANDS, evidenceAfterChange } from "./fact-evidence.policy"
-import type { UnchangedPassages } from "./fact-evidence.policy"
+import { NOTHING_STANDS, evidenceAfterChange, type UnchangedPassages } from "./fact-evidence.policy"
 import { toFactRecord } from "./fact-record.mapper"
 import { DEFAULT_VALID_TO, SUPERSEDE, decisionOf, nextVersion } from "./fact-write.policy"
 import { BrainFactRelationsService } from "./brain-fact-relations.service"
@@ -59,7 +57,7 @@ export class BrainFactsMaintenanceService {
             .getMany()
         const orphans: Array<string> = []
         const taken = rows
-            .map(toFactRecord)
+            .map((item) => toFactRecord(item))
             .map((fact) => ({ fact, after: evidenceAfterChange(fact, sourceId, unchanged) }))
             .filter(({ after }) => after.touched)
         await eachInOrder(taken, async ({ fact, after }) => {
@@ -87,7 +85,7 @@ export class BrainFactsMaintenanceService {
                 where: { workspaceId, status: "scheduled", validFrom: Raw((column) => `${column} <= now()`) },
                 take: 200,
             })
-        ).map(toFactRecord)
+        ).map((item) => toFactRecord(item))
         const activated: Array<FactRecord> = []
         await eachInOrder(due, async (fact) => {
             const current = await this.replacedBy(workspaceId, fact)

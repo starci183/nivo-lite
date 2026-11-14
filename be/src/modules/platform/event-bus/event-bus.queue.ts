@@ -5,27 +5,6 @@
 /** The event name and pgmq topic of `event_bus_probe`. */
 export const EVENT_BUS_PROBE_TOPIC = "event_bus_probe"
 
-/** The event name and pgmq topic of `bank_credit_booked`. */
-export const BANK_CREDIT_BOOKED_TOPIC = "bank_credit_booked"
-
-/** The event name and pgmq topic of `payment_reconciled`. */
-export const PAYMENT_RECONCILED_TOPIC = "payment_reconciled"
-
-/** The event name and pgmq topic of `lead_captured`. */
-export const LEAD_CAPTURED_TOPIC = "lead_captured"
-
-/** The event name and pgmq topic of `deal_won`. */
-export const DEAL_WON_TOPIC = "deal_won"
-
-/** The event name and pgmq topic of `order_confirmed`. */
-export const ORDER_CONFIRMED_TOPIC = "order_confirmed"
-
-/** The queue of the `inventory` consumer of `order_confirmed`. */
-export const ORDER_CONFIRMED_INVENTORY_TOPIC_QUEUE = "order_confirmed__inventory"
-
-/** The event name and pgmq topic of `order_shipped`. */
-export const ORDER_SHIPPED_TOPIC = "order_shipped"
-
 /** The event name and pgmq topic of `decision_made`. */
 export const DECISION_MADE_TOPIC = "decision_made"
 
@@ -34,21 +13,6 @@ export const APPROVAL_RESOLVED_TOPIC = "approval_resolved"
 
 /** The queue of the `agent_graphs` consumer of `approval_resolved`. */
 export const APPROVAL_RESOLVED_AGENT_GRAPHS_TOPIC_QUEUE = "approval_resolved__agent_graphs"
-
-/** The event name and pgmq topic of `booking_status_changed`. */
-export const BOOKING_STATUS_CHANGED_TOPIC = "booking_status_changed"
-
-/** The queue of the `booking_effects` consumer of `booking_status_changed`. */
-export const BOOKING_STATUS_CHANGED_BOOKING_EFFECTS_TOPIC_QUEUE = "booking_status_changed__booking_effects"
-
-/** The event name and pgmq topic of `ai_generation_completed`. */
-export const AI_GENERATION_COMPLETED_TOPIC = "ai_generation_completed"
-
-/** The queue of the `content` consumer of `ai_generation_completed`. */
-export const AI_GENERATION_COMPLETED_CONTENT_TOPIC_QUEUE = "ai_generation_completed__content"
-
-/** The queue of the `video` consumer of `ai_generation_completed`. */
-export const AI_GENERATION_COMPLETED_VIDEO_TOPIC_QUEUE = "ai_generation_completed__video"
 
 /** The event name and pgmq topic of `installation_changed`. */
 export const INSTALLATION_CHANGED_TOPIC = "installation_changed"
@@ -61,12 +25,6 @@ export const KNOWLEDGE_SOURCE_INDEXED_TOPIC = "knowledge_source_indexed"
 
 /** The queue of the `brain` consumer of `knowledge_source_indexed`. */
 export const KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE = "knowledge_source_indexed__brain"
-
-/** The queue of the `agent_wakes` consumer of `bank_credit_booked`. */
-export const BANK_CREDIT_BOOKED_AGENT_WAKES_TOPIC_QUEUE = "bank_credit_booked__agent_wakes"
-
-/** The queue of the `agent_wakes` consumer of `payment_reconciled`. */
-export const PAYMENT_RECONCILED_AGENT_WAKES_TOPIC_QUEUE = "payment_reconciled__agent_wakes"
 
 /** The queue of the `agent_wakes` consumer of `knowledge_source_indexed`. */
 export const KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE = "knowledge_source_indexed__agent_wakes"

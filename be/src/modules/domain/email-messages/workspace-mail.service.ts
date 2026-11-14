@@ -1,13 +1,19 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
+import { AccountDataIntakeService } from "@modules/domain/account-data"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectMailRelay, MailError } from "@modules/integrations/mail"
-import type { MailAttachment, MailMessage, MailRelayService, SmtpConfig } from "@modules/integrations/mail"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import {
+    InjectMailRelay,
+    MailError,
+    type MailAttachment,
+    type MailMessage,
+    type MailRelayService,
+    type SmtpConfig,
+} from "@modules/integrations/mail"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { fitsAttachmentLimit, mailAttachmentsOf } from "./attachments.policy"
 import { isMailAddress } from "./email-address.policy"
 import { EmailMessagesLogEvent } from "./email-messages.log-events"
@@ -21,6 +27,7 @@ import type {
     SendEmailStatus,
 } from "./email-messages.contracts"
 import { chooseSmtp, smtpConfigOf } from "./smtp-config.policy"
+import { SMTP_MAIL_TYPE } from "./smtp.data-types"
 
 /** Messages a workspace may send per hour: protects the owner's mailbox and NIVO's name. */
 const HOURLY_LIMIT = 120
@@ -39,8 +46,8 @@ interface Verdict {
 @Injectable()
 /**
  * Sends one email for a workspace and records it. The connection is the one asked for, else the workspace default, else its oldest
- * connected one. With no SMTP at all an owner notice falls back to the platform sender; customer mail never does. Customer mail is
- * refused unless it carries the id of the work item whose authority gate approved it.
+ * connected one. With no SMTP at all an owner notice falls back to the platform sender; customer mail never does. It asks nobody: whether
+ * a person approves a mail first is the calling node's mode, judged by the engine before the send tool runs.
  */
 export class WorkspaceMailService {
     constructor(
@@ -50,6 +57,8 @@ export class WorkspaceMailService {
         @InjectLogger() private readonly logger: Logger,
         private readonly log: EmailMessagesService,
         private readonly connections: ConnectionsService,
+        @Optional() @InjectPrimaryEntityManager() private readonly entityManager?: EntityManager,
+        @Optional() private readonly intake?: AccountDataIntakeService,
     ) {}
 
     /** Sends the email. A refusal or a failure is an answer, never a throw: the attempt is recorded either way. */
@@ -58,9 +67,6 @@ export class WorkspaceMailService {
         const to = input.to.trim()
         if (!isMailAddress(to))
             return this.done(input, to, "blocked", "none", { failure: "recipient", error: this.text("bad_recipient") })
-        if (audience === "customer" && input.workItemId === undefined) {
-            return this.done(input, to, "blocked", "none", { failure: "gate", error: this.text("gate") })
-        }
         const sentLastHour = await this.log.sentSince(
             input.workspaceId,
             new Date(this.clock.now().getTime() - HOUR_MS),
@@ -163,11 +169,11 @@ export class WorkspaceMailService {
             via,
             providerMessageId: verdict.messageId ?? null,
             error: verdict.error ?? null,
-            refs: {
-                ...input.refs,
-                ...(input.workItemId === undefined ? {} : { work_item_id: input.workItemId }),
-            },
+            refs: { ...input.refs },
         })
+        if (verdict.connectionId !== undefined) {
+            await this.keepOnAccount(verdict.connectionId, emailMessageId, input, to, status, verdict.messageId)
+        }
         return {
             status,
             via,
@@ -175,6 +181,37 @@ export class WorkspaceMailService {
             messageId: verdict.messageId,
             error: verdict.error,
             failure: verdict.failure,
+        }
+    }
+
+    /**
+     * Keeps the send in the SMTP connection's own account data (`smtp.mail`, keyed by the ledger row): to whom, what about, why, how it
+     * went. Never the body or a credential. A failure to keep it is logged and never fails the send.
+     */
+    private async keepOnAccount(
+        connectionId: string,
+        emailMessageId: string,
+        input: SendEmailInput,
+        to: string,
+        status: SendEmailStatus,
+        providerMessageId: string | undefined,
+    ): Promise<void> {
+        const entityManager = this.entityManager
+        const intake = this.intake
+        if (entityManager === undefined || intake === undefined) return
+        const value = {
+            emailMessageId,
+            to: to.slice(0, 254),
+            subject: input.subject.slice(0, 300),
+            purpose: input.purpose.slice(0, 60),
+            status,
+            ...(providerMessageId === undefined ? {} : { providerMessageId: providerMessageId.slice(0, 1000) }),
+            at: this.clock.now().toISOString(),
+        }
+        try {
+            await entityManager.transaction((tx) => intake.write(tx, connectionId, [{ type: SMTP_MAIL_TYPE, value }]))
+        } catch (cause) {
+            this.logger.error(EmailMessagesLogEvent.AccountKeepFailed, cause, { connectionId, emailMessageId })
         }
     }
 

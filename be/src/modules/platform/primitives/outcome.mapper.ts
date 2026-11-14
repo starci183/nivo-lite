@@ -4,11 +4,12 @@ import type { Outcome, OutcomeErrorClass, OutcomeOk, OutcomeRefused } from "./ou
 /** Wraps a produced value as a successful outcome. */
 export const ok = <V>(value: V): OutcomeOk<V> => ({ kind: "ok", value })
 
-/** Builds a refusal with a capability code and the parameters of its display text. */
-export const refused = <C extends string>(code: C, params?: ErrorParams): OutcomeRefused<C> => ({
+/** Builds a refusal with a capability code, the parameters of its display text and, when a failure caused it, that failure as `cause`. */
+export const refused = <C extends string>(code: C, params?: ErrorParams, cause?: unknown): OutcomeRefused<C> => ({
     kind: "refused",
     code,
     params,
+    ...(cause === undefined ? {} : { cause }),
 })
 
 /**
@@ -20,5 +21,5 @@ export const unwrapOutcome = <V, C extends K, K extends string>(
     ErrorClass: OutcomeErrorClass<K>,
 ): V => {
     if (outcome.kind === "ok") return outcome.value
-    throw new ErrorClass({ code: outcome.code, params: outcome.params })
+    throw new ErrorClass({ code: outcome.code, params: outcome.params, cause: outcome.cause })
 }

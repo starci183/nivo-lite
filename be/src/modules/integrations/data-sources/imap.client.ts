@@ -1,10 +1,8 @@
 import { isIP } from "node:net"
 import { Injectable } from "@nestjs/common"
-import { ImapFlow } from "imapflow"
-import type { FetchMessageObject } from "imapflow"
+import { ImapFlow, type FetchMessageObject } from "imapflow"
 import { simpleParser } from "mailparser"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectDataSourcesOptions, InjectPublicHost } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
@@ -96,7 +94,7 @@ export class ImapClient {
 
     private async open(login: ImapLogin): Promise<ImapFlow> {
         const { address } = await this.hosts.resolve(login.host)
-        const host = login.host.trim().replace(/^\[|\]$/gu, "")
+        const host = login.host.trim().replaceAll(/^\[|\]$/gu, "")
         const named = isIP(host) === 0 ? { servername: host } : {}
         const client = new ImapFlow({
             host: address,

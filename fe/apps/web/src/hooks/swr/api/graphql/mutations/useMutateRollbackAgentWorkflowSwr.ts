@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateRollbackAgentWorkflow, type MutateRollbackAgentWorkflowRequest } from "@/modules/api/graphql/mutations/mutation-rollback-agent-workflow"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RollbackAgentWorkflowMutation } from "@/modules/api"
 
 /** What the RollbackAgentWorkflow mutation is triggered with. */

@@ -1,6 +1,5 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ScheduledItemsService } from "@modules/domain/agent-doors"
-import type { ScheduledItem } from "@modules/domain/agent-doors"
+import { ScheduledItemsService, type ScheduledItem } from "@modules/domain/agent-doors"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ReadScheduledItemsQuery } from "./read-scheduled-items.query"

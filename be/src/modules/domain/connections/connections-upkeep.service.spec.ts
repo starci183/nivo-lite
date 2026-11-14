@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In, Not } from "typeorm"
+import { In, IsNull, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { connectionsCase } from "@tests/fixtures/builders/connections.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
@@ -58,7 +58,7 @@ describe("ConnectionsUpkeepService > health", () => {
         expect(fakes[0]?.callsOf("setParameter")).toEqual([
             ["verdict", '{"state":"silent","reason":"no event for 80h","checked_at":"2026-10-12T10:00:00.000Z"}'],
         ])
-        expect(fakes[0]?.callsOf("where")).toEqual([[{ id: "c-1" }]])
+        expect(fakes[0]?.callsOf("where")).toEqual([[{ id: "c-1", deletedAt: IsNull() }]])
         expect(evaluatedValues(fakes[0]?.callsOf("set")[0]?.[0])).toEqual({
             publicMeta: "jsonb_set(public_meta, '{health}', :verdict::jsonb)",
         })
@@ -85,7 +85,7 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         const { em, fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }])
         await expect((await build(em)).setSchedule("ws-1", "c1", everyMinutes)).resolves.toBeUndefined()
         expect(fakes[0]?.callsOf("setParameter")).toEqual([["minutes", everyMinutes]])
-        expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "c1" }]])
+        expect(fakes[0]?.callsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "c1", deletedAt: IsNull() }]])
         expect(setOf(fakes[0])).toEqual({
             syncEveryMinutes: ":minutes::int",
             nextSyncAt: "CASE WHEN :minutes::int IS NULL THEN NULL ELSE now() END",
@@ -112,7 +112,7 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         expect(evaluatedCalls(em.update.mock.calls, 2)).toEqual([
             [
                 "ConnectionEntity",
-                { id: "c2" },
+                { id: "c2", deletedAt: IsNull() },
                 {
                     status: "error",
                     lastError: "Expired token",
@@ -124,7 +124,7 @@ describe("ConnectionsUpkeepService > sync scheduling and default SMTP", () => {
         expect(setOf(fakes[1])).toEqual({ isDefault: "(id = :id)" })
         expect(fakes[1]?.callsOf("where")).toEqual([
             [
-                "workspace_id = :workspaceId AND provider = 'smtp' AND (is_default OR id = :id)",
+                "workspace_id = :workspaceId AND provider = 'smtp' AND deleted_at IS NULL AND (is_default OR id = :id)",
                 { workspaceId: "ws-1", id: "c3" },
             ],
         ])

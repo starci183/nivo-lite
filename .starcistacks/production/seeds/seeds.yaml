@@ -7,3 +7,14 @@ entries:
     mode: once
     schema: be/src/modules/domain/channel-provisioning/management-seed.schema.json
     reason: The NIVO management workspace is the product's own account on its own platform; its owner address and its provider connections (mail, Telegram, Zalo OA, SePay, payOS, Google) are the ones NIVO itself runs on, sealed in seeds-nivo-workspace.
+  # The enterprise workspaces, FOUNDATION only (the workspace, its string identifier, its owner): one document per enterprise under
+  # data/enterprises/, nivo-web first. Each document's `target` (off | local | prod | both; this level is prod) is read on every
+  # run, and a change of it changes the content hash, so `upsert` reruns the command; off seeds nothing. Usage data (the CRM import of
+  # customer files, conversations, runs, documents) is never seeded. Taking an enterprise off the local stack is `seed-enterprise remove`, by hand.
+  - id: enterprises
+    kind: data
+    path: data/enterprises
+    target: [node, be/dist/apps/cli/src/main.js, seed-enterprise, run, --env, production]
+    mode: upsert
+    after: [nivo-workspace]
+    schema: be/src/modules/domain/channel-provisioning/enterprise-seed.schema.json

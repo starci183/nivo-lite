@@ -1,16 +1,17 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectMailSettings, InjectMailer } from "@modules/integrations/mail"
-import type { MailOptions, Mailer, RenderedMail } from "@modules/integrations/mail"
+import { IsNull, type EntityManager } from "typeorm"
+import {
+    InjectMailSettings,
+    InjectMailer,
+    type MailOptions,
+    type Mailer,
+    type RenderedMail,
+} from "@modules/integrations/mail"
 import { digestOf, normalizeEmail } from "@modules/integrations/passport"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectIds, type Ids } from "@modules/platform/ids"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { sameSitePath } from "@modules/platform/primitives"
 import type { InviteSent } from "./identity-auth.contracts"
 import { InjectIdentityAuthOptions } from "./identity-auth.decorators"

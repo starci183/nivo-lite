@@ -18,6 +18,8 @@ const CAST_OF_FIELD: Readonly<Record<FieldKind, string | null>> = {
     enum: null,
     money_vnd: "bigint",
     sequence: null,
+    file: null,
+    contact: "uuid",
 }
 
 /** The type a nested jsonb key is cast to. */

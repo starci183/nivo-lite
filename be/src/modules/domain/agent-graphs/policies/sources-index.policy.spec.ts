@@ -33,7 +33,7 @@ describe("sources-index.policy", () => {
     it("indexes every kind of source by what names it, with the hash of a Brain value", async () => {
         const subject = await build()
 
-        const rows = subject.sourcesIndexOf({ nodes: [nodeOf({ sources: ALL })], rights: [] })
+        const rows = subject.sourcesIndexOf({ nodes: [nodeOf({ sources: ALL })] })
 
         expect(rows.map((row) => [row.kind, row.ref, row.valueHash])).toEqual([
             ["brain", "fact-1", "hash-1"],
@@ -60,7 +60,7 @@ describe("sources-index.policy", () => {
     it("lists a source once however often a node repeats it", async () => {
         const subject = await build()
 
-        const rows = subject.sourcesIndexOf({ nodes: [nodeOf({ sources: [TEMPLATE, TEMPLATE] })], rights: [] })
+        const rows = subject.sourcesIndexOf({ nodes: [nodeOf({ sources: [TEMPLATE, TEMPLATE] })] })
 
         expect(rows).toHaveLength(1)
     })

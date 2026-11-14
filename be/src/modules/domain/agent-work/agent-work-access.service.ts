@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InstallationRecordsService, type OptionalInstallationRecord } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 
@@ -16,12 +17,19 @@ export class AgentWorkAccessService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly installations: InstallationRecordsService,
     ) {}
 
     /** The seat of an owner or manager of the workspace, or a typed refusal; staff are refused. */
     async manager(userId: string, workspaceId: string): Promise<string> {
         await this.members.require(userId, workspaceId, ["owner", "manager"])
         return this.members.idOf(userId, workspaceId)
+    }
+
+    /** The agent instance an owner or manager names, or null when the workspace holds none by that id; the seat is proved first. */
+    async managedInstallation(userId: string, workspaceId: string, installationId: string): Promise<OptionalInstallationRecord> {
+        await this.manager(userId, workspaceId)
+        return this.installations.find(workspaceId, installationId)
     }
 
     /** The seat of an owner of the workspace, or a typed refusal; a manager and staff are refused. */

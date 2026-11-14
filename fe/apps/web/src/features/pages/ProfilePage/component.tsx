@@ -1,5 +1,4 @@
-import { Page } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
+import { Page, type PageHeaderContent } from "@starci/grammar/common"
 import { AccountProfile } from "@/components/blocks/AccountProfile"
 
 /** The header the profile page supplies. */

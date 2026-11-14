@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
 import { ConnectionSecretReadsService } from "@modules/domain/connections"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BillingLogEvent } from "./billing.log-events"
 
 /** A connection's secrets as the proof of its webhook needs them. */

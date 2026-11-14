@@ -21,7 +21,6 @@ export interface AgentWorkflowOverviewCopy {
     readonly inputsTitle: string
     readonly inputsEmpty: string
     readonly inputName: string
-    readonly inputLabel: string
     readonly inputRequired: string
     readonly yes: string
     readonly entryLine: (entry: string) => string
@@ -100,8 +99,7 @@ interface InputsProps extends PartProps<WorkflowOverviewView["inputs"]> {
 
 /** What one cell of an input row draws. */
 const inputCellOf = (input: WorkflowInputView, columnId: string, required: string) => {
-    if (columnId === "name") return <Text>{input.name}</Text>
-    if (columnId === "label") return <Text tone="muted">{input.label}</Text>
+    if (columnId === "name") return <Text>{input.label}</Text>
     return input.isRequired ? <Text tone="muted">{required}</Text> : null
 }
 
@@ -110,7 +108,6 @@ const Inputs = (props: InputsProps) => {
     const { copy } = props
     const columns: ReadonlyArray<DataTableColumn<InputRow>> = [
         { id: "name", label: copy.inputName, isRowHeader: true },
-        { id: "label", label: copy.inputLabel },
         { id: "required", label: copy.inputRequired, width: "fit" },
     ]
     const rows: ReadonlyArray<InputRow> = props.rows.map((input) => ({ id: input.name, input }))

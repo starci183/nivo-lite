@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto"
-import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { latestTemplateVersion, templateVersionOf, workflowTemplateOf } from "@nivo-lite/blocks-core/modules"
-import type { WorkflowTemplate } from "@nivo-lite/blocks-core/modules"
+import { graphSpecSchema, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { latestTemplateVersion, templateVersionOf, type WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import type { Locale } from "@modules/platform/i18n"
 import type { GraphChangeKind, GraphVersionView } from "../agent-graphs.contracts"
 import type {
@@ -43,9 +42,15 @@ export const snapshotOf = (version: WorkflowVersionRecord): GraphSpec => {
     return parsed.data
 }
 
+/** A stored snapshot read back as a graph, or null for one that no longer parses. */
+export const optionalSnapshotOf = (version: WorkflowVersionRecord): GraphSpec | null => {
+    const parsed = graphSpecSchema.safeParse(version.document)
+    return parsed.success ? parsed.data : null
+}
+
 /** The template of this id; refused when there is none. */
 export const templateRequired = (id: string): WorkflowTemplate => {
-    const template = workflowTemplateOf(id)
+    const template = INSTALLED.templateOf(id)
     if (template === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.TemplateNotFound })
     return template
 }
@@ -59,7 +64,7 @@ export const templateGraphOf = (template: WorkflowTemplate, version: number): Gr
 
 /** The graph of the template version a link names, or null when the template or the version is gone. */
 export const linkedGraphOf = (link: TemplateLink | null): GraphSpec | null => {
-    const template = link === null ? null : workflowTemplateOf(link.templateId)
+    const template = link === null ? null : INSTALLED.templateOf(link.templateId)
     if (link === null || template === null) return null
     return templateVersionOf(template, link.templateVersion)?.graph ?? null
 }
@@ -120,7 +125,7 @@ export const workflowViewOf = (
     running: WorkflowVersionRecord | null,
     locale: Locale,
 ): WorkflowView => {
-    const template = workflow.template === null ? null : workflowTemplateOf(workflow.template.templateId)
+    const template = workflow.template === null ? null : INSTALLED.templateOf(workflow.template.templateId)
     const graph = running === null ? null : snapshotOf(running)
     const base = linkedGraphOf(workflow.template)
     return {

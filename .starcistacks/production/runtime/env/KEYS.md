@@ -78,16 +78,6 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `AI_EMBEDDING_MODEL` | Profile the embedding calls use (default `embed`; stack value). |
 | `APP_BUILD_ID` | The name of the running build (the release tag or git sha), set per release; the jobs and the entity engine read it. |
 
-## api: optional executable paths
-
-These nonsecret keys select operator-installed executables. Omission retains the platform installation defaults. Paths must be absolute and local; the executable and every parent directory must be unwritable by untrusted users. PATH is never searched.
-
-| Key | Semantics |
-| --- | --- |
-| `VIDEO_FFMPEG_PATH` | Optional trusted FFmpeg executable path. |
-| `VIDEO_FFPROBE_PATH` | Optional trusted FFprobe executable path. |
-| `VIDEO_NICE_PATH` | Optional trusted priority-lowering executable path, used when priority lowering is enabled. |
-
 ## mcp (the NIVO MCP gateway, `be/apps/mcp`)
 
 The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets come from the same its sealed member (granted in `application-stacks.yaml`) member as the api's, granted key by key
@@ -98,11 +88,10 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `PORT` | stack environment | The listener port (`8790`); internal only, on the private `agents` network as `nivo-mcp`. |
 | `PRIMARY_DB_URL` | its sealed member (granted in `application-stacks.yaml`) (required) | The same `app_be` connection as the api: connectors, grants and the call audit. |
 | `ENTITY_ENGINE_CURSOR_KEY` | its sealed member (granted in `application-stacks.yaml`) (required) | The same cursor key as the api: the gateway reads the graph of each agent through the entity engine. |
-| `CHANNEL_TOKEN_KEY` | its sealed member (granted in `application-stacks.yaml`) (required) | The same connection key as the api: it opens the bearer credential each remote connector has sealed in its own `mcp_connectors` row. Connector credentials are set per workspace in the console (Settings > Connections), never as deployment keys. |
+| `CHANNEL_TOKEN_KEY` | its sealed member (granted in `application-stacks.yaml`) (required) | The same connection key as the api: the tool families open the connections' sealed credentials with it. |
 | `PRIMARY_DB_SCHEMA` | stack environment | `public`. |
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | stack environment | The OriginGuard and CORS allowlist (`https://app.nivo.vn`); the gateway has no browser caller, so only the console origin is listed. |
-| `MCP_GATEWAY_TIMEOUT_MS` | not set | Per-call timeout, default 4000. |
-| `MCP_CLIENT_NAME` | not set | Client name announced to remote MCP servers, default `nivo-mcp-gateway`. |
+| `TOOLS_TIMEOUT_MS` | not set | Per-call time limit of a tool family that declares none, default 4000. |
 
 ## Stack settings (sealed `n8n`, read at render time)
 
@@ -129,8 +118,7 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `READY_OWNER_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_EMAIL` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
 | `READY_STAFF_PASSWORD` | `test-accounts` | Ready-state accounts of the post-deploy smoke tests. |
-| `WORKSPACE_SEED_INPUT` | `test-accounts` | Private explicit workspace access input. The managed `ensure-workspace` and `verify-workspace` tasks read it as `WORKSPACE_SEED_INPUT_FILE`; the profile workflow uses the same input contract. See the production runbook's "Workspace access" procedure. |
-| `WORKSPACE_PROFILE_INPUT` | `test-accounts` | Private profile input `{"schema":"nivo/workspace-profile-input@1","connectors":{"hakuen":{"url":"https://..."}}}`: the endpoint of each remote MCP connector the profile registers. The same workflow hands it to `cli seed-workspace profile` as `WORKSPACE_PROFILE_INPUT_FILE`; a dry run refuses when a connector endpoint is missing. |
+| `WORKSPACE_SEED_INPUT` | `test-accounts` | Private explicit workspace access input. The managed `ensure-workspace` and `verify-workspace` tasks read it as `WORKSPACE_SEED_INPUT_FILE`. See the production runbook's "Workspace access" procedure. |
 | `privateKey` | `vps` | The operator SSH key (`starci app stack` reads it from the member `deploy.remote.sealed.sshKey` names). |
 | `knownHosts` | `vps` | The pinned host keys (`starci app stack` reads them from the member `deploy.remote.sealed.knownHosts` names). |
 | `ciPrivateKey` | `vps` | The operator copy of the CI deploy key (CI itself reads the sealed member `vps-ci`), kept apart from the operator `privateKey`. |

@@ -17,10 +17,10 @@ export const AccountSignIn = () => {
     const { slot, reload } = useAccountSignIn()
     const { change, isPending, error } = useChangePassword()
     const form = usePasswordForm()
-    const [isOpen, setOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
 
     const close = () => {
-        setOpen(false)
+        setIsOpen(false)
         form.reset()
     }
     const submit = form.handleSubmit(async (values) => {
@@ -70,7 +70,7 @@ export const AccountSignIn = () => {
             }}
             on={{
                 retry: reload,
-                openPassword: () => setOpen(true),
+                openPassword: () => setIsOpen(true),
                 closePassword: close,
                 setCurrent: set("current"),
                 setNext: set("next"),

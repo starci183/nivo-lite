@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AgentActivationService } from "@modules/domain/modules"
-import type { InstallationView } from "@modules/domain/modules"
+import { AgentActivationService, type InstallationView } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetModuleLiveCommand } from "./set-module-live.command"
 
 @CommandHandler(SetModuleLiveCommand)

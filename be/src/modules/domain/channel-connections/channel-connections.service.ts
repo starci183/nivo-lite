@@ -6,15 +6,21 @@ import {
     ConnectionsService,
     cleanConnectionName,
     sha256,
+    type ConnectionActor,
+    type ConnectionRecord,
+    type FirstEventState,
+    type Provider,
 } from "@modules/domain/connections"
 import { randomSecret, safeEqual } from "@modules/domain/connection-secrets"
-import type { ConnectionActor, ConnectionRecord, FirstEventState, Provider } from "@modules/domain/connections"
-import { ChannelSetupError, ChannelSetupErrorCode, InjectChannelSetupClient } from "@modules/integrations/channel-setup"
-import type { ChannelSetupClient, ZaloSetupSecret } from "@modules/integrations/channel-setup"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    ChannelSetupError,
+    ChannelSetupErrorCode,
+    InjectChannelSetupClient,
+    type ChannelSetupClient,
+    type ZaloSetupSecret,
+} from "@modules/integrations/channel-setup"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
 import { ChannelConnectionsError, ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
 import type {

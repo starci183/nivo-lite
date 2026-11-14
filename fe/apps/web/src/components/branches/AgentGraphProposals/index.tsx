@@ -9,6 +9,7 @@ import {
     Quote,
     Section,
     type ListRowData,
+    SurfaceCard,
 } from "@starci/grammar/common"
 import type { AgentGraphProposalView, AgentGraphProposalsView, AgentGraphSourceData } from "@/modules/types"
 
@@ -68,7 +69,7 @@ const ProposalBody = (props: ProposalBodyProps) => {
                 />
             )}
             {preview.length === 0 ? null : (
-                <DescriptionList layout="columns" isDivided items={evidenceItemsOf(preview)} />
+                <SurfaceCard><DescriptionList layout="columns" isDivided items={evidenceItemsOf(preview)} /></SurfaceCard>
             )}
             {rest.length === 0 ? null : (
                 <Disclosure
@@ -148,7 +149,7 @@ export const AgentGraphProposals = (props: AgentGraphProposalsProps) => (
     <Section
         kind="list"
         title={props.view.title}
-        description={props.view.hint}
+        caption={props.view.hint}
         isLoading={props.isLoading}
         headingLevel={3}
         items={props.view.items.map((item) => proposalItemOf(item, props))}

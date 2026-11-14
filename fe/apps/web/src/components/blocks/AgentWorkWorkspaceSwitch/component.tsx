@@ -30,7 +30,7 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
             onRetry={props.on.retry}
             render={(view, isLoading) => (
                 <Stack gap="row">
-                    <Cluster gap="row" align="start">
+                    <Cluster gap="inline" align="start">
                         <Switch
                             name="workspace-agent-work"
                             label={props.props.switchLabel}
@@ -47,7 +47,7 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
                             </Text>
                         </Stack>
                     </Cluster>
-                    {view.isOn ? null : <Alert title={props.props.offNotice} tone="negative" />}
+                    {view.isOn ? null : <Alert title={props.props.offNotice} />}
                     {view.canChange ? null : (
                         <Text size="sm" tone="muted">
                             {props.props.ownerOnly}

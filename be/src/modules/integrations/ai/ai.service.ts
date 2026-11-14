@@ -1,15 +1,12 @@
 import { createHash } from "node:crypto"
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { isRecord } from "@modules/platform/primitives"
 import type {
     ContextPassage,
     AiChatAttempt,
-    AiChatModel,
+    OptionalAiChatModel,
     AiCutSpend,
     AiFailure,
     AiServed,
@@ -22,13 +19,12 @@ import type {
     AiEmbeddingResult,
     PassageSearch,
 } from "./ai.contracts"
-import { InjectAiOptions, InjectAiRunner } from "./ai.decorators"
-import type { OptionalAiRunner } from "./ai.decorators"
+import { InjectAiOptions, InjectAiRunner, type OptionalAiRunner } from "./ai.decorators"
 import { AiLogEvent } from "./ai.log-events"
 import type { AiOptions } from "./ai.options"
 import { cutOf, fieldOf, finishOf, laneOf, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"
 import { providerOf } from "./routing.policy"
-import { embeddingIdentityOf } from "@nivo-lite/blocks-core"
+import { embeddingIdentityOf } from "@nivo-lite/agent-sdk/models"
 
 /** The most characters sent per embedded text; a passage is about 800 characters, this only guards a runaway input. */
 const MAX_EMBED_CHARS = 8000
@@ -72,7 +68,7 @@ const servedOf = (provider: unknown, responseMetadata: unknown, durationMs: numb
     durationMs,
 })
 
-/** What a try cut at the token limit spent: the usage its reply still carries, who served it and when, and the cap it was sent with. */
+/** What a try cut at the token limit (or answered empty) spent: the usage its reply still carries, who served it and when, and the cap it was sent with. */
 const cutSpendOf = (
     model: string,
     usageMetadata: unknown,
@@ -161,7 +157,13 @@ export class AiService implements OnModuleInit {
             }
             if (text === "") {
                 this.logger.warn(AiLogEvent.ChatEmpty, { model })
-                return { ok: false, failure: "empty" }
+                // An empty answer still returned tokens (the prompt, any hidden reasoning): what it spent rides along to be booked.
+                const served = servedOf(reply.provider, reply.responseMetadata, durationMs)
+                return {
+                    ok: false,
+                    failure: "empty",
+                    spent: cutSpendOf(model, reply.usageMetadata, reply.responseMetadata, served, request),
+                }
             }
             const usage = usageOf(reply.usageMetadata, reply.responseMetadata)
             const served = servedOf(reply.provider, reply.responseMetadata, durationMs)
@@ -204,7 +206,7 @@ export class AiService implements OnModuleInit {
      * The chat client of one try of an agent turn, or null when no endpoint is configured. The agent loop makes the call with it;
      * `readTurn` then says what the try came to, and `failureOfThrow` what a call that threw failed as.
      */
-    async turnModel(request: AiTurnRequest): Promise<AiChatModel | null> {
+    async turnModel(request: AiTurnRequest): Promise<OptionalAiChatModel> {
         return this.runner === null ? null : this.runner.turnModel(request)
     }
 

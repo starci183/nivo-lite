@@ -8,6 +8,17 @@ export enum TeamChatTurnsLogEvent {
     RoomPaused = "team_chat_turns.room_paused",
     /** The router failed on a message; the message stays written, no turn started. */
     RouteFailed = "team_chat_turns.route_failed",
-    /** "Ghi vào Second Brain" on a message (`outcome`). */
+    /**
+     * With the node rights deciding, agents a message named started no chat turn: the old tag path was kept shut for them and the
+     * room was told (`roomId`, `count`, `codes`).
+     */
+    FallbackClosed = "team_chat_turns.fallback_closed",
+    /** The line that tells the room of turns that did not start could not be written (`roomId`). */
+    UnhandledNotPosted = "team_chat_turns.unhandled_not_posted",
+    /** An agent that held no workflow from its module's chat-turn template was given it before its first turn (`agentId`). */
+    ChatTurnSeeded = "team_chat_turns.chat_turn_seeded",
+    /** Giving an agent its chat-turn workflow failed; the turn went on and the engine reports a wake nothing takes (`agentId`). */
+    ChatTurnSeedFailed = "team_chat_turns.chat_turn_seed_failed",
+    /** "Save to Second Brain" on a message (`outcome`). */
     Captured = "team_chat_turns.captured",
 }

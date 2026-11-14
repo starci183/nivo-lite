@@ -1,7 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import { DurableWorkService, EvidenceService } from "@modules/domain/decisions"
-import type { WorkItem } from "@modules/domain/decisions"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { ApiKeyOwnerService } from "@modules/domain/api-keys"
+import { EventsService } from "@modules/domain/events"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -12,6 +13,7 @@ import { MESSAGE_AUTO_SEND_WINDOW_MS } from "./public-api.policy"
 import { PublicConversationsService } from "./public-conversations.service"
 import type { PublicConversationRef } from "./public-conversations.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
+import { PublicMessageHoldsService } from "./public-message-holds.service"
 
 const body: MessageRequestBody = {
     conversationId: "conversation-1",
@@ -19,69 +21,73 @@ const body: MessageRequestBody = {
     requireApproval: false,
     source: "api:n8n",
 }
-const ctx = { workspaceId: "workspace-1", actor: "api:n8n", locale: "en" }
 const NOW = new Date("2026-10-25T12:00:00.000Z")
 const RECENT = new Date("2026-10-25T11:00:00.000Z")
-const CONVERSATION = { id: "conversation-1", lead_id: "lead-1" }
+const ROUTE: PublicConversationRef = {
+    id: "conversation-1",
+    contactId: "contact-1",
+    channel: "zalo",
+    accountId: "conn-1",
+}
+const KEY = "key-1"
 
-/** A manager for a request whose conversation read answers the given conversation, or none. */
+/** A manager for a request whose route read answers the given conversation, or none. */
 const managerWith = (conversation: PublicConversationRef | undefined) => ({ tx: mockEntityManager(), conversation })
 
-const build = async (conversation: PublicConversationRef | undefined) => {
-    const work = mock<DurableWorkService>({
-        enqueueWork: jest.fn().mockResolvedValue(mock<WorkItem>({ id: "work-1" })),
-    })
-    const evidence = mock<EvidenceService>({ log: jest.fn().mockResolvedValue(undefined) })
+/** Who owns what: the agent the key is scoped to (null: none or gone), the agent that answers the route's entrance, the installed front door. */
+interface Owners {
+    readonly scoped?: string | null
+    readonly front?: string | null
+    readonly installed?: string | null
+}
+
+const build = async (conversation: PublicConversationRef | undefined, owned: Owners = {}) => {
+    const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>()
     const chats = mock<PublicConversationsService>()
     chats.find.mockResolvedValue(conversation)
+    const holds = mock<PublicMessageHoldsService>({ report: jest.fn().mockResolvedValue(undefined) })
+    const owners = mock<ApiKeyOwnerService>()
+    owners.scopedAgentOf.mockResolvedValue(owned.scoped === undefined ? "agent-1" : owned.scoped)
+    owners.agentOfKey.mockResolvedValue(owned.installed === undefined ? null : owned.installed)
+    const bindings = mock<AgentBindingsService>()
+    bindings.owningAgentOf.mockResolvedValue(owned.front === undefined ? null : owned.front)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicMessageFulfillmentService,
-            { provide: DurableWorkService, useValue: work },
-            { provide: EvidenceService, useValue: evidence },
+            { provide: ApiKeyOwnerService, useValue: owners },
+            { provide: AgentBindingsService, useValue: bindings },
+            { provide: EventsService, useValue: events },
             { provide: PublicConversationsService, useValue: chats },
+            { provide: PublicMessageHoldsService, useValue: holds },
             { provide: CLOCK, useValue: new FakeClock(NOW.toISOString()) },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(PublicMessageFulfillmentService), work, evidence, logger, chats }
+    return { service: moduleRef.get(PublicMessageFulfillmentService), events, logger, chats, holds, owners, bindings }
 }
 
 describe("PublicMessageFulfillmentService", () => {
-    it("keeps the exact draft and its durable work and evidence in the supplied transaction", async () => {
-        const { tx, conversation } = managerWith(CONVERSATION)
-        const { service, work, evidence, logger, chats } = await build(conversation)
+    it("answers the send owed to the person of the route: the exact text, the key's agent as sender, the request key as the send key", async () => {
+        const { tx, conversation } = managerWith(ROUTE)
+        const { service, events, logger, chats } = await build(conversation)
 
-        await service.fulfill("workspace-1", "request-1", body, RECENT, tx)
+        const pending = await service.fulfill("workspace-1", "request-1", body, RECENT, KEY, tx)
 
         expect(chats.find).toHaveBeenCalledWith("workspace-1", "conversation-1")
-        expect(work.enqueueWork).toHaveBeenCalledWith(
-            ctx,
+        expect(pending).toEqual({
+            workspaceId: "workspace-1",
+            sendKey: "api.message:request-1",
+            routeId: "conversation-1",
+            contactId: "contact-1",
+            agentId: "agent-1",
+            channel: "zalo",
+            accountId: "conn-1",
+            text: body.text,
+        })
+        expect(events.record).toHaveBeenCalledWith(
             {
-                action: "reply_customer",
-                subject_type: "conversation",
-                subject_id: "conversation-1",
-                lead_id: "lead-1",
-                dedupeKey: "api.message:request-1",
-                seed: {
-                    summary: "Public API message",
-                    draft: body.text,
-                    fields: { conversation_id: "conversation-1" },
-                    confidence: 1,
-                    outcome: "clear",
-                },
-                preset: true,
-                noChain: true,
-                forceAsk: undefined,
-            },
-            tx,
-        )
-        expect(evidence.log).toHaveBeenCalledWith(
-            ctx,
-            {
-                lead_id: "lead-1",
-                work_item_id: "work-1",
+                workspaceId: "workspace-1",
                 kind: "api.message",
                 actor: "api:n8n",
                 summary: "Message accepted through the API",
@@ -92,104 +98,122 @@ describe("PublicMessageFulfillmentService", () => {
         expect(logger.info).not.toHaveBeenCalled()
     })
 
-    it("retains the legacy identity and approval without duplicating evidence already recorded at admission", async () => {
-        const { tx, conversation } = managerWith({ ...CONVERSATION, lead_id: null })
-        const { service, work, evidence } = await build(conversation)
+    it("sends as the route's front door when the key's agent is gone, and as the installed front door only when neither exists", async () => {
+        const { tx, conversation } = managerWith(ROUTE)
+        const byRoute = await build(conversation, { scoped: null, front: "agent-front" })
+        expect((await byRoute.service.fulfill("workspace-1", "request-1", body, RECENT, KEY, tx))?.agentId).toBe(
+            "agent-front",
+        )
+        expect(byRoute.bindings.owningAgentOf).toHaveBeenCalledWith("workspace-1", "conn-1")
 
-        await service.fulfill(
+        const byInstall = await build(conversation, { scoped: null, front: null, installed: "agent-installed" })
+        expect((await byInstall.service.fulfill("workspace-1", "request-1", body, RECENT, KEY, tx))?.agentId).toBe(
+            "agent-installed",
+        )
+    })
+
+    it("keeps the owner lookup's own refusal when neither the key's agent nor a front door exists", async () => {
+        const { tx, conversation } = managerWith(ROUTE)
+        const { service, owners, events } = await build(conversation, { scoped: null, front: null })
+        const refusal = new Error("key needs an agent")
+        owners.agentOfKey.mockRejectedValue(refusal)
+
+        await expect(service.fulfill("workspace-1", "request-1", body, RECENT, KEY, tx)).rejects.toBe(refusal)
+        expect(events.record).not.toHaveBeenCalled()
+    })
+
+    it("keeps the legacy identity as the send key without duplicating evidence already recorded at admission", async () => {
+        const { tx, conversation } = managerWith(ROUTE)
+        const { service, events } = await build(conversation, { scoped: null, front: "agent-front" })
+
+        const pending = await service.fulfill("workspace-1", "request-1", body, RECENT, null, tx, {
+            dedupeKey: "legacy-message",
+            recordEvidence: false,
+        })
+
+        expect(pending?.sendKey).toBe("legacy-message")
+        expect(events.record).not.toHaveBeenCalled()
+    })
+})
+
+describe("PublicMessageFulfillmentService held messages", () => {
+    it("never sends a message the caller asked to approve: the hold is recorded and reported to the founder with its text", async () => {
+        const { tx, conversation } = managerWith(ROUTE)
+        const { service, events, holds } = await build(conversation)
+
+        const pending = await service.fulfill(
             "workspace-1",
             "request-1",
             { ...body, requireApproval: true },
             RECENT,
+            KEY,
             tx,
-            "legacy-message",
-            false,
         )
 
-        expect(work.enqueueWork).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ dedupeKey: "legacy-message", lead_id: null, forceAsk: "over_authority" }),
+        expect(pending).toBeNull()
+        expect(events.record).toHaveBeenCalledWith(
+            expect.objectContaining({ kind: "api.message.held", actor: "api:n8n", evidence: body.text }),
             tx,
         )
-        expect(evidence.log).not.toHaveBeenCalled()
+        expect(holds.report).toHaveBeenCalledWith({
+            workspaceId: "workspace-1",
+            agentId: "agent-1",
+            conversationId: "conversation-1",
+            requestId: "request-1",
+            text: body.text,
+            reason: "approval_asked",
+        })
     })
-})
 
-describe("PublicMessageFulfillmentService auto-send window", () => {
-    it("still lets a message admitted exactly one window ago go out under the workspace's authority", async () => {
-        const { tx, conversation } = managerWith(CONVERSATION)
-        const { service, work, logger } = await build(conversation)
+    it("still lets a message admitted exactly one window ago go out", async () => {
+        const { tx, conversation } = managerWith(ROUTE)
+        const { service, logger, holds } = await build(conversation)
         const admittedAt = new Date(NOW.getTime() - MESSAGE_AUTO_SEND_WINDOW_MS)
 
-        await service.fulfill("workspace-1", "request-1", body, admittedAt, tx)
-
-        expect(work.enqueueWork).toHaveBeenCalledWith(ctx, expect.objectContaining({ forceAsk: undefined }), tx)
+        expect(await service.fulfill("workspace-1", "request-1", body, admittedAt, KEY, tx)).not.toBeNull()
         expect(logger.info).not.toHaveBeenCalled()
+        expect(holds.report).not.toHaveBeenCalled()
     })
 
-    it("holds an older message for approval with its draft kept and logs it without the content", async () => {
-        const { tx, conversation } = managerWith(CONVERSATION)
-        const { service, work, evidence, logger } = await build(conversation)
+    it("holds an older message and logs it without the content", async () => {
+        const { tx, conversation } = managerWith(ROUTE)
+        const { service, events, logger, holds } = await build(conversation)
         const admittedAt = new Date(NOW.getTime() - MESSAGE_AUTO_SEND_WINDOW_MS - 1)
 
-        await service.fulfill("workspace-1", "request-1", body, admittedAt, tx)
+        expect(await service.fulfill("workspace-1", "request-1", body, admittedAt, KEY, tx)).toBeNull()
 
-        expect(work.enqueueWork.mock.calls[0]?.[1]).toMatchObject({
-            forceAsk: "over_authority",
-            preset: true,
-            seed: { draft: body.text },
-        })
         expect(logger.info).toHaveBeenCalledWith(PublicApiLogEvent.StaleMessageHeld, {
             workspaceId: "workspace-1",
             requestId: "request-1",
-            workItemId: "work-1",
             admittedAt: "2026-10-24T11:59:59.999Z",
         })
-        expect(evidence.log).toHaveBeenCalledTimes(1)
+        expect(events.record).toHaveBeenCalledTimes(1)
+        expect(holds.report).toHaveBeenCalledWith(expect.objectContaining({ requestId: "request-1", reason: "stale" }))
     })
 
     it("holds a pre-ledger delivery, whose admission time is unknown, even when the caller asked for no approval", async () => {
-        const { tx, conversation } = managerWith(CONVERSATION)
-        const { service, work, logger } = await build(conversation)
+        const { tx, conversation } = managerWith(ROUTE)
+        const { service, logger } = await build(conversation, { front: "agent-front" })
 
-        await service.fulfill("workspace-1", "legacy-1", body, null, tx, "legacy-1", false)
+        expect(await service.fulfill("workspace-1", "legacy-1", body, null, null, tx, { dedupeKey: "legacy-1", recordEvidence: false })).toBeNull()
 
-        expect(work.enqueueWork).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ dedupeKey: "legacy-1", forceAsk: "over_authority" }),
-            tx,
-        )
         expect(logger.info).toHaveBeenCalledWith(PublicApiLogEvent.StaleMessageHeld, {
             workspaceId: "workspace-1",
             requestId: "legacy-1",
-            workItemId: "work-1",
             admittedAt: null,
         })
     })
 })
 
 describe("PublicMessageFulfillmentService refusals", () => {
-    it("refuses a conversation absent from the request workspace before inserting work or evidence", async () => {
+    it("refuses an id no route of the request workspace holds before any evidence", async () => {
         const { tx, conversation } = managerWith(undefined)
-        const { service, work, evidence } = await build(conversation)
+        const { service, events } = await build(conversation)
 
-        await expect(service.fulfill("workspace-1", "request-1", body, RECENT, tx)).rejects.toMatchObject({
+        await expect(service.fulfill("workspace-1", "request-1", body, RECENT, KEY, tx)).rejects.toMatchObject({
             code: PublicApiErrorCode.ConversationNotFound,
         })
 
-        expect(work.enqueueWork).not.toHaveBeenCalled()
-        expect(evidence.log).not.toHaveBeenCalled()
-    })
-
-    it("propagates a durable intake failure so the caller rolls back the request", async () => {
-        const { tx, conversation } = managerWith(CONVERSATION)
-        const { service, work, evidence, logger } = await build(conversation)
-        const cause = new Error("durable intake unavailable")
-        work.enqueueWork.mockRejectedValue(cause)
-
-        await expect(service.fulfill("workspace-1", "request-1", body, null, tx)).rejects.toBe(cause)
-
-        expect(evidence.log).not.toHaveBeenCalled()
-        expect(logger.info).not.toHaveBeenCalled()
+        expect(events.record).not.toHaveBeenCalled()
     })
 })

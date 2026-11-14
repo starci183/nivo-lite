@@ -1,5 +1,5 @@
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import type { WorkflowTemplate } from "@nivo-lite/blocks-core/modules"
+import type { WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
 import type { TemplateLink, WorkflowStatus } from "../agent-workflows.contracts"
 import { changedStepCount } from "./workflow-diff.policy"
 
@@ -64,7 +64,7 @@ export const workflowKeyOf = (base: string, taken: ReadonlySet<string>): string 
     const slug =
         base
             .normalize("NFD")
-            .replace(/\p{M}/gu, "")
+            .replaceAll(/\p{M}/gu, "")
             .toLowerCase()
             .replaceAll(D_STROKE, "d")
             .split(/[^a-z0-9]/)

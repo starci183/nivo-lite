@@ -1,19 +1,14 @@
 import { Test } from "@nestjs/testing"
 import {
-    accountingTarget,
     agentMemberOf as memberOf,
     agentOfOtherWorkspace,
     openAgentOf,
     ownedAgentOf,
     ownerlessAgent,
     roomlessOpenAgent,
-    taggedAgent,
-    taggingAgent,
-    untaggedAgent,
 } from "@tests/fixtures/builders/agents.builder"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
 import {
     WorkspaceMemberDirectoryService,
     WorkspaceMemberSeatsService,
@@ -145,34 +140,9 @@ describe("AgentOwnershipService ownerOf", () => {
     })
 })
 
-describe("AgentOwnershipService canTag", () => {
-    const from = taggingAgent()
-    const to = taggedAgent()
-
-    it("admits a listed agent", async () => {
-        const em = mockEntityManager({ find: [AgentEntity, [from, to]] })
-        const { service } = await build(em)
-
-        await expect(service.canTag("a1", "a2")).resolves.toBe(true)
-        expect(em.find).toHaveBeenCalledWith(AgentEntity, {
-            where: { id: In(["a1", "a2"]) },
-            take: 2,
-        })
-    })
-
-    it("refuses an agent that is not on the list", async () => {
-        const em = mockEntityManager({ find: [AgentEntity, [from, untaggedAgent()]] })
-        const { service } = await build(em)
-
-        await expect(service.canTag("a1", "a3")).resolves.toBe(false)
-    })
-
-    it("refuses an agent that does not exist", async () => {
-        const { service } = await build(mockEntityManager({ find: [AgentEntity, [from]] }))
-
-        await expect(service.canTag("a1", "ghost")).resolves.toBe(false)
-    })
-})
+// Ledger (ROAD Opus-1d, 2026-11-14): `canTag` is deleted with the plain tag road it answered for (ruling R34).
+// Ledger (ROAD Opus-1f, 2026-11-14): the tag grant lists (`canTag` targets, `canTagAgentIds`, `grantTags`) are deleted (ruling R43:
+// nothing enforced them); the ownership read, the write and its refusals lose their tag cases and nothing else.
 
 const OPEN_AGENT = openAgentOf()
 const LAN = seatOf({ memberId: "m-lan", userId: "u-lan", role: "staff" })
@@ -226,9 +196,8 @@ describe("AgentOwnershipService memberIdOf", () => {
 
 const MINH = seatOf({ memberId: "m-minh", userId: "u-minh", displayName: "Minh", role: "manager" })
 const NAM = seatOf({ memberId: "m-nam", userId: "u-nam", displayName: "Nam", role: "owner" })
-const TARGET = accountingTarget()
 
-/** The world one ownership read sees: the agent, its seats, the workspace owner, its tag targets, then the room lookups in call order. */
+/** The world one ownership read sees: the agent, its seats, the workspace owner, then the room lookups in call order. */
 const ownershipWorld = (
     seats: ReadonlyArray<MemberSeatRecord>,
     owner: string | null,
@@ -236,7 +205,6 @@ const ownershipWorld = (
 ) => {
     const em = mockEntityManager({
         findOne: [AgentEntity, agent],
-        find: [AgentEntity, [TARGET]],
         query: [FIND_WORKSPACE_OWNER, ownerRow(owner)],
     })
     const world: SeatWorld = {
@@ -247,7 +215,7 @@ const ownershipWorld = (
 }
 
 describe("AgentOwnershipService ownershipOf", () => {
-    it("shows the owner, the fallback, who may give the agent work and whom it may tag", async () => {
+    it("shows the owner, the fallback and who may give the agent work", async () => {
         const { em, world, seatRooms } = ownershipWorld([MINH, NAM], "m-nam")
         const { service, members, rooms } = await build(em, world, seatRooms)
 
@@ -258,12 +226,10 @@ describe("AgentOwnershipService ownershipOf", () => {
             responder: { ownerMemberId: "m-minh", fallbackMemberId: "m-nam" },
             assignableRoles: ["owner", "manager"],
             assignableRooms: [{ key: "sales", name: "Sales" }],
-            canTag: [{ id: "a2", name: "Accounting AI", module: "accounting", status: "active" }],
         })
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
         expect(rooms.labelsOf).toHaveBeenCalledWith("w1", ["sales"], 10)
         expect(rooms.seatRoomsOf).toHaveBeenCalledWith("w1", ["u-minh", "u-nam"], 50)
-        expect(em.find).toHaveBeenCalledWith(AgentEntity, expect.objectContaining({ take: 50 }))
     })
 
     it("shows a disabled owner as inactive and answers through the fallback", async () => {
@@ -319,12 +285,10 @@ const CHANGE = {
     fallbackMemberId: "m-nam",
     assignableRoles: ["manager", "manager"],
     assignableRooms: ["sales", "sales"],
-    canTagAgentIds: ["a2", "a2"],
 }
-/** A manager world: both owners are active members, the tag target exists, and the update lands on one row. */
+/** A manager world: both owners are active members and the update lands on one row. */
 interface WritableCounts {
     readonly members?: number
-    readonly agents?: number
     readonly affected?: number
 }
 
@@ -340,9 +304,6 @@ describe("AgentOwnershipService setOwnership", () => {
 
         expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
         expect(seats.countActiveAmong).toHaveBeenCalledWith("w1", ["m-minh", "m-nam"])
-        expect(em.count).toHaveBeenCalledWith(AgentEntity, {
-            where: { workspaceId: "w1", id: In(["a2"]) },
-        })
         expect(em.update).toHaveBeenCalledWith(
             AgentEntity,
             { id: "a1", workspaceId: "w1" },
@@ -351,16 +312,15 @@ describe("AgentOwnershipService setOwnership", () => {
                 fallbackMemberId: "m-nam",
                 assignableRoles: ["manager"],
                 assignableRooms: ["sales"],
-                canTagAgentIds: ["a2"],
             },
         )
     })
 
-    it("accepts an owner who is also the fallback, no tag and no room, without counting agents or rooms", async () => {
+    it("accepts an owner who is also the fallback and no room, without counting agents or rooms", async () => {
         const em = mockEntityManager({ count: [AgentEntity, 1], update: [AgentEntity, { affected: 1 }] })
         const { service, seats, rooms } = await build(em, countedOf({ members: 1 }))
 
-        const change = { ...CHANGE, fallbackMemberId: "m-minh", canTagAgentIds: [], assignableRooms: [] }
+        const change = { ...CHANGE, fallbackMemberId: "m-minh", assignableRooms: [] }
         await service.setOwnership("u1", "w1", "a1", change)
 
         expect(seats.countActiveAmong).toHaveBeenCalledWith("w1", ["m-minh"])
@@ -415,28 +375,6 @@ describe("AgentOwnershipService setOwnership refusals", () => {
         ).rejects.toMatchObject({ params: { field: "assignableRooms" } })
     })
 
-    it("refuses an agent that tags itself", async () => {
-        const { service } = await build(
-            mockEntityManager({ count: [AgentEntity, 1], update: [AgentEntity, { affected: 1 }] }),
-            countedOf(),
-        )
-
-        await expect(
-            service.setOwnership("u1", "w1", "a1", { ...CHANGE, canTagAgentIds: ["a1"] }),
-        ).rejects.toMatchObject({ params: { field: "canTagAgentIds" } })
-    })
-
-    it("refuses a tag target of another workspace", async () => {
-        const { service } = await build(
-            mockEntityManager({ count: [AgentEntity, 0], update: [AgentEntity, { affected: 1 }] }),
-            countedOf(),
-        )
-
-        await expect(service.setOwnership("u1", "w1", "a1", CHANGE)).rejects.toMatchObject({
-            params: { field: "canTagAgentIds" },
-        })
-    })
-
     it("refuses an agent that is not in the workspace", async () => {
         const { service } = await build(
             mockEntityManager({ count: [AgentEntity, 1], update: [AgentEntity, { affected: 0 }] }),
@@ -457,41 +395,5 @@ describe("AgentOwnershipService setOwnership refusals", () => {
         await expect(service.setOwnership("u1", "w1", "ghost", CHANGE)).rejects.toMatchObject({
             code: AgentsErrorCode.AgentNotFound,
         })
-    })
-})
-
-describe("AgentOwnershipService grantTags", () => {
-    it("adds the tag rights an agent lacks and leaves the ones it holds", async () => {
-        const em = mockEntityManager({
-            find: [
-                AgentEntity,
-                [ownedAgentOf({ id: "a1", canTagAgentIds: ["a2"] }), ownedAgentOf({ id: "a3", canTagAgentIds: [] })],
-            ],
-            update: [AgentEntity, { affected: 1 }],
-        })
-        const { service } = await build(em)
-
-        await service.grantTags("w1", [
-            { from: "a1", to: "a2" },
-            { from: "a1", to: "a4" },
-            { from: "a3", to: "a1" },
-        ])
-
-        expect(em.update).toHaveBeenCalledWith(
-            AgentEntity,
-            { id: "a1", workspaceId: "w1" },
-            { canTagAgentIds: ["a2", "a4"] },
-        )
-        expect(em.update).toHaveBeenCalledWith(AgentEntity, { id: "a3", workspaceId: "w1" }, { canTagAgentIds: ["a1"] })
-    })
-
-    it("writes nothing when every right is held or none is asked", async () => {
-        const em = mockEntityManager({ find: [AgentEntity, [ownedAgentOf({ id: "a1", canTagAgentIds: ["a2"] })]] })
-        const { service } = await build(em)
-
-        await service.grantTags("w1", [{ from: "a1", to: "a2" }])
-        await service.grantTags("w1", [])
-
-        expect(em.update).not.toHaveBeenCalled()
     })
 })

@@ -1,9 +1,8 @@
 "use client"
 
-import useSWRInfinite from "swr/infinite"
+import useSWRInfinite, { type SWRInfiniteResponse } from "swr/infinite"
 import { queryChatMessages } from "@/modules/api/graphql/queries/query-chat-messages"
 import type { ChatMessagesQuery } from "@/modules/api"
-import type { SWRInfiniteResponse } from "swr/infinite"
 
 /** The identity of the messages cache. */
 export const QUERY_CHAT_MESSAGES_SWR_KEY = "QUERY_CHAT_MESSAGES_SWR"

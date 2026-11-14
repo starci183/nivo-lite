@@ -48,6 +48,14 @@
           "type": "string",
           "minLength": 1
         },
+        "WORKSPACE_CRM_SERVICE_KEY": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_TELEGRAM_WEBHOOK_SECRET": {
+          "type": "string",
+          "minLength": 1
+        },
         "WORKSPACE_ZALO_OA_APP_ID": {
           "type": "string",
           "minLength": 1

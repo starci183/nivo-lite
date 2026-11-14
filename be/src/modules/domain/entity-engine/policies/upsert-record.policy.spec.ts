@@ -8,6 +8,9 @@ import { EntityEngineErrorCode } from "../errors/entity-engine.error"
 import { mintScopedTx } from "./scoped-tx.policy"
 import { upsertRecord } from "./upsert-record.policy"
 
+/** Matches the soft-delete guard TypeORM's `IsNull()` puts on `deletedAt`. */
+const IS_NULL: unknown = expect.objectContaining({ _type: "isNull" })
+
 const UPSERT_RECORD: unique symbol = Symbol("entity-engine.upsert-record")
 
 interface UpsertRecordPolicy {
@@ -85,7 +88,9 @@ describe("upsertRecord", () => {
 
         expect(upserted.created).toBe(false)
         expect(upserted.row).toMatchObject({ id: "c-1", version: "2" })
-        expect(update?.callsOf("where")).toEqual([[{ entity: "sales.contact", id: "c-1", workspaceId: WORKSPACE_ID }]])
+        expect(update?.callsOf("where")).toEqual([
+            [{ entity: "sales.contact", id: "c-1", workspaceId: WORKSPACE_ID, deletedAt: IS_NULL }],
+        ])
         expect(update?.callsOf("setParameter")).toEqual([["patch", '{"email":"an@example.com","name":"Anh"}']])
     })
 })

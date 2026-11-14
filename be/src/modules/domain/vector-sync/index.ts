@@ -1,0 +1,5 @@
+export type { VectorEmbedder, VectorsEmbedded } from "./vector-sync.contracts"
+export { VectorSyncModule } from "./vector-sync.module"
+export { VectorReconcileService } from "./vector-reconcile.service"
+export { VectorSyncService } from "./vector-sync.service"
+export { vectorSyncEntities } from "./persistence/entities"

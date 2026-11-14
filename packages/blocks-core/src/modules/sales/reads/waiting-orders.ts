@@ -1,14 +1,15 @@
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
+import { q, type FilterExpr } from "@nivo-lite/agent-sdk/query"
 import type { SalesSettings } from "../../../rules/sales/settings"
 import type { WaitingOrder } from "../../../rules/sales/waiting"
 import { WAITING_SHOWN } from "../constants"
-import { LEAD_NAME_FIELDS, ORDER_FIELDS, leadNameOf, orderRowOf } from "../sales-records"
+import { ORDER_FIELDS, leadNameOf, leadOfContact, orderRowOf } from "../sales-records"
 import { settingsOf } from "../settings-store"
 
 /** The ports the waiting orders are read from. */
 export interface WaitingPorts {
+    /** The sale's records of the customers, whose names the rows show. */
+    readonly leads: EntityApi
     /** The orders. */
     readonly orders: EntityApi
     /** The sales settings. */
@@ -33,11 +34,10 @@ export const waitingFilterOf = (settings: SalesSettings): FilterExpr => {
 }
 
 /** The orders that wait for the owner, oldest first, with the name of their customer, and how many wait in all. */
-export const waitingOrdersOf = async ({ orders, settings }: WaitingPorts): Promise<WaitingOrders> => {
+export const waitingOrdersOf = async ({ leads, orders, settings }: WaitingPorts): Promise<WaitingOrders> => {
     const where = waitingFilterOf(await settingsOf(settings))
     const page = await orders.list({
         select: ORDER_FIELDS,
-        join: { lead: LEAD_NAME_FIELDS },
         where,
         order: [
             ["createdAt", "asc"],
@@ -46,9 +46,13 @@ export const waitingOrdersOf = async ({ orders, settings }: WaitingPorts): Promi
         page: { size: WAITING_SHOWN },
     })
     const totals = await orders.aggregate({ where, measures: { count: { kind: "count" } }, limit: 1 })
-    const rows = page.rows.flatMap((listed): Array<WaitingOrder> => {
-        const order = orderRowOf(listed.row)
-        const buyer = listed.joined["lead"]
+    const listed = await Promise.all(
+        page.rows.map(async ({ row }) => {
+            const order = orderRowOf(row)
+            return { order, buyer: order === null ? null : await leadOfContact(leads, order.contactId) }
+        }),
+    )
+    const rows = listed.flatMap(({ order, buyer }): Array<WaitingOrder> => {
         return order === null
             ? []
             : [
@@ -57,7 +61,7 @@ export const waitingOrdersOf = async ({ orders, settings }: WaitingPorts): Promi
                       orderNo: order.orderNo,
                       items: order.itemsText,
                       amountVnd: order.amountVnd,
-                      customer: buyer === undefined || buyer === null ? null : leadNameOf(buyer.data),
+                      customer: buyer === null ? null : leadNameOf(buyer.data),
                   },
               ]
     })

@@ -1,7 +1,4 @@
-import type { Image } from "@modules/integrations/image"
-import type { StorageAssetsPort } from "@modules/integrations/object-storage"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ChannelSenderRegistry } from "./channels.contracts"
 import type { ZaloInboxReads } from "./channels.port"
 import type { ChannelsConfig } from "./channels.options"
@@ -26,23 +23,3 @@ export const ZALO_INBOX_READS: unique symbol = Symbol("domain.channels.zalo-inbo
 /** Injects the Zalo inbox reads port. Parameter type: ZaloInboxReads. */
 export const InjectZaloInboxReads = (): TypedParameterDecorator<ZaloInboxReads> =>
     injector<ZaloInboxReads>(ZALO_INBOX_READS)
-
-/** Token of the file store the collage is kept in, selected by the app root. */
-export const CHANNELS_COLLAGE_STORAGE: unique symbol = Symbol("domain.channels.collage-storage")
-
-/** Injects the file store of the collage. Parameter type: StorageAssetsPort. */
-export const InjectChannelsCollageStorage = (): TypedParameterDecorator<StorageAssetsPort> =>
-    injector<StorageAssetsPort>(CHANNELS_COLLAGE_STORAGE)
-
-/** Token of the public origin of the API, an empty text when it has none. */
-export const CHANNELS_PUBLIC_API_URL: unique symbol = Symbol("domain.channels.public-api-url")
-
-/** Injects the public origin of the API, or an empty text. Parameter type: string. */
-export const InjectChannelsPublicApiUrl = (): TypedParameterDecorator<string> =>
-    injector<string>(CHANNELS_PUBLIC_API_URL)
-
-/** Token of the image door the collage is drawn with, selected by the app root. */
-export const CHANNELS_IMAGE: unique symbol = Symbol("domain.channels.image")
-
-/** Injects the image door of the collage. Parameter type: Image. */
-export const InjectChannelsImage = (): TypedParameterDecorator<Image> => injector<Image>(CHANNELS_IMAGE)

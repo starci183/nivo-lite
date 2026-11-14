@@ -1,8 +1,6 @@
-import { bubbleDiameter } from "@starci/grammar/common"
-import type { BubbleMapEdge, BubbleMapNode, BubbleMapRingPart } from "@starci/grammar/common"
+import { bubbleDiameter, type BubbleMapEdge, type BubbleMapNode, type BubbleMapRingPart } from "@starci/grammar/common"
 import type { BrainFact } from "@/modules/types"
-import { documentsOfFact } from "./inbox"
-import type { FactKey, FactKeyKind } from "./inbox"
+import { documentsOfFact, type FactKey, type FactKeyKind } from "./inbox"
 import type { AgentLens } from "./lenses"
 
 /** The centre of the map: the shop, which every subject hangs from. */
@@ -105,7 +103,7 @@ export const factMapGraphOf = (
     words: FactMapWords,
     view: AgentLens | null,
 ): FactMapGraph => {
-    const shown = keys.filter(isMapped)
+    const shown = keys.filter((entry) => isMapped(entry))
     const groups = bySubject(shown)
     const maxGroup = Math.max(1, ...[...groups.values()].map((group) => group.length))
     const refs = new Map<string, FactMapRef>()
@@ -138,7 +136,7 @@ export const factMapGraphOf = (
             tone: "neutral",
             fill: "soft",
             ring: ringOf(group),
-            isDimmed: group.every(isOut),
+            isDimmed: group.every((entry) => isOut(entry)),
         })
         edges.push({ id: `${FACT_MAP_ROOT_ID}>${id}`, source: FACT_MAP_ROOT_ID, target: id })
         for (const one of group) {

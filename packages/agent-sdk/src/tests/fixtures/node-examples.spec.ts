@@ -9,7 +9,6 @@ const send = defineEffect({
     id: "channel.send",
     title: { key: "s" },
     payload: z.object({ text: z.string().max(200) }),
-    rights: [],
 })
 
 const greet = trusted<NodeDefinition>(
@@ -20,7 +19,6 @@ const greet = trusted<NodeDefinition>(
         params: z.object({ greeting: z.string().max(200) }),
         input: z.object({ name: z.string().max(200) }),
         output: z.object({ sent: z.boolean() }),
-        rights: [],
         effects: ["channel.send"],
         run: async (input, context) => {
             const tone = await context.model.text({ purpose: "tone", instructions: "", input: input.name })
@@ -44,7 +42,7 @@ const greet = trusted<NodeDefinition>(
                 output: { sent: true },
                 effects: ["channel.send"],
                 model: ["."],
-                grant: { rights: [] },
+                grant: {},
             },
         ],
     }),

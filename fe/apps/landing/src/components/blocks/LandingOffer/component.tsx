@@ -57,7 +57,7 @@ export const LandingOfferBase = (props: LandingOfferBaseProps) => {
     const campaign = props.props.campaign
     return (
         <div id="founding" className={ANCHOR}>
-            <Section title={props.props.title} description={props.props.eyebrow}>
+            <Section title={props.props.title} caption={props.props.eyebrow}>
                 <Grid
                     kind="featured"
                     leading={

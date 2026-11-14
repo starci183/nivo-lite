@@ -3,7 +3,7 @@ import { Field, Int, ObjectType } from "@nestjs/graphql"
 @ObjectType()
 /** What a decision on a truth-graph change card did, and where the card stands. */
 export class BrainChangeDecisionType {
-    /** `applied`, `rejected`, `founder_only` (a manager pressed Đồng ý), `already_decided`, `not_found` or `not_offered` (Giữ cả hai on a card with nothing to keep apart). */
+    /** `applied`, `rejected`, `founder_only` (a manager pressed Dong y), `already_decided`, `not_found` or `not_offered` (Giu ca hai on a card with nothing to keep apart). */
     @Field(() => String)
     outcome!: string
 

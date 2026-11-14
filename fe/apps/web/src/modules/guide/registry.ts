@@ -1,11 +1,4 @@
-import {
-    AGENT_ROLES_HREF,
-    CONSOLE_ROUTES,
-    KNOWLEDGE_ROUTES,
-    authoritySectionPath,
-    brainTabHref,
-} from "@/modules/routes"
-import { AUTHORITY_SECTIONS } from "@/modules/authority"
+import { AGENT_ROLES_HREF, CONSOLE_ROUTES, KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
 import type { GuideEntry } from "./types"
 
 /**
@@ -36,16 +29,13 @@ const action = (id: string, href: string, target?: string, managerOnly = false):
 /** The pages of the console. */
 const ROUTES: ReadonlyArray<GuideEntry> = [
     route("route.overview", CONSOLE_ROUTES.workspaceHome, true),
-    route("route.inbox", CONSOLE_ROUTES.inbox),
     route("route.chat", CONSOLE_ROUTES.chat),
     route("route.brain", KNOWLEDGE_ROUTES.brain),
     route("route.knowledgeNivo", KNOWLEDGE_ROUTES.nivo),
-    route("route.authority", CONSOLE_ROUTES.authority),
     route("route.agents", "/agents"),
     route("route.marketplace", "/agents/marketplace", true),
     route("route.templates", "/agents/templates", true),
     route("route.team", CONSOLE_ROUTES.team, true),
-    route("route.permissions", CONSOLE_ROUTES.permissions, true),
     route("route.connections", CONSOLE_ROUTES.connections, true),
     route("route.sepay", "/connections/sepay", true),
     route("route.telegram", "/connections/telegram", true),
@@ -59,19 +49,16 @@ const ROUTES: ReadonlyArray<GuideEntry> = [
     route("route.profile", "/profile"),
 ]
 
-/** The tabs of the pages: the Second Brain, the library of connections, the sections of the authority page. */
+/** The tabs of the pages: the Second Brain, the library of connections. */
 const TABS: ReadonlyArray<GuideEntry> = [
     tab("tab.brainTodo", brainTabHref("todo")),
     tab("tab.brainFacts", brainTabHref("facts")),
     tab("tab.brainDocuments", brainTabHref("sources")),
-    tab("tab.brainDossiers", brainTabHref("dossiers")),
-    tab("tab.brainMap", brainTabHref("map")),
     tab("tab.brainLessons", brainTabHref("lessons")),
     tab("tab.brainPublicDocs", brainTabHref("publicDocs")),
     tab("tab.brainPublicAsks", brainTabHref("publicAsks")),
     tab("tab.brainTry", brainTabHref("publicTry")),
     tab("tab.connectionsLibrary", `${CONSOLE_ROUTES.connections}?tab=library`, true),
-    ...AUTHORITY_SECTIONS.map((section) => tab(`tab.authority.${section}`, authoritySectionPath(section))),
 ]
 
 /** The actions that open a wizard or lead to the button that does the work. */
@@ -84,7 +71,6 @@ const ACTIONS: ReadonlyArray<GuideEntry> = [
     action("action.addGoogle", `${CONSOLE_ROUTES.connections}?connect=google`, undefined, true),
     action("action.addSmtp", `${CONSOLE_ROUTES.connections}?connect=smtp`, undefined, true),
     action("action.addWebhook", "/developers", "connections.webhook", true),
-    action("action.websiteForm", CONSOLE_ROUTES.inbox, "inbox.website"),
     action("action.inviteMember", CONSOLE_ROUTES.teamInvite, "team.invite", true),
     action("action.uploadDocument", brainTabHref("sources", { add: "upload" }), "brain.upload"),
     action("action.reviewFacts", brainTabHref("facts"), "brain.review"),

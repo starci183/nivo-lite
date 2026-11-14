@@ -1,27 +1,21 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatDecisionService } from "@modules/domain/team-chat"
+import { ChatApprovalDecisionService } from "@modules/domain/agent-pages"
 import type { DecideOutcome } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DecideChatApprovalCommand } from "./decide-chat-approval.command"
 
 @CommandHandler(DecideChatApprovalCommand)
-/** Settles one decision from any of its cards through the decisions core; the service holds the seat, the verdict and the refusals. */
+/** The verdict on an approval card: the capability refuses it `decision_not_found`, since no road opens an approval card any more. */
 export class DecideChatApprovalHandler extends ICQRSHandler<DecideChatApprovalCommand, DecideOutcome> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly decisions: TeamChatDecisionService,
+        private readonly decisions: ChatApprovalDecisionService,
     ) {
         super(logger)
     }
 
-    protected override process(command: DecideChatApprovalCommand): Promise<DecideOutcome> {
-        return this.decisions.decide(
-            command.params.request.workspaceId,
-            command.params.principal.id,
-            command.params.request.decisionId,
-            command.params.request.verdict,
-        )
+    protected override process(_command: DecideChatApprovalCommand): Promise<DecideOutcome> {
+        return this.decisions.decide()
     }
 }

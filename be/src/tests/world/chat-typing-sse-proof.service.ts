@@ -1,7 +1,6 @@
 import type { ChatTypingFrame } from "@modules/domain/chat-typing"
 import assert from "node:assert/strict"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
 import type { EntityManager } from "typeorm"
@@ -19,8 +18,8 @@ import {
     IDENTITY_MESSAGES,
     IdentityModule,
     refuseSessions,
+    type VerifyAccessToken,
 } from "@modules/domain/identity"
-import type { VerifyAccessToken } from "@modules/domain/identity"
 import { WORKSPACE_MEMBERS_ERROR_KINDS, WORKSPACE_MEMBERS_MESSAGES } from "@modules/domain/workspace-members"
 import { ChatTypingSseModule } from "@features/realtime/chat-typing"
 import { ClockModule } from "@modules/platform/clock"
@@ -40,8 +39,7 @@ import { TEAM_CHAT_PROOF_MODULES } from "./team-chat-capabilities.options"
 import type { LiteWorld } from "./lite-world.service"
 import { CHAT_ACTIVITY_PROOF_MODULES } from "./chat-activity-proof.module"
 import { redisProofOptions } from "./redis-capabilities.options"
-import { openTypingStream } from "./realtime-stream-proof.service"
-import type { TypingStreamClient, TypingStreamOptions } from "./realtime-stream-proof.service"
+import { openTypingStream, type TypingStreamClient, type TypingStreamOptions } from "./realtime-stream-proof.service"
 
 /** Minimal contract shapes keep this TDD proof compilable before the hub and door lanes merge. No runtime double is supplied. */
 interface ProofTopic {

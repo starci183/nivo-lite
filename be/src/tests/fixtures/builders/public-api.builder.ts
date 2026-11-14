@@ -1,22 +1,20 @@
-import { createHash } from "node:crypto"
+import assert from "node:assert/strict"
 import type { EntityManager } from "typeorm"
 import { agentsEntities } from "@modules/domain/agents"
+import { ContactsService } from "@modules/domain/contacts"
+import { CustomerRoutesService } from "@modules/domain/customer-routes"
 import { apiKeysEntities } from "@modules/domain/api-keys"
-import { authorityRulesEntities } from "@modules/domain/authority-rules"
-import type { ChatConversationsService } from "@modules/domain/chat-records"
+import { apiKeySecretSha256, parseApiKey } from "@modules/integrations/passport"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { workspacesEntities } from "@modules/domain/workspaces"
+import type { LiteWorld } from "../../world/lite-world.service"
 
 const [AgentEntity] = agentsEntities
-const [AuthorityRuleEntity] = authorityRulesEntities
 
 const [WorkspaceEntity] = workspacesEntities
 const [ApiKeyEntity] = apiKeysEntities
 
 const [KnowledgeSourceEntity] = knowledgeSourcesEntities
-
-/** A new workspace already holds the default rules of the stable modules, so a proof sets its own rule over the default. */
-const RULE_KEY = ["workspaceId", "department", "action"]
 
 /** All identities are supplied by the suite's isolated local world. */
 export interface PublicApiIdentity {
@@ -36,12 +34,14 @@ export const persistPublicApiWorkspace = async (manager: EntityManager, identity
             ownerId: identity.userId,
             name: "Public API proof",
         })
+        const presented = parseApiKey(identity.key, "nvk_")
+        assert(presented !== null && presented.keyId === identity.keyId, "the proof key reads nvk_<keyId>.<secret>")
         await tx.insert(ApiKeyEntity, {
             id: identity.keyId,
             workspaceId: identity.workspaceId,
             name: "Public API proof",
             keyPrefix: "nvk_proof",
-            keyHash: createHash("sha256").update(identity.key).digest("hex"),
+            keyHash: apiKeySecretSha256(presented.secret),
         })
         await tx.insert(AgentEntity, {
             id: identity.agentId,
@@ -52,45 +52,22 @@ export const persistPublicApiWorkspace = async (manager: EntityManager, identity
             role: "chatbot",
             instructions: "Local integration proof",
         })
-        await tx.upsert(
-            AuthorityRuleEntity,
-            {
-                workspaceId: identity.workspaceId,
-                department: "chatbot",
-                action: "reply_customer",
-                mode: "auto",
-            },
-            RULE_KEY,
-        )
-        await tx.upsert(
-            AuthorityRuleEntity,
-            {
-                workspaceId: identity.workspaceId,
-                department: "chatbot",
-                action: "handoff_lead",
-                mode: "auto",
-                requiredFields: ["contact_name", "need"],
-            },
-            RULE_KEY,
-        )
     })
 }
 
-/** Every message scenario gets its own conversation, opened as the chat records open it; the answer is its id. */
-export const persistPublicApiConversation = async (
-    chats: ChatConversationsService,
-    identity: PublicApiIdentity,
-    customerId: string,
-): Promise<string> => {
-    const met = await chats.meet({
-        workspaceId: identity.workspaceId,
-        agentId: identity.agentId,
-        channel: "website",
-        customerId,
-        visitor: "Public API customer",
-        connectionId: identity.keyId,
-    })
-    return met.conversation.id
+/**
+ * Every message scenario gets its own conversation, opened as the chatbot opens one; the answer is its id. The key is the entrance
+ * (`connectionId`, the source); the records are written as its owning agent: the key is scoped to none, so the workspace's installed
+ * front door answers, here the chatbot agent `persistPublicApiWorkspace` inserts.
+ */
+export const persistPublicApiConversation = async (world: LiteWorld, identity: PublicApiIdentity, customerId: string): Promise<string> => {
+    const contactId = await world
+        .resolve(ContactsService)
+        .meetChannel(identity.workspaceId, { channel: "website", account: identity.keyId, userId: customerId, name: "Public API customer" })
+    const route = await world
+        .resolve(CustomerRoutesService)
+        .ensure(identity.workspaceId, { contactId, channel: "website", accountId: identity.keyId })
+    return route.routeId
 }
 
 /** A historical source already admitted by the API before the request ledger existed. */

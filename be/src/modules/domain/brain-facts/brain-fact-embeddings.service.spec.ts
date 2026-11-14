@@ -32,16 +32,26 @@ describe("BrainFactEmbeddingsService", () => {
             embeddingModel: "embed",
             embeddingHash: "hash-1",
         })
-        expect(write?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "f1", status: In(["active", "proposed"]) }]])
+        expect(write?.callsOf("where")).toEqual([
+            [{ workspaceId: facts.WS, id: "f1", status: In(["active", "scheduled", "proposed"]) }],
+        ])
         expect(write?.callsOf("setParameter")).toEqual([["vector", "[0.1,0.2,0.3]"]])
     })
 
     it("compares a question only with vectors of the same identity, and reads the facts back in rank order", async () => {
         const em = mockEntityManager({
-            find: [BrainFactEntity, [facts.rowOf({ id: "f2", status: "active" }), facts.rowOf({ id: "f1", status: "active" })]],
+            find: [
+                BrainFactEntity,
+                [facts.rowOf({ id: "f2", status: "active" }), facts.rowOf({ id: "f1", status: "active" })],
+            ],
         })
         const [rank] = queueQueryBuilders(em, [
-            { getRawMany: [{ id: "f1", distance: "0.1" }, { id: "f2", distance: 0.4 }] },
+            {
+                getRawMany: [
+                    { id: "f1", distance: "0.1" },
+                    { id: "f2", distance: 0.4 },
+                ],
+            },
         ])
         const service = await build(em)
 
@@ -63,7 +73,11 @@ describe("BrainFactEmbeddingsService", () => {
         const service = await build(em)
 
         await expect(
-            service.nearest(facts.WS, IDENTITY, [1, 0, 0], 5, { audience: "customer", module: "chatbot", installationId: "i-1" }),
+            service.nearest(facts.WS, IDENTITY, [1, 0, 0], 5, {
+                audience: "customer",
+                module: "chatbot",
+                installationId: "i-1",
+            }),
         ).resolves.toEqual([])
         expect(rank?.callsOf("andWhere")).toEqual([
             ["(f.installationId IS NULL OR f.installationId = :installationId)", { installationId: "i-1" }],
@@ -71,12 +85,19 @@ describe("BrainFactEmbeddingsService", () => {
         ])
     })
 
+})
+
+describe("BrainFactEmbeddingsService: the lens of a meaning search and the facts near a stored one", () => {
     it("ranks for an internal lens its shared facts and the restricted ones of its module", async () => {
         const em = mockEntityManager()
         const [rank] = queueQueryBuilders(em, [{ getRawMany: [] }])
         const service = await build(em)
 
-        await service.nearest(facts.WS, IDENTITY, [1, 0, 0], 5, { audience: "internal", module: "sales", installationId: null })
+        await service.nearest(facts.WS, IDENTITY, [1, 0, 0], 5, {
+            audience: "internal",
+            module: "sales",
+            installationId: null,
+        })
         expect(rank?.callsOf("andWhere")).toEqual([
             ["f.installationId IS NULL", { installationId: null }],
             ["(f.scope <> 'restricted' OR :module = ANY(f.modules))", { module: "sales" }],
@@ -116,13 +137,25 @@ describe("BrainFactEmbeddingsService", () => {
         const service = await build(em)
 
         await expect(
-            service.nearestTo(facts.WS, "f1", IDENTITY, { statuses: [], installationId: null, maxDistance: 1, limit: 3 }),
+            service.nearestTo(facts.WS, "f1", IDENTITY, {
+                statuses: [],
+                installationId: null,
+                maxDistance: 1,
+                limit: 3,
+            }),
         ).resolves.toEqual([])
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
+})
+
+describe("BrainFactEmbeddingsService: stored state and the re-index reads", () => {
     it("reads the stored vector state of named facts", async () => {
-        const row = Object.assign(facts.rowOf({ id: "p1" }), { embeddingModel: "embed", embeddingDimensions: 3, embeddingHash: "h" })
+        const row = Object.assign(facts.rowOf({ id: "p1" }), {
+            embeddingModel: "embed",
+            embeddingDimensions: 3,
+            embeddingHash: "h",
+        })
         const em = mockEntityManager({ find: [BrainFactEntity, [row]] })
         const service = await build(em)
 
@@ -151,19 +184,145 @@ describe("BrainFactEmbeddingsService", () => {
         expect(condition).toContain("f.embeddingModel <> :model OR f.embeddingDimensions <> :dimensions")
         expect(parameters).toEqual({ workspaceId: facts.WS, model: "embed", dimensions: 3 })
     })
+})
 
-    it("reads the facts in force with what their stored vectors say", async () => {
-        const row = Object.assign(facts.rowOf({ status: "active" }), {
-            embeddingModel: "embed",
-            embeddingDimensions: 3,
-            embeddingHash: "h",
-        })
-        const em = mockEntityManager({ find: [BrainFactEntity, [row]] })
+describe("BrainFactEmbeddingsService.adopt: a version that kept its line copies the vector, no embedding call (D-T2-1)", () => {
+    const DONOR =
+        "(SELECT s.embedding FROM public.brain_facts s WHERE s.workspace_id = :workspaceId AND s.embedding IS NOT NULL AND s.embedding_model = :model AND s.embedding_dimensions = :dimensions AND s.embedding_hash = :hash ORDER BY s.id LIMIT 1)"
+
+    it("copies onto each fact the vector another row of the workspace holds for the same hash and identity", async () => {
+        const em = mockEntityManager()
+        const [kept, fresh] = queueQueryBuilders(em, [{ execute: { affected: 1 } }, { execute: { affected: 0 } }])
         const service = await build(em)
 
-        await expect(service.inForce(facts.WS, 50)).resolves.toMatchObject([
-            { fact: { id: "f1" }, stored: { model: "embed", dimensions: 3, hash: "h" } },
+        const copied = await service.adopt(
+            facts.WS,
+            [
+                { id: "08ee5a82", hash: "h-30" },
+                { id: "deb9154f", hash: "h-32" },
+                { id: "08ee5a82", hash: "h-30" },
+            ],
+            IDENTITY,
+        )
+
+        // Only the line some row already holds is copied; the other still needs an embedding. One write per fact, never twice.
+        expect([...copied]).toEqual(["08ee5a82"])
+        expect(evaluatedValues(kept?.callsOf("set")[0]?.[0])).toEqual({
+            embedding: DONOR,
+            embeddingModel: "embed",
+            embeddingHash: "h-30",
+        })
+        expect(kept?.callsOf("where")).toEqual([
+            [{ workspaceId: facts.WS, id: "08ee5a82", status: In(["active", "scheduled", "proposed"]) }],
         ])
-        expect(em.find.mock.calls[0]?.[1]).toMatchObject({ where: { workspaceId: facts.WS, status: "active" }, take: 50 })
+        expect(kept?.callsOf("andWhere")).toEqual([[`EXISTS ${DONOR.replace("s.embedding FROM", "s.id FROM")}`]])
+        expect(kept?.callsOf("setParameters")).toEqual([
+            [{ workspaceId: facts.WS, model: "embed", dimensions: 3, hash: "h-30" }],
+        ])
+        expect(fresh?.callsOf("setParameters")).toEqual([
+            [{ workspaceId: facts.WS, model: "embed", dimensions: 3, hash: "h-32" }],
+        ])
+    })
+
+    it("asks nothing for no fact", async () => {
+        const em = mockEntityManager()
+        const service = await build(em)
+
+        await expect(service.adopt(facts.WS, [], IDENTITY)).resolves.toEqual(new Set())
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+})
+
+describe("BrainFactEmbeddingsService: the reads of the sweep and the batched write", () => {
+    it("reads one keyset page of the facts in force with NO vector: in id order after the cursor, never the oldest 500", async () => {
+        const row = Object.assign(facts.rowOf({ id: "f9", status: "active" }), {
+            embeddingModel: null,
+            embeddingDimensions: null,
+            embeddingHash: null,
+        })
+        const em = mockEntityManager()
+        const [read] = queueQueryBuilders(em, [{ getMany: [row] }])
+        const service = await build(em)
+
+        await expect(
+            service.wanting(facts.WS, IDENTITY, { arm: "missing", afterId: "f8", limit: 128 }),
+        ).resolves.toMatchObject([{ fact: { id: "f9" }, stored: { model: null, dimensions: null, hash: null } }])
+        expect(read?.callsOf("where")).toEqual([
+            ["f.workspaceId = :workspaceId AND f.status = 'active'", { workspaceId: facts.WS }],
+        ])
+        expect(read?.callsOf("andWhere")).toEqual([["f.embedding IS NULL"], ["f.id > :afterId", { afterId: "f8" }]])
+        expect(read?.callsOf("orderBy")).toEqual([["f.id", "ASC"]])
+        expect(read?.callsOf("limit")).toEqual([[128]])
+    })
+
+    it("reads the re-index page by range on the identity (other model or size), the first page with no cursor", async () => {
+        const em = mockEntityManager()
+        const [read] = queueQueryBuilders(em, [{ getMany: [] }])
+        const service = await build(em)
+
+        await expect(
+            service.wanting(facts.WS, IDENTITY, { arm: "other_identity", afterId: null, limit: 5000 }),
+        ).resolves.toEqual([])
+        expect(read?.callsOf("andWhere")).toEqual([
+            [
+                "f.embedding IS NOT NULL AND (f.embeddingModel < :model OR f.embeddingModel > :model OR f.embeddingDimensions <> :dimensions)",
+                { model: "embed", dimensions: 3 },
+            ],
+        ])
+        // A page is never larger than one read's bound.
+        expect(read?.callsOf("limit")).toEqual([[500]])
+    })
+
+    it("names the workspaces that hold a fact in force with no vector, from the partial index alone", async () => {
+        const em = mockEntityManager()
+        const [read] = queueQueryBuilders(em, [{ getRawMany: [{ workspace: "ws-a" }, { workspace: "ws-b" }] }])
+        const service = await build(em)
+
+        await expect(service.workspacesWanting(50)).resolves.toEqual(["ws-a", "ws-b"])
+        expect(read?.callsOf("select")).toEqual([["DISTINCT w.workspace_id", "workspace"]])
+        expect(read?.callsOf("where")).toEqual([["w.status = 'active' AND w.embedding IS NULL"]])
+        expect(read?.callsOf("limit")).toEqual([[50]])
+    })
+})
+
+describe("BrainFactEmbeddingsService.storeMany: one write per embedding batch", () => {
+    it("stores one batch of vectors in ONE write, each with the identity and its line hash", async () => {
+        const em = mockEntityManager()
+        const [write] = queueQueryBuilders(em, [{ execute: {} }])
+        const service = await build(em)
+
+        await service.storeMany(
+            facts.WS,
+            [
+                { id: "f1", hash: "h1", vector: [0.1, 0.2, 0.3] },
+                { id: "f2", hash: "h2", vector: [0.4, 0.5, 0.6] },
+            ],
+            IDENTITY,
+        )
+
+        // Each id picks its vector and its hash out of the two arrays the one statement carries.
+        const set = JSON.stringify(evaluatedValues(write?.callsOf("set")[0]?.[0]))
+        expect(set).toContain('"embeddingModel":"embed"')
+        expect(set).toContain("unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[]))")
+        expect(set).toContain("unnest(CAST(:ids AS uuid[]), CAST(:hashes AS text[]))")
+        expect(write?.callsOf("where")[0]?.[0]).toContain("status IN ('active', 'scheduled', 'proposed')")
+        expect(write?.callsOf("setParameters")).toEqual([
+            [
+                {
+                    workspaceId: facts.WS,
+                    ids: ["f1", "f2"],
+                    vectors: ["[0.1,0.2,0.3]", "[0.4,0.5,0.6]"],
+                    hashes: ["h1", "h2"],
+                },
+            ],
+        ])
+    })
+
+    it("writes nothing for an empty batch", async () => {
+        const em = mockEntityManager()
+        const service = await build(em)
+
+        await service.storeMany(facts.WS, [], IDENTITY)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

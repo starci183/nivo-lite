@@ -1,9 +1,8 @@
 import type { ReactNode } from "react"
-import { MessageBubble } from "@starci/grammar/common"
-import type { MessageBubbleGroupPosition } from "@starci/grammar/common"
+import { MessageBubble, type MessageBubbleGroupPosition } from "@starci/grammar/common"
 
 /** One message of a conversation as the bubble of the team chat and of the journey of a customer draw it. */
-export interface ChatMessageBubbleProps {
+interface ChatMessageBubbleProps {
     readonly id?: string
     /** `outgoing` sits at the end (the reader's or the shop's side), `incoming` at the start. */
     readonly side: "incoming" | "outgoing"

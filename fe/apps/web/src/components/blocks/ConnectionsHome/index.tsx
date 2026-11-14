@@ -4,13 +4,12 @@ import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useConnectionsList, visibleRowsOf } from "@/hooks/connectionsPanes"
 import { usePaneCopy } from "@/hooks/paneFrame"
-import { useDefaultReceivingAccount, useProviderTemplateCandidates } from "@/hooks/providerRights"
+import { useProviderTemplateCandidates } from "@/hooks/providerRights"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ConnectionsHomeBase } from "./component"
 import { connectionsCopyOf } from "./copy"
-import { defaultAccountViewOf } from "./defaultAccountView"
 import { pendingViewsOf } from "./pendingView"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
@@ -22,7 +21,6 @@ export const ConnectionsHome = () => {
     const t = useTranslations("connections")
     const tRights = useTranslations("agentRights")
     const pending = useProviderTemplateCandidates()
-    const receiving = useDefaultReceivingAccount()
     const format = useFormatter()
     const pane = usePaneCopy()
     const locale = useLocale()
@@ -45,15 +43,10 @@ export const ConnectionsHome = () => {
                 filter,
                 text,
                 pending: pendingViewsOf(tRights, format, locale, pending.rows),
-                defaultAccount: defaultAccountViewOf(tRights, locale, receiving),
             }}
             on={{
                 later: (id) => pending.dismiss(id),
                 attachByTemplate: (id) => void pending.attach(id),
-                openDefaultPicker: receiving.openPicker,
-                closeDefaultPicker: receiving.closePicker,
-                pickDefault: receiving.pick,
-                saveDefault: () => void receiving.save(),
                 goTo: (href) => router.push(href),
                 openLibrary: () => router.push(workspaceHref(workspaceId, `${CONSOLE_ROUTES.connections}?tab=library`)),
                 retry: list.retry,

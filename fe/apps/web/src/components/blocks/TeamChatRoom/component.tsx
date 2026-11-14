@@ -1,6 +1,14 @@
-import type { ReactNode } from "react"
-import { Drawer, IconButton, Page, Pane, PaneGrid } from "@starci/grammar/common"
-import type { PageHeaderBreadcrumbs } from "@starci/grammar/common"
+import type { ReactElement, ReactNode } from "react"
+import {
+    Drawer,
+    IconButton,
+    Page,
+    Pane,
+    PaneGrid,
+    PaneSection,
+    Text,
+    type PageHeaderBreadcrumbs,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneBlank } from "@/components/composites/PaneBlank"
 import { TeamChatComposer } from "@/components/composites/TeamChatComposer"
@@ -47,6 +55,7 @@ const ThreadContent = (room: TeamChatRoomBaseProps) => (
                     onPin={room.on.pin}
                     onDecide={room.on.decide}
                     stops={{ ...room.props.stops, onAction: room.on.stop }}
+                    changes={{ ...room.props.changes, onAction: room.on.change }}
                     onReact={room.on.react}
                     onReply={room.on.reply}
                     onShare={room.on.share}
@@ -84,6 +93,7 @@ const PinnedDrawer = (room: TeamChatRoomBaseProps) => (
                     onPin={room.on.pin}
                     onDecide={room.on.decide}
                     stops={{ ...room.props.stops, onAction: room.on.stop }}
+                    changes={{ ...room.props.changes, onAction: room.on.change }}
                     onReact={room.on.react}
                     onReply={room.on.reply}
                     onShare={room.on.share}
@@ -104,6 +114,15 @@ const MembersDrawer = (room: TeamChatRoomBaseProps) => (
     >
         <TeamChatMembers label={room.props.copy.membersOpen} members={room.props.panels.members} />
     </Drawer>
+)
+
+/** The footer of a room nobody may write in (the NIVO room): no field, only the one muted line that says why, on the surface under the well. */
+const ReadOnlyContent = (room: TeamChatRoomBaseProps) => (
+    <PaneSection as="footer" isLoading={room.props.isWaiting} gap="row">
+        <Text size="xs" tone="muted">
+            {room.props.copy.readOnly}
+        </Text>
+    </PaneSection>
 )
 
 /** The composer on the surface under the well: the suggested questions above it, then the field with its attach and send. */
@@ -140,18 +159,22 @@ const RoomHead = (room: RoomHeadProps) => (
         isWaiting={room.props.isWaiting}
         {...(room.props.canGoBack ? { back: { label: room.props.copy.back, onPress: () => room.on.back() } } : {})}
     >
-        <IconButton
-            intent="neutral"
-            source={nivoIconSource("saved", "leading")}
-            label={room.props.copy.pinnedOpen}
-            onPress={() => room.on.panel("pinned")}
-        />
-        <IconButton
-            intent="neutral"
-            source={nivoIconSource("community", "leading")}
-            label={room.props.copy.membersOpen}
-            onPress={() => room.on.panel("members")}
-        />
+        {room.props.canPost ? (
+            <>
+                <IconButton
+                    intent="neutral"
+                    source={nivoIconSource("saved", "leading")}
+                    label={room.props.copy.pinnedOpen}
+                    onPress={() => room.on.panel("pinned")}
+                />
+                <IconButton
+                    intent="neutral"
+                    source={nivoIconSource("community", "leading")}
+                    label={room.props.copy.membersOpen}
+                    onPress={() => room.on.panel("members")}
+                />
+            </>
+        ) : null}
         {room.props.isMuted === null ? null : (
             <IconButton
                 intent="neutral"
@@ -194,7 +217,7 @@ export const teamChatRoomPartsOf = (props: TeamChatRoomBaseProps): TeamChatRoomP
                 <ThreadContent {...props} />
             </>
         ),
-        footer: <ComposerContent {...props} />,
+        footer: props.props.canPost ? <ComposerContent {...props} /> : <ReadOnlyContent {...props} />,
     }
 }
 
@@ -227,8 +250,8 @@ const gridOf = (hasList: boolean, hasRoom: boolean) =>
  * The room as a pane: its body is the head and the thread, its footer the composer, so only the thread scrolls. On the chat page it stands
  * beside the rooms pane under the trail; on an agent tab it is the only pane.
  */
-export const TeamChatPanesBase = (page: TeamChatPanesBaseProps) => {
-    const view = page.props
+export const TeamChatPanesBase = (props: TeamChatPanesBaseProps): ReactElement => {
+    const view = props.props
     const hasList = view.list !== null
     const grid = gridOf(hasList, view.hasRoom)
     const panes = (

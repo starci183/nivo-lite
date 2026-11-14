@@ -50,8 +50,7 @@ export const LegalPageBase = (props: LegalPageBaseProps) => (
             </>
         }
         body={
-            <>
-                <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>
+            <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>
                     <Stack gap="section">
                         <Alert tone="cautionary" title={props.props.draft} />
                         {props.props.sections.map((section) => (
@@ -68,7 +67,6 @@ export const LegalPageBase = (props: LegalPageBaseProps) => (
                     </Stack>
                     <LandingFooter anchorBase="/" />
                 </Page>
-            </>
         }
     />
 )

@@ -20,8 +20,8 @@ import {
     persistPublicIndexedPassage,
     persistPublicLifecycleScene,
     PUBLIC_HOURS,
+    type PublicLifecycleIdentity,
 } from "../../fixtures/builders/public-documents-lifecycle.builder"
-import type { PublicLifecycleIdentity } from "../../fixtures/builders/public-documents-lifecycle.builder"
 import { withBackendRole } from "../../world/backend-role-proof.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { enforcePublicApprovalPointer, enforcePublicHistoryParent } from "../../world/public-documents-database.service"

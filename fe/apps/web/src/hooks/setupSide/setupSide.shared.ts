@@ -1,23 +1,12 @@
 import type { useSetupGates } from "@/hooks/agentSetup"
 import type { useModuleCatalog } from "@/hooks/moduleCatalog"
 import type { MODULE_KEYS } from "@/modules/catalog"
-import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
-import type { SetupSession } from "@/modules/installations"
+import { gateEntry, gateHint, gateLabel, type SetupSession } from "@/modules/installations"
 import type { useSetupRequirements } from "@/hooks/setupRequirements"
-import type { SetupSideGate, SetupSideNotice, SetupSideView } from "@/modules/types"
+import type { SetupSideNotice, SetupSideView } from "@/modules/types"
 import type { useTranslations } from "next-intl"
 
 import type { Dispatch, SetStateAction } from "react"
-
-/** The words of a gate key that say it is something the agent must never do, or must ask first. */
-const NEVER_KEY = /prohibit|forbid|never|banned/
-const ASK_KEY = /approv|threshold|escalat|handoff|limit|consent|confirm/
-
-/** What the agent does about a gate: the catalogue names no mode yet, so the key says it (prohibited actions, approval thresholds), else the agent works on its own. */
-export const gateGroupOf = (key: string): SetupSideGate["group"] => {
-    if (NEVER_KEY.test(key)) return "never"
-    return ASK_KEY.test(key) ? "ask" : "auto"
-}
 
 const GATE_TONE = { missing: "neutral", proposed: "warning", confirmed: "success" } as const
 
@@ -53,7 +42,6 @@ export const PLACEHOLDER_GATES: SetupSideView["gates"]["gates"] = Array.from(
         statusLabel: "-",
         statusTone: "neutral",
         evidence: "",
-        group: "auto",
     }),
 )
 
@@ -97,7 +85,6 @@ export const gateViewMapper = (
             statusLabel: t(`gate_${entry.status}`),
             statusTone: GATE_TONE[entry.status],
             evidence: entry.evidence,
-            group: gateGroupOf(gate.key),
         }
     }
 }

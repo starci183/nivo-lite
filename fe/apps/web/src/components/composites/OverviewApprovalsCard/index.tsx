@@ -20,7 +20,7 @@ interface OverviewApprovalsCardProps {
         /** Opens one item in the workbench of its agent. */
         readonly open: (href: string) => void
     }
-    /** The inbox, where every item that waits is. */
+    /** The team chat, where every item that waits is. */
     readonly allHref: string
 }
 

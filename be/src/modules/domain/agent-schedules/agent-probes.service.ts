@@ -1,14 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { AgentWakeContext } from "@modules/domain/agent-work"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectQueueTimeout } from "@modules/platform/queue"
-import type { QueueTimeout } from "@modules/platform/queue"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectQueueTimeout, type QueueTimeout } from "@modules/platform/queue"
 import { PROBE_BUDGET_MS } from "./agent-schedules.policy"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { AccountingCloseProbeService } from "./probes/accounting-close-probe.service"
-import { InvoicesDueProbeService } from "./probes/invoices-due-probe.service"
-import { MoneyInProbeService } from "./probes/money-in-probe.service"
 import { NewDocumentsProbeService } from "./probes/new-documents-probe.service"
 import { TasksDueProbeService } from "./probes/tasks-due-probe.service"
 import type { AgentProbe, ProbeAgent, ProbeAnswer, ProbeDecision } from "./agent-schedules.contracts"
@@ -28,12 +24,10 @@ export class AgentProbesService {
         @InjectQueueTimeout() private readonly timeout: QueueTimeout,
         @InjectLogger() private readonly logger: Logger,
         tasksDue: TasksDueProbeService,
-        invoicesDue: InvoicesDueProbeService,
         newDocuments: NewDocumentsProbeService,
-        moneyIn: MoneyInProbeService,
         accountingClose: AccountingCloseProbeService,
     ) {
-        const known: ReadonlyArray<AgentProbe> = [tasksDue, invoicesDue, newDocuments, moneyIn, accountingClose]
+        const known: ReadonlyArray<AgentProbe> = [tasksDue, newDocuments, accountingClose]
         this.probes = new Map(known.map((probe) => [probe.key, probe]))
     }
 

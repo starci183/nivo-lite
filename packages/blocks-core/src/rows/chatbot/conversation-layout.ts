@@ -36,14 +36,15 @@ const rowOf = (names: ReadonlyArray<string>): ConversationArrangement => ({
 })
 
 /**
- * Where the panes stand: on a phone one pane at a time (the thread once one is chosen, else the list), from a medium width the
+ * Where the panes stand: on a phone one pane at a time, as wide as the screen (the thread once one is chosen, else the list: a
+ * fixed-width list would leave a blank strip beside it), from a medium width the
  * list beside the thread, and from a wide one the contact too.
  */
 export const conversationLayoutOf = (panes: ConversationPanes): ConversationLayout => {
     const phone = panes.hasThread || !panes.hasList ? ["thread"] : ["list"]
     const medium = panes.hasList ? ["list", "thread"] : ["thread"]
     return {
-        base: rowOf(phone),
+        base: { areas: [phone.join(" ")], columns: ["fill"] },
         medium: rowOf(medium),
         wide: rowOf(panes.hasContact ? [...medium, "contact"] : medium),
     }

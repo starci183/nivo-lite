@@ -38,8 +38,26 @@ export interface WorkflowCreateRequest extends WorkflowsRequest {
     readonly name?: string | null | undefined
 }
 
+/** One operation on a connected account the owner agreed a version may call, exactly as the refusal `RIGHTS_NEED_OWNER` listed it. */
+export interface AgreedRightRequest {
+    /** The key of the node. */
+    readonly nodeKey: string
+    /** The connected account. */
+    readonly connectionId: string
+    /** The operation, by tool id. */
+    readonly operation: string
+    /** `auto` or `ask`. */
+    readonly mode: string
+}
+
+/** What an activation carries about rights: the entries the owner agreed, absent when nothing was asked of them. */
+export interface AgreedRightsRequest {
+    /** The entries the owner agreed. */
+    readonly agreedRights?: ReadonlyArray<AgreedRightRequest> | null | undefined
+}
+
 /** What a change that writes a version names: why, and the newest version the caller read. */
-export interface WorkflowChangeRequest extends WorkflowRequest {
+export interface WorkflowChangeRequest extends WorkflowRequest, AgreedRightsRequest {
     /** Why the version is made. */
     readonly note: string
     /** The newest version number the caller read. */
@@ -64,8 +82,28 @@ export interface WorkflowAcceptRequest extends WorkflowChangeRequest {
     readonly templateVersion: number
 }
 
+/** One pick of the ONE source of a contested stream for a trigger purpose of a running workflow, as readiness names it. */
+export interface AgentTriggerPickRequest {
+    /** The workflow. */
+    readonly workflowId: string
+    /** The trigger purpose (verb). */
+    readonly verb: string
+    /** The stream, as readiness named it. */
+    readonly stream: string
+    /** The account picked. */
+    readonly connectionId: string
+}
+
+/** What one consent over the running workflows of an installation's agent names. */
+export interface AgentRightsAgreeRequest {
+    /** The installation whose agent holds the workflows. */
+    readonly installationId: string
+    /** The owner's picks of one source per contested stream (owner key `triggerOneSource2026_11_12`); absent or empty for none. */
+    readonly triggerPicks?: ReadonlyArray<AgentTriggerPickRequest> | null | undefined
+}
+
 /** What a status change names. */
-export interface WorkflowStatusRequest extends WorkflowRequest {
+export interface WorkflowStatusRequest extends WorkflowRequest, AgreedRightsRequest {
     /** active, draft or paused. */
     readonly status: string
 }

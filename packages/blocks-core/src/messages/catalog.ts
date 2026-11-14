@@ -1,4 +1,5 @@
 import type { NodeLocale } from "../nodes/node-schema.types"
+import { BRAIN_FACT_MODEL_NOTES } from "../vocabulary/brain-fact-legend"
 import en from "./en.json"
 import samples from "./samples.json"
 import vi from "./vi.json"
@@ -33,9 +34,15 @@ const ENGLISH: Readonly<Record<string, string>> = en
 
 /**
  * The words a model reads for a text key of this library (the title of an effect or a tool), in English like every step goal, or
- * undefined when the catalog has no such key. A host hands it to the node runner so an agent is told what a tool does in words.
+ * undefined when the catalog has no such key. A host hands it to the node runner so an agent is told what a tool does in words. The
+ * truth reads carry how to read their facts after their words (`BRAIN_FACT_MODEL_NOTES`: the one legend text, which the gateway's
+ * descriptions use too); a person reading the title never sees it.
  */
-export const modelWordsOf = (key: string): string | undefined => (Object.hasOwn(ENGLISH, key) ? ENGLISH[key] : undefined)
+export const modelWordsOf = (key: string): string | undefined => {
+    if (!Object.hasOwn(ENGLISH, key)) return undefined
+    const note = Object.hasOwn(BRAIN_FACT_MODEL_NOTES, key) ? BRAIN_FACT_MODEL_NOTES[key] : undefined
+    return note === undefined ? ENGLISH[key] : `${ENGLISH[key]}. ${note}`
+}
 
 /** The words of a key in both product languages. */
 export const bilingualOf = (key: MessageKey): BilingualText => ({ vi: messageOf("vi", key), en: messageOf("en", key) })

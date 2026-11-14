@@ -1,4 +1,3 @@
-export { DOC_ANSWERS, FACT_ANSWERS, answers, keywordsOf } from "./gap-keywords.policy"
 export { KnowledgeGapsModule } from "./knowledge-gaps.module"
 export { KnowledgeGapsService } from "./knowledge-gaps.service"
 export type { GapRecord, MaybeGapRecorded } from "./knowledge-gaps.contracts"

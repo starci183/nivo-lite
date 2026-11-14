@@ -4,6 +4,11 @@ export interface SeedTelegram {
     readonly id: string
     /** The bot token from @BotFather. */
     readonly token?: string | undefined
+    /**
+     * The secret Telegram echoes in `X-Telegram-Bot-Api-Secret-Token` (setWebhook `secret_token`: 1-256 of `A-Z a-z 0-9 _ -`), sealed by
+     * name so a dev webhook mock can prove its deliveries; absent keeps the connection's own random one.
+     */
+    readonly webhookSecret?: string | undefined
 }
 
 /** The Zalo OA of a seeded workspace; an absent value leaves the connection in the state that misses it. */

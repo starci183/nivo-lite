@@ -1,8 +1,7 @@
 import type { ComponentProps } from "react"
 import { Button, FileDropzone, Input, Text, Textarea } from "@starci/grammar/common"
 import { CsvImportDocs } from "@/components/branches/CsvImportDocs"
-import { CsvImportGrid } from "@/components/branches/CsvImportGrid"
-import type { CsvImportGridView } from "@/components/branches/CsvImportGrid"
+import { CsvImportGrid, type CsvImportGridView } from "@/components/branches/CsvImportGrid"
 
 /** The resolved local source controls of an import, with their existing edit commands. */
 interface CsvImportDataStepProps {

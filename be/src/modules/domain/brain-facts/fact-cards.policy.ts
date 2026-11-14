@@ -21,4 +21,4 @@ const keyOf = (proposal: Pick<WaitingProposal, "subjectKey" | "attribute">): str
  * page that groups the same proposals always agree.
  */
 export const waitingCardCount = (proposals: ReadonlyArray<WaitingProposal>): number =>
-    new Set(proposals.map(keyOf)).size
+    new Set(proposals.map((item) => keyOf(item))).size

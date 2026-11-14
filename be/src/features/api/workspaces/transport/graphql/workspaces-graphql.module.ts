@@ -26,6 +26,7 @@ import { RenameWorkspaceResolver } from "./rename-workspace.resolver"
 import { MyWorkInHandResolver } from "./my-work-in-hand.resolver"
 import { RestoreWorkspaceResolver } from "./restore-workspace.resolver"
 import { WorkspaceDeclinedInvitesResolver } from "./workspace-declined-invites.resolver"
+import { WorkspaceSettingsResolver } from "./workspace-settings.resolver"
 import { ConfigurableModuleClass } from "./workspaces-graphql.module-definition"
 
 @Module({
@@ -57,6 +58,7 @@ import { ConfigurableModuleClass } from "./workspaces-graphql.module-definition"
         RestoreWorkspaceResolver,
         MyWorkInHandResolver,
         WorkspaceDeclinedInvitesResolver,
+        WorkspaceSettingsResolver,
     ],
 })
 /** The GraphQL transport of the workspaces feature. */

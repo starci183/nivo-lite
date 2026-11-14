@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
-import { useAvatarEditorView, useAvatarUpload } from "@/hooks/avatar"
-import type { AvatarDoors } from "@/hooks/avatar"
+import { useAvatarEditorView, useAvatarUpload, type AvatarDoors } from "@/hooks/avatar"
 import {
     useMutateRequestAgentAvatarUploadSwr,
     useMutateSetAgentAvatarPresetSwr,

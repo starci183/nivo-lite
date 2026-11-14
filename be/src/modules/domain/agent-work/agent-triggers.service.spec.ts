@@ -8,6 +8,7 @@ import {
     eventTriggerRowOf,
     seededTriggerRowOf,
 } from "@tests/fixtures/builders/agent-work.builder"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings/workspace-time-zone.service"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -16,7 +17,8 @@ import { AgentTriggerEntity } from "./persistence/entities"
 
 const NOW = new Date("2026-11-10T03:00:00.000Z")
 
-const build = async (em: MockEntityManager = mockEntityManager()) => {
+const build = async (em: MockEntityManager = mockEntityManager(), zone = "Asia/Ho_Chi_Minh") => {
+    const zones = mock<WorkspaceTimeZoneService>({ timeZoneOf: jest.fn().mockResolvedValue(zone) })
     const access = mock<AgentWorkAccessService>({
         manager: jest.fn().mockResolvedValue("seat-1"),
         agent: jest.fn().mockResolvedValue(undefined),
@@ -26,9 +28,10 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
             AgentTriggersService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: AgentWorkAccessService, useValue: access },
+            { provide: WorkspaceTimeZoneService, useValue: zones },
         ],
     }).compile()
-    return { service: container.get(AgentTriggersService), em, access }
+    return { service: container.get(AgentTriggersService), em, access, zones }
 }
 
 describe("AgentTriggersService reads", () => {
@@ -104,6 +107,21 @@ describe("AgentTriggersService.save", () => {
             sources: [],
             seedKey: null,
         })
+    })
+
+    it("gives a trigger that names no zone the workspace's own zone", async () => {
+        const { service, em, zones } = await build(
+            mockEntityManager({
+                count: [AgentTriggerEntity, 0],
+                save: [AgentTriggerEntity, agentTriggerRowOf()],
+            }),
+            "Europe/London",
+        )
+
+        await service.save("user-1", agentTriggerWriteOf())
+
+        expect(zones.timeZoneOf).toHaveBeenCalledWith("ws-1")
+        expect(em.save).toHaveBeenCalledWith(AgentTriggerEntity, expect.objectContaining({ timeZone: "Europe/London" }))
     })
 
     it("lets a module seed a trigger with no member behind it", async () => {

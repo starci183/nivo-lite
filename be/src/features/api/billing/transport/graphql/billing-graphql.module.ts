@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common"
-import { BillingBankAccountResolver } from "./billing-bank-account.resolver"
 import { BillingApiModule } from "../../billing.module"
 import { ConfigurableModuleClass } from "./billing-graphql.module-definition"
 import { BillingPlansResolver } from "./billing-plans.resolver"
@@ -18,7 +17,6 @@ import { PaymentOrderRequestStatusResolver } from "./payment-order-request-statu
 @Module({
     imports: [BillingApiModule.register({})],
     providers: [
-        BillingBankAccountResolver,
         BillingPlansResolver,
         BillingPlanQuoteResolver,
         BillingStorageResolver,

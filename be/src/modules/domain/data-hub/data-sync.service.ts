@@ -1,30 +1,27 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionActor } from "@modules/domain/connections"
 import { DataRecordsService } from "@modules/domain/data-records"
-import { DataSyncRunsService } from "@modules/domain/data-sync-runs"
-import type { DataSyncRun, DataSyncTrigger } from "@modules/domain/data-sync-runs"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { DataSyncRunsService, type DataSyncRun, type DataSyncTrigger } from "@modules/domain/data-sync-runs"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { DomainError } from "@modules/platform/errors"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { DataSyncQueue, isDataSyncPayload, isDataSyncTickPayload } from "@modules/queues/data-sync"
-import type { DataSyncPayload } from "@modules/queues/data-sync"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import {
+    DataSyncQueue,
+    isDataSyncPayload,
+    isDataSyncTickPayload,
+    type DataSyncPayload,
+} from "@modules/queues/data-sync"
 import { CsvImportSyncService } from "./csv-import-sync.service"
-import { DATA_PROVIDERS } from "./data-hub.contracts"
-import type { DataConnector, DataProvider } from "./data-hub.contracts"
+import { DATA_PROVIDERS, type DataConnector, type DataProvider } from "./data-hub.contracts"
 import { DataHubLogEvent } from "./data-hub.log-events"
 import { DataHubService } from "./data-hub.service"
 import { DatabaseSyncService } from "./database-sync.service"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { ImapSyncService } from "./imap-sync.service"
-import { OpenApiSyncService } from "./openapi-sync.service"
 import { TelegramUserSyncService } from "./telegram-user-sync.service"
 
 /** How long one sync may run before it stops early and the next one continues. */
@@ -50,12 +47,11 @@ export class DataSyncService {
         private readonly runs: DataSyncRunsService,
         csv: CsvImportSyncService,
         database: DatabaseSyncService,
-        imap: ImapSyncService,
-        openapi: OpenApiSyncService,
+        private readonly imap: ImapSyncService,
         telegramUser: TelegramUserSyncService,
     ) {
         this.connectors = new Map<DataProvider, DataConnector>(
-            [csv, database, imap, openapi, telegramUser].map((connector) => [connector.provider, connector]),
+            [csv, database, imap, telegramUser].map((connector) => [connector.provider, connector]),
         )
     }
 
@@ -105,7 +101,11 @@ export class DataSyncService {
                 connection,
                 credential: (await this.hub.credentialOf(connection.id)) ?? "",
                 upsert: async (entity, list) => {
-                    const written = await this.records.upsert(connection.workspaceId, connection.id, entity, list)
+                    // A mailbox's mails are the IMAP account's own data; every other connector's rows go to the hub.
+                    const written =
+                        connection.provider === "imap"
+                            ? await this.imap.keep(connection.id, list)
+                            : await this.records.upsert(connection.workspaceId, connection.id, entity, list)
                     rows += written
                     return written
                 },

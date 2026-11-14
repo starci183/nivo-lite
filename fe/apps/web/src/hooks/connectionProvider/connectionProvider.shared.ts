@@ -1,5 +1,4 @@
-import { CATALOG, catalogKey } from "@/hooks/connection-catalog"
-import type { CatalogEntry } from "@/hooks/connection-catalog"
+import { CATALOG, catalogKey, type CatalogEntry } from "@/hooks/connection-catalog"
 import { isProvider, providerKey } from "@/hooks/connection-providers"
 import { connectionFactsOf } from "@/hooks/connection-rows"
 import { liveConnections, sortRows, wizardQuery } from "@/hooks/connections"
@@ -164,5 +163,5 @@ export const aboutOf = (provider: Provider, t: ProviderTranslate): ReadonlyArray
 export const latestEventOf = (connections: ReadonlyArray<Connection>): string =>
     connections.reduce((latest, connection) => {
         const at = connection.lastEventAt ?? ""
-        return at > latest ? at : latest
+        return latest === "" || new Date(at) > new Date(latest) ? at : latest
     }, "")

@@ -97,7 +97,7 @@ export const useCsvImportCommands = (): CsvImportCommands => {
                         connectionId: form.connectionId,
                         name: form.name,
                         link: form.link,
-                        files: await Promise.all(form.files.map(uploadedFileOf)),
+                        files: await Promise.all(form.files.map((entry) => uploadedFileOf(entry))),
                     }),
                 )
                 if (settled.kind === "ok") await refresh()

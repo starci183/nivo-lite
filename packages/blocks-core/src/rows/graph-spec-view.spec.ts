@@ -1,11 +1,23 @@
+import { strict as assert } from "node:assert"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { sampleOf } from "../messages/catalog"
 import en from "../messages/en.json"
 import vi from "../messages/vi.json"
-import { latestTemplateVersion, workflowTemplateOf } from "../modules/workflow-templates"
+import { latestTemplateVersion, parseWorkflowTemplate, type WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
+import consult from "./legacy-templates/consult.template.json"
+import frontDesk from "./legacy-templates/front-desk.template.json"
+import reconcile from "./legacy-templates/reconcile.template.json"
 import { FOR_EACH_MAX } from "../nodes/core/for-each.node"
 import { NODE_KINDS } from "../nodes/node-ui"
 import { graphViewOfSpec } from "./graph-spec-view"
 import { graphView } from "./graph-view"
+
+/**
+ * The last JSON templates of the front desk, the consult and the reconciliation, kept as data for the views of an @1 graph spec (the
+ * agents' graphs are `nivo/agent-graph@2` since the flip; the back end reads them into @1 for these views).
+ */
+const LEGACY_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [frontDesk, consult, reconcile].map((raw) => parseWorkflowTemplate(raw))
+const workflowTemplateOf = (id: string): WorkflowTemplate | null => LEGACY_TEMPLATES.find((one) => one.id === id) ?? null
 
 /** The main workflow of each module, as its template ships it now. */
 const TEMPLATES: Readonly<Record<string, string>> = {
@@ -13,11 +25,12 @@ const TEMPLATES: Readonly<Record<string, string>> = {
     sales: "sales.consult",
     accounting: "accounting.reconcile",
 }
-const MODULE_KEYS: ReadonlyArray<string> = Object.keys(TEMPLATES)
+/** The modules whose main workflow is still installed (the reconcile left with money: its legacy graph stays as data for the views). */
+const MODULE_KEYS: ReadonlyArray<string> = ["chatbot", "sales"]
 
 const specOf = (moduleKey: string): GraphSpec => {
     const template = workflowTemplateOf(TEMPLATES[moduleKey] ?? "")
-    if (template === null) throw new Error(`no template for ${moduleKey}`)
+    assert.ok(template !== null, `no template for ${moduleKey}`)
     return latestTemplateVersion(template).graph
 }
 
@@ -67,7 +80,7 @@ describe.each(MODULE_KEYS)("graphViewOfSpec of the %s graph", (moduleKey) => {
 })
 
 describe("graphViewOfSpec", () => {
-    it("labels the four routes of understanding the customer, and the ready route of the consult", () => {
+    it("labels the five routes of understanding the customer, and the ready route of the consult", () => {
         const view = graphViewOfSpec(specOf("chatbot"), { locale: "vi" })
         const edge = (id: string): unknown => view.edges.find((one) => one.id === id)
 
@@ -75,6 +88,7 @@ describe("graphViewOfSpec", () => {
         expect(edge("understand:question->answer")).toMatchObject({ label: vi.nodeChatbotUnderstandOutputQuestion })
         expect(view.nodes.find((one) => one.id === "understand")?.outputs?.map((one) => one.label)).toEqual([
             vi.nodeChatbotUnderstandOutputBuy,
+            vi.nodeChatbotUnderstandOutputBook,
             vi.nodeChatbotUnderstandOutputPaid,
             vi.nodeChatbotUnderstandOutputComplaint,
             vi.nodeChatbotUnderstandOutputQuestion,
@@ -120,16 +134,17 @@ describe("graphViewOfSpec", () => {
         const kinds = (moduleKey: string): Readonly<Record<string, string>> =>
             Object.fromEntries(graphViewOfSpec(specOf(moduleKey), { locale: "vi" }).nodes.map((node) => [node.id, node.kind]))
 
-        expect(kinds("chatbot")).toEqual({
+        // The legacy graphs also name steps the flip deleted (chatbot.complaint, sales.create-order): no kind is asserted for them.
+        expect(kinds("chatbot")).toMatchObject({
             understand: "condition",
             "to-consult": "event",
             "to-reconcile": "event",
-            complaint: "action",
             "to-owner": "end",
             answer: "action",
         })
-        expect(kinds("accounting")).toMatchObject({ match: "action", "notify-paid": "event", "to-after-sale": "event" })
-        expect(kinds("sales")).toMatchObject({ consult: "action", "create-order": "action", "notify-order": "event", won: "end" })
+        // The reconcile's own steps (match, notify-paid) and the consult's order notice left with money: no kind is asserted for them.
+        expect(kinds("accounting")).toMatchObject({ "to-after-sale": "event" })
+        expect(kinds("sales")).toMatchObject({ consult: "action", won: "end" })
     })
 })
 
@@ -141,15 +156,17 @@ describe("graphViewOfSpec contract fields", () => {
             ["zalo", "zalo", "Zalo"],
             ["telegram", "telegram", "Telegram"],
         ])
-        expect(chatbotView.outcomes?.map((one) => [one.key, one.label])).toEqual([["owner", "Chuyển chủ tiệm"]])
-        expect(chatbotView.entry).toEqual({ openTo: "any", holdsConversation: false, label: "Mọi quy trình được gọi" })
+        expect(chatbotView.outcomes?.map((one) => [one.key, one.label])).toEqual([["owner", sampleOf("sampleGraphOutcomeOwner")]])
+        expect(chatbotView.entry).toEqual({ openTo: "any", label: sampleOf("sampleGraphEntryAny") })
         const accounting = graphViewOfSpec(specOf("accounting"), { locale: "en" })
-        expect(accounting.entry).toMatchObject({ openTo: "any", holdsConversation: false })
+        expect(accounting.entry).toMatchObject({ openTo: "any" })
         expect(accounting.triggers?.map((one) => [one.key, one.sourceKind])).toEqual([
             ["sepay", "sepay"],
             ["call", "workflow"],
         ])
-        expect(graphViewOfSpec(specOf("sales"), { locale: "en" }).entry).toMatchObject({ openTo: "any", holdsConversation: true })
+        // `holdsConversation` is deleted (R35, R43): the sale's entry is open to any caller and holds nothing.
+        expect(graphViewOfSpec(specOf("sales"), { locale: "en" }).entry).toMatchObject({ openTo: "any" })
+        expect(graphViewOfSpec(specOf("sales"), { locale: "en" }).entry).not.toHaveProperty("holdsConversation")
         expect(graphViewOfSpec(specOf("sales"), { locale: "en" }).triggers?.[0]).toMatchObject({
             key: "call",
             sourceKind: "workflow",
@@ -173,7 +190,7 @@ describe("graphViewOfSpec contract fields", () => {
 
         expect(understand?.bindings?.find((one) => one.name === "conversationId")).toEqual({
             name: "conversationId",
-            label: "Cuộc trò chuyện",
+            label: sampleOf("sampleGraphParamConversation"),
             kind: "ref",
             text: "= trigger.conversationId",
             ref: "trigger.conversationId",
@@ -193,10 +210,10 @@ describe("graphViewOfSpec contract fields", () => {
 
         expect(call?.call).toMatchObject({
             agent: "sales",
-            agentLabel: "Bán hàng",
+            agentLabel: sampleOf("sampleGraphAgentSales"),
             workflow: "after-sale",
             version: "latest",
-            versionLabel: "Bản mới nhất",
+            versionLabel: sampleOf("sampleGraphVersionLatest"),
             params: [
                 { name: "orderId", kind: "ref", ref: "steps.mark-paid.output.orderId" },
                 { name: "leadId", kind: "ref", ref: "steps.mark-paid.output.leadId" },
@@ -205,7 +222,7 @@ describe("graphViewOfSpec contract fields", () => {
         expect(call?.outcome).toBeUndefined()
         expect(view.nodes.find((one) => one.id === "match")?.call).toBeUndefined()
         const owner = graphViewOfSpec(specOf("chatbot"), { locale: "vi" }).nodes.find((one) => one.id === "to-owner")
-        expect(owner?.outcome).toMatchObject({ key: "owner", label: "Chuyển chủ tiệm" })
+        expect(owner?.outcome).toMatchObject({ key: "owner", label: sampleOf("sampleGraphOutcomeOwner") })
         expect(owner?.call).toBeUndefined()
         expect(
             graphViewOfSpec(specOf("accounting"), { locale: "en" }).nodes.find((one) => one.id === "to-after-sale")?.call,
@@ -269,5 +286,39 @@ describe("graphViewOfSpec contract fields", () => {
         it("is a valid graph view", () => {
             expect(graphView.safeParse(view).success).toBe(true)
         })
+    })
+})
+
+describe("graphViewOfSpec: a hand-off names its target, and its settings are worded (ENG1)", () => {
+    const frontDesk = (): GraphSpec => specOf("chatbot")
+
+    it("titles the two front-desk hand-offs by the agent they hand to, so they never read the same", () => {
+        const view = graphViewOfSpec(frontDesk(), { locale: "vi" })
+        const titles = view.nodes.filter((node) => node.step === "core.call-workflow").map((node) => [node.id, node.title, node.label])
+        expect(titles).toEqual([
+            ["to-consult", sampleOf("sampleGraphHandOffToSales"), sampleOf("sampleGraphHandOffToSales")],
+            ["to-reconcile", sampleOf("sampleGraphHandOffToAccounting"), sampleOf("sampleGraphHandOffToAccounting")],
+        ])
+        expect(graphViewOfSpec(frontDesk(), { locale: "en" }).nodes.find((node) => node.id === "to-consult")?.title).toBe(
+            "Hand off to Sales",
+        )
+    })
+
+    it("titles a hand-off by its target workflow's name when the reader knows it", () => {
+        const names = { "sales.consult": sampleOf("sampleGraphWorkflowConsult"), "accounting.reconcile": sampleOf("sampleGraphWorkflowReconcile") }
+        const view = graphViewOfSpec(frontDesk(), { locale: "vi", names })
+        expect(view.nodes.find((node) => node.id === "to-consult")?.title).toBe(sampleOf("sampleGraphHandOffToConsult"))
+        expect(view.nodes.find((node) => node.id === "to-reconcile")?.title).toBe(sampleOf("sampleGraphHandOffToReconcile"))
+        expect(view.nodes.find((node) => node.id === "understand")?.title).toBe(sampleOf("sampleGraphStepUnderstand"))
+    })
+
+    it("words every setting of a hand-off in Vietnamese: no bare English parameter name", () => {
+        const node = graphViewOfSpec(frontDesk(), { locale: "vi" }).nodes.find((one) => one.id === "to-consult")
+        expect(node?.bindings?.map((binding) => [binding.name, binding.label])).toEqual([
+            ["agent", sampleOf("sampleGraphSettingAgent")],
+            ["workflow", sampleOf("sampleGraphSettingWorkflow")],
+            ["version", sampleOf("sampleGraphSettingVersion")],
+            ["inputs", sampleOf("sampleGraphSettingInputs")],
+        ])
     })
 })

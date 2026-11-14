@@ -1,7 +1,9 @@
 import { graphSpecSchema } from "./graph-spec.schema"
 import {
+    callInputsOf,
     callProblems,
     entryProblems,
+    workflowEntrySchema,
     conditionsHold,
     contractProblems,
     contractTypeFits,
@@ -11,7 +13,6 @@ import {
     outcomeProblems,
     suppliedParamsOf,
     triggerProblems,
-    wakesOfTriggers,
 } from "./workflow-contract"
 import type { WorkflowContract, WorkflowOutcome, WorkflowTrigger } from "./workflow-contract"
 
@@ -23,21 +24,29 @@ const CONSULT: WorkflowContract = {
     ],
 }
 
+// A contract a channel message supplies on the one event pipeline: the route and the contact (generic members), never a chat id.
+const CHANNEL: WorkflowContract = {
+    inputs: [
+        { name: "routeId", type: "string", required: true },
+        { name: "contactId", type: "string", required: true },
+        { name: "data", type: "object", required: false },
+    ],
+}
+
 const zalo: WorkflowTrigger = { key: "zalo", source: { kind: "zalo", connectionId: "c-1" } }
 const telegram: WorkflowTrigger = { key: "telegram", source: { kind: "telegram", connectionId: null } }
 
 describe("workflow triggers", () => {
     it("every trigger must supply the full contract; the problem names the trigger", () => {
         const sepay: WorkflowTrigger = { key: "bank", source: { kind: "sepay", connectionId: null } }
-        expect(triggerProblems([zalo, sepay], ["channel", "system-event"], CONSULT)).toEqual([
-            { code: "TRIGGER_INPUT_UNSUPPLIED", at: "triggers.bank.leadId" },
-            { code: "TRIGGER_INPUT_UNSUPPLIED", at: "triggers.bank.conversationId" },
+        expect(triggerProblems([zalo, sepay], CHANNEL)).toEqual([
+            { code: "TRIGGER_INPUT_UNSUPPLIED", at: "triggers.bank.routeId" },
+            { code: "TRIGGER_INPUT_UNSUPPLIED", at: "triggers.bank.contactId" },
         ])
     })
 
     it("two channels may start one workflow when each supplies the contract", () => {
-        expect(triggerProblems([zalo, telegram], ["channel"], CONSULT)).toEqual([])
-        expect(wakesOfTriggers([zalo, telegram])).toEqual(["channel"])
+        expect(triggerProblems([zalo, telegram], CHANNEL)).toEqual([])
     })
 
     it("a workflow hand-off source supplies exactly the contract", () => {
@@ -46,17 +55,17 @@ describe("workflow triggers", () => {
             "conversationId",
             "items",
         ])
-        expect(triggerProblems([{ key: "call", source: { kind: "workflow", connectionId: null } }], ["agent"], CONSULT)).toEqual([])
+        expect(triggerProblems([{ key: "call", source: { kind: "workflow", connectionId: null } }], CONSULT)).toEqual([])
     })
 
-    it("refuses a mistyped supply, a connection on a kind with none, an unknown condition, a duplicate key and other wakes", () => {
-        const typed: WorkflowContract = { inputs: [{ name: "slotMs", type: "string", required: true }] }
+    it("refuses a mistyped supply, a connection on a kind with none, an unknown condition and a duplicate key", () => {
+        const typed: WorkflowContract = { inputs: [{ name: "eventId", type: "integer", required: true }] }
         const clock: WorkflowTrigger = {
             key: "clock",
             source: { kind: "schedule", connectionId: "x" },
             conditions: [{ param: "nope", op: "present" }],
         }
-        expect(triggerProblems([clock, clock], ["channel"], typed).map((problem) => problem.code)).toEqual([
+        expect(triggerProblems([clock, clock], typed).map((problem) => problem.code)).toEqual([
             "TRIGGER_KEY_DUPLICATE",
             "TRIGGER_INPUT_TYPE",
             "TRIGGER_CONNECTION_INVALID",
@@ -64,12 +73,11 @@ describe("workflow triggers", () => {
             "TRIGGER_INPUT_TYPE",
             "TRIGGER_CONNECTION_INVALID",
             "TRIGGER_CONDITION_UNKNOWN",
-            "TRIGGER_SOURCES_MISMATCH",
         ])
     })
 
     it("judges nothing on a graph without triggers", () => {
-        expect(triggerProblems(undefined, ["channel"], CONSULT)).toEqual([])
+        expect(triggerProblems(undefined, CONSULT)).toEqual([])
     })
 })
 
@@ -128,7 +136,7 @@ describe("workflow contracts and hand-offs", () => {
     })
 
     it("conditions compare supplied params", () => {
-        const params = { text: "Em muốn mua HOA", channel: "zalo", tags: ["vip"] }
+        const params = { text: "Em mu\u1ed1n mua HOA", channel: "zalo", tags: ["vip"] }
         expect(conditionsHold(undefined, params)).toBe(true)
         expect(conditionsHold([{ param: "text", op: "contains", value: "hoa" }], params)).toBe(true)
         expect(conditionsHold([{ param: "channel", op: "equals", value: "telegram" }], params)).toBe(false)
@@ -142,13 +150,13 @@ describe("workflow outcomes", () => {
     const OUTCOMES: ReadonlyArray<WorkflowOutcome> = [
         {
             key: "won",
-            label: "Chốt mua",
+            label: "Ch\u1ed1t mua",
             outputs: [
                 { name: "items", type: "array" },
                 { name: "address", type: "string" },
             ],
         },
-        { key: "lost", label: "Khách không mua", outputs: [{ name: "reason", type: "string" }] },
+        { key: "lost", label: "Kh\u00e1ch kh\u00f4ng mua", outputs: [{ name: "reason", type: "string" }] },
     ]
 
     it("an end must fill each output of its outcome, of fitting types, and nothing more", () => {
@@ -168,7 +176,7 @@ describe("workflow outcomes", () => {
     it("refuses duplicate outcome keys and output names", () => {
         const twice: WorkflowOutcome = {
             key: "won",
-            label: "Chốt",
+            label: "Ch\u1ed1t",
             outputs: [
                 { name: "a", type: "string" },
                 { name: "a", type: "string" },
@@ -192,20 +200,57 @@ describe("workflow outcomes", () => {
             outcomes: OUTCOMES,
             entry: { openTo: "agent" },
             trigger: { kind: "tag", sources: ["agent"] },
-            grant: { rights: [], tools: [], effects: [] },
+            grant: { tools: [], effects: [] },
             nodes: [{ key: "end", kind: "output", step: "stop" }],
         })
         expect(parsed.success).toBe(true)
     })
 })
 
+// Design change (R35, R43): the conversation hold is gone (a waiting run takes the person's next line), so `holdsConversation` and its
+// check `ENTRY_HOLD_WITHOUT_CONVERSATION` are deleted; the entry rule raises nothing and the schema refuses the old member.
 describe("workflow entry rule", () => {
-    it("a workflow that holds the conversation must require it", () => {
-        expect(entryProblems({ openTo: "any", holdsConversation: true }, { inputs: [] })).toEqual([
-            { code: "ENTRY_HOLD_WITHOUT_CONVERSATION", at: "entry.holdsConversation" },
-        ])
-        expect(entryProblems({ openTo: "any", holdsConversation: true }, CONSULT)).toEqual([])
+    it("raises no problem and refuses the deleted holdsConversation member", () => {
         expect(entryProblems({ openTo: "any" }, { inputs: [] })).toEqual([])
         expect(entryProblems(undefined, undefined)).toEqual([])
+        expect(workflowEntrySchema.safeParse({ openTo: "any", holdsConversation: true }).success).toBe(false)
+    })
+})
+
+describe("a called workflow's params under data (lane concept triggers rule 13)", () => {
+    const CALLED: WorkflowContract = {
+        inputs: [
+            {
+                name: "data",
+                type: "object",
+                required: true,
+                members: [
+                    { name: "orderId", type: "string", required: true },
+                    { name: "contactId", type: "string", required: false },
+                ],
+            },
+        ],
+    }
+
+    it("a hand-off maps the members of data, by name and type, as it mapped the inputs before", () => {
+        expect(callInputsOf(CALLED).map((input) => input.name)).toEqual(["orderId", "contactId"])
+        expect(callProblems("to-after", [{ name: "orderId", type: "string", mayBeEmpty: false }], CALLED)).toEqual([])
+        expect(callProblems("to-after", [{ name: "contactId", type: "string", mayBeEmpty: false }], CALLED)).toEqual([
+            { code: "CALL_INPUT_MISSING", at: "to-after.orderId" },
+        ])
+        expect(callProblems("to-after", [{ name: "data", type: "object", mayBeEmpty: false }, { name: "orderId", type: "string", mayBeEmpty: false }], CALLED)).toEqual([
+            { code: "CALL_INPUT_UNKNOWN", at: "to-after.data" },
+        ])
+    })
+
+    it("a contract stored before the move is mapped by its inputs, as before", () => {
+        expect(callInputsOf(CONSULT)).toEqual(CONSULT.inputs)
+    })
+
+    it("a call supplies the generic members and its data members: the callee's own top inputs other than those are unsupplied", () => {
+        const supplied = suppliedParamsOf({ kind: "workflow", connectionId: null }, CALLED)
+        expect(supplied.map((param) => param.name)).toEqual(["eventId", "contactId", "routeId", "data", "locale"])
+        expect(supplied.find((param) => param.name === "data")?.members?.map((member) => member.name)).toEqual(["orderId", "contactId"])
+        expect(triggerProblems([{ key: "called", source: { kind: "workflow", connectionId: null } }], CALLED)).toEqual([])
     })
 })

@@ -1,7 +1,7 @@
 # Cleaning production down to the kept workspaces
 
 `cli cleanup-workspaces run` removes every workspace that is not kept, and every account that no kept workspace holds.
-At the v0.3.0 production deploy the owner uses it to keep the HAKUEN workspace only. The command is permanent and has no undo, so
+The owner uses it to keep the named production workspaces only. The command is permanent and has no undo, so
 take the native backup (`starci app db dump`) and verify its receipt first.
 
 ## What it does
@@ -26,7 +26,7 @@ take the native backup (`starci app db dump`) and verify its receipt first.
   - A row whose foreign key onto `auth.users` refuses the delete (`lead_actions.requested_by`) makes the dry run fail with
     the `UserReferenceBlocked` error, naming the users and the tables. Remove or reassign those rows, or make the person
     a member of a kept workspace, then run the dry run again.
-  - A row the delete would cascade-delete (`app_commands.requested_by`, `hiring_availability.member_user_id`) makes the dry run
+  - A row the delete would cascade-delete (`app_commands.requested_by`) makes the dry run
     fail with the `KeptCascadeRefused` error, naming the users and the tables, unless `--allow-kept-cascade` is set.
     With the flag the receipt lists those rows, so they are part of the digest.
   - Keys that only clear the link (`connections.created_by` and the other `created_by` columns) are not counted.
@@ -42,21 +42,19 @@ take the native backup (`starci app db dump`) and verify its receipt first.
 
 ## Production run
 
-Run it from the release tag through Actions > seed demo workspace (`.github/workflows/cli-deploy.yml`) with task
+Run it from the release tag through Actions > production cli tasks (`.github/workflows/cli-deploy.yml`) with task
 `cleanup-workspaces`. The job runs the cli inside the running `nivo-api` task (`docker exec` through `starci app stack connect`):
 deleting a workspace is the database cascade only: no agent gateway is involved since OpenClaw was removed (2026-11-11), so the
 delete needs no gateway and has no `WORKSPACES_OPENCLAW_UNAVAILABLE` refusal any more; a workspace whose rows could not be removed
 stays, and a re-run retries it.
 
-1. Run with `keep` set to the HAKUEN workspace id and `mode` set to `dry-run`. Leave `allow_kept_cascade` off unless a refusal
+1. Run with `keep` set to the kept workspace ids and `mode` set to `dry-run`. Leave `allow_kept_cascade` off unless a refusal
    named kept rows that may go with the account.
 2. Review the receipt line in the job log: the kept workspace, every workspace to remove with its counts, and every orphan
-   account. The HAKUEN owner account must not be in `orphanUsers`.
+   account. No kept workspace owner account may be in `orphanUsers`.
 3. Run again with the same `keep` and `allow_kept_cascade`, `mode` set to `execute` and `receipt_digest` set to the reviewed
    digest.
 4. Run a last dry run. It must show an empty `remove` and an empty `orphanUsers`.
-
-Then seed HAKUEN with task `seed-workspace` (profile `hakuen`).
 
 ## Local run
 
@@ -67,5 +65,5 @@ cli cleanup-workspaces run --keep <workspaceId> --dry-run
 cli cleanup-workspaces run --keep <workspaceId> --execute --receipt-digest <digest>
 ```
 
-The older `cli prune-workspaces run` deletes workspaces after a typed confirmation and leaves the accounts. Use
+The older `cli prune-workspaces run` deletes workspaces SOFTLY after a typed confirmation (owner ruling R36: it marks `workspaces.deleted_at`, removes no row, and leaves the accounts). Neither command hard-deletes a workspace any more: the schema has no cascade from `workspaces` and the application role has no DELETE on it. Use
 `cleanup-workspaces` for a reviewed production cleanup.

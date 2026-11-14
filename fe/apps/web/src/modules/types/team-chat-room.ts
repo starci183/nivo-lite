@@ -1,5 +1,6 @@
 import type { DataSlot, SlotLabels } from "./slot"
 import type { ChatParty, ChatPartyKind, TeamChatComposerProps, TeamChatMessageRow, TeamChatMessagesCopy, TeamChatRoomRow } from "./team-chat"
+import type { TeamChatBrainChangeHandlers } from "./team-chat-brain-change"
 import type { TeamChatStopHandlers } from "./team-chat-stop"
 
 /** The words of the new-chat drawer. */
@@ -62,11 +63,13 @@ export interface TeamChatRoomCopy {
     /** The words of the members: the head button and the panel title. */
     readonly membersOpen: string
     readonly panelClose: string
+    /** The one muted line that stands where the composer would be in a room nobody may write in (the NIVO room). */
+    readonly readOnly: string
 }
 
 /** The mark of the open room: the chat glyph of a group, or the avatar of the person or the agent it is with. */
 export interface TeamChatMarkView {
-    readonly kind: "group" | ChatPartyKind
+    readonly kind: "group" | "nivo" | ChatPartyKind
     readonly id: string
     readonly name: string
     readonly picture: string | null
@@ -135,6 +138,8 @@ export interface TeamChatRoomViewProps {
     readonly panels: TeamChatPanelsView
     /** A room is open, or the first message to an agent opens it: the thread and the composer are drawn. */
     readonly canWrite: boolean
+    /** The viewer may post in the open room; false draws the read-only line in place of the composer. */
+    readonly canPost: boolean
     /** The head has a way back to the list of rooms (the page on a phone; the agent tab has none). */
     readonly canGoBack: boolean
     readonly isMuted: boolean | null
@@ -147,6 +152,8 @@ export interface TeamChatRoomViewProps {
     readonly decideError: string | null
     /** The stop cards of runs: whether the viewer is the owner (only the owner approves a leave request) and the card in flight. */
     readonly stops: Omit<TeamChatStopHandlers, "onAction">
+    /** The truth-change cards: the change whose decision is in flight. */
+    readonly changes: Omit<TeamChatBrainChangeHandlers, "onAction">
     readonly forward: TeamChatForwardView
     readonly composer: Omit<TeamChatComposerProps, "onDraft" | "onMention" | "onSend" | "onFile" | "onFileClear" | "onReplyClear">
 }
@@ -166,6 +173,7 @@ export interface TeamChatRoomHandlers {
     readonly replyClear: () => void
     readonly decide: (decisionId: string, verdict: "approved" | "refused") => void
     readonly stop: TeamChatStopHandlers["onAction"]
+    readonly change: TeamChatBrainChangeHandlers["onAction"]
     readonly draft: (value: string) => void
     readonly mention: (party: ChatParty) => void
     readonly send: () => void
@@ -187,6 +195,7 @@ export interface TeamChatRoomsCopy {
     readonly sectionGroup: string
     readonly sectionAgent: string
     readonly sectionPerson: string
+    readonly sectionNivo: string
     readonly roomsEmpty: string
     readonly roomsEmptyAction: string
     readonly errorBody: string
@@ -219,23 +228,3 @@ export interface TeamChatRoomsHandlers {
     readonly newChatCreateGroup: () => void
 }
 
-/** One connection the agent answers from, in the aside of its chat. */
-export interface TeamChatAsideSource {
-    readonly id: string
-    readonly label: string
-    readonly subline: string
-    readonly logo: string | undefined
-}
-
-/** The aside of the agent chat: what the agent answers from. */
-export interface TeamChatAsideView {
-    readonly copy: {
-        readonly title: string
-        readonly empty: string
-        readonly brainTitle: string
-        readonly brainLine: string
-        readonly footnote: string
-    }
-    readonly labels: SlotLabels
-    readonly sources: DataSlot<ReadonlyArray<TeamChatAsideSource>>
-}

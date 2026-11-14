@@ -2,9 +2,8 @@
 
 import { useQueryAgentWorkSwr } from "@/hooks/swr"
 import { useAgentWorkItems } from "./useAgentWorkItems"
-import { useAgentWorkTriggers } from "./useAgentWorkTriggers"
+import { useAgentWorkTriggers, type NewClockTrigger } from "./useAgentWorkTriggers"
 import type { AgentWorkTriggerView, AgentWorkGoalView } from "@/modules/types"
-import type { NewClockTrigger } from "./useAgentWorkTriggers"
 
 /** The view `useAgentWorkActions` returns. */
 export interface AgentWorkActionsView {

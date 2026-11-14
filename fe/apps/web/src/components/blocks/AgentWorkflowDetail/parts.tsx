@@ -1,4 +1,5 @@
-import { Badge, Button } from "@starci/grammar/common"
+import { Alert, Badge, Button, IconButton, Link } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { AgentRunsListTable } from "@/components/composites/AgentRunsListTable"
 import { AgentWorkflowMap } from "@/components/composites/AgentWorkflowMap"
@@ -16,7 +17,9 @@ import type {
     SlotLabels,
     StepsMapView,
     WorkflowDetailView,
+    WorkflowNoticeView,
     WorkflowOverviewView,
+    WorkflowStatus,
 } from "@/modules/types"
 
 /** The tab of the page of a workflow that is open. */
@@ -27,6 +30,12 @@ export interface AgentWorkflowDetailCopy {
     readonly paneLabel: string
     readonly editMap: string
     readonly addStep: string
+    /** update from the template: the notice's one command. */
+    readonly noticeAction: string
+    /** see changes: the link in the notice's text to the page of what the update would change. */
+    readonly noticePreview: string
+    /** What updating does, under the notice: a new version is made, the owner's edits stay. */
+    readonly noticeCaption: string
     readonly mapTitle: string
     readonly graphLabel: string
     readonly graphCaption: string
@@ -44,6 +53,9 @@ interface DetailHeadProps {
     readonly isLoading: boolean
     readonly onMap: () => void
     readonly onAddStep: () => void
+    /** Turns the workflow on (draft, paused) or pauses it (active). */
+    readonly onToggle: (status: WorkflowStatus) => void
+    readonly isWriting: boolean
 }
 
 /** The head of the page: name, version and status, and the commands of the open part (the map has its two, the rest open the map). */
@@ -61,16 +73,71 @@ export const DetailHead = (props: DetailHeadProps) => {
             }
             isLoading={props.isLoading}
             actions={
-                props.tab === "map" ? (
-                    <Button intent="neutral" size="sm" onPress={props.onAddStep}>
-                        {copy.addStep}
+                <>
+                    <Button
+                        intent="neutral"
+                        size="sm"
+                        isPending={props.isWriting}
+                        isDisabled={props.isLoading}
+                        onPress={() => props.onToggle(view.head.toggleTo)}
+                    >
+                        {view.head.toggleLabel}
                     </Button>
-                ) : (
-                    <Button intent="neutral" size="sm" onPress={props.onMap}>
-                        {copy.editMap}
-                    </Button>
-                )
+                    {/* The head holds at most ONE Button (PaneHeader): the status command. The map commands are icon buttons. */}
+                    {props.tab === "map" ? (
+                        <IconButton
+                            intent="neutral"
+                            source={nivoIconSource("add", "leading")}
+                            label={copy.addStep}
+                            onPress={props.onAddStep}
+                        />
+                    ) : (
+                        <IconButton
+                            intent="neutral"
+                            source={nivoIconSource("edit", "leading")}
+                            label={copy.editMap}
+                            onPress={props.onMap}
+                        />
+                    )}
+                </>
             }
+        />
+    )
+}
+
+/** What the notice of a newer template version needs. */
+interface TemplateNoticeProps {
+    readonly notice: WorkflowNoticeView
+    readonly copy: AgentWorkflowDetailCopy
+    readonly onSync: () => void
+    /** The page of what the update would change (the template preview). */
+    readonly previewHref: string
+}
+
+/**
+ * The one neutral notice of a workflow whose template has a newer version: its title and what changed (the API's changelog and
+ * step count), and the one command update from the template. Declining is doing nothing: the old version keeps running.
+ */
+export const TemplateNotice = (props: TemplateNoticeProps) => {
+    const { notice, copy } = props
+    // A template version that cannot be read has nothing to preview or accept: the notice only says a newer version exists.
+    const lines = notice.canUpdate ? [notice.changelog, notice.diffLine, copy.noticeCaption] : [notice.changelog]
+    return (
+        <Alert
+            tone="neutral"
+            title={notice.title}
+            description={
+                <>
+                    {lines.filter((line) => line !== "").join(" · ")}
+                    {notice.canUpdate ? (
+                        <>
+                            {" "}
+                            <Link href={props.previewHref}>{copy.noticePreview}</Link>
+                        </>
+                    ) : null}
+                </>
+            }
+            {...(notice.canUpdate ? { action: { label: copy.noticeAction, onAction: props.onSync } } : {})}
         />
     )
 }

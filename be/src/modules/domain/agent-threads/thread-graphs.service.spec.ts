@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { coreNodes } from "@nivo-lite/blocks-core"
-import { latestTemplateVersion, workflowTemplateOf } from "@nivo-lite/blocks-core/modules"
 import { AgentGraphsService } from "@modules/domain/agent-graphs"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { latestGraphOf } from "@modules/domain/installed-plugins/installed-plugins.testing"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { GRAPH_THREADS } from "@modules/integrations/langgraph"
 import type { GraphThreads, ThreadNodeScope, ThreadRef, ThreadState } from "@modules/integrations/langgraph"
@@ -23,15 +23,18 @@ const RUN = { agentId: "agent-1", namespace: "chatbot.front-desk", workflowId: "
 const STATE: ThreadState = { trigger: {}, steps: {}, trouble: null, founderAnswers: [], loop: null }
 
 /** The front desk as blocks-core ships it. */
-const frontDesk = (): GraphSpec => latestTemplateVersion(workflowTemplateOf("chatbot.front-desk") ?? fail("no template")).graph
+const frontDesk = (): GraphSpec => latestGraphOf("chatbot.front-desk")
 
-const scopeOf = (runId: string): ThreadNodeScope => ({ thread: { ...REF, runId }, node: "understand", version: "v-1", stop: jest.fn() })
+const scopeOf = (runId: string): ThreadNodeScope => ({ thread: { ...REF, runId }, node: "hear", version: "v-1", stop: jest.fn() })
 
-const build = async (graphsMax?: number, installed: ReadonlyArray<string> = coreNodes.map((node) => node.id)) => {
+/** The registry's `defineNode` nodes (the control nodes since the flip); the service adds every template step itself. */
+const REGISTERED: ReadonlyArray<string> = INSTALLED.nodeInstall().nodes.map((node) => node.id)
+
+const build = async (graphsMax?: number, installed: ReadonlyArray<string> = REGISTERED) => {
     const replay = jest.fn()
     const port = mock<GraphThreads>({ replayPortsOf: replay })
     const graphs = mock<AgentGraphsService>({
-        versionAt: jest.fn().mockResolvedValue({ version: 4, document: { nodes: [], rights: [], flow: frontDesk() } }),
+        versionAt: jest.fn().mockResolvedValue({ version: 4, document: { nodes: [], flow: frontDesk() } }),
     })
     const nodes = mock<GraphNodeRegistryService>({
         installed: jest.fn(() => ({ nodes: new Map(installed.map((id) => [id, {}])) }) as never),
@@ -69,7 +72,8 @@ describe("ThreadGraphsService", () => {
         expect(pinned).toBe(first)
         expect(nodes.installed).toHaveBeenCalledTimes(1)
         expect(graphs.versionAt).not.toHaveBeenCalled()
-        expect(first).toMatchObject({ version: "v-1", entry: "understand" })
+        // The front desk's first step is the chatbot's own `hear` (one trigger pipeline: the package's first node), then `understand`.
+        expect(first).toMatchObject({ version: "v-1", entry: "hear" })
         expect(first.nodes.at(-1)?.key).toBe(FREEZE_NODE)
         expect(service.moduleKeyOf("v-1")).toBe("chatbot")
         expect(service.moduleKeyOf("v-2")).toBeNull()
@@ -98,23 +102,24 @@ describe("ThreadGraphsService", () => {
     it("hands a node the facts of the run that is driven, and only while it is driven", async () => {
         const { service, steps, replay } = await build()
         const graph = await service.routed(REF, { versionId: "v-1", flow: frontDesk(), number: 4 })
-        const understand = graph.nodes[0]
+        // The first step of the front desk is `hear` (it was `understand` before the chatbot's own first node).
+        const hear = graph.nodes[0]
         const gate = graph.nodes.at(-1)
 
         await service.driving("run-1", RUN, async () => {
             expect(service.isDriving("run-1")).toBe(true)
-            await understand?.run(STATE, scopeOf("run-1"))
+            await hear?.run(STATE, scopeOf("run-1"))
             await gate?.run(STATE, scopeOf("run-1"))
         })
 
         expect(steps.run).toHaveBeenCalledWith(
-            expect.objectContaining({ ...RUN, versionId: "v-1", replay, step: expect.objectContaining({ key: "understand" }) }),
+            expect.objectContaining({ ...RUN, versionId: "v-1", replay, step: expect.objectContaining({ key: "hear" }) }),
             STATE,
             expect.anything(),
         )
         expect(steps.gate).toHaveBeenCalledWith({ agentId: "agent-1" }, STATE, expect.anything())
         expect(service.isDriving("run-1")).toBe(false)
-        expect(() => understand?.run(STATE, scopeOf("run-1"))).toThrow(
+        expect(() => hear?.run(STATE, scopeOf("run-1"))).toThrow(
             expect.objectContaining({ code: AgentThreadsErrorCode.NotDriving }),
         )
     })
@@ -134,7 +139,7 @@ describe("ThreadGraphsService", () => {
             code: AgentThreadsErrorCode.TemplateRefused,
             params: { version: "v-1", problem: "TEMPLATE_STEP_UNKNOWN" },
         })
-        graphs.versionAt.mockResolvedValue({ version: 1, document: { nodes: [], rights: [] } })
+        graphs.versionAt.mockResolvedValue({ version: 1, document: { nodes: [] } })
         await expect(service.pinned(REF, "agent-1", "v-2")).rejects.toMatchObject({
             code: AgentThreadsErrorCode.TemplateRefused,
             params: { version: "v-2", problem: "TEMPLATE_EMPTY" },

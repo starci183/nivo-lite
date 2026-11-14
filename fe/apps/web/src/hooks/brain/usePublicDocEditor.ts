@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useWorkspaceMember } from "@/hooks/knowledge"
-import { usePublicDocumentEditForm } from "@/hooks/rhf"
-import type { PublicDocumentEditValues } from "@/hooks/rhf"
+import { usePublicDocumentEditForm, type PublicDocumentEditValues } from "@/hooks/rhf"
 import { mapSlot } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
@@ -57,7 +56,7 @@ export const usePublicDocEditor = (docId: string | undefined): PublicDocEditorVi
     const read = usePublicDocuments()
     const doc = read.documents.find((one) => one.id === docId)
     const form = usePublicDocumentEditForm({ title: doc?.title ?? "", body: doc?.body ?? "" })
-    const [isReviewStale, setReviewStale] = useState(false)
+    const [isReviewStale, setIsReviewStale] = useState(false)
     const decision = usePendingDecision()
     const close = () => router.replace(workspaceHref(workspaceId, brainTabHref("publicDocs")))
     const saveSnapshot = async (values: PublicDocumentEditValues) => {
@@ -67,10 +66,10 @@ export const usePublicDocEditor = (docId: string | undefined): PublicDocEditorVi
                 ? doc
                 : await commands.update({ id: doc.id, ...values }, t("saved"))
         if (saved !== undefined && (saved.title !== values.title || saved.body !== values.body)) {
-            setReviewStale(true)
+            setIsReviewStale(true)
             return undefined
         }
-        setReviewStale(false)
+        setIsReviewStale(false)
         return saved
     }
     const approve = form.handleSubmit((values) =>

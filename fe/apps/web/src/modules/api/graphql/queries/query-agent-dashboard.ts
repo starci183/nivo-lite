@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentDashboardQuery, AgentDashboardQueryVariables } from "../__generated__/graphql"
 
 /** Generated input of the agentDashboard query. */
@@ -97,7 +97,7 @@ export const queryAgentDashboard = async ({
     signal,
     headers,
 }: QueryAgentDashboardParams): Promise<ApolloClient.QueryResult<QueryAgentDashboardResponse>> => {
-    const apollo = createAuthApolloClient({ signal, headers })
+    const apollo = createAuthApolloClient(webApiTransport, { signal, headers })
     return apollo.query({
         query: queryMap[query],
         fetchPolicy: "no-cache",

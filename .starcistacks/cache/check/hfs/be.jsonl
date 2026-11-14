@@ -1,6 +1,0 @@
-{"data":{},"findings":[],"hash":"f3dae8d89e8883d083ff12eb4097f41846516d454a40225fcb2f0a7fbb62496a","path":"be/eslint.config.mjs","step":"file-rules"}
-{"data":{},"findings":[],"hash":"2cdc5ac686888e0f6b55c8699e26cc034ec1b23d997bc2034249d61e697628e6","path":"be/i18n-dynamic-keys.yaml","step":"file-rules"}
-{"data":{},"findings":[],"hash":"b11b4deca87bab348898548c79e8d90572c5210c00e2aa5958cc958cc0ea7624","path":"be/jest.config.js","step":"file-rules"}
-{"data":{},"findings":[],"hash":"327888e50fdf7ca88e2d37ccef3f6279094010bf17cb627dd9530d00a924eefe","path":"be/nest-cli.json","step":"file-rules"}
-{"data":{},"findings":[],"hash":"c3d0f80cbeebb7575264b99b524e6a7385f81373bb063c8dc4aebdd88469817c","path":"be/tsconfig.build.json","step":"file-rules"}
-{"data":{},"findings":[],"hash":"2634d1f7d7b7ea1494025c2016170dc60d6e0b4c75113637e58249fff79edf91","path":"be/tsconfig.json","step":"file-rules"}

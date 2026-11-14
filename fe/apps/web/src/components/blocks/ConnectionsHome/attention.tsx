@@ -33,8 +33,7 @@ const attentionRowsOf = (view: ConnectionsListView, on: ConnectionsHomeCommands)
                 : {
                       action: {
                           label: action.label,
-                          intent: action.isPrimary ? "commit" : "neutral",
-                          isPrimary: action.isPrimary,
+                          intent: "neutral",
                           press: () => on.goTo(action.href),
                       },
                   }),

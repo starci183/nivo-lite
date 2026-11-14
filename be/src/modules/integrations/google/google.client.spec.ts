@@ -12,7 +12,6 @@ import { RENEWAL_GRANT_FIELD } from "./google.contracts"
 import { GOOGLE_OPTIONS } from "./google.decorators"
 import { GoogleLogEvent } from "./google.log-events"
 import type { GoogleOptions } from "./google.options"
-import { ordersTab } from "./google-sheet.policy"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -227,37 +226,6 @@ describe("GoogleClient accountEmail", () => {
     })
 })
 
-describe("GoogleClient spreadsheets", () => {
-    it("creates the spreadsheet and formats the money column", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValueOnce(answer({ spreadsheetId: "id 1", spreadsheetUrl: "https://s.test/1" }))
-        http.request.mockResolvedValueOnce(answer({}))
-
-        await expect(client.createOrdersSpreadsheet("tok", "Shop")).resolves.toEqual({
-            spreadsheetId: "id 1",
-            spreadsheetUrl: "https://s.test/1",
-        })
-        expect(http.request).toHaveBeenNthCalledWith(
-            2,
-            objectLike({ url: "https://sheets.googleapis.com/v4/spreadsheets/id%201:batchUpdate" }),
-        )
-    })
-
-    it("builds the url itself when Google sends none and rejects a missing id", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValueOnce(answer({ spreadsheetId: "abc" }))
-        http.request.mockResolvedValueOnce(answer({}))
-        http.request.mockResolvedValueOnce(answer({}))
-
-        await expect(client.createOrdersSpreadsheet("tok", "Shop")).resolves.toMatchObject({
-            spreadsheetUrl: "https://docs.google.com/spreadsheets/d/abc/edit",
-        })
-        await expect(client.createOrdersSpreadsheet("tok", "Shop")).rejects.toMatchObject({
-            code: GoogleErrorCode.ContractMismatch,
-        })
-    })
-})
-
 describe("GoogleClient spreadsheetTitle", () => {
     it("asks only for the title of the spreadsheet and answers it, blank when Google names none", async () => {
         const { client, http } = await build()
@@ -273,106 +241,6 @@ describe("GoogleClient spreadsheetTitle", () => {
                 url: "https://sheets.googleapis.com/v4/spreadsheets/id%201?fields=properties.title",
             }),
         )
-    })
-})
-
-describe("GoogleClient sheet operations", () => {
-    it("finds the first matching row in priority order, skipping the header", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue(answer({ values: [["Code"], ["A-1"], [], ["B-2"], "bad", [" A-1 "]] }))
-        const sheets = (await build()).client.sheets("tok")
-        const api = client.sheets("tok")
-
-        await expect(api.findRow("s", ["B-2", "A-1"])).resolves.toEqual({ row: 4, code: "B-2" })
-        await expect(api.findRow("s", ["Code", "Z"])).resolves.toBeNull()
-        await expect(api.findRow("s", [" ", ""])).resolves.toBeNull()
-        expect(http.request).toHaveBeenCalledTimes(2)
-        expect(http.request).toHaveBeenCalledWith(
-            objectLike({
-                method: "GET",
-                url:
-                    "https://sheets.googleapis.com/v4/spreadsheets/s/values/" +
-                    encodeURIComponent(`'${ordersTab()}'!B:B`),
-            }),
-        )
-        expect(sheets).toBeDefined()
-    })
-
-    it("reads a sheet with no values as no match", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue(answer({}))
-
-        await expect(client.sheets("tok").findRow("s", ["A"])).resolves.toBeNull()
-    })
-})
-
-describe("GoogleClient sheet writes", () => {
-    it("appends a row as raw values and reads the row it landed on", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValueOnce(answer({ updates: { updatedRange: "'Tab'!A12:I12" } }))
-        http.request.mockResolvedValueOnce(answer({ updates: { updatedRange: "nonsense" } }))
-        http.request.mockResolvedValueOnce(answer({}))
-
-        await expect(client.sheets("tok").appendRow("s", "Tab", 9, ["=x", 1])).resolves.toBe(12)
-        await expect(client.sheets("tok").appendRow("s", "Tab", 9, [])).resolves.toBe(0)
-        await expect(client.sheets("tok").appendRow("s", "Tab", 9, [])).resolves.toBe(0)
-        expect(http.request).toHaveBeenNthCalledWith(
-            1,
-            objectLike({
-                method: "POST",
-                url: stringLike(":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"),
-                body: { majorDimension: "ROWS", values: [["=x", 1]] },
-                headers: { authorization: "Bearer tok" },
-            }),
-        )
-    })
-
-    it.each([
-        ["A12:I15", 12],
-        ["junkA7", 7],
-        ["a1:B9", 9],
-        ["A1:B2:C3", 2],
-        ["A".repeat(10000), 0],
-        ["A12:invalid", 0],
-    ])("reads the same final range suffix %s", async (updatedRange, row) => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue(answer({ updates: { updatedRange } }))
-
-        await expect(client.sheets("tok").appendRow("s", "Tab", 9, [])).resolves.toBe(row)
-    })
-
-    it("updates the given cells of one row", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue(answer({}))
-
-        await client.sheets("tok").updateCells("s", 4, { F: "x", G: 2 })
-
-        expect(http.request).toHaveBeenCalledWith(
-            objectLike({
-                body: {
-                    valueInputOption: "RAW",
-                    data: [
-                        { range: `'${ordersTab()}'!F4`, majorDimension: "ROWS", values: [["x"]] },
-                        { range: `'${ordersTab()}'!G4`, majorDimension: "ROWS", values: [[2]] },
-                    ],
-                },
-            }),
-        )
-    })
-})
-
-describe("GoogleClient sheet operations", () => {
-    it("applies a NIVO event through the sheet operations", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue(answer({ updates: { updatedRange: "A2:G2" } }))
-
-        const result = await client.applyEvent(
-            "tok",
-            { spreadsheetId: "s", recordLeads: true },
-            { event: "lead.created", data: { name: "An" }, occurredAt: "2026-10-12T03:00:00.000Z" },
-        )
-
-        expect(result.evidence).toContain("An")
     })
 })
 

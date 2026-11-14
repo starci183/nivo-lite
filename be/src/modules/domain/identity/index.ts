@@ -15,7 +15,6 @@ export type {
     CredentialAuthenticator,
     CredentialMetadata,
     CredentialPrincipal,
-    CredentialResourceId,
 } from "./credential.contracts"
 export { CredentialGuard } from "./credential.guard"
 export { identityEntities } from "./persistence/entities"

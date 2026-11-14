@@ -1,8 +1,6 @@
 import { isMailAddress } from "@modules/domain/email-messages"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import { MANAGEMENT_CONNECTION_IDS, MANAGEMENT_SEED_SCHEMA } from "./management-seed.contracts"
-import type { ManagementSeed, ManagementSmtp } from "./management-seed.contracts"
-
+import { MANAGEMENT_CONNECTION_IDS, MANAGEMENT_SEED_SCHEMA, type ManagementSeed, type ManagementSmtp } from "./management-seed.contracts"
 const NAME_MAX = 120
 const PORT_MAX = 65_535
 
@@ -59,7 +57,11 @@ export const readManagementSeed = (document: unknown): ManagementSeed => {
         ownerEmail: ownerOf(document, values),
         smtp: smtpOf(values),
         channels: {
-            telegram: { id: MANAGEMENT_CONNECTION_IDS.telegram, token: values.WORKSPACE_TELEGRAM_BOT_TOKEN },
+            telegram: {
+                id: MANAGEMENT_CONNECTION_IDS.telegram,
+                token: values.WORKSPACE_TELEGRAM_BOT_TOKEN,
+                webhookSecret: values.WORKSPACE_TELEGRAM_WEBHOOK_SECRET,
+            },
             zaloOa: {
                 id: MANAGEMENT_CONNECTION_IDS.zaloOa,
                 appId: values.WORKSPACE_ZALO_OA_APP_ID,

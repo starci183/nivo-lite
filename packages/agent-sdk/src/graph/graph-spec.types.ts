@@ -1,5 +1,4 @@
 import type { NodeInputBindings, NodeProblemCode, NodeRole } from "../node"
-import type { DataRight } from "../rights/rights.types"
 import type { JsonValue } from "../schema/schema.types"
 import type {
     ContractProblemCode,
@@ -15,36 +14,46 @@ export type GraphSpecSchemaId = "nivo/agent-graph@1"
 /** What can tag an agent: a customer channel, a /chats group, another agent, a system event or a schedule. */
 export type GraphTagSource = "channel" | "chats-group" | "agent" | "system-event" | "schedule"
 
-/**
- * How long a burst of tags from one source is gathered into one run: the quiet time after the last tag before the run starts (`window`,
- * "0s" turns it off), and the longest the burst may keep the run waiting from its first tag (`maxWait`, no shorter than the window).
- * Durations are written like "1500ms", "6s" or "1m".
- */
-export interface GraphBurst {
-    /** The quiet time after the last tag before the run starts; "0s" turns bursting off. */
-    readonly window: string
-    /** The longest the burst may hold the run from its first tag; no shorter than `window`. */
-    readonly maxWait?: string | undefined
-}
-
-/** What wakes the graph: a tag, from any of its sources; one run per tag. A source without a `burst` takes the app's default. */
+/** What wakes the graph: a tag, from any of its sources; one run per tag. */
 export interface GraphSpecTrigger {
     /** What wakes the graph; only a tag does. */
     readonly kind: "tag"
     /** The sources whose tags wake the graph. */
     readonly sources: ReadonlyArray<GraphTagSource>
-    /** The burst setting per source; a source without one takes the app's default. */
-    readonly burst?: { readonly [Source in GraphTagSource]?: GraphBurst | undefined } | undefined
 }
 
-/** The minimum an agent holds to run its graph: data rights, NIVO MCP tools and effects. Everything else is denied. */
+/**
+ * The minimum an agent holds to run its graph: NIVO MCP tools and effects, by name. Everything else is denied. There is no data right
+ * (`nivo-frame.rights`); a stored grant that still carries `rights` parses and drops them.
+ */
 export interface GraphSpecGrant {
-    /** The data rights the agent holds while it runs this graph. */
-    readonly rights: ReadonlyArray<DataRight>
     /** The names of the NIVO MCP tools the agent may call. */
     readonly tools: ReadonlyArray<string>
     /** The ids of the effects the agent may ask the host to run. */
     readonly effects: ReadonlyArray<string>
+}
+
+/** How a node asks to call one operation on an account: by itself, or only after a person approved the call. */
+export type GraphNodeAccountMode = "auto" | "ask"
+
+/**
+ * One provider a node lists, in its order of priority (nivo-frame `templates`: the ToolRunner binds each to the agent's attached account
+ * of that provider and tries them by data, then by this order). The node's ONE mode is the node's own (`GraphSpecNode.mode`), never a
+ * member of an account.
+ */
+export interface GraphNodeAccount {
+    /** The kind of the account, by the host's names (`messaging`, `payment`, `books`, `mail`, `records`). */
+    readonly kind: string
+    /** The provider of the account (`zalo_oa`, `sepay`), or null for any provider of the kind (a send acts on the conversation's own). */
+    readonly provider: string | null
+    /** The connected account, or null in a template: bound in the workspace, as a trigger source is. */
+    readonly connectionId: string | null
+    /**
+     * LEGACY, read only: the operations a node stored before the node's own `mode` asked for on the account, each with its mode (by tool
+     * id, or by the id of a work action the node's definition lists). Never written now; a stored document that holds it is read as
+     * written (its modes are the node's mode when the node states none). An empty set is refused.
+     */
+    readonly operations?: Readonly<Record<string, GraphNodeAccountMode>> | undefined
 }
 
 /** One node of a graph: the SDK node it runs, its settings, where its input comes from and where the run goes next. */
@@ -75,6 +84,18 @@ export interface GraphSpecNode {
      * The host checks the id against its vocabulary; this schema only bounds its form.
      */
     readonly model?: string | undefined
+    /**
+     * How the node's calls run (nivo-frame `rights`): `auto` runs them; `ask` interrupts for a person's approval on a card, then runs. ONE
+     * mode per node; the engine has no default. Always written for a node step read from a template graph (the step's mode, else its
+     * node's); absent on the engine's own control steps (`core.call-workflow`, `core.outcome`, the loops, the conditions), which make the
+     * engine's own calls, and on a stored node from before the member (its accounts' `operations` then state it).
+     */
+    readonly mode?: GraphNodeAccountMode | undefined
+    /**
+     * The providers the node acts through, in priority order (each bound to the agent's attached account of it). Absent on a node from
+     * before node rights. An empty list acts through NIVO's own tools only.
+     */
+    readonly accounts?: ReadonlyArray<GraphNodeAccount> | undefined
 }
 
 /** What a waiting node waits for and how long, as durations like "2h" or "30m". */
@@ -104,13 +125,26 @@ export interface GraphSpec {
     readonly outcomes?: ReadonlyArray<WorkflowOutcome> | undefined
     /** Who may call the workflow by an end hand-off; absent is open to any workflow of the workspace. */
     readonly entry?: WorkflowEntry | undefined
-    /** The wake envelope: the tag sources routing reads, and the burst per source. */
+    /** The wake envelope: the tag sources routing reads. */
     readonly trigger: GraphSpecTrigger
     /** The most the agent may hold to run this graph. */
     readonly grant: GraphSpecGrant
     /** The nodes of the graph; the first one starts the run. */
     readonly nodes: ReadonlyArray<GraphSpecNode>
 }
+
+/** Why the accounts a node asks for are refused. */
+export type NodeAccountProblemCode =
+    /** An operation the node's definition lists in neither its effects nor its tools: the node could never call it. */
+    | "NODE_ACCOUNT_OPERATION_UNDECLARED"
+    /** Two entries of one node for the same kind, provider and connection. */
+    | "NODE_ACCOUNT_DUPLICATE"
+    /** An entry that asks for no operation. */
+    | "NODE_ACCOUNT_EMPTY"
+    /** A kind the host does not know, or a provider that is not of the kind. Judged only when the host told its kinds. */
+    | "NODE_ACCOUNT_KIND_UNKNOWN"
+    /** An operation asked on `auto` that may only run after a person approved it. Judged only when the host told which are. */
+    | "NODE_ACCOUNT_ASK_ONLY"
 
 /** What a graph spec is refused for, over and above the node problems. */
 export type GraphSpecProblemCode =
@@ -123,7 +157,7 @@ export type GraphSpecProblemCode =
     | "GRAPH_EFFECTS_MISMATCH"
     | "GRAPH_TOOLS_MISMATCH"
     | "GRAPH_COMPENSABLE_AFTER_PIVOT"
-    | "GRAPH_BURST_INVALID"
+    | NodeAccountProblemCode
     | ContractProblemCode
 
 /** One problem of a graph spec and where it is: a node key, or a granted right, tool or effect. */

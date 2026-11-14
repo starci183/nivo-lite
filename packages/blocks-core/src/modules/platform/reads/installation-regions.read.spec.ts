@@ -1,6 +1,6 @@
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
 import { CONNECTIONS_VIEW, KNOWLEDGE_NONE, KNOWLEDGE_VIEW } from "../fixtures/platform.fixtures"
-import { agentConnectionsPort, agentGraphs, agentKnowledgePort } from "../ports"
+import { agentConnectionsPort, agentKnowledgePort, coreReadsPort } from "../ports"
 import { agentTabPath, installationConnectionsRead, installationKnowledgeRead } from "./installation-regions.read"
 
 const CONTEXT: RunContext = {
@@ -15,17 +15,10 @@ const INSTALLATION = "00000000-0000-4000-8000-000000000001"
 const AGENT = "00000000-0000-4000-8000-000000000002"
 const GIVEN = { installation: INSTALLATION, module: "accounting" }
 
-/** A provider whose graphs hold the installation (or none), and whose regions answer for the agent asked. */
+/** A provider whose core reads know the agent of the installation (or none), and whose regions answer for the agent asked. */
 const providerOf = (hasAgent: boolean, asked: Array<string>): PortProvider => ({
     implementationOf: (port) => {
-        if (port.id === agentGraphs.id)
-            return {
-                list: () =>
-                    Promise.resolve({
-                        rows: hasAgent ? [{ row: { id: "g", data: { agentId: AGENT } } }] : [],
-                        next: null,
-                    }),
-            }
+        if (port.id === coreReadsPort.id) return { agentOf: () => Promise.resolve(hasAgent ? AGENT : null) }
         if (port.id === agentConnectionsPort.id)
             return {
                 of: (agent: string) => {

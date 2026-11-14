@@ -1,8 +1,6 @@
-import { messageOf } from "../messages/catalog"
-import type { MessageKey } from "../messages/catalog"
-import { itemsTextOf, orderLinesOf } from "../nodes/payment/payment-request.policy"
-import { amountTextOf } from "../nodes/sales/order-notice.policy"
-import type { NoticeLocale } from "../nodes/sales/order-notice.policy"
+import { messageOf, type MessageKey } from "../messages/catalog"
+import { itemsTextOf, orderLinesOf } from "../nodes/sales/order-lines.policy"
+import { amountTextOf, type NoticeLocale } from "../nodes/sales/order-notice.policy"
 
 /** Where a customer pays an order, as the workspace's bank feed and its provider answer it. */
 export interface PaymentQrAccount {
@@ -44,7 +42,7 @@ export const paymentQrTextOf = (
     const items = itemsTextOf(orderLinesOf(order.items))
     return [
         filled(locale, "paymentQrIntro", {
-            items: items === "" ? "—" : items,
+            items: items === "" ? "\u2014" : items,
             amount: amountTextOf(order.amountVnd, locale),
         }),
         filled(locale, "paymentQrBank", { bank: account.bankName === "" ? account.bankCode : account.bankName }),

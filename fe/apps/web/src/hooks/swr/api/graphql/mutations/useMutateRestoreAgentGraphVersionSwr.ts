@@ -5,8 +5,7 @@ import {
     type mutateRestoreAgentGraphVersion as MutateRestoreAgentGraphVersionOperation,
 } from "@/modules/api/graphql/mutations/mutation-restore-agent-graph-version"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { RestoreAgentGraphVersionMutation } from "@/modules/api"
 
 /** The SWR key of the restoreAgentGraphVersion mutation. */

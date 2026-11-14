@@ -1,4 +1,4 @@
-import { EmptyNotice, Section, Stack, Text } from "@starci/grammar/common"
+import { EmptyNotice, Section } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { COLUMN_CLASS } from "./classNames"
 import type { GuideRowView } from "./types"
@@ -23,25 +23,18 @@ interface GuideRowsCardProps {
  */
 export const GuideRowsCard = (props: GuideRowsCardProps) => (
     <div className={COLUMN_CLASS}>
-        <Stack gap="identity">
-            {props.props.label === null ? null : (
-                <Text size="xs" tone="muted">
-                    {props.props.label}
-                </Text>
-            )}
-            <Section
-                kind="list"
-                ariaLabel={props.props.name}
-                items={props.props.rows.map((row) => ({
-                    id: row.id,
-                    title: row.title,
-                    ...(row.description === undefined || row.description === "" ? {} : { description: row.description }),
-                    leading: { icon: nivoIconSource(row.icon, "leading"), size: "sm" as const },
-                    ...(row.meta === undefined ? {} : { meta: { text: row.meta } }),
-                    onPress: () => props.on.open(row.id),
-                }))}
-                empty={<EmptyNotice message={props.props.name} />}
-            />
-        </Stack>
+        <Section
+            kind="list"
+            {...(props.props.label === null ? { ariaLabel: props.props.name } : { sublabel: props.props.label })}
+            items={props.props.rows.map((row) => ({
+                id: row.id,
+                title: row.title,
+                ...(row.description === undefined || row.description === "" ? {} : { description: row.description }),
+                leading: { icon: nivoIconSource(row.icon, "leading"), size: "sm" as const },
+                ...(row.meta === undefined ? {} : { meta: { text: row.meta } }),
+                onPress: () => props.on.open(row.id),
+            }))}
+            empty={<EmptyNotice message={props.props.name} />}
+        />
     </div>
 )

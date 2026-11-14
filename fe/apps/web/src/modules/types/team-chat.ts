@@ -1,3 +1,6 @@
+import type { TeamChatBackgroundStoppedView } from "./team-chat-background-stopped"
+import type { TeamChatBrainChangeView } from "./team-chat-brain-change"
+import type { TeamChatMarkView } from "./team-chat-room"
 import type { TeamChatStopCardView } from "./team-chat-stop"
 
 /** What a person answers an approval card with. */
@@ -26,6 +29,10 @@ export interface TeamChatRoomRow {
     readonly preview: string
     /** The time of the last message in the short form, or empty. */
     readonly when: string
+    /** The room is the viewer's NIVO room: NIVO's mark, no other party, nobody posts in it. */
+    readonly isNivo: boolean
+    /** The mark the row and the forward list draw: NIVO's own, the person or agent the room is with, else the group glyph. */
+    readonly mark: TeamChatMarkView
     readonly unread: number
     readonly mentions: number
     readonly isSelected: boolean
@@ -101,6 +108,10 @@ export interface TeamChatMessageRow {
     readonly groupPosition: TeamChatGroupPosition
     /** The typed stop card of a run (`workflow.stopped`), worded; absent or null for every other message. */
     readonly stop?: TeamChatStopCardView | null
+    /** The typed "background work stopped" card NIVO posted, worded; absent or null for every other message. */
+    readonly backgroundStopped?: TeamChatBackgroundStoppedView | null
+    /** The typed truth-change card (`brain.change`), worded; absent or null for every other message. */
+    readonly brainChange?: TeamChatBrainChangeView | null
 }
 
 /** The words of the reactions of a message. */
@@ -174,6 +185,19 @@ export interface TeamChatMessagesCopy {
     readonly pinned: string
     readonly report: string
     readonly approvalTitle: string
+    /** The head of an approval that names its step: "{this} · {step title}". */
+    readonly approvalNeeded: string
+    /** The words of an approval card's rows and folds. */
+    readonly approvalRows: {
+        readonly step: string
+        readonly account: string
+        readonly tool: string
+        readonly node: string
+        /** The viewer's language: it picks the side of the call's worded label. */
+        readonly locale: "vi" | "en"
+        readonly details: string
+        readonly technical: string
+    }
     readonly relatedWork: string
     /** The name of the place the open action of a report or an approval leads to. */
     readonly runName: string

@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateApplySetup, type MutateApplySetupRequest } from "@/modules/api/graphql/mutations/mutation-apply-setup"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ApplySetupMutation } from "@/modules/api"
 
 /** What the ApplySetup mutation is triggered with. */

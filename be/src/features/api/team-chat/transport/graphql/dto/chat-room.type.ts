@@ -23,9 +23,13 @@ export class ChatRoomType {
     @Field(() => String, { nullable: true })
     purposeModule!: string | null
 
-    /** A group's name; a direct room shows the other party. */
+    /** A group's name; a direct room shows the other party; a NIVO room shows "NIVO". */
     @Field(() => String)
     name!: string
+
+    /** Whether it is the viewer's NIVO room: the direct room where NIVO itself (no agent) reports to the founder; only the founder sits in it. */
+    @Field(() => Boolean)
+    withNivo!: boolean
 
     /** Where it sorts among rooms without a message. */
     @Field(() => Int)

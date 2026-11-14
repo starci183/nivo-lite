@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { MutateParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type MutateParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { StartFirstWorkspaceMutation } from "../__generated__/graphql"
 
 /** The generated response of startFirstWorkspace. */
@@ -33,7 +32,7 @@ export const mutateStartFirstWorkspace = async ({
     mutation = MutationStartFirstWorkspace.Mutation1,
     signal,
 }: MutateStartFirstWorkspaceParams = {}): Promise<ApolloClient.MutateResult<MutateStartFirstWorkspaceResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],
     })

@@ -1,6 +1,5 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
-import { WorkspaceCleanupService } from "@modules/domain/workspace-cleanup"
-import type { CleanupCommand } from "@modules/domain/workspace-cleanup"
+import { WorkspaceCleanupService, type CleanupCommand } from "@modules/domain/workspace-cleanup"
 
 @SubCommand({
     name: "run",

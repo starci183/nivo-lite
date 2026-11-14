@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useMutateReactToChatMessageSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { createReactionBatcher } from "@/modules/teamChat"
-import type { PendingTaps, ReactionBatch } from "@/modules/teamChat"
+import { createReactionBatcher, type PendingTaps, type ReactionBatch } from "@/modules/teamChat"
 import type { TeamChatReactionView } from "@/modules/types"
 
 /** What the reactions of the open room do to the thread once a burst is confirmed. */

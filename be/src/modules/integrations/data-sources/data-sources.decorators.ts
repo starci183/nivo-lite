@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { DatabaseClient } from "./database.client"
 import type { DataSourcesOptions } from "./data-sources.options"
 import type { ImapClient } from "./imap.client"

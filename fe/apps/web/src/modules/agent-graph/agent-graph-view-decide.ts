@@ -11,16 +11,14 @@ import type {
     AgentGraphRowView,
     AgentGraphTermForm,
     AgentGraphTermView,
-    AgentGraphThen,
+    AgentGraphBranchMode,
 } from "@/modules/types"
-import { opsOfFact, termsWords } from "./agent-graph-condition"
-import type { AgentGraphConditionWords } from "./agent-graph-condition"
+import { opsOfFact, termsWords, type AgentGraphConditionWords } from "./agent-graph-condition"
 import { KEEP_GROUP, MAX_ROWS, MAX_TERMS } from "./agent-graph-decide-form"
 import { problemLinesOf } from "./agent-graph-problems"
-import { thenWordOf, timeoutWordOf } from "./agent-graph-words"
-import type { AgentGraphContext, AgentGraphT } from "./agent-graph-words"
+import { branchModeWordOf, timeoutWordOf, type AgentGraphContext, type AgentGraphT } from "./agent-graph-words"
 
-const THENS: ReadonlyArray<AgentGraphThen> = ["auto", "ask", "stop"]
+const BRANCH_MODES: ReadonlyArray<AgentGraphBranchMode> = ["auto", "ask", "stop"]
 const TIMEOUTS: ReadonlyArray<AgentGraphOnTimeout> = ["backup", "stop", "agent_owner", "unset"]
 
 const optionsOf = <T extends string>(
@@ -78,10 +76,10 @@ const termViewOf = (
 
 /** What the form itself finds wrong with a row, before anything is saved. */
 const approverErrorOf = (row: AgentGraphRowForm, t: AgentGraphT): string =>
-    row.then === "ask" && row.approverId === "" ? t("errApprover") : ""
+    row.mode === "ask" && row.approverId === "" ? t("errApprover") : ""
 
 const backupErrorOf = (row: AgentGraphRowForm, t: AgentGraphT): string =>
-    row.then === "ask" && row.onTimeout === "backup" && row.backupId === "" ? t("errBackup") : ""
+    row.mode === "ask" && row.onTimeout === "backup" && row.backupId === "" ? t("errBackup") : ""
 
 /** One row of the editor. */
 const rowViewOf = (
@@ -120,7 +118,7 @@ const rowViewOf = (
         sentence,
         terms: row.terms.map((term, at) => termViewOf(term, `${id}-${at}`, row.terms.length, words, row.isLocked)),
         canAddTerm: !row.isElse && !row.isLocked && row.terms.length < MAX_TERMS,
-        then: row.then,
+        mode: row.mode,
         approverId: row.approverId,
         approverOptions:
             row.approverId === KEEP_GROUP
@@ -171,7 +169,7 @@ export const decideEditorViewOf = (
             op: t("fieldOp"),
             value: t("fieldValue"),
             amount: t("fieldAmount"),
-            then: t("fieldThen"),
+            mode: t("fieldThen"),
             approver: t("fieldApprover"),
             hours: t("fieldHours"),
             onTimeout: t("fieldOnTimeout"),
@@ -186,7 +184,7 @@ export const decideEditorViewOf = (
             allTerms: t("allTerms"),
         },
         factOptions: data.facts.map((fact) => ({ value: fact.key, label: fact.label })),
-        thenOptions: optionsOf(THENS, (value) => thenWordOf(t, value)),
+        modeOptions: optionsOf(BRANCH_MODES, (value) => branchModeWordOf(t, value)),
         memberOptions: data.members.map((member) => ({ value: member.id, label: member.name })),
         timeoutOptions: optionsOf(TIMEOUTS, (value) => timeoutWordOf(t, value)),
         addRowLabel: t("addRow"),

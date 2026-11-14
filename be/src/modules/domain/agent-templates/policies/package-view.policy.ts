@@ -42,10 +42,6 @@ export const previewViewOf = (preview: PackagePreview): PackagePreviewView => ({
                   requiredAuthorityActions: [...preview.package.requiredAuthorityActions],
                   starterKnowledge: preview.package.starterKnowledge.length,
                   parameters: preview.package.parameters.map((parameter) => parameterViewOf(parameter)),
-                  proposedRights: preview.package.proposedRights.map((right) => ({
-                      kind: right.kind,
-                      scope: right.scope,
-                  })),
                   personName: preview.package.persona.likeness?.personName ?? null,
               },
     report: preview.report,

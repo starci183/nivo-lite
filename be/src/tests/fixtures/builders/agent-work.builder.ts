@@ -1,17 +1,16 @@
 import { builder } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
-import { agentWorkEntities } from "@modules/domain/agent-work"
-import type {
-    AgentGoalWrite,
-    AgentTriggerWrite,
-    AgentTurnView,
-    AgentWake,
-    AgentWakeView,
+import {
+    agentWorkEntities,
+    type AgentGoalWrite,
+    type AgentTriggerWrite,
+    type AgentTurnView,
+    type AgentWake,
+    type AgentWakeView,
 } from "@modules/domain/agent-work"
 
 const AgentWorkSettingsEntity: (typeof agentWorkEntities)[0] = agentWorkEntities[0]
 const AgentWorkStateEntity: (typeof agentWorkEntities)[1] = agentWorkEntities[1]
-const AgentWorkLeaseEntity: (typeof agentWorkEntities)[2] = agentWorkEntities[2]
 const AgentGoalEntity: (typeof agentWorkEntities)[3] = agentWorkEntities[3]
 const AgentTaskEntity: (typeof agentWorkEntities)[4] = agentWorkEntities[4]
 const AgentTriggerEntity: (typeof agentWorkEntities)[5] = agentWorkEntities[5]
@@ -19,7 +18,6 @@ const AgentWakeEntity: (typeof agentWorkEntities)[6] = agentWorkEntities[6]
 const AgentTurnEntity: (typeof agentWorkEntities)[7] = agentWorkEntities[7]
 type AgentWorkSettingsEntity = InstanceType<typeof AgentWorkSettingsEntity>
 type AgentWorkStateEntity = InstanceType<typeof AgentWorkStateEntity>
-type AgentWorkLeaseEntity = InstanceType<typeof AgentWorkLeaseEntity>
 type AgentGoalEntity = InstanceType<typeof AgentGoalEntity>
 type AgentTaskEntity = InstanceType<typeof AgentTaskEntity>
 type AgentTriggerEntity = InstanceType<typeof AgentTriggerEntity>
@@ -89,6 +87,7 @@ export const agentTaskRowOf: (overrides?: Partial<AgentTaskEntity>) => AgentTask
     workItemId: null,
     originWakeId: null,
     doneAt: null,
+    data: null,
     createdAt: WHEN,
     updatedAt: WHEN,
 })
@@ -120,7 +119,7 @@ export const agentWakeRowOf: (overrides?: Partial<AgentWakeEntity>) => AgentWake
     id: "wake-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
-    source: "customer",
+    source: "trigger",
     eventKey: "wake-1",
     scopeKey: "conversation:conv-1",
     priority: 10,
@@ -139,26 +138,6 @@ export const agentWakeRowOf: (overrides?: Partial<AgentWakeEntity>) => AgentWake
     createdAt: new Date("2026-11-10T01:00:00.000Z"),
     updatedAt: WHEN,
 })
-
-/** The idle lease row of agent-1 in a customer conversation, last touched a long time ago. */
-export const agentWorkLeaseRowOf: (overrides?: Partial<AgentWorkLeaseEntity>) => AgentWorkLeaseEntity =
-    builder<AgentWorkLeaseEntity>({
-        agentId: "agent-1",
-        scopeKey: "conversation:conv-1",
-        workspaceId: "ws-1",
-        fence: 4,
-        leaseOwner: null,
-        leaseUntil: null,
-        runningTurnId: null,
-        createdAt: WHEN,
-        updatedAt: WHEN,
-    })
-
-/** The idle lease rows of agent-1 in conversations conv-1 and conv-2. */
-export const idleLeaseRowsOf = (): ReadonlyArray<AgentWorkLeaseEntity> => [
-    agentWorkLeaseRowOf({ scopeKey: "conversation:conv-1" }),
-    agentWorkLeaseRowOf({ scopeKey: "conversation:conv-2" }),
-]
 
 /** A settled turn row of agent-1 with its usage, whose proposal holds words the work tab must never show. */
 export const agentTurnRowOf: (overrides?: Partial<AgentTurnEntity>) => AgentTurnEntity = builder<AgentTurnEntity>({
@@ -191,7 +170,7 @@ export const agentTurnViewOf: (overrides?: Partial<AgentTurnView>) => AgentTurnV
     fence: 3,
     turnId: "turn-1",
     wakeId: "wake-1",
-    source: "customer",
+    source: "trigger",
     eventKey: "msg-1",
     context: {},
     actorMemberId: null,
@@ -207,7 +186,7 @@ export const agentWakeViewOf: (overrides?: Partial<AgentWakeView>) => AgentWakeV
     agentId: "agent-1",
     scopeKey: "conversation:conv-1",
     wakeId: "wake-2",
-    source: "customer",
+    source: "trigger",
     eventKey: "msg-2",
     context: {},
     actorMemberId: null,

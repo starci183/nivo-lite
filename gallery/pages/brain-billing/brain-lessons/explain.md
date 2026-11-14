@@ -15,7 +15,7 @@ Luật: `nivo-surface-layering.md`, `page-header-left-sublabel-xs.md`.
 Grammar: `PageHeader`, `node_modules/@starci/grammar/dist/core/frame/PageHeader/index.d.ts`.
 
 ## Nút "Thêm bài học" trong dải và trong thông báo trống
-Vì sao: SAI — the same command twice: a neutral sm pill in the band and a primary md button in the notice; one place only (the notice when empty, the band when there are lessons).
+Vì sao: ĐÃ SỬA (phase 2) — một chỗ duy nhất cho lệnh: khi trống nút nằm trong thẻ thông báo (thẻ trắng nổi trên nền hồng, như mọi trang), dải đầu không vẽ nó; có bài học thì nút ở dải. Trước đây hai chỗ cùng lúc và thông báo che cả trang bằng nền trắng.
 Luật: `suggestion-button-sm.md`, `page-header-left-sublabel-xs.md`.
 Grammar: `Button`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`.
 

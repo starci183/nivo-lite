@@ -12,6 +12,18 @@ interface Subject {
     readonly writesOf: typeof writesOf
 }
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("thread-state.policy")
 const THREAD: ThreadRef = { workspaceId: "ws-1", runId: "run-1" }
 
@@ -69,9 +81,7 @@ describe("thread-state.policy", () => {
     ])("refuses values with %s as not a thread of this engine", async (_name, values) => {
         const subject = await build()
 
-        expect(() => subject.heldOf(values, THREAD)).toThrow(
-            expect.objectContaining({ code: LanggraphErrorCode.ThreadUnreadable, params: { thread: "run-1" } }),
-        )
+        expect(thrownBy(() => subject.heldOf(values, THREAD))).toEqual(objectLike({ code: LanggraphErrorCode.ThreadUnreadable, params: { thread: "run-1" } }))
     })
 
     it("reads a stop from the library's interrupt records, one or a list", async () => {

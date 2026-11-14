@@ -1,4 +1,4 @@
-// The directory leads: other capabilities import this barrel while it loads (office-rooms <-> agents), see AgentDirectoryService.
+// The directory leads: other capabilities import this barrel while it loads (import cycles), see AgentDirectoryService.
 export { AgentDirectoryService } from "./agent-directory.service"
 export { AgentDeletionPauseService } from "./agent-deletion-pause.service"
 export { AgentViewScopeService } from "./agent-view-scope.service"
@@ -10,10 +10,8 @@ export type {
     BaseRule,
     Installation,
     InstallationDirectory,
-    InstallationRef,
     KnowledgeDocument,
     KnowledgeLens,
-    ModuleProfiles,
     OptionalContextVersion,
     OptionalInstallation,
 } from "./agents.port"
@@ -21,7 +19,7 @@ export { AgentCatalogService } from "./agent-catalog.service"
 export type { CatalogAgent } from "./agent-catalog.contracts"
 export { AgentLensesService } from "./agent-lenses.service"
 export { AgentsService } from "./agents.service"
-export type { AgentCard, AgentHeader, AgentTurnFacts, AgentViewScope } from "./agent-directory.contracts"
+export type { AgentCard, AgentHeader, AgentViewScope } from "./agent-directory.contracts"
 export { AgentIdentityService } from "./agent-identity.service"
 export { AGENT_IDENTITY_RULES } from "./agent-name.policy"
 export { AgentOwnershipService } from "./agent-ownership.service"
@@ -36,9 +34,7 @@ export type {
     LensLanes,
     OptionalId,
     OptionalOpenGaps,
-    OptionalAgentText,
     AgentTexts,
-    AgentProfile,
     AgentOwnership,
     Region,
 } from "./agents.contracts"

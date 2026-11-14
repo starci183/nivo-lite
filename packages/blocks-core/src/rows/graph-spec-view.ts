@@ -1,16 +1,16 @@
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { LOOP_BODY_ROUTE, LOOP_ITEMS_PARAM, LOOP_STEP } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { z } from "zod"
 import { FOR_EACH_MAX } from "../nodes/core/for-each.node"
 import { messageNamed } from "../messages/catalog"
-import { coreNodes } from "../nodes/core-nodes"
-import { nodeCardsOf, stopCardOf, triggerCardOf } from "../nodes/node-cards"
-import type { NodeCard } from "../nodes/node-cards"
+import { coreNodeViews } from "../nodes/node-lists"
+import { nodeCardsOf, stopCardOf, triggerCardOf, type NodeCard } from "../nodes/node-cards"
 import { paramFieldsOf } from "../nodes/node-params"
 import type { NodeLocale } from "../nodes/node-schema.types"
-import { STOP_STEP_ID, TRIGGER_STEP } from "../nodes/node-ui"
+import { STOP_STEP_ID, TRIGGER_STEP, type ViewNode } from "../nodes/node-ui"
 import type { GraphEdgeView, GraphNodeState, GraphNodeView, GraphView } from "./graph-view"
 import {
+    type CallView,
     bindingViewOf,
     bindingViewsOf,
     callViewOf,
@@ -34,6 +34,22 @@ export interface GraphSpecViewOptions {
     readonly states?: Readonly<Record<string, GraphNodeState>> | undefined
     /** True to draw the trigger as the first node, joined to the first step; false (the default) leaves it out. */
     readonly withTrigger?: boolean | undefined
+    /** The names of the workspace's workflows by `<agent>.<workflow>`: a hand-off's title names its target workflow by it. */
+    readonly names?: Readonly<Record<string, string>> | undefined
+}
+
+/** The catalog key of a hand-off's title that names its target (`Hand off to {target}`). */
+const CALL_TITLE = "nodeCoreCallWorkflowTitleTo"
+
+/**
+ * The title of a step: a hand-off names where it hands off to (the target workflow's name when the reader knows it, else the agent
+ * that runs it), so two hand-offs of one graph never read the same; every other step keeps its card's title.
+ */
+const titleOf = (card: NodeCard, call: CallView | null, locale: NodeLocale): string => {
+    if (call === null) return card.title
+    const target = call.workflowLabel !== call.workflow ? call.workflowLabel : call.agentLabel
+    const words = messageNamed(locale, CALL_TITLE)
+    return words === null || target === "" ? card.title : words.replace("{target}", target)
 }
 
 /** The card of a step: its own, or the stop/trigger pseudo steps. */
@@ -80,7 +96,7 @@ const edgesOfNode = (
     const outputWords = (outputs: ReadonlyArray<string>): string | undefined => {
         if (outputs.length === 0) return undefined
         if (outputs.length > LABELS_MAX) return messageNamed(locale, "graphEdgeOthers") ?? undefined
-        return outputs.map(labelOf).join(", ")
+        return outputs.map((output) => labelOf(output)).join(", ")
     }
     const edge = (to: string, outputs: ReadonlyArray<string>): GraphEdgeView => {
         const back = backs.has(`${node.key}->${to}`)
@@ -122,14 +138,14 @@ const loopBodiesOf = (spec: GraphSpec): ReadonlyMap<string, ReadonlyArray<string
     return bodies
 }
 
-/** The contract parts of one node: its bindings, its hand-off or outcome, its "Lỗi" route, its loop and the loop that holds it. */
+/** The contract parts of one node: its bindings, its hand-off or outcome, its error route, its loop and the loop that holds it. */
 const contractPartsOf = (
     spec: GraphSpec,
     node: GraphSpecNode,
     locale: NodeLocale,
     loops: ReadonlyMap<string, ReadonlyArray<string>>,
+    call: CallView | null,
 ): Partial<GraphNodeView> => {
-    const call = callViewOf(node, locale)
     const outcome = outcomeEndViewOf(node, spec, locale)
     const body = loops.get(node.key)
     const parent = [...loops.entries()].find(([, keys]) => keys.includes(node.key))?.[0]
@@ -163,6 +179,9 @@ const valuesOf = (
         : { ...written }
 }
 
+/** The settings of a step that declares none. */
+const NO_PARAMS = z.object({})
+
 /**
  * The graph view of a graph spec, in one language: every node with its card (kind, icon, title, subtitle, named outputs), its settings
  * with their form metadata and the values this graph gives them; every edge with the output it leaves from, and `back` plus a short
@@ -172,22 +191,24 @@ const valuesOf = (
 export const graphViewOfSpec = (spec: GraphSpec, options: GraphSpecViewOptions): GraphView => {
     const { locale } = options
     const cards = nodeCardsOf(locale)
-    const definitions = new Map<string, NodeDefinition>(coreNodes.map((node) => [node.id, node]))
+    const definitions = new Map<string, ViewNode>(coreNodeViews.map((node) => [node.id, node]))
     const backs = backPairs(spec)
     const loops = loopBodiesOf(spec)
     const nodes = spec.nodes.map((node): GraphNodeView => {
         const card = cardFor(node.step, cards, locale)
         const definition = definitions.get(node.step)
-        const values = valuesOf(node.params, definition === undefined ? undefined : (input) => definition.params.safeParse(input))
+        const values = valuesOf(node.params, definition === undefined ? undefined : (input) => (definition.params ?? NO_PARAMS).safeParse(input))
         const state = options.states?.[node.key]
+        const call = callViewOf(node, locale, options.names)
+        const title = titleOf(card, call, locale)
         return {
             id: node.key,
-            label: card.title,
+            label: title,
             kind: card.kind,
             description: card.subtitle,
             ...(state === undefined ? {} : { state }),
             step: node.step,
-            title: card.title,
+            title,
             subtitle: card.subtitle,
             icon: card.icon,
             heroicon: card.heroicon,
@@ -195,7 +216,7 @@ export const graphViewOfSpec = (spec: GraphSpec, options: GraphSpecViewOptions):
             outputs: card.outputs,
             params: values,
             paramFields: definition === undefined ? [] : paramFieldsOf(definition, locale, values),
-            ...contractPartsOf(spec, node, locale, loops),
+            ...contractPartsOf(spec, node, locale, loops, call),
         }
     })
     const spoken = spec.nodes.flatMap((node) => edgesOfNode(node, cardFor(node.step, cards, locale), backs, locale))

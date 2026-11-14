@@ -130,6 +130,8 @@ export type PlanOpKind =
     | "validate_constraint"
     | "add_unique"
     | "add_exclude"
+    | "add_foreign_key"
+    | "alter_foreign_key"
     | "drop_constraint"
     | "create_index"
     | "alter_index"

@@ -1,16 +1,13 @@
 import { Field, ObjectType } from "@nestjs/graphql"
 import { WorkspaceDashboardAgentType } from "./workspace-dashboard-agent.type"
 import { WorkspaceDashboardApprovalsType } from "./workspace-dashboard-approvals.type"
-import { WorkspaceDashboardChannelType } from "./workspace-dashboard-channel.type"
 import { WorkspaceDashboardComparedType } from "./workspace-dashboard-compared.type"
-import { WorkspaceDashboardDayType } from "./workspace-dashboard-day.type"
-import { WorkspaceDashboardFunnelType } from "./workspace-dashboard-funnel.type"
 import { WorkspaceDashboardPeriod } from "./workspace-dashboard-period.type"
 import { WorkspaceDashboardRateType } from "./workspace-dashboard-rate.type"
 import { WorkspaceDashboardSavingsType } from "./workspace-dashboard-savings.type"
 
 @ObjectType()
-/** The owner business dashboard for one period: takings, orders, customers, funnel, channels, what waits, what the agents did. */
+/** The owner dashboard for one period: the engine's own figures (conversations, contacts, runs, what waits, what the agents did), no module's records. */
 export class WorkspaceDashboardType {
     /** The period read. */
     @Field(() => WorkspaceDashboardPeriod)
@@ -24,37 +21,25 @@ export class WorkspaceDashboardType {
     @Field()
     to!: string
 
-    /** Matched payments, VND. */
+    /** Conversations with a line said. */
     @Field(() => WorkspaceDashboardComparedType)
-    revenue!: WorkspaceDashboardComparedType
+    conversations!: WorkspaceDashboardComparedType
 
-    /** Orders placed. */
+    /** New contacts: conversations opened, one per channel identity. */
     @Field(() => WorkspaceDashboardComparedType)
-    orders!: WorkspaceDashboardComparedType
+    newContacts!: WorkspaceDashboardComparedType
 
-    /** Leads created. */
+    /** Runs that finished. */
     @Field(() => WorkspaceDashboardComparedType)
-    newCustomers!: WorkspaceDashboardComparedType
+    runsDone!: WorkspaceDashboardComparedType
 
-    /** Paid orders over leads. */
-    @Field(() => WorkspaceDashboardRateType)
-    closeRate!: WorkspaceDashboardRateType
+    /** Runs that failed or were handed to a person. */
+    @Field(() => WorkspaceDashboardComparedType)
+    runsFailed!: WorkspaceDashboardComparedType
 
     /** Items finished by policy alone over items finished. */
     @Field(() => WorkspaceDashboardRateType)
     agentAutoRate!: WorkspaceDashboardRateType
-
-    /** The days of the chart, oldest first; at least the last seven. */
-    @Field(() => [WorkspaceDashboardDayType])
-    days!: Array<WorkspaceDashboardDayType>
-
-    /** The sales funnel. */
-    @Field(() => WorkspaceDashboardFunnelType)
-    funnel!: WorkspaceDashboardFunnelType
-
-    /** Leads and revenue per channel, the most leads first. */
-    @Field(() => [WorkspaceDashboardChannelType])
-    channels!: Array<WorkspaceDashboardChannelType>
 
     /** The items that wait for the owner. */
     @Field(() => WorkspaceDashboardApprovalsType)

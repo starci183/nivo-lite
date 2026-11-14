@@ -1,4 +1,4 @@
-import { MODULE_DECLARATIONS } from "@nivo-lite/blocks-core/modules"
+import { installed } from "@/modules/plugin-registry"
 import vi from "@/modules/i18n/messages/vi.json"
 import { chatAnswerOf } from "./chat"
 import viewer from "./viewer.json"
@@ -15,7 +15,7 @@ type FixtureAnswer = (variables: Variables) => Record<string, unknown>
 const fixtureInstallationId = (module: string): string => `fixture-${module}`
 
 /** The key of every declared module. */
-const MODULE_KEYS: ReadonlyArray<string> = MODULE_DECLARATIONS.map((declaration) => declaration.key)
+const MODULE_KEYS: ReadonlyArray<string> = installed.modules.map((declaration) => declaration.key)
 
 /** The department name of an agent in the product copy (Vietnamese); the key when the copy has none. */
 const departmentOf = (key: string): string => {
@@ -90,15 +90,12 @@ const ANSWERS: Readonly<Record<string, FixtureAnswer>> = {
         })),
     }),
     BrainTodo: () => ({
-        brainTodo: { __typename: "BrainTodo", findings: 0, facts: 0, questions: 0, proposals: 0, total: 0 },
+        brainTodo: { __typename: "BrainTodo", facts: 0, questions: 0, proposals: 0, total: 0 },
     }),
-    VideoBrand: () => ({ videoBrand: null }),
-    VideoMedia: () => ({ videoMedia: [] }),
     WorkspaceAgentWork: () => ({
         workspaceAgentWork: {
             __typename: "WorkspaceAgentWork",
             agentsOff: 0,
-            backgroundDailyCap: 50,
             heldWakes: 0,
             pendingWakes: 0,
             road: "open",

@@ -21,18 +21,43 @@ const instructionsOf = (ask: NodeAsk, schema: TaskSchema | null): string =>
  * words that hold for this call only, then the input as JSON (with the pictures).
  */
 export interface NodePrompt {
-    /** The stable part: one system message. THE END OF THE STABLE PART is the end of this list. */
+    /**
+     * The stable part: the shared opening (L1 + L2) then the step (L3), or one system message. THE END OF THE STABLE PART is the end
+     * of this list.
+     */
     readonly stable: ReadonlyArray<ChatMessage>
     /** The volatile part, sent after the stable one. */
     readonly volatile: ReadonlyArray<ChatMessage>
 }
 
-/** A graph node's call laid out stable part first. A model that takes cache markers gets its marker at the end of `stable`, nowhere else. */
+/** The blank line between the shared opening (L1 + L2) of a node's instructions and the step's own words (L3). */
+const LAYER_GAP = "\n\n"
+
+/**
+ * The stable part as system messages, each marked for the prompt cache: the opening every call of the agent shares (L1 + L2, as
+ * long as `sharedLength` says), then the step's own words with the answer's schema (L3); one message when the call names no shared
+ * opening (or one that does not fit its instructions). The text sent is the instructions, unchanged, cut at the layer's end.
+ */
+const stableOf = (ask: NodeAsk, schema: TaskSchema | null): ReadonlyArray<ChatMessage> => {
+    const whole = instructionsOf(ask, schema)
+    const at = ask.sharedLength
+    if (at === undefined || at <= 0 || !Number.isInteger(at) || !ask.instructions.startsWith(LAYER_GAP, at))
+        return [{ role: "system", content: whole, cacheMark: true }]
+    return [
+        { role: "system", content: whole.slice(0, at), cacheMark: true },
+        { role: "system", content: whole.slice(at + LAYER_GAP.length), cacheMark: true },
+    ]
+}
+
+/**
+ * A graph node's call laid out stable part first. A model that takes cache markers gets a marker at the end of the shared opening
+ * (L1 + L2) and at the end of `stable` (L3), nowhere else: two explicit breakpoints, the automatic one makes three of Anthropic's four.
+ */
 export const nodePromptOf = (ask: NodeAsk, schema: TaskSchema | null = null): NodePrompt => {
     const words = (ask.volatile ?? "").trim()
     return {
-        // The end of the stable part: the one cache breakpoint of a node's call (inert until `CACHE_MARKS_ON_THE_WIRE`).
-        stable: [{ role: "system", content: instructionsOf(ask, schema), cacheMark: true }],
+        // The end of the shared opening and the end of the stable part: the cache breakpoints of a node's call.
+        stable: stableOf(ask, schema),
         volatile: [
             ...(words === "" ? [] : [{ role: "system" as const, content: words }]),
             {

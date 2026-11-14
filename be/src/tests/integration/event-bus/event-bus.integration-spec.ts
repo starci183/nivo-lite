@@ -1,12 +1,17 @@
 import {
-    BANK_CREDIT_BOOKED_AGENT_WAKES_TOPIC_QUEUE,
+    APPROVAL_RESOLVED_AGENT_GRAPHS_TOPIC_QUEUE,
     KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE,
     KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE,
 } from "@modules/platform/event-bus"
 import { InboxService } from "@modules/platform/inbox"
 import { eachInOrder } from "@modules/platform/primitives"
-import { SpecEvent, drainRounds, openEventBusProof, pause } from "../../world/event-bus-proof.service"
-import type { EventBusProof } from "../../world/event-bus-proof.service"
+import {
+    SpecEvent,
+    drainRounds,
+    openEventBusProof,
+    pause,
+    type EventBusProof,
+} from "../../world/event-bus-proof.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
 
@@ -19,11 +24,11 @@ const world = useTestWorld({ modules: [] })
 
 const RUN = world.prefix
 const FANOUT_TOPIC = "knowledge_source_indexed"
-const SINGLE_TOPIC = "bank_credit_booked"
+const SINGLE_TOPIC = "approval_resolved"
 /** The live fan-out: one `knowledge_source_indexed` event reaches the brain and the agent wakes consumers. */
 const FANOUT_QUEUES = [KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE, KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE]
-/** A topic with one live consumer: `bank_credit_booked` reaches the agent wakes consumer alone. */
-const SINGLE_QUEUE = BANK_CREDIT_BOOKED_AGENT_WAKES_TOPIC_QUEUE
+/** A topic with one live consumer: `approval_resolved` reaches the agent graphs consumer alone. */
+const SINGLE_QUEUE = APPROVAL_RESOLVED_AGENT_GRAPHS_TOPIC_QUEUE
 const ALL_QUEUES = [...FANOUT_QUEUES, SINGLE_QUEUE]
 const SINGLE_Q = `q_${SINGLE_QUEUE}`
 const SINGLE_ARCHIVE = `a_${SINGLE_QUEUE}`

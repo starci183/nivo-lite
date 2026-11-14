@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { DecideRunStopMutation, DecideRunStopMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `decideRunStop` mutation. */
@@ -13,6 +13,12 @@ const mutation1: TypedDocumentNode<MutateDecideRunStopResponse, InputVariables<M
         decideRunStop(input: $input) {
             outcome
             stepKey
+            refusal {
+                stopId
+                workItemId
+                door
+                verdicts
+            }
         }
     }
 `
@@ -37,6 +43,6 @@ export const mutateDecideRunStop = async ({
 }: MutateParams<MutationDecideRunStop, MutateDecideRunStopRequest>): Promise<
     ApolloClient.MutateResult<MutateDecideRunStopResponse>
 > => {
-    const apollo = createAuthApolloClient({ signal, headers })
+    const apollo = createAuthApolloClient(webApiTransport, { signal, headers })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request }, context: { headers } })
 }

@@ -1,6 +1,5 @@
 import { MODULE_CONTEXT_NOTES_ERROR_KINDS } from "@modules/domain/module-context-notes"
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the modules capability. */
 export enum ModulesErrorCode {
@@ -8,8 +7,6 @@ export enum ModulesErrorCode {
     NotFound = "MODULES_NOT_FOUND",
     /** The catalogue breaks one of its own rules and must not be written to the database. */
     CatalogInvalid = "MODULES_CATALOG_INVALID",
-    /** A default rule grants an action public.authority_actions does not hold: the catalogue was not synced. */
-    CatalogUnresolved = "MODULES_CATALOG_UNRESOLVED",
     /** The name of an instance needs 1 to 80 characters. */
     InstanceNameInvalid = "MODULES_INSTANCE_NAME_INVALID",
     /** Another instance of the type already has this name. */
@@ -48,16 +45,10 @@ export enum ModulesErrorCode {
     CardNeedsResolution = "MODULES_CARD_NEEDS_RESOLUTION",
     /** Keeping both values needs the situation of the new one. */
     CardNeedsSituation = "MODULES_CARD_NEEDS_SITUATION",
-    /** A branch needs the band its boundary amount belongs to and the person asked above the line. */
-    CardBranchIncomplete = "MODULES_CARD_BRANCH_INCOMPLETE",
-    /** The flow of the agent still has a vague place, so the setup cannot be applied. */
-    GraphGapsOpen = "MODULES_GRAPH_GAPS_OPEN",
     /** The brain held the fact for review instead of applying it. */
     CardFactNotApplied = "MODULES_CARD_FACT_NOT_APPLIED",
-    /** The confirmed rule names an action outside the authority registry. */
-    CardRuleUnknownAction = "MODULES_CARD_RULE_UNKNOWN_ACTION",
-    /** The confirmed rule runs an action by itself past its cap. */
-    CardRuleModeCapped = "MODULES_CARD_RULE_MODE_CAPPED",
+    /** The operating mode of an agent is gone: a node's declared mode alone decides (2026-11-13); the old door answers this. */
+    OperatingModeRemoved = "MODULES_OPERATING_MODE_REMOVED",
     /** A turn of the setup chat failed in a way that heals (gateway, model, empty answer): the queue attempts it again. */
     SetupTurnTransient = "MODULES_SETUP_TURN_TRANSIENT",
 }
@@ -67,7 +58,6 @@ export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
     ...MODULE_CONTEXT_NOTES_ERROR_KINDS,
     [ModulesErrorCode.NotFound]: "not-found",
     [ModulesErrorCode.CatalogInvalid]: "internal",
-    [ModulesErrorCode.CatalogUnresolved]: "internal",
     [ModulesErrorCode.InstanceNameInvalid]: "invalid",
     [ModulesErrorCode.InstanceNameTaken]: "conflict",
     [ModulesErrorCode.SingleInstanceOnly]: "invalid",
@@ -87,11 +77,8 @@ export const MODULES_ERROR_KINDS: Record<ModulesErrorCode, ErrorKind> = {
     [ModulesErrorCode.CardFactIncomplete]: "invalid",
     [ModulesErrorCode.CardNeedsResolution]: "invalid",
     [ModulesErrorCode.CardNeedsSituation]: "invalid",
-    [ModulesErrorCode.CardBranchIncomplete]: "invalid",
-    [ModulesErrorCode.GraphGapsOpen]: "conflict",
     [ModulesErrorCode.CardFactNotApplied]: "conflict",
-    [ModulesErrorCode.CardRuleUnknownAction]: "invalid",
-    [ModulesErrorCode.CardRuleModeCapped]: "invalid",
+    [ModulesErrorCode.OperatingModeRemoved]: "invalid",
     [ModulesErrorCode.SetupTurnTransient]: "unavailable",
 }
 

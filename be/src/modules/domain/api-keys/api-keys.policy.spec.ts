@@ -2,28 +2,30 @@ import { Test } from "@nestjs/testing"
 import { ApiKeysErrorCode } from "./errors/api-keys.error"
 import {
     RATE_LIMIT_PER_MINUTE,
-    hashKey,
-    buildKey,
-    bearerKey,
+    displayPrefix,
+    refusalOfVerify,
+    requireScope,
     cleanName,
     secondsToRenewal,
-    admitKey,
     withinMinuteBudget,
-    admitAgentKey,
+    admitMcpKey,
+    kindOfScopes,
     mayManageKeys,
+    inactiveReasonOf,
 } from "./api-keys.policy"
 
 const SUBJECT = Symbol("api-keys.policy")
 type Subject = {
-    hashKey: typeof hashKey
-    buildKey: typeof buildKey
-    bearerKey: typeof bearerKey
+    displayPrefix: typeof displayPrefix
+    refusalOfVerify: typeof refusalOfVerify
+    requireScope: typeof requireScope
     cleanName: typeof cleanName
     secondsToRenewal: typeof secondsToRenewal
-    admitKey: typeof admitKey
     withinMinuteBudget: typeof withinMinuteBudget
-    admitAgentKey: typeof admitAgentKey
+    admitMcpKey: typeof admitMcpKey
+    kindOfScopes: typeof kindOfScopes
     mayManageKeys: typeof mayManageKeys
+    inactiveReasonOf: typeof inactiveReasonOf
 }
 
 const buildSubject = async () => {
@@ -32,15 +34,16 @@ const buildSubject = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
-                    hashKey,
-                    buildKey,
-                    bearerKey,
+                    displayPrefix,
+                    refusalOfVerify,
+                    requireScope,
                     cleanName,
                     secondsToRenewal,
-                    admitKey,
                     withinMinuteBudget,
-                    admitAgentKey,
+                    admitMcpKey,
+                    kindOfScopes,
                     mayManageKeys,
+                    inactiveReasonOf,
                 },
             },
         ],
@@ -50,23 +53,18 @@ const buildSubject = async () => {
 
 const NOW = new Date("2026-10-12T10:00:20.000Z")
 
-const answer = (overrides: Record<string, unknown> = {}) => ({
-    id: "key-1",
-    workspace_id: "workspace-1",
-    name: "n8n",
-    scopes: ["leads:read", "leads:write"],
-    hits: 1,
-    ...overrides,
-})
-
 describe("api-keys policy", () => {
-    it("builds a recognizable URL-safe secret and the stored SHA-256 from entropy", async () => {
+    it("shows a key by its recognizable prefix and the first characters of its id", async () => {
         const subject = await buildSubject()
-        expect(subject.buildKey(Uint8Array.from([251, 255, 239, 255, 255, 255, 255, 255, 255]))).toEqual({
-            key: "nvk_-__v________",
-            prefix: "nvk_-__v____",
-            hash: "c8efd6a8de1f8c5587b3bd8ca172e9f826700f44e5c8df2b074f37d8660fd146",
-        })
+        expect(subject.displayPrefix("0b9d5c2e-1f3a-4b6c-8d7e-9a0b1c2d3e4f")).toBe("nvk_0b9d5c2e")
+    })
+
+    it("reads a refused key as revoked only when the verifier said so, any other reason as unauthorized", async () => {
+        const subject = await buildSubject()
+        expect(subject.refusalOfVerify("revoked")).toBe(ApiKeysErrorCode.Revoked)
+        for (const reason of ["unknown", "secret", "malformed", "missing", "ambiguous", "expired", undefined]) {
+            expect(subject.refusalOfVerify(reason)).toBe(ApiKeysErrorCode.Unauthorized)
+        }
     })
 
     it("cleans, bounds and rejects short key names", async () => {
@@ -88,30 +86,6 @@ describe("api-keys policy", () => {
     })
 })
 
-describe("api-keys policy hashKey", () => {
-    it("is the SHA-256 hex of the key", async () => {
-        const subject = await buildSubject()
-        expect(subject.hashKey("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-        expect(subject.hashKey("nvk_abc")).not.toBe(subject.hashKey("nvk_abd"))
-    })
-})
-
-describe("api-keys policy bearerKey", () => {
-    it("reads the key of a Bearer header, whatever the case of the scheme", async () => {
-        const subject = await buildSubject()
-        expect(subject.bearerKey("Bearer nvk_abc")).toBe("nvk_abc")
-        expect(subject.bearerKey("bearer   nvk_abc")).toBe("nvk_abc")
-    })
-
-    it("reads nothing from a missing header, another scheme, a foreign key or extra words", async () => {
-        const subject = await buildSubject()
-        expect(subject.bearerKey(undefined)).toBeUndefined()
-        expect(subject.bearerKey("Basic nvk_abc")).toBeUndefined()
-        expect(subject.bearerKey("Bearer eyJhbGciOi")).toBeUndefined()
-        expect(subject.bearerKey("Bearer nvk_abc extra")).toBeUndefined()
-    })
-})
-
 describe("api-keys policy secondsToRenewal", () => {
     it("counts the seconds left in the minute", async () => {
         const subject = await buildSubject()
@@ -125,6 +99,7 @@ describe("api-keys policy withinMinuteBudget", () => {
 
         expect(subject.withinMinuteBudget({ hits: RATE_LIMIT_PER_MINUTE }, NOW)).toEqual({ kind: "ok", value: null })
         expect(subject.withinMinuteBudget(null, NOW)).toEqual({ kind: "ok", value: null })
+        expect(subject.withinMinuteBudget({ revoked: true }, NOW)).toEqual({ kind: "refused", code: ApiKeysErrorCode.Revoked })
         expect(subject.withinMinuteBudget({ hits: RATE_LIMIT_PER_MINUTE + 1 }, NOW)).toEqual({
             kind: "refused",
             code: ApiKeysErrorCode.RateLimited,
@@ -133,106 +108,117 @@ describe("api-keys policy withinMinuteBudget", () => {
     })
 })
 
-describe("api-keys policy admitKey", () => {
-    it("admits a working key that carries the scope", async () => {
+describe("api-keys policy requireScope", () => {
+    it("admits a scope the key carries and refuses one it does not", async () => {
         const subject = await buildSubject()
-        expect(subject.admitKey(answer(), "leads:read", NOW)).toEqual({
-            kind: "ok",
-            value: {
-                keyId: "key-1",
-                workspaceId: "workspace-1",
-                name: "n8n",
-                scopes: ["leads:read", "leads:write"],
-            },
-        })
-    })
-
-    it("admits a key at its budget and refuses the next request", async () => {
-        const subject = await buildSubject()
-        expect(subject.admitKey(answer({ hits: RATE_LIMIT_PER_MINUTE }), "leads:read", NOW).kind).toBe("ok")
-        expect(subject.admitKey(answer({ hits: RATE_LIMIT_PER_MINUTE + 1 }), "leads:read", NOW)).toEqual({
-            kind: "refused",
-            code: ApiKeysErrorCode.RateLimited,
-            params: { limit: RATE_LIMIT_PER_MINUTE, retryAfter: 40 },
-        })
-    })
-
-    it("refuses an unknown key and an answer without a workspace", async () => {
-        const subject = await buildSubject()
-        expect(subject.admitKey(null, "leads:read", NOW)).toMatchObject({ code: ApiKeysErrorCode.Unauthorized })
-        expect(subject.admitKey(answer({ id: undefined }), "leads:read", NOW)).toMatchObject({
-            code: ApiKeysErrorCode.Unauthorized,
-        })
-        expect(subject.admitKey(answer({ workspace_id: undefined }), "leads:read", NOW)).toMatchObject({
-            code: ApiKeysErrorCode.Unauthorized,
-        })
-    })
-
-    it("refuses a revoked key", async () => {
-        const subject = await buildSubject()
-        expect(subject.admitKey({ revoked: true }, "leads:read", NOW)).toMatchObject({ code: ApiKeysErrorCode.Revoked })
-    })
-
-    it("refuses a scope the key does not carry", async () => {
-        const subject = await buildSubject()
-        expect(subject.admitKey(answer(), "events:read", NOW)).toEqual({
+        expect(subject.requireScope(["leads:read", "leads:write"], "leads:read")).toEqual({ kind: "ok", value: null })
+        expect(subject.requireScope(["leads:read"], "events:read")).toEqual({
             kind: "refused",
             code: ApiKeysErrorCode.ScopeMissing,
             params: { scope: "events:read" },
         })
-    })
-
-    it("reads a key without hits, scopes or name as an empty one", async () => {
-        const subject = await buildSubject()
-        expect(subject.admitKey({ id: "key-1", workspace_id: "workspace-1" }, "leads:read", NOW)).toMatchObject({
-            code: ApiKeysErrorCode.ScopeMissing,
-        })
-        expect(
-            subject.admitKey({ id: "key-1", workspace_id: "workspace-1", scopes: ["leads:read"] }, "leads:read", NOW),
-        ).toMatchObject({ kind: "ok", value: { name: "" } })
+        expect(subject.requireScope([], "leads:read")).toMatchObject({ code: ApiKeysErrorCode.ScopeMissing })
     })
 })
 
-const agentAnswer = {
-    id: "key-1",
-    workspace_id: "workspace-1",
-    agent_id: "agent-1",
-    scopes: ["tools:call"],
-    revoked: false,
-    agent_status: "active",
+/** What the store answers for an MCP key: the key row and the state of its holder and agent. */
+interface McpAnswer {
+    readonly id: string
+    readonly workspaceId: string
+    readonly createdBy: string | null
+    readonly agentId: string | null
+    readonly scopes: ReadonlyArray<string> | null
+    readonly holderRole: string | null
+    readonly agentStatus: string | null
 }
 
-describe("api-keys policy admitAgentKey", () => {
-    it("admits a working key of an active agent that carries tools:call", async () => {
+const mcpAnswer: McpAnswer = {
+    id: "key-1",
+    workspaceId: "workspace-1",
+    createdBy: "user-1",
+    agentId: null,
+    scopes: ["mcp"],
+    holderRole: "owner",
+    agentStatus: null,
+}
+
+describe("api-keys policy admitMcpKey", () => {
+    it("admits a working MCP key as its holder, unscoped or scoped to an active agent", async () => {
         const subject = await buildSubject()
-        expect(subject.admitAgentKey(agentAnswer)).toEqual({
+        expect(subject.admitMcpKey(mcpAnswer)).toEqual({
             kind: "ok",
-            value: { keyId: "key-1", workspaceId: "workspace-1", agentId: "agent-1" },
+            value: { keyId: "key-1", workspaceId: "workspace-1", holderId: "user-1", agentId: null },
+        })
+        expect(subject.admitMcpKey({ ...mcpAnswer, agentId: "agent-1", agentStatus: "active" })).toMatchObject({
+            kind: "ok",
+            value: { holderId: "user-1", agentId: "agent-1" },
         })
     })
 
-    it("refuses an unknown key, a revoked key, a public key and the key of a missing or paused agent", async () => {
+    it("refuses a public API key and the retired agent-bound key", async () => {
         const subject = await buildSubject()
-        expect(subject.admitAgentKey(undefined)).toMatchObject({ code: ApiKeysErrorCode.Unauthorized })
-        expect(subject.admitAgentKey({ ...agentAnswer, revoked: true })).toMatchObject({
-            code: ApiKeysErrorCode.Revoked,
-        })
-        expect(subject.admitAgentKey({ ...agentAnswer, agent_id: null })).toMatchObject({
-            code: ApiKeysErrorCode.Unauthorized,
-        })
-        expect(subject.admitAgentKey({ ...agentAnswer, agent_status: null })).toMatchObject({
-            code: ApiKeysErrorCode.Unauthorized,
-        })
-        expect(subject.admitAgentKey({ ...agentAnswer, agent_status: "paused" })).toMatchObject({
-            code: ApiKeysErrorCode.Unauthorized,
-        })
-    })
-
-    it("refuses a key without the tools:call scope", async () => {
-        const subject = await buildSubject()
-        expect(subject.admitAgentKey({ ...agentAnswer, scopes: null })).toMatchObject({
+        expect(subject.admitMcpKey({ ...mcpAnswer, scopes: ["leads:read"] })).toMatchObject({
             code: ApiKeysErrorCode.ScopeMissing,
-            params: { scope: "tools:call" },
+            params: { scope: "mcp" },
         })
+        expect(subject.admitMcpKey({ ...mcpAnswer, scopes: ["tools:call"] })).toMatchObject({
+            code: ApiKeysErrorCode.ScopeMissing,
+        })
+        expect(subject.admitMcpKey({ ...mcpAnswer, scopes: null })).toMatchObject({ code: ApiKeysErrorCode.ScopeMissing })
+    })
+
+    it("refuses a key whose holder left the workspace or whose account was deleted", async () => {
+        const subject = await buildSubject()
+        expect(subject.admitMcpKey({ ...mcpAnswer, holderRole: null })).toMatchObject({
+            code: ApiKeysErrorCode.HolderGone,
+        })
+        expect(subject.admitMcpKey({ ...mcpAnswer, createdBy: null })).toMatchObject({
+            code: ApiKeysErrorCode.HolderGone,
+        })
+    })
+
+    it("admits a key held by an owner or a manager and refuses one whose holder is staff (demoted)", async () => {
+        const subject = await buildSubject()
+        for (const holderRole of ["owner", "manager"]) {
+            expect(subject.admitMcpKey({ ...mcpAnswer, holderRole })).toMatchObject({ kind: "ok" })
+        }
+        expect(subject.admitMcpKey({ ...mcpAnswer, holderRole: "staff" })).toMatchObject({
+            code: ApiKeysErrorCode.HolderNotManager,
+        })
+        expect(
+            subject.admitMcpKey({ ...mcpAnswer, holderRole: "staff", agentId: "agent-1", agentStatus: "active" }),
+        ).toMatchObject({ code: ApiKeysErrorCode.HolderNotManager })
+    })
+
+    it("refuses a key scoped to a missing or paused agent", async () => {
+        const subject = await buildSubject()
+        for (const status of [null, "paused"]) {
+            expect(subject.admitMcpKey({ ...mcpAnswer, agentId: "agent-1", agentStatus: status })).toMatchObject({
+                code: ApiKeysErrorCode.Unauthorized,
+            })
+        }
+    })
+})
+
+describe("api-keys policy key kinds and changes", () => {
+    it("reads an MCP key from its one scope and any other key as a public API key", async () => {
+        const subject = await buildSubject()
+        expect(subject.kindOfScopes(["mcp"])).toBe("mcp")
+        expect(subject.kindOfScopes(["leads:read", "events:read"])).toBe("public_api")
+        expect(subject.kindOfScopes(null)).toBe("public_api")
+    })
+})
+
+describe("api-keys policy inactiveReasonOf", () => {
+    it("derives why a working MCP key is suspended from its holder's current role, and nothing for any other key", async () => {
+        const subject = await buildSubject()
+        const base = { kind: "mcp" as const, revoked: false, holderId: "user-1" }
+        expect(subject.inactiveReasonOf({ ...base, holderRole: "owner" })).toBeNull()
+        expect(subject.inactiveReasonOf({ ...base, holderRole: "manager" })).toBeNull()
+        expect(subject.inactiveReasonOf({ ...base, holderRole: "staff" })).toBe("holder_not_manager")
+        expect(subject.inactiveReasonOf({ ...base, holderRole: null })).toBe("holder_gone")
+        expect(subject.inactiveReasonOf({ ...base, holderId: null, holderRole: null })).toBe("holder_gone")
+        expect(subject.inactiveReasonOf({ ...base, revoked: true, holderRole: "staff" })).toBeNull()
+        expect(subject.inactiveReasonOf({ ...base, kind: "public_api", holderRole: "staff" })).toBeNull()
     })
 })

@@ -1,8 +1,12 @@
+import { ACCOUNTING_MESSAGES, LEDGER_ACTIONS, LEDGER_READS, LEDGER_TOOLS } from "./ledger"
+import { LOYALTY_ACTIONS, LOYALTY_READS } from "./loyalty"
+import { LOYALTY_MESSAGES } from "./loyalty/loyalty-messages"
 import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
+import { DEFAULT_AI_READ_TOOLS, DEFAULT_NODE_TOOLS } from "@nivo-lite/agent-sdk/names"
+import { salesAgent } from "./template/sales.agent"
 import type { SpecNode } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
 import { salesBlocks } from "../../blocks/sales/sales-blocks"
-import { resumeRunAction } from "../platform/actions/resume-run.action"
 import {
     ATTENTION_COUNT_KEY,
     ATTENTION_KINDS,
@@ -45,18 +49,22 @@ describe("the Sales module declaration", () => {
     it("declares the reads and actions of the Sales workbench under its own key", () => {
         expect(salesModule.key).toBe("sales")
         expect(salesModule.reads.map((read) => read.id)).toEqual([
-            "sales.leads",
-            "sales.lead-counts",
-            "sales.lead",
-            "sales.orders",
-            "sales.order-counts",
-            "sales.order",
-            "sales.orders-waiting",
-            "sales.settings",
-            "sales.figures",
-            "sales.attention",
-            "sales.decisions",
-            "sales.awaiting-reply",
+            "blocks-core.sales.api.lead.list",
+            "blocks-core.sales.api.lead.counts",
+            "blocks-core.sales.api.lead.get",
+            "blocks-core.sales.api.order.list",
+            "blocks-core.sales.api.order.counts",
+            "blocks-core.sales.api.order.get",
+            "blocks-core.sales.api.order.waiting",
+            "blocks-core.sales.api.settings.get",
+            "blocks-core.sales.api.order.figures",
+            "blocks-core.sales.api.lead.attention",
+            "blocks-core.sales.api.order.decisions",
+            "blocks-core.sales.api.lead.awaiting-reply",
+            // The books of the sale (the ledger area).
+            ...LEDGER_READS.map((read) => read.id),
+            // The loyalty programme of the sale (the loyalty area).
+            ...LOYALTY_READS.map((read) => read.id),
         ])
         expect(salesModule.actions.map((action) => action.id)).toEqual([
             "sales.move-stage",
@@ -67,14 +75,23 @@ describe("the Sales module declaration", () => {
             "sales.respond",
             "sales.follow",
             "sales.reply",
+            ...LEDGER_ACTIONS.map((action) => action.id),
+            ...LOYALTY_ACTIONS.map((action) => action.id),
         ])
     })
 
-    it("declares the three permissions and nothing outside them is asked", () => {
-        expect(salesModule.permissions).toEqual(["sales.view", "sales.manage", "sales.approve"])
-        expect(salesModule.reads.every((read) => read.permission === "sales.view")).toBe(true)
-        expect(salesModule.actions.filter((action) => action.permission !== "sales.manage").map((a) => a.id)).toEqual([
-            "sales.decide",
+    it("declares the four permissions and nothing outside them is asked", () => {
+        expect(salesModule.permissions).toEqual(["sales.view", "sales.manage", "sales.approve", "sales.loyalty-decide"])
+        expect(salesModule.reads.filter((read) => read.permission !== "sales.view").map((read) => [read.id, read.permission])).toEqual([
+            ["blocks-core.sales.api.loyalty-decision.list", "sales.loyalty-decide"],
+            ["blocks-core.sales.api.loyalty-decision.waiting", "sales.loyalty-decide"],
+            ["blocks-core.sales.api.loyalty-decision.count", "sales.loyalty-decide"],
+        ])
+        expect(salesModule.actions.filter((action) => action.permission !== "sales.manage").map((a) => [a.id, a.permission])).toEqual([
+            ["sales.decide", "sales.approve"],
+            ["sales.loyalty-redeem-reward", "sales.view"],
+            ["sales.loyalty-preview-segment", "sales.view"],
+            ["sales.loyalty-decide", "sales.loyalty-decide"],
         ])
         expect(salesModule.actions.find((action) => action.id === "sales.decide")?.permission).toBe("sales.approve")
     })
@@ -87,22 +104,42 @@ describe("the Sales module declaration", () => {
         expect(strays).toEqual([])
     })
 
-    it("seeds one spec with the attention, customers, orders and settings views", () => {
+    it("seeds one spec: the agent's desk first, the attention, customers, orders and settings views, then the data pages of the desk", () => {
         expect(salesModule.specs).toEqual([SALES_WORKBENCH_SPEC])
         expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual([
+            "desk",
             "attention",
             "pipeline",
             "orders",
             "settings",
+            "today",
+            "overview",
+            "book",
+            "questions",
+            "ledger",
+            "ledger-settings",
+            "loyalty-overview",
+            "members",
+            "rewards",
+            "promo",
+            "pending",
+            "program",
+            "data-leads",
+            "data-orders",
+            "data-entries",
         ])
     })
 
-    it("has no tool, so nothing leaves the system from a transactional action", () => {
-        expect(salesModule.tools).toBeUndefined()
+    it("holds every tool a node of the Sales agent's graphs calls (the record, file, timer and AI read defaults aside)", () => {
+        const held = new Set<string>([...(salesModule.agent?.tools ?? []), ...DEFAULT_NODE_TOOLS, ...DEFAULT_AI_READ_TOOLS])
+        const outside = salesAgent.graphs.flatMap((graph) =>
+            [...graph.nodes.values()].flatMap((node) => node.tools.filter((tool) => !held.has(tool)).map((tool) => `${graph.key}:${node.id}:${tool}`)),
+        )
+        expect(outside).toEqual([])
     })
 
-    it("declares the payment reminder timings as policy values of the sales agent, in hours", () => {
-        expect(salesModule.agent?.policy.limits).toMatchObject({ paymentReminderHours: 2, paymentStaleHours: 24 })
+    it("lists only the ledger's door tools (the books on the sheet), nothing a transactional action of its own calls", () => {
+        expect(salesModule.tools).toEqual([...LEDGER_TOOLS])
     })
 })
 
@@ -125,14 +162,14 @@ describe("the fixtures of the Sales module", () => {
         )
     })
 
-    it.each(Object.entries(SALES_FIXTURES.reads))("%s has a ready answer and an empty one", (_id, fixture) => {
+    it.each(Object.entries(SALES_FIXTURES.reads))("%s has a ready answer and an empty (or, for the close check, a waiting) one", (_id, fixture) => {
         expect(fixture.ready).toBeDefined()
-        expect("empty" in fixture).toBe(true)
+        expect("empty" in fixture || "waiting" in fixture).toBe(true)
     })
 
     it("has a waiting-for-owner order and a waiting list with that order", () => {
-        expect(SALES_FIXTURES.reads["sales.order"]?.waiting).toMatchObject({ approval: "owner", status: "draft" })
-        expect(SALES_FIXTURES.reads["sales.orders-waiting"]?.ready).toMatchObject({ count: "1" })
+        expect(SALES_FIXTURES.reads["blocks-core.sales.api.order.get"]?.waiting).toMatchObject({ approval: "owner", status: "draft" })
+        expect(SALES_FIXTURES.reads["blocks-core.sales.api.order.waiting"]?.ready).toMatchObject({ count: "1" })
     })
 })
 
@@ -170,7 +207,6 @@ describe("the messages of the Sales module", () => {
                 ATTENTION_KIND_VIEWS[kind].chipKey,
                 ATTENTION_KIND_VIEWS[kind].commandKey,
             ]),
-            ...[resumeRunAction].flatMap((action) => keysIn(action.label)),
             ...PARKED_STEP_KEYS.values(),
             ...PARKED_REASON_KEYS.values(),
             ...Object.values(PIPELINE_WORD_KEYS),
@@ -184,8 +220,12 @@ describe("the messages of the Sales module", () => {
         expect(Object.keys(SALES_MESSAGES.en).sort()).toEqual(Object.keys(SALES_MESSAGES.vi).sort())
     })
 
-    it("hold every key the spec, the actions and the refusals name, and nothing else", () => {
-        expect(Object.keys(SALES_MESSAGES.vi).sort()).toEqual(used)
+    it("hold every key the spec, the actions and the refusals name, and nothing else (the ledger and loyalty areas' keys are their own catalogues')", () => {
+        expect(Object.keys(SALES_MESSAGES.vi).sort()).toEqual(
+            used.filter(
+                (key) => !(key in ACCOUNTING_MESSAGES.vi || key in LOYALTY_MESSAGES.vi) || key in SALES_MESSAGES.vi,
+            ),
+        )
     })
 
     it("have no blank text", () => {

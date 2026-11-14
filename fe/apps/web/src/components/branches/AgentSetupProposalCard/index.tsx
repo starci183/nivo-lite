@@ -1,6 +1,6 @@
-import { AgentMessageCard, agentMessageViews } from "@nivo-lite/blocks-core/client"
-import type { AgentMessageWords } from "@nivo-lite/blocks-core/client"
-import { agentMessageItemOf, agentMessageKinds } from "@nivo-lite/blocks-core"
+import { messageTextKind } from "@nivo-lite/agent-sdk/team-chat"
+import { AgentMessageCard, agentMessageViews, type AgentMessageWords } from "@/modules/plugin-registry/client"
+import { agentMessageItemOf, agentMessageKinds } from "@/modules/plugin-registry"
 import type { AgentSetupCopy, AgentSetupProposal } from "@/modules/types"
 
 /** What the owner can do with a proposal: apply it as it stands, or apply it with the words changed. */
@@ -45,15 +45,15 @@ const wordsOf = (copy: AgentSetupCopy): AgentMessageWords => ({
 })
 
 /**
- * A proposal of NIVO in the setup chat, drawn by the one agent message card of the app (the same card as the team chat and the
- * inbox): an approval whose "Apply" confirms the item and whose edit changes the words before they are applied.
+ * A proposal of NIVO in the setup chat, drawn by the one agent message card of the app (the same card as the team chat): an approval
+ * whose "Apply" confirms the item and whose edit changes the words before they are applied.
  */
 export const AgentSetupProposalCard = (props: AgentSetupProposalCardProps) => {
     const { proposal } = props
     const item = agentMessageItemOf(
         {
             id: proposal.key,
-            kind: "message.text",
+            kind: messageTextKind.id,
             intent: "approve",
             state: "waiting",
             agent: "NIVO",

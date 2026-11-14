@@ -3,8 +3,6 @@ import { mock } from "@starci/jest-preset"
 import { AgentDirectoryService, AgentOwnershipService } from "@modules/domain/agents"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { DepartmentRuleLine } from "@modules/domain/authority-rules"
 import type { AgentHeader, AgentOwnership } from "@modules/domain/agents"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -21,7 +19,6 @@ const OWNERSHIP: AgentOwnership = {
     responder: { ownerMemberId: "m-minh", fallbackMemberId: "m-nam" },
     assignableRoles: ["manager"],
     assignableRooms: [{ key: "sales", name: "Sales" }],
-    canTag: [{ id: "a2", name: "Accounting AI", module: "accounting", status: "active" }],
 }
 
 const HEAD_FACTS: AgentHeader = {
@@ -44,24 +41,13 @@ const WORK: RecentWorkRead = {
     leadId: null,
 }
 
-const RULE: DepartmentRuleLine = {
-    action: "send_quote",
-    department: "sales",
-    mode: "ask",
-    limitVnd: null,
-    note: "",
-}
-
 const build = async (
     head: AgentHeader | null = HEAD_FACTS,
-    recent: ReadonlyArray<RecentWorkRead> = [],
-    rules: ReadonlyArray<DepartmentRuleLine> | Error = new Error("rules table missing"),
+    recent: ReadonlyArray<RecentWorkRead> | Error = [],
 ) => {
-    const authority = mock<AuthorityRulesService>()
-    if (rules instanceof Error) authority.departmentRules.mockRejectedValue(rules)
-    else authority.departmentRules.mockResolvedValue([...rules])
     const activity = mock<WorkItemsActivityService>()
-    activity.recentOf.mockResolvedValue([...recent])
+    if (recent instanceof Error) activity.recentOf.mockRejectedValue(recent)
+    else activity.recentOf.mockResolvedValue([...recent])
     const agents = mock<AgentOwnershipService>({ ownershipOf: jest.fn(() => Promise.resolve(OWNERSHIP)) })
     const logger = mock<Logger>()
     const directory = mock<AgentDirectoryService>()
@@ -76,7 +62,6 @@ const build = async (
             { provide: LOGGER, useValue: logger },
             { provide: AgentOwnershipService, useValue: agents },
             { provide: WorkItemsActivityService, useValue: activity },
-            { provide: AuthorityRulesService, useValue: authority },
         ],
     }).compile()
     return {
@@ -84,24 +69,20 @@ const build = async (
         agents,
         logger,
         activity,
-        authority,
         directory,
         installations,
     }
 }
 
 describe("AgentProfileService", () => {
-    it("composes the header, the ownership, the rules of its module and its recent work", async () => {
-        const { service, agents, activity, authority, directory } = await build(HEAD_FACTS, [WORK], [RULE])
+    it("composes the header, the ownership, an empty rules region and its recent work", async () => {
+        const { service, agents, activity, directory } = await build(HEAD_FACTS, [WORK])
 
         const page = await service.page("u1", "w1", "a1")
 
         expect(page.agent).toMatchObject({ id: "a1", roomName: null, operatingMode: "assist" })
         expect(page.ownership).toBe(OWNERSHIP)
-        expect(page.rules).toEqual({
-            ok: true,
-            data: [{ action: "send_quote", department: "sales", mode: "ask", limitVnd: null, note: "" }],
-        })
+        expect(page.rules).toEqual({ ok: true, data: [] })
         expect(page.recent).toEqual({
             ok: true,
             data: [
@@ -118,12 +99,11 @@ describe("AgentProfileService", () => {
         })
         expect(agents.ownershipOf).toHaveBeenCalledWith("u1", "w1", "a1")
         expect(directory.headOf).toHaveBeenCalledWith("w1", "a1")
-        expect(authority.departmentRules).toHaveBeenCalledWith("w1", "sales", 50)
         expect(activity.recentOf).toHaveBeenCalledWith("w1", "sales", 6)
     })
 
     it("leaves the operating mode empty for an agent with no installation", async () => {
-        const { service, installations } = await build(HEAD_FACTS, [WORK], [RULE])
+        const { service, installations } = await build(HEAD_FACTS, [WORK])
         installations.ofAgent.mockResolvedValue(null)
 
         const page = await service.page("u1", "w1", "a1")
@@ -131,15 +111,15 @@ describe("AgentProfileService", () => {
         expect(page.agent.operatingMode).toBeNull()
     })
 
-    it("fails the rules region in place (their statement is not answered) and keeps the rest of the page", async () => {
-        const { service, logger } = await build()
+    it("fails the recent region in place and keeps the rest of the page", async () => {
+        const { service, logger } = await build(HEAD_FACTS, new Error("work table missing"))
 
         const page = await service.page("u1", "w1", "a1")
 
-        expect(page.rules).toEqual({ ok: false })
-        expect(page.recent).toEqual({ ok: true, data: [] })
+        expect(page.recent).toEqual({ ok: false })
+        expect(page.rules).toEqual({ ok: true, data: [] })
         expect(logger.error).toHaveBeenCalledWith(AgentProfileLogEvent.RegionFailed, expect.any(Error), {
-            region: "rules",
+            region: "recent",
         })
     })
 

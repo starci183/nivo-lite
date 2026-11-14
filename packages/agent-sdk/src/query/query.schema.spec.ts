@@ -1,3 +1,4 @@
+import { z } from "zod"
 import { aggregateSchema, filterExprSchema, querySchema } from "./query.schema"
 import { q } from "./q"
 import type { FilterExpr } from "./query.types"
@@ -70,6 +71,27 @@ describe("filterExprSchema", () => {
     it("bounds the depth at 6", () => {
         expect(filterExprSchema.safeParse(nested(6)).success).toBe(true)
         expect(filterExprSchema.safeParse(nested(7)).success).toBe(false)
+    })
+
+    it("counts every wrapper toward the depth: and / or / not / has, with or without a where", () => {
+        const deep = (levels: number, wrap: (inner: FilterExpr) => FilterExpr): FilterExpr =>
+            Array.from({ length: levels - 1 }).reduce<FilterExpr>((inner) => wrap(inner), q.isNull("channel"))
+        const viaAnd = (inner: FilterExpr): FilterExpr => q.and(inner, q.isNull("a"))
+        const viaHas = (inner: FilterExpr): FilterExpr => ({ op: "has", relation: "messages", where: inner })
+        for (const wrap of [viaAnd, viaHas]) {
+            expect(filterExprSchema.safeParse(deep(6, wrap)).success).toBe(true)
+            expect(filterExprSchema.safeParse(deep(7, wrap)).success).toBe(false)
+        }
+        expect(filterExprSchema.safeParse(viaHas(q.isNull("a"))).success).toBe(true)
+        expect(filterExprSchema.safeParse({ op: "has", relation: "messages" }).success).toBe(true)
+    })
+
+    // The filter is one recursive schema written once and referenced: it used to be unrolled six levels deep with three references per level
+    // (3^5 copies, 816,806 characters of JSON Schema in every model call that shows a tool taking a `where`).
+    it("renders as a small JSON Schema: the tree is written once and referenced, under 8,000 characters", () => {
+        const rendered = JSON.stringify(z.toJSONSchema(filterExprSchema))
+        expect(rendered.length).toBeLessThan(8000)
+        expect(rendered).toContain("$ref")
     })
 })
 

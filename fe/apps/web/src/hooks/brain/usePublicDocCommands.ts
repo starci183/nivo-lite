@@ -7,16 +7,22 @@ import {
     useMutateRedraftPublicDocumentSwr,
     useMutateUpdatePublicDocumentSwr,
     useMutateWritePublicDocumentSwr,
+    type MutateApprovePublicDocumentRequest,
+    type MutateDraftPublicDocumentRequest,
+    type MutateUpdatePublicDocumentRequest,
+    type MutateWritePublicDocumentRequest,
 } from "@/hooks/swr"
-import type {
-    MutateApprovePublicDocumentRequest,
-    MutateDraftPublicDocumentRequest,
-    MutateUpdatePublicDocumentRequest,
-    MutateWritePublicDocumentRequest,
-} from "@/hooks/swr"
-import { documentCommandOf } from "./brain.shared"
-import { usePublicDocRunner } from "./usePublicDocRunner"
-import type { PublicDocument } from "@/modules/brain"
+import { usePublicDocRunner, type Run } from "./usePublicDocRunner"
+import { toPublicDocument, type PublicDocument } from "@/modules/brain"
+
+/** A command that changes a public document: the runner answers the saved snapshot, and `done` says what was done. */
+const documentCommandOf =
+    <Request>(
+        run: Run,
+        send: (request: Request) => Promise<Parameters<typeof toPublicDocument>[0]>,
+    ): ((request: Request, done?: string) => Promise<PublicDocument | undefined>) =>
+    (request: Request, done?: string) =>
+        run(async () => toPublicDocument(await send(request)), done)
 
 /** The view `usePublicDocCommands` returns. */
 export interface PublicDocCommandsView {

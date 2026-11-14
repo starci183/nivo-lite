@@ -23,7 +23,4 @@ export class PackageReportType {
     @Field(() => Int)
     people!: number
 
-    /** Data rights not carried, kept as proposals. */
-    @Field(() => Int)
-    rights!: number
 }

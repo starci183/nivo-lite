@@ -293,6 +293,18 @@ describe("WebhookConnectionsService test", () => {
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", { lastError: null })
     })
 
+    it("sends the first picked event with its declared sample data (only `test` when it declares none)", async () => {
+        const { service, connections, delivery } = await build()
+        connections.get.mockResolvedValue(record({ meta: { host: "receiver.test:8443", events: "deal.won,lead.created" } }))
+
+        await service.test(ACTOR, "c1")
+
+        const call = delivery.post.mock.calls[0]?.[0]
+        expect(call?.headers["x-nivo-event"]).toBe("deal.won")
+        const sent: unknown = JSON.parse(call?.body ?? "{}")
+        expect(sent).toEqual(expect.objectContaining({ event: "deal.won", data: { test: true } }))
+    })
+
     it.each([
         { status: 199, ok: false, error: "HTTP_STATUS", lastError: "HTTP 199" },
         { status: 200, ok: true, error: null, lastError: null },

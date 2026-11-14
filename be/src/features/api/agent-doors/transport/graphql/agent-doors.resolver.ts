@@ -2,8 +2,7 @@ import type { CommandBus, QueryBus } from "@nestjs/cqrs"
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
-import { InjectCommandBus, InjectQueryBus } from "@modules/platform/cqrs"
-import type { Principal } from "@modules/platform/cqrs"
+import { InjectCommandBus, InjectQueryBus, type Principal } from "@modules/platform/cqrs"
 import { ReadCareOptOutQuery } from "../../application/read-care-opt-out.query"
 import { ReleaseConversationCommand } from "../../application/release-conversation.command"
 import { SetCareOptOutCommand } from "../../application/set-care-opt-out.command"
@@ -29,7 +28,7 @@ export class AgentDoorsResolver {
         const view = await this.queryBus.execute(
             new ReadCareOptOutQuery({ request: { workspaceId, leadId: input.leadId }, principal }),
         )
-        return view === null ? null : toCareOptOutType(view)
+        return toCareOptOutType(view)
     }
 
     /** Sets or clears a customer's care opt-out on the shop's word; who and when are recorded. Owner or manager. */
@@ -48,7 +47,7 @@ export class AgentDoorsResolver {
         return toSetCareOptOutType(answer)
     }
 
-    /** Hands a held conversation back ("hand back to the agent"): a person's take-over, an agent's consult hold, or both. Owner or manager. */
+    /** Hands a conversation back ("hand back to the agent"): one resume event for its route wakes the graphs on its channel. Owner or manager. */
     @Mutation(() => ConversationReleaseType, { name: "releaseConversation" })
     async releaseConversation(
         @CurrentPrincipal() principal: Principal,
@@ -57,7 +56,7 @@ export class AgentDoorsResolver {
     ): Promise<ConversationReleaseType> {
         const release = await this.commandBus.execute(
             new ReleaseConversationCommand({
-                request: { workspaceId, conversationId: input.conversationId, hold: input.hold },
+                request: { workspaceId, conversationId: input.conversationId },
                 principal,
             }),
         )

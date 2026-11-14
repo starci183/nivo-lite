@@ -2,14 +2,15 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Not } from "typeorm"
+import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EXTRACTIONS_WS as WS, extractionRowOf as rowOf } from "@tests/fixtures/builders/brain-extractions.builder"
 import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
-import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { ExtractionNote } from "./brain-extractions.contracts"
+import type { ExtractionRecord } from "./brain-extractions.contracts"
 import { BrainExtractionsService } from "./brain-extractions.service"
 import { BrainExtractionEntity } from "./persistence/entities"
-
-const WS = "11111111-1111-4111-8111-111111111111"
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -18,13 +19,11 @@ const build = async (em: MockEntityManager) => {
     return moduleRef.get(BrainExtractionsService)
 }
 
-const rowOf = entityRowBuilder<BrainExtractionEntity>({
+/** The record of the stored reading `rowOf()` holds, as the callers read it. */
+const RECORD: ExtractionRecord = {
     sourceId: "s1",
-    workspaceId: WS,
     status: "running",
     factsProposed: 7,
-    error: null,
-    model: null,
     promptVersion: 3,
     contentHash: "hash-1",
     windowsTotal: 5,
@@ -33,9 +32,21 @@ const rowOf = entityRowBuilder<BrainExtractionEntity>({
     orphanFactIds: ["f1", "f2"],
     passageHashes: ["h1"],
     factsChanged: false,
+    stage: "extract",
+    counts: {
+        passagesTotal: 40,
+        passagesTriaged: 40,
+        passagesKept: 6,
+        factsApplied: 0,
+        factsAsked: 0,
+        factsWaiting: 0,
+    },
+    windowsSkipped: 0,
+    linesRefused: 0,
+    linesUnread: 0,
     updatedAt: new Date("2026-10-13T02:00:00.000Z"),
-    createdAt: new Date("2026-10-13T02:00:00.000Z"),
-})
+    nature: null,
+}
 
 /** Every update the double saw: the entity, the filter and the changes with their function expressions named. */
 const updatesOf = (em: MockEntityManager): unknown => evaluatedCalls(em.update.mock.calls, 2)
@@ -84,19 +95,7 @@ describe("BrainExtractionsService", () => {
             const em = mockEntityManager({ findOne: [BrainExtractionEntity, rowOf()] })
             const service = await build(em)
 
-            await expect(service.get(WS, "s1")).resolves.toEqual({
-                sourceId: "s1",
-                status: "running",
-                factsProposed: 7,
-                promptVersion: 3,
-                contentHash: "hash-1",
-                windowsTotal: 5,
-                windowsDone: 2,
-                attempts: 1,
-                orphanFactIds: ["f1", "f2"],
-                passageHashes: ["h1"],
-                factsChanged: false,
-            })
+            await expect(service.get(WS, "s1")).resolves.toEqual(RECORD)
 
             expect(em.findOne).toHaveBeenCalledWith(BrainExtractionEntity, {
                 where: { workspaceId: WS, sourceId: "s1" },
@@ -110,19 +109,7 @@ describe("BrainExtractionsService", () => {
                 }),
             )
 
-            await expect(service.get(WS, "s1")).resolves.toEqual({
-                sourceId: "s1",
-                status: "running",
-                factsProposed: 7,
-                promptVersion: 3,
-                contentHash: null,
-                windowsTotal: 5,
-                windowsDone: 2,
-                attempts: 1,
-                orphanFactIds: [],
-                passageHashes: ["h1"],
-                factsChanged: false,
-            })
+            await expect(service.get(WS, "s1")).resolves.toEqual({ ...RECORD, contentHash: null, orphanFactIds: [] })
         })
 
         it("answers null when the document has no reading", async () => {
@@ -149,6 +136,7 @@ describe("BrainExtractionsService", () => {
                     windowsTotal: 5,
                     orphanFactIds,
                     factsChanged: true,
+                    passagesTotal: 40,
                 }),
             ).resolves.toBeUndefined()
 
@@ -166,6 +154,17 @@ describe("BrainExtractionsService", () => {
                 attempts: 0,
                 orphanFactIds: ["f1", "f2"],
                 factsChanged: true,
+                stage: "triage",
+                passagesTotal: 40,
+                passagesTriaged: 0,
+                passagesKept: 0,
+                factsApplied: 0,
+                factsAsked: 0,
+                factsWaiting: 0,
+                windowsSkipped: 0,
+                linesRefused: 0,
+                linesUnread: 0,
+                answerNotes: [],
             }
             const upserts = () => evaluatedCalls(em.upsert.mock.calls, 1)
             expect(upserts()).toEqual([["BrainExtractionEntity", started, ["sourceId"]]])
@@ -261,6 +260,40 @@ describe("BrainExtractionsService", () => {
                     },
                 ],
             ])
+        })
+
+        it("closes a reading that skipped calls with the note that says so (D-N-10)", async () => {
+            const em = mockEntityManager({ update: [BrainExtractionEntity, { affected: 1 }] })
+            const service = await build(em)
+
+            await service.finish(WS, "s1", "model-1", [], ExtractionNote.WindowsSkipped)
+
+            expect(updatesOf(em)).toEqual([
+                [
+                    "BrainExtractionEntity",
+                    { workspaceId: WS, sourceId: "s1" },
+                    expect.objectContaining({ status: "done", error: "BRAIN_NOTE_WINDOWS_SKIPPED" }),
+                ],
+            ])
+        })
+    })
+
+    describe("note", () => {
+        it("counts a skipped call and its refused lines and keeps the raw answer cut to 1,000 characters among the last 20, in one statement", async () => {
+            const em = mockEntityManager()
+            const [update] = queueQueryBuilders(em, [{ execute: { affected: 1 } }])
+            const service = await build(em)
+
+            await service.note(WS, "s1", {
+                skipped: true,
+                note: { at: "2026-11-11T15:00:00.000Z", reason: "unreadable", passages: ["c1"], refused: 2, answer: "x".repeat(1500) },
+            })
+
+            expect(update?.callsOf("where")).toEqual([[{ workspaceId: WS, sourceId: "s1" }]])
+            const [parameters] = update?.callsOf("setParameters")[0] ?? []
+            expect(parameters).toMatchObject({ skipped: 1, refused: 2 })
+            const keptNotes = parseJsonText(String(isRecord(parameters) ? parameters["note"] : undefined))
+            expect(keptNotes).toMatchObject({ ok: true, value: [{ answer: "x".repeat(1000) }] })
         })
     })
 })

@@ -1,5 +1,4 @@
-import { specDocumentSchema } from "@nivo-lite/agent-sdk/spec"
-import type { SpecDocument } from "@nivo-lite/agent-sdk/spec"
+import { specDocumentSchema, type SpecDocument } from "@nivo-lite/agent-sdk/spec"
 import data from "./agent-runs.workbench.json"
 
 /** The seed spec of the runs of an agent: the list with its status filter beside the steps of the chosen run, parsed once. */

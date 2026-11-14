@@ -1,9 +1,10 @@
 "use client"
 
-import { notFound } from "next/navigation"
+import { notFound, useParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import { useConnectionPageTabs } from "@/hooks/connectionPage"
+import { ConnectionFormContext, useConnectionFormState } from "@/hooks/connectionForm"
+import { useProviderPageTabs } from "@/hooks/connectionPage"
 import { useProviderCrumb } from "@/hooks/connectionProvider"
 import { useConnectionRefusal } from "@/hooks/connections"
 import { useConnectionOpenPage } from "@/hooks/connectionsPanes"
@@ -23,18 +24,24 @@ interface ConnectionOpenHeadProps {
  */
 export const ConnectionOpenHead = (props: ConnectionOpenHeadProps) => {
     const t = useTranslations("connections")
+    const tp = useTranslations("providerPage")
+    const params = useParams<{ id?: string }>()
+    const form = useConnectionFormState(typeof params.id === "string" ? params.id : "")
     const workspaceId = useWorkspaceId()
     const open = useConnectionOpenPage()
     const providerCrumb = useProviderCrumb(open.provider)
-    const tabs = useConnectionPageTabs(open.hasAgents ? open.agentCount : undefined)
+    const tabs = useProviderPageTabs()
     const refusal = useConnectionRefusal()
+    /** The account form belongs to the Config tab: its commands are not in the band of the read-only tabs. */
+    const isConfigTab = tabs.selectedKey === "config"
     if (open.isMissing && refusal === undefined) notFound()
     const view = "items" in open.slot ? open.slot.items : undefined
     return (
+        <ConnectionFormContext.Provider value={form}>
         <ConnectionOpenHeadBase
             props={{
                 ...(view === undefined ? {} : { view }),
-                ...(open.chip === null ? {} : { chip: open.chip }),
+                ...(open.chip === null ? {} : { chip: { ...open.chip, isDot: false } }),
                 glyph: open.glyph,
                 crumbsLabel: t("crumbLabel"),
                 crumbs: [
@@ -49,9 +56,34 @@ export const ConnectionOpenHead = (props: ConnectionOpenHeadProps) => {
                 tabs,
                 moreLabel: t("moreActions"),
                 ...(refusal === undefined ? {} : { refusal }),
+                form: {
+                    ...(isConfigTab && form.canTest
+                        ? {
+                              check: {
+                                  label: tp("formCheckAction"),
+                                  intent: "neutral" as const,
+                                  isPending: form.isTesting,
+                                  onPress: form.on.test,
+                              },
+                          }
+                        : {}),
+                    ...(isConfigTab && form.canEdit
+                        ? {
+                              save: {
+                                  label: tp("formSaveAction"),
+                                  intent: "commit" as const,
+                                  isPending: form.isSaving,
+                                  isDisabled: !form.isSaveEnabled,
+                                  onPress: form.on.save,
+                              },
+                          }
+                        : {}),
+                },
             }}
             on={open.on}
-            children={props.children}
-        />
+        >
+            {props.children}
+        </ConnectionOpenHeadBase>
+        </ConnectionFormContext.Provider>
     )
 }

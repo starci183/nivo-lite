@@ -1,10 +1,15 @@
-import type { StorageObjectsPort } from "@modules/integrations/object-storage"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
-
+import type { StorageAssetsPort, StorageObjectsPort } from "@modules/integrations/object-storage"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 /** Token of the storage door selected by the app root. */
 export const CHAT_FILES_STORAGE: unique symbol = Symbol("domain.chat-files.storage")
 
 /** Injects the private object storage door. Parameter type: StorageObjectsPort. */
 export const InjectChatFilesStorage = (): TypedParameterDecorator<StorageObjectsPort> =>
     injector<StorageObjectsPort>(CHAT_FILES_STORAGE)
+
+/** Token of the store the back end writes whole files to (a customer's picture it keeps), selected by the app root. */
+export const CHAT_FILES_ASSETS: unique symbol = Symbol("domain.chat-files.assets")
+
+/** Injects the store of whole files. Parameter type: StorageAssetsPort. */
+export const InjectChatFilesAssets = (): TypedParameterDecorator<StorageAssetsPort> =>
+    injector<StorageAssetsPort>(CHAT_FILES_ASSETS)

@@ -10,11 +10,11 @@ const SPEC: GraphSpec = {
             { name: "leadId", type: "string", required: true },
         ],
     },
-    outcomes: [{ key: "won", label: "Chốt mua", outputs: [{ name: "orderId", type: "string" }] }],
+    outcomes: [{ key: "won", label: "Ch\u1ed1t mua", outputs: [{ name: "orderId", type: "string" }] }],
     trigger: { kind: "tag", sources: ["agent"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [
-        { key: "record", kind: "output", step: "sales.create-order", next: "won" },
+        { key: "record", kind: "output", step: "sales.order-cancel", next: "won" },
         { key: "won", kind: "output", step: "core.outcome", params: { outcome: "won", outputs: {} }, next: "call" },
         { key: "call", kind: "output", step: "core.call-workflow", next: "tell" },
         { key: "tell", kind: "output", step: "chatbot.answer" },
@@ -36,7 +36,7 @@ describe("the output picker", () => {
         const options = refOptionsOf(SPEC, "call", "vi", "array")
         expect(options.every((option) => ["array", "unknown", "null"].includes(option.type))).toBe(true)
         const [first] = refOptionsOf(SPEC, "call", "vi")
-        expect(first).toMatchObject({ ref: "trigger.conversationId", text: "= trigger.conversationId", group: "Đầu vào", label: "Cuộc trò chuyện" })
+        expect(first).toMatchObject({ ref: "trigger.conversationId", text: "= trigger.conversationId", group: "\u0110\u1ea7u v\u00e0o", label: "Cu\u1ed9c tr\u00f2 chuy\u1ec7n" })
         expect(pickTypeFits("number", "integer")).toBe(true)
         expect(pickTypeFits("string", "number")).toBe(false)
     })
@@ -44,14 +44,14 @@ describe("the output picker", () => {
     it("lists the data params a step takes and what it answers, typed", () => {
         expect(bindableFieldsOf("chatbot.answer", "vi").map((field) => field.name)).toContain("conversationId")
         expect(bindableFieldsOf("not.installed", "vi")).toEqual([])
-        expect(outputFieldsOf("sales.create-order", "en").map((field) => field.name)).toContain("orderId")
+        expect(outputFieldsOf("sales.order-cancel", "en").map((field) => field.name)).toContain("orderId")
     })
 
     it("words a ref chip by its member and where it comes from, never by its path", () => {
-        expect(refChipTextOf(SPEC, "call", "trigger.leadId", "vi")).toBe("= Khách · Đầu vào")
-        expect(refChipTextOf(SPEC, "call", "steps.record.output.orderId", "vi")).toBe("= Đơn hàng · Tạo đơn")
-        expect(refChipTextOf(SPEC, "call", "out.orderId", "vi")).toBe("= Đơn hàng · Kết quả: Chốt mua")
-        expect(refChipTextOf(SPEC, "call", "lead.address", "en")).toBe("= Address · Customer")
-        expect(refChipTextOf(SPEC, "tell", "steps.ghost.output.orderId", "vi")).toBe("= Đơn hàng · ghost")
+        expect(refChipTextOf(SPEC, "call", "trigger.leadId", "vi")).toBe("= Kh\u00e1ch \u00b7 \u0110\u1ea7u v\u00e0o")
+        expect(refChipTextOf(SPEC, "call", "steps.record.output.orderId", "vi")).toBe("= \u0110\u01a1n h\u00e0ng \u00b7 Hu\u1ef7 \u0111\u01a1n")
+        expect(refChipTextOf(SPEC, "call", "out.orderId", "vi")).toBe("= \u0110\u01a1n h\u00e0ng \u00b7 K\u1ebft qu\u1ea3: Ch\u1ed1t mua")
+        expect(refChipTextOf(SPEC, "call", "lead.address", "en")).toBe("= Address \u00b7 Customer")
+        expect(refChipTextOf(SPEC, "tell", "steps.ghost.output.orderId", "vi")).toBe("= \u0110\u01a1n h\u00e0ng \u00b7 ghost")
     })
 })

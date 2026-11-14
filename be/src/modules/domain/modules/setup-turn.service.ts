@@ -1,30 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import { DirectGenerationService } from "@modules/domain/ai-generations"
-import { BrainFactsService } from "@modules/domain/brain-facts"
-import type { FactRecord } from "@modules/domain/brain-facts"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { SetupMessagesService } from "@modules/domain/module-setup-messages"
-import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
-import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
-import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { isSetupTurnPayload } from "@modules/queues/agents"
-import type { SetupTurnPayload } from "@modules/queues/agents"
+import { BrainFactsService, type FactRecord } from "@modules/domain/brain-facts"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { SetupMessagesService, type SetupMessageRecord } from "@modules/domain/module-setup-messages"
+import { SetupSessionsService, type SetupSessionRecord } from "@modules/domain/module-setup-sessions"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { isSetupTurnPayload, type SetupTurnPayload } from "@modules/queues/agents"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { ModulesLogEvent } from "./modules.log-events"
 import { ModulesService } from "./modules.service"
 import { conflictsOf, knownLinesOf, unmentionedConflicts } from "./policies/setup-facts.policy"
 import { attemptTimeoutOf, budgetLeftMs, canAttempt, canRetry, isTransient } from "./policies/setup-turn-budget.policy"
-import { mergeSetupTurn, readSetupTurn, setupPromptOf } from "./policies/setup-turn.policy"
-import type { SetupTurnResult } from "./policies/setup-turn.policy"
+import { mergeSetupTurn, readSetupTurn, setupPromptOf, type SetupTurnResult } from "./policies/setup-turn.policy"
 import { SetupCardsService } from "./setup-cards.service"
-import { SetupGraphService } from "./setup-graph.service"
 
 const HISTORY_TURNS = 16
 /** The most facts of the business one turn reads. */
@@ -65,7 +55,6 @@ export class SetupTurnService {
         private readonly messages: SetupMessagesService,
         private readonly modules: ModulesService,
         private readonly cards: SetupCardsService,
-        private readonly graph: SetupGraphService,
         @InjectClock() private readonly clock: Clock,
     ) {}
 
@@ -111,7 +100,6 @@ export class SetupTurnService {
             message: message.body,
             gaps: await this.cards.openGapsOf(job.workspaceId, module.key),
             known: knownLinesOf(onRecord.inForce, onRecord.hits),
-            graphGap: await this.graph.gapOf(job.workspaceId, installation.id),
             words: {
                 notApplicable: this.catalog.get("setup.notApplicable", {}, job.locale),
                 applyButton: this.catalog.get("setup.applyButton", {}, job.locale),

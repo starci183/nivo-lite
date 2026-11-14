@@ -11,8 +11,8 @@ export class WorkspaceAgentWorkType {
     @Field()
     road!: string
 
-    /** The most background turns an agent may run per day. */
-    @Field(() => Int)
+    /** Always 0: AI work has no per-day limit (owner ruling); kept until the web stops selecting it. */
+    @Field(() => Int, { deprecationReason: "No per-day limit on AI work: always 0. The plan's credit pool is the only bound." })
     backgroundDailyCap!: number
 
     /** Agents whose own switch is off. */

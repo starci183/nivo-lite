@@ -1,16 +1,13 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
-import { InjectCqrsReadiness } from "@modules/platform/cqrs"
-import type { CqrsReadinessService } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { Injectable, Optional, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common"
+import { InjectCqrsReadiness, type CqrsReadinessService } from "@modules/platform/cqrs"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import type { QueueDelivery, QueueHandler } from "./queue.contracts"
 import { InjectQueueOptions, InjectQueueTransport } from "./queue.decorators"
 import { QueueLogEvent } from "./queue.log-events"
 import type { QueueOptions } from "./queue.options"
-import { routeOf } from "./queue.policy"
+import { fairGroupOf, headroomOf, routeOf } from "./queue.policy"
 import type { QueueWorkerRegistry } from "./queue.port"
 import type { QueueTransport } from "./queue-transport.port"
 
@@ -84,6 +81,8 @@ export class QueueWorkerService implements QueueWorkerRegistry, OnApplicationBoo
         const own = this.handlers.filter((handler) => handler.queue === queue)
         const router: QueueHandler = {
             queue,
+            headroomOf: (job) => headroomOf(own, job),
+            fairGroupOf: (job, payload) => fairGroupOf(own, job, payload),
             handle: (delivery) => this.run(own, delivery),
             failed: (delivery, cause) => routeOf(own, delivery)?.failed?.(delivery, cause) ?? Promise.resolve(),
         }

@@ -105,7 +105,7 @@ describe("TeamChatAccessService known members", () => {
             { userId: ANA, displayName: "Ana" },
             { userId: BEN, displayName: "Ben" },
         ])
-        agents.activeInOrder.mockResolvedValue([{ id: BOT, name: "Bot", module: "sales", canTagAgentIds: [] }])
+        agents.activeInOrder.mockResolvedValue([{ id: BOT, name: "Bot", module: "sales" }])
         await expect(
             access.allKnown(WS, [
                 { memberKind: "user", memberId: ANA },

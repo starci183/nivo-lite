@@ -3,6 +3,8 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Localized team chat refusals. */
 export const TEAM_CHAT_MESSAGES: MessageBundle = {
     vi: {
+        "teamChat.chainStopped":
+            "Chuỗi agent đã dừng ở lượt thứ {{depth}} ({{reason}}) để không lặp vô hạn. Cần người xem lại sự kiện {{eventType}}.",
         "teamChat.report": "\u0110\u00e3 xong: {{trigger}}",
         "teamChat.approval": "C\u1ea7n b\u1ea1n duy\u1ec7t: {{action}} {{amount}}",
         "teamChat.approvalNoAmount": "C\u1ea7n b\u1ea1n duy\u1ec7t: {{action}}",
@@ -25,6 +27,17 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "teamChat.fact.why": "Lý do",
         "teamChat.fact.running": "Quy trình đang bật",
         "teamChat.fact.sources": "Nhận tin từ",
+        "teamChat.fact.customerLine": "Lời báo chờ cho khách",
+        "teamChat.fact.customerLineReason": "Vì sao chưa gửi",
+        "teamChat.fact.customerLineCode": "Mã lý do chưa gửi",
+        "teamChat.customerLine.notTold": "Chưa gửi cho khách",
+        "teamChat.lineReason.ability_off": "Quyền nhắn khách trên tài khoản của cuộc trò chuyện này chưa được bật.",
+        "teamChat.lineReason.not_attached": "Trợ lý chưa được gắn với tài khoản của cuộc trò chuyện này.",
+        "teamChat.lineReason.ask_mode":
+            "Bước này chỉ được nhắn khách sau khi chủ shop duyệt. Lời báo chờ không xin duyệt, nên không gửi.",
+        "teamChat.lineReason.route_held": "Một người của shop đang giữ cuộc trò chuyện; trợ lý không gửi gì cho đến khi được trả lại.",
+        "teamChat.lineReason.customer_opted_out": "Khách đã yêu cầu không nhận tin nhắn chủ động.",
+        "teamChat.lineReason.outside_window": "Đã quá thời gian Zalo cho phép trả lời khách.",
         "teamChat.channel.zalo": "Zalo",
         "teamChat.channel.meta": "Facebook Messenger",
         "teamChat.channel.messenger": "Facebook Messenger",
@@ -41,6 +54,7 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "teamChat.reason.ai_core_output_invalid": "Câu trả lời của AI không đúng yêu cầu của bước này.",
         "teamChat.reason.AI_TASKS_UNAVAILABLE": "Không gọi được AI sau 3 lần thử.",
         "teamChat.reason.AI_TASKS_JSON_NOT_RETURNED": "AI không trả lời đúng định dạng sau 3 lần thử.",
+        "teamChat.reason.agent_not_ready": "Trợ lý này còn đang thiết lập, chưa trả lời được tin nhắn.",
         "teamChat.reason.unknown": "Lỗi hệ thống chưa có mô tả.",
         "teamChat.stopCard.open.ai_report": "Quy tr\u00ecnh \u0111ang d\u1eebng",
         "teamChat.stopCard.open.ai_error": "Quy tr\u00ecnh \u0111ang d\u1eebng: AI l\u1ed7i",
@@ -82,6 +96,8 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "errors.TEAM_CHAT_REACTION_RATE_LIMITED": "Bạn thả cảm xúc quá nhanh, hãy thử lại sau giây lát.",
     },
     en: {
+        "teamChat.chainStopped":
+            "The agent chain stopped at step {{depth}} ({{reason}}) so it cannot loop for ever. A person needs to look at the {{eventType}} event.",
         "teamChat.report": "Done: {{trigger}}",
         "teamChat.approval": "Needs your approval: {{action}} {{amount}}",
         "teamChat.approvalNoAmount": "Needs your approval: {{action}}",
@@ -104,6 +120,17 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "teamChat.fact.why": "Why",
         "teamChat.fact.running": "Workflows switched on",
         "teamChat.fact.sources": "Takes messages from",
+        "teamChat.fact.customerLine": "Holding line to the customer",
+        "teamChat.fact.customerLineReason": "Why it was not sent",
+        "teamChat.fact.customerLineCode": "Not-sent reason code",
+        "teamChat.customerLine.notTold": "Not sent to the customer",
+        "teamChat.lineReason.ability_off": "The right to message customers is not switched on for this conversation's account.",
+        "teamChat.lineReason.not_attached": "The agent is not attached to this conversation's account.",
+        "teamChat.lineReason.ask_mode":
+            "This step may message customers only after the owner approves. A holding line asks for no approval, so it was not sent.",
+        "teamChat.lineReason.route_held": "A person of the shop holds the conversation; the agent sends nothing until it is handed back.",
+        "teamChat.lineReason.customer_opted_out": "The customer asked not to receive unprompted messages.",
+        "teamChat.lineReason.outside_window": "The time Zalo allows for a reply to this customer has passed.",
         "teamChat.channel.zalo": "Zalo",
         "teamChat.channel.meta": "Facebook Messenger",
         "teamChat.channel.messenger": "Facebook Messenger",
@@ -120,6 +147,7 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "teamChat.reason.ai_core_output_invalid": "The AI's answer did not fit what this step needs.",
         "teamChat.reason.AI_TASKS_UNAVAILABLE": "The AI could not be reached after 3 tries.",
         "teamChat.reason.AI_TASKS_JSON_NOT_RETURNED": "The AI did not answer in the expected form after 3 tries.",
+        "teamChat.reason.agent_not_ready": "This agent is still being set up and cannot answer messages yet.",
         "teamChat.reason.unknown": "A system error with no description yet.",
         "teamChat.stopCard.open.ai_report": "The workflow stopped",
         "teamChat.stopCard.open.ai_error": "The workflow stopped: AI error",

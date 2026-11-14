@@ -5,8 +5,9 @@ import {
     SourceTwinsService,
     StoredNote,
     contentHashOf,
+    type SourceRecord,
+    type TextParts,
 } from "@modules/domain/knowledge-sources"
-import type { SourceRecord, TextParts } from "@modules/domain/knowledge-sources"
 import { EmbeddingService } from "./embedding.service"
 import type { IndexOutcome } from "./knowledge.contracts"
 

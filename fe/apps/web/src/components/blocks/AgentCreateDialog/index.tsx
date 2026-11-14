@@ -1,9 +1,9 @@
 "use client"
 
 import { useLocale, useTranslations } from "next-intl"
-import { abilityRowsOf, toggleAbility, type RightsTranslate } from "@/components/composites/ProviderRightsCard"
+import type { RightsTranslate } from "@/components/composites/ProviderRightsCard"
 import { useAgentCreate, type AgentCreateView } from "@/hooks/agentCreate"
-import { accountTitleOf, pickLabel, providerLabelOf, providerLogoOf, type AbilityMode } from "@/hooks/providerRights"
+import { accountTitleOf, pickLabel, providerLabelOf, providerLogoOf } from "@/hooks/providerRights"
 import { AgentCreateDialogBase, type AgentCreateDialogBaseProps } from "./component"
 
 /** The translator of the dialog copy. */
@@ -21,12 +21,12 @@ const pictureOf = (view: AgentCreateView, t: CreateCopy): AgentCreateDialogBaseP
 })
 
 /**
- * The providers field: one card per connected ACCOUNT of a provider the template names ("Zalo OA · <OA name>"), pre-ticked "by
- * template" (for payment only the shop's default receiving account) and editable; a named provider that is not connected is a dimmed line.
+ * The providers field: one card per connected ACCOUNT of a provider the template names ("Zalo OA · <OA name>"), on "by
+ * template" (for payment only the shop's default receiving account) and switchable off; a named provider that is not connected is a dimmed line.
  */
 const providersOf = (
     view: AgentCreateView,
-    rights: AgentCreateView["abilities"],
+    rights: AgentCreateView["attachments"],
     t: RightsTranslate,
     locale: string,
 ): AgentCreateDialogBaseProps["props"]["providers"] =>
@@ -39,24 +39,20 @@ const providersOf = (
               notConnected: rights.unconnected.map((one) =>
                   t("createNotConnected", { provider: providerLabelOf(one.provider, one.key, locale) }),
               ),
-              cards: rights.cards.map(({ provider, account, held }) => {
-                  const setAbility = (ability: string, mode: AbilityMode) => rights.setAbility(account.connectionId, ability, mode)
-                  return {
-                      id: account.connectionId,
-                      card: {
-                          props: {
-                              name: accountTitleOf(pickLabel(provider.label, locale), account.accountLabel),
-                              logo: providerLogoOf(provider.provider),
-                              line: pickLabel(provider.kindLabel, locale),
-                              badge: account.isDefaultReceiving ? t("defaultReceiving") : undefined,
-                              menu: undefined,
-                              connectLink: undefined,
-                              rows: abilityRowsOf(t, locale, provider, held, setAbility),
-                          },
-                          on: { toggle: (id: string, isOn: boolean) => toggleAbility(provider, held, id, isOn, setAbility) },
+              cards: rights.cards.map(({ provider, account, isOn }) => ({
+                  id: account.connectionId,
+                  card: {
+                      props: {
+                          name: accountTitleOf(pickLabel(provider.label, locale), account.accountLabel),
+                          logo: providerLogoOf(provider.provider),
+                          line: pickLabel(provider.kindLabel, locale),
+                          menu: undefined,
+                          connectLink: undefined,
+                          attach: { label: t("createAttach"), isOn },
                       },
-                  }
-              }),
+                      on: { toggle: (next: boolean) => rights.setAttached(account.connectionId, next) },
+                  },
+              })),
           }
 
 /** Where the setup starts: a copy of each sibling, or the default setup; none while the role has no agent. */
@@ -86,7 +82,7 @@ export const AgentCreateDialog = () => {
     const tRights = useTranslations("agentRights")
     const locale = useLocale()
     const view = useAgentCreate()
-    const rights = view.abilities
+    const rights = view.attachments
     return (
         <AgentCreateDialogBase
             props={{

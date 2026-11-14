@@ -1,8 +1,7 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { useConnectionOpen } from "./useConnectionOpen"
-import type { ConnectionOpenRead } from "./useConnectionOpen"
+import { useConnectionOpen, type ConnectionOpenRead } from "./useConnectionOpen"
 
 /**
  * The connection the open page's address names (`/connections/open/<id>`), for its band and its tab body. Each reads it on its own;

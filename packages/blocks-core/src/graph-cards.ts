@@ -5,6 +5,7 @@ export {
     NODE_UI,
     STOP_STEP_ID,
     TRIGGER_STEP,
+    aiCallLabelOf,
     branchLabelOf,
     branchesOf,
     nodeGoalOf,

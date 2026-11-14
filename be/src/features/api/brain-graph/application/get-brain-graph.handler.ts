@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { BrainGraphService } from "@modules/domain/brain"
-import type { BrainGraph } from "@modules/domain/brain"
+import { BrainGraphService, type BrainGraph } from "@modules/domain/brain"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetBrainGraphQuery } from "./get-brain-graph.query"
 
 @QueryHandler(GetBrainGraphQuery)

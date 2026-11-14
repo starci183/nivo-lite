@@ -53,7 +53,7 @@ export interface WorkingHoursListProps {
 
 const keyOf = (days: ReadonlyArray<number>, names: ReadonlyArray<string>): string => {
     const first = names[days[0] ?? 0] ?? ""
-    const last = names[days[days.length - 1] ?? 0] ?? ""
+    const last = names[days.at(-1) ?? 0] ?? ""
     return days.length > 1 ? `${first} - ${last}` : first
 }
 
@@ -90,7 +90,7 @@ const RangeEditor = (props: EditorProps) => {
                 isDisabled={props.isDisabled}
                 onValueChange={(value) => value !== null && props.on.edit(props.row.days, props.at, "end", value)}
             />
-            <Cluster gap="inline">
+            <Cluster gap="identity">
                 <Button
                     intent="neutral"
                     size="sm"
@@ -117,7 +117,7 @@ const RangeEditor = (props: EditorProps) => {
 /** The value of one row: its range chips and the add command at the end. */
 const RowValue = (props: Omit<EditorProps, "at">) => (
     <Cluster gap="inline" justify="between" wrap={false}>
-        <Cluster gap="inline">
+        <Cluster gap="identity">
             {props.row.ranges.length === 0 ? (
                 <Text tone="muted">{props.words.closedLabel}</Text>
             ) : (

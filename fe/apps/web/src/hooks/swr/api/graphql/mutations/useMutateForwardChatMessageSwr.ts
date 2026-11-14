@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateForwardChatMessage,
     type mutateForwardChatMessage as ForwardChatMessageOperation,
 } from "@/modules/api/graphql/mutations/mutation-forward-chat-message"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ForwardChatMessageMutation } from "@/modules/api"
 
 /** What the ForwardChatMessage mutation is triggered with. */

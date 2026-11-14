@@ -67,12 +67,12 @@ const registerWithdraw = () => {
         ])
         const service = (await build(em)).service
 
-        await expect(service.withdrawChanged(facts.WS, "doc-1", "Changed", { hashes: [], folded: "open from 8 to 21 daily" })).resolves.toEqual(
-            {
-                orphans: [],
-                withdrawn: 1,
-            },
-        )
+        await expect(
+            service.withdrawChanged(facts.WS, "doc-1", "Changed", { hashes: [], folded: "open from 8 to 21 daily" }),
+        ).resolves.toEqual({
+            orphans: [],
+            withdrawn: 1,
+        })
         expect(reject?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "gone", status: "proposed" }]])
         expect(em.createQueryBuilder).toHaveBeenCalledTimes(2)
     })
@@ -137,13 +137,17 @@ const registerMaintenance = () => {
         const { service, reads } = await build(em)
         // Nothing active under the new fact's own key and scope: the replaced value is only reachable by the name its approval kept.
         reads.keyed.mockResolvedValue([])
-        reads.fetch.mockResolvedValue(facts.factOf({ id: "old", status: "active", version: 1, subjectKey: "giao-hang-noi-thanh" }))
+        reads.fetch.mockResolvedValue(
+            facts.factOf({ id: "old", status: "active", version: 1, subjectKey: "giao-hang-noi-thanh" }),
+        )
         const [promoted] = queueQueryBuilders(em, [answered(facts.rowOf({ id: "new", status: "active" })), answered()])
 
         await service.maintain(facts.WS)
 
         expect(reads.fetch).toHaveBeenCalledWith(em, facts.WS, "old")
-        expect(em.update.mock.calls.map((call): unknown => call[1])).toEqual([{ workspaceId: facts.WS, id: "old", status: "active" }])
+        expect(em.update.mock.calls.map((call): unknown => call[1])).toEqual([
+            { workspaceId: facts.WS, id: "old", status: "active" },
+        ])
         expect(setOf(promoted)).toMatchObject({ status: "active", version: 2 })
     })
 
@@ -159,7 +163,9 @@ const registerMaintenance = () => {
 
         await service.maintain(facts.WS)
 
-        expect(em.update.mock.calls.map((call): unknown => call[1])).toEqual([{ workspaceId: facts.WS, id: "keyed", status: "active" }])
+        expect(em.update.mock.calls.map((call): unknown => call[1])).toEqual([
+            { workspaceId: facts.WS, id: "keyed", status: "active" },
+        ])
     })
 
     it("counts no expirations when the statement answers no rows", async () => {

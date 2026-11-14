@@ -1,7 +1,5 @@
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import type { RunStepStatus, RunStepView } from "@/modules/types"
 
 /** What the card of steps (a phone has it in place of the column) draws and what it does. */

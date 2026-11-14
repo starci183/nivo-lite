@@ -8,12 +8,10 @@ import {
     AgentWakeService,
 } from "../../../modules/domain/agent-work"
 import type { AgentTurnView, AgentWakeSource } from "../../../modules/domain/agent-work/agent-work.contracts"
-import { QUEUE_SCHEDULES } from "@modules/platform/queue"
-import type { QueueDelivery, QueueSchedules } from "@modules/platform/queue"
+import { QUEUE_SCHEDULES, type QueueDelivery, type QueueSchedules } from "@modules/platform/queue"
 import { AGENT_SCHEDULE_FIRE_JOB, AGENT_SCHEDULE_FIRE_QUEUE, agentTriggerSchedulerId } from "@modules/queues/agent-turn"
 import { agentWakeOf, dueTaskOf } from "../../fixtures/builders/agent-work.builder"
-import { persistOfficeRows } from "../../fixtures/builders/office-chain.builder"
-import type { OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
+import { persistOfficeRows, type OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
 import { RoadWork, agentRoadModules } from "../../world/agent-road-capabilities.options"
 import { lateTrigger, sweepDrainsOf, wakesOfSource } from "../../world/agent-road-database.service"
 import {

@@ -25,6 +25,16 @@ export interface UserSeatRecord {
     readonly role: WorkspaceRole
 }
 
+/** An active account of a workspace with the role and the name its seat shows. */
+export interface ActiveSeatRecord {
+    /** The account id. */
+    readonly userId: string
+    /** The name Office shows for the account's seat. */
+    readonly displayName: string
+    /** The workspace role of the seat. */
+    readonly role: WorkspaceRole
+}
+
 /** An active account of a workspace with the name its seat shows. */
 export interface ActiveUserRecord {
     /** The account id. */

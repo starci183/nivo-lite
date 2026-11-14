@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import type { UploadAddress } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesService, type UploadAddress } from "@modules/domain/knowledge-sources"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CreateKnowledgeUploadCommand } from "./create-knowledge-upload.command"
 
 @CommandHandler(CreateKnowledgeUploadCommand)
@@ -23,6 +21,7 @@ export class CreateKnowledgeUploadHandler extends ICQRSHandler<CreateKnowledgeUp
             command.params.request.filename,
             command.params.request.contentType,
             command.params.request.sizeBytes,
+            command.params.request.visibility,
         )
     }
 }

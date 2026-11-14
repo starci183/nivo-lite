@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import { RequestDataSyncHandler } from "./application/request-data-sync.handler"
-import { SetSyncScheduleHandler } from "./application/set-sync-schedule.handler"
 import { DataSyncRunHandler } from "./application/data-sync-run.handler"
 import { PreviewCsvSourceHandler } from "./application/preview-csv-source.handler"
 import { LoadCsvImportHandler } from "./application/load-csv-import.handler"
@@ -13,10 +12,9 @@ import { LoadDatabaseConnectionHandler } from "./application/load-database-conne
 import { TestImapConnectionHandler } from "./application/test-imap-connection.handler"
 import { SaveImapConnectionHandler } from "./application/save-imap-connection.handler"
 import { LoadImapConnectionHandler } from "./application/load-imap-connection.handler"
-import { LoadOpenApiSpecHandler } from "./application/load-open-api-spec.handler"
-import { TestOpenApiOperationHandler } from "./application/test-open-api-operation.handler"
-import { LoadOpenApiConnectionHandler } from "./application/load-open-api-connection.handler"
-import { SaveOpenApiConnectionHandler } from "./application/save-open-api-connection.handler"
+import { SaveCrmConnectionHandler } from "./application/save-crm-connection.handler"
+import { LoadCrmTemplatesHandler } from "./application/load-crm-templates.handler"
+import { LoadCrmConnectionHandler } from "./application/load-crm-connection.handler"
 import { TelegramUserReadyHandler } from "./application/telegram-user-ready.handler"
 import { LoadTelegramUserSetupHandler } from "./application/load-telegram-user-setup.handler"
 import { StartTelegramLoginHandler } from "./application/start-telegram-login.handler"
@@ -31,7 +29,6 @@ import { ConfigurableModuleClass } from "./data-hub.module-definition"
 @Module({
     providers: [
         RequestDataSyncHandler,
-        SetSyncScheduleHandler,
         DataSyncRunHandler,
         PreviewCsvSourceHandler,
         LoadCsvImportHandler,
@@ -44,10 +41,9 @@ import { ConfigurableModuleClass } from "./data-hub.module-definition"
         TestImapConnectionHandler,
         SaveImapConnectionHandler,
         LoadImapConnectionHandler,
-        LoadOpenApiSpecHandler,
-        TestOpenApiOperationHandler,
-        LoadOpenApiConnectionHandler,
-        SaveOpenApiConnectionHandler,
+        SaveCrmConnectionHandler,
+        LoadCrmTemplatesHandler,
+        LoadCrmConnectionHandler,
         TelegramUserReadyHandler,
         LoadTelegramUserSetupHandler,
         StartTelegramLoginHandler,

@@ -1,23 +1,29 @@
-import type { PublicApiOutboxState, PublicApiInboxState, PublicApiSourceState } from "./public-api-database.service"
 import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
+import { issueApiKey } from "@modules/integrations/passport"
 import { ModulesService } from "@modules/domain/modules"
 import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
-import { apiInbox, apiOutbox, apiSource } from "./public-api-database.service"
+import {
+    apiInbox,
+    apiOutbox,
+    apiSource,
+    type PublicApiInboxState,
+    type PublicApiOutboxState,
+    type PublicApiSourceState,
+} from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
-import { PublicApiProofAccess } from "./public-api-capabilities.options"
 import { openPublicApiProof } from "./public-api-proof.service"
-import { registerPublicApiProcessors } from "./public-api-registration.service"
-import type { RegisteredPublicApi } from "./public-api-registration.service"
+import { registerPublicApiProcessors, type RegisteredPublicApi } from "./public-api-registration.service"
 
 const fixture = async (world: LiteWorld): Promise<PublicApiIdentity & { readonly authorization: string }> => {
+    const issued = issueApiKey({ prefix: "nvk_", id: world.id() })
     const identity = {
         workspaceId: world.id(),
         userId: world.id(),
-        keyId: world.id(),
+        keyId: issued.id,
         agentId: world.id(),
-        key: `nvk_public_api_proof_${world.id()}`,
+        key: issued.key.reveal(),
     }
     await openPublicApiProof(world, identity)
     return { ...identity, authorization: `Bearer ${identity.key}` }
@@ -52,7 +58,6 @@ export const preparePublicApiProof = (world: LiteWorld): PreparePublicApiProofRe
     })
     beforeEach(() => {
         jest.restoreAllMocks()
-        world.resolve(PublicApiProofAccess).access = "auto"
     })
     afterEach(() => jest.restoreAllMocks())
     const registered = (): RegisteredPublicApi => {

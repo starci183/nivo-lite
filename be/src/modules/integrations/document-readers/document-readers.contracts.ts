@@ -6,8 +6,12 @@ export const DOCUMENT_MAX_BYTES: number = 50 * 1024 * 1024
 /** The most pages (or pictures) of one document sent to the model to be transcribed; later ones are named in a warning. */
 export const MAX_TRANSCRIBED_PAGES = 20
 
-/** The most rows of one sheet or delimited file that reach the text; later rows are named in a warning. */
-export const MAX_TABLE_ROWS = 5000
+/**
+ * The most rows of one sheet or delimited file that reach the text (a technical bound, not a quota: 100,000 rows of a 50 MB file; the
+ * text is split into parts of 120,000 characters and every part is read whole, in bounded jobs). Rows past it are named in a warning
+ * with the exact number left, so nothing is dropped silently.
+ */
+export const MAX_TABLE_ROWS = 100_000
 
 /** The most pages of a PDF that are read at all. */
 export const MAX_PDF_PAGES = 500
@@ -81,6 +85,8 @@ export interface DocumentWarning {
     readonly place: string | null
     /** A count the note names (the rows read, the pages left), or null. */
     readonly count: number | null
+    /** The rows NOT read (rows over the limit), when the note is about rows; absent otherwise. */
+    readonly left?: number
 }
 
 /** A document as clean, located text for the index job. */
@@ -203,16 +209,4 @@ export interface DocumentLibraries {
     pictures(): Promise<PictureTools>
     /** HEIC (an iPhone photo) to JPEG; rejects when no HEIC decoder is installed. */
     heicToJpeg(bytes: Uint8Array): Promise<Uint8Array>
-}
-
-/** The error a library loader rejects with when its library is not installed. */
-export class LibraryMissingError extends Error {
-    /** The package that is missing. */
-    readonly library: string
-
-    constructor(library: string) {
-        super(`${library} is not installed`)
-        this.name = "LibraryMissingError"
-        this.library = library
-    }
 }

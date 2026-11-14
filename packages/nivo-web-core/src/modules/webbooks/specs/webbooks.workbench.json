@@ -1,0 +1,45 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "webbooks",
+  "params": {
+    "run": {
+      "type": "string",
+      "url": "run"
+    }
+  },
+  "views": [
+    {
+      "id": "queue",
+      "label": {
+        "key": "wb.tab.queue"
+      },
+      "root": {
+        "id": "queue-list",
+        "block": "core.list-card",
+        "props": {
+          "label": {
+            "key": "wb.queue.label"
+          },
+          "empty": {
+            "key": "wb.queue.empty"
+          },
+          "idPath": "id",
+          "titlePath": "trigger",
+          "descriptionPath": "when",
+          "metaPath": "duration",
+          "selectParam": "run",
+          "search": false
+        },
+        "bind": {
+          "rows": {
+            "read": "platform.agent-runs",
+            "variables": {
+              "installation": "$installationId",
+              "status": "running"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

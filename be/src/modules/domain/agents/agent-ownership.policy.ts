@@ -1,6 +1,6 @@
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import type { AgentOwners, OwnerCard } from "./agents.contracts"
-import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
+import type { AssignContext, MemberState } from "./agents-reads.contracts"
 import type { AgentEntity } from "./persistence/entities"
 
 /** The workspace roles an agent can be assigned to, in the order the page shows them. */
@@ -52,14 +52,6 @@ export const mayAssign = (context: AssignContext): boolean => {
  * The agent's own status does not matter, so a paused agent can still be set up before it is resumed.
  */
 export const mayManage = (context: AssignContext): boolean => mayAssign({ ...context, agentStatus: "active" })
-
-/** Whether an agent may pass work to another: two different active agents of one workspace, the second on the first's list. */
-export const mayTag = (context: TagContext): boolean =>
-    !context.sameAgent &&
-    context.sameWorkspace &&
-    context.listed &&
-    context.fromStatus === "active" &&
-    context.toStatus === "active"
 
 /** A member row as the card the page shows. */
 export const ownerCardOf = (row: MemberState): OwnerCard => ({

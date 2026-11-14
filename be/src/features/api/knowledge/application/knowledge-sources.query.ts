@@ -1,6 +1,7 @@
 import { Query } from "@nestjs/cqrs"
 import type { ExecuteParams } from "@modules/platform/cqrs"
-import type { KnowledgeSourceListing, KnowledgeSourcesRequest } from "./knowledge-sources.contracts"
+import type { KnowledgeSourceListing } from "@modules/domain/brain"
+import type { KnowledgeSourcesRequest } from "./knowledge-sources.contracts"
 
 /** Lists the documents of the workspace, newest first and without their text. */
 export class KnowledgeSourcesQuery extends Query<ReadonlyArray<KnowledgeSourceListing>> {

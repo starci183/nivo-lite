@@ -132,3 +132,36 @@ export const TOOL_CALL_REFUSAL: LoopRefusal = {
  * @returns The bound.
  */
 export const stepBoundOf = (maxTurns: number): number => maxTurns * 8 + 16
+
+/** The client kinds (`BaseChatModel._llmType()`) whose protocol takes prompt-cache breakpoints on a content part: Anthropic's Messages. */
+const CACHE_MARKED_CLIENTS: ReadonlySet<string> = new Set(["anthropic"])
+
+/** One text part of the system message (the agent's craft and the shop's values, as the runner wrote them), with its breakpoint. */
+export type MarkedSystemPart = {
+    /** The kind of content part. */
+    readonly type: "text"
+    /** The text of the part. */
+    readonly text: string
+    /** The prompt-cache breakpoint at the end of the part. */
+    readonly cache_control: CacheBreakpoint
+}
+
+/** A prompt-cache breakpoint of Anthropic's Messages protocol (a type alias: the client library reads it as an open record). */
+export type CacheBreakpoint = {
+    /** The breakpoint's lifetime kind. */
+    readonly type: "ephemeral"
+}
+
+/**
+ * The content of the system message of a step's agent. On a client whose protocol takes breakpoints it is ONE text part, the runner's
+ * text unchanged, with a breakpoint at its end: the tools and the system message (L1 craft + tools, L2 shop values) are the same for
+ * every step of the agent, so the first call of another step reads them from the cache this mark wrote. Without the mark only the
+ * automatic breakpoint at the end of the request is written, which no other step's request ever reaches. On any other client it is the
+ * text itself (no marker reaches a protocol that has none).
+ *
+ * @param instructions - The runner's system text (`NodeAgentLoop.instructions`).
+ * @param clientKind - The kind of the client the agent is built over (`_llmType()`).
+ * @returns The content.
+ */
+export const systemContentOf = (instructions: string, clientKind: string): string | ReadonlyArray<MarkedSystemPart> =>
+    CACHE_MARKED_CLIENTS.has(clientKind) ? [{ type: "text", text: instructions, cache_control: { type: "ephemeral" } }] : instructions

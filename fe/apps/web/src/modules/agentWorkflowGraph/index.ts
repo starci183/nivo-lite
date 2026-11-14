@@ -89,12 +89,27 @@ const MAIN_OUTCOME_INDEX = 0
 
 const FOREIGN = "x:"
 
+/** How many names a block's line or chips spell out; the rest is a count, so the block stays one card wide. */
+const LINE_NAMES = 2
+
 /** The chips of a workflow's outcomes: the first accent, the others neutral. */
-const outcomeChipsOf = (entry: WorkflowGraphEntryWire): ReadonlyArray<FlowGraphChip> =>
-    entry.outcomes.map((outcome, index) => ({
-        label: outcome.label,
-        tone: index === MAIN_OUTCOME_INDEX ? "accent" : "neutral",
-    }))
+const outcomeChipsOf = (entry: WorkflowGraphEntryWire): ReadonlyArray<FlowGraphChip> => {
+    const chips = entry.outcomes.slice(0, LINE_NAMES).map(
+        (outcome, index): FlowGraphChip => ({
+            label: outcome.label,
+            tone: index === MAIN_OUTCOME_INDEX ? "accent" : "neutral",
+        }),
+    )
+    const more = entry.outcomes.length - LINE_NAMES
+    // A block is one card wide: the first two outcomes, then how many more there are (the workflow's page names them all).
+    return more > 0 ? [...chips, { label: `+${more}`, tone: "neutral" }] : chips
+}
+
+/** The names of a list as one line: the first few, then "+N" for the rest. */
+const shortList = (names: ReadonlyArray<string>, separator: string): string =>
+    names.length <= LINE_NAMES
+        ? names.join(separator)
+        : `${names.slice(0, LINE_NAMES).join(separator)}${separator}+${names.length - LINE_NAMES}`
 
 /** The input line of a workflow: its distinct trigger sources. */
 const inputLineOf = (entry: WorkflowGraphEntryWire, words: WorkflowGraphWords): string => {
@@ -103,12 +118,12 @@ const inputLineOf = (entry: WorkflowGraphEntryWire, words: WorkflowGraphWords): 
         ...new Set(
             entry.triggers.map((trigger) =>
                 trigger.sourceKind === "workflow" && required.length > 0
-                    ? `${words.openEntry} · ${required.join(", ")}`
+                    ? `${words.openEntry} · ${shortList(required, ", ")}`
                     : trigger.sourceLabel,
             ),
         ),
     ]
-    return labels.length === 0 ? words.noInput : labels.join(" · ")
+    return labels.length === 0 ? words.noInput : shortList(labels, " · ")
 }
 
 /** The block of a workflow of another agent: dashed, named by its agent, opening that agent's Graph when it can. */

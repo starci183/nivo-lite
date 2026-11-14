@@ -1,10 +1,8 @@
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { FlowGraphEdge, FlowGraphNode } from "@starci/grammar/common" with { "resolution-mode": "import" }
 import { TRIGGER_STEP } from "../nodes/node-ui"
-import { runPathView } from "./graph-view"
-import type { GraphNodeKind, GraphNodeView, GraphView, RunPath } from "./graph-view"
-import { runStateLook } from "./run-state"
-import type { RunState } from "./run-state"
+import { runPathView, type GraphNodeKind, type GraphNodeView, type GraphView, type RunPath } from "./graph-view"
+import { runStateLook, type RunState } from "./run-state"
 
 /** A graph as the Grammar draws it: nodes and edges, ranked into branch lanes by the Grammar from the edges. */
 export interface GraphFlow {
@@ -42,7 +40,7 @@ const stateOf = (node: GraphNodeView, states: ReadonlyMap<string, RunState> | nu
 
 /** The lines under a node's name: the words of its state, then its own line. */
 const descriptionOf = (node: GraphNodeView, state: RunState | null, stateWords: (state: RunState) => string): string =>
-    [state === null ? "" : stateWords(state), node.description ?? ""].filter((line) => line !== "").join(" · ")
+    [state === null ? "" : stateWords(state), node.description ?? ""].filter((line) => line !== "").join(" \u00b7 ")
 
 /** The tone of a node: its state's, else a wait stays cautionary because it stops for a person. */
 const toneOf = (node: GraphNodeView, state: RunState | null): "warning" | "info" | "danger" | "success" | undefined => {

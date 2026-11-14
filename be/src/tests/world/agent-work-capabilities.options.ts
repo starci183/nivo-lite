@@ -1,5 +1,4 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { AGENT_TURN_EXECUTOR } from "../../modules/domain/agent-work/agent-work.decorators"
 import { AgentWorkHandlersService } from "../../modules/domain/agent-work/agent-work-handlers.service"
 import { AgentWorkModule } from "../../modules/domain/agent-work"
@@ -37,7 +36,7 @@ const whenAborted = (signal: AbortSignal): Promise<void> =>
  * `script` before it drains and reads what ran from `ran` and `settled`.
  */
 export class ScriptedAgentWork implements AgentWorkHandler, AgentTurnExecutor {
-    readonly sources: ReadonlyArray<AgentWakeSource> = ["customer", "tag", "internal", "schedule"]
+    readonly sources: ReadonlyArray<AgentWakeSource> = ["trigger", "tag", "internal", "schedule"]
 
     /** The script of the proof now running. */
     script: AgentWorkScript = {}

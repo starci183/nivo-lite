@@ -20,14 +20,6 @@ export class WorkspaceDashboardSavingsType {
     @Field(() => Int)
     messagesAnswered!: number
 
-    /** Orders placed. */
-    @Field(() => Int)
-    ordersCreated!: number
-
-    /** Matched payments. */
-    @Field(() => Int)
-    paymentsMatched!: number
-
     /** Credits used this month. */
     @Field(() => Int)
     creditsUsed!: number

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { adminApiTransport } from "@/modules/api-transport"
 import type { AdminWorkspaceQuery, AdminWorkspaceQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `adminWorkspace` query. */
@@ -127,7 +126,7 @@ export const queryAdminWorkspace = async ({
     request,
     signal,
 }: QueryAdminWorkspaceParams): Promise<ApolloClient.QueryResult<AdminWorkspaceQuery>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(adminApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
         variables: { input: request },

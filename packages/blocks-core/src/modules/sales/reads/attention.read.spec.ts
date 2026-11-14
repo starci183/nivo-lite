@@ -10,7 +10,7 @@ const dataOf = async (state = sampleState([])): Promise<unknown> => {
     return result?.ok === true ? result.data : result
 }
 
-describe("sales.attention", () => {
+describe("blocks-core.sales.api.lead.attention", () => {
     it("lists the deal past its next step, the customer with a question and the order that waits for the owner", async () => {
         expect(await dataOf()).toEqual({
             rows: [

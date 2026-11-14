@@ -1,35 +1,23 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { AgentPluginsService } from "@modules/domain/agent-plugins"
+import { In, type EntityManager } from "typeorm"
 import { AgentTemplateVersionsService, insertedId } from "@modules/domain/agent-templates"
 import type { AgentTemplatePackage } from "@nivo-lite/agent-sdk/template"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
-import { ModulesService } from "@modules/domain/modules"
 import { AdminAccessService } from "@modules/domain/platform-admin"
 import type { Principal } from "@modules/platform/cqrs"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
-import { REVENUE_SHARE_DEFAULT } from "./template-marketplace.contracts"
-import type { ListingCard, ListingCheck, ListingView } from "./template-marketplace.contracts"
+import {
+  REVENUE_SHARE_DEFAULT,
+  type ListingCard,
+  type ListingCheck,
+  type ListingView,
+} from "./template-marketplace.contracts"
 import { TemplateLikenessService } from "./template-likeness.service"
 import { TemplateListingEntity } from "./persistence/entities"
-import { runListingChecks } from "./policies/listing-checks.policy"
-import type { ListingChecksContext } from "./policies/listing-checks.policy"
+import { runListingChecks, type ListingChecksContext } from "./policies/listing-checks.policy"
 import { nextStatus } from "./policies/listing-review.policy"
-
-/** The data kinds every kind of agent may be proposed rights over: what its seed grants. */
-const KINDS_OF_PROVIDER: Readonly<Record<string, string>> = {
-    brain: "brain",
-    dossier: "customers",
-    drive: "documents",
-    sepay: "payments",
-    zalo: "channels",
-    telegram: "channels",
-    einvoice: "invoices",
-}
 
 /** The most listings one page of the review or the catalogue shows. */
 const LIST_MAX = 100
@@ -76,8 +64,6 @@ export class TemplateListingsService {
         @InjectClock() private readonly clock: Clock,
         private readonly versions: AgentTemplateVersionsService,
         private readonly likeness: TemplateLikenessService,
-        private readonly modules: ModulesService,
-        private readonly plugins: AgentPluginsService,
         private readonly access: AdminAccessService,
     ) {}
 
@@ -208,20 +194,9 @@ export class TemplateListingsService {
     }
 
     private async checksOf(pkg: AgentTemplatePackage): Promise<ReadonlyArray<ListingCheck>> {
-        const module = await this.modules.find(pkg.baseModule)
-        const allowed = new Set(
-            ["brain", ...module.connectionProviders].flatMap((provider) => {
-                const kind = KINDS_OF_PROVIDER[provider]
-                return kind === undefined ? [] : [kind]
-            }),
-        )
         const context: ListingChecksContext = {
-            pluginKeys: new Set(this.plugins.keys()),
-            allowedRightKinds: allowed,
+            pluginKeys: new Set<string>(),
             knownTool: (tool) => graphVocabulary.hasProvider(tool.split(".", 1).join("")),
-            askOnlyActions: new Set(
-                module.authorityActions.filter((action) => action.maxMode === "ask").map((action) => action.action),
-            ),
             consented: await this.likeness.covers(pkg.key, pkg.persona.likeness),
         }
         return runListingChecks(pkg, context)

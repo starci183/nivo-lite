@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { WebsiteSiteQuery } from "../__generated__/graphql"
 
 /** Generated selection returned by the website intake. */
@@ -38,9 +37,5 @@ type QueryWebsiteSiteParams = QueryParams<QueryWebsiteSite, Record<string, never
 export const queryWebsiteSite = ({
     query = QueryWebsiteSite.Query1,
     signal,
-    headers,
 }: QueryWebsiteSiteParams = {}): Promise<ApolloClient.QueryResult<QueryWebsiteSiteResponse>> =>
-    createAuthApolloClient({ signal, headers }).query({
-        query: queryMap[query],
-        context: { headers },
-    })
+    createAuthApolloClient(webApiTransport, { signal }).query({ query: queryMap[query] })

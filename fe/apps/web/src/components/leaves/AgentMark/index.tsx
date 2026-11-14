@@ -1,7 +1,6 @@
 "use client"
 
-import { Avatar } from "@starci/grammar/common"
-import type { AvatarSize } from "@starci/grammar/common"
+import { Avatar, type AvatarSize } from "@starci/grammar/common"
 
 /** What the agent mark draws. */
 type AgentMarkProps = {

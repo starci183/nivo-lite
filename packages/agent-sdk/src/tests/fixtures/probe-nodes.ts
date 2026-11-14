@@ -2,20 +2,12 @@ import { z } from "zod"
 import { defineEffect, defineNode, defineTool } from "../../node"
 import type { EffectDefinition, ToolDefinition } from "../../node/effect.types"
 import type { NodeDefinition } from "../../node/node.types"
-import type { DataRight } from "../../rights/rights.types"
-
-/** The right to read the `record` kind of the turn. */
-export const PROBE_READ: DataRight = { kind: "record", access: "read", scope: "turn", fields: ["id"] }
-
-/** The right to write the `record` kind of the turn. */
-export const PROBE_WRITE: DataRight = { kind: "record", access: "write", scope: "turn", fields: ["id"] }
 
 /** An effect with a compensation, `core.unping`. */
 export const pingEffect: EffectDefinition = defineEffect({
     id: "core.ping",
     title: { key: "p" },
     payload: z.object({ n: z.number() }),
-    rights: [],
     compensation: "core.unping",
 })
 
@@ -24,7 +16,6 @@ export const unpingEffect: EffectDefinition = defineEffect({
     id: "core.unping",
     title: { key: "u" },
     payload: z.object({ id: z.string().max(100) }),
-    rights: [],
 })
 
 /** An effect whose compensation is not installed. */
@@ -42,7 +33,6 @@ export const unflatEffect: EffectDefinition = defineEffect({
     id: "core.unflat",
     title: { key: "uf" },
     payload: z.object({ id: z.string().max(100) }).transform(({ id }) => id),
-    rights: [],
 })
 
 /** A read-only tool that answers `{ seen: true }`. */
@@ -52,7 +42,6 @@ export const lookTool: ToolDefinition = defineTool({
     args: z.object({}),
     result: z.object({ seen: z.boolean() }),
     mutates: false,
-    rights: [],
 })
 
 /** The settings of the probe nodes: none. */
@@ -109,7 +98,6 @@ export const probeNode: NodeDefinition<typeof PROBE_INPUT, typeof PROBE_OUTPUT, 
     params: NO_PARAMS,
     input: PROBE_INPUT,
     output: PROBE_OUTPUT,
-    rights: [PROBE_READ, PROBE_WRITE],
     effects: ["core.ping"],
     tools: ["core.look"],
     run: async (input, context) => {
@@ -166,7 +154,6 @@ export const swallowNode: NodeDefinition<typeof SWALLOW_INPUT, typeof SWALLOW_OU
     params: NO_PARAMS,
     input: SWALLOW_INPUT,
     output: SWALLOW_OUTPUT,
-    rights: [PROBE_WRITE],
     effects: ["core.ping"],
     tools: ["core.look"],
     run: async (input, context) => {

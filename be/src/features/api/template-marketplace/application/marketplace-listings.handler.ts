@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { TemplateCatalogueService } from "@modules/domain/template-marketplace"
-import type { ListingCardView } from "@modules/domain/template-marketplace"
+import { TemplateCatalogueService, type ListingCardView } from "@modules/domain/template-marketplace"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MarketplaceListingsQuery } from "./marketplace-listings.query"
 
 @QueryHandler(MarketplaceListingsQuery)

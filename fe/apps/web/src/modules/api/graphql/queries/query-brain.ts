@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { BrainQuery } from "../__generated__/graphql"
 
 /** The response of the `brain` query: the typed payload straight from the back end contract. */
@@ -102,6 +101,6 @@ type QueryBrainParams = QueryParams<QueryBrain>
 export const queryBrain = async ({ query = QueryBrain.Query1, signal }: QueryBrainParams = {}): Promise<
     ApolloClient.QueryResult<QueryBrainResponse>
 > => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query] })
 }

@@ -6,16 +6,16 @@ import {
     type MockEntityManager,
 } from "@starci/jest-preset"
 import type { InsertResult } from "typeorm"
-import type { SourceState } from "@modules/domain/knowledge-sources"
-import type {
-    PublicDocumentsService,
-    PublicDocumentKind,
-    PublicDocumentStatus,
-    LeftOut,
-    PublicDocumentDraftRequest,
-    ApproveRequest,
+import type { SourceDocument, SourceState } from "@modules/domain/knowledge-sources"
+import {
+    publicDocumentsEntities,
+    type PublicDocumentsService,
+    type PublicDocumentKind,
+    type PublicDocumentStatus,
+    type LeftOut,
+    type PublicDocumentDraftRequest,
+    type ApproveRequest,
 } from "@modules/domain/public-documents"
-import { publicDocumentsEntities } from "@modules/domain/public-documents"
 import { entityRowBuilder } from "./entity-row.builder"
 
 const PublicDocumentEntity: (typeof publicDocumentsEntities)[0] = publicDocumentsEntities[0]
@@ -89,7 +89,7 @@ type DocumentSourceRowShape = {
     readonly updatedAt?: Date
 }
 
-/** The internal document `s1` a public document was drafted from, with every persisted column. */
+/** The public-area document `s1` a public document was drafted from, with every persisted column. */
 export const documentSourceRow: (changes?: DocumentSourceRowShape) => PublicDocumentSourceEntity =
     entityRowBuilder<PublicDocumentSourceEntity>({
         documentId: "d1",
@@ -101,13 +101,26 @@ export const documentSourceRow: (changes?: DocumentSourceRowShape) => PublicDocu
         updatedAt: new Date("2026-11-01T01:00:00.000Z"),
     })
 
-/** A ready internal source and the current hash a document review reads. */
+/** A ready source of the PUBLIC area (the only area a draft is written from) and the current hash a document review reads. */
 export const publicSourceState: (overrides?: Partial<SourceState>) => SourceState = builder<SourceState>({
     id: "s1",
     title: "Delivery policy",
-    visibility: "internal",
+    visibility: "public",
     status: "ready",
     contentHash: "h1",
+})
+
+/** A ready document of the PUBLIC area of a bicycle workshop's Brain with its text, as a draft reads it (synthetic data). */
+export const brainDocumentOf: (overrides?: Partial<SourceDocument>) => SourceDocument = builder<SourceDocument>({
+    id: "s1",
+    title: "Document s1",
+    visibility: "public",
+    status: "ready",
+    contentHash: "h-s1",
+    module: null,
+    installationId: null,
+    topic: null,
+    content: "Flat tyre repair while you wait.",
 })
 
 /** A valid draft request; individual refusal cases change just the invalid field. */
@@ -137,10 +150,16 @@ export const PUBLIC_DRAFT_REFUSALS: Array<
     ],
     ["a source that is gone", publicDraftRequestOf(), [], "PUBLIC_DOCUMENTS_SOURCE_NOT_READY"],
     [
-        "a public source",
+        "a source of the internal area",
         publicDraftRequestOf(),
-        [publicSourceState({ visibility: "public" })],
-        "PUBLIC_DOCUMENTS_SOURCE_NOT_READY",
+        [publicSourceState({ visibility: "internal" })],
+        "PUBLIC_DOCUMENTS_SOURCE_INTERNAL",
+    ],
+    [
+        "a source whose area cannot be read",
+        publicDraftRequestOf(),
+        [publicSourceState({ visibility: "" })],
+        "PUBLIC_DOCUMENTS_SOURCE_INTERNAL",
     ],
     [
         "a source still being read",

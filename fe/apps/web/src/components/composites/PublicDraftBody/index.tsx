@@ -12,6 +12,9 @@ interface PublicDraftBodyProps {
     readonly onSubmit: () => void
 }
 
+/** The description of the note, only when it has one. */
+const descriptionOf = (description: string | null) => (description === null ? {} : { description })
+
 /**
  * The body of the open public document: why it waits, then the two fields the owner edits (the name, the draft customers will read),
  * where it came from, what NIVO left out, who approved it and the text customers read now. Inert while NIVO is still drafting.
@@ -21,7 +24,7 @@ export const PublicDraftBody = (props: PublicDraftBodyProps) => {
     const isDisabled = form.isBusy || props.isLoading || !draft.canEdit
     return (
         <Form label={copy.titleLabel} onSubmit={props.onSubmit} isPending={form.isBusy}>
-            <Stack gap="section">
+            <Stack gap="row">
                 <Badge tone={draft.badge.tone} isLoading={props.isLoading}>
                     {draft.badge.label}
                 </Badge>
@@ -29,7 +32,7 @@ export const PublicDraftBody = (props: PublicDraftBodyProps) => {
                     <Alert
                         tone={draft.note.tone}
                         title={draft.note.title}
-                        {...(draft.note.description === null ? {} : { description: draft.note.description })}
+                        {...descriptionOf(draft.note.description)}
                     />
                 )}
                 <Input
@@ -52,7 +55,7 @@ export const PublicDraftBody = (props: PublicDraftBodyProps) => {
                     onValueChange={props.onBody}
                 />
                 {draft.sources.length === 0 ? null : (
-                    <Stack gap="row">
+                    <Stack gap="inline">
                         <Text isStrong isLoading={props.isLoading}>
                             {copy.sourcesLabel}
                         </Text>

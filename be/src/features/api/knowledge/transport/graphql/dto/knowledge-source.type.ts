@@ -1,5 +1,6 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 import { KnowledgeDocumentAiCostType } from "./knowledge-document-ai-cost.type"
+import { KnowledgeSourceTruthsType } from "./knowledge-source-truths.type"
 
 @ObjectType()
 /** One document of a workspace as the Knowledge page lists it, without its text. */
@@ -40,7 +41,11 @@ export class KnowledgeSourceType {
     @Field(() => String)
     title!: string
 
-    /** Where it stands: `queued`, `reading`, `indexing`, `extracting_facts`, `ready`, `failed` or `blocked_credits`. */
+    /**
+     * Where it stands: `queued`, `reading`, `indexing`, `ready`, `failed` or `blocked_credits` (its passages are stored without vectors
+     * and wait for credits). `ready` = every passage is stored and searchable; the truths read out of it have their own state
+     * (`truths`). `extracting_facts` is only worn by a document indexed by an earlier build.
+     */
     @Field(() => String)
     status!: string
 
@@ -68,7 +73,7 @@ export class KnowledgeSourceType {
     @Field(() => Int)
     progress!: number
 
-    /** The stage a document is at (`read`, `chunk`, `embed`, `store`, `facts`, or `critic` while the critic checks its dossier), or null when none is. */
+    /** The stage a document is at (`read`, `chunk`, `embed`, `store`, `facts`, or `critic` while the critic checks it), or null when none is. */
     @Field(() => String, { nullable: true })
     stage?: string | null
 
@@ -79,6 +84,10 @@ export class KnowledgeSourceType {
     /** Passages of the stage in all, or null. */
     @Field(() => Int, { nullable: true })
     stageTotal?: number | null
+
+    /** Where the truths of the document stand; null while it has not been indexed, and in the answer of a single document. */
+    @Field(() => KnowledgeSourceTruthsType, { nullable: true })
+    truths?: KnowledgeSourceTruthsType | null
 
     /** When it was added, ISO 8601. */
     @Field(() => String)

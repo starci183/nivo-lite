@@ -2,7 +2,7 @@ import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { GRAPH_EFFECT_ONCE } from "@modules/domain/graph-nodes"
 import type { EffectOnce } from "@modules/domain/graph-nodes"
-import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { ToolsErrorCode } from "@modules/domain/tools"
 import {
     LedgerRegistryService,
     ProviderRegistryError,
@@ -10,16 +10,15 @@ import {
 } from "@modules/domain/provider-registry"
 import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
 import { DOOR_GRANTS } from "@modules/domain/entity-engine-door"
-import { domainNameIn } from "@modules/domain/mcp-gateway"
-import type { WorkspaceConnector } from "@modules/domain/mcp-gateway"
-import type { EntityApi, ListPage, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { domainNameIn } from "@modules/domain/tools"
+import type { WorkspaceToolFamily } from "@modules/domain/tools"
 import { LEDGER_MANIFEST, LedgerNativeService } from "./ledger-native.service"
 import { NativeViewService } from "./native-view.service"
 import type { NativeView } from "./native-view.policy"
 
-const CALLER = { agentId: "agent-1", conversationId: null }
+// The engine's own caller (the declared job `accounting.ledger-append`): the caller that writes with no account handed. An agent's
+// write with none handed is refused (ARCH-REVIEW 2026-11-12 S7, "no silent pick" below).
+const CALLER = { agentId: "agent-1", conversationId: null, engine: true as const }
 const ENTRY: BusinessLedgerEntry = {
     date: "2026-11-04",
     orderNo: "DH-7",
@@ -103,29 +102,22 @@ describe("LedgerNativeService > the manifest", () => {
 })
 
 describe("LedgerNativeService > the door", () => {
-    const connector: WorkspaceConnector = {
+    const connector: WorkspaceToolFamily = {
         manifest: LEDGER_MANIFEST,
-        status: "active",
-        url: null,
-        credentialState: "none",
-        credentialSetAt: null,
         timeoutMs: 4000,
-        approvedTools: null,
-        approvedAt: null,
-        checkedAt: null,
     }
 
-    it("plays every ledger door tool the internal agent holds, so a job that calls `nivo.ledger.status.get` or `nivo.ledger.entry.append` finds its tool", () => {
-        const ledgerGrants = DOOR_GRANTS.filter((tool) => tool.startsWith("nivo.ledger."))
-        expect(ledgerGrants).toEqual(["nivo.ledger.entry.append", "nivo.ledger.status.get"])
+    it("plays every ledger door tool the internal agent holds, so a job that calls `nivo.tool.ledger.status.get` or `nivo.tool.ledger.entry.append` finds its tool", () => {
+        const ledgerGrants = DOOR_GRANTS.filter((tool) => tool.startsWith("nivo.tool.ledger."))
+        expect(ledgerGrants).toEqual(["nivo.tool.ledger.entry.append", "nivo.tool.ledger.status.get"])
         for (const tool of ledgerGrants) expect(domainNameIn([connector], tool)).toBe(tool)
     })
 
     it("declares the domain of each of its tools", () => {
         expect(LEDGER_MANIFEST.tools.map((tool) => tool.domain)).toEqual([
-            "nivo.ledger.entry.append",
-            "nivo.ledger.entry.void",
-            "nivo.ledger.status.get",
+            "nivo.tool.ledger.entry.append",
+            "nivo.tool.ledger.entry.void",
+            "nivo.tool.ledger.status.get",
         ])
     })
 })
@@ -151,6 +143,19 @@ describe("LedgerNativeService > append and void", () => {
             ref: "Sheet1!A2:G2",
         })
         expect(port?.append).toHaveBeenCalledWith("ws-1", ENTRY)
+    })
+
+    it("writes on the account the tool runner handed the call, through that account's provider alone", async () => {
+        const { service, port } = await build()
+        const handed = { ...CALLER, provider: port?.provider ?? "", connectionId: "google-2" }
+
+        await service.invoke("ws-1", "entry.append", { entry: ENTRY }, handed)
+        await expect(
+            service.invoke("ws-1", "entry.append", { entry: ENTRY }, { ...handed, provider: "excel" }),
+        ).rejects.toMatchObject({ params: { reason: "not_connected" } })
+
+        expect(port?.append).toHaveBeenCalledWith("ws-1", ENTRY, "google-2")
+        expect(port?.append).toHaveBeenCalledTimes(1)
     })
 
     it("writes a transaction once: a replay, another run or a retry adds no second entry", async () => {
@@ -195,7 +200,7 @@ describe("LedgerNativeService > append and void", () => {
         const args = tool === "entry.append" ? { entry: ENTRY } : { transactionId: ENTRY.transactionId }
 
         await expect(service.invoke("ws-1", tool, args, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
+            code: ToolsErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
         expect(port?.append).not.toHaveBeenCalled()
@@ -224,7 +229,7 @@ describe("LedgerNativeService > a provider that cannot write", () => {
         const { service } = await build(port)
 
         await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
+            code: ToolsErrorCode.NativeRefused,
             params: { reason: "connection_refused" },
         })
     })
@@ -245,12 +250,16 @@ describe("LedgerNativeService > refusals", () => {
 
         await expect(
             service.invoke("ws-1", "entry.append", { entry: { ...ENTRY, date: "04/11/2026" } }, CALLER),
-        ).rejects.toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
+        ).rejects.toMatchObject({ code: ToolsErrorCode.InvalidArguments })
         await expect(
             service.invoke("ws-1", "entry.append", { entry: { ...ENTRY, sheetId: "x" } }, CALLER),
-        ).rejects.toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
+        ).rejects.toMatchObject({ code: ToolsErrorCode.InvalidArguments })
+        // The engine builds no entry: a bank transaction named by its id alone is no argument of the tool.
+        await expect(
+            service.invoke("ws-1", "entry.append", { transactionId: ENTRY.transactionId }, CALLER),
+        ).rejects.toMatchObject({ code: ToolsErrorCode.InvalidArguments })
         await expect(service.invoke("ws-1", "other", {}, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.UnknownTool,
+            code: ToolsErrorCode.UnknownTool,
         })
         expect(port?.append).not.toHaveBeenCalled()
     })
@@ -260,7 +269,7 @@ describe("LedgerNativeService > refusals", () => {
         const { service } = await buildBare(port)
 
         await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
+            code: ToolsErrorCode.NativeRefused,
             params: { reason: "ledger_key_unavailable" },
         })
         await expect(service.invoke("ws-1", "entry.void", { transactionId: ENTRY.transactionId }, CALLER)).rejects.toMatchObject({
@@ -286,112 +295,43 @@ describe("LedgerNativeService > refusals", () => {
     })
 })
 
-describe("LedgerNativeService > append by transaction id", () => {
-    const TRANSACTION = "55555555-5555-4555-8555-555555555555"
-    const ORDER = "44444444-4444-4444-8444-444444444444"
-    const LEAD = "33333333-3333-4333-8333-333333333333"
+// #10b (ARCH-REVIEW 2026-11-12 S7): no silent pick of the ledger. An agent's write the runner handed no account is refused
+// `not_connected` (the runner hands the node's books account; with none it never takes "the first ready provider"); the engine's own
+// caller (the declared job `accounting.ledger-append`) writes when exactly ONE provider is ready, is refused `not_selected` with
+// several and `not_connected` with none. The status read covers every provider: no pick.
+describe("LedgerNativeService > no silent pick", () => {
+    const AGENT = { agentId: "agent-1", conversationId: null }
+    const ENGINE = { ...AGENT, engine: true as const }
+    const second = (): jest.Mocked<LedgerPort> => ({ ...portOf(true), provider: "excel" })
 
-    const recordOf = (id: string, data: Readonly<Record<string, unknown>>): RecordRow => ({
-        id,
-        workspaceId: "ws-1",
-        version: "1",
-        createdAt: "2026-11-04T03:00:00.000Z",
-        updatedAt: "2026-11-04T03:00:00.000Z",
-        data,
+    it("an agent's write with no account handed: refused not_connected, nothing written", async () => {
+        const { service, port } = await build()
+
+        await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, AGENT)).rejects.toMatchObject({
+            code: ToolsErrorCode.NativeRefused,
+            params: { reason: "not_connected" },
+        })
+        await expect(service.invoke("ws-1", "entry.void", { transactionId: ENTRY.transactionId }, AGENT)).rejects.toMatchObject({
+            params: { reason: "not_connected" },
+        })
+        expect(port?.append).not.toHaveBeenCalled()
+        expect(port?.void).not.toHaveBeenCalled()
     })
 
-    const pageOf = (rows: ReadonlyArray<RecordRow>, joined: Readonly<Record<string, string>> = {}): ListPage => ({
-        rows: rows.map((row) => ({
-            row,
-            joined: Object.fromEntries(Object.entries(joined).map(([name, id]) => [name, { id, data: {} }])),
-            position: [],
-            included: {},
-        })),
-        next: null,
-    })
+    it("the engine's write: the one ready provider; two ready, not_selected and nothing written", async () => {
+        const one = await build()
+        await expect(one.service.invoke("ws-1", "entry.append", { entry: ENTRY }, ENGINE)).resolves.toEqual({ ref: "Sheet1!A2:G2" })
 
-    const buildWithRecords = async (orderId: string | null) => {
-        const port = portOf(true)
-        const views = mock<NativeViewService>()
-        const providers = mock<LedgerRegistryService>()
-        const engine = mock<EntityEngineService>()
-        const ports = mock<EntityPortsService>()
-        const transactions = mock<EntityApi>()
-        const orders = mock<EntityApi>()
-        const leads = mock<EntityApi>()
-        arrange(views, providers, port)
-        engine.scoped.mockImplementation((_workspace, work) => work(mock<ScopedTx>()))
-        ports.entityApi.mockImplementation((_runIn, _by, entity) => {
-            if (entity === "payment.transaction") return transactions
-            return entity === "sales.order" ? orders : leads
+        const two = await build()
+        const other = second()
+        const google = two.port
+        const providers = two.service["providers"] as jest.Mocked<LedgerRegistryService>
+        providers.all.mockReturnValue(google === null ? [other] : [google, other])
+        await expect(two.service.invoke("ws-1", "entry.append", { entry: ENTRY }, ENGINE)).rejects.toMatchObject({
+            params: { reason: "not_selected" },
         })
-        transactions.get.mockResolvedValue(
-            recordOf(TRANSACTION, {
-                direction: "credit",
-                amountVnd: 5000,
-                reference: "DH7 thanh toan",
-                payer: "DINH VAN A",
-                orderId,
-                occurredAt: "2026-11-04T03:00:00.000Z",
-                status: orderId === null ? "unmatched" : "matched",
-            }),
-        )
-        orders.list.mockResolvedValue(
-            pageOf([recordOf(ORDER, { orderNo: "DH-7", amountVnd: 5000, status: "paid", leadId: LEAD })], { lead: LEAD }),
-        )
-        leads.get.mockResolvedValue(recordOf(LEAD, { contactName: "Dinh" }))
-        leads.list.mockResolvedValue(pageOf([recordOf(LEAD, { contactName: "Dinh" })]))
-        const once = mock<EffectOnce>()
-        actOnce(once)
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                LedgerNativeService,
-                { provide: NativeViewService, useValue: views },
-                { provide: LedgerRegistryService, useValue: providers },
-                { provide: GRAPH_EFFECT_ONCE, useValue: once },
-                { provide: EntityEngineService, useValue: engine },
-                { provide: EntityPortsService, useValue: ports },
-            ],
-        }).compile()
-        return { service: moduleRef.get(LedgerNativeService), port, engine }
-    }
-
-    it("builds the line from the transaction and the order it paid: the caller gives the id alone", async () => {
-        const { service, port, engine } = await buildWithRecords(ORDER)
-
-        await expect(service.invoke("ws-1", "entry.append", { transactionId: TRANSACTION }, CALLER)).resolves.toEqual({
-            ref: "Sheet1!A2:G2",
-        })
-        expect(engine.scoped).toHaveBeenCalledWith("ws-1", expect.any(Function))
-        expect(port.append).toHaveBeenCalledWith(
-            "ws-1",
-            expect.objectContaining({
-                orderNo: "DH-7",
-                amountVnd: 5000,
-                transactionId: TRANSACTION,
-                status: "paid",
-                direction: "in",
-                category: "sale",
-            }),
-        )
-    })
-
-    it("refuses a transaction that paid nothing yet, one that is not there, and an id that is no record id; nothing is written", async () => {
-        const unsettled = await buildWithRecords(null)
-        await expect(unsettled.service.invoke("ws-1", "entry.append", { transactionId: TRANSACTION }, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
-            params: { reason: "not_found" },
-        })
-        await expect(unsettled.service.invoke("ws-1", "entry.append", { transactionId: "tx-1" }, CALLER)).rejects.toMatchObject({
-            params: { reason: "not_found" },
-        })
-        expect(unsettled.port.append).not.toHaveBeenCalled()
-    })
-
-    it("refuses arguments that name both a transaction and an entry", async () => {
-        const { service } = await buildWithRecords(ORDER)
-        await expect(
-            service.invoke("ws-1", "entry.append", { transactionId: TRANSACTION, entry: ENTRY }, CALLER),
-        ).rejects.toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
+        expect(google?.append).not.toHaveBeenCalled()
+        expect(other.append).not.toHaveBeenCalled()
+        await expect(two.service.invoke("ws-1", "status.get", {}, ENGINE)).resolves.toEqual({ connected: true })
     })
 })

@@ -15,7 +15,7 @@ export interface ProvidersChoiceProps {
     readonly view: ProvidersFieldView
 }
 
-/** The account cards of the create dialog: the template's rights, ticked, editable before the create button. */
+/** The account cards of the create dialog: the template's accounts, on by default, switchable off before the create button. */
 export const ProvidersChoice = (props: ProvidersChoiceProps) => (
     <Section kind="region" title={props.view.label} fact={props.view.chip} headingLevel={3}>
         <Stack gap="inline">

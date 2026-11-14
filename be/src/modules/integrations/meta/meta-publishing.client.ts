@@ -67,7 +67,7 @@ const pagePostOf = (row: Json): PagePost | null => {
 
 @Injectable()
 /** Schedules Page posts (published=false with scheduled_publish_time) and reads the daily Page insights. */
-export class MetaPublishingClient extends MetaMessagingClient {
+export class MetaPagePostsClient extends MetaMessagingClient {
     /**
      * Uploads each image as an unpublished photo, then creates the unpublished post that Meta publishes at `publishAt`. A publish
      * moment closer than ten minutes is moved to the earliest moment Meta accepts.

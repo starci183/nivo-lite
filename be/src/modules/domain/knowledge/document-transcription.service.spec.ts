@@ -3,6 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { AI } from "@modules/integrations/ai"
 import type { AiChatAttempt, AiService } from "@modules/integrations/ai"
 import type { PageImage } from "@modules/integrations/document-readers"
+import { BANG_GIA_HONG_35_000_VI, HONG_35_000_VI, FENCED_HONG_35_000_VI } from "@tests/fixtures/i18n/knowledge-spec.messages"
 import { DocumentTranscriptionService } from "./document-transcription.service"
 import { NOTHING_WRITTEN, TRANSCRIPTION_PROMPT, transcriptOf } from "./transcription.policy"
 import { UsageMeterService } from "./usage-meter.service"
@@ -37,9 +38,9 @@ const build = async () => {
 describe("DocumentTranscriptionService", () => {
     it("sends ONE call with the picture as a data address and the do-not-infer instructions, and meters it as brain work", async () => {
         const { transcriber, ai, usage } = await build()
-        ai.attempt.mockResolvedValue(answered("BẢNG GIÁ\nHồng | 35.000"))
+        ai.attempt.mockResolvedValue(answered(BANG_GIA_HONG_35_000_VI))
 
-        await expect(transcriber.transcribe(IMAGE)).resolves.toEqual({ kind: "ok", value: "BẢNG GIÁ\nHồng | 35.000" })
+        await expect(transcriber.transcribe(IMAGE)).resolves.toEqual({ kind: "ok", value: BANG_GIA_HONG_35_000_VI })
 
         expect(ai.attempt).toHaveBeenCalledTimes(1)
         const [request] = ai.attempt.mock.calls[0] ?? []
@@ -62,7 +63,7 @@ describe("DocumentTranscriptionService", () => {
             model: "vision-model",
             usage: USAGE,
             promptChars: TRANSCRIPTION_PROMPT.length + "Page 2. Transcribe it.".length,
-            completionChars: "BẢNG GIÁ\nHồng | 35.000".length,
+            completionChars: BANG_GIA_HONG_35_000_VI.length,
             tryNumber: 1,
         })
     })
@@ -102,6 +103,9 @@ describe("DocumentTranscriptionService", () => {
         ])
     })
 
+})
+
+describe("DocumentTranscriptionService: unavailable and fences", () => {
     it("makes no call when the AI is off, the endpoint is unconfigured or the allowance is used up", async () => {
         const off = await build()
         off.ai.available.mockReturnValue(false)
@@ -120,7 +124,31 @@ describe("DocumentTranscriptionService", () => {
     })
 
     it("drops code fences around an answer", () => {
-        expect(transcriptOf("```text\nHồng | 35.000\n```")).toBe("Hồng | 35.000")
+        expect(transcriptOf(FENCED_HONG_35_000_VI)).toBe(HONG_35_000_VI)
         expect(transcriptOf("  ")).toBe("")
+    })
+})
+
+describe("DocumentTranscriptionService: cut tries and the credit pool", () => {
+    it("books a try cut at its cap with what it spent (real figures, never billed), and checks the credit pool before every retry", async () => {
+        const { transcriber, ai, usage } = await build()
+        const served = { upstream: "anthropic", finishReason: "max_tokens", durationMs: 9 }
+        ai.attempt.mockResolvedValue({
+            ok: false,
+            failure: "length",
+            spent: { model: "claude-haiku-5-5", usage: USAGE, served, cap: 4000 },
+        })
+        usage.blockedBy.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+
+        await expect(transcriber.transcribe(IMAGE)).resolves.toMatchObject({ code: "no_credits" })
+
+        expect(ai.attempt).toHaveBeenCalledTimes(2)
+        expect(usage.blockedBy).toHaveBeenCalledTimes(3)
+        expect(
+            usage.record.mock.calls.map(([entry]) => [entry.model, entry.usage, entry.failure, entry.tryNumber]),
+        ).toEqual([
+            ["claude-haiku-5-5", USAGE, "length", 1],
+            ["claude-haiku-5-5", USAGE, "length", 2],
+        ])
     })
 })

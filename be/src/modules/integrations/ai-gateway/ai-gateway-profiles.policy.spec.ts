@@ -1,10 +1,28 @@
+import assert from "node:assert/strict"
+import { Test } from "@nestjs/testing"
 import type { ChatCompletionRequest } from "@starci/ai-router"
 import { createRouter } from "@starci/ai-router/gateway"
 import { createFakeProvider } from "@starci/ai-router/testing"
+import { CHEAP_MODEL, SONNET_MODEL } from "@nivo-lite/agent-sdk/models"
 import { Secret } from "@modules/platform/config"
 import type { AiGatewayOptions, AiGatewayProvider } from "./ai-gateway.options"
 import { MODEL_PROFILES, modelProfilesOf, profileWireOf } from "./ai-gateway-profiles.policy"
-import { routerOptionsOf } from "./ai-gateway-router.mapper"
+import { chatProfileRoutes, routerOptionsOf } from "./ai-gateway-router.mapper"
+
+const SUBJECT = Symbol("ai-gateway-profiles.policy")
+
+/** The profile and router policies of the gateway, built the way Nest provides them. */
+interface GatewayPolicies {
+    readonly modelProfilesOf: typeof modelProfilesOf
+    readonly profileWireOf: typeof profileWireOf
+}
+
+const build = async (): Promise<GatewayPolicies> => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { modelProfilesOf, profileWireOf } }],
+    }).compile()
+    return moduleRef.get<GatewayPolicies>(SUBJECT)
+}
 
 const ANTHROPIC: AiGatewayProvider = {
     id: "anthropic",
@@ -26,7 +44,7 @@ const VECTOR = Array.from({ length: 1536 }, (_, index) => index / 1536)
 const routerOf = (providers: ReadonlyArray<AiGatewayProvider>, fake: ReturnType<typeof createFakeProvider>) => {
     const options: AiGatewayOptions = { providers, models: MODELS, gateway: null }
     const pool = routerOptionsOf(options)
-    if (pool === null) throw new Error("no pool")
+    assert(pool !== null)
     return createRouter({ ...pool, fetch: fake.fetch, random: () => 0.5 })
 }
 
@@ -39,40 +57,42 @@ const NIVO_BODY: ChatCompletionRequest = {
 }
 
 /** The protocols the fake saw, in order. */
-const protocolsOf = (fake: ReturnType<typeof createFakeProvider>): ReadonlyArray<string> => fake.calls.map((call) => call.protocol)
+const protocolsOf = (fake: ReturnType<typeof createFakeProvider>): ReadonlyArray<string> =>
+    fake.calls.map((call) => call.protocol)
 
 describe("modelProfilesOf: Claude only (owner: no OpenRouter for chat)", () => {
-    it("serves every model profile on Anthropic alone, OpenAI present or not", () => {
-        const profiles = modelProfilesOf([ANTHROPIC, OPENAI], MODELS)
+    it("serves every model profile on Anthropic alone, OpenAI present or not", async () => {
+        const subject = await build()
+        const profiles = subject.modelProfilesOf([ANTHROPIC, OPENAI], MODELS)
 
         expect(profiles.map((profile) => profile.name)).toEqual(["sonnet", "haiku", "auto-light", "auto-heavy"])
         expect(profiles.flatMap((profile) => profile.candidates.map((seat) => seat.provider))).toEqual(
             Array.from({ length: 6 }, () => "anthropic"),
         )
-        expect(profiles.find((profile) => profile.name === "auto-light")?.candidates.map((seat) => seat.model)).toEqual([
-            MODELS.work,
-            MODELS.strong,
-        ])
-        expect(profiles.find((profile) => profile.name === "auto-heavy")?.candidates.map((seat) => seat.model)).toEqual([
-            MODELS.strong,
-            MODELS.work,
-        ])
+        expect(profiles.find((profile) => profile.name === "auto-light")?.candidates.map((seat) => seat.model)).toEqual(
+            [MODELS.work, MODELS.strong],
+        )
+        expect(profiles.find((profile) => profile.name === "auto-heavy")?.candidates.map((seat) => seat.model)).toEqual(
+            [MODELS.strong, MODELS.work],
+        )
     })
 
-    it("serves no model profile without an Anthropic key: nothing falls to another vendor", () => {
-        expect(modelProfilesOf([OPENAI], MODELS)).toEqual([])
+    it("serves no model profile without an Anthropic key: nothing falls to another vendor", async () => {
+        const subject = await build()
+        expect(subject.modelProfilesOf([OPENAI], MODELS)).toEqual([])
     })
 })
 
 describe("profileWireOf", () => {
-    it("sends every profile the Claude body: no sampling, no forced tool choice, no OpenRouter fields", () => {
+    it("sends every profile the Claude body: no sampling, no forced tool choice, no OpenRouter fields", async () => {
+        const subject = await build()
         for (const profile of Object.values(MODEL_PROFILES)) {
-            expect(profileWireOf(profile)).toEqual({ sampling: false, forcedToolChoice: false, upstreamFields: false })
+            expect(subject.profileWireOf(profile)).toEqual({ sampling: false, forcedToolChoice: false, upstreamFields: false })
         }
     })
 })
 
-describe("the pool on the router (fake providers, no real call)", () => {
+describe("the pool on the router: chat profiles (fake providers, no real call)", () => {
     it("is accepted by the router with every mix of keys", () => {
         for (const providers of [[ANTHROPIC, OPENAI], [ANTHROPIC], [OPENAI]]) {
             expect(() => routerOf(providers, createFakeProvider())).not.toThrow()
@@ -95,7 +115,9 @@ describe("the pool on the router (fake providers, no real call)", () => {
         const router = routerOf([ANTHROPIC, OPENAI], fake)
 
         const served = await Promise.all(
-            Object.values(MODEL_PROFILES).map(async (profile) => (await router.chat({ ...NIVO_BODY }, { profile })).model),
+            Object.values(MODEL_PROFILES).map(
+                async (profile) => (await router.chat({ ...NIVO_BODY }, { profile })).model,
+            ),
         )
 
         expect(served).toEqual(["claude-sonnet-5-5", "claude-haiku-5-5", "claude-haiku-5-5", "claude-sonnet-5-5"])
@@ -137,6 +159,9 @@ describe("the pool on the router (fake providers, no real call)", () => {
         expect(fake.calls.map((call) => call.key)).toEqual(["sk-test-openai"])
     })
 
+})
+
+describe("the pool on the router: embeddings", () => {
     it("both keys present: `embed-oa` lands on OpenAI's text-embedding-3-small, 1536 numbers", async () => {
         const fake = createFakeProvider().on({ baseUrl: OPENAI.baseUrl }, { embedding: VECTOR })
         const router = routerOf([ANTHROPIC, OPENAI], fake)
@@ -153,7 +178,9 @@ describe("the pool on the router (fake providers, no real call)", () => {
         const router = routerOf([ANTHROPIC, OPENAI], fake)
 
         // One attempt: a wrong length is a failed attempt the router would otherwise retry with backoff.
-        await expect(router.embeddings({ input: ["a"] }, { profile: "embed-oa", policy: { maxAttempts: 1 } })).rejects.toThrow()
+        await expect(
+            router.embeddings({ input: ["a"] }, { profile: "embed-oa", policy: { maxAttempts: 1 } }),
+        ).rejects.toThrow()
     })
 
     it("OpenAI key missing: no embeddings profile, so an embeddings call fails loudly and nothing is sent", async () => {
@@ -164,10 +191,18 @@ describe("the pool on the router (fake providers, no real call)", () => {
         expect(fake.calls).toHaveLength(0)
     })
 
+})
+
+describe("the pool on the router: its shape", () => {
     it("pins `embed-oa`: the router refuses at startup a second candidate of another identity", () => {
         const pool = routerOptionsOf({ providers: [OPENAI], models: MODELS, gateway: null })
-        if (pool === null) throw new Error("no pool")
-        const other = { id: "text-embedding-3-large", identity: "text-embedding-3-large", dimensions: 1536, capabilities: ["embeddings" as const] }
+        assert(pool !== null)
+        const other = {
+            id: "text-embedding-3-large",
+            identity: "text-embedding-3-large",
+            dimensions: 1536,
+            capabilities: ["embeddings" as const],
+        }
         const mixed = {
             ...pool,
             providers: pool.providers.map((entry) => ({ ...entry, models: [...entry.models, other] })),
@@ -200,5 +235,36 @@ describe("the pool on the router (fake providers, no real call)", () => {
             allowFallback: false,
         })
         expect(pool?.profiles).not.toHaveProperty("embed")
+    })
+})
+
+describe("chatProfileRoutes", () => {
+    it("names, for every chat profile the pool declares, its models in the pool's order and the single-model profile of each", () => {
+        const cheap = { model: CHEAP_MODEL, profile: MODEL_PROFILES.haiku }
+        const strong = { model: SONNET_MODEL, profile: MODEL_PROFILES.sonnet }
+
+        expect(chatProfileRoutes()).toEqual({
+            work: [cheap, strong],
+            [MODEL_PROFILES.sonnet]: [strong],
+            [MODEL_PROFILES.haiku]: [cheap],
+            [MODEL_PROFILES.autoLight]: [cheap, strong],
+            [MODEL_PROFILES.autoHeavy]: [strong, cheap],
+        })
+    })
+
+    it("follows the pool: every candidate of a declared profile is one of its routes, in the same order", () => {
+        const routes = chatProfileRoutes()
+        const pool = routerOptionsOf({
+            providers: [ANTHROPIC],
+            models: { work: CHEAP_MODEL, strong: SONNET_MODEL },
+            gateway: null,
+        })
+        for (const [name, profile] of Object.entries(pool?.profiles ?? {})) {
+            if (profile.pinned === true) continue
+            const models = (profile.candidates ?? []).flatMap((candidate) =>
+                "model" in candidate ? [candidate.model] : candidate.map((one) => one.model),
+            )
+            expect(routes[name]?.map((route) => route.model)).toEqual(models)
+        }
     })
 })

@@ -28,12 +28,12 @@ Luật: `table-heroui-native-section-head.md` (tab counts, section head).
 Grammar: `PaneHeader title count` / `Badge`, `node_modules/@starci/grammar/dist/core/composite/PaneHeader/index.d.ts`, `node_modules/@starci/grammar/dist/core/leaf/Badge/index.d.ts`.
 
 ## Bảng workspace (Workspace, Trạng thái, Mở gần nhất, Hành động, Thêm)
-Vì sao: SAI — (partly right, see the flagged part) columned data must be a Table in the HeroUI native frame (grey frame with header labels, white inner body, shadow no border); the row has avatar + name over "Chủ sở hữu · 2 người", status chip, relative time, "Mở →" and a ⋯ menu. Gaps: the "Hành động" and "Thêm" headers carry no data meaning (the actions column is one button; "Thêm" is a ⋯ menu) and there is no pagination footer in the grey frame; "Mở →" is a sm neutral button with an arrow icon, which contradicts "no sm button has an icon".
+Vì sao: SAI — (partly right, see the flagged part) columned data must be a Table in the HeroUI native frame (grey frame with header labels, white inner body, shadow no border); the row has avatar + name over "Chủ sở hữu · 2 người", status chip, relative time, "Mở →" and a ⋯ menu. Gaps: the "Hành động" and "Thêm" headers carry no data meaning (the actions column is one button; "Thêm" is a ⋯ menu) and there is no pagination footer in the grey frame; the "Mở" button now carries the end arrow only on the primary row (the most recently opened workspace, and only when no "Tạo workspace" action is on screen: see the red budget section, so in practice every "Mở" is neutral without an icon); the other rows are plain neutral buttons without an icon (only the primary CTA has an icon). Fixed 2026-11-13 (PL-6).
 Luật: `table-heroui-native-section-head.md`, `page-header-left-sublabel-xs.md` (sm buttons no icon), `type-scale-14-12.md`.
 Grammar: `DataTable` (`TableRowData`), `node_modules/@starci/grammar/dist/core/branch/DataTable/index.d.ts`; `Badge`, `Button size="sm"`; column API width/hideBelow in the table-law memory.
 
 ## Chip trạng thái "Đang hoạt động"
-Vì sao: status as a soft success chip with a dot; the tone follows state (active success, pending warning, disabled muted, deleted danger), never raw colour.
+Vì sao: status as a plain soft chip with NO dot (a lifecycle label, not a live status; `badge-no-dot` reserves the dot for something running); the tone follows state (active success, pending warning, disabled muted, deleted danger), never raw colour.
 Luật: `owner-colors-exact.md`, `table-heroui-native-section-head.md` (grey = quantity, pink = waiting on owner).
 Grammar: `Badge tone`, `node_modules/@starci/grammar/dist/core/leaf/Badge/index.d.ts`.
 
@@ -56,3 +56,7 @@ Grammar: `SurfaceCard treatment="soft" artwork`, `Stepper orientation="vertical"
 Vì sao: SAI — (partly right, see the flagged part) the table becomes a stack of row cards (avatar, name, meta, chip, time, "Mở →", ⋯), the join block moves under the list as a card with a label; layout follows "phone = list of rows". The count renders "· 1" (SAI, see above).
 Luật: `table-heroui-native-section-head.md` (phone = list of rows), `nivo-surface-layering.md`.
 Grammar: `Section`, `ListRow` (`ListRowData`), `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`; block `WorkspacesStack`.
+
+## Ngân sách đỏ của sảnh (cập nhật 2026-11-13, Q-1)
+Vì sao: màu đỏ chỉ ở MỘT nút "Tạo workspace": nút ở dải đầu trang khi đã có workspace, hoặc nút trong thẻ chào khi chưa có. "Mở" của từng hàng, "Chấp nhận" lời mời và "Tham gia" bằng link đều trung tính. Chỉ khi không có nút tạo nào trên màn hình thì "Mở" của hàng mở gần nhất mới được đỏ: quyết định đó là một hàm thuần (`lobbyPrimaryRowOf`, `hooks/lobby/lobby.shared.ts`), nên hai nút đỏ không thể hiện cùng lúc (mũi tên chỉ có ở nút đỏ).
+Luật: `red-budget-links-foreground.md`. Shot thiếu: sảnh có hàng + lời mời, "Mở" trung tính.

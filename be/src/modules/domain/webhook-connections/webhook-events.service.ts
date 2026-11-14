@@ -1,24 +1,23 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
-import { InjectWebhookDeliveryClient, WebhookDeliveryError } from "@modules/integrations/webhook-delivery"
-import type { WebhookDeliveryClient } from "@modules/integrations/webhook-delivery"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
+import {
+    InjectWebhookDeliveryClient,
+    WebhookDeliveryError,
+    type WebhookDeliveryClient,
+} from "@modules/integrations/webhook-delivery"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 import { eachInOrder } from "@modules/platform/primitives"
-import { N8N_QUEUE, N8N_WEBHOOK_JOB, isN8nWebhookPayload } from "@modules/queues/n8n"
-import type { N8nWebhookPayload } from "@modules/queues/n8n"
+import { N8N_QUEUE, N8N_WEBHOOK_JOB, isN8nWebhookPayload, type N8nWebhookPayload } from "@modules/queues/n8n"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
 import type { WebhookPublication } from "./webhook-connections.contracts"
 import { InjectWebhookConnectionsOptions } from "./webhook-connections.decorators"
 import { WebhookConnectionsLogEvent } from "./webhook-connections.log-events"
 import type { WebhookConnectionsOptions } from "./webhook-connections.options"
+import { installedWebhookEvents } from "./webhook-events.catalogue"
 import { deliveryVerdict, eventsOf, signDelivery, workspaceSigningSecret } from "./webhook-signing.policy"
 
 @Injectable()
@@ -45,9 +44,10 @@ export class WebhookEventsService {
     async publish(publication: WebhookPublication, manager: EntityManager = this.entityManager): Promise<void> {
         if (this.options.signingSecret === undefined) return
         const { workspaceId, event, data, dedupe } = publication
+        const available = installedWebhookEvents().map((option) => option.id)
         const subscribed = (
             await this.connections.listByProvider(workspaceId, "webhook", { includeDisconnected: false })
-        ).filter((connection) => connection.status === "connected" && eventsOf(connection.meta).includes(event))
+        ).filter((connection) => connection.status === "connected" && eventsOf(connection.meta, available).includes(event))
         const occurredAtMs = this.clock.now().getTime()
         await eachInOrder(subscribed, async (connection) => {
             const job: N8nWebhookPayload = {

@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
+import { IsNull, type UpdateResult } from "typeorm"
+import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
 import { WorkspacesErrorCode } from "./errors/workspaces.error"
@@ -23,12 +25,17 @@ const storedOf = (...briefs: ReadonlyArray<typeof NIVO | typeof SPA | typeof BUN
         }),
     )
 
-const DELETED = { affected: 1, raw: [] }
+const DELETED: UpdateResult = { affected: 1, raw: [], generatedMaps: [] }
+const NOW = new Date("2026-11-14T04:00:00.000Z")
 
 const build = async (em: MockEntityManager, answer = "DELETE") => {
     const terminal = { print: jest.fn(), ask: jest.fn().mockResolvedValue(answer) }
     const moduleRef = await Test.createTestingModule({
-        providers: [WorkspacePruneService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            WorkspacePruneService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: CLOCK, useValue: { now: () => NOW } },
+        ],
     }).compile()
     return { prune: moduleRef.get(WorkspacePruneService), terminal }
 }
@@ -44,7 +51,7 @@ describe("WorkspacePruneService", () => {
     it("keeps the built-in workspace, lists both sides, asks, deletes the rest and counts what is left", async () => {
         const em = mockEntityManager({
             find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
-            delete: [WorkspaceEntity, DELETED],
+            update: [WorkspaceEntity, DELETED],
             count: [WorkspaceEntity, 1],
         })
         const { prune, terminal } = await build(em)
@@ -54,20 +61,22 @@ describe("WorkspacePruneService", () => {
         expect(report).toEqual({ status: "deleted", kept: [NIVO], doomed: [SPA, BUN], left: 1 })
         expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
             select: { id: true, name: true, planCode: true, status: true },
+            where: { deletedAt: IsNull() },
             order: { createdAt: "ASC" },
             take: 1000,
         })
-        expect(terminal.ask).toHaveBeenCalledWith("Type DELETE to permanently delete these 2 workspaces: ")
-        expect(em.delete).toHaveBeenCalledWith(WorkspaceEntity, { id: "ws-spa" })
-        expect(em.delete).toHaveBeenCalledWith(WorkspaceEntity, { id: "ws-bun" })
+        expect(terminal.ask).toHaveBeenCalledWith("Type DELETE to delete these 2 workspaces (soft delete: nothing is removed, every read hides them): ")
+        expect(em.update).toHaveBeenCalledWith(WorkspaceEntity, { id: "ws-spa", deletedAt: IsNull() }, { deletedAt: NOW })
+        expect(em.update).toHaveBeenCalledWith(WorkspaceEntity, { id: "ws-bun", deletedAt: IsNull() }, { deletedAt: NOW })
+        expect(em.delete).not.toHaveBeenCalled()
         expect(printed(terminal)).toEqual([
             "KEEP:",
             `  NIVO  (pro)  ${NIVO_WORKSPACE_ID}`,
-            "DELETE (2):",
+            "DELETE, softly (2):",
             "  Spa  (no plan, pending_payment)  ws-spa",
             "  Bun  (starter, past_due)  ws-bun",
-            "  deleted Spa",
-            "  deleted Bun",
+            "  deleted (soft) Spa",
+            "  deleted (soft) Bun",
             "Done. 2 deleted, 0 failed, 1 workspace(s) left.",
         ])
     })
@@ -75,7 +84,7 @@ describe("WorkspacePruneService", () => {
     it("skips the question with the yes flag and keeps the extra workspaces named", async () => {
         const em = mockEntityManager({
             find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
-            delete: [WorkspaceEntity, DELETED],
+            update: [WorkspaceEntity, DELETED],
             count: [WorkspaceEntity, 0],
         })
         const { prune, terminal } = await build(em)
@@ -130,7 +139,7 @@ describe("WorkspacePruneService", () => {
 
         await expect(prune.prune({}, terminal)).resolves.toMatchObject({ status: "cancelled", left: 2 })
         expect(printed(terminal).at(-1)).toBe("Cancelled. Nothing deleted.")
-        expect(em.delete).not.toHaveBeenCalled()
+        expect(em.update).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -141,7 +150,7 @@ describe("WorkspacePruneService", () => {
             find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
             count: [WorkspaceEntity, 2],
         })
-        em.delete.mockImplementation((_target, criteria) =>
+        em.update.mockImplementation((_target, criteria) =>
             isRecord(criteria) && criteria.id === "ws-spa" ? Promise.reject(cause) : Promise.resolve(DELETED),
         )
         const { prune, terminal } = await build(em)
@@ -153,7 +162,7 @@ describe("WorkspacePruneService", () => {
         expect(printed(terminal)).toEqual(
             expect.arrayContaining([
                 `  FAILED Spa: ${message}`,
-                "  deleted Bun",
+                "  deleted (soft) Bun",
                 "Done. 1 deleted, 1 failed, 2 workspace(s) left.",
             ]),
         )
@@ -161,24 +170,25 @@ describe("WorkspacePruneService", () => {
 })
 
 describe("WorkspacePruneService without an agent runtime", () => {
-    it("deletes a workspace by its row alone: its agents and their history go with the cascade", async () => {
+    it("marks a workspace deleted by its row alone: its agents and their history stay, nothing cascades", async () => {
         const em = mockEntityManager({
             find: [WorkspaceEntity, storedOf(NIVO, SPA)],
-            delete: [WorkspaceEntity, DELETED],
+            update: [WorkspaceEntity, DELETED],
             count: [WorkspaceEntity, 1],
         })
         const { prune, terminal } = await build(em)
 
         await expect(prune.prune({ yes: true }, terminal)).resolves.toMatchObject({ status: "deleted", left: 1 })
 
-        expect(em.delete).toHaveBeenCalledTimes(1)
-        expect(em.delete).toHaveBeenCalledWith(WorkspaceEntity, { id: SPA.id })
+        expect(em.update).toHaveBeenCalledTimes(1)
+        expect(em.update).toHaveBeenCalledWith(WorkspaceEntity, { id: SPA.id, deletedAt: IsNull() }, { deletedAt: NOW })
+        expect(em.delete).not.toHaveBeenCalled()
         expect(printed(terminal)).toEqual([
             "KEEP:",
             `  NIVO  (pro)  ${NIVO_WORKSPACE_ID}`,
-            "DELETE (1):",
+            "DELETE, softly (1):",
             "  Spa  (no plan, pending_payment)  ws-spa",
-            "  deleted Spa",
+            "  deleted (soft) Spa",
             "Done. 1 deleted, 0 failed, 1 workspace(s) left.",
         ])
     })

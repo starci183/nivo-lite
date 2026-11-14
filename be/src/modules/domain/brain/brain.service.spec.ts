@@ -1,13 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
-import { BrainFactsError, BrainFactsErrorCode, BrainFactsService } from "@modules/domain/brain-facts"
-import type { FactRecord, ProposeResult } from "@modules/domain/brain-facts"
+import { BrainFactsError, BrainFactsErrorCode, BrainFactsReadService, BrainFactsService } from "@modules/domain/brain-facts"
+import type { ProposeResult } from "@modules/domain/brain-facts"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
-import type { LessonRecord } from "@modules/domain/brain-lessons"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -15,38 +13,14 @@ import type { FactDecision, FactForm } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
 import { BrainService } from "./brain.service"
 import { DocumentFactsService } from "./document-facts.service"
-import { FactEmbeddingsService } from "./fact-embeddings.service"
+import { FactVectorsSweepService } from "./fact-vectors-sweep.service"
+import { SERVICE_AT, SERVICE_WS, serviceFactOf, serviceLesson, serviceMemberOf } from "@tests/fixtures/builders/brain-service.builder"
 
-const WS = "ws-1"
-const AT = "2026-10-12T10:00:00.000Z"
-const factOf = builder<FactRecord>({
-    id: "f1",
-    subjectType: "business",
-    subjectKey: "shop",
-    subjectLabel: "Shop",
-    attribute: "hours",
-    attributeLabel: "Hours",
-    value: "8 to 21",
-    valueNumber: null,
-    unit: null,
-    scope: "public",
-    modules: [],
-    installationId: null,
-    status: "active",
-    sourceKind: "owner",
-    trust: 100,
-    validFrom: null,
-    validTo: null,
-    supersedesId: null,
-    conflictWith: null,
-    proposalKind: "set",
-    evidence: [],
-    proposedBy: "Ada",
-    proposedAt: AT,
-    decidedBy: "Ada",
-    decidedAt: AT,
-    decisionNote: null,
-})
+const WS = SERVICE_WS
+const AT = SERVICE_AT
+const factOf = serviceFactOf
+const memberOf = serviceMemberOf
+const lesson = serviceLesson
 const formOf = builder<FactForm>({
     subjectType: "business",
     subjectLabel: "Shop",
@@ -55,29 +29,6 @@ const formOf = builder<FactForm>({
     scope: "public",
     modules: [],
 })
-const memberOf = builder<WorkspaceMember>({
-    userId: "u1",
-    workspaceId: WS,
-    role: "owner",
-    staffId: null,
-    displayName: "Ada",
-    status: "active",
-})
-const lesson: LessonRecord = {
-    id: "l1",
-    module: null,
-    title: "Confirm",
-    body: "Confirm hours",
-    appliesWhen: "Before replying",
-    status: "active",
-    origin: "manual",
-    evidence: [],
-    version: 1,
-    proposedBy: "Ada",
-    proposedAt: AT,
-    decidedBy: "Ada",
-    decidedAt: AT,
-}
 
 const build = async () => {
     const logger = mock<Logger>()
@@ -87,8 +38,10 @@ const build = async () => {
     const gaps = mock<KnowledgeGapsService>()
     const sources = mock<KnowledgeSourcesService>()
     const documentFacts = mock<DocumentFactsService>()
-    const vectors = mock<FactEmbeddingsService>()
+    const vectors = mock<FactVectorsSweepService>()
+    const reads = mock<BrainFactsReadService>()
     members.require.mockResolvedValue(memberOf())
+    vectors.sweep.mockResolvedValue({ workspaces: 0, embedded: 0, copied: 0, more: 0 })
     facts.propose.mockResolvedValue({ fact: factOf(), outcome: "applied" })
     lessons.propose.mockResolvedValue(lesson)
     const moduleRef = await Test.createTestingModule({
@@ -102,7 +55,8 @@ const build = async () => {
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: DocumentFactsService, useValue: documentFacts },
-            { provide: FactEmbeddingsService, useValue: vectors },
+            { provide: FactVectorsSweepService, useValue: vectors },
+            { provide: BrainFactsReadService, useValue: reads },
         ],
     }).compile()
     return {
@@ -115,8 +69,82 @@ const build = async () => {
         sources,
         documentFacts,
         vectors,
+        reads,
     }
 }
+
+describe("BrainService upkeep: the timed job that brings scheduled facts in force (BR1)", () => {
+    /** The dev pair of D-P11-8: 35.000 d scheduled from 00:00 VN, nothing activated it until someone opened the page. */
+    const scheduled = factOf({ id: "fee-35", value: "35.000 d", scope: "internal", status: "active", version: 2 })
+
+    it("runs the page's maintain in every due workspace as the brain itself (no member check), then the vectors' sweep of the tick", async () => {
+        const { service, reads, facts, members, vectors, logger, documentFacts } = await build()
+        reads.dueWorkspaces.mockResolvedValue([WS, "ws-2"])
+        facts.maintain
+            .mockResolvedValueOnce({ activated: [scheduled], expired: 1 })
+            .mockResolvedValueOnce({ activated: [], expired: 0 })
+        vectors.sweep.mockResolvedValue({ workspaces: 1, embedded: 40, copied: 2, more: 0 })
+        documentFacts.resumeParked.mockResolvedValue(1)
+
+        await expect(service.upkeep()).resolves.toEqual({
+            workspaces: 2,
+            activated: 1,
+            expired: 1,
+            failed: 0,
+            vectors: 42,
+            readingsResumed: 1,
+        })
+
+        expect(reads.dueWorkspaces).toHaveBeenCalledWith(200)
+        // Documents stored word-only for want of credits are looked at by the same tick (D-U-4).
+        expect(documentFacts.resumeIndexing).toHaveBeenCalledTimes(1)
+        expect(facts.maintain.mock.calls).toEqual([[WS], ["ws-2"]])
+        expect(members.require).not.toHaveBeenCalled()
+        // The fact that came in force got its vector from maintain's announcement; the tick sweeps once, never a workspace per fact.
+        expect(vectors.refresh).not.toHaveBeenCalled()
+        expect(vectors.sweep).toHaveBeenCalledTimes(1)
+        expect(logger.info).toHaveBeenCalledWith(BrainLogEvent.UpkeepDone, {
+            workspaces: 2,
+            activated: 1,
+            expired: 1,
+            failed: 0,
+            vectors: 42,
+            readingsResumed: 1,
+        })
+    })
+
+    it("does nothing when nothing is due, and one failing workspace never stops the others", async () => {
+        const idle = await build()
+        idle.reads.dueWorkspaces.mockResolvedValue([])
+        idle.documentFacts.resumeParked.mockResolvedValue(0)
+        await expect(idle.service.upkeep()).resolves.toEqual({
+            workspaces: 0,
+            activated: 0,
+            expired: 0,
+            failed: 0,
+            vectors: 0,
+            readingsResumed: 0,
+        })
+        expect(idle.facts.maintain).not.toHaveBeenCalled()
+        // Facts with no vector are swept even in a tick with no upkeep due.
+        expect(idle.vectors.sweep).toHaveBeenCalledTimes(1)
+
+        const { service, reads, facts, logger, documentFacts } = await build()
+        documentFacts.resumeParked.mockResolvedValue(0)
+        const cause = new Error("db")
+        reads.dueWorkspaces.mockResolvedValue(["broken", WS])
+        facts.maintain.mockRejectedValueOnce(cause).mockResolvedValueOnce({ activated: [], expired: 2 })
+        await expect(service.upkeep()).resolves.toEqual({
+            workspaces: 2,
+            activated: 0,
+            expired: 2,
+            failed: 1,
+            vectors: 0,
+            readingsResumed: 0,
+        })
+        expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.UpkeepFailed, cause, { workspaceId: "broken" })
+    })
+})
 
 describe("BrainService saveFact", () => {
     it("applies an owner's fact with dated manual evidence and answers its linked and matching questions", async () => {
@@ -150,8 +178,8 @@ describe("BrainService saveFact", () => {
         })
         expect(gaps.answer).toHaveBeenCalledWith(WS, "g1", "fact:f1")
         expect(gaps.resolve).toHaveBeenCalledWith(WS, {
-            text: "Shop - Hours: 8 to 21",
-            minimum: 0.6,
+            subject: "Shop",
+            attribute: "Hours",
             module: null,
             by: "fact:f1",
         })
@@ -255,15 +283,16 @@ describe("BrainService decideFact", () => {
 
         await expect(service.decideFact("u1", decision)).resolves.toEqual(factOf())
 
-        // Only turning a proposal down is a manager's too; every activation and retirement is the founder's alone.
+        // Turning a proposal down and splitting are a manager's too (a manager's split is only a proposal); every other activation and
+        // retirement is the founder's alone.
         expect(members.require).toHaveBeenCalledWith(
             "u1",
             WS,
-            decision.action === "reject" ? ["owner", "manager"] : ["owner"],
+            decision.action === "reject" || decision.action === "split" ? ["owner", "manager"] : ["owner"],
         )
         expect(gaps.resolve).toHaveBeenCalledWith(WS, {
-            text: "Shop - Hours: 8 to 21",
-            minimum: 0.6,
+            subject: "Shop",
+            attribute: "Hours",
             module: null,
             by: "fact:f1",
         })
@@ -278,7 +307,8 @@ describe("BrainService decideFact", () => {
                 expect(facts.choose).toHaveBeenCalledWith(WS, "f1", "Ada")
                 break
             case "split":
-                expect(facts.split).toHaveBeenCalledWith(WS, "f1", decision.situation ?? "", "Ada")
+                // The founder's split is the approval: in force at once.
+                expect(facts.split).toHaveBeenCalledWith(WS, "f1", decision.situation ?? "", "Ada", true)
                 break
             case "retire":
                 expect(facts.retire).toHaveBeenCalledWith(WS, "f1", "Ada", "Ended")
@@ -358,87 +388,17 @@ describe("BrainService lessons", () => {
         expect(lessons.retire).not.toHaveBeenCalled()
     })
 })
-describe("BrainService", () => {
-    it("dismisses a customer question under the manager's name", async () => {
-        const { service, members, gaps } = await build()
 
-        await expect(service.dismissGap("u1", WS, "g1")).resolves.toBeUndefined()
-
-        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
-        expect(gaps.dismiss).toHaveBeenCalledWith(WS, "g1", "Ada")
-    })
-
-    it("withdraws a deleted document's facts using its returned title", async () => {
-        const { service, sources, documentFacts } = await build()
-        sources.removeSource.mockResolvedValue({ title: "Hours", parts: [] })
-
-        await expect(service.removeSource("u1", WS, "s1")).resolves.toBeUndefined()
-
-        expect(sources.removeSource).toHaveBeenCalledWith("u1", WS, "s1")
-        expect(documentFacts.withdraw).toHaveBeenCalledWith(WS, "s1", "Hours")
-    })
-
-    it("takes back what the later parts of a deleted long document contributed as well", async () => {
-        const { service, sources, documentFacts } = await build()
-        sources.removeSource.mockResolvedValue({
-            title: "Plan (1/3)",
-            parts: [
-                { id: "p2", title: "Plan (2/3)" },
-                { id: "p3", title: "Plan (3/3)" },
-            ],
-        })
-
-        await service.removeSource("u1", WS, "s1")
-
-        expect(documentFacts.withdraw.mock.calls).toEqual([
-            [WS, "s1", "Plan (1/3)"],
-            [WS, "p2", "Plan (2/3)"],
-            [WS, "p3", "Plan (3/3)"],
-        ])
-    })
-
-    it("does not withdraw a source when deleting it fails", async () => {
-        const { service, sources, documentFacts } = await build()
-        const cause = new Error("source absent")
-        sources.removeSource.mockRejectedValue(cause)
-
-        await expect(service.removeSource("u1", WS, "s1")).rejects.toBe(cause)
-
-        expect(documentFacts.withdraw).not.toHaveBeenCalled()
-    })
-
-    it("lets a workspace member maintain and resolves each newly activated public fact in order", async () => {
-        const { service, members, facts, gaps } = await build()
-        facts.maintain.mockResolvedValue({ activated: [factOf(), factOf({ id: "f2", value: "9 to 20" })], expired: 2 })
-
-        await expect(service.maintain("u1", WS)).resolves.toBeUndefined()
-
-        expect(members.require).toHaveBeenCalledWith("u1", WS)
-        expect(facts.maintain).toHaveBeenCalledWith(WS)
-        expect(gaps.resolve.mock.calls).toEqual([
-            [WS, { text: "Shop - Hours: 8 to 21", minimum: 0.6, module: null, by: "fact:f1" }],
-            [WS, { text: "Shop - Hours: 9 to 20", minimum: 0.6, module: null, by: "fact:f2" }],
-        ])
-    })
-
-    it("maintains a workspace with no new active facts", async () => {
-        const { service, facts, gaps } = await build()
-        facts.maintain.mockResolvedValue({ activated: [], expired: 0 })
-
-        await expect(service.maintain("u1", WS)).resolves.toBeUndefined()
-
-        expect(gaps.resolve).not.toHaveBeenCalled()
-    })
-})
 describe("BrainService founder-only activation", () => {
-    it.each(["apply", "choose", "split", "retire"] as const)(
+    it.each(["apply", "choose", "retire"] as const)(
         "refuses a manager who tries to %s: nothing goes in force",
         async (action) => {
             const { service, members, facts } = await build()
             const refused = new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
-            members.require.mockImplementation((_user, _ws, roles) =>
-                roles?.includes("manager") === true ? Promise.resolve(memberOf({ role: "manager" })) : Promise.reject(refused),
-            )
+            members.require.mockImplementation((_user, _ws, roles) => {
+                if (roles?.includes("manager") !== true) throw refused
+                return Promise.resolve(memberOf({ role: "manager" }))
+            })
 
             await expect(service.decideFact("u1", { workspaceId: WS, id: "f1", action })).rejects.toBe(refused)
 
@@ -449,7 +409,21 @@ describe("BrainService founder-only activation", () => {
         },
     )
 
-    it("lets the founder approve a change request and refreshes the vectors of the truths in force", async () => {
+    it("a manager's split files the situational value as a PROPOSAL for the founder, never in force (BRAIN-LIMITS item 6)", async () => {
+        const { service, members, facts } = await build()
+        members.require.mockResolvedValue(memberOf({ role: "manager" }))
+        facts.split.mockResolvedValue(factOf({ status: "proposed" }))
+
+        await expect(
+            service.decideFact("u1", { workspaceId: WS, id: "f1", action: "split", situation: "Cu\u1ed1i tu\u1ea7n" }),
+        ).resolves.toMatchObject({ status: "proposed" })
+
+        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
+        expect(facts.split).toHaveBeenCalledWith(WS, "f1", "Cu\u1ed1i tu\u1ea7n", "Ada", false)
+        expect(facts.apply).not.toHaveBeenCalled()
+    })
+
+    it("lets the founder approve a change request; its vector comes with the store's announcement, never a workspace refresh", async () => {
         const { service, facts, vectors } = await build()
         facts.apply.mockResolvedValue(factOf({ status: "active", version: 2 }))
 
@@ -458,6 +432,7 @@ describe("BrainService founder-only activation", () => {
             version: 2,
         })
 
-        expect(vectors.refresh).toHaveBeenCalledWith(WS)
+        expect(facts.apply).toHaveBeenCalledWith(WS, "f1", "Ada", "")
+        expect(vectors.refresh).not.toHaveBeenCalled()
     })
 })

@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import {
@@ -39,7 +39,7 @@ const FLOW: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "accounting",
     trigger: { kind: "tag", sources: ["agent"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [{ key: "echo", kind: "output", step: "core.outcome", params: { outcome: "done", outputs: {} } }],
 }
 
@@ -66,12 +66,7 @@ const build = async (state: OptionalGraphState, options: { context?: GraphContex
                 provide: GraphNodeRegistryService,
                 useValue: mock<GraphNodeRegistryService>({
                     installed: jest.fn().mockReturnValue(
-                        nodeIndexOf({
-                            nodes: coreNodes,
-                            effects: coreEffects,
-                            tools: coreTools,
-                            dataKinds: coreDataKinds,
-                        }),
+                        nodeIndexOf(INSTALLED.nodeInstall()),
                     ),
                 }),
             },
@@ -103,7 +98,7 @@ const raised = (state: GraphState): GraphDocument => ({
                           branchOf({
                               key: "middle",
                               when: { all: [amountIs("gte", 6_000_000), amountIs("lt", 20_000_000)] },
-                              then: "ask",
+                              mode: "ask",
                               next: "ask",
                               approver: approverOf(),
                           }),
@@ -123,7 +118,6 @@ describe("AgentGraphPublishService.publishDraft", () => {
 
         expect(context.contextOf).toHaveBeenCalledWith(
             expect.objectContaining({ agentId: "agent-1", moduleKey: "accounting" }),
-            state.draft,
         )
         expect(graphs.publish).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -251,7 +245,7 @@ describe("AgentGraphPublishService.requirePublishable", () => {
 
 describe("AgentGraphPublishService.publishDraft without a fact counted in dong", () => {
     it("compares a graph with no amount in it when the module has no fact counted in dong", async () => {
-        const draft: GraphDocument = { nodes: [], rights: [] }
+        const draft: GraphDocument = { nodes: [] }
         const { service, graphs } = await build(stateOf({ draft }), { context: { ...contextOf(), facts: {} } })
 
         await expect(service.publishDraft("ws-1", "agent-1", OWNER, "Bare")).resolves.toBe(VERSION)
@@ -378,24 +372,12 @@ describe("AgentGraphPublishService.publishContract", () => {
 })
 
 describe("AgentGraphPublishService the contracts of a graph", () => {
-    const FRAMED = (intent: string): boolean => intent === "pay_supplier"
-
-    it("refuses a graph whose intent has no frame in the catalogue of the module", async () => {
-        const context = { ...contextOf(), hasFrame: (intent: string) => intent === "send_quote" }
-        const { service, graphs } = await build(stateOf(), { context })
-
-        expect(await codeOf(service.publishDraft("ws-1", "agent-1", OWNER, "Edit"))).toBe(
-            AgentGraphsErrorCode.PublishRefused,
-        )
-        expect(graphs.publish).not.toHaveBeenCalled()
-    })
-
     it("publishes a graph with no contracts block, and a contract that only warns", async () => {
         const warned = {
             ...stateOf().draft,
             contracts: [{ intent: "give_discount", task: "", limits: [], sources: [] }],
         }
-        const context = { ...contextOf(), hasFrame: FRAMED }
+        const context = contextOf()
         const shipped = await build(stateOf(), { context })
         const warning = await build(stateOf({ draft: warned }), { context })
 

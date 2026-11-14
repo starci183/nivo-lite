@@ -154,7 +154,6 @@ export const usePublicBrain = (input: PublicBrainInput): PublicBrainView => {
         },
         on: {
             ...draft.on,
-            reviewAll: header.on.reviewAll,
             selectTab: header.on.selectTab,
             search: setQuery,
             setTab,

@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
+import { STOCK_QUESTION_VI } from "@tests/fixtures/i18n/ai-tasks-spec.messages"
 import { nodeMessagesOf, nodeMetaOf, nodePromptOf } from "./node-prompt.policy"
-import { ORDER_SCHEMA } from "./ai-tasks.schema"
+import { ITEMS_SCHEMA } from "@tests/fixtures/builders/ai-tasks-service.builder"
 
 const ASK = { purpose: "intent.classify:read", instructions: "Rules", input: { text: "hi" } }
 
@@ -29,7 +30,7 @@ describe("node-prompt policy", () => {
     })
 
     it("names the answer's members and their types in the system message of a structured call", () => {
-        const [system] = policy.nodeMessagesOf(ASK, ORDER_SCHEMA)
+        const [system] = policy.nodeMessagesOf(ASK, ITEMS_SCHEMA)
 
         expect(system?.content.startsWith("Rules\n\nAnswer with one JSON object")).toBe(true)
         expect(system?.content).toContain('"items":')
@@ -48,10 +49,10 @@ describe("node-prompt policy", () => {
     })
 
     it("prompt cache: opens two calls of a step with the same system message whatever their words and data for this call", () => {
-        const first = policy.nodePromptOf({ ...ASK, input: { thread: ["hi"], at: "2026-11-10T01:00:00Z" } }, ORDER_SCHEMA)
+        const first = policy.nodePromptOf({ ...ASK, input: { thread: ["hi"], at: "2026-11-10T01:00:00Z" } }, ITEMS_SCHEMA)
         const second = policy.nodePromptOf(
-            { ...ASK, volatile: "The founder answered.", input: { thread: ["hi", "còn hàng không"], leadId: "lead-9" } },
-            ORDER_SCHEMA,
+            { ...ASK, volatile: "The founder answered.", input: { thread: ["hi", STOCK_QUESTION_VI], leadId: "lead-9" } },
+            ITEMS_SCHEMA,
         )
 
         expect(second.stable).toEqual(first.stable)
@@ -60,7 +61,7 @@ describe("node-prompt policy", () => {
         expect(first.volatile).toEqual([{ role: "user", content: '{"thread":["hi"],"at":"2026-11-10T01:00:00Z"}' }])
         expect(second.volatile).toEqual([
             { role: "system", content: "The founder answered." },
-            { role: "user", content: '{"thread":["hi","còn hàng không"],"leadId":"lead-9"}' },
+            { role: "user", content: JSON.stringify({ thread: ["hi", STOCK_QUESTION_VI], leadId: "lead-9" }) },
         ])
         // What is sent is the stable part, then the volatile one.
         expect(policy.nodeMessagesOf({ ...ASK, volatile: "V" })).toEqual([
@@ -72,5 +73,25 @@ describe("node-prompt policy", () => {
 
     it("meters the call as engine work of the namespace of the node", () => {
         expect(policy.nodeMetaOf(ASK)).toEqual({ kind: "engine", module: "intent" })
+    })
+})
+
+describe("node-prompt policy: the shared opening of a node's call (ENG1)", () => {
+    const LAYERED = { ...ASK, instructions: "CRAFT TOOLS\n\nSHOP\n\nSTEP", sharedLength: "CRAFT TOOLS\n\nSHOP".length }
+
+    it("sends L1 + L2 and L3 as two marked system messages, the text cut at the blank line and nothing else changed", () => {
+        expect(nodePromptOf(LAYERED).stable).toEqual([
+            { role: "system", content: "CRAFT TOOLS\n\nSHOP", cacheMark: true },
+            { role: "system", content: "STEP", cacheMark: true },
+        ])
+        expect(nodePromptOf(LAYERED, ITEMS_SCHEMA).stable[1]?.content.startsWith("STEP\n\nAnswer with one JSON object")).toBe(true)
+    })
+
+    it("keeps one marked message when the length names no layer end of the instructions", () => {
+        for (const sharedLength of [undefined, 0, 3, 2.5, 999]) {
+            expect(nodePromptOf({ ...LAYERED, sharedLength }).stable).toEqual([
+                { role: "system", content: LAYERED.instructions, cacheMark: true },
+            ])
+        }
     })
 })

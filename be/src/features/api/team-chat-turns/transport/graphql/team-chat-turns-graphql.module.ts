@@ -7,5 +7,5 @@ import { ConfigurableModuleClass } from "./team-chat-turns-graphql.module-defini
     imports: [TeamChatTurnsApiModule.register({})],
     providers: [CaptureChatTruthResolver],
 })
-/** The GraphQL transport of "Ghi vào Second Brain". */
+/** The GraphQL transport of "Ghi vao Second Brain". */
 export class TeamChatTurnsGraphqlModule extends ConfigurableModuleClass {}

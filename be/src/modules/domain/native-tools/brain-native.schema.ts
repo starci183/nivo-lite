@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-/** `nivo.brain.search`: the facts in force and the passages of the business documents that answer a question. */
+/** `nivo.tool.brain.search`: the facts in force that answer a question (documents: `nivo.tool.brain.passage.search`). */
 export const BRAIN_SEARCH_SCHEMA: z.ZodObject<
     {
         query: z.ZodString
@@ -14,7 +14,7 @@ export const BRAIN_SEARCH_SCHEMA: z.ZodObject<
     })
     .strict()
 
-/** `nivo.brain.fact.list`: the facts in force of the caller's view, optionally of one subject. */
+/** `nivo.tool.brain.fact.list`: the facts in force of the caller's view, optionally of one subject. */
 export const BRAIN_FACTS_LIST_SCHEMA: z.ZodObject<
     {
         subject: z.ZodOptional<z.ZodString>
@@ -28,7 +28,7 @@ export const BRAIN_FACTS_LIST_SCHEMA: z.ZodObject<
     })
     .strict()
 
-/** `nivo.brain.fact.get`: one fact in force of the caller's view with its evidence. */
+/** `nivo.tool.brain.fact.get`: one fact in force of the caller's view with its evidence. */
 export const BRAIN_FACTS_GET_SCHEMA: z.ZodObject<
     {
         id: z.ZodUUID
@@ -36,7 +36,7 @@ export const BRAIN_FACTS_GET_SCHEMA: z.ZodObject<
     z.core.$strict
 > = z.object({ id: z.uuid() }).strict()
 
-/** `nivo.brain.document.read`: one internal document, whole, for an internal agent that drafts a public text from it. */
+/** `nivo.tool.brain.document.read`: one internal document, whole, for an internal agent that drafts a public text from it. */
 export const BRAIN_DOCUMENTS_READ_SCHEMA: z.ZodObject<
     {
         sourceId: z.ZodUUID
@@ -44,16 +44,16 @@ export const BRAIN_DOCUMENTS_READ_SCHEMA: z.ZodObject<
     z.core.$strict
 > = z.object({ sourceId: z.uuid() }).strict()
 
-/** The arguments of `nivo.brain.document.read` as its validator reads them. */
+/** The arguments of `nivo.tool.brain.document.read` as its validator reads them. */
 export type BrainDocumentsReadInput = z.output<typeof BRAIN_DOCUMENTS_READ_SCHEMA>
 
-/** The arguments of `nivo.brain.search` as its validator reads them. */
+/** The arguments of `nivo.tool.brain.search` as its validator reads them. */
 export type BrainSearchInput = z.output<typeof BRAIN_SEARCH_SCHEMA>
 
-/** The arguments of `nivo.brain.fact.list` as its validator reads them. */
+/** The arguments of `nivo.tool.brain.fact.list` as its validator reads them. */
 export type BrainFactsListInput = z.output<typeof BRAIN_FACTS_LIST_SCHEMA>
 
-/** The arguments of `nivo.brain.fact.get` as its validator reads them. */
+/** The arguments of `nivo.tool.brain.fact.get` as its validator reads them. */
 export type BrainFactsGetInput = z.output<typeof BRAIN_FACTS_GET_SCHEMA>
 
 /** The schemas the manifest advertises, generated from the validators. */
@@ -92,7 +92,7 @@ export const BRAIN_DOCUMENTS_READ_INPUT_SCHEMA: z.core.ZodStandardJSONSchemaPayl
     >
 > = z.toJSONSchema(BRAIN_DOCUMENTS_READ_SCHEMA, { io: "input" })
 
-/** `nivo.brain.fact.related`: the truths an edge of the truth graph joins to one truth, read through the caller's lens. */
+/** `nivo.tool.brain.fact.related`: the truths an edge of the truth graph joins to one truth, read through the caller's lens. */
 export const BRAIN_FACT_RELATED_SCHEMA: z.ZodObject<
     {
         id: z.ZodUUID
@@ -107,7 +107,7 @@ export const BRAIN_FACT_RELATED_SCHEMA: z.ZodObject<
     .strict()
 
 /**
- * `nivo.brain.change.propose`: a change to a truth that someone said in an agent's private chat or the common chat, filed as a change
+ * `nivo.tool.brain.change.propose`: a change to a truth that someone said in an agent's private chat or the common chat, filed as a change
  * request for the founder. It never puts anything in force. `retire: true` asks to stop using the value in force (no `value`).
  */
 export const BRAIN_CHANGE_PROPOSE_SCHEMA: z.ZodObject<
@@ -139,7 +139,7 @@ export const BRAIN_CHANGE_PROPOSE_SCHEMA: z.ZodObject<
         reason: z.string().min(1).max(1000),
         validFrom: z.iso.datetime({ offset: true }).max(40).optional(),
         validTo: z.iso.datetime({ offset: true }).max(40).optional(),
-        // The id of the fact in force this changes or retires, as nivo.brain.search / fact.get gave it (FX5): checked, then the
+        // The id of the fact in force this changes or retires, as nivo.tool.brain.search / fact.get gave it (FX5): checked, then the
         // proposal is the next version of THAT fact.
         replaces: z.uuid().optional(),
     })
@@ -148,10 +148,10 @@ export const BRAIN_CHANGE_PROPOSE_SCHEMA: z.ZodObject<
         message: "Give a value, or retire: true without one",
     })
 
-/** The arguments of `nivo.brain.fact.related` as its validator reads them. */
+/** The arguments of `nivo.tool.brain.fact.related` as its validator reads them. */
 export type BrainFactRelatedInput = z.output<typeof BRAIN_FACT_RELATED_SCHEMA>
 
-/** The arguments of `nivo.brain.change.propose` as its validator reads them. */
+/** The arguments of `nivo.tool.brain.change.propose` as its validator reads them. */
 export type BrainChangeProposeInput = z.output<typeof BRAIN_CHANGE_PROPOSE_SCHEMA>
 
 /** The schemas the manifest advertises, generated from the validators. */

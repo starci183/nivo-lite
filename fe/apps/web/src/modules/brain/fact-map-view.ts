@@ -1,6 +1,12 @@
+import type { BubbleMapEdge, BubbleMapNode } from "@starci/grammar/common"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import type { MapContent } from "./map-view"
 import type { FactMapPaneView } from "./fact-map-pane"
+
+/** The nodes and edges the map draws. */
+export interface MapContent {
+    readonly nodes: ReadonlyArray<BubbleMapNode>
+    readonly edges: ReadonlyArray<BubbleMapEdge>
+}
 
 /** The two ways the facts card draws the same facts. */
 export type FactMode = "list" | "map"

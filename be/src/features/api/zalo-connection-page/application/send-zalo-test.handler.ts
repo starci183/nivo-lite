@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ZaloPageService } from "@modules/domain/channels"
-import type { ZaloTestSendResult } from "@modules/domain/channels"
+import { ZaloPageService, type ZaloTestSendResult } from "@modules/domain/channels"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SendZaloTestCommand } from "./send-zalo-test.command"
 
 @CommandHandler(SendZaloTestCommand)

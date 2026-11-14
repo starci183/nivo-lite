@@ -1,4 +1,5 @@
 import { z } from "../schema/zod-entry"
+import { thrownFailureOf } from "../tests/thrown-failure"
 import { defineJob } from "./job"
 import { defineSaga, SAGA_STEPS_MAX, sagaDefinitionProblems, sagaProblems } from "./saga"
 import type { SagaConfig, SagaStep } from "./saga"
@@ -105,6 +106,6 @@ describe("defineSaga", () => {
     it("throws the first problem at definition", () => {
         const attempt = (): unknown => defineSaga(config([{ job: reserve, compensate: reserve }]))
         expect(attempt).toThrow(SagaDefinitionError)
-        expect(attempt).toThrow("SAGA_COMPENSATION_SELF: demo.checkout.demo.reserve")
+        expect(thrownFailureOf(attempt)).toEqual({ code: "SAGA_COMPENSATION_SELF", at: "demo.checkout.demo.reserve" })
     })
 })

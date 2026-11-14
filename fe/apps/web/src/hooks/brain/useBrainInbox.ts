@@ -2,18 +2,15 @@
 
 import { useState } from "react"
 import { useKnowledgeSources } from "@/hooks/knowledge"
-import { factKeysOf, trustLevelOf } from "@/modules/brain"
-import type { FactKey, PickGrouping } from "@/modules/brain"
+import { factKeysOf, trustLevelOf, type FactKey, type PickGrouping } from "@/modules/brain"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { InboxSideRowView, InboxView, KnowledgeListView, KnowledgeRowView } from "@/modules/types"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { useBrainBoard } from "./useBrainBoard"
 import { useBrainGaps } from "./useBrainGaps"
 import { useFactDrawer } from "./useFactDrawer"
-import { useFactDrawers } from "./useFactDrawers"
-import type { FactDrawers } from "./useFactDrawers"
-import { useFactPick } from "./useFactPick"
-import type { FactPick } from "./useFactPick"
+import { useFactDrawers, type FactDrawers } from "./useFactDrawers"
+import { useFactPick, type FactPick } from "./useFactPick"
 import { useFactWords } from "./useFactWords"
 import { useInboxConflicts } from "./useInboxConflicts"
 import { usePublicProposals } from "./usePublicProposals"
@@ -75,7 +72,7 @@ export const useBrainInbox = (input: BrainInboxInput): BrainInbox => {
     const fresh = keys.filter((one) => one.kind === "fresh")
     const topicOf = (sourceId: string) => sources?.find((source) => source.id === sourceId)?.topic ?? undefined
     const conflicts = useInboxConflicts({ keys, topicOf, words })
-    const shown = trust === "high" ? fresh.filter(isHigh) : fresh
+    const shown = trust === "high" ? fresh.filter((entry) => isHigh(entry)) : fresh
     const pick = useFactPick({ keys: shown, by: grouping, topicOf, words: words.pick, canWrite: board.canWrite })
     const drawers = useFactDrawers({ tab: "todo", board, keys, words: words.drawer })
     const factDrawer = useFactDrawer({ tab: "todo", fact: input.fact, edit: input.edit, answer: input.answer })
@@ -89,7 +86,7 @@ export const useBrainInbox = (input: BrainInboxInput): BrainInbox => {
             ...conflicts,
             total: fresh.length,
             trust,
-            trustCounts: { all: fresh.length, high: fresh.filter(isHigh).length },
+            trustCounts: { all: fresh.length, high: fresh.filter((entry) => isHigh(entry)).length },
             grouping,
             groups: pick.groups,
             bar: pick.bar,

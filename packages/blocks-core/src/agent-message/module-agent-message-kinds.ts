@@ -1,6 +1,5 @@
-import { coreAgentMessageKinds } from "./agent-message-kinds"
-import type { AgentMessageKind } from "./agent-message-kinds"
-import { accountingAgentMessageKinds } from "../modules/accounting/agent-message-kinds"
+import { coreAgentMessageKinds, type AgentMessageKind } from "@nivo-lite/agent-sdk/team-chat"
+import { accountingAgentMessageKinds } from "../modules/sales/ledger/agent-message-kinds"
 import { salesAgentMessageKinds } from "../modules/sales/agent-message-kinds"
 
 /**

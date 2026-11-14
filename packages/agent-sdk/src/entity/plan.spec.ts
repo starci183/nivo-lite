@@ -97,6 +97,13 @@ const partition = (): CatalogPartition => ({
         check(`${P}_note_chk`, "CHECK ((char_length((data ->> 'note'::text)) <= 100))"),
         check(`${P}_custom_chk`, "CHECK ((jsonb_typeof((data -> 'custom'::text)) = 'object'::text))"),
         check(`${P}_note_len`, "CHECK ((data ? 'note'::text))"),
+        check(`${P}_agent_scope_chk`, "CHECK ((agent_id IS NOT NULL))"),
+        {
+            name: `${P}_agent_fk`,
+            kind: "foreign",
+            definition: "FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE",
+            validated: true,
+        },
         {
             name: `${P}_no_overlap`,
             kind: "exclude",
@@ -115,7 +122,7 @@ const partition = (): CatalogPartition => ({
             "btree",
             "(data ? 'note'::text)",
         ),
-        index(`${P}_ws_name_key`, ["workspace_id", "(data ->> 'name'::text)"], true),
+        index(`${P}_ws_name_key`, ["workspace_id", "agent_id", "(data ->> 'name'::text)"], true, "btree", "(deleted_at IS NULL)"),
         index(
             `${P}_name_trgm_idx`,
             ["public.knowledge_fold((data ->> 'name'::text)) public.gin_trgm_ops"],
@@ -191,7 +198,9 @@ describe("planOf: an empty database", () => {
             `add_check public.${P}:constraint:${P}_note_chk`,
             `add_check public.${P}:constraint:${P}_custom_chk`,
             `add_check public.${P}:constraint:${P}_note_len`,
+            `add_check public.${P}:constraint:${P}_agent_scope_chk`,
             `add_exclude public.${P}:constraint:${P}_no_overlap`,
+            `add_foreign_key public.${P}:constraint:${P}_agent_fk`,
             `create_index public.${P}:index:${P}_recent_idx`,
             `create_index public.${P}:index:${P}_stage_idx`,
             `add_unique public.${P}:index:${P}_ws_name_key`,
@@ -211,10 +220,12 @@ describe("planOf: an empty database", () => {
         expect(ops.find((planned) => planned.kind === "create_view")?.reason).toBe("typed view with 9 columns")
     })
 
-    it("plans nothing for an entity with no fields, indexes, constraints or view", () => {
+    it("plans only the partition and its agent scope for an entity with no fields, indexes, constraints or view", () => {
         const bare: EntityDefinition = { entry: "entity", name: "x.y", dataKind: "xy", fields: {} }
         expect(summary(planOf([bare], { extensions: [], bases: bases(), partitions: [], views: [] }))).toEqual([
             "create_partition public.records_x_y",
+            "add_check public.records_x_y:constraint:records_x_y_agent_scope_chk",
+            "add_foreign_key public.records_x_y:constraint:records_x_y_agent_fk",
         ])
     })
 })
@@ -364,6 +375,41 @@ describe("planOf: checks", () => {
     })
 })
 
+describe("planOf: the agent scope of every record", () => {
+    const without = (name: string) =>
+        withPartition((value) => ({ ...value, constraints: value.constraints.filter((c) => c.name !== `${P}_${name}`) }))
+    const fkOf = (definition: string, validated = true) =>
+        withPartition((value) => ({
+            ...value,
+            constraints: value.constraints.map((c) => (c.name === `${P}_agent_fk` ? { ...c, definition, validated } : c)),
+        }))
+
+    it("adds the missing agent check (agent_id NOT NULL)", () => {
+        expect(without("agent_scope_chk")).toEqual([`add_check public.${P}:constraint:${P}_agent_scope_chk`])
+    })
+
+    it("adds the missing foreign key to the agents", () => {
+        expect(without("agent_fk")).toEqual([`add_foreign_key public.${P}:constraint:${P}_agent_fk`])
+    })
+
+    it("accepts the foreign key spelled with the schema", () => {
+        expect(fkOf("FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE")).toEqual([])
+    })
+
+    it("refuses to guess when the foreign key has another rule or target", () => {
+        const expected = [`alter_foreign_key! public.${P}:constraint:${P}_agent_fk`]
+        expect(fkOf("FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL")).toEqual(expected)
+        expect(fkOf("FOREIGN KEY (agent_id) REFERENCES agents(id)")).toEqual(expected)
+        expect(fkOf("FOREIGN KEY (agent_id) REFERENCES workspaces(id) ON DELETE CASCADE")).toEqual(expected)
+    })
+
+    it("validates a foreign key that was added NOT VALID", () => {
+        expect(fkOf("FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE", false)).toEqual([
+            `validate_constraint public.${P}:constraint:${P}_agent_fk`,
+        ])
+    })
+})
+
 describe("planOf: indexes", () => {
     const withIndex = (change: (value: CatalogPartition["indexes"]) => CatalogPartition["indexes"]) =>
         withPartition((value) => ({ ...value, indexes: change(value.indexes) }))
@@ -386,6 +432,12 @@ describe("planOf: indexes", () => {
         expect(altered({ predicate: "x" })).toEqual(expected)
         expect(altered({ columns: ["workspace_id"] })).toEqual(expected)
         expect(altered({ columns: ["workspace_id", "updated_at DESC", "other DESC"] })).toEqual(expected)
+    })
+
+    it("asks to alter a unique index that is not partial on `deleted_at IS NULL`: a deleted record would still hold its key", () => {
+        expect(
+            withIndex((all) => all.map((i) => (i.name === `${P}_ws_name_key` ? { ...i, predicate: null } : i))),
+        ).toEqual([`alter_index! public.${P}:index:${P}_ws_name_key`])
     })
 
     it("adds a missing unique", () => {

@@ -35,13 +35,13 @@ describe("StorageAssetsService", () => {
         const { storage, service } = await build()
         storage.get.mockResolvedValueOnce({ bytes: new Uint8Array([1, 2, 3]), contentType: "video/mp4" })
 
-        await expect(service.upload("videos", "ws/a.mp4", Buffer.from("xyz"), "video/mp4")).resolves.toEqual({
+        await expect(service.upload("media", "ws/a.mp4", Buffer.from("xyz"), "video/mp4")).resolves.toEqual({
             error: null,
         })
-        const read = await service.download("videos", "ws/a.mp4")
+        const read = await service.download("media", "ws/a.mp4")
 
-        expect(storage.put).toHaveBeenCalledWith("nivo-videos", "ws/a.mp4", Buffer.from("xyz"), "video/mp4")
-        expect(storage.get).toHaveBeenCalledWith("nivo-videos", "ws/a.mp4")
+        expect(storage.put).toHaveBeenCalledWith("nivo-media", "ws/a.mp4", Buffer.from("xyz"), "video/mp4")
+        expect(storage.get).toHaveBeenCalledWith("nivo-media", "ws/a.mp4")
         expect(read.error).toBeNull()
         expect(read.data?.size).toBe(3)
         expect(read.data?.type).toBe("video/mp4")

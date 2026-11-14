@@ -2,11 +2,18 @@ export { DATA_HUB_ERROR_KINDS } from "./errors/data-hub.error"
 export { DATA_HUB_MESSAGES } from "./messages/data-hub.messages"
 export { DataHubModule } from "./data-hub.module"
 export { CsvImportWizardService } from "./csv-import-wizard.service"
-export { DataHubService } from "./data-hub.service"
 export { DataSyncService } from "./data-sync.service"
 export { DatabaseWizardService } from "./database-wizard.service"
 export { ImapWizardService } from "./imap-wizard.service"
-export { OpenApiWizardService } from "./openapi-wizard.service"
+export { OpenApiToolsOperatorService } from "./openapi-tools-operator.service"
+export type { OpenApiToolsPinView } from "./openapi-tools-pin.service"
+export { CrmConnectService } from "./crm-connect.service"
+export type {
+    CrmAuthDraft,
+    CrmConnectionResult,
+    CrmConnectionView,
+    CrmTemplateView,
+} from "./crm-connect.service"
 export { TelegramUserWizardService } from "./telegram-user-wizard.service"
 export type { ImapInput, ImapView } from "./imap-connection.contracts"
 export type {
@@ -26,12 +33,6 @@ export type {
     CsvSourceRequest,
     DocumentImportRequest,
 } from "./csv-import.contracts"
-export type {
-    OpenApiAuthDraft,
-    OpenApiConnectionView,
-    OpenApiOperationTestResult,
-    OpenApiSpecLoaded,
-} from "./openapi-wizard.contracts"
 export type {
     DatabasePreviewDraft,
     DatabaseSaveDraft,

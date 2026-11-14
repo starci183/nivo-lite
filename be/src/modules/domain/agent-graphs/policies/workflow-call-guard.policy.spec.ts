@@ -19,7 +19,7 @@ const buildPolicy = async (): Promise<typeof policy> => {
 const link = (over: Partial<CallLink> = {}): CallLink => ({
     agentId: "sales",
     workflow: "wf-after-sale",
-    leadId: "lead-1",
+    contactId: "contact-1",
     paramHash: "h-1",
     ...over,
 })
@@ -44,20 +44,20 @@ describe("workflow-call-guard.policy", () => {
         expect(paramHashOf({ leadId: "l", order: { no: 2, items: [] } })).not.toBe(one)
     })
 
-    it("reads the lead of a call from the trigger, else from its params", async () => {
-        const { callLeadOf } = await buildPolicy()
-        const call = { callerRunId: "r", params: { leadId: "lead-p" } }
-        expect(callLeadOf({ leadId: "lead-t" }, call)).toBe("lead-t")
-        expect(callLeadOf({}, call)).toBe("lead-p")
-        expect(callLeadOf({}, { callerRunId: "r", params: {} })).toBeNull()
+    it("reads the contact of a call from the trigger, else from its params (workflow-call inputs carry contactId)", async () => {
+        const { callContactOf } = await buildPolicy()
+        const call = { callerRunId: "r", params: { contactId: "contact-p" } }
+        expect(callContactOf({ contactId: "contact-t" }, call)).toBe("contact-t")
+        expect(callContactOf({}, call)).toBe("contact-p")
+        expect(callContactOf({}, { callerRunId: "r", params: {} })).toBeNull()
     })
 
-    it("refuses a cycle on the same lead and params, and a chain past the depth limit", async () => {
+    it("refuses a cycle on the same contact and params, and a chain past the depth limit", async () => {
         const { CALL_DEPTH_MAX, chainRefusalOf, duplicates } = await buildPolicy()
         const chain = [link({ workflow: "wf-consult" }), link()]
         expect(chainRefusalOf(link(), chain)).toBe("call_cycle")
         expect(chainRefusalOf(link({ paramHash: "h-2" }), chain)).toBeNull()
-        expect(chainRefusalOf(link({ leadId: "lead-2" }), chain)).toBeNull()
+        expect(chainRefusalOf(link({ contactId: "contact-2" }), chain)).toBeNull()
         const deep = Array.from({ length: CALL_DEPTH_MAX - 1 }, (_, at) => link({ workflow: `wf-${at}` }))
         expect(chainRefusalOf(link(), deep)).toBeNull()
         expect(chainRefusalOf(link(), [...deep, link({ workflow: "wf-x" })])).toBe("call_too_deep")

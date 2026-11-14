@@ -1,7 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { SubmitTemplateListingMutation } from "@/modules/api"
 import {
     mutateSubmitTemplateListing,

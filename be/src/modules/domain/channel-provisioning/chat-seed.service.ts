@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
@@ -60,6 +60,7 @@ export class ChatSeedService {
         private readonly agents: AgentDirectoryService,
         private readonly members: WorkspaceMembersReadService,
         private readonly workspaces: WorkspacesService,
+        private readonly zones: WorkspaceTimeZoneService,
     ) {}
 
     /** Seeds the rooms of the envelope read from `text` into the workspace named `workspaceName`; a refused document stops the run. */
@@ -94,7 +95,7 @@ export class ChatSeedService {
             ]),
         )
         const lines = room.messages.filter((message) => seats.has(keyOf(message.from)))
-        const at = instantsOf(lines, this.clock.now())
+        const at = instantsOf(lines, this.clock.now(), await this.zones.timeZoneOf(workspaceId))
         await eachInOrder(lines, async (line, index) => {
             const author = seats.get(keyOf(line.from))
             const when = at[index]

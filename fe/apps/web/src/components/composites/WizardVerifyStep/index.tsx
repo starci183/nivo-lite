@@ -14,6 +14,9 @@ type WizardVerifyStepProps = {
     readonly failed: string | null
 }
 
+/** The loading flag a step passes on to a notice when it has one. */
+const loadingOf = (isLoading: boolean | undefined) => (isLoading === undefined ? {} : { isLoading })
+
 /** Waits for the first event of a connection and says plainly what the owner should do meanwhile. */
 export const WizardVerifyStep = (props: WizardVerifyStepProps) => (
     <>
@@ -42,7 +45,7 @@ export const WizardVerifyStep = (props: WizardVerifyStepProps) => (
             </Text>
         ) : (
             <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loadingOf(props.isLoading)}
                 tone="affirmative"
                 title={props.received}
             />

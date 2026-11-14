@@ -18,15 +18,29 @@ export const CACHE_MARK_KINDS: Readonly<Record<RoutedKind, boolean>> = { anthrop
 export const MAX_CACHE_BREAKPOINTS = 4
 
 /** The explicit breakpoints a prompt may carry beside the automatic one. */
-export const MAX_EXPLICIT_MARKS = MAX_CACHE_BREAKPOINTS - 1
+export const MAX_EXPLICIT_MARKS: number = MAX_CACHE_BREAKPOINTS - 1
 
 /** The breakpoint of a marked layer end: Anthropic's default five-minute entry. */
 const EPHEMERAL = { type: "ephemeral" } as const
 
+/** The cache breakpoint a marked text part carries. */
+export type CacheControl = {
+    /** The only breakpoint type Anthropic documents: the default five-minute entry. */
+    readonly type: "ephemeral"
+}
+
+/** One text part of a marked message content. */
+export type MarkedTextPart = {
+    /** Always `text`: the part carries words. */
+    readonly type: "text"
+    /** The words of the part, never changed by a marker. */
+    readonly text: string
+    /** The breakpoint, present only when the part is marked. */
+    readonly cache_control?: CacheControl
+}
+
 /** One text part of a message content, with a breakpoint when it is marked and the protocol takes markers. */
-export type MarkedText =
-    | string
-    | ReadonlyArray<{ readonly type: "text"; readonly text: string; readonly cache_control?: { readonly type: "ephemeral" } }>
+export type MarkedText = string | ReadonlyArray<MarkedTextPart>
 
 /** The content of a message as the wire carries it: plain text, or one text part with a breakpoint when marked. A marker never changes the text. */
 export const markedContentOf = (content: string, marked: boolean, onTheWire: boolean): MarkedText =>

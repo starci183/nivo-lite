@@ -2,6 +2,7 @@ import type { useFormatter, useTranslations } from "next-intl"
 import type { CreditUsageSummaryType } from "@/hooks/swr"
 import { dayjs } from "@/modules/dayjs"
 import type { DataSlot } from "@/modules/types"
+import { creditsLeftShown, creditsUsedShown } from "@/modules/utils"
 
 type UsageTranslator = ReturnType<typeof useTranslations<"billing">>
 type UsageFormatter = ReturnType<typeof useFormatter>
@@ -122,11 +123,11 @@ export const factsOf = (
             id: "left",
             term: t("usageCreditsLeft"),
             value:
-                limit === null ? t("usageNoLimit") : format.number(Math.round(Math.max(0, limit - status.creditsUsed))),
+                limit === null ? t("usageNoLimit") : format.number(creditsLeftShown(limit - status.creditsUsed)),
         },
     ]
     if (status.creditsCarried > 0) {
-        facts.push({ id: "carried", term: t("usageCarried"), value: format.number(Math.round(status.creditsCarried)) })
+        facts.push({ id: "carried", term: t("usageCarried"), value: format.number(creditsUsedShown(status.creditsCarried)) })
     }
     facts.push({
         id: "period",

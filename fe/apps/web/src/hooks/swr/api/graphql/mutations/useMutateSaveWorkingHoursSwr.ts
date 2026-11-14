@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSaveWorkingHours,
     type MutateSaveWorkingHoursRequest,
 } from "@/modules/api/graphql/mutations/mutation-save-working-hours"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveWorkingHoursMutation } from "@/modules/api"
 
 /** What the SaveWorkingHours mutation is triggered with. */

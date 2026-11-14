@@ -1,8 +1,6 @@
 import agentSdkEn from "@nivo-lite/agent-sdk/client/messages/en.json"
 import agentSdkVi from "@nivo-lite/agent-sdk/client/messages/vi.json"
-import { MODULE_MESSAGES } from "@nivo-lite/blocks-core/modules"
-import blocksEn from "@nivo-lite/blocks-core/messages/en.json"
-import blocksVi from "@nivo-lite/blocks-core/messages/vi.json"
+import { blocksMessagesEn, blocksMessagesVi, installed } from "@/modules/plugin-registry"
 import type { AbstractIntlMessages } from "next-intl"
 
 /** The namespace of the words the blocks and the renderer say themselves. */
@@ -11,19 +9,19 @@ const BLOCKS_NAMESPACE = "blocks"
 /**
  * The messages of the generic workbench in one language, to lay over the app's own catalogue: the words of the blocks and of the
  * renderer under `blocks`, and the words of each declared module under its own namespace. Nothing here names a module: a module
- * that joins `MODULE_MESSAGES` reaches the catalogue by that one line.
+ * that a plugin lists under `messages` reaches the catalogue by that one line.
  */
 export const workbenchMessages = (locale: string): AbstractIntlMessages => {
     const isEnglish = locale === "en"
     const modules = Object.fromEntries(
-        Object.entries(MODULE_MESSAGES).map(([namespace, messages]) => [
+        Object.entries(installed.messages).map(([namespace, messages]) => [
             namespace,
             isEnglish ? messages.en : messages.vi,
         ]),
     )
     return {
         ...modules,
-        [BLOCKS_NAMESPACE]: isEnglish ? { ...blocksEn, ...agentSdkEn } : { ...blocksVi, ...agentSdkVi },
+        [BLOCKS_NAMESPACE]: isEnglish ? { ...blocksMessagesEn, ...agentSdkEn } : { ...blocksMessagesVi, ...agentSdkVi },
     }
 }
 

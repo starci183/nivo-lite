@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { ApproverDirectoryQuery } from "../__generated__/graphql"
 
 type QueryApproverDirectoryResponse = ApproverDirectoryQuery
@@ -36,6 +35,6 @@ export const queryApproverDirectory = async ({
     query = QueryApproverDirectory.Query1,
     signal,
 }: QueryApproverDirectoryParams = {}): Promise<ApolloClient.QueryResult<QueryApproverDirectoryResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query] })
 }

@@ -1,8 +1,7 @@
 "use client"
 
 import { workspaceArgumentKey } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryCreditRecentCostUsd } from "@/modules/api/graphql/queries/query-credit-recent-cost-usd"
 import type { CreditRecentCostUsdQuery } from "@/modules/api"
 

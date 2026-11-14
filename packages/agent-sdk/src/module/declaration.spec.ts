@@ -43,7 +43,7 @@ const CONFIG: ModuleDeclarationConfig = {
     permissions: ["sales.view", "sales.manage", "sales.read", "sales.write"],
     reads: [LEADS, LEAD_COUNTS, ORDERS],
     actions: [MOVE, OPEN],
-    tools: ["nivo.chat.send"],
+    tools: ["nivo.tool.customer.message.send"],
     specs: [],
 }
 
@@ -69,12 +69,27 @@ describe("defineModule", () => {
     it("refuses a read or an action whose id is not the module's", () => {
         expect(captured(() => defineModule({ ...CONFIG, reads: [OTHER_READ] }))).toMatchObject({
             code: "MODULE_ID_OUTSIDE",
-            at: "crm.people",
+            params: { at: "crm.people" },
         })
         const foreign = defineAction({ id: "crm.open", operation: "o", permission: "sales.write", label: { key: "o" } })
         expect(captured(() => defineModule({ ...CONFIG, actions: [foreign] }))).toMatchObject({
             code: "MODULE_ID_OUTSIDE",
-            at: "crm.open",
+            params: { at: "crm.open" },
+        })
+    })
+
+    it("takes the package-qualified action ids (three parts) of its own agent and refuses another agent's", () => {
+        const qualified = defineAction({
+            id: "blocks-core.sales.lead-move",
+            operation: "o",
+            permission: "sales.write",
+            label: { key: "o" },
+        })
+        expect(defineModule({ ...CONFIG, actions: [qualified] }).actions).toContain(qualified)
+        const foreign = defineAction({ id: "blocks-core.crm.lead-move", operation: "o", permission: "sales.write", label: { key: "o" } })
+        expect(captured(() => defineModule({ ...CONFIG, actions: [foreign] }))).toMatchObject({
+            code: "MODULE_ID_OUTSIDE",
+            params: { at: "blocks-core.crm.lead-move" },
         })
     })
 
@@ -85,24 +100,24 @@ describe("defineModule", () => {
     it("refuses a permission the module does not declare, on a read or an action", () => {
         expect(captured(() => defineModule({ ...CONFIG, permissions: ["sales.manage"] }))).toMatchObject({
             code: "MODULE_PERMISSION_UNDECLARED",
-            at: "sales.leads",
+            params: { at: "sales.leads" },
         })
         expect(
             captured(() => defineModule({ ...CONFIG, reads: [], permissions: ["sales.view", "sales.write"] })),
-        ).toMatchObject({ code: "MODULE_PERMISSION_UNDECLARED", at: "sales.move-stage" })
+        ).toMatchObject({ code: "MODULE_PERMISSION_UNDECLARED", params: { at: "sales.move-stage" } })
     })
 
     it("refuses a refreshed read the module does not have", () => {
         expect(captured(() => defineModule({ ...CONFIG, reads: [LEADS, ORDERS] }))).toMatchObject({
             code: "MODULE_REFRESH_UNKNOWN",
-            at: "sales.move-stage",
+            params: { at: "sales.move-stage" },
         })
     })
 
     it("refuses a counts read of a list the module does not have, of a read that is no list, or of a filter the list lacks", () => {
         expect(captured(() => defineModule({ ...CONFIG, reads: [LEAD_COUNTS], actions: [] }))).toMatchObject({
             code: "MODULE_COUNTS_UNKNOWN",
-            at: "sales.lead-counts",
+            params: { at: "sales.lead-counts" },
         })
         const ofRead = { ...LEAD_COUNTS, listing: { kind: "counts", of: "sales.orders", by: "stage" } } as const
         expect(captured(() => defineModule({ ...CONFIG, reads: [ORDERS, ofRead], actions: [] }))).toMatchObject({

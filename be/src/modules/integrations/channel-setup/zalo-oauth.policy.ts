@@ -1,6 +1,8 @@
 import { createHash, randomBytes } from "node:crypto"
 import type { ChannelSetupOptions } from "./channel-setup.options"
 
+const DEFAULT_OAUTH_BASE = "https://oauth.zaloapp.com"
+
 const trimSlashes = (value: string): string => {
     let end = value.length
     while (end > 0 && value[end - 1] === "/") end -= 1
@@ -25,7 +27,7 @@ export const zaloAuthorizeUrl = (
     verifier: string,
     state: string,
 ): string => {
-    const base = trimSlashes(options.zaloOauthBase || "https://oauth.zaloapp.com")
+    const base = trimSlashes(options.zaloOauthBase === undefined || options.zaloOauthBase === "" ? DEFAULT_OAUTH_BASE : options.zaloOauthBase)
     const query = new URLSearchParams({
         app_id: appId,
         redirect_uri: redirectUri,

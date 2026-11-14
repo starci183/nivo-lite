@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { MetaConnectionsService } from "@modules/domain/meta-connections"
-import type { MetaCallbackResult } from "@modules/domain/meta-connections"
+import { MetaConnectionsService, type MetaCallbackResult } from "@modules/domain/meta-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MetaCallbackCommand } from "./meta-callback.command"
 
 @CommandHandler(MetaCallbackCommand)

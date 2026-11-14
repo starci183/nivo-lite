@@ -139,11 +139,7 @@ export interface BuildAddDocumentsViewResult {
                           | "chatbot"
                           | "lead_gen"
                           | "sales"
-                          | "accounting"
-                          | "shifts"
                           | "booking"
-                          | "inventory"
-                          | "loyalty"
                           | "video"
                           | "hiring"
                       label: string

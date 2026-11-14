@@ -79,6 +79,8 @@ describe("JobRunnerService", () => {
                 job: "mail.send",
                 concurrency: 2,
                 scheduled: true,
+                workspaceHeadroom: 2,
+                fairGroupOf: () => Promise.resolve("document:d1"),
             })
             const cause = new Error("gave up")
             runner.add(processor)
@@ -86,8 +88,15 @@ describe("JobRunnerService", () => {
 
             await handler?.failed?.(delivery, cause)
 
-            expect(handler).toMatchObject({ queue: "mail", job: "mail.send", concurrency: 2, scheduled: true })
+            expect(handler).toMatchObject({
+                queue: "mail",
+                job: "mail.send",
+                concurrency: 2,
+                scheduled: true,
+                workspaceHeadroom: 2,
+            })
             expect(processor.onFailed).toHaveBeenCalledWith(delivery, cause)
+            await expect(handler?.fairGroupOf?.("mail.send", {})).resolves.toBe("document:d1")
         })
     })
 })

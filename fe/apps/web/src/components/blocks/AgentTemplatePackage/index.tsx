@@ -2,13 +2,14 @@
 
 import { useTranslations } from "next-intl"
 import type { ReactElement } from "react"
+import { useAgentRoute } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { usePackageTemplate } from "@/hooks/templates"
 import { AgentTemplatePackageBase, type AgentTemplatePackageBaseProps } from "./component"
 
 type PreviewViewProps = AgentTemplatePackageBaseProps["props"]["preview"]
 
-/** What the page hands the packaging form: the installation whose agent is packaged. */
+/** What the page hands the packaging form: the installation whose agent is packaged; empty on the loading route, which reads the address. */
 interface AgentTemplatePackageProps {
     readonly installationId: string
 }
@@ -42,7 +43,6 @@ const previewViewOf = (t: Translate, preview: PackagePreview | undefined): Previ
                     brain: report.brainRefs,
                     sources: report.privateSources,
                     people: report.people,
-                    rights: report.rights,
                 }),
             },
             {
@@ -51,10 +51,7 @@ const previewViewOf = (t: Translate, preview: PackagePreview | undefined): Previ
                 description:
                     pkg === null
                         ? "-"
-                        : t("needs", {
-                              providers: pkg.requiredProviders.join(", ") || "-",
-                              actions: pkg.requiredAuthorityActions.join(", ") || "-",
-                          }),
+                        : t("needs", { providers: pkg.requiredProviders.join(", ") || "-" }),
             },
         ],
         problems: preview.problems,
@@ -68,7 +65,8 @@ const previewViewOf = (t: Translate, preview: PackagePreview | undefined): Previ
 export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactElement => {
     const t = useTranslations("agentTemplates")
     const slotLabels = useSlotLabels()
-    const packaging = usePackageTemplate(props.installationId)
+    const { installationId } = useAgentRoute({ installationId: props.installationId === "" ? undefined : props.installationId })
+    const packaging = usePackageTemplate(installationId)
     const fields = packaging.fields
     const preview = packaging.preview
     const pkg = preview?.package

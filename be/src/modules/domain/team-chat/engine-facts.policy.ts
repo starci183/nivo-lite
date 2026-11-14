@@ -1,4 +1,4 @@
-import type { MessageFact } from "@nivo-lite/blocks-core"
+import type { MessageFact } from "@nivo-lite/agent-sdk/team-chat"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 
 /** The words of one catalogue key with no fill-in; empty when the key is missing (or its text still waits for a fill-in). */
@@ -87,6 +87,54 @@ export const STUCK_FACT = {
     question: "question",
 } as const
 
+/**
+ * The names of the two engine facts of a stop whose holding line the send refused (`RunStopsService.lineNotTold` writes them): that the
+ * line was not told to the customer, and the reason code of the refusal.
+ */
+export const LINE_FACT = { told: "customerLine", reason: "customerLineReason" } as const
+
+/** The value of the `customerLine` fact: the engine's holding line was NOT told to the customer. */
+export const LINE_NOT_TOLD = "not_told"
+
+/** The label keys of what a card shows for a holding line that was not told: that it was not, why in words, and the raw reason code. */
+const LINE_LABEL = { told: "customerLine", reason: "customerLineReason", code: "customerLineCode" } as const
+
+/** That the holding line was not told, in words; any other value of the fact stays a raw fact. */
+const lineFactOf = (words: FactWords, value: string): MessageFact =>
+    value === LINE_NOT_TOLD
+        ? worded(words, LINE_LABEL.told, wordOr(words, "teamChat.customerLine.notTold", value))
+        : technical(words, LINE_LABEL.told, value)
+
+/** Why the holding line was not told: the engine's words for the reason code when it has them, and always the code as a technical fact. */
+const lineReasonFactsOf = (words: FactWords, code: string): ReadonlyArray<MessageFact> => {
+    const reason = words.text(`teamChat.lineReason.${code}`)
+    return [...(reason === "" ? [] : [worded(words, LINE_LABEL.reason, reason)]), technical(words, LINE_LABEL.code, code)]
+}
+
+/** The most facts a stop card holds (`workflowStoppedPayload`). */
+const CARD_FACTS_MAX = 40
+
+/**
+ * The facts of a stored card with what its stop says NOW about its holding line (the raw `LINE_FACT` facts of the stop record, handed
+ * with a rewrite): the line facts the card showed before are replaced by the ones given, worded; worded facts stay first. A rewrite
+ * that hands no line fact leaves the stored facts as they are.
+ */
+export const withLineFactsOf = (
+    stored: ReadonlyArray<MessageFact>,
+    given: ReadonlyArray<MessageFact>,
+    words: FactWords,
+): ReadonlyArray<MessageFact> => {
+    const fresh = given.flatMap((fact) => {
+        if (fact.name === LINE_FACT.told) return [lineFactOf(words, fact.value)]
+        return fact.name === LINE_FACT.reason ? lineReasonFactsOf(words, fact.value) : []
+    })
+    if (fresh.length === 0) return stored
+    const labels = new Set(Object.values(LINE_LABEL).map((label) => labelOf(words, label)))
+    const kept = stored.filter((fact) => !labels.has(fact.name)).slice(0, CARD_FACTS_MAX - fresh.length)
+    const all = [...kept, ...fresh]
+    return [...all.filter((fact) => fact.technical !== true), ...all.filter((fact) => fact.technical === true)]
+}
+
 /** The facts of a step's data that name a bank: the code or the provider's spelling of it. */
 const BANK_FACTS: ReadonlySet<string> = new Set(["bank", "bankCode", "bankName"])
 
@@ -154,6 +202,10 @@ const stuckFactOf = (words: FactWords, fact: MessageFact, context: StopFactConte
             return [technical(words, "run", fact.value)]
         case STUCK_FACT.question:
             return fact.value === context.question ? [] : [worded(words, "question", fact.value)]
+        case LINE_FACT.told:
+            return [lineFactOf(words, fact.value)]
+        case LINE_FACT.reason:
+            return lineReasonFactsOf(words, fact.value)
         default:
             return [dataFactOf(words, fact, context.locale)]
     }

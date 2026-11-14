@@ -1,7 +1,5 @@
-import { Badge, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import type { BadgeTone, ListRowData } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { Badge, EmptyNotice, SurfaceCard, type BadgeTone, type ListRowData } from "@starci/grammar/common"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 
 /** One live event of a connection: what came in or happened, the line under it, how it ended, and when. */
 export interface ConnectionEventLine {

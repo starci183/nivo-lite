@@ -1,9 +1,17 @@
 import assert from "node:assert/strict"
 import { eachInOrder } from "@modules/platform/primitives"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
-import type { ChatMemberRef, ChatRoomView, TeamChatResult } from "@modules/domain/team-chat"
-import { TEAM_CHAT_CODES, persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
-import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
+import {
+    TeamChatRoomsService,
+    type ChatMemberRef,
+    type ChatRoomView,
+    type TeamChatResult,
+} from "@modules/domain/team-chat"
+import {
+    TEAM_CHAT_CODES,
+    persistTeamChat,
+    teamChatIdentity,
+    type TeamChatIdentity,
+} from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
 import { TEAM_CHAT_PROOF_MODULES } from "../../world/team-chat-capabilities.options"
@@ -52,7 +60,7 @@ const group = async (
         await chat().createRoom(identity.workspaceId, identity.ownerId, {
             kind: "group",
             name,
-            members: members.map(user),
+            members: members.map((memberId) => user(memberId)),
         }),
     )
 

@@ -3,9 +3,11 @@ import { mock } from "@starci/jest-preset"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type { WorkflowRecord } from "../agent-workflows.contracts"
-import { AGENT_LABELS } from "@nivo-lite/blocks-core/graph"
 import * as policy from "./workflow-graph.policy"
 import type { WorkflowGraphTarget } from "./workflow-graph.policy"
+
+/** The Vietnamese words of the sales agent as the calls list them: what the catalog gave it before the engine read the installation. */
+const SALES_VI = "Bán hàng"
 
 const SUBJECT = Symbol("workflow-graph.policy")
 
@@ -19,7 +21,6 @@ const buildPolicy = async (): Promise<typeof policy> => {
     }).compile()
     return moduleRef.get<typeof policy>(SUBJECT)
 }
-
 
 const WORKFLOW: WorkflowRecord = {
     id: "wf-1",
@@ -55,7 +56,7 @@ const GRAPH: GraphSpec = {
     triggers: [{ key: "zalo", source: { kind: "zalo", connectionId: "oa-1" } }],
     outcomes: [{ key: "sell", label: "Customer wants to buy", outputs: [{ name: "leadId", type: "string" }] }],
     entry: { openTo: "agent" },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [
         node("end", "core.outcome", { outcome: "sell", outputs: { leadId: { $ref: "trigger.leadId" } } }, "hand"),
         node("hand", "core.call-workflow", { agent: "sales", workflow: "consult", version: "latest", inputs: {} }),
@@ -98,7 +99,7 @@ describe("workflowGraphEntryOf", () => {
                 nodeKey: "hand",
                 outcome: "sell",
                 agent: "sales",
-                agentLabel: AGENT_LABELS.sales?.vi,
+                agentLabel: SALES_VI,
                 workflow: "consult",
                 workflowName: "Consult (own)",
                 version: "latest",
@@ -108,7 +109,7 @@ describe("workflowGraphEntryOf", () => {
                 nodeKey: "far",
                 outcome: null,
                 agent: "sales",
-                agentLabel: AGENT_LABELS.sales?.vi,
+                agentLabel: SALES_VI,
                 workflow: "gone",
                 workflowName: null,
                 version: "2",
@@ -120,7 +121,6 @@ describe("workflowGraphEntryOf", () => {
             crossAgent: true,
         })
     })
-
 })
 
 describe("workflowGraphEntryOf: a workflow with nothing to draw", () => {

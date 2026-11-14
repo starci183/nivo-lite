@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createNoAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createNoAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { SubmitWebsiteLeadMutation, SubmitWebsiteLeadMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the SubmitWebsiteLead mutation. */
@@ -32,6 +31,6 @@ export const mutateSubmitWebsiteLead = async ({
     request,
     signal,
 }: MutateSubmitWebsiteLeadParams): Promise<ApolloClient.MutateResult<MutateSubmitWebsiteLeadResponse>> => {
-    const apollo = createNoAuthApolloClient({ signal })
+    const apollo = createNoAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

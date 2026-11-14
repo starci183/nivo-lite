@@ -61,7 +61,7 @@ const plainEntity = (name: `${string}.${string}`, relations: EntityDefinition["r
     ...(relations === undefined ? {} : { relations }),
 })
 
-/** The entities of the compiler specs: leads, their owners, their tasks (restrict) and their notes (cascade). */
+/** The entities of the compiler specs: leads, their owners, their tasks (restrict) and their notes (clear: deleting a lead only unlinks them). */
 export const entityCatalogOf = (meta: MetaShape): ReadonlyMap<string, EntityDefinition> =>
     new Map<string, EntityDefinition>([
         ["sales.lead", leadEntityOf(meta)],
@@ -69,7 +69,7 @@ export const entityCatalogOf = (meta: MetaShape): ReadonlyMap<string, EntityDefi
         ["sales.task", plainEntity("sales.task", { lead: { kind: "toOne", target: "sales.lead" } })],
         [
             "sales.note",
-            plainEntity("sales.note", { lead: { kind: "toOne", target: "sales.lead", onDelete: "cascade" } }),
+            plainEntity("sales.note", { lead: { kind: "toOne", target: "sales.lead", onDelete: "clear" } }),
         ],
     ])
 

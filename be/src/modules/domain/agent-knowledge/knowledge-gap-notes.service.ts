@@ -1,17 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { factSlugOf } from "@modules/domain/brain-facts"
-import { KnowledgeSearchService } from "@modules/domain/knowledge"
-import { FACT_ANSWERS, KnowledgeGapsService, answers, keywordsOf } from "@modules/domain/knowledge-gaps"
-import type { MaybeGapRecorded } from "@modules/domain/knowledge-gaps"
+import { KnowledgeGapsService, type MaybeGapRecorded } from "@modules/domain/knowledge-gaps"
 import { GapProposalsService } from "@modules/domain/public-documents"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentKnowledgeLogEvent } from "./agent-knowledge.log-events"
-import type { GapNote, KnowledgeView } from "./agent-knowledge.contracts"
-import { KnowledgeRecallService } from "./knowledge-recall.service"
-
-/** How many facts and passages are compared with an unanswered question. */
-const COVER_LIMIT = 5
+import type { GapNote } from "./agent-knowledge.contracts"
 
 @Injectable()
 /**
@@ -27,38 +19,27 @@ export class KnowledgeGapNotesService {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         private readonly gaps: KnowledgeGapsService,
-        private readonly recall: KnowledgeRecallService,
-        private readonly search: KnowledgeSearchService,
         private readonly proposals: GapProposalsService,
     ) {}
 
-    /** Records the gap of this turn when there is one. */
+    /**
+     * Records the gap of this turn when the MODEL of the turn claimed one (its own reading of the question against what it was
+     * given: `signals.knowledgeGap`, with the topic it names). No gap is inferred by code from the words of a question any more
+     * (owner 2026-11-12: no word list or word overlap decides what a text means).
+     */
     async note(note: GapNote): Promise<void> {
         try {
             const { signals, view } = note
             const claimed = signals.knowledgeGap
-            if (claimed !== null && claimed.question.trim() !== "") {
-                await this.propose(
-                    view.workspaceId,
-                    await this.gaps.record(view.workspaceId, {
-                        module: view.module,
-                        question: claimed.question,
-                        topic: claimed.topic,
-                        conversationId: note.conversationId,
-                        source: "model",
-                    }),
-                )
-                return
-            }
-            if (!signals.needsHuman || signals.proposedAnswer !== null || signals.isTransaction) return
-            if (!(await this.isUncovered(view, note.question))) return
+            if (claimed === null || claimed.question.trim() === "") return
             await this.propose(
                 view.workspaceId,
                 await this.gaps.record(view.workspaceId, {
                     module: view.module,
-                    question: note.question,
+                    question: claimed.question,
+                    topic: claimed.topic,
                     conversationId: note.conversationId,
-                    source: "retrieval",
+                    source: "model",
                 }),
             )
         } catch (cause) {
@@ -70,32 +51,5 @@ export class KnowledgeGapNotesService {
     private async propose(workspaceId: string, recorded: MaybeGapRecorded): Promise<void> {
         if (recorded === null || !(recorded.isNew || recorded.reopened)) return
         await this.proposals.open(workspaceId, recorded.gap)
-    }
-
-    /** True when nothing the view may read covers the question's words. */
-    private async isUncovered(view: KnowledgeView, question: string): Promise<boolean> {
-        const words = keywordsOf(question)
-        if (words.length === 0) return false
-        const [facts, passages] = await Promise.all([
-            this.recall
-                .factsMatching(view, question, COVER_LIMIT)
-                .catch((cause: unknown) => this.skip(cause, view, [])),
-            this.search
-                .passagesText(view, words.join(" "), COVER_LIMIT)
-                .catch((cause: unknown) => this.skip(cause, view, [])),
-        ])
-        const covered = (text: string): boolean => answers(words, new Set(factSlugOf(text).split("-")), FACT_ANSWERS)
-        return (
-            !facts.some((fact) => covered(`${fact.subjectLabel} ${fact.attributeLabel} ${fact.value}`)) &&
-            !passages.some((passage) => covered(`${passage.title} ${passage.topic ?? ""} ${passage.content}`))
-        )
-    }
-
-    private skip<T>(cause: unknown, view: KnowledgeView, fallback: T): T {
-        this.logger.error(AgentKnowledgeLogEvent.RecallPartFailed, cause, {
-            workspaceId: view.workspaceId,
-            part: "coverage",
-        })
-        return fallback
     }
 }

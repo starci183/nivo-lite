@@ -1,8 +1,6 @@
 export { useTelegramSteps } from "./useTelegramSteps"
 export { useTelegramPage } from "./useTelegramPage"
 export { useTelegramChecks } from "./useTelegramChecks"
-export { useTelegramHead } from "./useTelegramHead"
 export { useTelegramNoticeList } from "./useTelegramNoticeList"
 export { useTelegramEventLines } from "./useTelegramEventLines"
-export { useTelegramSetup } from "./useTelegramSetup"
 export { useTelegramOverviewFacts } from "./useTelegramOverviewFacts"

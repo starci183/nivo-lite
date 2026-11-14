@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import type { DynamicModule } from "@nestjs/common"
-import { createFakeBridge, FakesHost, openaiCompatibleFake } from "@starci/test-world/fakes"
-import type { OpenAiCompatibleClient } from "@starci/test-world/fakes"
+import {
+    createFakeBridge,
+    FakesHost,
+    openaiCompatibleFake,
+    type OpenAiCompatibleClient,
+} from "@starci/test-world/fakes"
 import { Secret } from "@modules/platform/config"
 import { apiAppModules } from "./api-app.options"
 import { worldIds } from "./lite-world.service"

@@ -5,20 +5,14 @@ import { useTranslations } from "next-intl"
 import { useLeadFreeze } from "@/hooks/leadFreeze"
 import { LeadFreezeBase } from "./component"
 
-/** Which customer the card is about: the lead on the Inputs page; on a run page the run comes from the route. */
-type LeadFreezeProps = {
-    readonly leadId?: string
-}
-
 /** The route of a run page. */
 type RunRoute = { readonly runId?: string }
 
-/** The connected card of a frozen customer: it reads the freeze itself and draws nothing while the customer is not frozen. */
-export const LeadFreeze = (props: LeadFreezeProps) => {
+/** The connected card of a frozen customer on a run page: the run comes from the route; it reads the freeze itself and draws nothing while the customer is not frozen. */
+export const LeadFreeze = () => {
     const t = useTranslations("leadFreeze")
     const route = useParams<RunRoute>()
-    const leadId = props.leadId ?? ""
-    const { freeze, isAnswering, answer } = useLeadFreeze({ leadId, runId: leadId === "" ? (route.runId ?? "") : "" })
+    const { freeze, isAnswering, answer } = useLeadFreeze({ leadId: "", runId: route.runId ?? "" })
     if (freeze === null) return null
     return (
         <LeadFreezeBase

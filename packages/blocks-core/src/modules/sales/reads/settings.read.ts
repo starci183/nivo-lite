@@ -1,12 +1,11 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import type { SalesSettings } from "../../../rules/sales/settings"
 import { SALES_VIEW } from "../constants"
 import { salesSettings } from "../ports"
 import { savedSettingsOf } from "../settings-store"
 
-/** What `sales.settings` answers: the rules and when they were saved. */
+/** What `blocks-core.sales.api.settings.get` answers: the rules and when they were saved. */
 export interface SettingsView extends SalesSettings {
     /** When the rules were last saved, ISO text; null before the first save. */
     readonly savedAt: string | null
@@ -24,9 +23,9 @@ const SETTINGS_FIELDS: ReadonlyArray<keyof SalesSettings | "savedAt"> = [
     "savedAt",
 ]
 
-/** `sales.settings`: the rules the workspace chose for its sales; the defaults before the first save. */
+/** `blocks-core.sales.api.settings.get`: the rules the workspace chose for its sales; the defaults before the first save. */
 export const settingsRead: ReadDefinition = defineRead({
-    id: "sales.settings",
+    id: "blocks-core.sales.api.settings.get",
     dataKind: "sales-settings",
     shape: "record",
     fields: SETTINGS_FIELDS,

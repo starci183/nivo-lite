@@ -1,6 +1,4 @@
 export {
-    GOOGLE_ACCOUNT_LOGO,
-    GOOGLE_SERVICE_LOGO,
     PROVIDERS,
     PROVIDER_LOGO,
     isProvider,

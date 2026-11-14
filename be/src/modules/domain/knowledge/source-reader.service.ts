@@ -1,20 +1,23 @@
 import { Injectable } from "@nestjs/common"
-import { StoredNote, KnowledgeSourcesService, SourceReadingsService } from "@modules/domain/knowledge-sources"
-import type { SourceRecord } from "@modules/domain/knowledge-sources"
-import { DocumentRefusalCode, InjectDocumentReaders } from "@modules/integrations/document-readers"
-import type { DocumentReadersPort } from "@modules/integrations/document-readers"
-import { InjectDocuments } from "@modules/integrations/documents"
-import type { DocumentsPort } from "@modules/integrations/documents"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import {
+    StoredNote,
+    KnowledgeSourcesService,
+    SourceReadingsService,
+    type SourceRecord,
+} from "@modules/domain/knowledge-sources"
+import {
+    DocumentRefusalCode,
+    InjectDocumentReaders,
+    type DocumentReadersPort,
+} from "@modules/integrations/document-readers"
+import { InjectDocuments, type DocumentsPort } from "@modules/integrations/documents"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { ok, refused } from "@modules/platform/primitives"
 import { DocumentTranscriptionService } from "./document-transcription.service"
 import { InjectDriveAccessSource } from "./knowledge.decorators"
 import type { DriveAccessSource, ReadOutcome } from "./knowledge.contracts"
-import { noteOfRefusal, partsOfDocument, readingOfDocument, readingOfRefusal } from "./source-reading.policy"
-import type { Say } from "./source-reading.policy"
+import { noteOfRefusal, partsOfDocument, readingOfDocument, readingOfRefusal, type Say } from "./source-reading.policy"
 
 /** The part of the text of a link without its scheme, lower case, for comparing a title with its address. */
 const bare = (value: string): string => {

@@ -33,6 +33,11 @@ export interface HttpRequest {
     readonly timeoutMs: number
     /** Cancels the call when aborted. */
     readonly signal?: AbortSignal
+    /**
+     * Pinned reads of raw bytes only: the most body bytes to hold. A body that declares or reaches more stops the read there and the
+     * answer carries `tooLarge` with no body, so a big file is never buffered past the caller's limit. Absent: the client's own cap, and a body over it fails the call.
+     */
+    readonly maxBytes?: number
 }
 
 /** The answer to one request: the status, the headers, the address it finally came from and the body read as the request asked. */
@@ -45,6 +50,8 @@ export interface HttpResponse {
     readonly url?: string
     /** The parsed JSON body (undefined when the answer had none), a string for `read: "text"`, or a Buffer for `read: "bytes"`. */
     readonly body: unknown
+    /** Set only when the request named `maxBytes` and the body passed it: the read stopped there and `body` is empty. */
+    readonly tooLarge?: true
 }
 
 /** The outbound HTTP port: the only way product code calls another service. */

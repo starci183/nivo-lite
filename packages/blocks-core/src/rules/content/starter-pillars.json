@@ -1,0 +1,32 @@
+[
+    {
+        "name": "Sản phẩm và dịch vụ",
+        "description": "Giới thiệu sản phẩm, dịch vụ, cách dùng, điểm khác biệt có thật.",
+        "weight": 3,
+        "active": true
+    },
+    {
+        "name": "Kiến thức hữu ích",
+        "description": "Mẹo, hướng dẫn, câu hỏi thường gặp giúp khách hiểu và chọn đúng.",
+        "weight": 3,
+        "active": true
+    },
+    {
+        "name": "Khách hàng",
+        "description": "Câu chuyện, phản hồi, ảnh của khách (khi khách đồng ý cho đăng).",
+        "weight": 2,
+        "active": true
+    },
+    {
+        "name": "Hậu trường",
+        "description": "Đội ngũ, quy trình làm việc, một ngày ở cửa hàng.",
+        "weight": 1,
+        "active": true
+    },
+    {
+        "name": "Ưu đãi",
+        "description": "Ưu đãi thật đang có, thời hạn và điều kiện rõ ràng.",
+        "weight": 1,
+        "active": true
+    }
+]

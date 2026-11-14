@@ -84,9 +84,41 @@ const declaredRow = (
 ): DecisionRowView => ({
     ...row,
     primary: optionalCommand(row.primary, declared, words),
+    ...(row.alternative === undefined ? {} : { alternative: optionalCommand(row.alternative, declared, words) }),
     edit: editCommand(row.edit, declared, editLabel, words),
     menu: row.menu.map((command) => declaredCommand(command, declared, words)),
 })
+
+/** A command as a neutral control when it would be the filled primary. */
+const plainCommand = (command: CommandView): CommandView =>
+    command.intent === "commit" ? { ...command, intent: "neutral" } : command
+
+/** A command of a row, if it has one, plain when it would be the filled primary. */
+const plainOptional = (command: CommandView | null | undefined): CommandView | null | undefined =>
+    command === null || command === undefined ? command : plainCommand(command)
+
+/**
+ * ONE filled primary per queue (`DNA-COMMON-ONE-ACCENT-FILL`): the first row that offers a main command (the read lists the oldest
+ * first, so the one that has waited longest) keeps its commands as declared; on every other row a command that would be the filled
+ * primary draws neutral. With one row nothing changes.
+ */
+export const onePrimaryQueue = (queue: DecisionQueueView): DecisionQueueView => {
+    const first = queue.rows.findIndex((row) => row.primary !== null)
+    return {
+    ...queue,
+    rows: queue.rows.map((row, index) =>
+        index === first
+            ? row
+            : {
+                  ...row,
+                  primary: plainOptional(row.primary) ?? null,
+                  ...(row.alternative === undefined ? {} : { alternative: plainOptional(row.alternative) }),
+                  edit: plainOptional(row.edit) ?? null,
+                  menu: row.menu.map((command) => plainCommand(command)),
+              },
+    ),
+    }
+}
 
 /**
  * The queue with the words and look of its commands taken from the spec: a command whose id the spec declares draws the spec's

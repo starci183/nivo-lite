@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -14,7 +14,8 @@ const B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 const C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
 const AT = new Date("2026-11-11T00:00:00.000Z")
 
-const factRow = (id: string, status: "proposed" | "active" = "proposed") => Object.assign(new BrainFactEntity(), { id, status })
+const factRow = (id: string, status: "proposed" | "active" = "proposed") =>
+    Object.assign(new BrainFactEntity(), { id, status })
 const edgeRow = (changes: Partial<BrainFactRelationEntity> = {}) =>
     Object.assign(new BrainFactRelationEntity(), {
         id: "e1",
@@ -28,6 +29,25 @@ const edgeRow = (changes: Partial<BrainFactRelationEntity> = {}) =>
         updatedAt: AT,
         ...changes,
     })
+
+/** An edge with another id and ends than the default one. */
+const edgeBetween = (id: string, fromFactId: string, toFactId: string) => edgeRow({ id, fromFactId, toFactId })
+
+/** The columns of an edge as the insert statement receives them. */
+type InsertedEdge = Pick<
+    BrainFactRelationEntity,
+    "workspaceId" | "fromFactId" | "toFactId" | "kind" | "label" | "createdBy"
+>
+
+/** An edge of NIVO's reading as the insert statement receives it: A to B, part of, no label. */
+const insertedEdge: (changes?: Partial<InsertedEdge>) => InsertedEdge = builder<InsertedEdge>({
+    workspaceId: WS,
+    fromFactId: A,
+    toFactId: B,
+    kind: "part_of",
+    label: null,
+    createdBy: "NIVO",
+})
 
 const build = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -62,9 +82,7 @@ describe("BrainFactRelationsService link: relation CRUD under the workspace's ro
         expect(optionsOf(em.find.mock.calls)).toEqual([
             { select: { id: true, status: true }, where: { workspaceId: WS, id: In([A, B]) }, take: 2 },
         ])
-        expect(insert?.callsOf("values")).toEqual([
-            [[{ workspaceId: WS, fromFactId: A, toFactId: B, kind: "part_of", label: "delivered by", createdBy: "Ada" }]],
-        ])
+        expect(insert?.callsOf("values")).toEqual([[[insertedEdge({ label: "delivered by", createdBy: "Ada" })]]])
         expect(insert?.callsOf("orIgnore")).toEqual([[]])
         expect(optionsOf(em.findOne.mock.calls)).toEqual([
             { where: { workspaceId: WS, fromFactId: A, toFactId: B, kind: "part_of" } },
@@ -75,7 +93,9 @@ describe("BrainFactRelationsService link: relation CRUD under the workspace's ro
         const em = mockEntityManager({ find: [BrainFactEntity, [factRow(A)]] })
         const service = await build(em)
 
-        await expect(service.link(WS, { fromFactId: A, toFactId: B, kind: "related", createdBy: "Ada" })).rejects.toMatchObject({
+        await expect(
+            service.link(WS, { fromFactId: A, toFactId: B, kind: "related", createdBy: "Ada" }),
+        ).rejects.toMatchObject({
             code: BrainFactsErrorCode.FactNotFound,
         })
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
@@ -85,7 +105,9 @@ describe("BrainFactRelationsService link: relation CRUD under the workspace's ro
         const em = mockEntityManager()
         const service = await build(em)
 
-        await expect(service.link(WS, { fromFactId: A, toFactId: A, kind: "related", createdBy: "Ada" })).rejects.toMatchObject({
+        await expect(
+            service.link(WS, { fromFactId: A, toFactId: A, kind: "related", createdBy: "Ada" }),
+        ).rejects.toMatchObject({
             code: BrainFactsErrorCode.RelationInvalid,
         })
         expect(em.find).not.toHaveBeenCalled()
@@ -114,7 +136,7 @@ describe("BrainFactRelationsService reads, removal and many links", () => {
         const em = mockEntityManager({
             find: [
                 [BrainFactRelationEntity, [edgeRow()]],
-                [BrainFactRelationEntity, [edgeRow(), edgeRow({ id: "e2", fromFactId: B, toFactId: A })]],
+                [BrainFactRelationEntity, [edgeRow(), edgeBetween("e2", B, A)]],
             ],
         })
         const service = await build(em)
@@ -140,13 +162,16 @@ describe("BrainFactRelationsService reads, removal and many links", () => {
                 { fromFactId: A, toFactId: "elsewhere", kind: "related", createdBy: "NIVO" },
             ]),
         ).resolves.toBe(1)
-        expect(insert?.callsOf("values")).toEqual([
-            [[{ workspaceId: WS, fromFactId: A, toFactId: B, kind: "part_of", label: null, createdBy: "NIVO" }]],
-        ])
+        expect(insert?.callsOf("values")).toEqual([[[insertedEdge()]]])
     })
 
+})
+
+describe("BrainFactRelationsService: edges of a reading between facts in force, and carried edges", () => {
     it("never writes a reading's edge between two facts already in force: an edge of the model stands only once a person put its proposal in force (A.3)", async () => {
-        const em = mockEntityManager({ find: [BrainFactEntity, [factRow(A, "active"), factRow(B, "active"), factRow(C)]] })
+        const em = mockEntityManager({
+            find: [BrainFactEntity, [factRow(A, "active"), factRow(B, "active"), factRow(C)]],
+        })
         const [insert] = queueQueryBuilders(em, [{ execute: {} }])
         const service = await build(em)
 
@@ -160,8 +185,8 @@ describe("BrainFactRelationsService reads, removal and many links", () => {
         expect(insert?.callsOf("values")).toEqual([
             [
                 [
-                    { workspaceId: WS, fromFactId: A, toFactId: C, kind: "applies_to", label: null, createdBy: "NIVO" },
-                    { workspaceId: WS, fromFactId: C, toFactId: B, kind: "related", label: null, createdBy: "NIVO" },
+                    insertedEdge({ toFactId: C, kind: "applies_to" }),
+                    insertedEdge({ fromFactId: C, toFactId: B, kind: "related" }),
                 ],
             ],
         ])
@@ -171,7 +196,9 @@ describe("BrainFactRelationsService reads, removal and many links", () => {
         const em = mockEntityManager({ find: [BrainFactEntity, [factRow(A, "active"), factRow(B, "active")]] })
         const service = await build(em)
 
-        await expect(service.linkMany(WS, [{ fromFactId: A, toFactId: B, kind: "part_of", createdBy: "NIVO" }])).resolves.toBe(0)
+        await expect(
+            service.linkMany(WS, [{ fromFactId: A, toFactId: B, kind: "part_of", createdBy: "NIVO" }]),
+        ).resolves.toBe(0)
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
@@ -179,10 +206,13 @@ describe("BrainFactRelationsService reads, removal and many links", () => {
         const tx = fakeTransaction(
             mockEntityManager({
                 find: [
-                    [BrainFactRelationEntity, [edgeRow({ id: "out", fromFactId: A, toFactId: C })]],
+                    [BrainFactRelationEntity, [edgeBetween("out", A, C)]],
                     [
                         BrainFactRelationEntity,
-                        [edgeRow({ id: "in", fromFactId: C, toFactId: A }), edgeRow({ id: "v", fromFactId: B, toFactId: A })],
+                        [
+                            edgeBetween("in", C, A),
+                            edgeBetween("v", B, A),
+                        ],
                     ],
                 ],
             }),
@@ -199,8 +229,8 @@ describe("BrainFactRelationsService reads, removal and many links", () => {
         expect(insert?.callsOf("values")).toEqual([
             [
                 [
-                    { workspaceId: WS, fromFactId: B, toFactId: C, kind: "part_of", label: "delivered by", createdBy: "Ada" },
-                    { workspaceId: WS, fromFactId: C, toFactId: B, kind: "part_of", label: "delivered by", createdBy: "Ada" },
+                    insertedEdge({ fromFactId: B, toFactId: C, label: "delivered by", createdBy: "Ada" }),
+                    insertedEdge({ fromFactId: C, toFactId: B, label: "delivered by", createdBy: "Ada" }),
                 ],
             ],
         ])

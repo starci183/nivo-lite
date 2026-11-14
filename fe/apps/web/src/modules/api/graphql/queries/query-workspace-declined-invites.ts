@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { WorkspaceDeclinedInvitesQuery } from "../__generated__/graphql"
 
 /** The response of the `workspaceDeclinedInvites` query: the typed payload straight from the back end contract. */
@@ -25,4 +24,4 @@ type QueryWorkspaceDeclinedInvitesParams = Omit<QueryParams<never>, "query" | "r
 export const queryWorkspaceDeclinedInvites = (
     params: QueryWorkspaceDeclinedInvitesParams = {},
 ): Promise<ApolloClient.QueryResult<QueryWorkspaceDeclinedInvitesResponse>> =>
-    createAuthApolloClient({ signal: params.signal }).query({ query: query1 })
+    createAuthApolloClient(webApiTransport, { signal: params.signal }).query({ query: query1 })

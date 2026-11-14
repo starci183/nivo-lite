@@ -7,7 +7,7 @@ const UNIQUE_LOCAL_OR_LINK_LOCAL = /^(fc|fd|fe[89ab])/u
 
 /** True for loopback, private, link-local, unique-local, shared (CGNAT), metadata and unspecified addresses, IPv4 and IPv6. */
 export const isPrivateAddress = (address: string): boolean => {
-    const bare = address.toLowerCase().replace(/^\[|\]$/gu, "")
+    const bare = address.toLowerCase().replaceAll(/^\[|\]$/gu, "")
     if (isIP(bare) === 6) {
         if (bare === "::1" || bare === "::") return true
         const mapped = MAPPED_V4.exec(bare)

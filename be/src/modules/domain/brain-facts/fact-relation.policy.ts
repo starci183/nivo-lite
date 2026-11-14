@@ -1,5 +1,10 @@
-import { RELATION_KINDS } from "./brain-facts.contracts"
-import type { FactRelation, Instant, RelationInput, RelationKind } from "./brain-facts.contracts"
+import {
+    RELATION_KINDS,
+    type FactRelation,
+    type Instant,
+    type RelationInput,
+    type RelationKind,
+} from "./brain-facts.contracts"
 
 /** The longest label of a relation, in characters. */
 export const RELATION_LABEL_MAX = 80
@@ -29,8 +34,7 @@ export type RelationRefusal = "self" | "kind" | "label"
 
 /** A relation input after trimming, or the reason it cannot be stored. */
 export type RelationCheck =
-    | { readonly ok: true; readonly relation: CheckedRelation }
-    | { readonly ok: false; readonly reason: RelationRefusal }
+    { readonly ok: true; readonly relation: CheckedRelation } | { readonly ok: false; readonly reason: RelationRefusal }
 
 /** The two ends of an edge. */
 export interface EdgeEnds {

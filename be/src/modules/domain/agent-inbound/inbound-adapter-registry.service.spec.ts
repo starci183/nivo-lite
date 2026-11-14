@@ -31,15 +31,11 @@ const codeOf = (run: () => unknown): unknown => {
 }
 
 describe("InboundAdapterRegistryService", () => {
-    it("knows the four sources that existed before adapters as adapters", async () => {
+    it("knows the three sources that existed before adapters as adapters, and no customer source any more", async () => {
         const registry = await build()
 
-        expect(["customer", "tag", "internal", "schedule"].map((key) => registry.of(key).key)).toEqual([
-            "customer",
-            "tag",
-            "internal",
-            "schedule",
-        ])
+        expect(["tag", "internal", "schedule"].map((key) => registry.of(key).key)).toEqual(["tag", "internal", "schedule"])
+        expect(registry.lookup("customer")).toBeUndefined()
     })
 
     it("adds an adapter by key and records its traits with the work core, so a wake of its key can be written", async () => {
@@ -56,7 +52,7 @@ describe("InboundAdapterRegistryService", () => {
     it("refuses a second adapter for a key, so a wiring bug fails at start", async () => {
         const registry = await build()
 
-        expect(codeOf(() => registry.add(adapter("customer")))).toBe(AgentInboundErrorCode.AdapterDuplicate)
+        expect(codeOf(() => registry.add(adapter("tag")))).toBe(AgentInboundErrorCode.AdapterDuplicate)
     })
 
     it("finds nothing for a key nobody registered and refuses to deliver its events", async () => {

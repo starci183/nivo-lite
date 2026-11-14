@@ -1,6 +1,5 @@
 import { useState } from "react"
-import { AlertDialog, Button, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { AlertDialog, Button, EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -81,7 +80,7 @@ const rowsOf = (props: AccountSessionsBaseProps, rows: ReadonlyArray<SessionRowV
         description: row.facts,
         leading: { icon: nivoIconSource(row.isPhone ? "phone" : "device", "leading") },
         ...(row.isCurrent
-            ? { badges: [{ label: props.props.currentLabel, tone: "accent", isDot: true }] as const }
+            ? { badges: [{ label: props.props.currentLabel, tone: "accent" }] as const }
             : {}),
         action: {
             label: props.props.signOutLabel,

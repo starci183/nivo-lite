@@ -5,7 +5,7 @@ import { viewerCacheKey, viewerSwrConfig, type ViewerId } from "@starci/next-dat
 import { ThemeProvider } from "next-themes"
 import type { ReactNode } from "react"
 import { SWRConfig, useSWRConfig } from "swr"
-import { useViewerId } from "@/hooks/auth"
+import { useAdminViewerId } from "@/hooks/auth"
 import { useAuthSessionEffect } from "@/hooks/effects"
 import { SwrSideEffects } from "@/hooks/swr"
 import { viewerCache } from "@/modules/viewer-cache"
@@ -53,7 +53,7 @@ const renderViewerScope = (viewerId: ViewerId, children: ReactNode): ReactNode =
 )
 
 /** The SWR config of the viewer on screen around the routed tree. */
-const ViewerSwrScope = (props: AppProvidersProps): ReactNode => renderViewerScope(useViewerId(), props.children)
+const ViewerSwrScope = (props: AppProvidersProps): ReactNode => renderViewerScope(useAdminViewerId(), props.children)
 
 /**
  * The one client provider stack the locale layout mounts, outer to inner: the theme (light and dark through the `.light` /

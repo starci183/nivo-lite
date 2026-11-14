@@ -1,18 +1,12 @@
-import { Avatar, IconTile } from "@starci/grammar/common"
-import type { IconTileTone } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { Avatar, IconTile, type IconTileTone } from "@starci/grammar/common"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 
 /** The glyph and the soft colour of each kind of agent: the mark it wears on every screen. */
 const KIND_MARK: Readonly<Record<string, { readonly glyph: IconName; readonly tone: IconTileTone }>> = {
     chatbot: { glyph: "moduleChatbot", tone: "accent" },
     lead_gen: { glyph: "moduleLeadGen", tone: "danger" },
     sales: { glyph: "moduleSales", tone: "danger" },
-    accounting: { glyph: "moduleAccounting", tone: "warning" },
-    shifts: { glyph: "moduleShifts", tone: "neutral" },
     booking: { glyph: "moduleBooking", tone: "accent" },
-    inventory: { glyph: "moduleInventory", tone: "neutral" },
-    loyalty: { glyph: "moduleLoyalty", tone: "warning" },
     video: { glyph: "moduleVideo", tone: "accent" },
     content: { glyph: "moduleContent", tone: "success" },
     hiring: { glyph: "moduleHiring", tone: "success" },
@@ -23,11 +17,7 @@ const EMBLEM_KINDS: ReadonlySet<string> = new Set([
     "chatbot",
     "lead_gen",
     "sales",
-    "accounting",
-    "shifts",
     "booking",
-    "inventory",
-    "loyalty",
     "video",
     "content",
     "hiring",

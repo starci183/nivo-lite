@@ -1,5 +1,5 @@
 import type { FlowGraphTone } from "@starci/grammar/common"
-import type { GraphView } from "@nivo-lite/blocks-core/graph"
+import { type GraphView } from "@/modules/plugin-registry"
 import { graphOfSpec, specOf, stepsMapOf } from "@/modules/workflowSteps"
 import type { WorkflowContext } from "./agentWorkflows.types"
 import type { StepsMapView, WorkflowMark } from "@/modules/types"

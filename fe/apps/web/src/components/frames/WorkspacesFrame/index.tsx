@@ -17,6 +17,8 @@ type WorkspacesFrameProps = {
 /** The layout frame of the workspaces area (outside the console shell): the bar with logo, language switch and account menu over the routed page. */
 export const WorkspacesFrame = (props: WorkspacesFrameProps) => (
     <WorkspaceShell
+        viewport="fixed"
+        align="stretch"
         header={
             <div className={BAR_CLASS_NAME}>
                 <Cluster gap="section" justify="between" wrap={false}>

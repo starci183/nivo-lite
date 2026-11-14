@@ -1,24 +1,19 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { AgentGraphFreezeGateService } from "@modules/domain/agent-graphs"
 import type { AgentTurnView } from "@modules/domain/agent-work"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { LeadFreezeRecordsService } from "./lead-freeze-records.service"
 import { LeadFreezeStopHoldsService } from "./lead-freeze-stop-holds.service"
 import { isThreadHold } from "./lead-freeze-threads.policy"
 import { LeadFreezesLogEvent } from "./lead-freezes.log-events"
 import {
     holds,
-    holdsWorkflow,
     keysOf,
-    leadSubjectOf,
+    contactSubjectOf,
     pendingEventOf,
     stateOf,
     subjectOfTrigger,
-    transactionOf,
     withPending,
     workflowOfTrigger,
 } from "./lead-freeze.policy"
@@ -29,6 +24,7 @@ import type {
     LeadFreeze,
     OptionalFreezeState,
     OptionalLeadFreeze,
+    PendingEvent,
 } from "./lead-freezes.contracts"
 
 /** What a trigger scope is to the freezes: plain members by name. */
@@ -64,6 +60,16 @@ export class LeadFreezesService implements OnModuleInit {
         this.gate.set(this)
     }
 
+    /** The events held for a run that no step of it took yet (the run's queue while it waits at a stop). */
+    untakenOfRun(workspaceId: string, runId: string): Promise<ReadonlyArray<PendingEvent>> {
+        return this.stopHolds.untakenOfRun(workspaceId, runId)
+    }
+
+    /** Records held events of a run as taken by a step visit (`<run>:<step>:<visit>`). */
+    markTaken(workspaceId: string, runId: string, wakeIds: ReadonlyArray<string>, visit: string): Promise<void> {
+        return this.stopHolds.markTaken(workspaceId, runId, wakeIds, visit)
+    }
+
     /**
      * True when the wake's customer is held: the wake is recorded for them and starts no run. A stop that closed since releases the
      * customer on the way, this event replayed with the others.
@@ -95,8 +101,8 @@ export class LeadFreezesService implements OnModuleInit {
     }
 
     /** Whether a lead waits for the founder, for the lead page; a hold whose stop closed is settled first. */
-    async stateOfLead(workspaceId: string, leadId: string): Promise<OptionalFreezeState> {
-        return this.stateAfterSettle(workspaceId, await this.records.byLead(workspaceId, leadId))
+    async stateOfContact(workspaceId: string, contactId: string): Promise<OptionalFreezeState> {
+        return this.stateAfterSettle(workspaceId, await this.records.byContact(workspaceId, contactId))
     }
 
     /** Whether the customer of a run waits for the founder because of it, for the run page. */
@@ -136,9 +142,9 @@ export class LeadFreezesService implements OnModuleInit {
         const held = holding.filter(
             (freeze) =>
                 isThreadHold(freeze) &&
-                (subject.leadId === null
+                (subject.contactId === null
                     ? freeze.conversationId !== null && freeze.conversationId === subject.conversationId
-                    : freeze.leadId === subject.leadId),
+                    : freeze.contactId !== null && [subject.contactId, ...(subject.aliases ?? [])].includes(freeze.contactId)),
         )
         // An open stop of a thread run waits for the founder too, before any wake of the customer was held for it.
         const recorded = new Set(held.map((freeze) => freeze.frozenRunId))
@@ -149,15 +155,23 @@ export class LeadFreezesService implements OnModuleInit {
         ]
     }
 
-    /** The customer a trigger is about: its lead, else its conversation's lead, else the conversation; null when it names none. */
+    /**
+     * The person a trigger is about: its contact, else its conversation's contact, else the conversation; null when it names none. A
+     * contact carries the ids merged into it, so a stop or a hold written under an old id still holds the same person.
+     */
     private async subjectOf(workspaceId: string, trigger: Trigger): Promise<FreezeSubject | null> {
         const named = subjectOfTrigger(trigger)
-        if (named?.leadId !== null || named.conversationId === null) return named
-        const leadId = await this.records.leadOfConversation(workspaceId, named.conversationId)
-        return leadId === null ? named : leadSubjectOf(leadId, named.conversationId, workflowOfTrigger(trigger))
+        const contactId =
+            named?.contactId !== null || named.conversationId === null
+                ? (named?.contactId ?? null)
+                : await this.records.contactOfConversation(workspaceId, named.conversationId)
+        if (named === null || contactId === null) return named
+        const subject = contactSubjectOf(contactId, named.conversationId, workflowOfTrigger(trigger))
+        const aliases = (await this.records.aliasesOf(workspaceId, contactId)).filter((id) => id !== contactId)
+        return aliases.length === 0 ? subject : { ...subject, aliases }
     }
 
-    /** The hold of the customer of a trigger: by its lead, its conversation, its conversation's lead or the order a transfer pays. */
+    /** The hold of the customer of a trigger: by its lead, its conversation or its conversation's lead. */
     private async holdingFor(workspaceId: string, trigger: Trigger): Promise<LeadFreeze | null> {
         const named = (await Promise.all(keysOf(trigger).map((key) => this.records.byKey(workspaceId, key)))).find(
             isHolding,
@@ -165,16 +179,15 @@ export class LeadFreezesService implements OnModuleInit {
         if (named !== undefined) return named
         const subject = await this.subjectOf(workspaceId, trigger)
         if (subject !== null && !keysOf(trigger).includes(subject.key)) {
-            const keys = [subject.key, ...(subject.leadId === null ? [] : [leadSubjectOf(subject.leadId, null).key])]
+            const people = subject.contactId === null ? [] : [subject.contactId, ...(subject.aliases ?? [])]
+            const workflowId = workflowOfTrigger(trigger)
+            const keys = [
+                subject.key,
+                ...people.flatMap((id) => [contactSubjectOf(id, null, workflowId).key, contactSubjectOf(id, null).key]),
+            ]
             const found = (await Promise.all(keys.map((key) => this.records.byKey(workspaceId, key)))).find(isHolding)
             if (found !== undefined) return found
         }
-        const transactionId = transactionOf(trigger)
-        if (transactionId === null) return null
-        const workflowId = workflowOfTrigger(trigger)
-        const holding = (await this.records.holding(workspaceId)).filter(
-            (freeze) => isThreadHold(freeze) && holdsWorkflow(freeze, workflowId),
-        )
-        return holding.length === 0 ? null : this.records.leadOfTransaction(workspaceId, transactionId, holding)
+        return null
     }
 }

@@ -1,9 +1,7 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 import { appPgTypes } from "@modules/integrations/data-sources"
-import { DatabaseModule, RATE_LIMIT_STORE } from "@modules/platform/database"
-import type { RateLimitStore } from "@modules/platform/database"
+import { DatabaseModule, RATE_LIMIT_STORE, type RateLimitStore } from "@modules/platform/database"
 import { HttpSecurityModule, RateLimitGuard } from "@modules/platform/http-security"
 import type { LiteWorld } from "./lite-world.service"
 

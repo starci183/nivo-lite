@@ -1,9 +1,10 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
 import { usePaneCopy } from "@/hooks/paneFrame"
-import { agentRunGridOf, useAgentRunAiCalls, useAgentRunDetail, useRunAsideWide } from "@/hooks/agentRuns"
+import { agentRunGridOf, useAgentRunAiCalls, useAgentRunDetail, useAgentRunReads, useRunAsideWide } from "@/hooks/agentRuns"
 import { useOverviewPhone } from "@/hooks/overview"
 import { useSlotLabels } from "@/hooks/slot"
 import { EMPTY_STEPS_MAP } from "@/hooks/workflowSteps"
@@ -12,9 +13,9 @@ import { AgentRunPanesBase, type AgentRunPanesCopy } from "./component"
 
 /** The run of the instance the page shows. */
 type AgentRunPanesProps = {
-    readonly module: string
-    readonly installationId: string
-    readonly runId: string
+    readonly module?: string | undefined
+    readonly installationId?: string | undefined
+    readonly runId?: string | undefined
 }
 
 /** What the page shows while its first read is under way: the shape of a run with nothing in it. */
@@ -119,13 +120,16 @@ const EMPTY_STEPS: ReadonlyArray<RunStepView> = []
 
 /** The connected page of one run: reads it with the graph it ran on, keeps the selected step and runs a stopped run again. */
 export const AgentRunPanes = (props: AgentRunPanesProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("agentRuns")
+    const tReads = useTranslations("agentRunReads")
     const slotLabels = useSlotLabels()
     const isPhone = useOverviewPhone()
-    const run = useAgentRunDetail(props.module, props.installationId, props.runId)
+    const run = useAgentRunDetail(route.module, route.installationId, route.runId)
     const steps = "items" in run.slot ? run.slot.items.steps : EMPTY_STEPS
     const stepLabels = useMemo(() => new Map(steps.map((step) => [step.nodeKey, step.label])), [steps])
-    const aiCalls = useAgentRunAiCalls(props.installationId, props.runId, stepLabels)
+    const aiCalls = useAgentRunAiCalls(route.installationId, route.runId, stepLabels)
+    const reads = useAgentRunReads(route.installationId, route.runId)
     const pane = usePaneCopy()
     const [isAsideOpen, setIsAsideOpen] = useState(false)
     const isWide = useRunAsideWide()
@@ -148,6 +152,7 @@ export const AgentRunPanes = (props: AgentRunPanesProps) => {
                     description: selected?.kindLabel ?? "",
                 },
                 grid: agentRunGridOf(),
+                reads: { title: tReads("title"), slot: reads },
                 aiCalls: {
                     copy: {
                         title: t("aiTitle"),

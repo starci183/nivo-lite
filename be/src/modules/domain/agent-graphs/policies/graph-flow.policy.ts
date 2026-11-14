@@ -1,8 +1,7 @@
 import type { GraphSpecNode, GraphTagSource } from "@nivo-lite/agent-sdk/graph"
-import { iterationKeyOf, type NodeSaga } from "@nivo-lite/agent-sdk/node"
+import { iterationKeyOf, iterationKeyPartsOf, type NodeSaga } from "@nivo-lite/agent-sdk/node"
 import type { StepEffect, StepJson, StepSpec } from "@modules/domain/agent-runs"
-import { tagPayloadOf } from "@modules/domain/agent-work"
-import type { AgentWakeContext } from "@modules/domain/agent-work"
+import { tagPayloadOf, type AgentWakeContext } from "@modules/domain/agent-work"
 import type { Locale } from "@modules/platform/i18n"
 import { suppliedScopeOf } from "./workflow-trigger.policy"
 
@@ -47,8 +46,11 @@ export interface GraphNodeStepInput {
     readonly namespace?: string | undefined
     /** The workflow the run is pinned to, or null for the agent's own graph. */
     readonly workflowId?: string | null | undefined
-    /** Inside a for-each body: the element this iteration works on; memory keys the step `<nodeKey>[<index>]`. */
-    readonly item?: { readonly value: StepJson[string]; readonly index: number } | undefined
+    /**
+     * Inside a for-each body: the element this iteration works on, its position and its identity (the loop's `itemKey` member, bounded,
+     * or its index); the step is keyed `<loop>[<key>].<nodeKey>` (`iterationKeyOf`).
+     */
+    readonly item?: { readonly value: StepJson[string]; readonly index: number; readonly key: string } | undefined
     /** Inside a for-each body: the loop, the iteration and the list. */
     readonly loop?: LoopFrame | undefined
 }
@@ -70,7 +72,7 @@ export const tagSourceOf = ({ source, context, actorMemberId }: FlowWake): Graph
     if (source === "internal" || context.tagSource !== undefined) return "system-event"
     if (context.authorAgentId !== undefined) return "agent"
     if (actorMemberId !== null || context.authorUserId !== undefined) return "chats-group"
-    return source === "customer" || context.conversationId !== undefined ? "channel" : "agent"
+    return context.conversationId !== undefined ? "channel" : "agent"
 }
 
 /** A subject written as `<kind>:<id>` (as the tag door keeps it), or null for a label in any other form. */
@@ -82,9 +84,9 @@ export const subjectOfLabel = (label: unknown): { readonly kind: string; readonl
 
 /**
  * The trigger scope the nodes read as `trigger.*`: the params the wake supplies to the workflow's input contract (`suppliedScopeOf`: a
- * hand-off's mapped params and its caller, a tag's plain data, a credit's transaction, the close's slot), every member of the wake's flat context as its door wrote it, the subject as
- * `{ kind, id }` when the door wrote it as `<kind>:<id>`, the tag's plain data as `context`, the system source that tagged (or where the wake came from) as `source`, where it came from as `origin`, and the
- * language as `locale`.
+ * hand-off's mapped params and its caller, a tag's plain data, the close's slot), every member of the wake's flat context as its door wrote it, the subject as
+ * `{ kind, id }` when the door wrote it as `<kind>:<id>`, the system source that tagged (or where the wake came from) as `source`, where it
+ * came from as `origin`, and the language as `locale`. No `context` member: the tag door's carrier is deleted (a call is read from its wake).
  */
 export const triggerScopeOf = (wake: FlowWake): StepJson => {
     const members = Object.fromEntries(Object.entries(wake.context).filter(([name]) => name !== "tagContext"))
@@ -92,10 +94,9 @@ export const triggerScopeOf = (wake: FlowWake): StepJson => {
     const payload = tagPayloadOf(wake.context)
     const subject = subjectOfLabel(wake.context.subject)
     return {
-        ...suppliedScopeOf({ members, payload, subject }),
+        ...suppliedScopeOf({ members, payload }),
         ...members,
         subject: subject ?? wake.context.subject ?? null,
-        context: payload,
         source: wake.context.tagSource ?? origin,
         origin,
         locale: localeOf(members),
@@ -111,9 +112,9 @@ const stepEffectOf = (saga: NodeSaga): StepEffect => {
     return saga === "pivot" ? { kind: "pivot" } : { kind: "read" }
 }
 
-/** The key of a node's step: the iteration of a body node (`<node>[<index>]`), else the node itself. */
-const nodeStepKeyIn = (node: GraphSpecNode, input: GraphNodeStepInput): string =>
-    input.item === undefined ? node.key : iterationKeyOf(node.key, input.item.index)
+/** The key of a node's step: the item of a body node (`<loop>[<item>].<node>`), else the node itself. */
+export const nodeStepKeyIn = (node: Pick<GraphSpecNode, "key">, input: Pick<GraphNodeStepInput, "item" | "loop">): string =>
+    input.item === undefined || input.loop === undefined ? node.key : iterationKeyOf(input.loop.nodeKey, input.item.key, node.key)
 
 /** The step of one graph node in the run, keyed by the node, with the saga kind of the node it runs. */
 export const graphNodeStepOf = (node: GraphSpecNode, input: GraphNodeStepInput, saga: NodeSaga): StepSpec => ({
@@ -124,8 +125,8 @@ export const graphNodeStepOf = (node: GraphSpecNode, input: GraphNodeStepInput, 
     input: { ...input },
 })
 
-/** The key of the node a step ran: the step key without the iteration of a for-each body (`<node>[<index>]` → `<node>`). */
-export const nodeStepKeyOf = (stepKey: string): string => stepKey.replace(/\[\d+\]$/, "")
+/** The key of the node a step ran: the step key without the item of a for-each body (`<loop>[<item>].<node>` → `<node>`). */
+export const nodeStepKeyOf = (stepKey: string): string => iterationKeyPartsOf(stepKey)?.nodeKey ?? stepKey
 
 /**
  * Whether a node blocks its run when it fails: the graph node's own `blocking` when it says one, else what the node definition says

@@ -1,7 +1,13 @@
+import { wakeSources } from "./agent-wake-source.policy"
 import { Test } from "@nestjs/testing"
 import { fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { agentTurnViewOf as turn, agentWakeViewOf as endedWake } from "@tests/fixtures/builders/agent-work.builder"
-import { AGENT_TURN_QUEUE_PRODUCER, AgentTurnQueue } from "@modules/queues/agent-turn"
+import {
+    AGENT_TURN_QUEUE_PRODUCER,
+    AgentTurnQueue,
+    isAgentTurnDrainPayload,
+    type AgentTurnDrainPayload,
+} from "@modules/queues/agent-turn"
 import { jobRecordingOutbox } from "@tests/fixtures/builders/queue-job-outbox.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
@@ -14,10 +20,16 @@ import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import { HEARTBEAT_MS, LEASE_SECONDS } from "./agent-work.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
-import type { AgentTurnUsage } from "./agent-work.contracts"
+import type { AgentTurnUsage, AgentTurnView } from "./agent-work.contracts"
 import type { AgentTurnExecutor, AgentTurnPlan, AgentWorkFlow, AgentWorkHandler } from "./agent-work.port"
 
-const PAYLOAD = { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" }
+const PAYLOAD: AgentTurnDrainPayload = { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" }
+
+/** The drain payload of a follow-up job: the payload with the hop it carries beside the fields a drain reads. */
+const rearmed = (rearm: number): AgentTurnDrainPayload => {
+    const payload = { ...PAYLOAD, rearm }
+    return payload
+}
 
 const PLAN: AgentTurnPlan = {
     module: "chatbot",
@@ -49,7 +61,7 @@ const build = async ({ handler = true }: Options = {}) => {
         finish: jest.fn().mockResolvedValue({ fenced: false, more: false }),
     })
     const registered = mock<AgentWorkHandler>({
-        sources: ["customer"],
+        sources: ["trigger"],
         prepare: jest.fn().mockResolvedValue({ kind: "run", plan: PLAN }),
         settle: jest.fn().mockResolvedValue(DONE),
         holdOver: jest.fn().mockResolvedValue({ status: "done", reason: "holding_line", outcome: null }),
@@ -268,10 +280,56 @@ describe("AgentDrainService.drain, a scope that has nothing to run", () => {
 
         expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.NoHandler, {
             agentId: "agent-1",
-            source: "customer",
+            source: "trigger",
         })
         expect(turns.finish).toHaveBeenCalledWith(
             turn(),
+            expect.objectContaining({ status: "held", reason: "no_handler" }),
+        )
+    })
+})
+
+describe("AgentDrainService.drain, a person's line to an agent nobody can answer yet (D-BR-14)", () => {
+    /** A flow that takes nothing (the agent is still in setup) and reports what it is told. */
+    const untakenFlow = () =>
+        mock<AgentWorkFlow>({
+            takes: jest.fn().mockResolvedValue(false),
+            stuck: jest.fn().mockResolvedValue(undefined),
+        })
+
+    it("tells the founder once through the common wake report, then holds the wake (walk: Sales in setup, wake held no_handler)", async () => {
+        const { service, turns, handlers } = await build({ handler: false })
+        const line = turn({ source: "tag" })
+        turns.begin.mockResolvedValue({ result: "begun", turn: line, ended: [] })
+        const flow = untakenFlow()
+        handlers.flowOf.mockReturnValue(flow)
+
+        await service.drain(PAYLOAD)
+
+        expect(flow.stuck).toHaveBeenCalledWith(line, "agent_not_ready")
+        expect(turns.finish).toHaveBeenCalledWith(line, expect.objectContaining({ status: "held", reason: "no_handler" }))
+    })
+
+    it("only logs a background wake, and a report that fails never fails the drain", async () => {
+        const background = await build({ handler: false })
+        background.turns.begin.mockResolvedValue({ result: "begun", turn: turn({ source: "schedule" }), ended: [] })
+        const quiet = untakenFlow()
+        background.handlers.flowOf.mockReturnValue(quiet)
+        await background.service.drain(PAYLOAD)
+        expect(quiet.stuck).not.toHaveBeenCalled()
+
+        const failing = await build({ handler: false })
+        failing.turns.begin.mockResolvedValue({ result: "begun", turn: turn({ source: "tag" }), ended: [] })
+        const broken = untakenFlow()
+        broken.stuck.mockRejectedValue(new Error("chat down"))
+        failing.handlers.flowOf.mockReturnValue(broken)
+        await failing.service.drain(PAYLOAD)
+        expect(failing.logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, expect.any(Error), {
+            agentId: "agent-1",
+            wakeId: "wake-1",
+        })
+        expect(failing.turns.finish).toHaveBeenCalledWith(
+            expect.anything(),
             expect.objectContaining({ status: "held", reason: "no_handler" }),
         )
     })
@@ -313,7 +371,7 @@ describe("AgentDrainService.drain, a drain that came before the burst window end
 
         await service.drain(PAYLOAD)
         await service.drain(PAYLOAD)
-        await service.drain({ ...PAYLOAD, rearm: 1 } as typeof PAYLOAD)
+        await service.drain(rearmed(1))
 
         expect(outbox.written.map((job) => job.dedupeKey)).toEqual([
             "agent-turn:agent-1:rearm:conversation:conv-1:wake-9:1",
@@ -336,7 +394,7 @@ describe("AgentDrainService.drain, a drain that came before the burst window end
         const { service, turns, outbox, logger } = await build()
         turns.begin.mockResolvedValue({ result: "idle", ended: [], wait: WAIT })
 
-        await service.drain({ ...PAYLOAD, rearm: 5 } as typeof PAYLOAD)
+        await service.drain(rearmed(5))
 
         expect(outbox.written).toEqual([])
         expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.DrainRearmSpent, expect.objectContaining({ hop: 6 }))
@@ -373,7 +431,7 @@ const underTwoClocks = async (messagesAt: ReadonlyArray<number>, offsetAt: (host
     const database = () => host + offsetAt(host)
     const wakes: Array<Wake> = []
     const begun: Array<{ readonly hostMs: number; readonly wakeId: string; readonly merged: ReadonlyArray<string> }> = []
-    const jobs: Array<{ readonly at: number; readonly payload: typeof PAYLOAD }> = []
+    const jobs: Array<{ readonly at: number; readonly payload: AgentTurnDrainPayload }> = []
     const keys = new Set<string>()
     let read = 0
     fixture.turns.begin.mockImplementation(() => {
@@ -395,7 +453,10 @@ const underTwoClocks = async (messagesAt: ReadonlyArray<number>, offsetAt: (host
             const key = job.dedupeKey ?? ""
             if (keys.has(key)) continue
             keys.add(key)
-            jobs.push({ at: host + (job.delayMs ?? 0), payload: job.payload as typeof PAYLOAD })
+            const { payload } = job
+            expect(isAgentTurnDrainPayload(payload)).toBe(true)
+            if (!isAgentTurnDrainPayload(payload)) continue
+            jobs.push({ at: host + (job.delayMs ?? 0), payload })
         }
         read = fixture.outbox.written.length
     }
@@ -578,16 +639,32 @@ describe("AgentDrainService.drain, a turn that fails or leaves more to do", () =
 })
 
 describe("AgentDrainService.drain, a runtime that is down", () => {
-    it("gives a customer the holding line at once when the runtime is down, ends the wake and still counts the failure", async () => {
+    // A source whose sender waits for an answer: only an inbound adapter declares one now (the old `customer` source is gone).
+    const ANSWERING = "answering_hook"
+    beforeAll(() => {
+        if (wakeSources.lookup(ANSWERING) === undefined)
+            wakeSources.add(ANSWERING, {
+                priority: 10,
+                maxAttempts: 2,
+                scopedToConversation: false,
+                background: false,
+                restoresHeld: true,
+                awaitsAnswer: true,
+            })
+    })
+
+    it("gives a sender who waits for an answer the holding line at once when the runtime is down, ends the wake and still counts the failure", async () => {
         const { service, turns, executor, handler } = await build()
+        const asking = turn({ source: ANSWERING })
+        turns.begin.mockResolvedValue({ result: "begun", turn: asking, ended: [] })
         executor.run.mockRejectedValue(new Error("socket closed"))
 
         await service.drain(PAYLOAD)
 
-        expect(handler.holdOver).toHaveBeenCalledWith(turn(), "error")
+        expect(handler.holdOver).toHaveBeenCalledWith(asking, "error")
         expect(turns.propose).not.toHaveBeenCalled()
         expect(turns.finish).toHaveBeenCalledWith(
-            turn(),
+            asking,
             finished({ status: "done", reason: "holding_line", outcome: null, errorCode: "AGENT_WORK_UNEXPECTED" }),
         )
     })
@@ -614,13 +691,15 @@ describe("AgentDrainService.drain, a runtime that is down", () => {
     it("fails the wake all the same when the hold-over line itself cannot be written, and logs why", async () => {
         const { service, turns, executor, handler, logger } = await build()
         const cause = new Error("channel down")
+        const asking = turn({ source: ANSWERING })
+        turns.begin.mockResolvedValue({ result: "begun", turn: asking, ended: [] })
         executor.run.mockRejectedValue(new Error("socket closed"))
         handler.holdOver.mockRejectedValue(cause)
 
         await service.drain(PAYLOAD)
 
         expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, cause, WAKE_REF)
-        expect(turns.finish).toHaveBeenCalledWith(turn(), expect.objectContaining({ status: "failed" }))
+        expect(turns.finish).toHaveBeenCalledWith(asking, expect.objectContaining({ status: "failed" }))
     })
 
     it("fails the wake when it ran out of attempts and no handler is left to announce it", async () => {
@@ -685,9 +764,11 @@ describe("AgentDrainService.drain, the heartbeat and its budget", () => {
     it("keeps the lease of a workflow wake whose model call and its one retry take ninety seconds: the lease never lapses under it", async () => {
         const fixture = await build()
         const gate = new AbortController()
+        const seen: SeenSignal = {}
         const flow = mock<AgentWorkFlow>({
             takes: jest.fn().mockResolvedValue(true),
-            run: jest.fn(async () => {
+            run: jest.fn(async (_turn: AgentTurnView, given: AbortSignal) => {
+                seen.signal = given
                 await whenAborted(gate.signal)
                 return { status: "done" as const, reason: null, outcome: { ran: "graph" } }
             }),
@@ -699,7 +780,7 @@ describe("AgentDrainService.drain, the heartbeat and its budget", () => {
         await jest.advanceTimersByTimeAsync(LEASE_SECONDS * 1000)
         expect(fixture.turns.touch).toHaveBeenCalledTimes(Math.floor((LEASE_SECONDS * 1000) / HEARTBEAT_MS))
         expect(HEARTBEAT_MS * 2).toBeLessThan(LEASE_SECONDS * 1000)
-        expect((flow.run.mock.calls[0]?.[1] as AbortSignal).aborted).toBe(false)
+        expect(seen.signal?.aborted).toBe(false)
 
         gate.abort()
         await done
@@ -718,6 +799,10 @@ describe("AgentDrainService.drain, the heartbeat and its budget", () => {
         release()
         await done
     })
+})
+
+describe("AgentDrainService.drain, the heartbeat's failures and its spent budget", () => {
+    fakeTimers()
 
     it("logs a failed renewal and tries again at the next beat", async () => {
         const fixture = await build()

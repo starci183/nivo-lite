@@ -67,7 +67,7 @@ export interface FrameSubTabs {
 export const RUN_PATH: RegExp = /\/work\/runs\/([^/?#]+)/
 
 /** The path of the page of one version of a workflow, below the workflows tab: the workflow key, then the version number. */
-export const VERSION_PATH: RegExp = /(\/workflows\/([^/?#]+))\/versions\/(\d+)/
+export const VERSION_PATH: RegExp = /(\/workflows\/([^/?#]+))\/versions\/(preview\/)?(\d+)/
 
 /** The crumb of the open version of a workflow, from the path; null when the path names no version. */
 export const versionCrumbOf = (
@@ -79,7 +79,7 @@ export const versionCrumbOf = (
     return {
         workflowLabel: words("crumbWorkflow"),
         workflowHref: `${pathname.slice(0, (match.index ?? 0) + (match[1] ?? "").length)}/versions`,
-        label: words("crumbVersion", { number: match[3] ?? "" }),
+        label: words(match[3] === undefined ? "crumbVersion" : "crumbPreview", { number: match[4] ?? "" }),
     }
 }
 
@@ -301,7 +301,7 @@ export interface InstanceTab {
 }
 
 /** One link tab of the instance band: its label and address, with the count the tab carries. */
-export const tabOf = (
+export const instanceTabOf = (
     id: string,
     label: string,
     href: string,

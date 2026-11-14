@@ -9,6 +9,7 @@ import { docsCopyOf, docsMainViewOf, docsNivoSlotOf, docsTrailOf, nivoOpenedOf }
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading, DocsSelection, KnowledgeDocsView } from "@/modules/types"
 import { useBrainPageHeader } from "./useBrainPageHeader"
+import { useDocumentQuestionsLink } from "./useDocumentQuestionsLink"
 import { useDocsList } from "./useDocsList"
 import { useFailureToast } from "./useFailureToast"
 import { useKnowledgeDocsCommands } from "./useKnowledgeDocsCommands"
@@ -41,6 +42,7 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
     const nivo = useNivoKnowledge()
     const ideas = useKnowledgeDocIdeas(useFailureToast())
     const waiting = useWaitingFactCount()
+    const questions = useDocumentQuestionsLink(input.selection.kind === "doc" ? input.selection.id : undefined)
     const selection = input.selection
     const doc = useOpenedDoc(selection.kind === "doc" ? selection.id : undefined, row)
     const [isRemoveOpen, setIsRemoveOpen] = useState(false)
@@ -68,7 +70,6 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
     const on = useKnowledgeDocsCommands({
         selection,
         selectTab: header.on.selectTab,
-        reviewAll: header.on.reviewAll,
         reloads: [sources.reload, nivo.reload, doc.reload],
         doc: { reindex: doc.commands.reindex, remove: doc.commands.remove, row: row.dispatch },
         ideas: { idea: ideas.decide, moreIdeas: ideas.toggleMore },
@@ -87,6 +88,7 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
             main,
             ideas: ideas.view,
             nextReview,
+            questions,
             isWaiting: isWaitingOf(list.slot, ...(main.kind === "none" ? [] : [main.slot])),
             hasAside,
             isRemoveOpen,

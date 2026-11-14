@@ -9,8 +9,8 @@ describe("salesDecisionQueueOf", () => {
         expect(queue.count).toBe("3")
         expect(queue.rows[0]).toMatchObject({
             id: "o1",
-            title: "DH-1 · Lan",
-            amount: "6.000.000\u00a0₫",
+            title: "DH-1 \u00b7 Lan",
+            amount: "6.000.000\u00a0\u20ab",
             primary: { id: "approve" },
             menu: [{ id: "reject", isDanger: true }],
         })

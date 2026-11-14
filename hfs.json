@@ -2,7 +2,6 @@
   "hfs": 3,
   "kind": "app",
   "edition": "lite",
-  "modules": "data",
   "project": "nivo-lite",
   "sides": {
     "be": {
@@ -78,12 +77,20 @@
           "reason": "ends a running turn under its fence, settles its wake and releases the lease"
         },
         {
+          "name": "public.record_ai_usage_work",
+          "reason": "writes one ai_usage_events row of the knowledge meter with the run, work and call facts, so the meter and the workspace credit ledger never diverge"
+        },
+        {
           "name": "public.agent_work_due",
           "reason": "lists the lapsed leases, due wakes, due tasks and overdue triggers the minute sweep drives"
         },
         {
           "name": "public.agent_work_has_agent",
           "reason": "proves an agent belongs to a workspace before a write that names both"
+        },
+        {
+          "name": "public.agent_work_leases_expire",
+          "reason": "removes the lease rows of customer conversations idle past retention; app_be may only select the lease table, its rows are written by the definer functions only"
         },
         {
           "name": "public.agent_work_switch",
@@ -134,18 +141,6 @@
           "reason": "settles a payment order and its credits atomically"
         },
         {
-          "name": "public.seat_office_member",
-          "reason": "seats a member in the office rooms"
-        },
-        {
-          "name": "public.ensure_office_rooms",
-          "reason": "creates the default office rooms"
-        },
-        {
-          "name": "public.move_office_agent_home",
-          "reason": "moves an agent to its home room"
-        },
-        {
           "name": "public.job_stats",
           "reason": "job counts for readiness and ops"
         },
@@ -182,10 +177,6 @@
           "reason": "AI quota of a workspace"
         },
         {
-          "name": "public.usage_notice_post",
-          "reason": "posts a usage notice"
-        },
-        {
           "name": "public.api_key_auth",
           "reason": "verifies an API key, counts the hit and stamps last use"
         },
@@ -196,10 +187,6 @@
         {
           "name": "public.shell_data",
           "reason": "app shell bootstrap read"
-        },
-        {
-          "name": "public.post_office_notice",
-          "reason": "posts a notice into the office"
         },
         {
           "name": "gen_random_uuid",
@@ -218,16 +205,8 @@
           "reason": "resolves the module installation a decision belongs to"
         },
         {
-          "name": "be_access.chat_target_member",
-          "reason": "admits a member to a chat target (an Office room)"
-        },
-        {
           "name": "be_access.workspace_member_avatars",
           "reason": "member names and avatars for chat readers"
-        },
-        {
-          "name": "public.mark_office_room_read",
-          "reason": "advances a room, agent or lead read marker for a member"
         },
         {
           "name": "public.admin_workspace_stats",
@@ -240,102 +219,6 @@
         {
           "name": "be_access.user_emails",
           "reason": "emails of auth users for the platform console"
-        },
-        {
-          "name": "public.inventory_add_po_lines",
-          "reason": "writes purchase-order lines"
-        },
-        {
-          "name": "public.inventory_apply_movement",
-          "reason": "row-locked idempotent stock change, the one writer of quantities"
-        },
-        {
-          "name": "public.inventory_cancel_po",
-          "reason": "cancels an order and answers its work item"
-        },
-        {
-          "name": "public.inventory_close_receipt",
-          "reason": "sets a receipt value"
-        },
-        {
-          "name": "public.inventory_default_location",
-          "reason": "creates or reads the default location"
-        },
-        {
-          "name": "public.inventory_delete_recipe",
-          "reason": "deletes a recipe with its lines"
-        },
-        {
-          "name": "public.inventory_discard_receipt",
-          "reason": "removes an empty receipt"
-        },
-        {
-          "name": "public.inventory_edit_po_draft",
-          "reason": "edits a draft order, its lines and total"
-        },
-        {
-          "name": "public.inventory_import_item",
-          "reason": "import upsert of an item"
-        },
-        {
-          "name": "public.inventory_insert_po",
-          "reason": "draft order with a unique number"
-        },
-        {
-          "name": "public.inventory_mark_po_reminded",
-          "reason": "counts an order reminder"
-        },
-        {
-          "name": "public.inventory_mark_po_sent",
-          "reason": "marks an order sent"
-        },
-        {
-          "name": "public.inventory_mark_po_waiting",
-          "reason": "moves a draft to waiting approval"
-        },
-        {
-          "name": "public.inventory_open_receipt",
-          "reason": "opens a goods receipt"
-        },
-        {
-          "name": "public.inventory_receive_po_line",
-          "reason": "adds received quantity and cost to a line"
-        },
-        {
-          "name": "public.inventory_recompute_po_total",
-          "reason": "sets an order total from its lines"
-        },
-        {
-          "name": "public.inventory_refuse_po",
-          "reason": "returns a refused order to draft"
-        },
-        {
-          "name": "public.inventory_save_item",
-          "reason": "item upsert with the sku rule"
-        },
-        {
-          "name": "public.inventory_save_location",
-          "reason": "renames or adds a location"
-        },
-        {
-          "name": "public.inventory_save_recipe",
-          "reason": "recipe plus lines in one step"
-        },
-        {
-          "name": "public.inventory_save_supplier",
-          "reason": "supplier upsert"
-        },
-        {
-          "name": "public.inventory_set_item_active",
-          "reason": "switches an item on or off"
-        },
-        {
-          "name": "public.inventory_set_po_message",
-          "reason": "stores the supplier message on a draft"
-        },
-        {
-          "name": "public.inventory_set_po_status",
-          "reason": "order status after a receipt"
         },
         {
           "name": "public.job_relay_claim",
@@ -388,42 +271,6 @@
         {
           "name": "public.job_reset",
           "reason": "resets a stuck job"
-        },
-        {
-          "name": "public.shifts_save_schedule",
-          "reason": "versions and saves a schedule, superseding the last"
-        },
-        {
-          "name": "public.shifts_add_shifts",
-          "reason": "bulk-inserts shifts with unnest"
-        },
-        {
-          "name": "public.shifts_reassign",
-          "reason": "reassigns a shift"
-        },
-        {
-          "name": "public.shifts_publish",
-          "reason": "publishes a schedule and cancels superseded shifts"
-        },
-        {
-          "name": "public.shifts_create_leave",
-          "reason": "creates a leave request"
-        },
-        {
-          "name": "public.shifts_create_swap",
-          "reason": "creates a swap request"
-        },
-        {
-          "name": "public.shifts_decide_swap",
-          "reason": "settles a swap once and moves the shift"
-        },
-        {
-          "name": "public.shifts_decide_leave",
-          "reason": "settles a leave once and opens the hit shifts"
-        },
-        {
-          "name": "public.shifts_import_apply",
-          "reason": "applies an imported schedule"
         },
         {
           "name": "public.job_tick_claim",
@@ -502,128 +349,8 @@
           "reason": "confirms an auth email (identity door)"
         },
         {
-          "name": "public.hiring_application_submit",
-          "reason": "records a candidate application and its first pipeline event in one call"
-        },
-        {
-          "name": "public.hiring_availability_save",
-          "reason": "saves a candidate interview availability for a job"
-        },
-        {
-          "name": "public.hiring_candidate_link_staff",
-          "reason": "links a hired candidate to the staff record it became"
-        },
-        {
-          "name": "public.hiring_candidate_move",
-          "reason": "moves a candidate to another pipeline stage and logs the move"
-        },
-        {
-          "name": "public.hiring_candidate_notes",
-          "reason": "updates a candidate notes under the workspace guard"
-        },
-        {
-          "name": "public.hiring_candidate_screened",
-          "reason": "marks a candidate screened with its screening result"
-        },
-        {
-          "name": "public.hiring_candidates_delete",
-          "reason": "deletes candidates and their hiring rows for a workspace"
-        },
-        {
-          "name": "public.hiring_event_log",
-          "reason": "appends a hiring pipeline event"
-        },
-        {
-          "name": "public.hiring_interview_confirm",
-          "reason": "confirms an interview slot for a candidate"
-        },
-        {
-          "name": "public.hiring_interview_create",
-          "reason": "creates an interview for a candidate"
-        },
-        {
-          "name": "public.hiring_interview_none_fit",
-          "reason": "records that no offered interview slot fits the candidate"
-        },
-        {
-          "name": "public.hiring_interview_remind_claim",
-          "reason": "claims due interview reminders once for the reminder tick"
-        },
-        {
-          "name": "public.hiring_interview_status",
-          "reason": "changes an interview status"
-        },
-        {
-          "name": "public.hiring_job_ads",
-          "reason": "reads the published job ads of a workspace"
-        },
-        {
-          "name": "public.hiring_job_create",
-          "reason": "creates a job opening"
-        },
-        {
-          "name": "public.hiring_job_fill_check",
-          "reason": "closes a job once its openings are filled"
-        },
-        {
-          "name": "public.hiring_job_status",
-          "reason": "changes a job opening status"
-        },
-        {
-          "name": "public.hiring_job_update",
-          "reason": "updates a job opening"
-        },
-        {
-          "name": "public.hiring_jobs_expire",
-          "reason": "expires job openings past their end date for the jobs tick"
-        },
-        {
-          "name": "public.hiring_offer_answer",
-          "reason": "records a candidate answer to an offer"
-        },
-        {
-          "name": "public.hiring_offer_cancel",
-          "reason": "cancels an open offer"
-        },
-        {
-          "name": "public.hiring_offer_create",
-          "reason": "creates an offer for a candidate"
-        },
-        {
-          "name": "public.hiring_offer_link",
-          "reason": "issues the answer link of an offer"
-        },
-        {
-          "name": "public.hiring_offer_sent",
-          "reason": "marks an offer sent"
-        },
-        {
-          "name": "public.hiring_offers_expire",
-          "reason": "expires unanswered offers for the jobs tick"
-        },
-        {
-          "name": "public.hiring_onboarding_toggle",
-          "reason": "toggles an onboarding checklist item of a hire"
-        },
-        {
-          "name": "public.hiring_retention_log_add",
-          "reason": "appends a retention log entry for a hire"
-        },
-        {
-          "name": "public.hiring_settings_init",
-          "reason": "creates the default hiring settings of a workspace"
-        },
-        {
-          "name": "public.hiring_settings_save",
-          "reason": "saves the hiring settings of a workspace"
-        },
-        {
           "name": "public.record_ai_usage",
           "reason": "records metered AI usage against the workspace quota"
-        },
-        {
-          "name": "public.post_ai_usage_notice",
-          "reason": "posts the AI usage threshold notice once per period"
         },
         {
           "name": "public.be_auth_list_users",
@@ -697,6 +424,14 @@
         "views": "v_*",
         "manifest": "db/entities.manifest.json"
       },
+      "receiptPorts": [
+        {
+          "class": "AccountDataIntakeService",
+          "method": "claim",
+          "repeat": "undefined",
+          "reason": "writes the delivery's account_data row once under the provider's own key (render id); a repeat or an unknown account answers undefined"
+        }
+      ],
       "ddlRenderers": [
         {
           "path": "packages/agent-sdk/src/entity/render*.ts",
@@ -756,24 +491,10 @@
     ],
     "scopeColumns": ["workspace_id"],
     "baselineReset": {
-      "baseline": "db/migrations/20261112000700_baseline.sql",
-      "ruling": "nivo-reset-2026-11-05",
-      "date": "2026-11-05",
-      "reason": "owner: không migrate, reset, làm lại từ đầu (no prod data)"
-    },
-    "destructiveRulings": [
-      {
-        "migration": "db/migrations/20261112001100_sales-partitions.sql",
-        "objects": ["public.records_sales_order.records_sales_order_status_chk"],
-        "reason": "the Sales move widens the status check of sales.order (failed_system joins the statuses): the planner replaces the check in place; nothing reads the constraint by name and no data is carried over (owner 2026-11-05 \"không care prod\")",
-        "date": "2026-11-06"
-      },
-      {
-        "migration": "db/migrations/20261112001800_entity-engine-partitions.sql",
-        "objects": ["public.records_payment_transaction.records_payment_transaction_status_chk"],
-        "reason": "the Accounting resolve-unmatched-payment action adds other_income to the statuses of payment.transaction: the planner replaces the status check in place; nothing reads the constraint by name and no data is carried over (owner 2026-11-05 \"không care prod\")",
-        "date": "2026-11-07"
-      }
-    ]
+      "baseline": "db/migrations/20261113180000_baseline.sql",
+      "ruling": "nivo-reset-2026-11-13",
+      "date": "2026-11-13",
+      "reason": "owner: ko migration, xoa het data records cu, threads cu, giu data workspace, providers, accounts (build TEN; END PLAN squash)"
+    }
   }
 }

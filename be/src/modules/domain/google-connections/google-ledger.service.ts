@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
-import { ProviderRegistryError, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
-import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
-import { GoogleError, InjectGoogleClient } from "@modules/integrations/google"
-import type { GoogleClient, SheetCell } from "@modules/integrations/google"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
+import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
+import {
+    ProviderRegistryError,
+    ProviderRegistryErrorCode,
+    withProof,
+    type BusinessLedgerEntry,
+    type LedgerPort,
+} from "@modules/domain/provider-registry"
+import { GoogleError, InjectGoogleClient, type GoogleClient, type SheetCell } from "@modules/integrations/google"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { GoogleTokensService } from "./google-tokens.service"
 import {
     dayOf,
@@ -19,8 +22,14 @@ import {
     ledgerRowOf,
     voidRowOf,
 } from "./policies/ledger-sheet.policy"
+import { DomainError } from "@modules/platform/errors"
 
 const PROVIDER = "google"
+
+/** Whether the append itself was asked of Google: the row may have reached it only after. */
+interface AppendAsked {
+    append: boolean
+}
 
 /** The refusal of a ledger connection only the owner can cure, carrying what Google answered, when it answered. */
 const refusedLedger = (cause?: unknown): ProviderRegistryError =>
@@ -49,6 +58,7 @@ export class GoogleLedgerService implements LedgerPort {
         @InjectGoogleClient() private readonly google: GoogleClient,
         private readonly tokens: GoogleTokensService,
         @InjectClock() private readonly clock: Clock,
+        private readonly zones: WorkspaceTimeZoneService,
     ) {}
 
     /** True when a Google connection of the workspace gave the spreadsheets access and holds the ledger sheet. */
@@ -56,18 +66,23 @@ export class GoogleLedgerService implements LedgerPort {
         return (await this.keeperOf(workspaceId)) !== undefined
     }
 
-    /** Appends the row of one entry. */
-    append(workspaceId: string, entry: BusinessLedgerEntry): Promise<string | undefined> {
-        return this.write(workspaceId, ledgerRowOf(entry))
+    /** Appends the row of one entry, on the connection the tool runner handed the call when it handed one. */
+    append(workspaceId: string, entry: BusinessLedgerEntry, connectionId?: string): Promise<string | undefined> {
+        return this.write(workspaceId, ledgerRowOf(entry), connectionId)
     }
 
-    /** Appends the row that takes one transaction back. */
-    void(workspaceId: string, transactionId: string): Promise<string | undefined> {
-        return this.write(workspaceId, voidRowOf(transactionId, dayOf(this.clock.now())))
+    /** Appends the row that takes one transaction back, on the connection the tool runner handed the call when it handed one. */
+    async void(workspaceId: string, transactionId: string, connectionId?: string): Promise<string | undefined> {
+        const day = dayOf(this.clock.now(), await this.zones.timeZoneOf(workspaceId))
+        return this.write(workspaceId, voidRowOf(transactionId, day), connectionId)
     }
 
-    private async write(workspaceId: string, line: ReadonlyArray<SheetCell>): Promise<string | undefined> {
-        const keeper = await this.keeperOf(workspaceId)
+    private async write(
+        workspaceId: string,
+        line: ReadonlyArray<SheetCell>,
+        connectionId?: string,
+    ): Promise<string | undefined> {
+        const keeper = await this.keeperOf(workspaceId, connectionId)
         if (keeper === undefined) return undefined
         if (!this.google.isConfigured()) throw refusedLedger()
         const { row, sheetId } = keeper
@@ -75,8 +90,10 @@ export class GoogleLedgerService implements LedgerPort {
         // once, and what was written before stays where it is.
         const headed = row.meta.ledgerHeader === HEADER_WRITTEN && row.meta.ledgerLayout === LEDGER_LAYOUT
         const rows = headed ? [line] : [LEDGER_HEADER, line]
+        // Whether the row may have reached Google: only once the append itself was asked (the token and the tab come first).
+        const asked = { append: false }
         try {
-            const range = await this.appended(row, sheetId, rows, !headed)
+            const range = await this.appended(row, sheetId, rows, !headed, asked)
             await this.connections.patch(workspaceId, row.id, {
                 meta: {
                     ...row.meta,
@@ -87,6 +104,10 @@ export class GoogleLedgerService implements LedgerPort {
             return range === "" ? sheetId : range
         } catch (cause) {
             if (isRefusedLedger(cause)) throw refusedLedger(cause)
+            // Thrown as it is (the run tries a rate limit, a 5xx or a timeout again), with what it proves where it happened: before the
+            // append was asked the row never left; after, it may be there.
+            const failure = withProof(cause, asked.append ? "unknown" : "not_sent")
+            if (failure instanceof DomainError) throw failure
             throw cause
         }
     }
@@ -96,19 +117,22 @@ export class GoogleLedgerService implements LedgerPort {
         sheetId: string,
         rows: ReadonlyArray<ReadonlyArray<SheetCell>>,
         newTab: boolean,
+        asked: AppendAsked,
     ): Promise<string> {
         return this.tokens.withRetry(
             (force) => this.tokens.accessToken({ row, force }),
             async (token) => {
                 if (newTab) await this.google.ensureTab(token, sheetId, LEDGER_TAB)
+                asked.append = true
                 return this.google.appendValues(token, sheetId, LEDGER_TAB, rows)
             },
             isUnauthorized,
         )
     }
 
-    private async keeperOf(workspaceId: string): Promise<ReturnType<typeof ledgerKeeperOf>> {
+    /** The connection that keeps the ledger: the one named, when the call names one, else the first that keeps it. */
+    private async keeperOf(workspaceId: string, connectionId?: string): Promise<ReturnType<typeof ledgerKeeperOf>> {
         const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
-        return ledgerKeeperOf(rows)
+        return ledgerKeeperOf(connectionId === undefined ? rows : rows.filter((row) => row.id === connectionId))
     }
 }

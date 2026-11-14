@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { SECRET_STEP, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "./webhook-wizard.shared"
+import { useState, useTransition, type SetStateAction, type Dispatch } from "react"
+import { SECRET_STEP, WEBHOOK_STEPS } from "./webhook-wizard.shared"
 import type { WebhookTestVerdict, WebhookView } from "@/modules/types"
 
 import { useWebhookCommands } from "./useWebhookCommands"
-import type { SetStateAction, Dispatch } from "react"
 
 /** What the webhook wizard needs from its drawer. */
 interface WebhookWizardInput {
     /** The name the connection starts with. */
     readonly defaultName: string
+    /** The ids of the events the back end offers (the installed plugins' and the engine's): all are picked until the owner changes the choice. */
+    readonly availableEvents: ReadonlyArray<string>
     /** `changed` is true when something was saved, so the list should refresh. */
     readonly onClose: (changed: boolean) => void
 }
@@ -44,7 +45,10 @@ export const useWebhookWizard = (input: WebhookWizardInput): UseWebhookWizardRes
     const commands = useWebhookCommands()
     const [index, setIndex] = useState(0)
     const [form, setForm] = useState({ name: input.defaultName, url: "" })
-    const [events, setEvents] = useState<ReadonlyArray<string>>([...WEBHOOK_EVENTS])
+    const [picked, setPicked] = useState<ReadonlyArray<string> | null>(null)
+    const events = picked ?? input.availableEvents
+    const setEvents: Dispatch<SetStateAction<readonly string[]>> = (next) =>
+        setPicked((current) => (typeof next === "function" ? next(current ?? input.availableEvents) : next))
     const [created, setCreated] = useState<WebhookView | null>(null)
     const [test, setTest] = useState<WebhookTestVerdict | null>(null)
     const [error, setError] = useState<string | null>(null)

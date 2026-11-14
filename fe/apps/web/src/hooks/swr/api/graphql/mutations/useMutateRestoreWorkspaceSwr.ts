@@ -1,7 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateRestoreWorkspace } from "@/modules/api/graphql/mutations/mutation-restore-workspace"
 import { answeredData } from "@/hooks/workspaceread"
 import { GraphQLHeadersKey } from "@/modules/api"

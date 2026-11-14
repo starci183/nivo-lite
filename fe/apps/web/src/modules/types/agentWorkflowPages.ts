@@ -44,6 +44,7 @@ export interface WorkflowInputView {
 /** One param a call hands over: its name, the value (pink when bound) and where it is taken from. */
 export interface WorkflowCallParamView {
     readonly name: string
+    readonly label: string
     readonly chip: WorkflowChipView
     readonly source: string
 }
@@ -63,4 +64,31 @@ export interface WorkflowOverviewView {
     readonly entry: string
     readonly outcomes: ReadonlyArray<WorkflowOverviewRowView>
     readonly calls: ReadonlyArray<WorkflowCallView>
+}
+
+/** One reason the back end names for a hidden workflow (`not_connected`, `trigger_off`, `needs_pick`, `tool_unavailable`), or `needs_reconnect` for an attached account whose provider refused the credential (it hides nothing). */
+export type ReadinessReason = "not_connected" | "trigger_off" | "needs_pick" | "tool_unavailable" | "needs_reconnect"
+
+/** The choice of one source of a contested stream: the accounts that read it. */
+export interface ReadinessPickView {
+    readonly workflowId: string
+    readonly verb: string
+    readonly stream: string
+    readonly options: ReadonlyArray<{ readonly connectionId: string; readonly label: string }>
+}
+
+/** The one next step of a row: a page to go to, or the choice to make in place. */
+export type ReadinessNextView =
+    | { readonly kind: "link"; readonly label: string; readonly href: string }
+    | { readonly kind: "pick"; readonly label: string; readonly pick: ReadinessPickView }
+
+/** One reason a workflow is hidden, with its one next step. */
+export interface ReadinessRowView {
+    readonly id: string
+    readonly workflowId: string
+    readonly workflowName: string
+    /** The reason, or `other` for one this view does not know. */
+    readonly reason: ReadinessReason | "other"
+    readonly text: string
+    readonly next: ReadinessNextView | null
 }

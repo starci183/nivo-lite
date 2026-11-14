@@ -1,6 +1,6 @@
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import { latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
-import type { WorkflowTemplate } from "@nivo-lite/blocks-core/modules"
+import { latestTemplateVersion, type WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
 import type { Locale } from "@modules/platform/i18n"
 import type {
     SnapshotDiff,
@@ -10,6 +10,8 @@ import type {
     WorkflowVersionView,
     WorkflowView,
 } from "../agent-workflows.contracts"
+import type { NodeRightAsk, OptionalStepTitle } from "../agent-workflow-rights.contracts"
+import { operationTitleOf, type OptionalOperationTitle } from "./node-accounts.policy"
 import { linkedGraphOf } from "./workflow-view.policy"
 
 /** A workflow as the GraphQL transport sends it. */
@@ -104,10 +106,6 @@ export interface WorkflowDiffWire {
     readonly steps: ReadonlyArray<StepDiffWire>
     /** Whether what wakes the graph changed. */
     readonly triggerChanged: boolean
-    /** The rights gained. */
-    readonly rightsAdded: ReadonlyArray<string>
-    /** The rights lost. */
-    readonly rightsRemoved: ReadonlyArray<string>
     /** The tools gained. */
     readonly toolsAdded: ReadonlyArray<string>
     /** The tools lost. */
@@ -116,11 +114,46 @@ export interface WorkflowDiffWire {
     readonly effectsAdded: ReadonlyArray<string>
     /** The effects lost. */
     readonly effectsRemoved: ReadonlyArray<string>
+    /** The operations on connected accounts the nodes ask for that they did not. */
+    readonly nodeRightsAdded: ReadonlyArray<NodeRightWire>
+    /** The operations on connected accounts the nodes no longer ask for. */
+    readonly nodeRightsRemoved: ReadonlyArray<NodeRightWire>
+    /** The operations the nodes asked to call after a person's yes and now ask to call by themselves. */
+    readonly nodeRightsLoosened: ReadonlyArray<NodeRightWire>
     /** The graph before, or null for a first version. */
     readonly beforeJson: string | null
     /** The graph after. */
     readonly afterJson: string
 }
+
+/** One operation a node asks for, as a diff row shows it: the entry, and the declared titles of its step and its operation. */
+export interface NodeRightWire extends NodeRightAsk {
+    /** The title of the step the node runs, as its installed node declares it; null for a step no installed node is. */
+    readonly stepTitle: OptionalStepTitle
+    /** The title of the operation, as its plugin (a tool) or its provider's ability (a work action) declares it; null when none does. */
+    readonly operationTitle: OptionalOperationTitle
+}
+
+/** The title of a step by its id, as its installed node declares it. */
+export type StepTitleOf = (step: string) => OptionalStepTitle
+
+/** No step has a title: what a caller with no titles of the installed nodes at hand passes. */
+const UNTITLED: StepTitleOf = () => null
+
+/** The entries of one side of a diff with their titles; the step of each node is read in the graph that holds the node. */
+const titledOf = (
+    asks: ReadonlyArray<NodeRightAsk> | undefined,
+    graph: GraphSpec | null,
+    stepTitleOf: StepTitleOf,
+): ReadonlyArray<NodeRightWire> =>
+    (asks ?? []).map((ask) => {
+        const step = graph?.nodes.find((node) => node.key === ask.nodeKey)?.step
+        return {
+            ...ask,
+            stepTitle: step === undefined ? null : stepTitleOf(step),
+            operationTitle: operationTitleOf(ask),
+        }
+    })
 
 /** A workflow with its graph and history as the transport sends it. */
 export interface WorkflowDetailWire {
@@ -229,8 +262,11 @@ export const workflowVersionWireOf = (view: WorkflowVersionView): WorkflowVersio
     active: view.active,
 })
 
-/** A diff as the wire carries it, with the two graphs it compares. */
-export const workflowDiffWireOf = (read: SnapshotDiff): WorkflowDiffWire => ({
+/**
+ * A diff as the wire carries it, with the two graphs it compares. Each operation the nodes gained, lost or loosened carries the
+ * declared title of its step (`stepTitleOf`) and of its operation, so a row never shows a node key or a tool id alone.
+ */
+export const workflowDiffWireOf = (read: SnapshotDiff, stepTitleOf: StepTitleOf = UNTITLED): WorkflowDiffWire => ({
     steps: read.diff.steps.map((step) => ({
         key: step.key,
         change: step.change,
@@ -244,31 +280,39 @@ export const workflowDiffWireOf = (read: SnapshotDiff): WorkflowDiffWire => ({
     })),
     triggerChanged: read.diff.triggerChanged,
     ...read.diff.grant,
+    nodeRightsAdded: titledOf(read.diff.nodeRights?.added, read.after, stepTitleOf),
+    nodeRightsRemoved: titledOf(read.diff.nodeRights?.removed, read.before, stepTitleOf),
+    nodeRightsLoosened: titledOf(read.diff.nodeRights?.loosened, read.after, stepTitleOf),
     beforeJson: read.before === null ? null : JSON.stringify(read.before),
     afterJson: JSON.stringify(read.after),
 })
 
 /** A workflow detail as the wire carries it; the template diff compares against the template version the workflow came from. */
-export const workflowDetailWireOf = (detail: WorkflowDetail): WorkflowDetailWire => ({
+export const workflowDetailWireOf = (
+    detail: WorkflowDetail,
+    stepTitleOf: StepTitleOf = UNTITLED,
+): WorkflowDetailWire => ({
     workflow: workflowWireOf(detail.workflow),
     graphJson: JSON.stringify(detail.graph),
-    versions: detail.versions.map(workflowVersionWireOf),
+    versions: detail.versions.map((item) => workflowVersionWireOf(item)),
     templateDiff:
         detail.templateDiff === null
             ? null
-            : workflowDiffWireOf({
-                  before: linkedGraphOf(detail.workflow.template),
-                  after: detail.graph,
-                  diff: detail.templateDiff,
-              }),
+            : workflowDiffWireOf(
+                  { before: linkedGraphOf(detail.workflow.template), after: detail.graph, diff: detail.templateDiff },
+                  stepTitleOf,
+              ),
 })
 
 /** A template preview as the wire carries it: the diff from the workflow now to the merged graph. */
-export const templatePreviewWireOf = (preview: TemplatePreview): TemplatePreviewWire => ({
+export const templatePreviewWireOf = (
+    preview: TemplatePreview,
+    stepTitleOf: StepTitleOf = UNTITLED,
+): TemplatePreviewWire => ({
     templateVersion: preview.templateVersion,
     changes: preview.changes,
     conflicts: preview.conflicts,
-    diff: workflowDiffWireOf({ before: preview.current, after: preview.merged, diff: preview.diff }),
+    diff: workflowDiffWireOf({ before: preview.current, after: preview.merged, diff: preview.diff }, stepTitleOf),
 })
 
 /** A template in the reader's language, with its versions oldest first and the graph of its newest. */

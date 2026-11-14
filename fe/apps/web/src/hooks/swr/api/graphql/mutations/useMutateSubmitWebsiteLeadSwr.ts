@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSubmitWebsiteLead,
     type mutateSubmitWebsiteLead as SubmitWebsiteLeadOperation,
 } from "@/modules/api/graphql/mutations/mutation-submit-website-lead"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SubmitWebsiteLeadMutation } from "@/modules/api"
 
 /** The request of the SubmitWebsiteLead operation. */

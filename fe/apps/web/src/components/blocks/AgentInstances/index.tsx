@@ -2,15 +2,20 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useAddInstance, useConnectionNeedsCopy, useInstanceList, isSetupPending } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
+import {
+    useAddInstance,
+    useConnectionNeedsCopy,
+    useInstanceList,
+    isSetupPending,
+    useAgentRoute,
+    type ModuleKey,
+} from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useAddInstanceForm } from "@/hooks/rhf"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentInstancesBase } from "./component"
-import type { InstanceRowView } from "./component"
+import { AgentInstancesBase, type InstanceRowView } from "./component"
 
 const PLACEHOLDER: ReadonlyArray<InstanceRowView> = [
     {
@@ -19,6 +24,7 @@ const PLACEHOLDER: ReadonlyArray<InstanceRowView> = [
         description: "-",
         statusLabel: "-",
         statusTone: "neutral",
+        isStatusDot: true,
         needs: { lines: [], linkLabel: "-", href: "#" },
         openHref: "#",
     },
@@ -41,7 +47,8 @@ const toRowView = (
             : t("versionInUse", { version: row.activeVersion }),
     ].join(" · "),
     statusLabel: t(`lifecycle_${row.lifecycle}`),
-    statusTone: row.statusTone,
+    statusTone: isSetupPending(row.lifecycle) ? "muted" : row.statusTone,
+    isStatusDot: !isSetupPending(row.lifecycle),
     needs: {
         lines: needs.linesOf(row.connectionNeeds),
         linkLabel: needs.linkLabel,
@@ -52,25 +59,26 @@ const toRowView = (
 
 /** What the type page hands the block: the type of the url, the query to carry on and whether the list was asked for. */
 interface AgentInstancesProps {
-    readonly module: ModuleKey
+    readonly module?: ModuleKey | undefined
     readonly query: string
     readonly showList: boolean
 }
 
 /** The connected instances of one agent type: reads the installed agents in the browser, redirects when the type has one instance, adds new ones. */
 export const AgentInstances = (props: AgentInstancesProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("modulesCore")
     const ts = useTranslations("shell")
     const member = useMember()
     const workspaceId = useWorkspaceId()
-    const list = useInstanceList(props.module, props.query, props.showList ? "list" : "page")
+    const list = useInstanceList(route.module, props.query, props.showList ? "list" : "page")
     const { add, isAdding } = useAddInstance()
     const needs = useConnectionNeedsCopy()
     const slotLabels = useSlotLabels()
-    const [isOpen, setOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
     const form = useAddInstanceForm(list.defaultName, list.names)
     const submit = form.handleSubmit(async (values) => {
-        await add(props.module, values.name)
+        await add(route.module, values.name)
     })
 
     return (
@@ -111,7 +119,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                           on: {
                               setName: (value) => form.setValue("name", value, { shouldValidate: true }),
                               create: () => void submit(),
-                              close: () => setOpen(false),
+                              close: () => setIsOpen(false),
                           },
                       }
                     : null,
@@ -120,7 +128,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                 add: () => {
                     form.reset({ name: list.defaultName })
                     void form.trigger("name")
-                    setOpen(true)
+                    setIsOpen(true)
                 },
             }}
         />

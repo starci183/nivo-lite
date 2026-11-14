@@ -74,7 +74,7 @@ const sourcesOf = (
 const branchOf = (branch: GraphBranch, draft: PackageDraft, tally: Tally): GraphBranch => ({
     key: branch.key,
     when: branch.when,
-    then: branch.then,
+    mode: branch.mode,
     next: branch.next,
     approver: approverOf(branch.approver, tally),
     sources: sourcesOf(branch.sources, draft, tally),
@@ -228,13 +228,12 @@ const requiredActionsOf = (graph: GraphDocument): ReadonlyArray<string> => [
 /**
  * Packages a frozen graph version, by an allowlist: the package is built field by field from what the format names, so nothing else
  * of the creator's agent can reach it. The Brain is cut from the nodes, chats and people from the sources, members and rooms from the
- * approvers, and the data rights become proposals. Then the finished package is scanned for ids, addresses and secrets.
+ * approvers,. Then the finished package is scanned for ids, addresses and secrets.
  */
 export const previewPackage = (graph: GraphDocument, draft: PackageDraft): PackagePreview => {
     const tally: Tally = { brainRefs: 0, privateSources: 0, people: 0 }
     const rebuilt: GraphDocument = {
         nodes: graph.nodes.map((node) => nodeOf(node, draft, tally)),
-        rights: [],
         ...(graph.contracts === undefined ? {} : { contracts: contractsOf(graph.contracts, tally) }),
     }
     const providers = [...new Set(rebuilt.nodes.flatMap((node) => node.uses.map((use) => use.provider)))].filter(
@@ -251,12 +250,6 @@ export const previewPackage = (graph: GraphDocument, draft: PackageDraft): Packa
         graph: rebuilt,
         parameters: draft.parameters,
         bindings: draft.bindings,
-        proposedRights: graph.rights.map((right) => ({
-            kind: right.kind,
-            scope: right.scope,
-            hide: [...right.hide],
-            mask: [...right.mask],
-        })),
         requiredProviders: providers,
         requiredAuthorityActions: requiredActionsOf(rebuilt),
         starterKnowledge: draft.starterKnowledge,
@@ -272,7 +265,6 @@ export const previewPackage = (graph: GraphDocument, draft: PackageDraft): Packa
         brainRefs: tally.brainRefs,
         privateSources: tally.privateSources,
         people: tally.people,
-        rights: graph.rights.length,
     }
     return {
         package: problems.length === 0 ? { ...body, hash: hashOfPackage(body) } : null,

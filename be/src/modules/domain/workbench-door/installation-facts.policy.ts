@@ -1,5 +1,5 @@
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
-import type { InstallationFacts } from "@nivo-lite/blocks-core/modules"
+import type { InstallationFacts } from "@nivo-lite/agent-sdk/platform"
 
 /** The facts of the installation the `platform.installation` read describes: what the modules declare, the registry hash, and the keys the workspace enabled. */
 export const installationFactsOf = (

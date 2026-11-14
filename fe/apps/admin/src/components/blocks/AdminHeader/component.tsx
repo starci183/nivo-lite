@@ -10,8 +10,8 @@ import {
     Text,
     TopBar,
 } from "@starci/grammar/common"
-import { languageMenuEntries } from "../../composites/LanguageMenu"
-import { nivoIconSource } from "../../leaves/Icon"
+import { adminLanguageMenuEntries } from "../../composites/LanguageMenu"
+import { adminIconSource } from "../../leaves/Icon"
 
 /** One destination of the console bar. */
 export interface AdminHeaderDestination {
@@ -64,7 +64,7 @@ const Actions = (props: AdminHeaderBaseProps) => (
     <>
         <DropdownMenu
             placement="bottom end"
-            entries={languageMenuEntries({
+            entries={adminLanguageMenuEntries({
                 label: props.props.languageLabel,
                 value: props.props.locale,
                 options: props.props.localeOptions,
@@ -73,7 +73,7 @@ const Actions = (props: AdminHeaderBaseProps) => (
             })}
             trigger={
                 <IconButton
-                    source={nivoIconSource("locale", "leading")}
+                    source={adminIconSource("locale", "leading")}
                     label={props.props.languageLabel}
                     intent="dismiss"
                     isDisabled={props.props.isLocalePending}
@@ -86,8 +86,8 @@ const Actions = (props: AdminHeaderBaseProps) => (
             size="control"
             isSelected={props.props.isDark}
             onSelectedChange={props.on.chooseDark}
-            thumbIcon={nivoIconSource("light", "leading")}
-            selectedThumbIcon={nivoIconSource("dark", "leading")}
+            thumbIcon={adminIconSource("light", "leading")}
+            selectedThumbIcon={adminIconSource("dark", "leading")}
         />
         <DropdownMenu
             placement="bottom end"
@@ -100,7 +100,7 @@ const Actions = (props: AdminHeaderBaseProps) => (
                         {
                             id: "signout",
                             label: props.props.signOutLabel,
-                            iconSource: nivoIconSource("signOut", "leading"),
+                            iconSource: adminIconSource("signOut", "leading"),
                             tone: "danger",
                             onAction: props.on.signOut,
                         },
@@ -119,7 +119,7 @@ export const AdminHeaderBase = (props: AdminHeaderBaseProps) => (
             brand={<Text isStrong>{props.props.title}</Text>}
             navigation={<Destinations props={props.props} />}
             menu={{
-                icon: <Icon source={nivoIconSource("menu", "leading")} />,
+                icon: <Icon source={adminIconSource("menu", "leading")} />,
                 openLabel: props.props.openMenuLabel,
                 closeLabel: props.props.closeMenuLabel,
                 isOpen: props.props.isMenuOpen,

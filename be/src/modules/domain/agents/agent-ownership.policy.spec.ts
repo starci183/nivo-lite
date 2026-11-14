@@ -5,17 +5,15 @@ import {
     isAssignableRole,
     mayAssign,
     mayManage,
-    mayTag,
     ownerCardOf,
     resolveOwners,
     rolesOf,
 } from "./agent-ownership.policy"
-import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
+import type { AssignContext, MemberState } from "./agents-reads.contracts"
 
 type Subject = {
     isAssignableRole: typeof isAssignableRole
     mayAssign: typeof mayAssign
-    mayTag: typeof mayTag
     ownerCardOf: typeof ownerCardOf
     resolveOwners: typeof resolveOwners
     rolesOf: typeof rolesOf
@@ -28,7 +26,7 @@ const buildSubject = async () => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { isAssignableRole, mayAssign, mayTag, ownerCardOf, resolveOwners, rolesOf },
+                useValue: { isAssignableRole, mayAssign, ownerCardOf, resolveOwners, rolesOf },
             },
         ],
     }).compile()
@@ -42,14 +40,6 @@ const assignOf = builder<AssignContext>({
     assignableRoles: ["owner", "manager"],
     assignableRooms: [],
     memberRooms: [],
-})
-
-const tagOf = builder<TagContext>({
-    fromStatus: "active",
-    toStatus: "active",
-    sameWorkspace: true,
-    listed: true,
-    sameAgent: false,
 })
 
 const memberOf = builder<MemberState>({
@@ -190,26 +180,7 @@ describe("mayAssign", () => {
     })
 })
 
-describe("mayTag", () => {
-    it("admits a listed active agent of the same workspace", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.mayTag(tagOf())).toBe(true)
-    })
-
-    it.each([
-        { name: "itself", change: { sameAgent: true } },
-        { name: "an agent of another workspace", change: { sameWorkspace: false } },
-        { name: "an agent that is not on its list", change: { listed: false } },
-        { name: "from a paused agent", change: { fromStatus: "paused" } },
-        { name: "a paused agent", change: { toStatus: "paused" } },
-    ])("refuses $name", async ({ change }) => {
-        const subject = await buildSubject()
-
-        expect(subject.mayTag(tagOf(change))).toBe(false)
-    })
-})
-
+// Ledger (ROAD Opus-1d, 2026-11-14): `mayTag` is deleted with the plain tag road it answered for (ruling R34).
 describe("ownerCardOf", () => {
     it("shows an active member with their room", async () => {
         const subject = await buildSubject()

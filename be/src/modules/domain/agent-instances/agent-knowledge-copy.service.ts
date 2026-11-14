@@ -1,15 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { BrainFactsReadService, BrainFactsService } from "@modules/domain/brain-facts"
-import type { FactStatus } from "@modules/domain/brain-facts"
+import { BrainFactsReadService, BrainFactsService, type FactStatus } from "@modules/domain/brain-facts"
 import {
     KnowledgeSourcesError,
     KnowledgeSourcesReadService,
     KnowledgeSourcesService,
+    type InstanceDocument,
 } from "@modules/domain/knowledge-sources"
-import type { InstanceDocument } from "@modules/domain/knowledge-sources"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentInstancesLogEvent } from "./agent-instances.log-events"
 import { copiedDocumentOf, copiedFactOf, copyTagOf } from "./agent-knowledge-copy.policy"

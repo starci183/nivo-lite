@@ -3,16 +3,3 @@ export const WEBHOOK_STEPS = ["address", "secret", "test", "done"] as const
 
 /** The index of the step that shows the signing secret, the only time it is shown. */
 export const SECRET_STEP = 1
-
-/** The events an outgoing webhook can be sent (their plain-words names live in the `webhookWizard` catalog). */
-export const WEBHOOK_EVENTS = [
-    "lead.created",
-    "deal.won",
-    "order.confirmed",
-    "payment.received",
-    "handoff.requested",
-    "decision.made",
-] as const
-
-/** One of the events an outgoing webhook can be sent. */
-export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]

@@ -10,10 +10,15 @@ import {
     Alert,
     Badge,
     Button,
+    DataTable,
     EmptyNotice,
+    Pagination,
+    Section,
     Stack,
     SurfaceCard,
     Text,
+    type DataTableColumn,
+    type DataTableRow,
 } from "@starci/grammar/common"
 import type { tableBlock } from "../../blocks/table.block"
 import { cellContextOf } from "../../rows/cell-format"
@@ -32,6 +37,7 @@ import { queryOf } from "../../rows/search"
 import { pagesOf } from "../../rows/table-pages"
 import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
+import { useInCard } from "../composites/CardScope"
 import { filterFieldsOf, footerZonesOf, headerZonesOf, type PagingInput } from "../composites/ListZones"
 import { usePaneSearch } from "../composites/usePaneSearch"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -72,13 +78,9 @@ interface TableCellProps {
 /** One cell: its text, in a badge of its tone for a badge column, over its note when it has one. */
 const TableCell = (props: TableCellProps): ReactNode => {
     const { cell } = props
-    if (cell.text === "") return "—"
+    if (cell.text === "") return "\u2014"
     if (cell.isBadge) {
-        return (
-            <Badge tone={cell.tone} isDot>
-                {cell.text}
-            </Badge>
-        )
+        return <Badge tone={cell.tone}>{cell.text}</Badge>
     }
     if (cell.note === "") return cell.text
     return (
@@ -185,6 +187,76 @@ const useFooterZones = (
     return [...footerZonesOf(paging, words), ...more]
 }
 
+/** One row of a table drawn in a card that already stands. */
+interface InCardRow extends DataTableRow {
+    readonly row: TableRow
+}
+
+/** What the table inside a card that already stands is given. */
+interface TableInCardProps {
+    readonly title: string
+    readonly count: number
+    readonly columns: ReadonlyArray<TableColumnData>
+    readonly specColumns: RenderOf<typeof tableBlock>["props"]["columns"]
+    readonly rows: ReadonlyArray<TableRow>
+    readonly isLoading: boolean
+    readonly empty: string
+    readonly paging: PagingInput
+    /** What the read has more to load: the way to load it or to try again. */
+    readonly more: ReadonlyArray<ReactNode>
+    readonly onRowAction?: (id: string) => void
+}
+
+/**
+ * The table in a surface that already frames it (a card, a side pane): a surface never stands in a surface (COLLECTION-4), so the head is a
+ * titled Section with its count chip, the table draws full bleed with no frame of its own (`surface="none"`), the pager is the table's foot.
+ */
+const TableInCard = (props: TableInCardProps): ReactNode => {
+    const words = useBlockWords()
+    const columns: ReadonlyArray<DataTableColumn<InCardRow>> = props.columns.map((column, index) => ({
+        id: column.id,
+        label: column.label,
+        ...(index === 0 ? { isRowHeader: true } : {}),
+        ...(column.align === undefined ? {} : { align: column.align }),
+        ...(column.priority === undefined ? {} : { priority: column.priority }),
+        ...(column.width === undefined ? {} : { width: column.width }),
+        ...(column.minWidth === undefined ? {} : { minWidth: column.minWidth }),
+        ...(column.truncate === undefined ? {} : { truncate: column.truncate }),
+        ...(column.hideBelow === undefined ? {} : { hideBelow: column.hideBelow }),
+    }))
+    const { paging } = props
+    return (
+        <Section title={props.title} headingLevel={3} count={props.count} isLoading={props.isLoading}>
+            <DataTable
+                label={props.title}
+                surface="none"
+                columns={columns}
+                rows={props.rows.map((row) => ({ id: row.id, row }))}
+                renderCell={(item, columnId) => <TableCell cell={cellOf(props.specColumns, item.row, columnId)} />}
+                isLoading={props.isLoading}
+                emptyContent={<EmptyNotice frame="frameless" message={props.empty} />}
+                {...(props.onRowAction === undefined ? {} : { onRowAction: props.onRowAction })}
+                {...(paging.pageCount < 2
+                    ? {}
+                    : {
+                          footer: (
+                              <Pagination
+                                  label={words({ key: "tablePagination" })}
+                                  page={paging.page}
+                                  pageCount={paging.pageCount}
+                                  onPageChange={paging.onPage}
+                                  previousLabel={words({ key: "tablePrevious" })}
+                                  nextLabel={words({ key: "tableNext" })}
+                                  pageLabel={(number) => `${words({ key: "tablePage" })} ${number}`}
+                              />
+                          ),
+                      })}
+            />
+            {props.more}
+        </Section>
+    )
+}
+
 /** What one page of the table is drawn from. */
 interface TableCardProps {
     readonly block: RenderOf<typeof tableBlock>
@@ -199,6 +271,7 @@ interface TableCardProps {
 const TableCard = (props: TableCardProps): ReactNode => {
     const { block, items } = props
     const words = useBlockWords()
+    const inCard = useInCard()
     const { columns, selectParam } = block.props
     const search = useSearchFields(block)
     const filter = useFilterFields(block)
@@ -215,6 +288,23 @@ const TableCard = (props: TableCardProps): ReactNode => {
     const onRow = (id: string): void => {
         if (selectParam !== undefined) block.params.set(selectParam, id)
         else openRow(id)
+    }
+    const hasRowAction = selectParam !== undefined || open.isAllowed
+    if (inCard && search === null && filter === null) {
+        return (
+            <TableInCard
+                title={words(block.props.title ?? block.props.label)}
+                count={items.length}
+                columns={gridColumns}
+                rows={paged.rows}
+                specColumns={columns}
+                isLoading={props.isLoading}
+                empty={props.labels.empty}
+                paging={{ page: paged.page, pageCount: paged.pageCount, onPage: props.onPage }}
+                more={footers.filter((zone) => zone.kind === "custom").map((zone) => zone.children)}
+                {...(hasRowAction ? { onRowAction: onRow } : {})}
+            />
+        )
     }
     return (
         <SurfaceCard
@@ -236,7 +326,7 @@ const TableCard = (props: TableCardProps): ReactNode => {
             footers={footers}
             isLoading={props.isLoading}
             empty={<EmptyNotice frame="frameless" message={props.labels.empty} />}
-            {...(selectParam !== undefined || open.isAllowed ? { onRowAction: onRow } : {})}
+            {...(hasRowAction ? { onRowAction: onRow } : {})}
         />
     )
 }

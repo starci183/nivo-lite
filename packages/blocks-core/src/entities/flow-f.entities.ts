@@ -1,40 +1,37 @@
 import type { AnyEntityDefinition } from "@nivo-lite/agent-sdk/entity"
 
-import { adjustmentEntity } from "./accounting/adjustment.entity"
-import { bookEntryEntity } from "./accounting/book-entry.entity"
-import { accountingQuestionEntity } from "./accounting/question.entity"
-import { accountingSettingsEntity } from "./accounting/settings.entity"
-import { invoiceEntity } from "./accounting/invoice.entity"
-import { agentGraphDecisionEntity } from "./agent/graph-decision.entity"
-import { agentGraphProposalEntity } from "./agent/graph-proposal.entity"
-import { agentGraphSourceEntity } from "./agent/graph-source.entity"
-import { agentGraphVersionEntity } from "./agent/graph-version.entity"
-import { agentGraphEntity } from "./agent/graph.entity"
-import { agentWorkflowVersionEntity } from "./agent/workflow-version.entity"
-import { agentWorkflowEntity } from "./agent/workflow.entity"
-import { loyaltyMemberEntity } from "./loyalty/member.entity"
-import { loyaltyLedgerEntryEntity } from "./loyalty/ledger-entry.entity"
-import { loyaltyRewardEntity } from "./loyalty/reward.entity"
-import { loyaltyProgramEntity } from "./loyalty/program.entity"
-import { loyaltyCampaignEntity } from "./loyalty/campaign.entity"
-import { loyaltyDecisionEntity } from "./loyalty/decision.entity"
-import { agentNodeEffectEntity } from "./agent/node-effect.entity"
-import { agentRunStepEntity } from "./agent/run-step.entity"
-import { agentRunEntity } from "./agent/run.entity"
-import { agentRunWorkflowEntity } from "./agent/run-workflow.entity"
-import { agentLeadFreezeEntity } from "./agent/lead-freeze.entity"
-import { agentConversationHoldEntity } from "./agent/conversation-hold.entity"
-import { agentRunStopEntity } from "./agent/run-stop.entity"
-import { agentLeadMemoryEntity } from "./agent/lead-memory.entity"
+import { adjustmentEntity } from "./sales/ledger-adjustment.entity"
+import { bookEntryEntity } from "./sales/ledger-entry.entity"
+import { salesLedgerQuestionEntity } from "./sales/ledger-question.entity"
+import { salesLedgerSettingsEntity } from "./sales/ledger-settings.entity"
+import { invoiceEntity } from "./sales/invoice.entity"
+import { bookingEntity } from "./booking/booking.entity"
+import { bookingHoursEntity } from "./booking/hours.entity"
+import { bookingResourceEntity } from "./booking/resource.entity"
+import { bookingServiceEntity } from "./booking/service.entity"
+import { bookingSettingsEntity } from "./booking/settings.entity"
+import { loyaltyMemberEntity } from "./sales/loyalty-member.entity"
+import { loyaltyLedgerEntryEntity } from "./sales/loyalty-ledger-entry.entity"
+import { loyaltyRewardEntity } from "./sales/loyalty-reward.entity"
+import { loyaltyProgramEntity } from "./sales/loyalty-program.entity"
+import { loyaltyCampaignEntity } from "./sales/loyalty-campaign.entity"
+import { loyaltyDecisionEntity } from "./sales/loyalty-decision.entity"
 import { conversationEntity } from "./chat/conversation.entity"
-import { messageEntity } from "./chat/message.entity"
+import { contentBrandEntity } from "./content/brand.entity"
+import { contentPostEntity } from "./content/post.entity"
+import { noteEntity } from "./chat/note.entity"
+import { replyEntity } from "./chat/reply.entity"
 import { chatSettingsEntity } from "./chat/settings.entity"
-import { claimEntity } from "./payment/claim.entity"
-import { transactionEntity } from "./payment/transaction.entity"
-import { workspaceSettingsEntity } from "./workspace/settings.entity"
+import { claimEntity } from "./sales/claim.entity"
+import { transactionEntity } from "./sales/transaction.entity"
+import { hiringCandidateEntity } from "./hiring/candidate.entity"
+import { hiringJobEntity } from "./hiring/job.entity"
 import { leadEntity } from "./sales/lead.entity"
 import { orderEntity } from "./sales/order.entity"
 import { salesSettingsEntity } from "./sales/settings.entity"
+import { videoBrandKitEntity } from "./video/brand-kit.entity"
+import { videoProjectEntity } from "./video/project.entity"
+import { videoRenderEntity } from "./video/render.entity"
 
 /** Every flow F entity declaration. */
 export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
@@ -42,35 +39,32 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     orderEntity,
     salesSettingsEntity,
     conversationEntity,
-    messageEntity,
+    noteEntity,
+    replyEntity,
     chatSettingsEntity,
     transactionEntity,
     claimEntity,
     invoiceEntity,
     adjustmentEntity,
     bookEntryEntity,
-    accountingQuestionEntity,
-    accountingSettingsEntity,
+    salesLedgerQuestionEntity,
+    salesLedgerSettingsEntity,
     loyaltyMemberEntity,
     loyaltyLedgerEntryEntity,
     loyaltyRewardEntity,
     loyaltyProgramEntity,
     loyaltyCampaignEntity,
     loyaltyDecisionEntity,
-    agentRunEntity,
-    agentRunStepEntity,
-    agentNodeEffectEntity,
-    agentGraphEntity,
-    agentGraphVersionEntity,
-    agentGraphSourceEntity,
-    agentGraphProposalEntity,
-    agentGraphDecisionEntity,
-    agentWorkflowEntity,
-    agentWorkflowVersionEntity,
-    agentRunWorkflowEntity,
-    agentLeadFreezeEntity,
-    agentConversationHoldEntity,
-    agentRunStopEntity,
-    agentLeadMemoryEntity,
-    workspaceSettingsEntity,
+    bookingServiceEntity,
+    bookingResourceEntity,
+    bookingHoursEntity,
+    bookingEntity,
+    bookingSettingsEntity,
+    videoProjectEntity,
+    videoRenderEntity,
+    videoBrandKitEntity,
+    hiringJobEntity,
+    hiringCandidateEntity,
+    contentBrandEntity,
+    contentPostEntity,
 ]

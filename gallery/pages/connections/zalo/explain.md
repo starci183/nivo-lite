@@ -7,7 +7,7 @@ area: connections
 
 > Shot note: the blank 64px pink strip above the header band described below is visible in THIS older capture (and at 390 as the nav row + strip). The newer audit capture of the same page (gallery/pages/audit/<page>) shows the band directly under the top bar, so treat that single defect as probably fixed; retake this shot to confirm. All other findings stand.
 
-Block `ConnectionProvider` (components/blocks/ConnectionProvider/component.tsx) with frames `ConnectionProviderTable`, `ConnectionBand` and composite `FiguresStrip`; this layout is shared by every provider (Zalo, Telegram, SePay, payOS). Shots `1440.png`, `390.png`. Grammar paths under `node_modules/@starci/grammar/dist/core/`. Overlays ("N", "Compiling", red dot) are not content.
+Block `ConnectionProvider` (components/blocks/ConnectionProvider/component.tsx) with frames `ConnectionProviderTable`, `ConnectionBand`; this layout is shared by every provider (Zalo, Telegram, SePay, payOS). Shots `1440.png`, `390.png`. Grammar paths under `node_modules/@starci/grammar/dist/core/`. Overlays ("N", "Compiling", red dot) are not content.
 
 ## Khung console (thanh trên, thanh bên)
 Vì sao: white console chrome, "Kết nối" current in the sidebar; the theme toggle in the top bar has no law behind it (CHƯA RÕ).
@@ -22,7 +22,7 @@ Grammar: `PageHeader`, `Button intent="commit"`, `node_modules/@starci/grammar/d
 ## Dải số liệu
 Vì sao: three figures: Đang chạy 1 (trên 1 OA), Sự kiện cuối "5 giờ trước", Agent dùng 1 (Chatbot), in one card of cells with a 14 muted label, a figure and a 12 muted note: the figures-ribbon content type. The third figure repeats information the table below shows (which agents use the connection).
 Luật: `surfacecard-zones-api.md` (header kind `figures`), `table-heroui-native-section-head.md` (one content per card).
-Grammar: `SurfaceCard headers=[{ kind: "figures" }]`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`; composite `FiguresStrip`.
+Grammar: `SurfaceCard headers=[{ kind: "figures" }]`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`.
 
 ## Đầu khối "Kết nối của bạn 1"
 Vì sao: a block label 14/500 on the pink with a grey count chip directly to its right and nothing at the right: exactly the section-head law (compare the hub, where the count is wrongly at the right).

@@ -1,5 +1,4 @@
-import { Alert, Stack } from "@starci/grammar/common"
-import type { PresentationState } from "@starci/grammar/common"
+import { Alert, Stack, type PresentationState } from "@starci/grammar/common"
 
 /** One notice of a connection page: why it cannot work, a refused command, or the one step left. */
 interface ConnectionNoticeRow {

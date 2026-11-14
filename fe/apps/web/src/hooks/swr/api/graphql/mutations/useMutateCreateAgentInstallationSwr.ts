@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateCreateAgentInstallation,
     type MutateCreateAgentInstallationRequest,
 } from "@/modules/api/graphql/mutations/mutation-create-agent-installation"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { CreateAgentInstallationMutation } from "@/modules/api"
 
 /** What the CreateAgentInstallation mutation is triggered with. */

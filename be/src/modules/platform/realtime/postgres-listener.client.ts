@@ -1,8 +1,7 @@
 import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { listenOn } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { CancelTimer, Timer } from "@modules/platform/retry"
 import { RealtimeError, RealtimeErrorCode } from "./errors/realtime.error"
 import { NOTIFY_CHANNEL, PROBE_PREFIX, PROBE_TIMEOUT_MS, RECONNECT_DELAY_MS } from "./realtime.contracts"
@@ -132,9 +131,9 @@ export class PostgresListenerClient implements NotificationListener {
         if (this.connection !== connection) return
         this.connection = undefined
         this.logger.warn(RealtimeLogEvent.ListenLost, { cause: cause instanceof Error ? cause.message : "closed" })
-        connection.end().catch((closeCause: unknown) =>
+        connection.end().catch((error: unknown) =>
             this.logger.warn(RealtimeLogEvent.ListenLost, {
-                cause: String(closeCause),
+                cause: String(error),
             }),
         )
         handlers.lost()

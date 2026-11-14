@@ -1,13 +1,12 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useCallback, useState } from "react"
+import { useCallback, useState, type SetStateAction, type Dispatch } from "react"
 import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { useMutateSendZaloTestMessageSwr } from "@/hooks/swr"
 import type { DataSlot, ZaloSendView } from "@/modules/types"
 import { useZaloPage } from "./useZaloPage"
-import type { SetStateAction, Dispatch } from "react"
 
 type UseZaloTestSendResult = {
     view: DataSlot<ZaloSendView>
@@ -50,8 +49,8 @@ export const useZaloTestSend = (connectionId: string): UseZaloTestSendResult => 
             blocked: page.sendBlock === null ? "" : (blocks[page.sendBlock] ?? t("blockTokenExpired")),
         }
     })
-    const recipientId =
-        picked === "" ? (("items" in slot ? slot.items.recipients[0]?.userId : undefined) ?? "") : picked
+    const firstRecipientId = ("items" in slot ? slot.items.recipients[0]?.userId : undefined) ?? ""
+    const recipientId = picked === "" ? firstRecipientId : picked
 
     const send = useCallback(async (): Promise<void> => {
         setNote({ text: "", isOk: false })

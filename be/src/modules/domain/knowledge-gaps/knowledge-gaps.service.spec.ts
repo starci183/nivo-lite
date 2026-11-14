@@ -17,7 +17,7 @@ const rowOf = builder<KnowledgeGapEntity>({
     module: "chatbot",
     question: "Tea price?",
     questionKey: "tea-price",
-    keywords: ["tea", "price"],
+    keywords: [],
     topic: "Tea",
     attributeGuess: "Price",
     count: 1,
@@ -102,8 +102,6 @@ const BUMP_SET = {
 
 const BUMP_WHERE = ["workspace_id = :workspaceId AND id = :id", { workspaceId: WS, id: "g1" }]
 
-const nullKeywords = null
-
 describe("KnowledgeGapsService", () => {
     it("lists mapped gaps with the requested statuses and caps the limit at 200", async () => {
         const em = mockEntityManager({ find: [KnowledgeGapEntity, [rowOf()]] })
@@ -135,11 +133,11 @@ describe("KnowledgeGapsService", () => {
 
 describe("KnowledgeGapsService", () => {
     describe("record", () => {
-        it("ignores a question without significant words before querying", async () => {
+        it("ignores a question with no letter or digit before querying", async () => {
             const em = mockEntityManager()
             const service = await build(em)
 
-            await expect(service.record(WS, inputOf({ question: " hello please how are you " }))).resolves.toBeNull()
+            await expect(service.record(WS, inputOf({ question: " ?! -- " }))).resolves.toBeNull()
 
             expect(em.find).not.toHaveBeenCalled()
             expect(em.createQueryBuilder).not.toHaveBeenCalled()
@@ -166,7 +164,7 @@ describe("KnowledgeGapsService", () => {
                         module: "chatbot",
                         question: "Tea price?",
                         questionKey: "tea-price",
-                        keywords: ["tea", "price"],
+                        keywords: [],
                         topic: "Tea",
                         attributeGuess: "Price",
                         exampleConversationId: "c1",
@@ -193,7 +191,7 @@ describe("KnowledgeGapsService", () => {
                         module: "chatbot",
                         question: "t".repeat(300),
                         questionKey: "t".repeat(120),
-                        keywords: ["t".repeat(120)],
+                        keywords: [],
                         topic: null,
                         attributeGuess: null,
                         exampleConversationId: null,
@@ -235,41 +233,107 @@ describe("KnowledgeGapsService", () => {
             ])
             expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
         })
+    })
+})
 
-        it("matches stored significant words and falls back to the existing row when the bump returns none", async () => {
-            const em = mockEntityManager({
-                find: [KnowledgeGapEntity, [Object.assign(rowOf(), { questionKey: "old-key" })]],
-            })
-            const [bump] = queueQueryBuilders(em, [NOTHING])
-            const service = await build(em)
-
-            await expect(service.record(WS, inputOf())).resolves.toEqual({ gap, isNew: false, reopened: false })
-
-            expect(bump?.callsOf("setParameters")).toEqual([[{ subject: null, attribute: null, conversationId: null }]])
-        })
-
-        it("derives missing candidate keywords and skips an unrelated candidate", async () => {
+describe("KnowledgeGapsService", () => {
+    describe("record: the same gap by the model's topic", () => {
+        it("counts again a differently worded question the model gave the same topic and attribute", async () => {
             const em = mockEntityManager({
                 find: [
                     KnowledgeGapEntity,
                     [
                         Object.assign(rowOf(), {
-                            id: "other",
-                            questionKey: "coffee-stock",
-                            keywords: ["coffee", "stock"],
+                            id: "other-attribute",
+                            questionKey: "brake-pads-stock",
+                            topic: "Brake pads",
+                            attributeGuess: "Stock",
                         }),
-                        Object.assign(rowOf(), { questionKey: "old-key", keywords: nullKeywords }),
+                        Object.assign(rowOf(), {
+                            questionKey: "do-you-fit-brake-pads",
+                            topic: "Brake pads",
+                            attributeGuess: "Fitting price",
+                        }),
                     ],
                 ],
             })
-            queueQueryBuilders(em, [INSERTED(Object.assign(rowOf(), { count: 2 }))])
+            const [bump] = queueQueryBuilders(em, [NOTHING])
             const service = await build(em)
 
-            await expect(service.record(WS, inputOf())).resolves.toEqual({
-                gap: { ...gap, count: 2 },
+            await expect(
+                service.record(
+                    WS,
+                    inputOf({ question: "How much to fit new pads?", topic: " brake PADS | Fitting price " }),
+                ),
+            ).resolves.toEqual({
+                gap: { ...gap, topic: "Brake pads", attributeGuess: "Fitting price" },
                 isNew: false,
                 reopened: false,
             })
+
+            expect(bump?.callsOf("where")).toEqual([BUMP_WHERE])
+            expect(bump?.callsOf("setParameters")).toEqual([
+                [{ subject: "brake PADS", attribute: "Fitting price", conversationId: null }],
+            ])
+        })
+
+        it("no word compare: a similar question with no topic is a NEW gap, as is one whose stored gap had no topic", async () => {
+            const stored = [
+                Object.assign(rowOf(), {
+                    id: "pads",
+                    questionKey: "price-to-fit-brake-pads",
+                    topic: "Brake pads",
+                    attributeGuess: "Fitting price",
+                }),
+                Object.assign(rowOf(), {
+                    id: "untopical",
+                    questionKey: "chain-wax-price",
+                    topic: null,
+                    attributeGuess: null,
+                }),
+            ]
+            const em = mockEntityManager({ find: [KnowledgeGapEntity, stored] })
+            const [first, second] = queueQueryBuilders(em, [INSERTED(rowOf()), INSERTED(rowOf())])
+            const service = await build(em)
+
+            await service.record(WS, inputOf({ question: "Price to fit the brake pads?" }))
+            await service.record(WS, inputOf({ question: "What does chain wax cost?", topic: "Chain wax | Price" }))
+
+            expect(first?.callsOf("insert")).toEqual([[]])
+            expect(first?.callsOf("values")[0]?.[0]).toMatchObject({
+                questionKey: "price-to-fit-the-brake-pads",
+                topic: null,
+                keywords: [],
+            })
+            expect(second?.callsOf("insert")).toEqual([[]])
+            expect(second?.callsOf("values")[0]?.[0]).toMatchObject({ topic: "Chain wax", attributeGuess: "Price" })
+        })
+    })
+})
+
+describe("KnowledgeGapsService", () => {
+    describe("record: the same gap by the question text", () => {
+        it("the same question text counts again even without a topic", async () => {
+            const em = mockEntityManager({
+                find: [
+                    KnowledgeGapEntity,
+                    [
+                        Object.assign(rowOf(), {
+                            questionKey: "price-to-fit-brake-pads",
+                            topic: null,
+                            attributeGuess: null,
+                        }),
+                    ],
+                ],
+            })
+            const [bump] = queueQueryBuilders(em, [INSERTED(Object.assign(rowOf(), { count: 2 }))])
+            const service = await build(em)
+
+            await expect(service.record(WS, inputOf({ question: "Price to fit brake pads?" }))).resolves.toMatchObject({
+                isNew: false,
+                gap: { count: 2 },
+            })
+            expect(bump?.callsOf("update")).toEqual([[]])
         })
     })
 })
@@ -341,64 +405,6 @@ describe("KnowledgeGapsService", () => {
                 plain({ status: "answered", answeredAt: NOW, answeredBy: "owner" }),
             ],
         ])
-    })
-})
-
-const OPEN_QUERY = [
-    KnowledgeGapEntity,
-    plain({
-        select: { id: true, module: true, keywords: true, question: true },
-        where: { workspaceId: WS, status: "open" },
-        take: 300,
-    }),
-]
-
-const ANSWERED = (id: string, by: string) => [
-    KnowledgeGapEntity,
-    plain({ workspaceId: WS, id, status: "open" }),
-    plain({ status: "answered", answeredAt: NOW, answeredBy: by }),
-]
-
-describe("KnowledgeGapsService", () => {
-    it("answers matching questions of one module in their stored order", async () => {
-        const em = mockEntityManager({
-            find: [
-                KnowledgeGapEntity,
-                [
-                    Object.assign(rowOf(), { id: "g1" }),
-                    Object.assign(rowOf(), { id: "wrong-module", module: "sales" }),
-                    Object.assign(rowOf(), { id: "wrong-question", keywords: ["coffee", "stock"] }),
-                    Object.assign(rowOf(), { id: "g2", keywords: nullKeywords }),
-                ],
-            ],
-            update: [KnowledgeGapEntity, {}],
-        })
-        const service = await build(em)
-
-        await expect(
-            service.resolve(WS, { text: "Tea price is 5", module: "chatbot", minimum: 0.6, by: "fact:f1" }),
-        ).resolves.toBe(2)
-
-        expect(em.find.mock.calls).toEqual([OPEN_QUERY])
-        expect(em.update.mock.calls).toEqual([ANSWERED("g1", "fact:f1"), ANSWERED("g2", "fact:f1")])
-    })
-
-    it("resolves across every module and leaves uncovered questions open", async () => {
-        const em = mockEntityManager({
-            find: [KnowledgeGapEntity, [Object.assign(rowOf(), { module: "sales" })]],
-            update: [KnowledgeGapEntity, {}],
-        })
-        const service = await build(em)
-
-        await expect(
-            service.resolve(WS, { text: "Tea price", module: null, minimum: 0.75, by: "document:d1" }),
-        ).resolves.toBe(1)
-        await expect(
-            service.resolve(WS, { text: "coffee", module: null, minimum: 0.75, by: "document:d2" }),
-        ).resolves.toBe(0)
-
-        expect(em.find.mock.calls).toEqual([OPEN_QUERY, OPEN_QUERY])
-        expect(em.update.mock.calls).toEqual([ANSWERED("g1", "document:d1")])
     })
 })
 

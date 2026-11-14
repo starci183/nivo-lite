@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import { AuthorizeGoogleHandler } from "./application/authorize-google.handler"
 import { AuthorizeMetaHandler } from "./application/authorize-meta.handler"
 import { AuthorizeZaloHandler } from "./application/authorize-zalo.handler"
+import { BindableAgentsHandler } from "./application/bindable-agents.handler"
 import { CheckConnectionHandler } from "./application/check-connection.handler"
 import { CheckMetaHandler } from "./application/check-meta.handler"
 import { ChooseMetaPageHandler } from "./application/choose-meta-page.handler"
@@ -9,6 +10,10 @@ import { ConnectTelegramHandler } from "./application/connect-telegram.handler"
 import { DeleteConnectionHandler } from "./application/delete-connection.handler"
 import { DisconnectConnectionHandler } from "./application/disconnect-connection.handler"
 import { FinishWebhookConnectionHandler } from "./application/finish-webhook-connection.handler"
+import { GetConnectionAccountDataHandler } from "./application/get-connection-account-data.handler"
+import { AccountDataRowsPageService } from "@modules/domain/account-data"
+import { AccountDataRowsHandler } from "./application/account-data-rows.handler"
+import { AccountDataTypesHandler } from "./application/account-data-types.handler"
 import { GetConnectionFirstEventHandler } from "./application/get-connection-first-event.handler"
 import { GetGoogleStateHandler } from "./application/get-google-state.handler"
 import { GetMetaConnectionHandler } from "./application/get-meta-connection.handler"
@@ -16,6 +21,7 @@ import { GetMoneyConnectionHandler } from "./application/get-money-connection.ha
 import { GetZaloConnectionHandler } from "./application/get-zalo-connection.handler"
 import { ListConnectionAgentsHandler } from "./application/list-connection-agents.handler"
 import { ListConnectionsHandler } from "./application/list-connections.handler"
+import { ListWebhookEventsHandler } from "./application/list-webhook-events.handler"
 import { ReturnZaloAuthorizationHandler } from "./application/return-zalo-authorization.handler"
 import { SaveProviderKeysHandler } from "./application/save-provider-keys.handler"
 import { SaveZaloOaSecretHandler } from "./application/save-zalo-oa-secret.handler"
@@ -41,6 +47,7 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         AuthorizeGoogleHandler,
         AuthorizeMetaHandler,
         AuthorizeZaloHandler,
+        BindableAgentsHandler,
         CheckConnectionHandler,
         CheckMetaHandler,
         ChooseMetaPageHandler,
@@ -48,6 +55,10 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         DeleteConnectionHandler,
         DisconnectConnectionHandler,
         FinishWebhookConnectionHandler,
+        GetConnectionAccountDataHandler,
+        AccountDataRowsPageService,
+        AccountDataTypesHandler,
+        AccountDataRowsHandler,
         GetConnectionFirstEventHandler,
         GetGoogleStateHandler,
         GetMetaConnectionHandler,
@@ -55,6 +66,7 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         GetZaloConnectionHandler,
         ListConnectionAgentsHandler,
         ListConnectionsHandler,
+        ListWebhookEventsHandler,
         ReturnZaloAuthorizationHandler,
         SaveProviderKeysHandler,
         SaveZaloOaSecretHandler,

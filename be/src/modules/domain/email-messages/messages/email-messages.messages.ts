@@ -1,11 +1,11 @@
 import type { MessageBundle } from "@modules/platform/i18n"
+import type { FieldWords } from "@modules/domain/connection-fields"
 
 /** Display text of the email-messages codes and of the reasons a send is refused, Vietnamese and English. */
 export const EMAIL_MESSAGES_MESSAGES: MessageBundle = {
     vi: {
         "errors.EMAIL_MESSAGES_NOT_RECORDED": "Không ghi được lần gửi email.",
         "email.err_no_smtp": "Chưa cấu hình email gửi đi: hãy kết nối một tài khoản SMTP trong Kết nối > Email gửi đi.",
-        "email.err_gate": "Email cho khách chỉ được gửi sau khi đã qua bước kiểm tra quyền.",
         "email.err_rate": "Đã gửi quá nhiều email trong một giờ qua. Thử lại sau.",
         "email.err_bad_recipient": "Địa chỉ email người nhận không hợp lệ.",
         "email.err_attachment": "Tệp đính kèm quá lớn (tối đa 2 MB cho tất cả các tệp).",
@@ -27,7 +27,6 @@ export const EMAIL_MESSAGES_MESSAGES: MessageBundle = {
         "errors.EMAIL_MESSAGES_NOT_RECORDED": "The email attempt could not be recorded.",
         "email.err_no_smtp":
             "Outgoing email is not set up yet: connect an SMTP account in Connections > Outgoing email.",
-        "email.err_gate": "A customer email can only be sent after it has passed the authority check.",
         "email.err_rate": "Too many emails were sent in the last hour. Try again later.",
         "email.err_bad_recipient": "The recipient email address is not valid.",
         "email.err_attachment": "The attachments are too large (2 MB at most for all files together).",
@@ -45,4 +44,18 @@ export const EMAIL_MESSAGES_MESSAGES: MessageBundle = {
         "email.test_footer": "This email was sent by {{shop}}.",
         "email.notice_footer": "This email was sent by {{shop}}.",
     },
+}
+
+/** The words of an SMTP sender's connection form fields (Kết nối card). */
+export const SMTP_FIELD_WORDS: Readonly<
+    Record<"fromEmail" | "host" | "user" | "password" | "testSend" | "testTo" | "setDefault" | "isDefault", FieldWords>
+> = {
+    fromEmail: { vi: "Địa chỉ gửi", en: "Sender address" },
+    host: { vi: "Máy chủ SMTP", en: "SMTP server" },
+    user: { vi: "Tên đăng nhập", en: "User name" },
+    password: { vi: "Mật khẩu", en: "Password" },
+    testSend: { vi: "Gửi email thử", en: "Send a test email" },
+    testTo: { vi: "Gửi email thử tới", en: "Send the test to" },
+    setDefault: { vi: "Đặt làm mặc định", en: "Make default" },
+    isDefault: { vi: "Mặc định", en: "Default" },
 }

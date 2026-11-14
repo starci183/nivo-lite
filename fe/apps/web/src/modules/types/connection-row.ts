@@ -59,30 +59,14 @@ export interface RowCopyLabels {
     readonly hide: string
 }
 
-/** The words of the SMTP extras. */
-export interface RowSmtpLabels {
-    readonly defaultBadge: string
-    readonly test: string
-    readonly changePassword: string
-    readonly setDefault: string
-    readonly testTo: string
-    readonly testSend: string
-    readonly newPassword: string
-    readonly passwordStored: string
-    readonly savePassword: string
-    readonly cancel: string
-}
-
-/** The SMTP-only part of a row. */
+/**
+ * The SMTP-only part of a row: whether the sender is the default, and where its password, test send and default are edited (the
+ * account's Cau hinh tab: the drawer holds no editing control for it).
+ */
 export interface RowSmtpView {
-    readonly labels: RowSmtpLabels
     readonly isDefault: boolean
-    readonly canSetDefault: boolean
-    readonly panel: "test" | "password" | null
-    readonly to: string
-    readonly password: string
-    readonly isPending: boolean
-    readonly note: { readonly tone: "affirmative" | "negative"; readonly text: string } | null
+    readonly defaultBadge: string
+    readonly page: { readonly href: string; readonly label: string }
 }
 
 /** Everything one connection row draws, as data. */

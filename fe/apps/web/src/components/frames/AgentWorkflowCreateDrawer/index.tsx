@@ -1,7 +1,5 @@
-import { Button, Drawer, ListBox, Section, Stack } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
-import { AgentWorkflowTemplate } from "@/components/composites/AgentWorkflowTemplate"
-import type { AgentWorkflowTemplateCopy } from "@/components/composites/AgentWorkflowTemplate"
+import { Button, Drawer, Stack, SurfaceCard } from "@starci/grammar/common"
+import { AgentWorkflowTemplate, type AgentWorkflowTemplateCopy } from "@/components/composites/AgentWorkflowTemplate"
 import { Icon } from "@/components/leaves/Icon"
 import type { WorkflowCreateView, WorkflowTemplateRowView } from "@/modules/types"
 
@@ -29,17 +27,16 @@ interface AgentWorkflowCreateDrawerProps {
     }
 }
 
-/** One template: its name and what it does. */
-const itemOf = (template: WorkflowTemplateRowView): ListBoxItem => ({
+/** One template as a row of the choice: its name, and under it what it does with its version and what it needs. */
+const itemOf = (template: WorkflowTemplateRowView) => ({
     id: template.id,
-    label: template.name,
-    description: template.summary,
-    footer: [template.meta, template.needs].filter((part) => part !== "").join(" · "),
+    title: template.name,
+    subtitle: [template.summary, template.meta, template.needs].filter((part) => part !== "").join(" · "),
 })
 
 /**
- * The drawer that makes a workflow from a template: the templates of the kind of agent, the one chosen with the map of its newest
- * version, and the one primary "Create workflow". The new workflow keeps its own copy of the map.
+ * The drawer that makes a workflow from a template: the templates of the kind of agent as a choice list (a select card, one row per
+ * template), the one chosen with the map of its newest version, and the one primary "Create workflow". The new workflow keeps its own copy of the map.
  */
 export const AgentWorkflowCreateDrawer = (props: AgentWorkflowCreateDrawerProps) => {
     const { copy, create } = props.props
@@ -66,19 +63,15 @@ export const AgentWorkflowCreateDrawer = (props: AgentWorkflowCreateDrawerProps)
             }
         >
             <Stack gap="section">
-                <Section title={copy.pick} headingLevel={3}>
-                    <ListBox
-                        label={copy.pick}
-                        items={props.props.templates.map(itemOf)}
-                        selectionMode="single"
-                        selectedIds={[create.selectedId]}
-                        selectionIndicator="none"
-                        onSelectionChange={(ids) => {
-                            const [id] = ids
-                            if (id !== undefined) props.on.pick(id)
-                        }}
-                    />
-                </Section>
+                <SurfaceCard
+                    kind="select"
+                    selectionMode="single"
+                    label={copy.pick}
+                    headingLevel={3}
+                    items={props.props.templates.map((template) => itemOf(template))}
+                    value={create.selectedId === "" ? null : create.selectedId}
+                    onChange={props.on.pick}
+                />
                 {create.detail === null ? null : <AgentWorkflowTemplate props={{ copy: copy.template, template: create.detail, hasIntro: false }} />}
             </Stack>
         </Drawer>

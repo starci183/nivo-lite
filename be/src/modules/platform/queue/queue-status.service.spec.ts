@@ -28,4 +28,15 @@ describe("QueueStatusService", () => {
 
         await expect(service.status("ws-1", "mail", "mail:missing")).resolves.toBeNull()
     })
+
+    it("says whether a job of the queue and name stands under the key, in the caller's transaction", async () => {
+        const STANDS = 'SELECT * FROM "public"."job_status"($1, $2, $3, $4)'
+        const { service } = await build([])
+        const found = mockEntityManager({ query: [STANDS, [{ id: "job-1", state: "done" }]] })
+        const none = mockEntityManager({ query: [STANDS, []] })
+
+        await expect(service.stands(found, "ws-1", "thread_deadline", "thread-deadline.fire", "k")).resolves.toBe(true)
+        await expect(service.stands(none, "ws-1", "thread_deadline", "thread-deadline.fire", "k")).resolves.toBe(false)
+        expect(found.query).toHaveBeenCalledWith(STANDS, ["ws-1", "thread_deadline", "thread-deadline.fire", "k"])
+    })
 })

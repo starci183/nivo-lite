@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { installationViewOf } from "../installation-view"
 import { PLATFORM_VIEW } from "../constants"

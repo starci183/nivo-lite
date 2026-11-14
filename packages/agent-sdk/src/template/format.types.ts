@@ -1,5 +1,5 @@
 import type { TEMPLATE_FORMAT } from "./format"
-import type { GraphDocument, GraphRight } from "./graph.types"
+import type { GraphDocument } from "./graph.types"
 
 /** A text in both product languages. */
 export interface TemplateText {
@@ -129,14 +129,12 @@ export interface AgentTemplatePackage {
     readonly requiresPlugins: ReadonlyArray<RequiredPlugin>
     /** The card. */
     readonly listing: TemplateListingText
-    /** The process: nodes and the business half of the contracts; its own rights are always empty. */
+    /** The process: nodes and the business half of the contracts. */
     readonly graph: GraphDocument
     /** The settings of the buyer. */
     readonly parameters: ReadonlyArray<TemplateParameter>
     /** Where each number setting lands in the graph. */
     readonly bindings: ReadonlyArray<ParameterBinding>
-    /** The rights the creator proposes; the buyer turns each one on, none is ever granted by the package. */
-    readonly proposedRights: ReadonlyArray<GraphRight>
     /** The providers the agent needs connected; no credential travels. */
     readonly requiredProviders: ReadonlyArray<string>
     /** The actions of the authority matrix the buyer needs a rule for; the package carries no limit. */
@@ -187,8 +185,6 @@ export interface PackageReport {
     readonly privateSources: number
     /** Members and rooms removed from approvers. */
     readonly people: number
-    /** Data rights not carried, kept as proposals. */
-    readonly rights: number
 }
 
 /** The preview of packaging, or why it is refused. */

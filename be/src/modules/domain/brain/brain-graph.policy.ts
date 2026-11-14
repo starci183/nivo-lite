@@ -1,5 +1,4 @@
-import { foldedText } from "@modules/domain/brain-facts"
-import type { Evidence, FactRecord, FactRelation } from "@modules/domain/brain-facts"
+import { foldedText, type Evidence, type FactRecord, type FactRelation } from "@modules/domain/brain-facts"
 import type { ExtractionProgressView } from "@modules/domain/brain-extractions"
 import type {
     BrainGraph,
@@ -184,6 +183,14 @@ export const sourcesOf = (
         .sort((a, b) => (b.lastChangedAt ?? "").localeCompare(a.lastChangedAt ?? "") || a.title.localeCompare(b.title))
 }
 
+/** The SQL counts of the whole workspace behind a capped graph read. */
+export interface BrainGraphCounts {
+    /** Truths in force or scheduled. */
+    readonly nodes: number
+    /** Waiting proposals. */
+    readonly pending: number
+}
+
 /** The parts the graph read gathered. */
 export interface GraphParts {
     /** The truths in force or scheduled of the workspace. */
@@ -198,6 +205,11 @@ export interface GraphParts {
     readonly readings: ReadonlyArray<ExtractionProgressView>
     /** How many edges the workspace has among its truths in force. */
     readonly relationTotal: number
+    /**
+     * The SQL counts of the whole workspace (truths in force or scheduled, waiting proposals), when the read is capped: the totals say
+     * the real numbers and how many are not shown. Absent: the parts are the whole graph.
+     */
+    readonly counts?: BrainGraphCounts
 }
 
 /**
@@ -248,12 +260,14 @@ export const graphOf = (
         ),
         sources: sourcesOf(parts.facts, parts.readings),
         totals: {
-            nodes: parts.facts.length,
+            nodes: Math.max(parts.counts?.nodes ?? 0, parts.facts.length),
             relations: parts.relationTotal,
             recentlyChanged: parts.facts.filter(
                 (fact) => fact.decidedAt !== null && nowMs - Date.parse(fact.decidedAt) < RECENT_MS,
             ).length,
-            pending: parts.proposals.length,
+            pending: Math.max(parts.counts?.pending ?? 0, parts.proposals.length),
+            nodesNotShown: Math.max(0, (parts.counts?.nodes ?? 0) - parts.facts.length),
+            pendingNotShown: Math.max(0, (parts.counts?.pending ?? 0) - parts.proposals.length),
         },
         nextCursor: page.nextCursor,
     }

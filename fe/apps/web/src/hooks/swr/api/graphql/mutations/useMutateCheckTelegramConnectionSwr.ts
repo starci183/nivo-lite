@@ -1,9 +1,8 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData, argumentKey } from "@/hooks/workspaceread"
 import { mutateCheckConnection } from "@/modules/api/graphql/mutations/mutation-check-connection"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { CheckConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the check of one Telegram connection; every block of its page reads the same answer under it. */

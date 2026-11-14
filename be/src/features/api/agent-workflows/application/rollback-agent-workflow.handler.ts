@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AgentWorkflowsAdminService } from "@modules/domain/agent-graphs"
-import type { WorkflowVersionWire } from "@modules/domain/agent-graphs"
+import { AgentWorkflowsAdminService, type WorkflowVersionWire } from "@modules/domain/agent-graphs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RollbackAgentWorkflowCommand } from "./rollback-agent-workflow.command"
 
 @CommandHandler(RollbackAgentWorkflowCommand)

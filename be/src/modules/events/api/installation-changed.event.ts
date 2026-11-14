@@ -1,6 +1,5 @@
-import { BaseEvent } from "@modules/platform/event-bus"
-import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isTextOrAbsent, whenPresent, openEnvelope } from "./money-event.policy"
+import { BaseEvent, type EventPayload, type ParsedEvent } from "@modules/platform/event-bus"
+import { isKey, isTextOrAbsent, whenPresent, openEnvelope } from "./event-payload.policy"
 
 /**
  * The payload of the `installation_changed` event: an installation (or the workspace's shared business knowledge) changed in a way its

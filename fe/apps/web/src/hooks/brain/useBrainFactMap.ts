@@ -10,8 +10,12 @@ import {
     factMapGraphOf,
     factMapPaneOf,
     factMapSelectionIdOf,
+    type FactDrawerWords,
+    type FactKey,
+    type FactMapRef,
+    type FactMapView,
+    type FactMode,
 } from "@/modules/brain"
-import type { FactDrawerWords, FactKey, FactMapRef, FactMapView, FactMode } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { useWorkspaceId } from "@/hooks/workspaces"
@@ -43,6 +47,12 @@ export interface FactMapState {
         readonly compare: () => void
     }
 }
+
+/** The translation key of each kind's count line. */
+const KIND_COUNT_KEYS = { settled: "kindSettled", fresh: "kindFresh", conflict: "kindConflict", retired: "kindConflict" } as const
+
+/** The translation key of each kind's legend entry. */
+const KIND_LEGEND_KEYS = { settled: "legendConfirmed", fresh: "legendProposed", conflict: "legendConflict" } as const
 
 /** A map of the same shape as a ready one, drawn as geometry while the facts are read. */
 const PLACEHOLDER: FactMapView["placeholder"] = {
@@ -103,16 +113,13 @@ export const useBrainFactMap = (input: FactMapInput): FactMapState => {
             edit: t("edit"),
             compare: t("compare"),
             kindLabel: (kind, count) =>
-                t(kind === "settled" ? "kindSettled" : kind === "fresh" ? "kindFresh" : "kindConflict", { count }),
+                t(KIND_COUNT_KEYS[kind], { count }),
         },
     })
     const isWaiting = read.isLoading || isWaitingOf(input.board.slot)
     const ready = mapSlot(input.board.slot, () => ({ nodes: graph.nodes, edges: graph.edges }))
-    const slot: FactMapView["slot"] = isWaiting
-        ? loadingSlot<FactMapView["placeholder"]>()
-        : "items" in ready && graph.nodes.length <= 1
-          ? { isEmpty: true }
-          : ready
+    const readySlot: FactMapView["slot"] = "items" in ready && graph.nodes.length <= 1 ? { isEmpty: true } : ready
+    const slot: FactMapView["slot"] = isWaiting ? loadingSlot<FactMapView["placeholder"]>() : readySlot
     const lensLabel = (one: (typeof lenses)[number]): string =>
         one.kind === "customer" ? t("viewChatbot") : (one.name ?? one.module ?? one.id)
     const view: FactMapView = {
@@ -132,7 +139,7 @@ export const useBrainFactMap = (input: FactMapInput): FactMapState => {
         readersNone: t("readersNone"),
         legend: FACT_MAP_KINDS.map((kind) => ({
             id: kind,
-            label: t(kind === "settled" ? "legendConfirmed" : kind === "fresh" ? "legendProposed" : "legendConflict"),
+            label: t(KIND_LEGEND_KEYS[kind]),
             tone: FACT_MAP_KIND_TONE[kind],
         })),
         documentLegend: t("legendDocument"),

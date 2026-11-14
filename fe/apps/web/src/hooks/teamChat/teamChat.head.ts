@@ -1,4 +1,4 @@
-import { partyKeyOf } from "@/modules/teamChat"
+import { NIVO_MARK, partyKeyOf } from "@/modules/teamChat"
 import type { TeamChatHeadView, TeamChatPanelsView } from "@/modules/types"
 import { partyOf } from "./teamChat.shared"
 import type { RoomViewContext, Words } from "./teamChat.view"
@@ -21,6 +21,13 @@ export const headOf = (context: RoomViewContext): TeamChatHeadView | null => {
             title: agent.name,
             subtitle: t("kindAgent"),
             mark: { kind: "agent", id: agent.id, name: agent.name, picture: agent.picture },
+        }
+    }
+    if (open.withNivo) {
+        return {
+            title: open.name,
+            subtitle: t("nivoRoom.subtitle"),
+            mark: NIVO_MARK,
         }
     }
     const other = room.rooms.other

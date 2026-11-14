@@ -1,12 +1,11 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import {
     mutateRequestChatFileUpload,
     type mutateRequestChatFileUpload as RequestChatFileUploadOperation,
 } from "@/modules/api/graphql/mutations/mutation-request-chat-file-upload"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RequestChatFileUploadMutation } from "@/modules/api"
 
 /** What the RequestChatFileUpload mutation is triggered with. */

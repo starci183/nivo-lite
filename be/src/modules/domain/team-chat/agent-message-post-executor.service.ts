@@ -1,28 +1,30 @@
 import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
-import type { EffectCall, EffectPayload, NodeQuery } from "@nivo-lite/agent-sdk/node"
+import { type EffectCall, type EffectPayload, isRefused, refusalOf, type EffectFact } from "@nivo-lite/agent-sdk/node"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import {
-    TOOL,
-    agentMessagePostEffect,
-    orderAddressOf,
-    refusalOf,
+    agentMessageCodePayload,
+    approvalDecisionCard,
     reportFactsKind,
     reportFactsPayload,
-    teamOrderCardOf,
-    teamPaymentCardOf,
     workflowStoppedPayload,
     type AgentMessagePostPayload,
-    type CardOrder,
-    type EffectFact,
+    type AgentMessagePreview,
+    type ApprovalDecisionCard,
     type ReportFactsPayload,
     type TeamAudience,
     type TeamChatAnswer,
     type WorkflowStoppedPayload,
-} from "@nivo-lite/blocks-core"
+} from "@nivo-lite/agent-sdk/team-chat"
 import { bankDisplayNameOf } from "@modules/domain/channel-connections"
-import { GraphNodeRegistryService, type NodeRow, type NodeTurn } from "@modules/domain/graph-nodes"
+import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
+import { INSTALLED } from "@modules/domain/installed-plugins"
+import { InjectErrorReporter, isDomainError, type ErrorReporter } from "@modules/platform/errors"
 import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
-import { factWordsOf, wordedStopFactsOf, type FactWords } from "./engine-facts.policy"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { factWordsOf, withLineFactsOf, wordedStopFactsOf, type FactWords } from "./engine-facts.policy"
+import { InjectTeamCardKinds, type TeamCardKinds } from "./team-chat.decorators"
 import { lineKeyOf } from "./team-chat.policy"
+import { CARD_KIND_NOT_POSTABLE, postedCardOf, type PostedCard } from "./team-card-post.policy"
 import type { StopCardSection, StopCardSectionGiven } from "./stop-card.contracts"
 import {
     countedSectionOf,
@@ -38,15 +40,16 @@ import { TeamChatAudienceService } from "./team-chat-audience.service"
 import { TeamChatCardsService } from "./team-chat-cards.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
 import { TeamChatError, TeamChatErrorCode } from "./errors/team-chat.error"
+import { TeamChatLogEvent } from "./team-chat.log-events"
 
-/** The most catalogue items read to find the photos of a card. */
-const CATALOGUE_ROWS = 500
+/** The code of a failed team post: a domain error's own code, else what it is. */
+const codeOf = (cause: unknown): string => {
+    if (isDomainError(cause)) return cause.code
+    return cause instanceof Error ? cause.name : "unknown"
+}
 
 /** Who a line is for when the caller does not say: the room of the agent's own team. */
 const DEFAULT_AUDIENCE: TeamAudience = "own"
-
-/** The message to store, or why none can be built. */
-type Built = { readonly message: TeamCardMessage } | { readonly refused: string }
 
 /** The kind of the card of a stopped workflow: the engine's own, built here and never by a tool call. */
 const STOPPED_KIND = "workflow.stopped"
@@ -90,7 +93,20 @@ interface RewriteGiven {
     readonly title: string
     readonly summary: string
     readonly stop: StopCardSectionGiven
+    /** What the stop's record says now about its holding line to the customer (its raw line facts); empty when it says nothing. */
+    readonly lineFacts: ReadonlyArray<{ readonly name: string; readonly value: string }>
 }
+
+/** The raw facts handed with a rewrite: every `{ name, value }` pair of strings; anything else is left out. */
+const rawFactsOf = (given: unknown): RewriteGiven["lineFacts"] =>
+    Array.isArray(given)
+        ? given.flatMap((one: unknown) => {
+              if (typeof one !== "object" || one === null) return []
+              const name: unknown = Reflect.get(one, "name")
+              const value: unknown = Reflect.get(one, "value")
+              return typeof name === "string" && typeof value === "string" ? [{ name, value }] : []
+          })
+        : []
 
 const rewriteGivenOf = (payload: EffectPayload): RewriteGiven | null => {
     const rewrite: unknown = payload["rewrite"]
@@ -99,7 +115,7 @@ const rewriteGivenOf = (payload: EffectPayload): RewriteGiven | null => {
     const summary: unknown = Reflect.get(rewrite, "summary")
     const stop = stopCardSectionGiven.safeParse(Reflect.get(rewrite, "stop"))
     return typeof title === "string" && typeof summary === "string" && stop.success
-        ? { title, summary, stop: stop.data }
+        ? { title, summary, stop: stop.data, lineFacts: rawFactsOf(Reflect.get(rewrite, "lineFacts")) }
         : null
 }
 
@@ -121,12 +137,47 @@ const resolvedGivenOf = (payload: EffectPayload): ResolvedGiven | null => {
         : null
 }
 
-const stoppedGivenOf = (payload: EffectPayload): StoppedGiven | null => {
+/**
+ * A package preview kept only when its kind is one a package registered and its payload passes that kind's schema; otherwise
+ * undefined (the preview is dropped, the card still posts).
+ */
+const checkedPreviewOf = (
+    preview: AgentMessagePreview | undefined,
+    kinds: TeamCardKinds,
+): AgentMessagePreview | undefined =>
+    preview !== undefined && kinds(preview.kind)?.payload.safeParse(preview.payload).success === true
+        ? preview
+        : undefined
+
+/** An approval card with its package preview checked against its kind. */
+const decisionCheckedOf = (card: ApprovalDecisionCard, kinds: TeamCardKinds): ApprovalDecisionCard => {
+    const { preview, ...rest } = card
+    const shown = checkedPreviewOf(preview, kinds)
+    return shown === undefined ? rest : { ...rest, preview: shown }
+}
+
+/**
+ * The stop card the engine handed, with the approval card of a permission request (`decision`, the `approval.decision` card built
+ * before the write) carried on it, and every package preview checked against its kind.
+ */
+const stoppedGivenOf = (payload: EffectPayload, kinds: TeamCardKinds): StoppedGiven | null => {
     const card = workflowStoppedPayload.safeParse(payload["card"])
     const { title, summary } = payload
-    return card.success && typeof title === "string" && typeof summary === "string"
-        ? { title, summary, card: card.data, section: givenSectionOf(payload["card"]) }
-        : null
+    if (!card.success || typeof title !== "string" || typeof summary !== "string") return null
+    const { preview, decision: _carried, ...common } = card.data
+    const shown = checkedPreviewOf(preview, kinds)
+    const asked = approvalDecisionCard.safeParse(payload["decision"])
+    const decision = asked.success ? decisionCheckedOf(asked.data, kinds) : undefined
+    return {
+        title,
+        summary,
+        card: {
+            ...common,
+            ...(shown === undefined ? {} : { preview: shown }),
+            ...(decision === undefined ? {} : { decision }),
+        },
+        section: givenSectionOf(payload["card"]),
+    }
 }
 
 /** The one-tap replies of a stop card: the AI's suggestions while it is open, none after. */
@@ -200,28 +251,15 @@ const repeatsOf = (message: TeamCardMessage): number => {
     return typeof repeats === "number" ? repeats : 1
 }
 
-/** A text member of a row, or empty. */
-const textOf = (value: unknown): string => (typeof value === "string" ? value : "")
-
-/** The order of a row as a card reads it, or null when the row has no order number. */
-const cardOrderOf = (row: NodeRow | undefined): CardOrder | null =>
-    typeof row?.orderNo === "string"
-        ? {
-              orderNo: row.orderNo,
-              amountVnd: typeof row.amountVnd === "number" ? row.amountVnd : null,
-              items: row.items,
-              note: orderAddressOf(row),
-          }
-        : null
-
 @Injectable()
 /**
- * The executor of the team-post tool (`TOOL.teamMessagePost`): a step's agent tells the team something. A card about an order or a
- * payment is built here from the records the caller names by id (the order, its customer, the catalogue photos, the bank credit that
- * paid it), so no line, price or total on a card is ever the caller's; only `message.text` carries the caller's own words. The line
+ * The executor of the team-post tool (`TOOL.teamMessagePost`): a step's agent tells the team something. A card (an order, a payment) is
+ * built by the package's own step from its records and posted finished; the engine only checks its content against the schema of the kind
+ * a plugin registered (`INSTALLED.messageKindOf`) and stores and delivers it as it is, knowing no shape of any package's card. The line
  * always reaches the founder's direct room, and also the agent's team room (`own`, the default) or the common room (`everyone`) when
  * the agent holds the right to post there; the facts list the rooms posted to and what was skipped and why, and a missing room or right
- * never refuses. Once per key: a retry of the same call finds the lines it wrote. A record that is not there is a refusal fact; a line
+ * never refuses. Once per key: a retry of the same call finds the lines it wrote. A kind no plugin registers, or content that is not of
+ * its kind's shape, is a refusal fact; a line
  * that cannot be written (the agent or the owner is not of the workspace) fails the step, so a run never reports done for a message
  * nobody received.
  */
@@ -232,24 +270,54 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
         private readonly cards: TeamChatCardsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
         @Optional() @InjectMessageCatalog() private readonly catalog?: MessageCatalog,
+        @Optional() @InjectTeamCardKinds() private readonly cardKinds: TeamCardKinds = INSTALLED.messageKindOf,
+        @Optional() @InjectErrorReporter() private readonly errors?: ErrorReporter,
+        @Optional() @InjectLogger() private readonly logger?: Logger,
     ) {}
 
     /** Registers the executor when the app hosts graph nodes; otherwise there is nothing to serve. */
     onModuleInit(): void {
         this.registry?.addExecutor({
             effect: TOOL.teamMessagePost,
-            execute: (turn, payload, call) => this.post(turn, payload, call),
+            execute: (turn, payload, call) => this.told(turn, call, () => this.post(turn, payload, call)),
         })
+    }
+
+    /**
+     * A post to the team chat that is refused (a refusal fact) or fails (a throw) is NEVER silent (ruling R45): the team chat is where the
+     * engine tells people, so its own failure is told elsewhere, once: an app error (the team console) and one log line. Nothing is posted
+     * about it (no recursion). The step still gets the same answer: the refusal fact, or the throw.
+     */
+    private async told(turn: NodeTurn, call: EffectCall, post: () => Promise<EffectFact>): Promise<EffectFact> {
+        try {
+            const fact = await post()
+            if (isRefused(fact)) await this.recorded(turn, call, fact.id, null)
+            return fact
+        } catch (cause) {
+            await this.recorded(turn, call, codeOf(cause), cause)
+            throw cause
+        }
+    }
+
+    /** Records one refused or failed team post: the log line, then the app error (which never throws). */
+    private async recorded(turn: NodeTurn, call: EffectCall, code: string, cause: unknown): Promise<void> {
+        const facts = { workspaceId: turn.workspaceId, agentId: turn.agentId, runId: turn.turnId, code, key: call.key }
+        this.logger?.warn(TeamChatLogEvent.PostRefused, facts)
+        await this.errors?.report(
+            TeamChatLogEvent.PostRefused,
+            cause ?? new TeamChatError({ code: TeamChatErrorCode.AgentMessageNotPosted, params: { refusal: code } }),
+            facts,
+        )
     }
 
     private async post(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<EffectFact> {
         // The engine's own card (never reachable from a model's tool call, whose payload the runner checks against the tool's schema).
         if (payload["kind"] === STOPPED_KIND) return this.stopped(turn, payload, call)
         if (payload["kind"] === REPORT_FACTS_KIND) return this.reported(turn, payload, call)
-        const parsed = agentMessagePostEffect.payload.safeParse(payload)
+        const parsed = agentMessageCodePayload.safeParse(payload)
         if (!parsed.success) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
-        if (parsed.data.kind === "chat.answer") return this.answered(turn, parsed.data, call)
-        const built = await this.built(turn, parsed.data)
+        if ("messageId" in parsed.data) return this.answered(turn, parsed.data, call)
+        const built = this.built(parsed.data)
         if ("refused" in built) return refusalOf(built.refused)
         const posted = await this.audience.postTeamCard(turn.workspaceId, {
             agentId: turn.agentId,
@@ -257,7 +325,7 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
             message: built.message,
             key: lineKeyOf(call.dedupeKey ?? call.key),
         })
-        return { kind: "chat-message", id: posted.messageId, facts: posted.facts }
+        return { kind: "chat-message", id: posted.messageId, facts: { messageId: posted.messageId, ...posted.facts } }
     }
 
     /**
@@ -270,7 +338,7 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
         if (rewrite !== null) return this.rewrittenStop(turn, rewrite, lineKeyOf(call.dedupeKey ?? call.key))
         const resolved = resolvedGivenOf(payload)
         if (resolved !== null) return this.resolvedStop(turn, resolved, lineKeyOf(call.dedupeKey ?? call.key))
-        const raw = stoppedGivenOf(payload)
+        const raw = stoppedGivenOf(payload, this.cardKinds)
         if (raw === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
         const given = raw.section === null ? raw : this.wordedStop(raw, turn)
         const key = lineKeyOf(call.dedupeKey ?? call.key)
@@ -316,7 +384,7 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
 
     /**
      * The engine's own report with facts (`report.facts`): one readable sentence and its facts, posted once per key to the founder (or
-     * the audience the engine names). A model's `nivo.team.message.post` can never name this kind (its payload is checked against the tool's
+     * the audience the engine names). A model's `nivo.tool.team.message.post` can never name this kind (its payload is checked against the tool's
      * schema before it reaches here).
      */
     private async reported(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<EffectFact> {
@@ -378,7 +446,9 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
         if (previous === null || before?.success !== true)
             return { kind: "chat-message", id: key, facts: { rewritten: false } }
         const section = countedSectionOf(rewrite.stop, storedSectionOf(previous.payload))
-        const card = typedPayloadOf(before.data, section)
+        // What the stop says now about its holding line to the customer (not told, and why) is shown on the card, in words.
+        const facts = withLineFactsOf(before.data.facts, rewrite.lineFacts, this.factWords(turn))
+        const card = typedPayloadOf({ ...before.data, facts: [...facts] }, section)
         const message: TeamCardMessage = {
             kind: STOPPED_KIND,
             intent: stopIntentOf(section),
@@ -403,7 +473,7 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
      */
     private async answered(turn: NodeTurn, given: TeamChatAnswer, call: EffectCall): Promise<EffectFact> {
         const [asked] = await this.store.messagesByIds(turn.workspaceId, [given.messageId])
-        if (asked === undefined || asked.authorKind !== "user") return refusalOf("not_person_line")
+        if (asked?.authorKind !== "user") return refusalOf("not_person_line")
         if (turn.subject?.kind !== "chat-room" || turn.subject.id !== asked.roomId) return refusalOf("other_room")
         const posted = await this.cards.postMessage(turn.workspaceId, {
             authorAgentId: turn.agentId,
@@ -421,63 +491,25 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
             }),
         })
         if (posted === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
-        return { kind: "chat-message", id: posted.messageId, facts: { roomId: posted.roomId, replyTo: asked.id } }
-    }
-
-    /** The message of a payload: the caller's words, or the card of the record it names. */
-    private async built(turn: NodeTurn, given: AgentMessagePostPayload): Promise<Built> {
-        if (given.kind === "message.text") {
-            return {
-                message: {
-                    kind: given.kind,
-                    intent: given.intent,
-                    title: given.title,
-                    summary: given.text,
-                    payload: { text: given.text },
-                },
-            }
+        return {
+            kind: "chat-message",
+            id: posted.messageId,
+            facts: { messageId: posted.messageId, roomId: posted.roomId, replyTo: asked.id },
         }
-        return "orderId" in given ? this.orderCard(turn, given.kind, given.orderId) : { refused: "kind_not_postable" }
     }
 
-    /** The card of an order, or of the money that paid it, from the records. */
-    private async orderCard(
-        turn: NodeTurn,
-        kind: "order.summary" | "payment.received",
-        orderId: string,
-    ): Promise<Built> {
-        const [row] = await this.rows(turn, "order", {
-            where: { id: orderId },
-            fields: ["orderNo", "amountVnd", "items", "note", "deliveryAddress", "leadId"],
-            limit: 1,
-        })
-        const order = cardOrderOf(row)
-        if (order === null) return { refused: "order_missing" }
-        const leadId = textOf(row?.leadId)
-        const [lead] =
-            leadId === ""
-                ? []
-                : await this.rows(turn, "sales-lead", { where: { id: leadId }, fields: ["contactName"], limit: 1 })
-        const customer = textOf(lead?.contactName)
-        const catalogue = (
-            await this.rows(turn, "catalogue-item", { fields: ["name", "imageUrl"], limit: CATALOGUE_ROWS })
-        ).map((item) => ({
-            name: textOf(item.name),
-            imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
-        }))
-        if (kind === "order.summary") return { message: teamOrderCardOf(order, customer, catalogue, turn.locale) }
-        const [credit] = await this.rows(turn, "bank-transaction", {
-            where: { orderId },
-            fields: ["amountVnd"],
-            limit: 1,
-        })
-        return typeof credit?.amountVnd === "number"
-            ? { message: teamPaymentCardOf(order, credit.amountVnd, customer, catalogue, turn.locale) }
-            : { refused: "not_paid" }
-    }
-
-    /** The rows of a data kind of the workspace; none when the app serves no data ports. */
-    private async rows(turn: NodeTurn, kind: string, query: NodeQuery): Promise<ReadonlyArray<NodeRow>> {
-        return this.registry === undefined ? [] : await this.registry.portOf(kind).read(turn, query, "workspace")
+    /** The message of a payload: the caller's words, or the finished card of a registered kind. */
+    private built(given: AgentMessagePostPayload): PostedCard {
+        if ("payload" in given) return postedCardOf(given, this.cardKinds(given.kind))
+        if (given.kind !== "message.text") return { refused: CARD_KIND_NOT_POSTABLE }
+        return {
+            message: {
+                kind: given.kind,
+                intent: given.intent,
+                title: given.title,
+                summary: given.text,
+                payload: { text: given.text },
+            },
+        }
     }
 }

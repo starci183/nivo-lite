@@ -2,13 +2,10 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectIds, type Ids } from "@modules/platform/ids"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { startLocalInterval } from "@modules/platform/queue"
-import { InjectAgentTurnQueue } from "@modules/queues/agent-turn"
-import type { AgentTurnDrainPayload, AgentTurnQueue } from "@modules/queues/agent-turn"
+import { InjectAgentTurnQueue, type AgentTurnDrainPayload, type AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentTurnsService } from "./agent-turns.service"
 import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
@@ -32,7 +29,12 @@ import type {
     AgentTurnPlan,
     AgentTurnRun,
     AgentWorkHandler,
+    OptionalAgentWorkFlow,
 } from "./agent-work.port"
+import { wakeSources } from "./agent-wake-source.policy"
+
+/** The code a person's line to an agent nobody can answer yet (still in setup) is reported with (`teamChat.reason.agent_not_ready`). */
+const NOT_READY_CODE = "agent_not_ready"
 
 /** The payload of a follow-up drain: the scope again, and how many follow-ups led to it. */
 interface RearmedDrainPayload extends AgentTurnDrainPayload {
@@ -135,7 +137,13 @@ export class AgentDrainService {
      */
     private async rearm(payload: AgentTurnDrainPayload, wait: AgentBeginWait): Promise<void> {
         const hop = rearmHopOf(payload) + 1
-        const fields = { agentId: payload.agentId, scopeKey: payload.scopeKey, wakeId: wait.wakeId, hop, waitMs: wait.ms }
+        const fields = {
+            agentId: payload.agentId,
+            scopeKey: payload.scopeKey,
+            wakeId: wait.wakeId,
+            hop,
+            waitMs: wait.ms,
+        }
         if (hop > REARM_MAX_HOPS) {
             this.logger.warn(AgentWorkLogEvent.DrainRearmSpent, fields)
             return
@@ -177,14 +185,15 @@ export class AgentDrainService {
         const exhausted = turn.attempts >= turn.maxAttempts
         if (exhausted) this.logger.warn(AgentWorkLogEvent.WakeDead, { agentId: turn.agentId, wakeId: turn.wakeId })
         const immediate = modelDown && awaitsAnswer(turn.source)
-        if ((immediate || exhausted) && (await this.toldByFlow(turn, failed.errorCode ?? failed.reason ?? "error"))) return failed
+        if ((immediate || exhausted) && (await this.toldByFlow(turn, failed.errorCode ?? failed.reason ?? "error")))
+            return failed
         const handler = this.handlers.of(turn.source)
         if (handler === undefined || !(immediate || exhausted)) return failed
         try {
             const ending = await handler.holdOver(turn, "error")
             return immediate ? { ...endingOf(ending, null), errorCode: failed.errorCode } : failed
-        } catch (holdCause) {
-            this.logger.error(AgentWorkLogEvent.TurnFailed, holdCause, { agentId: turn.agentId, wakeId: turn.wakeId })
+        } catch (error) {
+            this.logger.error(AgentWorkLogEvent.TurnFailed, error, { agentId: turn.agentId, wakeId: turn.wakeId })
             return failed
         }
     }
@@ -207,6 +216,20 @@ export class AgentDrainService {
         }
     }
 
+    /**
+     * A person's line no workflow takes and no handler answers (an agent still in setup: D-BR-14) is never dropped in silence: the
+     * founder is told once per wake through the engine's common wake report (`AgentWorkFlow.stuck`, code `agent_not_ready`), in place of
+     * an answer. A background wake (a timer, a schedule) is only logged. A report that fails is logged; the wake stays held as before.
+     */
+    private async toldUnanswered(flow: OptionalAgentWorkFlow, turn: AgentTurnView): Promise<void> {
+        if (flow === undefined || wakeSources.lookup(turn.source)?.background !== false) return
+        try {
+            await flow.stuck(turn, NOT_READY_CODE)
+        } catch (cause) {
+            this.logger.error(AgentWorkLogEvent.TurnFailed, cause, { agentId: turn.agentId, wakeId: turn.wakeId })
+        }
+    }
+
     private async run(turn: AgentTurnView, signal: AbortSignal): Promise<Step> {
         const flow = this.handlers.flowOf()
         if (flow !== undefined && (await flow.takes(turn))) {
@@ -215,6 +238,7 @@ export class AgentDrainService {
         const handler = this.handlers.of(turn.source)
         if (handler === undefined) {
             this.logger.warn(AgentWorkLogEvent.NoHandler, { agentId: turn.agentId, source: turn.source })
+            await this.toldUnanswered(flow, turn)
             return { kind: "ending", ending: heldBy("no_handler") }
         }
         if (turn.proposal !== null) return this.settle(handler, turn, turn.proposal, null, signal)

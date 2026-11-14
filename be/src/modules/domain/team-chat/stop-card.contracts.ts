@@ -1,4 +1,4 @@
-import type { WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
+import type { WorkflowStoppedPayload } from "@nivo-lite/agent-sdk/team-chat"
 
 /**
  * The typed part of the `workflow.stopped` card (DESIGN item D.2, package 1-7): the one thing the founder sees for a stop. The card's
@@ -70,7 +70,7 @@ export interface StopCardReply {
 export interface StopCardSection {
     /** The shape of this part; 1 today. */
     readonly version: 1
-    /** The stop record (`agent.run-stop`); null on a card the old engine posted. */
+    /** The stop (a row of `public.run_stops`); null on a card the old engine posted. */
     readonly stopId: string | null
     /** The run. */
     readonly runId: string
@@ -149,6 +149,35 @@ export interface StoredStopCard {
     readonly section: StopCardSection
 }
 
+/** A package's preview as a screen reads it: the registered kind and its payload as JSON text (the kind's renderer parses it). */
+export interface StopCardPreview {
+    /** The kind a package registered. */
+    readonly kind: string
+    /** The payload, as JSON text. */
+    readonly payloadJson: string
+}
+
+/** The approval card of a permission request as a screen reads it: built by the engine before the write, stored on the chat line. */
+export interface StopCardDecisionCard {
+    /** The step that asks. */
+    readonly step: { readonly nodeId: string; readonly title: string; readonly description: string }
+    /** The call: the tool and the connected account it would use (null when none was picked). */
+    readonly call: {
+        readonly tool: string
+        readonly account: string | null
+        /** The tool's worded title (vi/en) for the "Action" row; null when the tool declares none (draw the id). */
+        readonly label: { readonly vi: string; readonly en: string } | null
+    }
+    /** The facts, worded by code from the real arguments. */
+    readonly facts: ReadonlyArray<{ readonly name: string; readonly value: string; readonly technical: boolean }>
+    /** The brief in words (the AI's, or the engine's fallback). */
+    readonly text: string
+    /** A package's preview of the call, when a valid one was given. */
+    readonly preview: StopCardPreview | null
+    /** What the person approves, IN FULL (the send's words, each image's address): the members the tool declares; empty when it declares none. */
+    readonly content: ReadonlyArray<{ readonly name: string; readonly kind: "text" | "address"; readonly value: string }>
+}
+
 /** The typed stop of a card as a screen shows it, the common content of the card included. */
 export interface StopCardView {
     /** The stop record; null on a card of the old engine. */
@@ -200,6 +229,10 @@ export interface StopCardView {
     readonly resolvedAt: string | null
     /** What a permission request asks to do; null for any other stop. */
     readonly approval: StopCardApproval | null
+    /** The approval card of a permission request (step, call, facts, brief, preview), as stored on the chat line; null otherwise. */
+    readonly decision: StopCardDecisionCard | null
+    /** A package's preview of what the step was doing, as stored on the chat line; null when none was given. */
+    readonly preview: StopCardPreview | null
     /** How many times the card was written (0 on an old-engine card). */
     readonly revision: number
 }

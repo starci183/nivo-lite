@@ -1,3 +1,5 @@
+import { isRecord } from "@modules/platform/primitives"
+
 /** The jobs of the knowledge queue; the value is the job name inside the queue and the prefix of the dedupe key. */
 export enum KnowledgeJob {
     /** Reads the source (storage object, link, Drive file or text), chunks and embeds it; on success enqueues the facts job. */
@@ -8,12 +10,12 @@ export enum KnowledgeJob {
     Reembed = "knowledge.reembed",
     /** Carries out a command an owner or manager asked for on the Second Brain or Knowledge page (row in brain_commands). */
     BrainCommand = "brain.command",
-    /** Reviews the dossiers of a run row (dossier_review_runs): rules, then the model pass, then the findings and statuses. */
+    /** Carries out a run row (dossier_review_runs): one batch of the shop-document critiques that wait. */
     DossierReview = "dossier.review",
-    /** Writes the remedy draft of a row of dossier_remedy_drafts through the model. */
-    DossierRemedy = "dossier.remedy",
     /** Writes the text of a row of public_documents in the status drafting, from internal documents read through NIVO MCP, or looks for the internal answer to a customer question. */
     PublicDraft = "public.draft",
+    /** Derives the shop's policies from the truth graph of a workspace: only the facts that changed are judged (brain_policies). */
+    PolicyDerive = "brain.policies",
 }
 
 /** The payload of the index and facts jobs: the source to work on, ids only (the handler re-reads the current state). */
@@ -22,6 +24,12 @@ export interface KnowledgeSourcePayload {
     readonly sourceId: string
     /** The workspace that owns it: the workspace concurrency limit is keyed on it. */
     readonly workspaceId: string
+    /**
+     * A facts job only: the critic's verdict on the document changed (its critique ended, the founder answered or skipped a point) and
+     * its waiting truths must be settled AGAIN by this job, whatever the reading was doing when the job was queued: ended, waiting,
+     * or in the middle of a settle that read the verdict before the change.
+     */
+    readonly settleAgain?: boolean | undefined
 }
 
 /** The payload of the reembed job. */
@@ -48,14 +56,6 @@ export interface DossierReviewPayload {
     readonly workspaceId: string
 }
 
-/** The payload of the dossier remedy job: the draft row to write, ids only. */
-export interface DossierRemedyPayload {
-    /** The dossier_remedy_drafts row. */
-    readonly draftId: string
-    /** The workspace it belongs to. */
-    readonly workspaceId: string
-}
-
 /** The payload of the public draft job: the document row to write, ids only. */
 export interface PublicDraftPayload {
     /** The public_documents row. */
@@ -64,12 +64,22 @@ export interface PublicDraftPayload {
     readonly workspaceId: string
     /** The exact drafting revision this job may finish; the row increments it for every redraft. */
     readonly draftRevision: number
+    /**
+     * The Auth user of the member who asked for this draft (a draft or a redraft from the console), so the internal documents are read
+     * as that person once node rights decide; absent for a draft no person asked for (a customer question's proposal) and for a job
+     * queued before the member was carried.
+     */
+    readonly requestedBy?: string
+}
+
+/** The payload of the policy derive job: the workspace whose truth graph changed (the handler re-reads the current state). */
+export interface PolicyDerivePayload {
+    /** The workspace. */
+    readonly workspaceId: string
 }
 
 /** The failure reason recorded when a workspace has no credits left: the job fails WITHOUT retrying and the owner tops up, then retries. */
 export const KNOWLEDGE_BLOCKED_CREDITS = "blocked_credits"
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
 /** True when a job payload is the payload of an index or facts job. */
 export const isKnowledgeSourcePayload = (value: unknown): value is KnowledgeSourcePayload =>
@@ -83,10 +93,6 @@ export const isKnowledgeCommandPayload = (value: unknown): value is KnowledgeCom
 export const isDossierReviewPayload = (value: unknown): value is DossierReviewPayload =>
     isRecord(value) && typeof value.runId === "string" && typeof value.workspaceId === "string"
 
-/** True when a job payload is the payload of a dossier remedy job. */
-export const isDossierRemedyPayload = (value: unknown): value is DossierRemedyPayload =>
-    isRecord(value) && typeof value.draftId === "string" && typeof value.workspaceId === "string"
-
 /** True when a job payload is the payload of a public draft job. */
 export const isPublicDraftPayload = (value: unknown): value is PublicDraftPayload =>
     isRecord(value) &&
@@ -94,7 +100,12 @@ export const isPublicDraftPayload = (value: unknown): value is PublicDraftPayloa
     typeof value.workspaceId === "string" &&
     typeof value.draftRevision === "number" &&
     Number.isSafeInteger(value.draftRevision) &&
-    value.draftRevision >= 0
+    value.draftRevision >= 0 &&
+    (value.requestedBy === undefined || (typeof value.requestedBy === "string" && value.requestedBy !== ""))
+
+/** True when a job payload is the payload of a policy derive job. */
+export const isPolicyDerivePayload = (value: unknown): value is PolicyDerivePayload =>
+    isRecord(value) && typeof value.workspaceId === "string"
 
 /** True when a job payload is the payload of a reembed job. */
 export const isKnowledgeReembedPayload = (value: unknown): value is KnowledgeReembedPayload =>

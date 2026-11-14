@@ -24,9 +24,9 @@
       "types": "./dist/modules/index.d.ts",
       "default": "./dist/modules/index.js"
     },
-    "./modules/accounting": {
-      "types": "./dist/modules/accounting/index.d.ts",
-      "default": "./dist/modules/accounting/index.js"
+    "./modules/sales/ledger": {
+      "types": "./dist/modules/sales/ledger/index.d.ts",
+      "default": "./dist/modules/sales/ledger/index.js"
     },
     "./modules/sales": {
       "types": "./dist/modules/sales/index.d.ts",
@@ -55,13 +55,15 @@
     "@heroicons/react": "2.2.0",
     "@heroui/react": "3.2.6",
     "@nivo-lite/agent-sdk": "*",
-    "@starci/grammar": "0.37.34",
+    "@starci/common": "1.0.1",
+    "@starci/grammar": "0.39.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@nivo-lite/agent-sdk": "*",
+    "@starci/common": "1.0.1",
     "@types/react": "19.3.0",
     "typescript": "5.9.3"
   }

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { GoogleConnectionStateQuery } from "../__generated__/graphql"
 
 /** The response of the `googleConnectionState` query: the typed payload straight from the back end contract. */
@@ -44,6 +43,6 @@ export const queryGoogleState = async ({
     query = QueryGoogleState.Query1,
     signal,
 }: QueryGoogleStateParams = {}): Promise<ApolloClient.QueryResult<QueryGoogleStateResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], fetchPolicy: "no-cache" })
 }

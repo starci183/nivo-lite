@@ -28,8 +28,6 @@ interface ConversationPaneProps {
     readonly slots: RenderOf<typeof inboxBlock>["slots"]
     /** The control of the contact pane beside the thread. */
     readonly contact: ConversationContactToggle
-    /** The approval card the spec placed in the inbox; null when it placed none. */
-    readonly approval: ReactNode
 }
 
 /** What the skeleton of a thread draws instead of messages. */
@@ -110,8 +108,6 @@ interface ThreadBandProps {
     /** Reads the messages again. */
     readonly onRetry: () => void
     readonly composer: ConversationSend
-    /** The approval card of the reply the AI drafted, which stands under the messages. */
-    readonly approval: ReactNode
 }
 
 /** The scrolling band of the thread: its messages in the states of the data, and the controls of the failed sends. */
@@ -155,7 +151,6 @@ const ThreadBand = (props: ThreadBandProps): ReactNode => {
                     />
                 )}
             />
-            {props.approval}
         </PaneSection>
     )
 }
@@ -221,7 +216,6 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
                 older={older}
                 onRetry={messages.retry}
                 composer={composer}
-                approval={props.approval}
             />
             <ConversationComposer
                 label={words({ key: "conversationComposerLabel" })}

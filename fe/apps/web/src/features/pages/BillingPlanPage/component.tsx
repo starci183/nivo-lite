@@ -1,5 +1,4 @@
-import { Page } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
+import { Page, type PageHeaderContent } from "@starci/grammar/common"
 import { BillingPlanChange } from "@/components/blocks/BillingPlanChange"
 
 /** What the plan change page is told: its header and the link of the plan contact. */

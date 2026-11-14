@@ -23,7 +23,7 @@ const build = async (): Promise<Subject> => {
 const short = (_key: string, params?: Readonly<Record<string, string | number>>): string =>
     `${params?.name ?? ""} approves`
 
-const SEPAY = { provider: "sepay", tool: "sepay.status.get", scope: "read", label: "SePay" } as const
+const SEPAY = { provider: "sepay", tool: "nivo.tool.connection.status.get", scope: "read", label: "SePay" } as const
 
 describe("node-card.policy", () => {
     it.each([

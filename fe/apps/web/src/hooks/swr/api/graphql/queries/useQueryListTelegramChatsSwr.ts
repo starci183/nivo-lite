@@ -1,8 +1,7 @@
 "use client"
 
 import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import useSWR, { type SWRConfiguration } from "swr"
 import { queryListTelegramChats } from "@/modules/api/graphql/queries/query-list-telegram-chats"
 import type { ListTelegramChatsQuery } from "@/modules/api"
 

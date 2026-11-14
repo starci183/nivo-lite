@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { WorkspaceDashboardQuery, WorkspaceDashboardQueryVariables } from "../__generated__/graphql"
 
 /** Generated variables of the owner dashboard. */
@@ -18,41 +17,21 @@ const query1: Document = gql`
             period
             from
             to
-            revenue {
+            conversations {
                 current
                 previous
             }
-            orders {
+            newContacts {
                 current
                 previous
             }
-            newCustomers {
+            runsDone {
                 current
                 previous
             }
-            closeRate {
+            runsFailed {
                 current
                 previous
-            }
-            agentAutoRate {
-                current
-                previous
-            }
-            days {
-                day
-                revenueVnd
-                orders
-            }
-            funnel {
-                visitors
-                consulted
-                ordered
-                paid
-            }
-            channels {
-                channel
-                leads
-                revenueVnd
             }
             approvals {
                 total
@@ -75,8 +54,6 @@ const query1: Document = gql`
                 }
                 defaultMinutes
                 messagesAnswered
-                ordersCreated
-                paymentsMatched
                 creditsUsed
                 creditsLimit
             }
@@ -115,7 +92,7 @@ export const queryWorkspaceDashboard = ({
     signal,
     headers,
 }: QueryWorkspaceDashboardParams = {}): Promise<ApolloClient.QueryResult<QueryWorkspaceDashboardResponse>> =>
-    createAuthApolloClient({ signal, headers }).query({
+    createAuthApolloClient(webApiTransport, { signal, headers }).query({
         query: queryMap[query],
         variables: { input: request },
         context: { headers },

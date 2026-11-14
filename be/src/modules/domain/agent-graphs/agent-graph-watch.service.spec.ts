@@ -1,12 +1,10 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { CLOCK } from "@modules/platform/clock"
-import { OWNER_EXAMPLE, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
-import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
+import { stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphWatchService } from "./agent-graph-watch.service"
@@ -47,7 +45,6 @@ const build = async (
         moved?: boolean
         missing?: ReadonlyArray<string>
         seeded?: boolean
-        closedAgents?: ReadonlyArray<string>
         state?: ReturnType<typeof stateOf> | null
         sources?: ReadonlyArray<BrainSourceInForce>
         cited?: FactRecord | null
@@ -72,11 +69,7 @@ const build = async (
         ensureFor: jest.fn().mockResolvedValue(options.seeded === false ? null : stateOf()),
         refresh: jest.fn().mockResolvedValue(options.moved ?? false),
     })
-    const decisions = mock<AgentGraphDecisionsService>({
-        agentsClosedSince: jest.fn().mockResolvedValue(options.closedAgents ?? []),
-    })
     const proposals = mock<AgentGraphProposalsService>({
-        learn: jest.fn().mockResolvedValue(2),
         raiseConflict: jest.fn().mockResolvedValue(true),
     })
     const brain = mock<BrainFactsService>({
@@ -100,11 +93,9 @@ const build = async (
         providers: [
             AgentGraphWatchService,
             { provide: WorkspacesService, useValue: workspaces },
-            { provide: CLOCK, useValue: new FakeClock("2026-11-01T02:00:00.000Z") },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: AgentGraphsService, useValue: graphs },
             { provide: AgentGraphSeedService, useValue: seed },
-            { provide: AgentGraphDecisionsService, useValue: decisions },
             { provide: AgentGraphProposalsService, useValue: proposals },
             { provide: BrainFactsService, useValue: brain },
         ],
@@ -114,7 +105,6 @@ const build = async (
         installations,
         graphs,
         seed,
-        decisions,
         proposals,
         brain,
         workspaces,
@@ -194,30 +184,6 @@ describe("AgentGraphWatchService refreshing", () => {
     })
 })
 
-describe("AgentGraphWatchService learning", () => {
-    it("raises what the decisions that ended lately teach, for the version that decides", async () => {
-        const { service, proposals, decisions } = await build({ missing: [], closedAgents: ["agent-1"] })
-
-        await expect(service.tick()).resolves.toMatchObject({ learned: 2 })
-
-        expect(decisions.agentsClosedSince).toHaveBeenCalledWith("ws-1", new Date("2026-10-30T02:00:00.000Z"), 500)
-        expect(proposals.learn).toHaveBeenCalledWith("ws-1", "agent-1", "version-1", graphOf(OWNER_EXAMPLE))
-    })
-
-    it("learns nothing for an agent with no graph or no version that decides", async () => {
-        const none = await build({ missing: [], closedAgents: ["agent-1"], state: null })
-        const fresh = await build({
-            missing: [],
-            closedAgents: ["agent-1"],
-            state: stateOf({ active: null, activeVersionId: null }),
-        })
-
-        await expect(none.service.tick()).resolves.toMatchObject({ learned: 0 })
-        await expect(fresh.service.tick()).resolves.toMatchObject({ learned: 0 })
-        expect(none.proposals.learn).not.toHaveBeenCalled()
-    })
-})
-
 describe("AgentGraphWatchService the Brain rules", () => {
     it("raises a conflict when the rule a node cites was replaced by one that says something else, and changes no graph", async () => {
         const { service, proposals, graphs } = await build({ missing: [], sources: [SOURCE] })
@@ -273,7 +239,7 @@ describe("AgentGraphWatchService the workspaces of a tick", () => {
 
     it("visits a slice of workspaces per tick and starts over after the last one", async () => {
         const full = Array.from({ length: 50 }, (_unused, index) => ({ id: `ws-${index}`, name: "Shop" }))
-        const { service, workspaces, decisions } = await build({ missing: [] })
+        const { service, workspaces, graphs } = await build({ missing: [] })
         workspaces.list.mockResolvedValueOnce(full).mockResolvedValueOnce([{ id: "ws-99", name: "Shop" }])
 
         await service.tick()
@@ -285,6 +251,6 @@ describe("AgentGraphWatchService the workspaces of a tick", () => {
             [50, "ws-49"],
             [50, undefined],
         ])
-        expect(decisions.agentsClosedSince).toHaveBeenCalledTimes(50 + 1 + 1)
+        expect(graphs.brainSourcesInForce).toHaveBeenCalledTimes(50 + 1 + 1)
     })
 })

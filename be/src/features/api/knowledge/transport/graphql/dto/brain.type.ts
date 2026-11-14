@@ -12,6 +12,14 @@ export class BrainType {
     @Field(() => [BrainFactType])
     facts!: Array<BrainFactType>
 
+    /** How many facts match the page's filter in all (SQL count): more than `facts` holds means there are more pages. */
+    @Field(() => Int, { defaultValue: 0 })
+    factsTotal!: number
+
+    /** The cursor of the next page of facts (`brain(facts: { after })`), or null when this page is the last. */
+    @Field(() => String, { nullable: true })
+    factsNextCursor?: string | null
+
     /** The lessons in force, waiting or retired. */
     @Field(() => [BrainLessonType])
     lessons!: Array<BrainLessonType>

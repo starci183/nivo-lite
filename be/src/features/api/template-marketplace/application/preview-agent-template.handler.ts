@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentTemplatesService } from "@modules/domain/agent-templates"
-import type { PackagePreviewView } from "@modules/domain/agent-templates"
+import { AgentTemplatesService, type PackagePreviewView } from "@modules/domain/agent-templates"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { PreviewAgentTemplateQuery } from "./preview-agent-template.query"
 
 @QueryHandler(PreviewAgentTemplateQuery)

@@ -1,5 +1,8 @@
 import { Grid, Alert, DataTable, Select, Text } from "@starci/grammar/common"
 
+/** The `isLoading` prop, spread only when the caller states it (an absent flag stays absent). */
+const loadingOf = (isLoading: boolean | undefined) => (isLoading === undefined ? {} : { isLoading })
+
 /** One option of a select. */
 interface CsvImportOption {
     readonly id: string
@@ -44,7 +47,7 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
     <>
         {props.missing === null ? null : (
             <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loadingOf(props.isLoading)}
                 tone="cautionary"
                 title={props.missing}
             />
@@ -54,7 +57,7 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
         </Text>
         {props.sheet === null ? null : (
             <Select
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loadingOf(props.isLoading)}
                 label={props.text.sheetLabel}
                 isDisabled={props.isDisabled}
                 value={props.sheet.value}
@@ -68,7 +71,7 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
             {csvColumnsOf(props).map((column) => (
                 <Select
                     key={column.name}
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    {...loadingOf(props.isLoading)}
                     label={column.label}
                     isDisabled={props.isDisabled}
                     value={props.values[column.name]}
@@ -81,12 +84,12 @@ export const CsvImportMap = (props: CsvImportMapProps) => (
             {props.text.mapIdHint}
         </Text>
         {props.kinds === null ? null : (
-            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
+            <Text {...loadingOf(props.isLoading)} size="xs" tone="muted">
                 {props.kinds}
             </Text>
         )}
         <DataTable
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            {...loadingOf(props.isLoading)}
             label={props.text.previewLabel}
             columns={props.headers.map((header, at) => ({ id: String(at), label: header, isRowHeader: at === 0 }))}
             rows={props.sample.map((cells, at) => ({ id: String(at), cells }))}

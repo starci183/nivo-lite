@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { pendingLineOf } from "@tests/fixtures/builders/lead-freezes.builder"
 import { freezeOf, pendingJsonOf, pendingOf } from "./lead-freezes.mapper"
+import { ContactFreezeEntity } from "./persistence/entities"
 
 const SUBJECT = Symbol("lead-freezes.mapper")
 
@@ -21,14 +21,35 @@ const buildMapper = async (): Promise<Mapper> => {
 
 const EVENT = pendingLineOf({ context: { conversationId: "c-1", lookupName: false }, folded: true })
 
-const rowOf = (data: RecordRow["data"]): RecordRow => ({
-    id: "freeze-1",
-    workspaceId: "ws-1",
-    version: "7",
-    createdAt: "2026-11-04T10:00:00.000Z",
-    updatedAt: "2026-11-04T10:00:00.000Z",
-    data,
-})
+/** A row of the freezes table as Postgres hands it back, with the members a case sets. */
+const rowOf = (values: Partial<Record<keyof ContactFreezeEntity, unknown>>): ContactFreezeEntity =>
+    Object.assign(new ContactFreezeEntity(), {
+        id: "freeze-1",
+        workspaceId: "ws-1",
+        version: 7,
+        createdAt: new Date("2026-11-04T10:00:00.000Z"),
+        updatedAt: new Date("2026-11-04T10:00:00.000Z"),
+        key: "",
+        contactId: null,
+        conversationId: null,
+        status: "frozen",
+        frozenRunId: null,
+        agentId: null,
+        frozenAt: null,
+        frozenReason: null,
+        stepKey: null,
+        stepTitle: null,
+        customerName: null,
+        workItemId: null,
+        episode: 0,
+        failures: 0,
+        heldBy: null,
+        releasedAt: null,
+        releasedBy: null,
+        releaseReason: null,
+        pending: { events: [] },
+        ...values,
+    })
 
 describe("lead-freezes.mapper", () => {
     it("keeps the pending events as plain JSON under `events` and reads them back the same", async () => {
@@ -65,8 +86,8 @@ describe("lead-freezes.mapper", () => {
     it("reads a freeze row, with a status it does not know read as released and counts read as numbers", async () => {
         const mapper = await buildMapper()
         const row = rowOf({
-            key: "lead:lead-1",
-            leadId: "lead-1",
+            key: "contact:lead-1",
+            contactId: "lead-1",
             status: "frozen",
             frozenRunId: "run-1",
             episode: 2,
@@ -76,8 +97,8 @@ describe("lead-freezes.mapper", () => {
         expect(mapper.freezeOf(row)).toMatchObject({
             id: "freeze-1",
             version: "7",
-            key: "lead:lead-1",
-            leadId: "lead-1",
+            key: "contact:lead-1",
+            contactId: "lead-1",
             conversationId: null,
             status: "frozen",
             frozenRunId: "run-1",
@@ -85,7 +106,7 @@ describe("lead-freezes.mapper", () => {
             failures: 1,
             pending: [EVENT],
         })
-        expect(mapper.freezeOf(rowOf({ status: "odd", episode: "x" }))).toMatchObject({
+        expect(mapper.freezeOf(rowOf({ status: "odd", episode: Number.NaN }))).toMatchObject({
             status: "released",
             episode: 0,
             key: "",

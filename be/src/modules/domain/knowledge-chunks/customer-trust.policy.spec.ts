@@ -18,9 +18,9 @@ const buildSubject = async (): Promise<Subject> => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-/** The migration that adds the gate (repo root db/migrations, four levels above be/src/modules/domain). */
+/** The baseline migration, which holds the gate (repo root db/migrations, four levels above be/src/modules/domain). */
 const MIGRATION = readFileSync(
-    join(__dirname, "..", "..", "..", "..", "..", "db", "migrations", "20261112013200_shop-document-critic.sql"),
+    join(__dirname, "..", "..", "..", "..", "..", "db", "migrations", "20261113180000_baseline.sql"),
     "utf8",
 )
 
@@ -33,15 +33,25 @@ describe("customer trust gate", () => {
         expect([isUnreviewed(true), isUnreviewed(false), isUnreviewed(null)]).toEqual([false, true, true])
     })
 
-    it("a passage is served once a finished critique read it (or the founder released the version) and no open high point holds it", async () => {
+    it("a passage is served once a finished critique read it and no open high point holds it; a release never serves an unreviewed one", async () => {
         const subject = await buildSubject()
         const gate = { reviewed: new Set(["a", "b"]), held: new Set(["b"]), released: false }
         expect(["a", "b", "c"].map((hash) => subject.customerReadyOf(hash, gate))).toEqual([true, false, false])
-        expect(["a", "b", "c"].map((hash) => subject.customerReadyOf(hash, { ...gate, released: true }))).toEqual([true, false, true])
+        expect(["a", "b", "c"].map((hash) => subject.customerReadyOf(hash, { ...gate, released: true }))).toEqual([
+            true,
+            false,
+            false,
+        ])
+        // Its review ends clean: the critique read it, so it is served (the critic calls `regate` at the end of every critique).
+        const reviewedLater = { ...gate, reviewed: new Set(["a", "b", "c"]), released: true }
+        expect(subject.customerReadyOf("c", reviewedLater)).toBe(true)
     })
 
     it("is index-served: the customer filter is exactly the predicate of the partial index the migration creates, and new rows start withheld while old rows stay served", () => {
-        const index = /CREATE INDEX knowledge_chunks_customer ON public\.knowledge_chunks USING btree \(workspace_id\) WHERE visibility = 'public' AND (\w+);/u.exec(MIGRATION)
+        const index =
+            /CREATE INDEX knowledge_chunks_customer ON public\.knowledge_chunks USING btree \(workspace_id\) WHERE visibility = 'public' AND (\w+);/u.exec(
+                MIGRATION,
+            )
         expect(index?.[1]).toBe(CUSTOMER_READY_COLUMN)
         expect(MIGRATION).toContain(`ADD COLUMN ${CUSTOMER_READY_COLUMN} boolean NOT NULL DEFAULT true;`)
         expect(MIGRATION).toContain(`ALTER COLUMN ${CUSTOMER_READY_COLUMN} SET DEFAULT false;`)

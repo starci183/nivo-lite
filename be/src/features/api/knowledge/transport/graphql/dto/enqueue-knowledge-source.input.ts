@@ -78,7 +78,7 @@ export class EnqueueKnowledgeSourceInput {
     @MaxLength(36)
     installationId?: string
 
-    /** `public` or `internal`; internal when omitted. */
+    /** The upload area, `public` or `internal`; internal when omitted. Each area holds at most 5 MB (`knowledgeUsage.documents.areas`). */
     @Field(() => String, { nullable: true })
     @NullAsAbsent()
     @IsOptional()

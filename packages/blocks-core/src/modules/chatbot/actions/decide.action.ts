@@ -4,13 +4,14 @@ import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { TAKE_OVER_COMMAND } from "../../../rules/chatbot/decisions"
 import { chatbotText } from "../copy"
+import { routeHoldsPort } from "@nivo-lite/agent-sdk/platform"
 import { membersPort } from "../../platform/ports"
-import { CONVERSATIONS, MESSAGES } from "../ports"
+import { CONVERSATIONS, NOTES } from "../ports"
 import { changeHandling } from "./handling"
 
-/** `chatbot.decide`: the answer of a person to a customer who waits: take the conversation over, as the take-over action does. */
+/** `blocks-core.chatbot.chat-decide`: the answer of a person to a customer who waits: take the conversation over, as the take-over action does. */
 export const DECIDE: ActionDefinition = defineAction({
-    id: "chatbot.decide",
+    id: "blocks-core.chatbot.chat-decide",
     permission: "chatbot.reply",
     label: chatbotText("action_decide"),
     input: z.object({
@@ -18,16 +19,16 @@ export const DECIDE: ActionDefinition = defineAction({
         command: z.literal(TAKE_OVER_COMMAND),
         locale: z.enum(["vi", "en"]).optional(),
     }),
-    ports: { conversations: CONVERSATIONS, messages: MESSAGES, members: membersPort },
+    ports: { conversations: CONVERSATIONS, notes: NOTES, members: membersPort, holds: routeHoldsPort },
     transactional: true,
     refreshes: [
-        "chatbot.threads",
-        "chatbot.thread",
-        "chatbot.messages",
-        "chatbot.thread-counts",
-        "chatbot.channel-counts",
-        "chatbot.figures",
-        "chatbot.decisions",
+        "blocks-core.chatbot.api.chat.list",
+        "blocks-core.chatbot.api.chat.get",
+        "blocks-core.chatbot.api.message.list",
+        "blocks-core.chatbot.api.chat.status-counts",
+        "blocks-core.chatbot.api.chat.channel-counts",
+        "blocks-core.chatbot.api.chat.figures",
+        "blocks-core.chatbot.api.chat.waiting",
     ],
     run: (ports, { id, locale }, context) => changeHandling(ports, { id, locale }, context, true),
 })

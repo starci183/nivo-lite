@@ -17,6 +17,4 @@ export type {
     GuideAsk,
     ResponseFormat,
 } from "./ai-generations.contracts"
-export type { GenerationState } from "./ai-generations.contracts"
-export { ModuleTextGeneratorService } from "./module-text-generator.service"
 export { aiGenerationsEntities } from "./persistence/entities"

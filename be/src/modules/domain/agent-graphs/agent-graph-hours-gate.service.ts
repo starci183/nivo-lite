@@ -1,18 +1,16 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentWakeService } from "@modules/domain/agent-work"
 import type { AgentTurnView } from "@modules/domain/agent-work"
+import { DeliveredWakesService } from "@modules/domain/provider-triggers/delivered-wakes.service"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { holdsCustomerAt, nextOnDutyAt, workingHoursOf } from "@modules/domain/modules"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
+import { personEventOf } from "./policies/workflow-trigger.policy"
 
-/** The source of a customer's wake: the only one the working hours hold. */
-const CUSTOMER = "customer"
 
 /** The mark of a wake written again for the agent's next working hour: `<key>~open-<n>`, `n` counting the times it was held. */
 const OPEN_MARK = "~open-"
@@ -45,21 +43,23 @@ export class AgentGraphHoursGateService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly installations: InstallationRecordsService,
-        private readonly wakes: AgentWakeService,
+        private readonly wakes: DeliveredWakesService,
+        private readonly zones: WorkspaceTimeZoneService,
     ) {}
 
     /** True when the wake was held for the agent's next working hour: it starts no run now. */
     async deferred(turn: AgentTurnView): Promise<boolean> {
-        if (turn.source !== CUSTOMER) return false
+        if (!personEventOf(turn.context)) return false
         const installation = await this.installations.ofAgent(turn.workspaceId, turn.agentId)
         const hours = workingHoursOf(installation?.settings.workingHours ?? null)
         const now = this.clock.now()
-        if (!holdsCustomerAt(hours, now)) return false
-        const openAt = hours === null ? null : nextOnDutyAt(hours, now)
+        const timeZone = await this.zones.timeZoneOf(turn.workspaceId)
+        if (!holdsCustomerAt(hours, now, timeZone)) return false
+        const openAt = hours === null ? null : nextOnDutyAt(hours, now, timeZone)
         if (openAt === null) return false
         const { base, held } = heldKeyOf(turn.eventKey)
         await this.entityManager.transaction((tx) =>
-            this.wakes.write(tx, {
+            this.wakes.rewrite(tx, {
                 workspaceId: turn.workspaceId,
                 agentId: turn.agentId,
                 source: turn.source,

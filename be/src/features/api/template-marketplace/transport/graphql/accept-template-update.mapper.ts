@@ -7,7 +7,12 @@ import type { UpdateOfferType } from "./dto/update-offer.type"
 export const toAcceptTemplateUpdateRequest = (
     workspaceId: string,
     input: AcceptTemplateUpdateInput,
-): AcceptTemplateUpdateRequest => ({ workspaceId, installationId: input.installationId, unitIds: input.unitIds })
+): AcceptTemplateUpdateRequest => ({
+    workspaceId,
+    installationId: input.installationId,
+    unitIds: input.unitIds,
+    agreedRights: input.agreedRights,
+})
 
 /** Maps the answer to the GraphQL type. */
 export const toAcceptTemplateUpdateType = (result: UpdateOffer | null): UpdateOfferType | null => result

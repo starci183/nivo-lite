@@ -1,16 +1,19 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { usesAgents } from "@/hooks/connection-rows"
-import { isLocalOnly, useConnectionRowView, useConnectionsData, useConnectionsRole } from "@/hooks/connections"
-import type { ConnectionRowHandlers } from "@/hooks/connections"
+import {
+    isLocalOnly,
+    useConnectionRowView,
+    useConnectionsData,
+    useConnectionsRole,
+    type ConnectionRowHandlers,
+} from "@/hooks/connections"
 import { slotOfReads } from "@/hooks/slot"
 import { webSiteOrigin } from "@/modules/config"
 import { lifecycleChipOf, lifecycleOf } from "@/modules/connection-lifecycle"
 import type { Connection, ConnectionLifecycleChip, DataSlot, Provider, RowView } from "@/modules/types"
-import { useConnectionOpenFacts } from "./useConnectionOpenFacts"
-import type { ConnectionOpenEvent, ConnectionOpenFact } from "./useConnectionOpenFacts"
+import { useConnectionOpenFacts, type ConnectionOpenEvent, type ConnectionOpenFact } from "./useConnectionOpenFacts"
 
 /** A connection with nothing in it: the hook runs for it while the workspace reads wait, so the placeholder view has the ready shape. */
 const BLANK: Connection = {
@@ -61,7 +64,6 @@ export const useConnectionOpen = (connectionId: string): ConnectionOpenRead => {
     const t = useTranslations("connections")
     const data = useConnectionsData()
     const access = useConnectionsRole()
-    const user = useQueryAuthUserSwr()
     const found = data.items.find((item) => item.id === connectionId)
     const { view, on } = useConnectionRowView({
         connection: found ?? BLANK,
@@ -69,7 +71,6 @@ export const useConnectionOpen = (connectionId: string): ConnectionOpenRead => {
             .map((id) => data.agentNames[id])
             .filter((name): name is string => name !== undefined),
         localOnly: isLocalOnly(webSiteOrigin()),
-        ownerEmail: user.data?.email ?? "",
         canManage: access.role === "owner",
     })
     const { facts, event } = useConnectionOpenFacts(found, view)

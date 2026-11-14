@@ -1,75 +1,26 @@
-import { marksOf, patchAfterHandling, patchAfterLine, patchAfterWaiting } from "./conversation-patch"
+import { marksOf, patchAfterWaiting } from "./conversation-patch"
 import type { ConversationState } from "./conversation-patch"
-import { EMPTY_TAIL } from "./conversation-tail"
 
-const FRESH: ConversationState = { ...EMPTY_TAIL, waiting: false, handledBy: null }
+// Design change (owner ruling R26, MESSAGES-PLAN section 4): the chat keeps no tail of the lines (no preview, last role or count) and no
+// derived "unanswered": `unanswered` is the chatbot's own stored mark (set by hear on a person's line, cleared by a reply). The marks a
+// change derives are the inbox status only.
+// Design change (ruling R43): who holds the thread is the ENGINE's (the route's staff hold), so the chat stores no holder and no `handled`
+// mark: the stored mark is the open question only (`needs` / `ai`); `handled` is shown from the route. `patchAfterHandling` is gone.
+const FRESH: ConversationState = { waiting: false }
 
 describe("marksOf", () => {
-    it("derives the status and the unanswered mark from the state", () => {
-        expect(marksOf({ ...FRESH, lastRole: "user", handledBy: "Ha" })).toEqual({
-            status: "handled",
-            unanswered: true,
-        })
-        expect(marksOf(FRESH)).toEqual({ status: "ai", unanswered: false })
-    })
-})
-
-describe("patchAfterLine", () => {
-    it("moves the tail and leaves the AI's conversation answered", () => {
-        expect(patchAfterLine(FRESH, { role: "user", text: "Hi", at: "t1" })).toEqual({
-            lastText: "Hi",
-            lastRole: "user",
-            lastAt: "t1",
-            messageCount: 1,
-            status: "ai",
-            unanswered: false,
-        })
-    })
-
-    it("marks a customer line unanswered while a person holds the conversation", () => {
-        const patch = patchAfterLine({ ...FRESH, handledBy: "Ha" }, { role: "user", text: "Hello?", at: "t2" })
-        expect(patch.status).toBe("handled")
-        expect(patch.unanswered).toBe(true)
-    })
-
-    it("clears the unanswered mark when the person answers", () => {
-        const waiting: ConversationState = { ...FRESH, lastRole: "user", waiting: true, handledBy: "Ha" }
-        expect(patchAfterLine(waiting, { role: "agent", text: "Here", at: "t3" }).unanswered).toBe(false)
-    })
-})
-
-describe("patchAfterHandling", () => {
-    it("holds the conversation under the member's name", () => {
-        expect(patchAfterHandling({ ...FRESH, lastRole: "user" }, "Ha")).toEqual({
-            handledBy: "Ha",
-            status: "handled",
-            unanswered: true,
-        })
-    })
-
-    it("hands it back to the AI", () => {
-        expect(patchAfterHandling({ ...FRESH, handledBy: "Ha", lastRole: "user" }, null)).toEqual({
-            handledBy: null,
-            status: "ai",
-            unanswered: false,
-        })
+    it("derives the stored mark from the open question", () => {
+        expect(marksOf(FRESH)).toEqual({ status: "ai" })
+        expect(marksOf({ waiting: true })).toEqual({ status: "needs" })
     })
 })
 
 describe("patchAfterWaiting", () => {
     it("lists a conversation with a question for a person under needs", () => {
-        expect(patchAfterWaiting({ ...FRESH, lastRole: "user" }, true)).toEqual({
-            waiting: true,
-            status: "needs",
-            unanswered: true,
-        })
+        expect(patchAfterWaiting(FRESH, true)).toEqual({ waiting: true, status: "needs" })
     })
 
-    it("lists it again by its holder once the question is answered", () => {
-        expect(patchAfterWaiting({ ...FRESH, waiting: true, handledBy: "Ha" }, false)).toEqual({
-            waiting: false,
-            status: "handled",
-            unanswered: false,
-        })
+    it("lists it as the AI's again once the question is answered (a hold is shown from the route)", () => {
+        expect(patchAfterWaiting({ waiting: true }, false)).toEqual({ waiting: false, status: "ai" })
     })
 })

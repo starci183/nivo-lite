@@ -3,8 +3,7 @@ import { PROVIDERS, PROVIDER_LOGO, isProvider } from "@/hooks/connection-provide
 import type { InstalledAgent } from "@/hooks/installations"
 import type { AgentCatalogEntry, AgentCatalogRow, CatalogGrantChip } from "@/modules/agentCatalog"
 import { MODULE_REGISTRY } from "@/modules/catalog"
-import { agentHref, agentLifecycleTone, foldText } from "@/modules/installations"
-import { workspaceHref } from "@/modules/routes"
+import { agentLifecycleTone, foldText } from "@/modules/installations"
 
 /** The translator of the catalogue copy. */
 export type CatalogCopy = ReturnType<typeof useTranslations<"agentCatalog">>
@@ -20,9 +19,6 @@ const accountLabelOf = (grant: Grant): string => {
     return grant.name
 }
 
-/** The most provider logos a row shows before the rest fold into "+N". */
-const LOGO_LIMIT = 3
-
 /** One bound connection: its provider mark and the account. */
 const grantChipOf = (grant: Grant, index: number): CatalogGrantChip => ({
     id: `${grant.connectionId}-${grant.purpose}-${String(index)}`,
@@ -30,20 +26,6 @@ const grantChipOf = (grant: Grant, index: number): CatalogGrantChip => ({
     label: accountLabelOf(grant),
     brand: isProvider(grant.provider) ? PROVIDERS[grant.provider].brand : grant.name,
 })
-
-/** The knowledge line, the note of a customer facing agent and the count of facts waiting. */
-type KnowledgeLines = Pick<AgentCatalogRow, "knowledgeLine" | "knowledgeNote" | "waitingLabel">
-
-/** What the agent reads, counted: a customer facing agent reads public texts only; a team agent says how many facts wait. */
-const knowledgeOf = (entry: AgentCatalogEntry | undefined, t: CatalogCopy): KnowledgeLines => {
-    if (entry === undefined) return { knowledgeLine: "-", knowledgeNote: "", waitingLabel: "" }
-    const { audience, documents, factsApproved, factsTotal, factsWaiting } = entry.knowledge
-    const counts = { documents, approved: factsApproved, total: factsTotal }
-    const waitingLabel = factsWaiting > 0 ? t("knowledgeWaitingShort", { count: factsWaiting }) : ""
-    if (audience === "customer")
-        return { knowledgeLine: t("knowledgePublic", counts), knowledgeNote: t("knowledgeNoInternal"), waitingLabel }
-    return { knowledgeLine: t("knowledgeInternal", counts), knowledgeNote: "", waitingLabel }
-}
 
 /** What the dashboard counts for one agent over the last 7 days. */
 export interface AgentCounts {
@@ -63,7 +45,6 @@ const liveActionOf = (lifecycle: InstalledAgent["lifecycle"]): AgentCatalogRow["
 /** One installed agent as a card of the team, in the reader language. */
 export const catalogRowOf = (
     agent: InstalledAgent,
-    workspaceId: string,
     t: CatalogCopy,
     counts: AgentCounts | undefined,
     canAdd: boolean,
@@ -76,19 +57,13 @@ export const catalogRowOf = (
     return {
         key: agent.id,
         name: agent.name,
-        emblem: `/agents/${agent.moduleKey}.webp`,
-        emblemKind: agent.moduleKey,
         roleKey: agent.moduleKey,
         picture: agent.avatarUrl,
         isInitials: agent.avatarUrl === null && agent.avatarPreset === "initials",
         seed: agent.seed,
         subtitle,
         grants,
-        countLabel: t("connectionsCount", { count: grants.length }),
-        overflowLabel: grants.length > LOGO_LIMIT ? t("moreConnections", { count: grants.length - LOGO_LIMIT }) : "",
         menuLabel: t("cardMenu", { name: agent.name }),
-        grantHref: workspaceHref(workspaceId, agentHref(agent.moduleKey, agent.id, "connections")),
-        ...knowledgeOf(agent.catalog, t),
         statusLabel: t(`status_${agent.lifecycle}`),
         statusTone: agentLifecycleTone(agent.lifecycle),
         href: agent.href,

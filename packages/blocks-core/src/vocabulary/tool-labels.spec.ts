@@ -1,3 +1,4 @@
+import { ENGINE_TOOL_LABELS } from "@nivo-lite/agent-sdk/names"
 import { TOOL } from "./tool-ids"
 import { TOOL_LABELS, toolLabelOf } from "./tool-labels"
 
@@ -22,13 +23,21 @@ describe("tool labels", () => {
 
     it("tells reads from acts", () => {
         expect(toolLabelOf(TOOL.brainSearch)?.kind).toBe("reads")
-        expect(toolLabelOf(TOOL.bankTransactions)?.kind).toBe("reads")
+        expect(toolLabelOf(TOOL.bankTransactionList)?.kind).toBe("reads")
         expect(toolLabelOf(TOOL.customerMessageSend)?.kind).toBe("acts")
-        expect(toolLabelOf(TOOL.ledgerAppend)?.kind).toBe("acts")
+        expect(toolLabelOf(TOOL.ledgerEntryAppend)?.kind).toBe("acts")
     })
 
     it("answers null for a tool it does not name, never a property of the object", () => {
         expect(toolLabelOf("nope.tool")).toBeNull()
         expect(toolLabelOf("toString")).toBeNull()
+    })
+
+    it("joins the engine's own tool words by reference, so the installation's tool labels are the same key by key", () => {
+        for (const [id, label] of Object.entries(ENGINE_TOOL_LABELS)) {
+            expect(Object.hasOwn(TOOL_LABELS, id)).toBe(true)
+            expect(TOOL_LABELS[id]).toBe(label)
+            expect(toolLabelOf(id)).toBe(label)
+        }
     })
 })

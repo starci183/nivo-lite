@@ -1,14 +1,20 @@
-import { Injectable } from "@nestjs/common"
-import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { WORKFLOW_TEMPLATES, workflowTemplatesOf } from "@nivo-lite/blocks-core/modules"
+import { Injectable, Optional } from "@nestjs/common"
+import { graphSpecSchema, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import type { AgentRightsAgreed } from "./agent-workflow-rights.contracts"
+import type { WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import { WorkspaceEnterpriseService } from "@modules/domain/workspaces"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { parseJsonText } from "@modules/platform/primitives"
 import type { GraphActor } from "./agent-graph-admin.service"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { AgentGraphLayoutService } from "./agent-graph-layout.service"
+import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
+import { AgentStepTitlesService } from "./agent-step-titles.service"
+import { AgentWorkflowInstallService } from "./agent-workflow-install.service"
 import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
 import { AgentWorkflowsService } from "./agent-workflows.service"
 import type {
@@ -20,6 +26,8 @@ import type {
     WorkflowGraphEntry,
 } from "./agent-workflows.contracts"
 import type {
+    AgentRightsAgreeRequest,
+    AgreedRightsRequest,
     RunPinsRequest,
     TemplateRequest,
     TemplatesRequest,
@@ -36,6 +44,7 @@ import type {
 } from "./agent-workflows-door.contracts"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type { GraphLayoutPosition } from "./policies/graph-layout.policy"
+import { agreedRightsOf, type AgreedRight } from "./policies/node-rights-gate.policy"
 import { requireNoWidening } from "./policies/workflow-widening.policy"
 import {
     diffAgainstOf,
@@ -51,14 +60,12 @@ import {
     workflowDiffWireOf,
     workflowVersionWireOf,
     workflowWireOf,
-} from "./policies/workflow-wire.policy"
-import type {
-    TemplatePreviewWire,
-    TemplateWire,
-    WorkflowDetailWire,
-    WorkflowDiffWire,
-    WorkflowVersionWire,
-    WorkflowWire,
+    type TemplatePreviewWire,
+    type TemplateWire,
+    type WorkflowDetailWire,
+    type WorkflowDiffWire,
+    type WorkflowVersionWire,
+    type WorkflowWire,
 } from "./policies/workflow-wire.policy"
 
 /** The agent of an installation and the module it runs. */
@@ -96,6 +103,12 @@ export interface GraphLayoutWire {
     readonly positions: ReadonlyArray<GraphLayoutPosition>
 }
 
+/** The entries the owner agreed, as the last argument of a version write: none when the request agreed nothing. */
+const agreedOf = (request: AgreedRightsRequest): [] | [ReadonlyArray<AgreedRight>] => {
+    const agreed = agreedRightsOf(request.agreedRights)
+    return agreed.length === 0 ? [] : [agreed]
+}
+
 /** The text of a graph the editor sent, read as a graph; one that is not JSON or not a graph is refused. */
 const graphOfText = (text: string): GraphSpec => {
     const read = parseJsonText(text)
@@ -109,7 +122,8 @@ const graphOfText = (text: string): GraphSpec => {
  * The door of the workflows tab and the template pages: every call checks the seat (owner or manager to read or change workflows, any
  * member for the templates and the run pins) and that the workflow belongs to the agent of the installation named, then answers the
  * wire the transport sends. A version that gives the agent more reach (rights, tools or effects its running version does not hold) is
- * the owner's alone to publish, as with the agent graph.
+ * the owner's alone to publish, as with the agent graph; one whose nodes ask for more on connected accounts activates only with the
+ * owner's agreed list (the rights gate of `AgentWorkflowsService`).
  */
 export class AgentWorkflowsAdminService {
     constructor(
@@ -119,12 +133,20 @@ export class AgentWorkflowsAdminService {
         private readonly runs: AgentWorkflowRunsService,
         private readonly layouts: AgentGraphLayoutService,
         private readonly agents: AgentDirectoryService,
+        @Optional() private readonly enterprise?: WorkspaceEnterpriseService,
+        @Optional() private readonly installer?: AgentWorkflowInstallService,
+        @Optional() @InjectLogger() private readonly logger?: Logger,
+        @Optional() private readonly titles?: AgentStepTitlesService,
     ) {}
+
+    /** The title of a step as its installed node declares it; none in an app that installed no nodes. */
+    private readonly stepTitleOf = (step: string) => this.titles?.titleOf(step) ?? null
 
     /** The workflows of the agent of an installation. */
     async list(actor: GraphActor, request: WorkflowsRequest): Promise<ReadonlyArray<WorkflowWire>> {
         await this.editorOf(actor)
         const seat = await this.seatOf(actor, request.installationId)
+        await this.installed(actor.workspaceId, request.installationId, seat)
         const views = await this.workflows.list(actor.workspaceId, seat.agentId, workflowLocaleOf(request.locale))
         return views.map(workflowWireOf)
     }
@@ -133,6 +155,7 @@ export class AgentWorkflowsAdminService {
     async graph(actor: GraphActor, request: WorkflowsRequest): Promise<AgentWorkflowGraphWire> {
         await this.editorOf(actor)
         const seat = await this.seatOf(actor, request.installationId)
+        await this.installed(actor.workspaceId, request.installationId, seat)
         const graph = await this.workflows.graphOf(actor.workspaceId, seat.agentId, workflowLocaleOf(request.locale))
         const targets = new Set(
             graph.workflows.flatMap((workflow) =>
@@ -193,7 +216,7 @@ export class AgentWorkflowsAdminService {
     /** One workflow with its graph, its history and how it differs from its template. */
     async detail(actor: GraphActor, request: WorkflowRequest): Promise<WorkflowDetailWire> {
         await this.editorOf(actor)
-        return workflowDetailWireOf(await this.owned(actor, request))
+        return workflowDetailWireOf(await this.owned(actor, request), this.stepTitleOf)
     }
 
     /** How one version differs from another, from the one before or from a template version. */
@@ -203,6 +226,7 @@ export class AgentWorkflowsAdminService {
         const against = diffAgainstOf(request.against, request.againstNumber ?? null)
         return workflowDiffWireOf(
             await this.workflows.versionDiff(actor.workspaceId, request.workflowId, request.number, against),
+            this.stepTitleOf,
         )
     }
 
@@ -218,6 +242,7 @@ export class AgentWorkflowsAdminService {
                 request.templateVersion,
                 locale,
             ),
+            this.stepTitleOf,
         )
     }
 
@@ -228,6 +253,7 @@ export class AgentWorkflowsAdminService {
         const locale = workflowLocaleOf(request.locale)
         const templateId = request.templateId ?? null
         if (templateId !== null) {
+            await this.openTemplate(actor.workspaceId, templateId)
             const pick = { templateId, version: request.templateVersion ?? null }
             return workflowWireOf(
                 await this.workflows.createFromTemplate(actor.workspaceId, seat.agentId, pick, author, locale),
@@ -246,8 +272,17 @@ export class AgentWorkflowsAdminService {
         const graph = graphOfText(request.graphJson)
         requireNoWidening(detail.graph, graph, author.role)
         const expected = request.expectedLatest ?? null
+        const { workspaceId } = actor
         return workflowVersionWireOf(
-            await this.workflows.publish(actor.workspaceId, request.workflowId, graph, author, expected, request.note),
+            await this.workflows.publish(
+                workspaceId,
+                request.workflowId,
+                graph,
+                author,
+                expected,
+                request.note,
+                ...agreedOf(request),
+            ),
         )
     }
 
@@ -268,6 +303,7 @@ export class AgentWorkflowsAdminService {
                 author,
                 expected,
                 request.note,
+                ...agreedOf(request),
             ),
         )
     }
@@ -293,30 +329,80 @@ export class AgentWorkflowsAdminService {
                 author,
                 expected,
                 request.note,
+                ...agreedOf(request),
             ),
         )
     }
 
     /** Moves the workflow to `active`, `draft` or `paused`. */
     async setStatus(actor: GraphActor, request: WorkflowStatusRequest): Promise<boolean> {
-        await this.editorOf(actor)
+        const editor = await this.editorOf(actor)
         await this.owned(actor, request)
-        await this.workflows.setStatus(actor.workspaceId, request.workflowId, workflowStatusOf(request.status))
+        const status = workflowStatusOf(request.status)
+        const { workspaceId } = actor
+        // Turning a workflow on activates its running version: what it asks beyond its grant rows needs the owner's agreed list first.
+        if (status === "active" && editor.memberId !== null) {
+            const agreed = agreedRightsOf(request.agreedRights)
+            const consent = { memberId: editor.memberId, role: editor.role, agreed }
+            await this.workflows.requireRights(workspaceId, request.workflowId, consent)
+        }
+        await this.workflows.setStatus(workspaceId, request.workflowId, status)
         return true
+    }
+
+    /**
+     * The road of the REMOVED rights agreement (nivo-frame `rights`: no rights-upgrade gate, nothing to agree): it agrees nothing and
+     * answers so. What stays on it is no right: the OWNER picks the one source of each stream two attached accounts read (`triggerPicks`,
+     * owner key `triggerOneSource2026_11_12`): every pick is checked first (`TRIGGER_PICK_REFUSED` refuses the call, nothing written), a
+     * manager's pick is refused `FORBIDDEN`.
+     */
+    async agreeRights(actor: GraphActor, request: AgentRightsAgreeRequest): Promise<AgentRightsAgreed> {
+        const editor = await this.editorOf(actor)
+        const seat = await this.seatOf(actor, request.installationId)
+        const picks = request.triggerPicks ?? []
+        if (picks.length > 0 && (editor.role !== "owner" || editor.memberId === null))
+            throw new AgentGraphsError({ code: AgentGraphsErrorCode.Forbidden })
+        const checked = await this.runs.triggerPicksOf(actor.workspaceId, seat.agentId, picks)
+        if (checked.length > 0 && editor.memberId !== null)
+            await this.runs.recordTriggerPicks(actor.workspaceId, seat.agentId, editor.memberId, checked)
+        return { nodeRightsDecide: true, agreed: 0 }
     }
 
     /** The workflow templates of the market, of one module or of all, for any member of the workspace. */
     async templates(actor: GraphActor, request: TemplatesRequest): Promise<ReadonlyArray<TemplateWire>> {
         await this.memberOf(actor)
         const locale = workflowLocaleOf(request.locale)
-        const listed = request.moduleKey == null ? WORKFLOW_TEMPLATES : workflowTemplatesOf(request.moduleKey)
-        return listed.map((template) => templateWireOf(template, locale))
+        const listed = request.moduleKey == null ? INSTALLED.templates() : INSTALLED.templatesOf(request.moduleKey)
+        // A template of a private plugin is listed only to the enterprise workspaces the plugin names.
+        const open = await Promise.all(listed.map((template) => this.opens(actor.workspaceId, template.moduleKey)))
+        return listed.filter((_, at) => open[at] === true).map((template) => templateWireOf(template, locale))
     }
 
     /** One workflow template, for any member of the workspace. */
     async template(actor: GraphActor, request: TemplateRequest): Promise<TemplateWire> {
         await this.memberOf(actor)
-        return templateWireOf(templateRequired(request.templateId), workflowLocaleOf(request.locale))
+        return templateWireOf(
+            await this.openTemplate(actor.workspaceId, request.templateId),
+            workflowLocaleOf(request.locale),
+        )
+    }
+
+    /**
+     * Whether the workspace may use what a module ships: always for a module of a public plugin (no read); for a module of a private
+     * plugin only when the workspace's enterprise identifier is one the plugin names. An app without the workspaces capability
+     * opens no private module.
+     */
+    private async opens(workspaceId: string, moduleKey: string): Promise<boolean> {
+        if (INSTALLED.isOpenTo(moduleKey, null)) return true
+        return (await this.enterprise?.opens(workspaceId, moduleKey)) ?? false
+    }
+
+    /** The template of this id as the workspace may use it; one of a module closed to the workspace is the not-found of an unknown id. */
+    private async openTemplate(workspaceId: string, templateId: string): Promise<WorkflowTemplate> {
+        const template = templateRequired(templateId)
+        // An unknown id and a closed template answer the same refusal: nothing tells a private template from no template.
+        if (!(await this.opens(workspaceId, template.moduleKey))) return templateRequired("")
+        return template
     }
 
     /** The workflow and version each of these runs of the installation's agent executes, for any member of the workspace. */
@@ -324,6 +410,21 @@ export class AgentWorkflowsAdminService {
         await this.memberOf(actor)
         await this.seatOf(actor, request.installationId)
         return this.runs.pinsOf(actor.workspaceId, request.runIds)
+    }
+
+    /**
+     * Before the workflows of an agent are listed, the agent is given the ones its plugin ships where it holds none: how an agent
+     * installed before the install doors made them (or through a door that makes none) is repaired the first time an owner or a
+     * manager opens its workflows. It changes nothing for an agent that holds them; a failure is logged and the page is answered.
+     */
+    private async installed(workspaceId: string, installationId: string, seat: Seat): Promise<void> {
+        const made = { workspaceId, agentId: seat.agentId, installationId, moduleKey: seat.moduleKey }
+        try {
+            await this.installer?.install(made)
+        } catch (cause: unknown) {
+            if (this.logger === undefined) throw cause
+            this.logger.error(AgentGraphsLogEvent.WorkflowInstallFailed, cause, made)
+        }
     }
 
     private async owned(actor: GraphActor, request: WorkflowRequest): Promise<WorkflowDetail> {

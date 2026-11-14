@@ -84,7 +84,7 @@ export interface NewInstallation {
 export interface RequirementFacts {
     /** The connection providers that are connected. */
     readonly providers: ReadonlyArray<string>
-    /** How many active chat agents (chatbot, booking) the workspace has. */
+    /** How many active chat agents the workspace has. */
     readonly chatAgents: number
     /** How many active staff members the workspace has. */
     readonly staff: number

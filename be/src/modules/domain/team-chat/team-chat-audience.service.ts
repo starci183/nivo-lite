@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import type { EffectFacts, TeamAudience } from "@nivo-lite/blocks-core"
-import type { EntityManager } from "typeorm"
-import { IsNull } from "typeorm"
-import { AgentDirectoryService } from "@modules/domain/agents"
-import type { OptionalId } from "@modules/domain/agents"
+import type { EffectFacts } from "@nivo-lite/agent-sdk/node"
+import type { TeamAudience } from "@nivo-lite/agent-sdk/team-chat"
+import { type EntityManager, IsNull } from "typeorm"
+import { AgentDirectoryService, type OptionalId } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TeamChatError, TeamChatErrorCode } from "./errors/team-chat.error"
 import { ChatRoomEntity, ChatRoomMemberEntity } from "./persistence/entities"
@@ -27,8 +26,7 @@ import type {
 } from "./team-chat-audience.contracts"
 import { TeamChatAccessService } from "./team-chat-access.service"
 import { TeamChatCardsService } from "./team-chat-cards.service"
-import type { OptionalRoom } from "./team-chat-store.service"
-import { TeamChatStoreService } from "./team-chat-store.service"
+import { type OptionalRoom, TeamChatStoreService } from "./team-chat-store.service"
 import { TeamChatViewsService } from "./team-chat-views.service"
 
 /** Why the agent's team room did not get the line: the workspace has no room for that team. */

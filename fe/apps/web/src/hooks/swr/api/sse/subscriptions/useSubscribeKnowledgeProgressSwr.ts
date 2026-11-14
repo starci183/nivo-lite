@@ -1,7 +1,7 @@
 "use client"
 
 import { useSWRConfig } from "swr"
-import useSWRSubscription from "swr/subscription"
+import useSWRSubscription, { type SWRSubscriptionResponse } from "swr/subscription"
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
 import {
     streamKnowledgeProgress,
@@ -11,7 +11,6 @@ import { QUERY_BRAIN_SWR_KEY } from "../../graphql/queries/useQueryBrainSwr"
 import { QUERY_BRAIN_TODO_SWR_KEY } from "../../graphql/queries/useQueryBrainTodoSwr"
 import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeSourcesSwr"
 import { QUERY_KNOWLEDGE_USAGE_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeUsageSwr"
-import type { SWRSubscriptionResponse } from "swr/subscription"
 
 /** The SWR key of the knowledge-progress stream; the full key carries the workspace and the signed-in member, the identity of the stream. */
 export const SUBSCRIBE_KNOWLEDGE_PROGRESS_SWR_KEY = "SUBSCRIBE_KNOWLEDGE_PROGRESS_SWR"

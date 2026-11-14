@@ -1,5 +1,4 @@
-import type { BrainGraph } from "@modules/domain/brain"
-import type { BrainChangeDecision } from "@modules/domain/brain/brain-change-messages.service"
+import type { BrainChangeDecision, BrainGraph } from "@modules/domain/brain"
 import type { FactRelation } from "@modules/domain/brain-facts"
 import type { DecideBrainChangeRequest } from "../../application/decide-brain-change.contracts"
 import type { GetBrainGraphRequest } from "../../application/get-brain-graph.contracts"

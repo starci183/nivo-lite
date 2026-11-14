@@ -1,5 +1,4 @@
-import { Alert, Page } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
+import { Alert, Page, type PageHeaderContent } from "@starci/grammar/common"
 
 /** Copy and retry the failed personal route supplies. */
 export interface AccountErrorPageBaseProps {

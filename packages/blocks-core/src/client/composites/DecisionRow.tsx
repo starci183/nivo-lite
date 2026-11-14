@@ -1,12 +1,10 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { Badge, Button, Cluster, DropdownMenu, Link, Quote, Stack, Text } from "@starci/grammar/common"
 import type { EditAnswer } from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
 import type { CommandView, DecisionRowView } from "../../views/views.types"
 import { decisionLinesOf } from "../../rows/decision-lines"
-import { DecisionEditForm } from "./DecisionEditForm"
-import type { DecisionEditFormProps } from "./DecisionEditForm"
+import { DecisionEditForm, type DecisionEditFormProps } from "./DecisionEditForm"
 
 /** What a row needs to edit a decision in place: the form the spec declares, and how its values are sent for this row. */
 export interface DecisionEdit extends Pick<DecisionEditFormProps, "fields" | "currency" | "words"> {
@@ -104,7 +102,7 @@ const WaitingFor = (props: WaitingForProps): ReactNode =>
         </Text>
     )
 
-/** The one visible command of a row, then the menu for the rest. */
+/** The alternative command of a row (when it has one), its one main command, then the menu for the rest. */
 const RowActions = (props: RowActionsProps): ReactNode => {
     const row = props.row
     const primary = row.primary
@@ -117,8 +115,17 @@ const RowActions = (props: RowActionsProps): ReactNode => {
     }))
     if (primary === null) return <WaitingFor row={row} />
     const edit = row.edit
+    const alternative = row.alternative ?? null
     return (
         <Cluster gap="inline" wrap={false}>
+            {alternative === null ? null : (
+                <RowButton
+                    command={alternative}
+                    fallback="neutral"
+                    size={props.commandSize}
+                    onPress={() => props.onCommand(row.id, alternative.id)}
+                />
+            )}
             <RowButton
                 command={primary}
                 fallback="alternative"
@@ -159,7 +166,11 @@ const RowFoot = (props: RowFootProps): ReactNode => {
     return (
         <Cluster gap="row" wrap={false} justify="between" align="center">
             <RowActions {...props} />
-            {whyHref === null ? null : <Link href={whyHref}>{props.seeWhyLabel}</Link>}
+            {whyHref === null ? null : (
+                <Link href={whyHref} variant="plain">
+                    {props.seeWhyLabel}
+                </Link>
+            )}
         </Cluster>
     )
 }

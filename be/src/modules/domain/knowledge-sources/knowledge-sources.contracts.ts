@@ -53,19 +53,23 @@ export const KNOWLEDGE_UPLOAD_MIME: ReadonlyMap<string, string> = new Map([
 /** The extensions of old binary Office files: refused at the upload door with the advice to save them again as .docx or .xlsx. */
 export const LEGACY_OFFICE_EXTENSIONS: ReadonlySet<string> = new Set(["doc", "xls", "ppt"])
 
-/** The largest uploaded document, in bytes: 50 MB. */
-export const MAX_UPLOAD_BYTES: number = 50 * 1024 * 1024
+/**
+ * The Second Brain's documents limit (owner 2026-11-11: second brain data is its own limit for all workspaces, apart from the plan's
+ * storage; the number: 50 MB on 2026-11-11, 20 MB then 10 MB on 2026-11-12): the raw bytes of a workspace's Second Brain sources (files
+ * and pasted text) are at most this in total, the SAME for every workspace whatever its plan. It is not the plan's storage: that quota
+ * (`plans.storage_gb`, e.g. Pro 20 GB) is the workspace's general storage, checked by `EntitlementsService.requireStorageFor` over
+ * every stored object, and stays as it was. A Second Brain upload must pass both. Changing the number is this one line.
+ */
+export const BRAIN_DOCUMENTS_BYTES: number = 10 * 1024 * 1024
 
-/** The most raw document data one workspace may index in total, in bytes: 50 MB. */
-export const WORKSPACE_SOURCE_BYTES: number = 50 * 1024 * 1024
+/**
+ * The limit of ONE of the Second Brain's two upload areas (owner 2026-11-12: PUBLIC documents and INTERNAL documents, 5 MB each, 10 MB in
+ * total): the raw bytes of the sources whose `visibility` is that area. Two areas of this size are the whole limit above.
+ */
+export const BRAIN_AREA_BYTES: number = 5 * 1024 * 1024
 
-/** How much of its raw document allowance a workspace has used. */
-export interface KnowledgeUsage {
-    /** The raw bytes its sources hold now. */
-    readonly usedBytes: number
-    /** The most raw bytes it may hold. */
-    readonly limitBytes: number
-}
+/** The largest uploaded document, in bytes: 50 MB, and never more than one area of the Second Brain may hold (5 MB today). */
+export const MAX_UPLOAD_BYTES: number = Math.min(50 * 1024 * 1024, BRAIN_AREA_BYTES)
 
 /** The storage path of an uploaded file, or null for a source that has none. */
 export type MaybeStoragePath = string | null
@@ -116,7 +120,7 @@ export interface ReadingWarning {
     readonly place: string | null
     /** The count the note names, or null. */
     readonly count: number | null
-    /** The note in plain Vietnamese, e.g. "Trang 3 không đọc được." */
+    /** The note in plain Vietnamese, e.g. the sentence "Page 3 could not be read." */
     readonly message: string
 }
 
@@ -165,7 +169,7 @@ export interface AddSourceInput {
     readonly module?: string | undefined
     /** The agent instance that alone reads the document; omitted = every instance. */
     readonly installationId?: string | undefined
-    /** public or internal, as the owner chose; a source without one is refused. */
+    /** The area the member uploads into, `public` or `internal`; internal when omitted. */
     readonly visibility?: string | undefined
     /** Where it came from: a folder, a ZIP, the Google Picker. */
     readonly origin?: string | undefined
@@ -183,7 +187,7 @@ export interface UpdateSourceInput {
     readonly tags?: ReadonlyArray<string> | undefined
     /** A new module; an empty text means every module. */
     readonly module?: string | undefined
-    /** public or internal. */
+    /** The area to move the document to, `public` or `internal` (the MOVE: its passages and truths follow). */
     readonly visibility?: string | undefined
 }
 
@@ -212,6 +216,15 @@ export interface NewUpload {
     /** Its size in bytes. */
     readonly bytes: number
 }
+
+/** A new upload, or null when none was given. */
+export type MaybeNewUpload = NewUpload | null
+
+/** The path of a new upload the browser may not have given. */
+export type OptionalUploadPath = string | undefined
+
+/** The size in bytes the browser may not have said. */
+export type OptionalSizeBytes = number | undefined
 
 /** The columns a new upload writes on its source (empty without one). */
 export interface ReplacementColumns {
@@ -343,7 +356,7 @@ export interface SourceSummary {
     readonly origin: string | null
     /** 0-100 while a worker is on it. */
     readonly progress: number
-    /** The stage the document is at (read, chunk, embed, store, facts, or critic while the critic checks its dossier), or null when none is. */
+    /** The stage the document is at (read, chunk, embed, store, facts, or critic while the critic checks it), or null when none is. */
     readonly stage: "read" | "chunk" | "embed" | "store" | "facts" | "critic" | null
     /** Passages of the stage that are done, or null. */
     readonly stageDone: number | null
@@ -446,14 +459,4 @@ export interface SourceCategory {
     readonly documentCount: number
     /** The raw bytes those documents hold. */
     readonly sizeBytes: number
-}
-
-/** How many documents a category holds for one dossier reference: the leading number of a title, or a `dossier:<n>` tag. */
-export interface DossierDocumentCount {
-    /** The topic label (the category) of the documents. */
-    readonly topic: string
-    /** The dossier reference, without leading zeros. */
-    readonly ref: string
-    /** How many documents name that reference. */
-    readonly documentCount: number
 }

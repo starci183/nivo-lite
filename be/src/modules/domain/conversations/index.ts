@@ -1,7 +1,4 @@
 export { ConversationsModule } from "./conversations.module"
-export { ConversationsService } from "./conversations.service"
-export { CustomerIntakeService } from "./customer-intake.service"
+export { HeldLinesService } from "./held-lines.service"
 export { CONVERSATIONS_ERROR_KINDS } from "./errors/conversations.error"
 export { CONVERSATIONS_MESSAGES } from "./messages/conversations.messages"
-export { readTelegramUpdate } from "./telegram-update.policy"
-export { readZaloEvent } from "./zalo-event.policy"

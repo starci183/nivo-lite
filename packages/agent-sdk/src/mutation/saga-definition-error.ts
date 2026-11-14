@@ -1,4 +1,4 @@
-import { SdkError } from "../sdk-error"
+import { DomainError } from "@starci/common"
 
 /** The codes a saga definition is refused with. */
 export type SagaProblemCode =
@@ -11,4 +11,8 @@ export type SagaProblemCode =
     | "SAGA_STATE_STATUS_MISSING"
 
 /** Thrown at module load by `defineSaga`, with the first problem's code and the saga name or step job it is about. */
-export class SagaDefinitionError extends SdkError<SagaProblemCode> {}
+export class SagaDefinitionError extends DomainError<SagaProblemCode> {
+    constructor(code: SagaProblemCode, at: string, options?: ErrorOptions) {
+        super({ code, params: { at }, cause: options?.cause })
+    }
+}

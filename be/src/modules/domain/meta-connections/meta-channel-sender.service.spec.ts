@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { CHANNEL_SENDER_REGISTRY } from "@modules/domain/channels"
 import type { ChannelSenderRegistry } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
@@ -9,10 +8,9 @@ import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient, SendResult } from "@modules/integrations/meta"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { MetaChannelSender } from "./meta-channel-sender.service"
+import { MetaChannelSender, type MetaSendTarget } from "./meta-channel-sender.service"
 
-const target = (overrides: Partial<ChatConversationTarget> = {}): ChatConversationTarget => ({
-    id: "conversation-1",
+const target = (overrides: Partial<MetaSendTarget> = {}): MetaSendTarget => ({
     workspaceId: "workspace-1",
     channel: "facebook",
     externalId: "person-1:archived:1730000000",

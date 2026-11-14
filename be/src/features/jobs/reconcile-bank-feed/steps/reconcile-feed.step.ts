@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { BankFeedPollService } from "@modules/domain/billing"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: every bank connection that can be read back is polled for the transactions its webhook never delivered. */

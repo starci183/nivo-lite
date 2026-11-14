@@ -1,7 +1,7 @@
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import { AccountDataReadService, type StoredRow } from "@modules/domain/account-data"
+import type { ChannelTarget } from "./channels.contracts"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
@@ -20,9 +20,9 @@ const HOUR = 3_600_000
 const INSIDE = NOW - 2 * HOUR
 const OUTSIDE = NOW - 30 * 24 * HOUR
 
-const QR = "https://qr.sepay.vn/img?acc=0123456789&bank=MB&amount=1500000&des=INV2026100001&template=compact"
+const QR = "https://vietqr.app/img?acc=0123456789&bank=MB&amount=1500000&des=INV2026100001&template=compact"
 
-const target: ChatConversationTarget = {
+const target: ChannelTarget = {
     id: "conv-1",
     workspaceId: "ws-1",
     channel: "zalo",
@@ -87,12 +87,22 @@ const znsMessage = {
 const refusal = (zaloCode: number, path = "/v3.0/oa/message/cs") =>
     new ZaloError({ code: ZaloErrorCode.Rejected, params: { path, reason: "no", zaloCode } })
 
+/** The stored inbound message the customer wrote at a moment. */
+const inboundAt = (at: number): StoredRow => ({
+    id: "row-1",
+    type: "zalo_oa.message",
+    typeVersion: 1,
+    key: "msg-1",
+    value: {},
+    occurredAt: new Date(at),
+    processedAt: null,
+})
+
 const build = async (lastCustomerAt: number | null = INSIDE) => {
-    const messages = mock<ChatMessagesService>()
-    messages.lastCustomerAt.mockResolvedValue(
-        lastCustomerAt === null
-            ? { kind: "refused", code: ChatRecordsErrorCode.NotFound }
-            : { kind: "ok", value: new Date(lastCustomerAt) },
+    // The reply window is read from the engine's stored inbound messages of the connection, never from a conversation record.
+    const messages = mock<AccountDataReadService>()
+    messages.newestWhereAlso.mockResolvedValue(
+        lastCustomerAt === null ? null : inboundAt(lastCustomerAt),
     )
     const zalo = mock<ZaloClient>()
     zalo.sendCsText.mockResolvedValue(undefined)
@@ -111,13 +121,13 @@ const build = async (lastCustomerAt: number | null = INSIDE) => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: ZALO, useValue: zalo },
             { provide: LOGGER, useValue: logger },
-            { provide: ChatMessagesService, useValue: messages },
+            { provide: AccountDataReadService, useValue: messages },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloPicturesService, useValue: pictures },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloDeliveryService), zalo, credentials, connections, logger, pictures }
+    return { service: moduleRef.get(ZaloDeliveryService), zalo, credentials, connections, logger, pictures, messages }
 }
 
 describe("ZaloDeliveryService", () => {
@@ -129,6 +139,15 @@ describe("ZaloDeliveryService", () => {
 
             expect(zalo.sendCsText).toHaveBeenCalledWith("access-1", "user-1", withQr.text)
             expect(zalo.sendCsImage).toHaveBeenCalledWith("access-1", "user-1", QR)
+        })
+
+        it("asks the stored inbound messages nothing for the window when the caller already judged it (`windowChecked`)", async () => {
+            const { service, zalo, messages } = await build(OUTSIDE)
+
+            await expect(service.send(target, "user-1", { ...request, windowChecked: true })).resolves.toEqual(byConsultation)
+
+            expect(messages.newestWhereAlso).not.toHaveBeenCalled()
+            expect(zalo.sendCsText).toHaveBeenCalledWith("access-1", "user-1", request.text)
         })
 
         it("sends no image for a text without a QR link", async () => {

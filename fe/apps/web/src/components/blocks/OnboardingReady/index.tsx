@@ -7,12 +7,12 @@ import { navigation } from "@/modules/i18n"
 import { APP_ROUTES, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { OnboardingReadyBase } from "./component"
 
-/** The connected ready screen: names the workspace just made (the one the address carries), offers the first steps, lands on the Office. */
+/** The connected ready screen: names the workspace just made (the one the address carries), offers the first steps, lands on the workspace home. */
 export const OnboardingReady = () => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
-    const { cards, status } = useWorkspaceCards()
+    const { cards, slot } = useWorkspaceCards()
     const name = cards.find((card) => card.id === workspaceId)?.name
     const open = (path: string) => workspaceHref(workspaceId, path)
     return (
@@ -23,13 +23,6 @@ export const OnboardingReady = () => {
                 description: t("readyText"),
                 nextLabel: t("readyNextLabel"),
                 next: [
-                    {
-                        id: "inbox",
-                        title: t("readyNextInbox"),
-                        description: t("readyNextInboxText"),
-                        leading: { icon: nivoIconSource("chat", "leading") },
-                        href: open(CONSOLE_ROUTES.inbox),
-                    },
                     {
                         id: "connections",
                         title: t("readyNextChannels"),
@@ -46,7 +39,7 @@ export const OnboardingReady = () => {
                     },
                 ],
                 enterLabel: t("enterWorkspace"),
-                isLoading: status === "loading",
+                isLoading: "isLoading" in slot,
             }}
             on={{
                 enter: () => {

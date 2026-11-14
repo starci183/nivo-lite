@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryBillingWorkspaces } from "@/modules/api/graphql/queries/query-billing-workspaces"
 import type { BillingWorkspacesQuery } from "@/modules/api"
 

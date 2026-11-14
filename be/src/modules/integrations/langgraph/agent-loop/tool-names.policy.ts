@@ -7,8 +7,8 @@ const WIRE_DOT = "__"
 const WIRE_NAME = /^[a-zA-Z0-9_-]{1,64}$/
 
 /**
- * The wire name of a tool id when the model's profile cannot take a dot: every `.` becomes `__` (`nivo.lead.message.send` ->
- * `nivo__lead__message__send`). An id has a wire name only when the way back is certain: it holds no `__` of its own, and what comes
+ * The wire name of a tool id when the model's profile cannot take a dot: every `.` becomes `__` (`nivo.tool.customer.message.send` ->
+ * `nivo__tool__customer__message__send`). An id has a wire name only when the way back is certain: it holds no `__` of its own, and what comes
  * out is a legal name of at most 64 characters.
  *
  * @param id - The id of an effect or a tool, as NIVO names it everywhere else.

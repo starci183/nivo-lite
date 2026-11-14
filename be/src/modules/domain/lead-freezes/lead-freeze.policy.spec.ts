@@ -20,69 +20,65 @@ const buildPolicy = async (): Promise<typeof policy> => {
 const WAKE: HeldWake = {
     wakeId: "wake-2",
     agentId: "chatbot",
-    source: "customer",
+    source: "trigger",
     eventKey: "msg-2",
     scopeKey: "conversation:c-1",
     context: { conversationId: "c-1", messageId: "m-2", lookupName: false, nested: { no: 1 } },
     actorMemberId: null,
 }
 
-describe("lead-freeze.policy: who a wake is about", () => {
+describe("lead-freeze.policy: who a wake is about: the customer and the workflow", () => {
     it("names the lead first, then the conversation, and nothing for a trigger that names neither", async () => {
-        const { keysOf, leadSubjectOf, subjectOfTrigger } = await buildPolicy()
-        expect(subjectOfTrigger({ leadId: "lead-1", conversationId: "c-1" })).toEqual({
-            key: "lead:lead-1",
-            leadId: "lead-1",
+        const { keysOf, contactSubjectOf, subjectOfTrigger } = await buildPolicy()
+        expect(subjectOfTrigger({ contactId: "lead-1", conversationId: "c-1" })).toEqual({
+            key: "contact:lead-1",
+            contactId: "lead-1",
             conversationId: "c-1",
         })
         expect(subjectOfTrigger({ conversationId: "c-1" })).toEqual({
             key: "conversation:c-1",
-            leadId: null,
+            contactId: null,
             conversationId: "c-1",
         })
-        expect(subjectOfTrigger({ leadId: "", subject: "bank-transaction:tx-1" })).toBeNull()
-        expect(leadSubjectOf("lead-2", null)).toEqual({ key: "lead:lead-2", leadId: "lead-2", conversationId: null })
-        expect(keysOf({ leadId: "lead-1", conversationId: "c-1" })).toEqual(["lead:lead-1", "conversation:c-1"])
+        expect(subjectOfTrigger({ contactId: "", subject: "bank-transaction:tx-1" })).toBeNull()
+        expect(contactSubjectOf("lead-2", null)).toEqual({
+            key: "contact:lead-2",
+            contactId: "lead-2",
+            conversationId: null,
+        })
+        expect(keysOf({ contactId: "lead-1", conversationId: "c-1" })).toEqual(["contact:lead-1", "conversation:c-1"])
         expect(keysOf({})).toEqual([])
     })
 
     it("keys a freeze by the workflow its trigger names, so a customer is frozen one workflow at a time", async () => {
-        const { keysOf, leadSubjectOf, subjectOfTrigger, workflowOfKey, workflowOfTrigger } = await buildPolicy()
-        const trigger = { leadId: "lead-1", conversationId: "c-1", workflowId: "wf-consult" }
+        const { keysOf, contactSubjectOf, subjectOfTrigger, workflowOfKey, workflowOfTrigger } = await buildPolicy()
+        const trigger = { contactId: "lead-1", conversationId: "c-1", workflowId: "wf-consult" }
 
         expect(subjectOfTrigger(trigger)).toEqual({
-            key: "lead:lead-1|wf:wf-consult",
-            leadId: "lead-1",
+            key: "contact:lead-1|wf:wf-consult",
+            contactId: "lead-1",
             conversationId: "c-1",
         })
-        expect(subjectOfTrigger({ conversationId: "c-1", workflowId: "wf-desk" })?.key).toBe("conversation:c-1|wf:wf-desk")
-        expect(leadSubjectOf("lead-2", "c-2", "wf-consult").key).toBe("lead:lead-2|wf:wf-consult")
-        expect(leadSubjectOf("lead-2", "c-2", null).key).toBe("lead:lead-2")
+        expect(subjectOfTrigger({ conversationId: "c-1", workflowId: "wf-desk" })?.key).toBe(
+            "conversation:c-1|wf:wf-desk",
+        )
+        expect(contactSubjectOf("lead-2", "c-2", "wf-consult").key).toBe("contact:lead-2|wf:wf-consult")
+        expect(contactSubjectOf("lead-2", "c-2", null).key).toBe("contact:lead-2")
         // The workflow's own keys come first, then the bare ones of a freeze that holds the customer as a whole.
         expect(keysOf(trigger)).toEqual([
-            "lead:lead-1|wf:wf-consult",
+            "contact:lead-1|wf:wf-consult",
             "conversation:c-1|wf:wf-consult",
-            "lead:lead-1",
+            "contact:lead-1",
             "conversation:c-1",
         ])
         expect(workflowOfTrigger(trigger)).toBe("wf-consult")
-        expect(workflowOfTrigger({ leadId: "lead-1", workflowId: "" })).toBeNull()
-        expect(workflowOfKey("lead:lead-1|wf:wf-consult")).toBe("wf-consult")
-        expect(workflowOfKey("lead:lead-1")).toBeNull()
+        expect(workflowOfTrigger({ contactId: "lead-1", workflowId: "" })).toBeNull()
+        expect(workflowOfKey("contact:lead-1|wf:wf-consult")).toBe("wf-consult")
+        expect(workflowOfKey("contact:lead-1")).toBeNull()
     })
+})
 
-    it("holds only the wakes of the workflow a freeze names, and every wake when it holds the customer as a whole", async () => {
-        const { holdsWorkflow } = await buildPolicy()
-        const ofConsult = frozenFreezeOf({ key: "lead:lead-1|wf:wf-consult" })
-        const whole = frozenFreezeOf({ key: "lead:lead-1" })
-
-        expect(holdsWorkflow(ofConsult, "wf-consult")).toBe(true)
-        expect(holdsWorkflow(ofConsult, "wf-reconcile")).toBe(false)
-        expect(holdsWorkflow(ofConsult, null)).toBe(false)
-        expect(holdsWorkflow(whole, "wf-reconcile")).toBe(true)
-        expect(holdsWorkflow(whole, null)).toBe(true)
-    })
-
+describe("lead-freeze.policy: who a wake is about: what a wake carries", () => {
     it("reads the bank transaction of a bank-feed tag, as a label or as the subject of the flows", async () => {
         const { transactionOf } = await buildPolicy()
         expect(transactionOf({ subject: "bank-transaction:tx-1" })).toBe("tx-1")
@@ -92,11 +88,20 @@ describe("lead-freeze.policy: who a wake is about", () => {
         expect(transactionOf({ subject: 3 })).toBeNull()
     })
 
+    it("reads the credit a wake names (subject or `transactionId`) as a payment event", async () => {
+        const { creditOf, pendingKindOf } = await buildPolicy()
+        expect(creditOf({ subject: "bank-transaction:tx-1", transactionId: "tx-9" })).toBe("tx-1")
+        expect(creditOf({ transactionId: "tx-2" })).toBe("tx-2")
+        expect(creditOf({ transactionId: "" })).toBeNull()
+        expect(pendingKindOf("tag", { transactionId: "tx-2" })).toBe("payment")
+    })
+
     it("tells a line, a payment, a timer, a hand-off and any other event apart", async () => {
         const { pendingKindOf } = await buildPolicy()
-        expect(pendingKindOf("customer", {})).toBe("message")
+        // A person's line of the one pipeline: source `trigger`, told apart by the channel identity its event is about.
+        expect(pendingKindOf("trigger", { routeId: "route-1", subject: { channel: "zalo", id: "u-1" }, data: { text: "alo" } })).toBe("message")
+        expect(pendingKindOf("trigger", { eventId: "render-1", data: { renderId: "r-1" } })).toBe("event")
         expect(pendingKindOf("tag", { subject: "bank-transaction:tx-1" })).toBe("payment")
-        expect(pendingKindOf("tag", { tagSource: "bank_feed" })).toBe("payment")
         expect(pendingKindOf("schedule", {})).toBe("timer")
         expect(pendingKindOf("internal", { taskId: "t-1" })).toBe("timer")
         expect(pendingKindOf("tag", {})).toBe("handoff")
@@ -106,7 +111,7 @@ describe("lead-freeze.policy: who a wake is about", () => {
     it("reads the messages a trigger carries, from the ids of the flows or from the wake's own", async () => {
         const { messageIdsOf } = await buildPolicy()
         expect(messageIdsOf({ messageIds: ["m-1", 2, "m-2"] })).toEqual(["m-1", "m-2"])
-        expect(messageIdsOf({ messageId: "m-1", mergedMessageIds: "m-2,m-3" })).toEqual(["m-1", "m-2", "m-3"])
+        expect(messageIdsOf({ messageId: "m-1" })).toEqual(["m-1"])
         expect(messageIdsOf({})).toEqual([])
     })
 })
@@ -115,10 +120,16 @@ describe("lead-freeze.policy: the pending events", () => {
     it("keeps a held wake with its texts and flags only, and a line with its conversation and messages", async () => {
         const { pendingEventOf } = await buildPolicy()
         expect(
-            pendingEventOf(WAKE, { conversationId: "c-1", messageIds: ["m-2"] }, "2026-11-04T10:01:00.000Z"),
+            pendingEventOf(
+                WAKE,
+                { conversationId: "c-1", messageIds: ["m-2"], subject: { channel: "zalo", id: "u-1" } },
+                "2026-11-04T10:01:00.000Z",
+            ),
         ).toEqual({
             ...pendingLineOf(),
             context: { conversationId: "c-1", messageId: "m-2", lookupName: false },
+            // The trigger scope as the flow formed it: what a run the event joins reads (`ctx.run.joined`).
+            trigger: { conversationId: "c-1", messageIds: ["m-2"], subject: { channel: "zalo", id: "u-1" } },
         })
         const payment = pendingEventOf({ ...WAKE, source: "tag" }, { subject: "bank-transaction:tx-1" }, "t")
         expect(payment).toMatchObject({ kind: "payment", conversationId: null, messageIds: [] })
@@ -141,6 +152,19 @@ describe("lead-freeze.policy: the pending events", () => {
         expect(withPending(unfolded, pendingLineOf({ wakeId: "u-new" }))).toHaveLength(PENDING_MAX + 1)
     })
 
+    it("an event a step of the run took into its queue snapshot is the run's work; an untaken one is replayed (ROAD-API section 4)", async () => {
+        const { takenByRun, withTaken } = await buildPolicy()
+        const early = pendingLineOf({ wakeId: "early", at: "2026-11-04T10:01:00.000Z" })
+        const late = pendingLineOf({ wakeId: "late", at: "2026-11-04T10:09:00.000Z" })
+        expect(takenByRun([early, late])).toEqual([])
+        const marked = withTaken([early, late], new Set(["early"]), "run-1:answer:1")
+        expect(takenByRun(marked).map((one) => one.wakeId)).toEqual(["early"])
+        expect(marked.find((one) => one.wakeId === "early")?.taken).toBe("run-1:answer:1")
+        // A second visit never takes an event another visit took: the first mark stands.
+        const again = withTaken(marked, new Set(["early", "late"]), "run-1:answer:2")
+        expect(again.map((one) => one.taken)).toEqual(["run-1:answer:1", "run-1:answer:2"])
+    })
+
     it("writes a replayed wake under its own key marked with the hold and its episode", async () => {
         const { replayKeyOf } = await buildPolicy()
         expect(replayKeyOf(pendingLineOf(), "freeze-1", 2)).toBe("msg-2~after-freeze-freeze-1-2")
@@ -158,7 +182,7 @@ describe("lead-freeze.policy: what the owner reads", () => {
             id: "freeze-1",
             status: "frozen",
             workflowId: null,
-            leadId: "lead-1",
+            contactId: "lead-1",
             conversationId: "c-1",
             runId: "run-1",
             stepTitle: "Take a payment claim",
@@ -169,16 +193,7 @@ describe("lead-freeze.policy: what the owner reads", () => {
             frozenAt: "2026-11-04T10:00:00.000Z",
             onStop: false,
         })
-        expect(stateOf({ ...freeze, key: "lead:lead-1|wf:wf-consult" })?.workflowId).toBe("wf-consult")
+        expect(stateOf({ ...freeze, key: "contact:lead-1|wf:wf-consult" })?.workflowId).toBe("wf-consult")
         expect(stateOf({ ...freeze, frozenReason: "run_stop", workItemId: null })?.onStop).toBe(true)
-    })
-
-    it("matches a transfer to an order by its transfer code, whatever the spacing and case", async () => {
-        const { namesAnOrder } = await buildPolicy()
-        expect(namesAnOrder("dh202611090001 NGUYEN VAN A", ["DH-20261109-0001"])).toBe(true)
-        expect(namesAnOrder("DH 2026 1109 0001", ["DH-20261109-0001"])).toBe(true)
-        expect(namesAnOrder("DH202611090002", ["DH-20261109-0001"])).toBe(false)
-        expect(namesAnOrder(null, ["DH-20261109-0001"])).toBe(false)
-        expect(namesAnOrder("anything", ["--"])).toBe(false)
     })
 })

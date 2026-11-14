@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { TEXT_MAX } from "../schema/bounds"
 import type { FieldDef } from "../entity/entity.types"
+import { fileValueSchemaOf } from "../entity/file-ref"
 
 /** The longest ISO timestamp a write carries. */
 const TIMESTAMP_MAX = 64
@@ -9,6 +10,7 @@ const TIMESTAMP_MAX = 64
 const kindSchema = (field: FieldDef): z.ZodType => {
     switch (field.kind) {
         case "uuid":
+        case "contact":
             return z.guid()
         case "text":
             return z.string().max(field.maxLength ?? TEXT_MAX)
@@ -35,6 +37,8 @@ const kindSchema = (field: FieldDef): z.ZodType => {
             return field.of === undefined ? z.never() : z.enum(field.of)
         case "sequence":
             return z.never()
+        case "file":
+            return fileValueSchemaOf(field)
     }
 }
 

@@ -26,12 +26,8 @@ export const KNOWLEDGE_MESSAGES: MessageBundle = {
         "reading.warning.DOCUMENT_PAGE_UNREADABLE": "Trang {{place}} không đọc được.",
         "reading.warning.DOCUMENT_PAGE_TRANSCRIBED": "Trang {{place}} là ảnh: chữ do AI chép lại từ ảnh, hãy kiểm tra.",
         "reading.warning.DOCUMENT_PAGES_OVER_LIMIT": "{{count}} trang cuối chưa được đọc (quá giới hạn một lần đọc).",
-        "reading.warning.DOCUMENT_ROWS_OVER_LIMIT": "Trang tính {{place}}: chỉ đọc {{count}} dòng đầu.",
+        "reading.warning.DOCUMENT_ROWS_OVER_LIMIT": "Trang tính {{place}}: chỉ đọc {{count}} dòng đầu, còn {{left}} dòng chưa đọc (quá giới hạn một lần đọc).",
         "reading.warning.DOCUMENT_PLACE_EMPTY": "{{place}} không có chữ.",
-        "usage.notice.warn":
-            "Mức dùng AI tháng này đã đạt {{percent}}% hạn mức ({{use}}). Khi hết hạn mức, chatbot sẽ chuyển câu hỏi của khách cho nhân viên thay vì tự trả lời. Nạp thêm credit hoặc nâng cấp gói tại Credit & gói (/billing).",
-        "usage.notice.exceeded":
-            "Workspace đã dùng hết hạn mức AI của tháng này ({{use}}). Chatbot tạm dừng tự trả lời: khách nhận lời xác nhận lịch sự và câu hỏi được chuyển cho nhân viên. Nạp thêm credit hoặc nâng cấp gói tại Credit & gói (/billing) để chatbot hoạt động lại.",
     },
     en: {
         "errors.KNOWLEDGE_MODULE_UNKNOWN": "This agent was not found.",
@@ -60,11 +56,7 @@ export const KNOWLEDGE_MESSAGES: MessageBundle = {
             "Page {{place}} is a picture: its text was copied by the AI, please check it.",
         "reading.warning.DOCUMENT_PAGES_OVER_LIMIT":
             "The last {{count}} pages were not read (over the limit of one reading).",
-        "reading.warning.DOCUMENT_ROWS_OVER_LIMIT": "Sheet {{place}}: only the first {{count}} rows were read.",
+        "reading.warning.DOCUMENT_ROWS_OVER_LIMIT": "Sheet {{place}}: only the first {{count}} rows were read; {{left}} rows were not read (over the limit of one reading).",
         "reading.warning.DOCUMENT_PLACE_EMPTY": "{{place}} has no text.",
-        "usage.notice.warn":
-            "This month's AI use reached {{percent}}% of the allowance ({{use}}). When it runs out, the chatbot hands customers' questions to staff instead of answering. Top up credits or upgrade the plan at Credits & plans (/billing).",
-        "usage.notice.exceeded":
-            "The workspace used up its AI allowance for this month ({{use}}). The chatbot stops answering by itself: customers get a polite acknowledgement and their questions go to staff. Top up credits or upgrade the plan at Credits & plans (/billing) to turn the chatbot back on.",
     },
 }

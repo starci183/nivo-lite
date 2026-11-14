@@ -1,5 +1,4 @@
-import type { SqlText } from "@modules/platform/database"
-import { sql } from "@modules/platform/database"
+import { type SqlText, sql } from "@modules/platform/database"
 
 /** Lets the local role creator enter the backend role for one rolled-back proof transaction. */
 export const ENTER_BACKEND_ROLE: SqlText = sql`GRANT app_be TO CURRENT_USER WITH INHERIT FALSE, SET TRUE`

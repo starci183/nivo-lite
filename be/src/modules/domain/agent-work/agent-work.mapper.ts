@@ -18,12 +18,11 @@ import type {
     AgentWorkStateEntity,
 } from "./persistence/entities"
 
-/** The settings of a workspace that has no row yet: work on, the core road, the default cap. */
+/** The settings of a workspace that has no row yet: work on, the core road. */
 export const defaultSettings = (workspaceId: string): AgentWorkSettingsRecord => ({
     workspaceId,
     workEnabled: true,
     road: "core",
-    backgroundDailyCap: 200,
 })
 
 /** The state of an agent that has no row yet: work on, no failures, nothing counted. */
@@ -42,7 +41,6 @@ export const toSettingsRecord = (row: AgentWorkSettingsEntity): AgentWorkSetting
     workspaceId: row.workspaceId,
     workEnabled: row.workEnabled,
     road: row.road,
-    backgroundDailyCap: row.backgroundDailyCap,
 })
 
 /** The state row as the capability's record. */
@@ -80,6 +78,7 @@ export const toTaskRecord = (row: AgentTaskEntity): AgentTaskRecord => ({
     waitingOn: row.waitingOn,
     nextActionAt: row.nextActionAt,
     workItemId: row.workItemId,
+    data: row.data,
 })
 
 /** The trigger row as the capability's record; the time of day loses its seconds. */

@@ -1,6 +1,10 @@
-import { ConnectionsErrorCode, connectionsEntities } from "@modules/domain/connections"
+import {
+    ConnectionsErrorCode,
+    connectionsEntities,
+    type ConnectionsService,
+    type ConnectionActor,
+} from "@modules/domain/connections"
 import { entityOf } from "./entity.builder"
-import type { ConnectionsService, ConnectionActor } from "@modules/domain/connections"
 
 type ConnectionsOptions = ConstructorParameters<typeof ConnectionsService>[1]
 /** URL precedence overrides accepted by the connection subject. */

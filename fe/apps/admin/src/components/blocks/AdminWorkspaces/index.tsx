@@ -2,8 +2,14 @@
 
 import { notFound } from "next/navigation"
 import { useEffect, useState } from "react"
-import { isAdminWorkspaceFilter, useAdminFormat, useAdminWorkspaceList, useAdminWorkspaceRows } from "@/hooks/admin"
-import type { AdminWorkspaceFilter, AdminWorkspaceRowView } from "@/hooks/admin"
+import {
+    isAdminWorkspaceFilter,
+    useAdminFormat,
+    useAdminWorkspaceList,
+    useAdminWorkspaceRows,
+    type AdminWorkspaceFilter,
+    type AdminWorkspaceRowView,
+} from "@/hooks/admin"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { adminListPath } from "@/modules/routes"

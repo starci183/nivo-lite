@@ -1,4 +1,4 @@
-/** One agent as the readers of other capabilities see it: who it is, the department it works in and the agents it may tag. */
+/** One agent as the readers of other capabilities see it: who it is and the department it works in. */
 export interface AgentCard {
     /** The agent id. */
     readonly id: string
@@ -6,22 +6,6 @@ export interface AgentCard {
     readonly name: string
     /** The module (department) the agent works in. */
     readonly module: string
-    /** The agents it may tag, in the owner's order. */
-    readonly canTagAgentIds: ReadonlyArray<string>
-}
-
-/** One agent as a room or an office lists its seat: who it is, its picture and when it was created (sortable text). */
-export interface AgentSeat {
-    /** The agent id. */
-    readonly id: string
-    /** The agent name. */
-    readonly name: string
-    /** The module (department) the agent works in. */
-    readonly module: string
-    /** The agent's own picture; null when it has none. */
-    readonly avatar_url: string | null
-    /** When the agent was created: digits only, fixed width, microsecond exact, so text order is time order. */
-    readonly at: string
 }
 
 /** An active agent as the mention reader sees it: the handle people tag it with. */

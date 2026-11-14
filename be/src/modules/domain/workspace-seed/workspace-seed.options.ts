@@ -1,8 +1,7 @@
 import type { InjectionToken, Type } from "@nestjs/common"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import type { Secret } from "@modules/platform/config"
-import type { OfficeAuthorityPort } from "@modules/domain/member-grants"
-import type { SeedAgentRecords, SeedConnectors, SeedSources, SeedToolGrants } from "./workspace-seed.port"
+import type { SeedAgentRecords } from "./workspace-seed.port"
 
 /** One user the Auth administrator returns. */
 export interface SeedAuthUser {
@@ -94,32 +93,20 @@ export interface SeedAuth {
     verifyUser(token: string): Promise<string | null>
 }
 
-/** The owner classes the app root binds behind the ports of a profile run; each writes only its own table. */
+/** The owner classes the app root binds behind the ports of a seed run; each writes only its own table. */
 export interface WorkspaceSeedPorts {
     /** Implements the agents port. */
     readonly agents: Type<SeedAgentRecords>
-    /** Implements the documents port. */
-    readonly sources: Type<SeedSources>
-    /** Implements the tool grants port. */
-    readonly toolGrants: Type<SeedToolGrants>
-    /** The gateway console class, already provided in the app, behind the connectors port. */
-    readonly connectors: Type<SeedConnectors>
-    /** The authority capability behind the rules and grants of an office run. */
-    readonly officeAuthority: Type<OfficeAuthorityPort>
 }
 
 /** What the workspace seed takes from the app root. */
 export interface WorkspaceSeedOptions {
     /** The provider token of the Auth administration (a `SeedAuth`) in the app. */
     readonly auth: InjectionToken
-    /** The owner classes behind the ports of a profile run. */
+    /** The owner classes behind the ports of a seed run. */
     readonly ports: WorkspaceSeedPorts
     /** Private command input supplied by the selected target runner. */
     readonly input?: Secret | undefined
-    /** Private profile input (`nivo/workspace-profile-input@1`): the connector endpoints of a profile run. */
-    readonly profileInput?: Secret | undefined
-    /** Private office input (`nivo/workspace-office-input@1`): the accounts of the two people the ensure input does not carry. */
-    readonly officeInput?: Secret | undefined
     /** The nodes, effects, tools and data kinds the app installs: the graphs a seed publishes are judged against them. */
     readonly nodes?: NodeInstall | undefined
     /** Writes the closed public receipt, never credentials. */

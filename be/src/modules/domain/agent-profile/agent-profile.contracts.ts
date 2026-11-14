@@ -1,5 +1,4 @@
 import type { AgentOwnership, Region } from "@modules/domain/agents"
-import type { RuleMode } from "@modules/domain/authority-rules"
 
 /** What the profile page's header says about an agent. */
 export interface AgentHead {
@@ -23,14 +22,14 @@ export interface AgentHead {
     readonly operatingMode: string | null
 }
 
-/** One rule of the owner's authority as the agent's page lists it, read-only. */
+/** One rule of the owner's authority as the agent's page lists it: the shape the web still reads; the list is always empty (2026-11-13). */
 export interface AppliedRule {
     /** The action key. */
     readonly action: string
     /** The module the action belongs to. */
     readonly department: string
     /** auto, ask or never. */
-    readonly mode: RuleMode
+    readonly mode: "auto" | "ask" | "never"
     /** The action runs alone strictly below this amount, VND; null for none. */
     readonly limitVnd: number | null
     /** The note shown with the rule; may be empty. */
@@ -64,7 +63,7 @@ export interface AgentPage {
     readonly agent: AgentHead
     /** Who is in charge, who may give it work, whom it may tag. */
     readonly ownership: AgentOwnership
-    /** The rules that apply to the agent. */
+    /** Always an empty list: authority rules decide nothing (2026-11-13). */
     readonly rules: Region<ReadonlyArray<AppliedRule>>
     /** The latest work. */
     readonly recent: Region<ReadonlyArray<RecentWork>>

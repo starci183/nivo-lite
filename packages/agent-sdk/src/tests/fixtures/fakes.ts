@@ -1,6 +1,7 @@
 import type {
     ActionHandle,
     ActionOutcome,
+    BlockFileStore,
     BlockHost,
     ParamHandle,
     ReadHandle,
@@ -8,6 +9,7 @@ import type {
     SlotValues,
     BlockSlots,
 } from "../../block/block.types"
+import type { FileRef } from "../../entity/file-ref"
 import type { SpecLocale, SpecText } from "../../schema/schema.types"
 import type { DataSlot, SlotLabels } from "../../slot/slot.types"
 import type { HostAction, HostRead, WorkbenchHost } from "../../host/host.types"
@@ -117,8 +119,48 @@ export const sampleParamHandle = (values: Readonly<Record<string, string | null>
     }
 }
 
-/** A block host for a block test: keys come back as themselves, owner words in the locale, notifications and reports recorded. */
+/** The file store of a block test: every call recorded with the `via` it was made for; an upload ends as the reference of the file it was given. */
+export interface SampleBlockFiles extends BlockFileStore {
+    /** The calls the block made, in order. */
+    readonly calls: () => ReadonlyArray<string>
+}
+
+/** The reference a sample file store hands back for an upload: the key spells where the file went, the rest is the file's own. */
+const referenceOf = (recordType: string, recordId: string, field: string, file: File): FileRef => ({
+    key: `ws/${recordType}/${recordId}/${field}/object`,
+    mime: file.type,
+    size: file.size,
+    name: file.name,
+})
+
+/** A file store for a block test, answering every call as the store would when it accepts it. */
+export const sampleBlockFiles = (overrides: Partial<BlockFileStore> = {}): SampleBlockFiles => {
+    const calls: Array<string> = []
+    return {
+        upload: (via, recordType, recordId, field, file, options) => {
+            calls.push(`upload ${via} ${recordType}/${recordId}/${field}: ${file.name}`)
+            options?.onProgress?.(1)
+            return Promise.resolve(referenceOf(recordType, recordId, field, file))
+        },
+        url: (via, recordType, recordId, field, key) => {
+            const item = key === undefined ? "" : `#${key}`
+            calls.push(`url ${via} ${recordType}/${recordId}/${field}${item}`)
+            return Promise.resolve({ url: `https://files.test/${recordType}/${recordId}/${field}${item}`, expiresAt: "2099-01-01T00:00:00Z" })
+        },
+        remove: (via, recordType, recordId, field, key) => {
+            const item = key === undefined ? "" : `#${key}`
+            calls.push(`remove ${via} ${recordType}/${recordId}/${field}${item}`)
+            return Promise.resolve()
+        },
+        ...overrides,
+        calls: () => calls,
+    }
+}
+
+/** A block host for a block test: keys come back as themselves, owner words in the locale, notifications and reports recorded, the file port present and recording. */
 export interface SampleBlockHost extends BlockHost {
+    /** The file store, recording every call. */
+    readonly files: SampleBlockFiles
     /** The messages the block notified, in order. */
     readonly notices: () => ReadonlyArray<string>
     /** The contract defects the block reported, as `<code> @ <at>`, in order. */
@@ -128,8 +170,14 @@ export interface SampleBlockHost extends BlockHost {
 /** The language of a block host that is not told another. */
 const englishLocale = (): SpecLocale => "en"
 
+/** The ports of a sample block host a test overrides; its file port stays a recording one. */
+export type SampleBlockHostOverrides = Partial<Omit<BlockHost, "files">> & {
+    /** The sample's own file store; the host's default when absent. */
+    readonly files?: SampleBlockFiles
+}
+
 /** Builds a sample block host; every port may be overridden. */
-export const sampleBlockHost = (overrides: Partial<BlockHost> = {}): SampleBlockHost => {
+export const sampleBlockHost = (overrides: SampleBlockHostOverrides = {}): SampleBlockHost => {
     const notices: Array<string> = []
     const reports: Array<string> = []
     const query = new Map<string, string>()
@@ -156,6 +204,7 @@ export const sampleBlockHost = (overrides: Partial<BlockHost> = {}): SampleBlock
         report: (code, at) => {
             reports.push(`${code} @ ${at}`)
         },
+        files: sampleBlockFiles(),
         ...overrides,
         notices: () => notices,
         reports: () => reports,
@@ -180,7 +229,7 @@ export interface SampleWorkbenchOptions {
     /** The permissions the viewer holds; all when absent. */
     readonly permissions?: ReadonlyArray<string>
     /** The ports of the block host to override. */
-    readonly block?: Partial<BlockHost>
+    readonly block?: SampleBlockHostOverrides
 }
 
 /** A workbench host for a renderer test. */

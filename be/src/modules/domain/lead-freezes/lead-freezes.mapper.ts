@@ -1,5 +1,6 @@
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
+import { jsonObjectOf } from "./lead-freeze.policy"
+import type { ContactFreezeEntity } from "./persistence/entities"
 import type { FreezeStatus, LeadFreeze, PendingContextValue, PendingEvent, PendingKind } from "./lead-freezes.contracts"
 
 const STATUSES: ReadonlyArray<FreezeStatus> = ["frozen", "retrying", "released"]
@@ -48,6 +49,8 @@ const pendingEventOf = (value: unknown): PendingEvent | null => {
         conversationId: textOf(value.conversationId),
         messageIds: ids,
         folded: value.folded === true,
+        ...(isObject(value.trigger) ? { trigger: jsonObjectOf(value.trigger) } : {}),
+        ...(typeof value.taken === "string" && value.taken !== "" ? { taken: value.taken } : {}),
     }
 }
 
@@ -72,33 +75,34 @@ export const pendingJsonOf = (pending: ReadonlyArray<PendingEvent>): JsonValue =
         conversationId: each.conversationId,
         messageIds: [...each.messageIds],
         folded: each.folded,
+        ...(each.trigger === undefined ? {} : { trigger: each.trigger }),
+        ...(each.taken === undefined ? {} : { taken: each.taken }),
     })),
 })
 
-/** The freeze of a record row. */
-export const freezeOf = (row: RecordRow): LeadFreeze => {
-    const data = row.data
-    return {
-        id: row.id,
-        version: row.version,
-        key: textOf(data.key) ?? "",
-        leadId: textOf(data.leadId),
-        conversationId: textOf(data.conversationId),
-        status: statusOf(data.status),
-        frozenRunId: textOf(data.frozenRunId),
-        agentId: textOf(data.agentId),
-        frozenAt: textOf(data.frozenAt),
-        frozenReason: textOf(data.frozenReason),
-        stepKey: textOf(data.stepKey),
-        stepTitle: textOf(data.stepTitle),
-        customerName: textOf(data.customerName),
-        workItemId: textOf(data.workItemId),
-        episode: numberOf(data.episode),
-        failures: numberOf(data.failures),
-        heldBy: textOf(data.heldBy),
-        releasedAt: textOf(data.releasedAt),
-        releasedBy: textOf(data.releasedBy),
-        releaseReason: textOf(data.releaseReason),
-        pending: pendingOf(data.pending),
-    }
-}
+const isoOf = (value: Date | null): string | null => (value === null ? null : value.toISOString())
+
+/** The freeze a row of the freezes table holds. */
+export const freezeOf = (row: ContactFreezeEntity): LeadFreeze => ({
+    id: row.id,
+    version: String(row.version),
+    key: row.key,
+    contactId: textOf(row.contactId),
+    conversationId: textOf(row.conversationId),
+    status: statusOf(row.status),
+    frozenRunId: textOf(row.frozenRunId),
+    agentId: textOf(row.agentId),
+    frozenAt: isoOf(row.frozenAt),
+    frozenReason: textOf(row.frozenReason),
+    stepKey: textOf(row.stepKey),
+    stepTitle: textOf(row.stepTitle),
+    customerName: textOf(row.customerName),
+    workItemId: textOf(row.workItemId),
+    episode: numberOf(row.episode),
+    failures: numberOf(row.failures),
+    heldBy: textOf(row.heldBy),
+    releasedAt: isoOf(row.releasedAt),
+    releasedBy: textOf(row.releasedBy),
+    releaseReason: textOf(row.releaseReason),
+    pending: pendingOf(row.pending),
+})

@@ -6,10 +6,9 @@ import { TeamChatErrorCode } from "./errors/team-chat.error"
 import { TEAM_CHAT_TAGS } from "./team-chat.decorators"
 import type { TeamChatTags } from "./team-chat.port"
 import { TeamChatRoomsService } from "./team-chat.service"
-import { cursorOf, lineKeyOf } from "./team-chat.policy"
+import { cursorOf } from "./team-chat.policy"
 import type { ChatMemberRef, ChatRoomView, MessageView, SendInput, TeamChatResult } from "./team-chat.contracts"
 import { TeamChatAccessService } from "./team-chat-access.service"
-import { TeamChatApprovalsService } from "./team-chat-approvals.service"
 import { TeamChatCardsService } from "./team-chat-cards.service"
 import { TeamChatFilesService } from "./team-chat-files.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
@@ -51,7 +50,6 @@ const build = async (withTags = true) => {
     const views = mock<TeamChatViewsService>()
     const files = mock<TeamChatFilesService>()
     const cards = mock<TeamChatCardsService>()
-    const approvals = mock<TeamChatApprovalsService>()
     const tags = mock<TeamChatTags>()
     access.visibleRoom.mockResolvedValue(roomOf())
     access.allKnown.mockResolvedValue(true)
@@ -66,7 +64,6 @@ const build = async (withTags = true) => {
                   { provide: TeamChatViewsService, useValue: views },
                   { provide: TeamChatFilesService, useValue: files },
                   { provide: TeamChatCardsService, useValue: cards },
-                  { provide: TeamChatApprovalsService, useValue: approvals },
                   { provide: TEAM_CHAT_TAGS, useValue: tags },
               ],
           }).compile()
@@ -78,10 +75,9 @@ const build = async (withTags = true) => {
                   { provide: TeamChatViewsService, useValue: views },
                   { provide: TeamChatFilesService, useValue: files },
                   { provide: TeamChatCardsService, useValue: cards },
-                  { provide: TeamChatApprovalsService, useValue: approvals },
               ],
           }).compile()
-    return { subject: moduleRef.get(TeamChatRoomsService), store, access, views, files, cards, approvals, tags }
+    return { subject: moduleRef.get(TeamChatRoomsService), store, access, views, files, cards, tags }
 }
 
 describe("TeamChatRoomsService rooms and room", () => {
@@ -379,6 +375,46 @@ describe("TeamChatRoomsService send refusals", () => {
     })
 })
 
+describe("TeamChatRoomsService: the founder's NIVO room is read-only", () => {
+    const nivoRoom = roomOf({ kind: "direct", name: null, directKey: `system:nivo|user:${ANA}`, purpose: "direct" })
+
+    it("refuses a person's line there before anything is stored, so an @agent tag in it never reaches an agent", async () => {
+        const { subject, access, store, files, tags } = await build()
+        access.visibleRoom.mockResolvedValue(nivoRoom)
+        files.verify.mockResolvedValue({ ok: true, value: [] })
+        store.sentBefore.mockResolvedValue(null)
+
+        expect(refusalOf(await subject.send(WS, ANA, sendOf({ body: "@bot hi", mentions: [bot] })))).toBe(
+            TeamChatErrorCode.Forbidden,
+        )
+        expect(store.insertText).not.toHaveBeenCalled()
+        expect(tags.handOff).not.toHaveBeenCalled()
+        expect(store.moveReadPosition).not.toHaveBeenCalled()
+    })
+
+    it("issues no upload address there (a file only travels with a line)", async () => {
+        const { subject, access, files } = await build()
+        access.visibleRoom.mockResolvedValue(nivoRoom)
+        const ask = { fileName: "a.pdf", mimeType: "application/pdf", sizeBytes: 1 }
+
+        expect(refusalOf(await subject.requestUpload(WS, ANA, ROOM, ask))).toBe(TeamChatErrorCode.Forbidden)
+        expect(files.requestUpload).not.toHaveBeenCalled()
+    })
+
+    it("still takes a line in a person-to-person or person-to-agent direct room", async () => {
+        const { subject, access, store, views, files } = await build()
+        access.visibleRoom.mockResolvedValue(
+            roomOf({ kind: "direct", name: null, directKey: `agent:${BOT}|user:${ANA}` }),
+        )
+        files.verify.mockResolvedValue({ ok: true, value: [] })
+        store.sentBefore.mockResolvedValue(null)
+        store.insertText.mockResolvedValue(messageOf())
+        views.viewOf.mockResolvedValue(mock<MessageView>())
+
+        expect(refusalOf(await subject.send(WS, ANA, sendOf()))).toBe("done")
+    })
+})
+
 describe("TeamChatRoomsService upload, mute, read and pins", () => {
     it("issues an upload address only to a viewer who sees the room", async () => {
         const { subject, access, files } = await build()
@@ -441,119 +477,5 @@ describe("TeamChatRoomsService upload, mute, read and pins", () => {
         access.pinnable.mockResolvedValue(null)
         expect(refusalOf(await subject.pin(WS, ANA, ROOM, MSG))).toBe(TeamChatErrorCode.NotFound)
         expect(refusalOf(await subject.unpin(WS, ANA, ROOM, MSG))).toBe(TeamChatErrorCode.NotFound)
-    })
-})
-
-describe("TeamChatRoomsService engine side", () => {
-    it("hands the approval reads and the card writes to their classes", async () => {
-        const { subject, cards, approvals } = await build()
-        approvals.stateOf.mockResolvedValue(null)
-        approvals.requestOf.mockResolvedValue(null)
-        cards.postReport.mockResolvedValue(null)
-        cards.postApproval.mockResolvedValue(4)
-        cards.postMessage.mockResolvedValue(null)
-        cards.postAsAgent.mockResolvedValue(null)
-        cards.cardRooms.mockResolvedValue(2)
-        expect(await subject.approvalOf(WS, ANA, MSG)).toBeNull()
-        expect(await subject.approvalRequest(WS, MSG)).toBeNull()
-        expect(await subject.postReport(WS, { runId: MSG, agentId: BOT, body: "done", roomId: null })).toBeNull()
-        expect(
-            await subject.postApproval(WS, {
-                decisionId: MSG,
-                agentId: BOT,
-                body: "ok?",
-                roomIds: [],
-                approverSeatIds: [],
-            }),
-        ).toBe(4)
-        expect(
-            await subject.postMessage(WS, { key: "k", authorAgentId: BOT, body: "hi", roomId: ROOM, toUserId: null }),
-        ).toBeNull()
-        expect(await subject.postAsAgent(WS, { agent: "sales", body: "hi", toUserId: null, key: null })).toBeNull()
-        expect(await subject.cardRooms(WS, MSG)).toBe(2)
-        expect(cards.cardRooms).toHaveBeenCalledWith(WS, MSG)
-    })
-})
-
-describe("TeamChatRoomsService replies to a line an agent wrote under a key", () => {
-    const KEY = "run-stuck:run-1:mark-paid"
-
-    /** A world in which the room holds the agent's line `MSG2`, written under `clientId`, and the next text is stored as `MSG`. */
-    const buildReplying = async (clientId: string | null, authorKind: "agent" | "user" = "agent") => {
-        const world = await build()
-        world.files.verify.mockResolvedValue({ ok: true, value: [] })
-        world.store.sentBefore.mockResolvedValue(null)
-        world.store.messageIn.mockResolvedValue(messageOf({ id: MSG2, authorKind, authorId: BOT, clientId }))
-        world.store.insertText.mockResolvedValue(messageOf({ id: MSG, replyTo: MSG2 }))
-        world.views.viewOf.mockResolvedValue(mock<MessageView>())
-        return world
-    }
-
-    it("tells the listener who replied to which line, once the reply is stored, and nothing on a retry of the same reply", async () => {
-        const { subject, store } = await buildReplying("line-key-1")
-        const heard = jest.fn().mockResolvedValue(undefined)
-        subject.listenReplies(heard)
-
-        valueOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2, body: "cho qua" })))
-
-        expect(heard).toHaveBeenCalledTimes(1)
-        // The reply itself travels with it: its id, the words stored and the database time, so two replies at once never mix.
-        const stored = messageOf({ id: MSG, replyTo: MSG2 })
-        expect(heard).toHaveBeenCalledWith({
-            workspaceId: WS,
-            byUserId: ANA,
-            lineKey: "line-key-1",
-            messageId: MSG,
-            text: stored.body,
-            at: stored.createdAt.toISOString(),
-        })
-        store.sentBefore.mockResolvedValue(messageOf({ id: MSG }))
-        valueOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2, body: "cho qua", clientId: "c1" })))
-        expect(heard).toHaveBeenCalledTimes(1)
-    })
-
-    it("tells nobody of a reply to a person's message, to an agent's line written under no key, or of a text that replies to nothing", async () => {
-        const person = await buildReplying("line-key-1", "user")
-        const keyless = await buildReplying(null)
-        const heard = jest.fn().mockResolvedValue(undefined)
-        person.subject.listenReplies(heard)
-        keyless.subject.listenReplies(heard)
-
-        valueOf(await person.subject.send(WS, ANA, sendOf({ replyTo: MSG2 })))
-        valueOf(await keyless.subject.send(WS, ANA, sendOf({ replyTo: MSG2 })))
-        valueOf(await keyless.subject.send(WS, ANA, sendOf()))
-
-        expect(heard).not.toHaveBeenCalled()
-    })
-
-    it("still stores the person's reply when the listener fails or nobody listens: the chat does no business itself", async () => {
-        const failing = await buildReplying("line-key-1")
-        failing.subject.listenReplies(jest.fn().mockRejectedValue(new Error("retry refused")))
-        const silent = await buildReplying("line-key-1")
-
-        expect((await failing.subject.send(WS, ANA, sendOf({ replyTo: MSG2 }))).ok).toBe(true)
-        expect((await silent.subject.send(WS, ANA, sendOf({ replyTo: MSG2 }))).ok).toBe(true)
-        expect(failing.store.moveReadPosition).toHaveBeenCalledWith(WS, ROOM, ANA, MSG)
-    })
-
-    it("reads what people replied to the line of a key, oldest first as the store answers them, and nothing when no line holds the key", async () => {
-        const { subject, store } = await build()
-        store.agentLine.mockResolvedValueOnce(messageOf({ id: MSG2, authorKind: "agent", authorId: BOT }))
-        store.repliesTo.mockResolvedValue([
-            messageOf({ id: MSG, body: "Khach chuyen thieu 2k", createdAt: new Date("2026-11-10T03:00:00.000Z") }),
-            messageOf({ id: MSG, body: "Cho qua", createdAt: new Date("2026-11-10T03:01:00.000Z") }),
-        ])
-
-        await expect(subject.repliesToAgentLine(WS, KEY)).resolves.toEqual([
-            { text: "Khach chuyen thieu 2k", at: "2026-11-10T03:00:00.000Z" },
-            { text: "Cho qua", at: "2026-11-10T03:01:00.000Z" },
-        ])
-        // The line is looked up under the stored form of the key it was posted with.
-        expect(store.agentLine).toHaveBeenCalledWith(WS, lineKeyOf(KEY))
-        expect(store.repliesTo).toHaveBeenCalledWith(WS, MSG2)
-
-        store.agentLine.mockResolvedValueOnce(null)
-        await expect(subject.repliesToAgentLine(WS, "run-stuck:none:none")).resolves.toEqual([])
-        expect(store.repliesTo).toHaveBeenCalledTimes(1)
     })
 })

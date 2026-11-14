@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { AGENT_WORKFLOWS, AGENT_WORKFLOW_VERSIONS, workflowRecordOfRow, workflowVersionRecordOfRow } from "@tests/fixtures/builders/engine-core-tables.builder"
 import { workflowDoubles } from "@tests/fixtures/builders/agent-workflows.builder"
 import type { WorkflowDoubles } from "@tests/fixtures/builders/agent-workflows.builder"
 import { AgentWorkflowAdoptionService } from "./agent-workflow-adoption.service"
@@ -6,7 +7,6 @@ import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
 import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
 import { AgentWorkflowStoreService } from "./agent-workflow-store.service"
 import { AgentWorkflowsService } from "./agent-workflows.service"
-import { workflowRecordOf, workflowVersionRecordOf } from "./agent-workflows.mapper"
 import type { WorkflowRecord, WorkflowVersionRecord } from "./agent-workflows.contracts"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import {
@@ -47,15 +47,15 @@ const buildWorld = async (): Promise<World> => {
 }
 
 const workflowsOf = (world: World): ReadonlyArray<WorkflowRecord> =>
-    world.memory.rows("agent.workflow").map(workflowRecordOf)
+    world.memory.rows(AGENT_WORKFLOWS).map(workflowRecordOfRow)
 
 const versionsOf = (world: World): ReadonlyArray<WorkflowVersionRecord> =>
-    world.memory.rows("agent.workflow-version").map(workflowVersionRecordOf)
+    world.memory.rows(AGENT_WORKFLOW_VERSIONS).map(workflowVersionRecordOfRow)
 
 const OWNER = { kind: "owner" as const, memberId: "member-1" }
 
-/** The newest version of the reconcile template: the only one the catalogue ships, so the shop's workflow came from it. */
-const NEWEST = templateNewest("accounting.reconcile")
+/** The newest version of the invoice template (`webbooks.invoice`, the primary of `webbooks`): the shop's workflow came from it. */
+const NEWEST = templateNewest("webbooks.invoice")
 
 const stepOf = (graph: GraphSpec, at: number) => graph.nodes.at(at)
 
@@ -69,7 +69,7 @@ const reportsOf = (world: World): Promise<WorkflowView> =>
     world.workflows.createFromTemplate(
         "ws-1",
         "agent-1",
-        { templateId: "accounting.reports", version: null },
+        { templateId: "webbooks.debt-round", version: null },
         OWNER,
         "vi",
     )
@@ -83,16 +83,16 @@ describe("AgentWorkflowsService: a workflow from a template", () => {
 
         expect(made).toMatchObject({ status: "draft", primary: false, activeNumber: 1, templateChangedSteps: 0 })
         expect(made.template).toEqual({
-            templateId: "accounting.reports",
-            templateVersion: templateNewest("accounting.reports"),
+            templateId: "webbooks.debt-round",
+            templateVersion: templateNewest("webbooks.debt-round"),
         })
-        expect(version?.document).toEqual(jsonOf(templateGraph("accounting.reports")))
+        expect(version?.document).toEqual(jsonOf(templateGraph("webbooks.debt-round")))
         expect(version).toMatchObject({ changeKind: "template", authorKind: "owner", authorId: "member-1" })
     })
 
     it("makes a blank workflow of one step from a name, and keeps keys unique", async () => {
         const world = await buildWorld()
-        const blank = { name: "Chi phi", moduleKey: "accounting" }
+        const blank = { name: "Chi phi", moduleKey: "webbooks" }
 
         const first = await world.workflows.createBlank("ws-1", "agent-1", blank, OWNER, "vi")
         const second = await world.workflows.createBlank("ws-1", "agent-1", blank, OWNER, "vi")
@@ -104,12 +104,31 @@ describe("AgentWorkflowsService: a workflow from a template", () => {
     it("seeds the primary workflow and a workflow per other template of the module, once", async () => {
         const world = await buildWorld()
 
-        await expect(world.workflows.seedAgent("ws-1", "agent-1", "accounting")).resolves.toBe(2)
-        await expect(world.workflows.seedAgent("ws-1", "agent-1", "accounting")).resolves.toBe(0)
+        // Ledger (TOOLS-LEAD 2026-11-13): `webbooks` ships five templates (the dropped accounting agent shipped three): the primary is adopted
+        // and the other four are copied.
+        await expect(world.workflows.seedAgent("ws-1", "agent-1", "webbooks")).resolves.toBe(4)
+        await expect(world.workflows.seedAgent("ws-1", "agent-1", "webbooks")).resolves.toBe(0)
         expect(workflowsOf(world).map((workflow) => [workflow.key, workflow.status])).toEqual([
-            ["reconcile", "active"],
-            ["reports", "active"],
+            ["invoice", "active"],
+            // Only the templates in the seeded chain (`seedActive`: the team chat) start active; the other copies are drafts the owner turns on.
+            ["payment", "draft"],
+            ["debt-round", "draft"],
+            ["supplier-invoices", "draft"],
             ["team-chat", "active"],
+        ])
+    })
+
+    it("with `only`, copies that one template and adopts nothing: once, never a primary template, the owner's status kept", async () => {
+        const world = await buildWorld()
+
+        await expect(world.workflows.seedAgent("ws-1", "agent-1", "sales", "sales.team-chat")).resolves.toBe(1)
+        await expect(world.workflows.seedAgent("ws-1", "agent-1", "sales", "sales.consult")).resolves.toBe(0)
+        const [made] = workflowsOf(world)
+        await world.workflows.setStatus("ws-1", made?.id ?? "", "paused")
+        await expect(world.workflows.seedAgent("ws-1", "agent-1", "sales", "sales.team-chat")).resolves.toBe(0)
+
+        expect(workflowsOf(world).map((workflow) => [workflow.key, workflow.status, workflow.primary])).toEqual([
+            ["team-chat", "paused", false],
         ])
     })
 
@@ -119,11 +138,13 @@ describe("AgentWorkflowsService: a workflow from a template", () => {
         await world.workflows.seedAgent("ws-1", "agent-1", "sales")
 
         const status = new Map(workflowsOf(world).map((workflow) => [workflow.key, workflow.status]))
-        for (const key of ["after-sale", "delivery-check", "occasion", "payment-reminder", "web-order"]) {
+        // Ledger (E-RED 2026-11-14): `sales.payment-reminder` is gone: the reminders are the pay loop of the ONE sale graph
+        // (`sales.consult`, one run per subject, R47's `remind` inside the loop), so the sale ships no reminder template to turn on.
+        for (const key of ["after-sale", "delivery-check", "occasion", "web-order"]) {
             expect(status.get(key)).toBe("active")
         }
         expect(status.get("consult")).toBeUndefined()
-        expect(status.get("reconcile")).toBe("active")
+        expect(status.get("payment")).toBe("active")
     })
 })
 
@@ -132,7 +153,7 @@ describe("AgentWorkflowsService: a template version to accept", () => {
         const world = await buildWorld()
         const primary = await primaryOf(world)
 
-        expect(primary.template).toEqual({ templateId: "accounting.reconcile", templateVersion: NEWEST })
+        expect(primary.template).toEqual({ templateId: "webbooks.invoice", templateVersion: NEWEST })
         await expect(world.workflows.templatePreview("ws-1", primary.id, NEWEST, "vi")).rejects.toMatchObject({
             code: AgentGraphsErrorCode.WorkflowRefused,
             params: { reason: "template-version" },
@@ -152,7 +173,7 @@ describe("AgentWorkflowsService: a template version to accept", () => {
         const blank = await world.workflows.createBlank(
             "ws-1",
             "agent-1",
-            { name: "Chi phi", moduleKey: "accounting" },
+            { name: "Chi phi", moduleKey: "webbooks" },
             OWNER,
             "vi",
         )
@@ -168,11 +189,38 @@ describe("AgentWorkflowsService: a template version to accept", () => {
     })
 })
 
+describe("AgentWorkflowsService: a template version adopted as shipped (the re-seed)", () => {
+    it("writes the template version's graph as a new version and moves the provenance to it, with no merge", async () => {
+        const world = await buildWorld()
+        const made = await reportsOf(world)
+        await world.workflows.publish("ws-1", made.id, ownerEdited(templateGraph("webbooks.debt-round")), OWNER, 1, "own")
+        const pick = { templateId: "webbooks.debt-round", templateVersion: templateNewest("webbooks.debt-round") }
+
+        const adopted = await world.workflows.adoptTemplateVersion("ws-1", made.id, pick, OWNER, 2, "re-seed")
+        const own = versionsOf(world).filter((version) => version.workflowId === made.id)
+
+        expect(adopted).toMatchObject({ number: 3, changeKind: "accept_template" })
+        expect(own.find((version) => version.number === 3)?.document).toEqual(jsonOf(templateGraph("webbooks.debt-round")))
+        expect(workflowsOf(world).find((workflow) => workflow.id === made.id)?.template).toEqual(pick)
+    })
+
+    it("refuses a template version the installation does not ship, and writes nothing", async () => {
+        const world = await buildWorld()
+        const made = await reportsOf(world)
+        const pick = { templateId: "webbooks.debt-round", templateVersion: templateNewest("webbooks.debt-round") + 1 }
+
+        await expect(world.workflows.adoptTemplateVersion("ws-1", made.id, pick, OWNER, 1, "")).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.TemplateNotFound,
+        })
+        expect(versionsOf(world).filter((version) => version.workflowId === made.id)).toHaveLength(1)
+    })
+})
+
 describe("AgentWorkflowsService: history", () => {
     it("rolls back by writing a new version that copies the old snapshot", async () => {
         const world = await buildWorld()
         const made = await reportsOf(world)
-        const edited = ownerEdited(templateGraph("accounting.reports"))
+        const edited = ownerEdited(templateGraph("webbooks.debt-round"))
         await world.workflows.publish("ws-1", made.id, edited, OWNER, 1, "tighter")
 
         const back = await world.workflows.rollback("ws-1", made.id, 1, OWNER, 2, "")
@@ -190,7 +238,7 @@ describe("AgentWorkflowsService: history", () => {
         const made = await reportsOf(world)
 
         await expect(
-            world.workflows.publish("ws-1", made.id, templateGraph("accounting.reports"), OWNER, 0, ""),
+            world.workflows.publish("ws-1", made.id, templateGraph("webbooks.debt-round"), OWNER, 0, ""),
         ).rejects.toMatchObject({ code: AgentGraphsErrorCode.WorkflowConflict })
     })
 
@@ -210,10 +258,8 @@ describe("AgentWorkflowsService: history", () => {
     it("publishes a primary workflow's version as the agent graph's next version", async () => {
         const world = await buildWorld()
         const primary = await primaryOf(world)
-        // The reconcile graph ends in a hand-off to the after-sale workflow, which must be there for the publish to be sound.
-        await madeFrom(world, "sales.after-sale")
 
-        await world.workflows.publish("ws-1", primary.id, templateGraph("accounting.reconcile"), OWNER, 1, "")
+        await world.workflows.publish("ws-1", primary.id, templateGraph("webbooks.invoice"), OWNER, 1, "")
 
         expect(world.graphs.publish).toHaveBeenCalledWith(
             expect.objectContaining({ kind: "edit", memberId: "member-1" }),
@@ -265,7 +311,8 @@ describe("AgentWorkflowsService: publishing a hand-off", () => {
         const world = await buildWorld()
         const desk = await madeFrom(world, "chatbot.front-desk")
         await madeFrom(world, "sales.consult")
-        await madeFrom(world, "accounting.reconcile")
+        await madeFrom(world, "booking.book")
+        await madeFrom(world, "sales.payment")
 
         const published = await world.workflows.publish(
             "ws-1",
@@ -283,14 +330,26 @@ describe("AgentWorkflowsService: publishing a hand-off", () => {
         const world = await buildWorld()
         const desk = await madeFrom(world, "chatbot.front-desk")
         const consult = await madeFrom(world, "sales.consult")
-        await madeFrom(world, "accounting.reconcile")
+        await madeFrom(world, "booking.book")
+        await madeFrom(world, "sales.payment")
+        // The one sale graph hands a paid order on to `sales.after-sale` (`to-after-sale`): its target must be there, or the publish is
+        // refused for that hand-off (CALL_TARGET_UNKNOWN) before the caller check this case is about.
+        await madeFrom(world, "sales.after-sale")
         const demanding = templateGraph("sales.consult")
+        // A called workflow's params are the members of its `data` input (a `workflow.called` trigger: the caller's params arrive as the
+        // event's `data`, `callInputsOf`), so the new required param is a member of `data`; a top-level input beside `data` is no call
+        // param any more and would break no caller.
         const widened: GraphSpec = {
             ...demanding,
             contract: {
-                inputs: [...(demanding.contract?.inputs ?? []), { name: "voucher", type: "string", required: true }],
+                inputs: (demanding.contract?.inputs ?? []).map((input) =>
+                    input.name === "data"
+                        ? { ...input, members: [...(input.members ?? []), { name: "voucher", type: "string", required: true }] }
+                        : input,
+                ),
             },
         }
+        expect(widened.contract?.inputs.some((input) => input.name === "data")).toBe(true)
 
         const refusal = await refusalOf(world.workflows.publish("ws-1", consult.id, widened, OWNER, 1, ""))
 
@@ -304,7 +363,10 @@ describe("AgentWorkflowsService: publishing a hand-off", () => {
         const world = await buildWorld()
         await madeFrom(world, "chatbot.front-desk")
         const consult = await madeFrom(world, "sales.consult")
-        await madeFrom(world, "accounting.reconcile")
+        await madeFrom(world, "booking.book")
+        await madeFrom(world, "sales.payment")
+        // The one sale graph's own hand-off target (`to-after-sale`), see the case above.
+        await madeFrom(world, "sales.after-sale")
 
         await expect(
             world.workflows.publish("ws-1", consult.id, templateGraph("sales.consult"), OWNER, 1, ""),
@@ -323,8 +385,10 @@ describe("AgentWorkflowsService.graphOf: the agent's Graph page", () => {
         const called = graph.workflows.find((workflow) => workflow.id === consult.id)
 
         expect(graph.agentId).toBe("agent-1")
-        expect(desk?.triggers.map((trigger) => trigger.sourceKind)).toEqual(["zalo", "telegram"])
-        expect(desk?.inputs.map((input) => input.name)).toContain("conversationId")
+        expect(desk?.triggers.map((trigger) => trigger.sourceKind)).toEqual(["zalo", "telegram", "facebook", "instagram"])
+        // The channel trigger scope is the generic delivered one (one trigger pipeline): the route is `routeId`, no `conversationId`.
+        expect(desk?.inputs.map((input) => input.name)).toContain("routeId")
+        expect(desk?.inputs.map((input) => input.name)).not.toContain("conversationId")
         const toConsult = desk?.calls.find((call) => call.agent === "sales" && call.workflow === "consult")
         expect(toConsult).toMatchObject({ workflowName: consult.name })
         expect(called).toMatchObject({ entry: "any", activeNumber: 1 })
@@ -336,7 +400,7 @@ describe("AgentWorkflowsService.graphOf: the agent's Graph page", () => {
 
         const graph = await world.workflows.graphOf("ws-1", "agent-1", "vi")
 
-        expect(graph.workflows.map((workflow) => [workflow.key, workflow.primary])).toEqual([["reconcile", true]])
+        expect(graph.workflows.map((workflow) => [workflow.key, workflow.primary])).toEqual([["invoice", true]])
         expect(world.graphs.stateOfAgent).toHaveBeenCalled()
     })
 
@@ -347,5 +411,31 @@ describe("AgentWorkflowsService.graphOf: the agent's Graph page", () => {
         const graph = await world.workflows.graphOf("ws-1", "agent-2", "en")
 
         expect(graph.workflows.find((workflow) => workflow.key === "front-desk")).toBeUndefined()
+    })
+})
+
+describe("AgentWorkflowsService.activeGraphsOf: the graphs that run now", () => {
+    it("answers each workflow that has an active version with its ids and its graph, and writes nothing", async () => {
+        const world = await buildWorld()
+        const consult = await madeFrom(world, "sales.consult")
+        const before = versionsOf(world).length
+
+        const active = await world.workflows.activeGraphsOf("ws-1")
+        const entry = active.find((one) => one.workflowId === consult.id)
+
+        expect(entry?.agentId).toBe("agent-1")
+        expect(entry?.graph.nodes.map((node) => node.key)).toContain("consult")
+        expect(versionsOf(world).map((version) => version.id)).toContain(entry?.versionId)
+        expect(versionsOf(world)).toHaveLength(before)
+    })
+
+    it("leaves out a workflow that has no active version", async () => {
+        const world = await buildWorld()
+        const made = await madeFrom(world, "sales.consult")
+        const stored = workflowsOf(world).find((workflow) => workflow.id === made.id)
+
+        const active = await world.workflows.activeGraphsOf("ws-1")
+
+        expect(active.some((one) => one.workflowId === made.id)).toBe(stored?.activeVersionId !== null)
     })
 })

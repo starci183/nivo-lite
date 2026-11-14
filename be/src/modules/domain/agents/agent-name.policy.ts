@@ -8,7 +8,7 @@ export const AGENT_DISPLAY_NAME_LIMITS = { min: 2, max: 40 } as const
  * whitespace folded to one space; null when it is shorter or longer than the limits.
  */
 export const cleanAgentName = (name: string): OptionalCleanText => {
-    const clean = name.replace(/\s+/g, " ").trim()
+    const clean = name.replaceAll(/\s+/g, " ").trim()
     return clean.length >= AGENT_DISPLAY_NAME_LIMITS.min && clean.length <= AGENT_DISPLAY_NAME_LIMITS.max ? clean : null
 }
 
@@ -44,9 +44,9 @@ export const handleSlugOf = (typed: string): string =>
         .trim()
         .replace(/^@+/u, "")
         .toLowerCase()
-        .replace(/\u0111/gu, "d")
+        .replaceAll('\u0111', "d")
         .normalize("NFD")
-        .replace(/\p{M}+/gu, "")
+        .replaceAll(/\p{M}+/gu, "")
         .split(/[^a-z0-9]+/u)
         .filter((part) => part !== "")
         .join("-")

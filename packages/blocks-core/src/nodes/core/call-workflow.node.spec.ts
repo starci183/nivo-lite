@@ -18,7 +18,7 @@ const callWith = async (
             params: target,
             input: { inputs },
             turn: EXAMPLE_TURN,
-            grant: { rights: [] },
+            grant: {},
             effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
             tools: new Map(),
             key: "k",
@@ -31,7 +31,14 @@ const callWith = async (
 describe("core.call-workflow", () => {
     it("is the end hand-off step of the contract", () => {
         expect(coreCallWorkflowNode.id).toBe(CALL_WORKFLOW_STEP)
-        expect(coreCallWorkflowNode.effects).toEqual(["nivo.agent.tag"])
+        expect(coreCallWorkflowNode.effects).toEqual(["nivo.tool.agent.tag"])
+    })
+
+    it("answers in each example the tag the example runner gives the first effect, by its literal id", () => {
+        expect(coreCallWorkflowNode.examples.map((each) => each.output?.tag.id)).toEqual([
+            "nivo.tool.agent.tag-1",
+            "nivo.tool.agent.tag-1",
+        ])
     })
 
     it.each(coreCallWorkflowNode.examples.map((each) => [each.name, each] as const))("example: %s", async (_name, each) => {
@@ -41,8 +48,8 @@ describe("core.call-workflow", () => {
     it("tags once, and answers the target it called with the tag it wrote", async () => {
         const { run, executed } = await callWith({ text: "Em mu\u1ed1n mua hoa", leadId: "l1" })
 
-        expect(executed.map((one) => one.id)).toEqual(["nivo.agent.tag"])
-        expect(run.output).toMatchObject({ agent: "sales", workflow: "consult", version: "latest", tag: { kind: "nivo.agent.tag" } })
+        expect(executed.map((one) => one.id)).toEqual(["nivo.tool.agent.tag"])
+        expect(run.output).toMatchObject({ agent: "sales", workflow: "consult", version: "latest", tag: { kind: "nivo.tool.agent.tag" } })
     })
 
     it("carries ONLY the mapped inputs as the data of the target, with the pin of the workflow and the calling run", async () => {
@@ -54,7 +61,9 @@ describe("core.call-workflow", () => {
             [WORKFLOW_PARAMS_MEMBER]: { orderId: "o1", note: "giao s\u1edbm" },
             [CALLER_MEMBER]: { runId: EXAMPLE_TURN.turnId },
         })
-        expect(payload).toMatchObject({ toModuleKey: "sales", visibility: "chat" })
+        expect(payload).toMatchObject({ toModuleKey: "sales" })
+        // `visibility` is deleted from the tag payload (R28: nothing reads it since the speaker machinery went).
+        expect(payload).not.toHaveProperty("visibility")
         // Nothing the caller did not map rides along: no lead, conversation or channel the graph did not pass.
         expect(payload).not.toHaveProperty("leadId")
         expect(payload).not.toHaveProperty("conversationId")

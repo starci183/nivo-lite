@@ -1,7 +1,6 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentsModule } from "@modules/domain/agents"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { ModuleProfilesService } from "@modules/domain/agent-knowledge"
 import { BrainFactsModule } from "@modules/domain/brain-facts"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
 import { InstallationDirectoryService, MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
@@ -19,7 +18,6 @@ export const cliSetupModules = (_options: CliAppOptions): Array<DynamicModule> =
         setupOnly: true,
         ports: {
             installations: InstallationDirectoryService,
-            modules: ModuleProfilesService,
             connections: AgentBindingsService,
             rooms: ChatRoomDirectoryService,
         },

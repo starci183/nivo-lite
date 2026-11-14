@@ -1,11 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService, sha256 } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord, Environment } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    sha256,
+    type ConnectionActor,
+    type ConnectionRecord,
+    type Environment,
+} from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { bankDisplayNameOf } from "./bank-name.policy"
 import type { SepayKeyReveal } from "./channel-connections.contracts"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
@@ -73,7 +79,7 @@ const isStatsRead = (value: unknown): value is SepayStatsRead =>
 const ofSepayFeed =
     (column: string): (() => string) =>
     () =>
-        `(SELECT c.${column} FROM public.connections c WHERE c.id = :connectionId AND c.provider = 'sepay')`
+        `(SELECT c.${column} FROM public.connections c WHERE c.id = :connectionId AND c.provider = 'sepay' AND c.deleted_at IS NULL)`
 
 const MANAGER = ["owner", "manager"] as const
 const OWNER = ["owner"] as const
@@ -142,19 +148,7 @@ export class SepayConnectionService {
             .orderBy("e.receivedAt", "DESC")
             .limit(EVENT_LIMIT)
             .getRawMany()
-        return rows.filter(isEventRead).map(eventOf)
-    }
-
-    /** Switches the connection between the SePay test mode and live (owner). Credits of a test connection are never booked. */
-    async setEnvironment(
-        actor: ConnectionActor,
-        connectionId: string,
-        environment: Environment,
-    ): Promise<SepayConnectionView> {
-        await this.connections.authorize(actor, OWNER)
-        const connection = await this.sepayOf(actor, connectionId)
-        await this.connections.patch(actor.workspaceId, connection.id, { environment })
-        return this.view(await this.sepayOf(actor, connectionId))
+        return rows.filter(isEventRead).map((item) => eventOf(item))
     }
 
     /**

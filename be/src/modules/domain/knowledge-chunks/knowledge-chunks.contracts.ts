@@ -15,6 +15,9 @@ export type MaybePlaceText = string | null
 /** The place of a passage, or null when it has none. */
 export type MaybePassagePlace = PassagePlace | null
 
+/** A stored vector of the pgvector size, or null when the stored value is no such vector. */
+export type MaybeStoredVector = ReadonlyArray<number> | null
+
 /** A stretch of a document, or a passage cut from it, with the place it sits at, or null when the file names no places. */
 export interface LocatedText {
     /** The place, or null. */
@@ -65,8 +68,21 @@ export interface ChunkWrite {
     readonly installationId: string | null
     /** The model that made the vectors. */
     readonly model: string
+    /**
+     * True when the deployment keeps vectors in the vector index: the row records the model and the hash of an embedded passage but NO
+     * vector, and `indexed_at` stays empty until the index accepts the vector. Absent or false: the vector is stored in the row.
+     */
+    readonly vectorsInIndex?: boolean
     /** The passages in order. */
     readonly drafts: ReadonlyArray<ChunkDraft>
+}
+
+/** The row a passage was stored under at an order: the id its point takes in the vector index. */
+export interface StoredAt {
+    /** The order of the passage in its source. */
+    readonly order: number
+    /** The passage id. */
+    readonly id: string
 }
 
 /** A passage to store at a fixed place in its source. */
@@ -183,42 +199,31 @@ export interface SourcePassage {
 /** The dimensions of every stored vector (the pgvector column size); the embeddings provider is asked for exactly this many. */
 export const EMBEDDING_DIMENSIONS = 1536
 
-/** What a passage search asks: the lens of the reader and the two halves of the query. */
-export interface ChunkQuery {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The module of the reader: its own passages and those for every module. */
-    readonly module: string
-    /** customer sees public passages only. */
-    readonly audience: "customer" | "internal"
-    /** The agent instance whose own passages join the shared ones; null = the shared ones only. */
-    readonly installationId: string | null
-    /** The query vector in the pgvector text form, or null. */
-    readonly vector: string | null
-    /** The model the vector comes from; passages of another model score by words only. */
-    readonly model: string | null
-    /** The words of the query as a tsquery text (`a | b`), or null. */
-    readonly tsquery: string | null
-    /** The most passages wanted. */
-    readonly limit: number
-}
+/** What triage says of a passage: `rule` (it states a rule of the shop, read into truths), `data` (shop records, never truths) or `none`. */
+export type TriageVerdict = "rule" | "data" | "none"
 
-/** One passage a search found. */
-export interface ChunkHit {
+/** The triage verdict of one passage, to store. */
+export interface PassageVerdict {
     /** The passage id. */
     readonly id: string
-    /** The source the passage was cut from. */
-    readonly sourceId: string
-    /** The module the passage is for, or null. */
-    readonly module: string | null
-    /** The text. */
-    readonly content: string
-    /** The relevance, higher first. */
-    readonly score: number
-    /** public or internal. */
-    readonly visibility: string
+    /** Its verdict. */
+    readonly verdict: TriageVerdict
+}
+
+/** A passage of a document as the truths work reads it: its text and where triage and the truth reading stand. */
+export interface TruthPassage {
+    /** The passage id. */
+    readonly id: string
     /** The order of the passage in its source. */
     readonly order: number
-    /** True when the passage is not released to customers yet (trust gate): an internal reader sees it marked unreviewed. */
-    readonly unreviewed: boolean
+    /** The text. */
+    readonly text: string
+    /** The model-free hash of the text (`passageTextHashOf`). */
+    readonly hash: string
+    /** The triage verdict, or null while not judged. */
+    readonly triage: TriageVerdict | null
+    /** The triage prompt version that judged it (0 = judged by code), or null while not judged. */
+    readonly triageVersion: number | null
+    /** The extraction prompt version its truths were read with, or null while not read. */
+    readonly truthsVersion: number | null
 }

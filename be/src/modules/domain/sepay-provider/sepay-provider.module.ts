@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { SepayBankTransactionsService } from "./sepay-bank-transactions.service"
 import { SepayFeedWebhookService } from "./sepay-feed-webhook.service"
 import { SepayFeedPollerService } from "./sepay-feed-poller.service"
@@ -12,7 +11,7 @@ const PROVIDERS = [SepayFeedPollerService, SepayBankTransactionsService, SepayPa
 @Module({})
 /**
  * Everything SePay-specific that core asks a provider for, registered under the capability names: the poller that reads its
- * transactions back, the transaction list its MCP tool (`nivo.bank.transaction.list`) answers with, the payment instruction the QR effect draws,
+ * transactions back, the transaction list its MCP tool (`nivo.tool.bank.transaction.list`) answers with, the payment instruction the QR effect draws,
  * and, in the app that receives it, the workspace-feed webhook.
  */
 export class SepayProviderModule extends ConfigurableModuleClass {

@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentCatalogService } from "@modules/domain/agents"
-import type { CatalogAgent } from "@modules/domain/agents"
+import { AgentCatalogService, type CatalogAgent } from "@modules/domain/agents"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListAgentCatalogQuery } from "./list-agent-catalog.query"
 
 @QueryHandler(ListAgentCatalogQuery)

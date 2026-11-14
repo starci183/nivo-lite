@@ -3,8 +3,7 @@
 import { useCreditsData, useCreditsOrder, useCreditsView } from "@/hooks/credits"
 import { loadingSlot } from "@/hooks/slot"
 import type { CreditsOverviewView, DataSlot } from "@/modules/types"
-import { CreditsOverviewBase } from "./component"
-import type { CreditsOverviewShape } from "./component"
+import { CreditsOverviewBase, type CreditsOverviewShape } from "./component"
 
 interface CreditsOverviewProps {
     readonly contactHref: string

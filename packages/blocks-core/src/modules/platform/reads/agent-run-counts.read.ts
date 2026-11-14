@@ -1,15 +1,8 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
-import { q } from "@nivo-lite/agent-sdk/query"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
-import { countsOf } from "../agent-runs"
-import type { AgentRunCounts } from "../agent-runs"
+import { countsOf, type AgentRunCounts } from "../agent-runs"
 import { PLATFORM_VIEW } from "../constants"
-import { agentGraphs, agentRuns } from "../ports"
-import { agentOfInstallation } from "./agent-run-scope"
-
-/** The most groups the count by status asks for: the engine has eight statuses. */
-const STATUS_GROUPS = 16
+import { coreReadsPort } from "../ports"
 
 /** What an installation with no runs counts. */
 const NO_RUNS: AgentRunCounts = { counts: { running: 0, parked: 0, done: 0, failed: 0 }, total: 0 }
@@ -23,17 +16,10 @@ export const agentRunCountsRead: ReadDefinition = defineRead({
     paths: { counts: "record" },
     variables: z.object({ installation: z.uuid() }),
     permission: PLATFORM_VIEW,
-    ports: { graphs: agentGraphs, runs: agentRuns },
-    run: async ({ graphs, runs }, { installation }): Promise<AgentRunCounts> => {
-        const agent = await agentOfInstallation(graphs, installation)
+    ports: { core: coreReadsPort },
+    run: async ({ core }, { installation }): Promise<AgentRunCounts> => {
+        const agent = await core.agentOf(installation)
         if (agent === null) return NO_RUNS
-        return countsOf(
-            await runs.aggregate({
-                where: q.eq("agentId", agent),
-                groupBy: ["status"],
-                measures: { count: { kind: "count" } },
-                limit: STATUS_GROUPS,
-            }),
-        )
+        return countsOf(await core.runs.count(agent))
     },
 })

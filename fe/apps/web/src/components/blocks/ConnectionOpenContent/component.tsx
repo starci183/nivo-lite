@@ -1,6 +1,5 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { ConnectionRowBody } from "@/components/frames/ConnectionRowBody"
-import type { RowCommandSet } from "@/components/frames/ConnectionRowBody"
+import { ConnectionRowBody, type RowCommandSet } from "@/components/frames/ConnectionRowBody"
 import type { DataSlot, RowView, SlotLabels } from "@/modules/types"
 
 /** The read, the placeholder and the commands of the content of a connection without a page of its own. */
@@ -24,6 +23,6 @@ export const ConnectionOpenContentBase = (props: ConnectionOpenContentBaseProps)
         placeholder={props.props.placeholder}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-        render={(view) => <ConnectionRowBody view={view} on={props.on} withoutQuestions />}
+        render={(view) => <ConnectionRowBody view={view} on={props.on} withoutQuestions onAccountPage />}
     />
 )

@@ -1,8 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { assertSmtpTarget } from "@starci/mail"
-import type { Mailer, MailOptions as MailerOptions, MailSecurity, SentMail } from "@starci/mail"
-import { InjectMailSettings, InjectMailer, InjectMailerFactory } from "./mail.decorators"
-import type { MailerFactory } from "./mail.decorators"
+import {
+    assertSmtpTarget,
+    type Mailer,
+    type MailOptions as MailerOptions,
+    type MailSecurity,
+    type SentMail,
+} from "@starci/mail"
+import { InjectMailSettings, InjectMailer, InjectMailerFactory, type MailerFactory } from "./mail.decorators"
 import type { MailDelivery, SmtpConfig } from "./mail.contracts"
 import { mailErrorOf } from "./mail-error.policy"
 import type { MailOptions } from "./mail.options"

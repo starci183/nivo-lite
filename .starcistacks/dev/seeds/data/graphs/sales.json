@@ -4,30 +4,42 @@
     "contract": {
         "inputs": [
             {
-                "name": "conversationId",
-                "type": "string",
-                "required": true
-            },
-            {
-                "name": "text",
-                "type": "string",
-                "required": true
-            },
-            {
-                "name": "channel",
-                "type": "string",
-                "required": false
-            },
-            {
-                "name": "leadId",
-                "type": "string",
-                "required": false
+                "name": "data",
+                "type": "object",
+                "required": true,
+                "members": [
+                    {
+                        "name": "conversationId",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "text",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "channel",
+                        "type": "string",
+                        "required": false
+                    },
+                    {
+                        "name": "contactId",
+                        "type": "string",
+                        "required": false
+                    },
+                    {
+                        "name": "since",
+                        "type": "string",
+                        "required": false
+                    }
+                ]
             }
         ]
     },
     "triggers": [
         {
-            "key": "call",
+            "key": "t1",
             "source": {
                 "kind": "workflow",
                 "connectionId": null
@@ -36,223 +48,1347 @@
     ],
     "outcomes": [
         {
-            "key": "won",
-            "label": "Chốt mua",
+            "key": "not-sale",
+            "label": "not-sale",
+            "outputs": []
+        },
+        {
+            "key": "paid",
+            "label": "paid",
             "outputs": [
+                {
+                    "name": "contactId",
+                    "type": "string"
+                },
                 {
                     "name": "orderId",
                     "type": "string"
+                },
+                {
+                    "name": "orderNo",
+                    "type": "string"
                 }
             ]
+        },
+        {
+            "key": "unpaid",
+            "label": "unpaid",
+            "outputs": [
+                {
+                    "name": "contactId",
+                    "type": "string"
+                },
+                {
+                    "name": "orderId",
+                    "type": "string"
+                },
+                {
+                    "name": "orderNo",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "key": "declined",
+            "label": "declined",
+            "outputs": []
+        },
+        {
+            "key": "quiet",
+            "label": "quiet",
+            "outputs": []
         }
     ],
     "entry": {
-        "openTo": "any",
-        "holdsConversation": true
+        "openTo": "any"
     },
     "trigger": {
         "kind": "tag",
         "sources": [
             "agent"
-        ],
-        "burst": {
-            "agent": {
-                "window": "0s"
-            }
-        }
+        ]
     },
     "grant": {
-        "rights": [
-            {
-                "kind": "order",
-                "access": "read",
-                "scope": "workspace",
-                "fields": [
-                    "id",
-                    "orderNo",
-                    "status",
-                    "createdAt",
-                    "recipientName",
-                    "recipientPhone",
-                    "deliveryAddress",
-                    "deliveryAt",
-                    "note",
-                    "leadId"
-                ]
-            },
-            {
-                "kind": "catalogue-item",
-                "access": "read",
-                "scope": "workspace",
-                "fields": [
-                    "id",
-                    "name",
-                    "priceVnd",
-                    "active",
-                    "imageUrl"
-                ]
-            },
-            {
-                "kind": "message",
-                "access": "read",
-                "scope": "turn",
-                "fields": [
-                    "role",
-                    "text",
-                    "sentAt"
-                ]
-            },
-            {
-                "kind": "message",
-                "access": "write",
-                "scope": "turn",
-                "fields": [
-                    "body"
-                ]
-            },
-            {
-                "kind": "sales-lead",
-                "access": "write",
-                "scope": "turn",
-                "fields": [
-                    "contactName",
-                    "phone",
-                    "channel",
-                    "stage"
-                ]
-            },
-            {
-                "kind": "order",
-                "access": "write",
-                "scope": "turn",
-                "fields": [
-                    "leadId",
-                    "items",
-                    "amountVnd",
-                    "status"
-                ]
-            }
-        ],
         "tools": [
-            "nivo.brain.search",
-            "nivo.lead.order.list"
+            "nivo.tool.brain.fact.list",
+            "nivo.tool.contact.get",
+            "nivo.tool.contact.memory.remember",
+            "nivo.tool.conversation.message.list",
+            "nivo.tool.customer.message.send",
+            "nivo.tool.lead.order.list",
+            "nivo.tool.payment.credit.get",
+            "nivo.tool.payment.transfer.create",
+            "nivo.tool.team.message.post"
         ],
         "effects": [
-            "nivo.lead.message.send",
-            "nivo.lead.ensure",
-            "nivo.lead.stage.update",
-            "nivo.order.create",
-            "nivo.order.confirm",
-            "nivo.payment.qr.create",
-            "nivo.lead.care.schedule",
-            "nivo.team.message.post"
+            "nivo.tool.agent.tag"
         ]
     },
     "nodes": [
         {
-            "key": "consult",
+            "key": "talk",
             "kind": "execute",
-            "step": "sales.consult-turn",
+            "step": "core.until",
             "params": {
-                "conversationId": {
-                    "$ref": "trigger.conversationId"
+                "mode": "until",
+                "until": {
+                    "or": [
+                        {
+                            "ref": {
+                                "$ref": "steps.consult.output.branch",
+                                "default": null
+                            },
+                            "op": "eq",
+                            "value": "ready"
+                        },
+                        {
+                            "ref": {
+                                "$ref": "steps.consult.output.branch",
+                                "default": null
+                            },
+                            "op": "eq",
+                            "value": "cancel"
+                        },
+                        {
+                            "ref": {
+                                "$ref": "steps.consult.output.branch",
+                                "default": null
+                            },
+                            "op": "eq",
+                            "value": "declined"
+                        },
+                        {
+                            "ref": {
+                                "$ref": "steps.hear.output.trigger",
+                                "default": null
+                            },
+                            "op": "eq",
+                            "value": "timeout"
+                        },
+                        {
+                            "and": [
+                                {
+                                    "ref": {
+                                        "$ref": "steps.consult.output.branch",
+                                        "default": null
+                                    },
+                                    "op": "eq",
+                                    "value": "off"
+                                },
+                                {
+                                    "ref": {
+                                        "$ref": "steps.hear.output.trigger",
+                                        "default": null
+                                    },
+                                    "op": "absent"
+                                }
+                            ]
+                        }
+                    ]
                 },
-                "text": {
-                    "$ref": "trigger.text"
-                },
-                "channel": {
-                    "$ref": "trigger.channel",
-                    "default": null
-                },
-                "leadId": {
-                    "$ref": "trigger.leadId",
-                    "default": null
-                },
-                "locale": "vi",
-                "address": {
-                    "$ref": "lead.address",
-                    "default": null
+                "max": 30
+            },
+            "routes": {
+                "body": "opening",
+                "exhausted": "quiet"
+            },
+            "next": "settled"
+        },
+        {
+            "key": "opening",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "item.$round",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": 1
                 }
             },
             "routes": {
-                "ready": "create-order"
-            },
-            "model": "claude-sonnet-5-5"
+                "yes": "consult",
+                "no": "hear"
+            }
         },
         {
-            "key": "create-order",
-            "kind": "output",
-            "step": "sales.create-order",
+            "key": "hear",
+            "kind": "condition",
+            "step": "core.wait",
             "params": {
-                "conversationId": {
-                    "$ref": "trigger.conversationId"
-                },
-                "leadId": {
-                    "$ref": "steps.consult.output.leadId"
-                },
-                "items": {
-                    "$ref": "steps.consult.output.items"
-                },
-                "address": {
-                    "$ref": "steps.consult.output.address"
-                },
-                "recipientName": {
-                    "$ref": "steps.consult.output.recipientName",
-                    "default": null
-                },
-                "recipientPhone": {
-                    "$ref": "steps.consult.output.recipientPhone"
-                },
-                "deliveryAt": {
-                    "$ref": "steps.consult.output.deliveryAt"
+                "on": [
+                    {
+                        "key": "zalo",
+                        "verb": "nivo.trigger.zalo.message.received"
+                    },
+                    {
+                        "key": "telegram",
+                        "verb": "nivo.trigger.telegram.message.received"
+                    },
+                    {
+                        "key": "facebook",
+                        "verb": "nivo.trigger.facebook.message.received"
+                    },
+                    {
+                        "key": "instagram",
+                        "verb": "nivo.trigger.instagram.message.received"
+                    }
+                ],
+                "timeout": {
+                    "days": 1
                 }
             },
-            "next": "send-qr",
-            "model": "claude-sonnet-5-5"
+            "routes": {
+                "zalo": "consult",
+                "telegram": "consult",
+                "facebook": "consult",
+                "instagram": "consult"
+            }
         },
         {
-            "key": "send-qr",
-            "kind": "output",
-            "step": "payment.request",
+            "key": "consult",
+            "kind": "condition",
+            "step": "sales.consult-turn",
             "params": {
-                "orderId": {
-                    "$ref": "steps.create-order.output.orderId"
-                },
                 "conversationId": {
-                    "$ref": "trigger.conversationId"
+                    "$ref": "trigger.data.conversationId"
+                },
+                "text": {
+                    "$ref": "trigger.data.text"
+                },
+                "latest": {
+                    "$ref": "steps.hear.output.event.data.text",
+                    "default": null
+                },
+                "draft": {
+                    "$ref": "steps.consult.output",
+                    "default": null,
+                    "round": "previous"
+                },
+                "channel": {
+                    "$ref": "trigger.data.channel",
+                    "default": null
+                },
+                "contactId": {
+                    "$ref": "trigger.data.contactId",
+                    "default": null
+                },
+                "since": {
+                    "$ref": "trigger.data.since",
+                    "default": null
                 },
                 "locale": "vi"
             },
-            "next": "notify-order",
-            "model": "claude-sonnet-5-5"
+            "model": "claude-sonnet-5-5",
+            "routes": {
+                "off": "off-round"
+            },
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
         },
         {
-            "key": "notify-order",
-            "kind": "output",
-            "step": "sales.order-notice",
+            "key": "off-round",
+            "kind": "condition",
+            "step": "core.when",
             "params": {
-                "orderId": {
-                    "$ref": "steps.create-order.output.orderId"
+                "when": {
+                    "ref": {
+                        "$ref": "item.$round",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": 1
+                }
+            },
+            "routes": {
+                "yes": "not-sale-notice",
+                "no": "give-back-talk"
+            }
+        },
+        {
+            "key": "not-sale-notice",
+            "kind": "execute",
+            "step": "sales.not-sale-notice",
+            "params": {
+                "routeId": {
+                    "$ref": "trigger.data.conversationId"
                 },
-                "leadId": {
-                    "$ref": "steps.consult.output.leadId"
+                "text": {
+                    "$ref": "trigger.data.text"
                 },
                 "locale": "vi"
             },
-            "next": "won",
-            "model": "claude-sonnet-5-5"
+            "blocking": false,
+            "mode": "auto",
+            "accounts": []
         },
         {
-            "key": "won",
+            "key": "give-back-talk",
+            "kind": "output",
+            "step": "core.hand-back",
+            "params": {
+                "wait": "hear"
+            }
+        },
+        {
+            "key": "settled",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.talk.output.last.occasions",
+                        "default": null
+                    },
+                    "op": "present"
+                }
+            },
+            "routes": {
+                "yes": "keep-occasions",
+                "no": "not-sale-said"
+            }
+        },
+        {
+            "key": "not-sale-said",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.talk.output.last.posted",
+                        "default": null
+                    },
+                    "op": "present"
+                }
+            },
+            "routes": {
+                "yes": "not-sale",
+                "no": "ready-said"
+            }
+        },
+        {
+            "key": "not-sale",
             "kind": "output",
             "step": "core.outcome",
             "params": {
-                "outcome": "won",
-                "outputs": {
-                    "orderId": {
-                        "$ref": "steps.create-order.output.orderId"
+                "outcome": "not-sale",
+                "outputs": {}
+            }
+        },
+        {
+            "key": "keep-occasions",
+            "kind": "execute",
+            "step": "sales.occasion-keep",
+            "params": {
+                "contactId": {
+                    "$ref": "steps.talk.output.last.contactId",
+                    "default": null
+                },
+                "occasions": {
+                    "$ref": "steps.talk.output.last.occasions",
+                    "default": null
+                }
+            },
+            "blocking": false,
+            "next": "keep-occasions-declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "keep-occasions-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.keep-occasions.output.declined",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "keep-occasions-declined-notice",
+                "no": "not-sale-said"
+            }
+        },
+        {
+            "key": "keep-occasions-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Ghi nhớ ngày của khách",
+                "ref": null
+            },
+            "blocking": false,
+            "next": "not-sale-said",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "ready-said",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.talk.output.last.branch",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": "ready"
+                }
+            },
+            "routes": {
+                "yes": "create-order",
+                "no": "cancel-said"
+            }
+        },
+        {
+            "key": "create-order",
+            "kind": "execute",
+            "step": "sales.order-create",
+            "params": {
+                "contactId": {
+                    "$ref": "steps.talk.output.last.contactId",
+                    "default": null
+                },
+                "items": {
+                    "$ref": "steps.talk.output.last.items",
+                    "default": null
+                },
+                "address": {
+                    "$ref": "steps.talk.output.last.address",
+                    "default": null
+                },
+                "recipientName": {
+                    "$ref": "steps.talk.output.last.recipientName",
+                    "default": null
+                },
+                "recipientPhone": {
+                    "$ref": "steps.talk.output.last.recipientPhone",
+                    "default": null
+                },
+                "deliveryAt": {
+                    "$ref": "steps.talk.output.last.deliveryAt",
+                    "default": null
+                }
+            },
+            "next": "create-declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "create-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.create-order.output.declined",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "create-declined-notice",
+                "no": "request-qr"
+            }
+        },
+        {
+            "key": "create-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Ghi đơn hàng",
+                "ref": null,
+                "locale": "vi"
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "request-qr",
+            "kind": "execute",
+            "step": "sales.request-qr",
+            "params": {
+                "orderNo": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "amountVnd": {
+                    "$ref": "steps.create-order.output.amountVnd"
+                }
+            },
+            "next": "tell-order",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "payment",
+                    "provider": "sepay",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "tell-order",
+            "kind": "execute",
+            "step": "sales.order-tell",
+            "params": {
+                "conversationId": {
+                    "$ref": "trigger.data.conversationId"
+                },
+                "orderNo": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "amountVnd": {
+                    "$ref": "steps.create-order.output.amountVnd"
+                },
+                "lines": {
+                    "$ref": "steps.create-order.output.lines"
+                },
+                "qr": {
+                    "$ref": "steps.request-qr.output"
+                },
+                "locale": "vi"
+            },
+            "model": "claude-sonnet-5-5",
+            "next": "tell-declined",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "tell-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.tell-order.output.declined",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "tell-declined-notice",
+                "no": "pay"
+            }
+        },
+        {
+            "key": "tell-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Báo khách đơn hàng",
+                "ref": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "pay",
+            "kind": "execute",
+            "step": "core.until",
+            "params": {
+                "mode": "until",
+                "until": {
+                    "or": [
+                        {
+                            "ref": {
+                                "$ref": "steps.paid-order.output.orderNo",
+                                "default": null
+                            },
+                            "op": "present"
+                        },
+                        {
+                            "ref": {
+                                "$ref": "steps.paid-order.output.declined",
+                                "default": false
+                            },
+                            "op": "eq",
+                            "value": true
+                        }
+                    ]
+                },
+                "max": 6
+            },
+            "routes": {
+                "body": "await",
+                "exhausted": "unpaid-notice"
+            },
+            "next": "paid-declined"
+        },
+        {
+            "key": "await",
+            "kind": "condition",
+            "step": "core.wait",
+            "params": {
+                "on": [
+                    {
+                        "key": "credit",
+                        "verb": "nivo.trigger.payment.credit.received",
+                        "where": [
+                            {
+                                "param": "data.direction",
+                                "op": "equals",
+                                "value": "in"
+                            }
+                        ],
+                        "match": [
+                            {
+                                "member": "data.content",
+                                "op": "contains",
+                                "value": {
+                                    "$ref": "steps.create-order.output.orderNo",
+                                    "default": null
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "key": "zalo",
+                        "verb": "nivo.trigger.zalo.message.received"
+                    },
+                    {
+                        "key": "telegram",
+                        "verb": "nivo.trigger.telegram.message.received"
+                    },
+                    {
+                        "key": "facebook",
+                        "verb": "nivo.trigger.facebook.message.received"
+                    },
+                    {
+                        "key": "instagram",
+                        "verb": "nivo.trigger.instagram.message.received"
+                    }
+                ],
+                "timeout": {
+                    "days": 1
+                }
+            },
+            "routes": {
+                "credit": "credit",
+                "zalo": "order-talk",
+                "telegram": "order-talk",
+                "facebook": "order-talk",
+                "instagram": "order-talk",
+                "timeout": "remind"
+            }
+        },
+        {
+            "key": "credit",
+            "kind": "execute",
+            "step": "sales.credit-read",
+            "params": {
+                "transactionId": {
+                    "$ref": "steps.await.output.event.data.transactionId"
+                }
+            },
+            "next": "exact",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "payment",
+                    "provider": "sepay",
+                    "connectionId": null
+                },
+                {
+                    "kind": "payment",
+                    "provider": "casso",
+                    "connectionId": null
+                },
+                {
+                    "kind": "payment",
+                    "provider": "payos",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "exact",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.credit.output.amountVnd",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": {
+                        "$ref": "steps.create-order.output.amountVnd",
+                        "default": null
                     }
                 }
+            },
+            "routes": {
+                "yes": "paid-order",
+                "no": "short"
+            }
+        },
+        {
+            "key": "paid-order",
+            "kind": "execute",
+            "step": "sales.order-paid",
+            "params": {
+                "orderId": {
+                    "$ref": "steps.create-order.output.orderId"
+                }
+            },
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "short",
+            "kind": "execute",
+            "step": "sales.payment-short",
+            "params": {
+                "contactId": {
+                    "$ref": "steps.talk.output.last.contactId",
+                    "default": null
+                },
+                "orderNo": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "orderAmountVnd": {
+                    "$ref": "steps.create-order.output.amountVnd"
+                },
+                "creditAmountVnd": {
+                    "$ref": "steps.credit.output.amountVnd"
+                },
+                "locale": "vi"
+            },
+            "model": "claude-sonnet-5-5",
+            "blocking": false,
+            "next": "short-notice",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "short-notice",
+            "kind": "execute",
+            "step": "sales.credit-notice",
+            "params": {
+                "transactionId": {
+                    "$ref": "steps.credit.output.transactionId"
+                },
+                "amountVnd": {
+                    "$ref": "steps.credit.output.amountVnd"
+                },
+                "content": {
+                    "$ref": "steps.credit.output.content"
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "order-talk",
+            "kind": "condition",
+            "step": "sales.order-talk",
+            "params": {
+                "contactId": {
+                    "$ref": "steps.talk.output.last.contactId",
+                    "default": null
+                },
+                "text": {
+                    "$ref": "steps.await.output.event.data.text",
+                    "default": ""
+                },
+                "orderNo": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "amountVnd": {
+                    "$ref": "steps.create-order.output.amountVnd"
+                },
+                "locale": "vi"
+            },
+            "model": "claude-sonnet-5-5",
+            "routes": {
+                "about": "order-talk-sent",
+                "off": "give-back"
+            },
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "order-talk-sent",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "and": [
+                        {
+                            "ref": {
+                                "$ref": "steps.order-talk.output.refusal",
+                                "default": null
+                            },
+                            "op": "present"
+                        },
+                        {
+                            "ref": {
+                                "$ref": "steps.order-talk.output.refusal",
+                                "default": null
+                            },
+                            "op": "ne",
+                            "value": "route_held"
+                        }
+                    ]
+                }
+            },
+            "routes": {
+                "yes": "order-talk-unsent-notice"
+            }
+        },
+        {
+            "key": "order-talk-unsent-notice",
+            "kind": "execute",
+            "step": "team.unsent-notice",
+            "params": {
+                "step": "Trao đổi về đơn",
+                "ref": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "refusal": {
+                    "$ref": "steps.order-talk.output.refusal"
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "give-back",
+            "kind": "output",
+            "step": "core.hand-back",
+            "params": {
+                "wait": "await"
+            }
+        },
+        {
+            "key": "remind",
+            "kind": "execute",
+            "step": "sales.payment-remind",
+            "params": {
+                "contactId": {
+                    "$ref": "steps.talk.output.last.contactId",
+                    "default": null
+                },
+                "orderNo": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "amountVnd": {
+                    "$ref": "steps.create-order.output.amountVnd"
+                },
+                "locale": "vi"
+            },
+            "model": "claude-sonnet-5-5",
+            "next": "remind-sent",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "remind-sent",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "and": [
+                        {
+                            "ref": {
+                                "$ref": "steps.remind.output.refusal",
+                                "default": null
+                            },
+                            "op": "present"
+                        },
+                        {
+                            "ref": {
+                                "$ref": "steps.remind.output.refusal",
+                                "default": null
+                            },
+                            "op": "ne",
+                            "value": "route_held"
+                        }
+                    ]
+                }
+            },
+            "routes": {
+                "yes": "remind-unsent-notice"
+            }
+        },
+        {
+            "key": "remind-unsent-notice",
+            "kind": "execute",
+            "step": "team.unsent-notice",
+            "params": {
+                "step": "Nhắc khách chuyển khoản",
+                "ref": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "refusal": {
+                    "$ref": "steps.remind.output.refusal"
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "unpaid-notice",
+            "kind": "execute",
+            "step": "sales.unpaid-notice",
+            "params": {
+                "orderNo": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "amountVnd": {
+                    "$ref": "steps.create-order.output.amountVnd"
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "next": "unpaid",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "paid-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.pay.output.last.declined",
+                        "default": false
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "paid-declined-notice",
+                "no": "to-after-sale"
+            }
+        },
+        {
+            "key": "paid-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Ghi đơn đã trả",
+                "ref": {
+                    "$ref": "steps.create-order.output.orderNo"
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "to-after-sale",
+            "kind": "output",
+            "step": "core.call-workflow",
+            "params": {
+                "agent": "sales",
+                "workflow": "after-sale",
+                "version": "latest",
+                "inputs": {
+                    "orderId": {
+                        "$ref": "steps.create-order.output.orderId"
+                    },
+                    "contactId": {
+                        "$ref": "steps.talk.output.last.contactId",
+                        "default": null
+                    }
+                }
+            },
+            "next": "paid"
+        },
+        {
+            "key": "paid",
+            "kind": "output",
+            "step": "core.outcome",
+            "params": {
+                "outcome": "paid",
+                "outputs": {
+                    "contactId": {
+                        "$ref": "trigger.data.contactId",
+                        "default": null
+                    },
+                    "orderId": {
+                        "$ref": "steps.create-order.output.orderId"
+                    },
+                    "orderNo": {
+                        "$ref": "steps.create-order.output.orderNo"
+                    }
+                }
+            }
+        },
+        {
+            "key": "unpaid",
+            "kind": "output",
+            "step": "core.outcome",
+            "params": {
+                "outcome": "unpaid",
+                "outputs": {
+                    "contactId": {
+                        "$ref": "trigger.data.contactId",
+                        "default": null
+                    },
+                    "orderId": {
+                        "$ref": "steps.create-order.output.orderId"
+                    },
+                    "orderNo": {
+                        "$ref": "steps.create-order.output.orderNo"
+                    }
+                }
+            }
+        },
+        {
+            "key": "cancel-said",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.talk.output.last.branch",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": "cancel"
+                }
+            },
+            "routes": {
+                "yes": "cancel-read",
+                "no": "declined-said"
+            }
+        },
+        {
+            "key": "declined-said",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.talk.output.last.branch",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": "declined"
+                }
+            },
+            "routes": {
+                "yes": "consult-declined-notice",
+                "no": "quiet"
+            }
+        },
+        {
+            "key": "consult-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Tư vấn khách",
+                "ref": null,
+                "locale": "vi"
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "cancel-read",
+            "kind": "execute",
+            "step": "sales.order-read",
+            "params": {
+                "orderId": {
+                    "$ref": "steps.talk.output.last.cancelOrderId",
+                    "default": null
+                }
+            },
+            "next": "cancel-paid",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "cancel-paid",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.cancel-read.output.status",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": "paid"
+                }
+            },
+            "routes": {
+                "yes": "cancel-paid-notice",
+                "no": "cancel-order"
+            }
+        },
+        {
+            "key": "cancel-paid-notice",
+            "kind": "execute",
+            "step": "sales.cancel-paid-notice",
+            "params": {
+                "orderNo": {
+                    "$ref": "steps.cancel-read.output.orderNo"
+                },
+                "reason": {
+                    "$ref": "steps.talk.output.last.cancelReason",
+                    "default": null
+                },
+                "text": {
+                    "$ref": "trigger.data.text"
+                },
+                "locale": "vi"
+            },
+            "model": "claude-sonnet-5-5",
+            "next": "quiet",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "cancel-order",
+            "kind": "execute",
+            "step": "sales.order-cancel",
+            "params": {
+                "orderId": {
+                    "$ref": "steps.cancel-read.output.orderId"
+                },
+                "reason": {
+                    "$ref": "steps.talk.output.last.cancelReason",
+                    "default": null
+                }
+            },
+            "next": "cancel-declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "cancel-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.cancel-order.output.declined",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "cancel-declined-notice",
+                "no": "tell-cancelled"
+            }
+        },
+        {
+            "key": "cancel-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Huỷ đơn",
+                "ref": {
+                    "$ref": "steps.cancel-order.output.orderId"
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "tell-cancelled",
+            "kind": "execute",
+            "step": "sales.order-cancel-tell",
+            "params": {
+                "conversationId": {
+                    "$ref": "trigger.data.conversationId"
+                },
+                "orderNo": {
+                    "$ref": "steps.cancel-order.output.orderNo",
+                    "default": null
+                },
+                "locale": "vi"
+            },
+            "model": "claude-sonnet-5-5",
+            "next": "tell-cancelled-declined",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "tell-cancelled-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.tell-cancelled.output.declined",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "tell-cancelled-declined-notice",
+                "no": "quiet"
+            }
+        },
+        {
+            "key": "tell-cancelled-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Báo khách đã huỷ đơn",
+                "ref": {
+                    "$ref": "steps.cancel-order.output.orderNo",
+                    "default": null
+                },
+                "locale": "vi"
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "declined",
+            "kind": "output",
+            "step": "core.outcome",
+            "params": {
+                "outcome": "declined",
+                "outputs": {}
+            }
+        },
+        {
+            "key": "quiet",
+            "kind": "output",
+            "step": "core.outcome",
+            "params": {
+                "outcome": "quiet",
+                "outputs": {}
             }
         }
     ]

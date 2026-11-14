@@ -1,7 +1,18 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { BrainChangeRequestsService, BrainFactsError, BrainFactsErrorCode, BrainFactsService } from "@modules/domain/brain-facts"
-import type { ChangeFiled, ChangeRequestHook, FactRecord, ReasonedChangeRequest } from "@modules/domain/brain-facts"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import {
+  BrainChangeRequestsService,
+  BrainFactsError,
+  BrainFactsErrorCode,
+  BrainFactsService,
+  foldedText,
+  valueLineOf,
+  type ChangeFiled,
+  type ChangeRequestHook,
+  type ChangeSpeaker,
+  type FactRecord,
+  type MaybeFact,
+  type ReasonedChangeRequest,
+} from "@modules/domain/brain-facts"
 import { TeamChatAudienceService, TeamChatCardsService, TeamChatStoreService } from "@modules/domain/team-chat"
 import type {
     BrainChangeCurrent,
@@ -19,8 +30,7 @@ import {
     supersededPayloadOf,
 } from "@modules/domain/team-chat/brain-change-card.policy"
 import { WorkspaceMembersReadService, WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BrainService } from "./brain.service"
 import { FactEmbeddingsService } from "./fact-embeddings.service"
@@ -61,7 +71,7 @@ export interface BrainChangeDecide {
     /** The change request on the card. */
     readonly changeId: string
     /**
-     * Đồng ý, Không, or Giữ cả hai (FX5: only on a card whose value in force is a near-meaning candidate; the founder only): the new
+     * Approve, Reject, or Keep both (FX5: only on a card whose value in force is a near-meaning candidate; the founder only): the new
      * value goes in force as its own truth and the candidate stays.
      */
     readonly action: "approve" | "reject" | "keep_both"
@@ -72,9 +82,9 @@ export interface BrainChangeDecide {
 /** What a decision did, and where the card stands after it. */
 export interface BrainChangeDecision {
     /**
-     * `applied` / `rejected`: decided and the card rewritten; `founder_only`: a manager pressed Đồng ý, nothing changed;
+     * `applied` / `rejected`: decided and the card rewritten; `founder_only`: a manager pressed Approve, nothing changed;
      * `already_decided`: the card was not open (or the request was decided meanwhile); `not_found`: no card of that request;
-     * `not_offered`: Giữ cả hai on a card whose value in force is the same truth (nothing to keep apart), nothing changed.
+     * `not_offered`: Keep both on a card whose value in force is the same truth (nothing to keep apart), nothing changed.
      */
     readonly outcome: "applied" | "rejected" | "founder_only" | "already_decided" | "not_found" | "not_offered"
     /** Where the card stands; null when there is none. */
@@ -84,7 +94,7 @@ export interface BrainChangeDecision {
 }
 
 /** The decisions of the store that put a proposal in force (or take a fact out of force, for a retire proposal). */
-const APPLIED: ReadonlyArray<FactRecord["status"]> = ["active", "scheduled", "superseded", "expired"]
+const APPLIED: ReadonlySet<FactRecord["status"]> = new Set(["active", "scheduled", "superseded", "expired"])
 
 /** What a change request does to the graph, read from the proposal and the value in force. */
 const kindOf = (fact: FactRecord, current: BrainChangeCurrent | null): BrainChangePayload["kind"] => {
@@ -92,13 +102,18 @@ const kindOf = (fact: FactRecord, current: BrainChangeCurrent | null): BrainChan
     return current === null ? "add" : "change"
 }
 
-/** The value in force a card shows, found as the same truth or as another truth near in meaning. */
+/**
+ * The value in force a card shows, found as the same truth or as another truth near in meaning: with its unit (`valueLineOf`), as the
+ * proposed side reads `newValue` + `unit`, so the card's line never loses the unit on one side nor says it twice on the other.
+ */
 const currentLineOf = (fact: FactRecord, match: "same" | "near"): BrainChangeCurrent => ({
-    value: fact.value,
+    value: valueLineOf(fact),
     version: fact.version ?? null,
     source: sourceOf(fact),
     match,
     factKey: { subjectLabel: fact.subjectLabel, attributeLabel: fact.attributeLabel },
+    // D-BR-6: a planned value (the truth's only value starts later) is named as what is planned, with its start date (day and month).
+    ...(fact.status === "scheduled" && fact.validFrom !== null ? { startsAt: fact.validFrom } : {}),
 })
 
 /** Whether a proposal names a fact of another truth as possibly the same (BG2's flag, or FX5's near-meaning candidate). */
@@ -132,10 +147,10 @@ const givenOf = (post: BrainChangePost, fact: FactRecord, current: BrainChangeCu
 
 @Injectable()
 /**
- * The truth-graph change message (BG4; owner 2026-11-11: "agent in ra message sửa truth graph và lí do"). When a change request is filed
- * from a chat (through `nivo.brain.change.propose`), learnt from repeated human answers (BG5) or found in a document, ONE `brain.change`
+ * The truth-graph change message (BG4; owner 2026-11-11: the agent prints a message that edits the truth graph, with its reason). When a change request is filed
+ * from a chat (through `nivo.tool.brain.change.propose`), learnt from repeated human answers (BG5) or found in a document, ONE `brain.change`
  * card goes to the room it came from (the founder's direct room with the agent when it came from no room): the truth, the value in force
- * → the proposed one, the agent's reason and the evidence. It never applies anything. The same request again rewrites its card (more
+ * to the proposed one, the agent's reason and the evidence. It never applies anything. The same request again rewrites its card (more
  * evidence, the newest reason); a newer request for the same truth marks the older open card `superseded`. Only the workspace owner
  * approves on the card (W2's founder-only apply: next version, one year unless stated, edges carried); a manager may turn it down. Every
  * decision rewrites the same card in place.
@@ -159,16 +174,26 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
         this.requests.whenFiled(this)
     }
 
-    /** Refuses words that are not a person's line of the workspace's team chat (a customer's words never are). */
-    async vet(workspaceId: string, request: ReasonedChangeRequest): Promise<void> {
+    /**
+     * Refuses words that are not a person's line of the workspace's team chat (a customer's words never are), or that the line does
+     * not hold (accents, case and punctuation aside), and answers WHO wrote the line: their workspace role is the source the request is
+     * filed under (owner order 2026-11-11: the founder's own words are an owner source). The role is read here from the line's author,
+     * never taken from the model; an author who is no active member any more counts as staff.
+     */
+    async vet(workspaceId: string, request: ReasonedChangeRequest): Promise<ChangeSpeaker> {
         const [line] = await this.store.messagesByIds(workspaceId, [request.messageId])
         if (line?.authorKind !== "user" || line.authorId === null) {
             throw new BrainFactsError({ code: BrainFactsErrorCode.FactNotFound, params: { field: "messageId" } })
         }
+        if (!foldedText(line.body).includes(foldedText(request.quote))) {
+            throw new BrainFactsError({ code: BrainFactsErrorCode.FactNotFound, params: { field: "quote" } })
+        }
+        const author = await this.members.require(line.authorId, workspaceId).catch(() => null)
+        return author?.role ?? "staff"
     }
 
     /** The near-meaning candidate in force for a chat proposal that replaces nothing by id or key (FX5); the founder confirms on the card. */
-    nearOf(workspaceId: string, proposal: FactRecord): Promise<FactRecord | null> {
+    nearOf(workspaceId: string, proposal: FactRecord): Promise<MaybeFact> {
         return this.vectors.nearestInForce(workspaceId, proposal)
     }
 
@@ -176,8 +201,9 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
     async filed(workspaceId: string, request: ReasonedChangeRequest, filed: ChangeFiled): Promise<void> {
         if (filed.outcome === "already_true") return
         const [line] = await this.store.messagesByIds(workspaceId, [request.messageId])
-        if (line === undefined || line.authorId === null) return
-        const [person] = await this.people.namesOf(workspaceId, [line.authorId])
+        const authorId = line?.authorId ?? null
+        if (line === undefined || authorId === null) return
+        const [person] = await this.people.namesOf(workspaceId, [authorId])
         await this.post({
             workspaceId,
             changeId: filed.fact.id,
@@ -188,7 +214,7 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
                     kind: "message",
                     quote: request.quote.trim(),
                     ref: `team-chat:${line.id}`,
-                    by: { name: person?.displayName ?? "", memberId: line.authorId },
+                    by: { name: person?.displayName ?? "", memberId: authorId },
                     at: line.createdAt.toISOString(),
                 },
             ],
@@ -224,8 +250,8 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
     }
 
     /**
-     * Decides on the card: Đồng ý applies through W2's founder-only path (a competing value of the same truth is turned down with it),
-     * Không turns it down; then the same card is rewritten with who and when. A manager's Đồng ý changes nothing (`founder_only`);
+     * Decides on the card: Approve applies through W2's founder-only path (a competing value of the same truth is turned down with it),
+     * Reject turns it down; then the same card is rewritten with who and when. A manager's Approve changes nothing (`founder_only`);
      * someone who is neither owner nor manager is refused by the member check.
      */
     async decide(userId: string, decision: BrainChangeDecide): Promise<BrainChangeDecision> {
@@ -243,7 +269,7 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
         const fact = await this.facts.get(decision.workspaceId, decision.changeId)
         if (fact?.status !== "proposed") return this.closed(decision.workspaceId, card, fact)
         try {
-            // Giữ cả hai: the candidate is no longer named, so approving puts the value in force as its own truth and merges nothing.
+            // Keep both: the candidate is no longer named, so approving puts the value in force as its own truth and merges nothing.
             if (decision.action === "keep_both") await this.facts.keepApart(decision.workspaceId, fact.id)
             await this.brain.decideFact(userId, {
                 workspaceId: decision.workspaceId,
@@ -274,7 +300,7 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
         const key = brainChangeKeyOf(fact.id)
         const card = brainChangeOfMessage(await this.audience.storedCard(workspaceId, key))
         if (card?.state !== "open" || fact.status === "proposed") return
-        const state = APPLIED.includes(fact.status) ? "applied" : "rejected"
+        const state = APPLIED.has(fact.status) ? "applied" : "rejected"
         const decided = decidedPayloadOf(card, state, {
             memberId: "",
             name: fact.decidedBy ?? "",
@@ -296,21 +322,30 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
 
     /**
      * The value in force the proposal would replace, or null for a new truth: the fact it names (`conflictWith`: the value in force of
-     * its key when it was filed, or, flagged `same_meaning`, a fact of another truth near in meaning: shown as `near`, "có thể thay
-     * cho"), else the active value of its key in its own instance scope, then the workspace-wide one.
+     * its key when it was filed, or, flagged `same_meaning`, a fact of another truth near in meaning: shown as `near`, "may replace it"), else the active value of its key in its own instance scope, then the workspace-wide one.
      */
     private async currentOf(workspaceId: string, fact: FactRecord): Promise<BrainChangeCurrent | null> {
         const named = fact.conflictWith === null ? null : await this.facts.get(workspaceId, fact.conflictWith)
-        if (named?.status === "active") {
+        if (named?.status === "active" || named?.status === "scheduled") {
             const sameKey = named.subjectKey === fact.subjectKey && named.attribute === fact.attribute
             return currentLineOf(named, sameMeaningOf(fact) && !sameKey ? "near" : "same")
         }
-        const [own] = await this.facts.byKey(workspaceId, fact.subjectKey, fact.attribute, "active", fact.installationId)
-        const [keyed] =
-            own !== undefined || fact.installationId === null
-                ? [own]
-                : await this.facts.byKey(workspaceId, fact.subjectKey, fact.attribute, "active", null)
+        // The value in force of the key, else (D-BR-6) its plan: the card names what the change replaces, never "add" beside a plan.
+        const keyed =
+            (await this.valueOfKey(workspaceId, fact, "active")) ?? (await this.valueOfKey(workspaceId, fact, "scheduled"))
         return keyed === undefined ? null : currentLineOf(keyed, "same")
+    }
+
+    /** The value of the proposal's key in one status: in its own instance scope, then the workspace-wide one. */
+    private async valueOfKey(
+        workspaceId: string,
+        fact: FactRecord,
+        status: "active" | "scheduled",
+    ): Promise<FactRecord | undefined> {
+        const [own] = await this.facts.byKey(workspaceId, fact.subjectKey, fact.attribute, status, fact.installationId)
+        if (own !== undefined || fact.installationId === null) return own
+        const [shared] = await this.facts.byKey(workspaceId, fact.subjectKey, fact.attribute, status, null)
+        return shared
     }
 
     /** Posts the card once under its key: in the room named, else in the founder's direct room with the agent. */
@@ -352,9 +387,9 @@ export class BrainChangeMessagesService implements OnModuleInit, ChangeRequestHo
     }
 }
 
-/** The store's decision for a card's button: Đồng ý on a value chooses it (competing values turned down), on a retire applies it. */
+/** The store's decision for a card's button: Approve on a value chooses it (competing values turned down), on a retire applies it. */
 const actionOf = (action: BrainChangeDecide["action"], fact: FactRecord): "choose" | "apply" | "reject" => {
-    // keep_both: the candidate was let go just before; the value is chosen like Đồng ý.
+    // keep_both: the candidate was let go just before; the value is chosen like Approve.
     if (action === "reject") return "reject"
     return fact.proposalKind === "set" ? "choose" : "apply"
 }

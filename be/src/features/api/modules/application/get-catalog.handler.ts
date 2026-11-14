@@ -1,22 +1,20 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ModulesService } from "@modules/domain/modules"
-import type { ModulesCatalog } from "@modules/domain/modules"
+import { ModuleAccessService, type OpenCatalog } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetCatalogQuery } from "./get-catalog.query"
 
 @QueryHandler(GetCatalogQuery)
-/** Answers the catalogue of installable agents from the modules service. */
-export class GetCatalogHandler extends ICQRSHandler<GetCatalogQuery, ModulesCatalog> {
+/** Answers the catalogue of installable agents as the named workspace may see it: one list, the modules of every installed plugin. */
+export class GetCatalogHandler extends ICQRSHandler<GetCatalogQuery, OpenCatalog> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly modulesService: ModulesService,
+        private readonly access: ModuleAccessService,
     ) {
         super(logger)
     }
 
-    protected override process(): Promise<ModulesCatalog> {
-        return this.modulesService.catalog()
+    protected override process(query: GetCatalogQuery): Promise<OpenCatalog> {
+        return this.access.catalogFor(query.params.principal.id, query.params.request.workspaceId)
     }
 }

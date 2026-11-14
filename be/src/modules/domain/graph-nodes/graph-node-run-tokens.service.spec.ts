@@ -41,6 +41,7 @@ describe("GraphNodeRunTokensService", () => {
             memberId: null,
             scope: "workspace",
             expiresAt: NOW + 300_000,
+            contactId: null,
             leadId: null,
         })
     })
@@ -51,6 +52,7 @@ describe("GraphNodeRunTokensService", () => {
 
         expect(claims).toMatchObject({ leadId: "lead-1" })
         expect(claims).not.toHaveProperty("stepTools")
+        expect(tokens.verify(tokens.mint({ ...TURN, contactId: "contact-1" }))).toMatchObject({ contactId: "contact-1", leadId: null })
         expect(claims).not.toHaveProperty("locale")
         expect(tokens.verify(tokens.mint({ ...TURN, subject: { kind: "order", id: "o-1" } }))).toMatchObject({ leadId: null })
     })
@@ -74,5 +76,23 @@ describe("GraphNodeRunTokensService", () => {
         expect(other.tokens.verify(token)).toBeNull()
         clock.advance(300_000)
         expect(tokens.verify(token)).toBeNull()
+    })
+
+    it("signs the part the run plays for the provider trigger that started it; a token without it is no notice run", async () => {
+        const { tokens } = await build()
+        const step = { nodeKey: "ledger", versionId: "v-6", workflowId: "wf-1" }
+
+        expect(tokens.verify(tokens.mint(TURN, { ...step, triggerRole: "notice" }))?.step).toEqual({ ...step, triggerRole: "notice" })
+        expect(tokens.verify(tokens.mint(TURN, { ...step, triggerRole: "decider" }))?.step?.triggerRole).toBe("decider")
+        expect(tokens.verify(tokens.mint(TURN, step))?.step).not.toHaveProperty("triggerRole")
+    })
+
+    it("signs the workflow step the host names, and none when it names none", async () => {
+        const { tokens } = await build()
+        const step = { nodeKey: "send-qr", versionId: "v-3", workflowId: "wf-1" }
+
+        expect(tokens.verify(tokens.mint(TURN, step))).toMatchObject({ runId: "run-1", step })
+        expect(tokens.verify(tokens.mint(TURN, { ...step, workflowId: null }))?.step).toEqual({ ...step, workflowId: null })
+        expect(tokens.verify(tokens.mint(TURN))).not.toHaveProperty("step")
     })
 })

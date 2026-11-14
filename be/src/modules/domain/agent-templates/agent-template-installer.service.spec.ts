@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { AgentWorkflowInstallService } from "@modules/domain/agent-graphs"
 import * as sdk from "@nivo-lite/agent-sdk/template"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentGraphPublishService, AgentGraphSeedService } from "@modules/domain/agent-graphs"
@@ -90,6 +91,7 @@ const build = async (options: Options = {}) => {
         setMode: jest.fn().mockResolvedValue(null),
     })
     const documents = mock<PublicDocumentsService>({ write: jest.fn().mockResolvedValue({}) })
+    const workflows = mock<AgentWorkflowInstallService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentTemplateInstallerService,
@@ -102,6 +104,7 @@ const build = async (options: Options = {}) => {
             { provide: AgentGraphSeedService, useValue: seed },
             { provide: AgentGraphPublishService, useValue: publish },
             { provide: PublicDocumentsService, useValue: documents },
+            { provide: AgentWorkflowInstallService, useValue: workflows },
         ],
     }).compile()
     return {
@@ -113,6 +116,7 @@ const build = async (options: Options = {}) => {
         publish,
         documents,
         installations,
+        workflows,
     }
 }
 
@@ -139,7 +143,6 @@ describe("AgentTemplateInstallerService.install", () => {
         expect(workspaceId).toBe("ws-buyer")
         expect(agentId).toBe("agent-new")
         expect(by).toEqual({ memberId: "member-owner", role: "owner" })
-        expect(document?.rights).toEqual([])
         const small = document?.nodes
             .find((node) => node.key === "decide")
             ?.decide?.branches.find((branch) => branch.key === "small")
@@ -285,9 +288,10 @@ describe("AgentTemplateInstallerService.install refusals", () => {
 
     it("refuses, publishing nothing, a filled graph the graph schema cannot read", async () => {
         const { service, publish } = await build()
+        // A node whose title is longer than the graph schema allows: the filled graph does not parse.
+        const [first, ...rest] = packageOf().graph.nodes
         jest.spyOn(sdk, "instantiate").mockReturnValueOnce({
-            nodes: [],
-            rights: [{ kind: "bogus", scope: "workspace", hide: [], mask: [] }],
+            nodes: first === undefined ? [] : [{ ...first, title: "x".repeat(10_000) }, ...rest],
         })
 
         expect(await codeOf(service.install(BUYER, REQUEST))).toBe(AgentTemplatesErrorCode.ValuesRefused)
@@ -335,5 +339,23 @@ describe("AgentTemplateInstallerService.importOwn", () => {
 
         expect(await codeOf(service.importOwn(BUYER, IMPORT))).toBe(AgentTemplatesErrorCode.NotYours)
         expect(moduleInstall.install).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentTemplateInstallerService.install, rights and workflows of the agent it makes", () => {
+    it("publishes with unagreed rights WAITING (the agent was made in this call), then gives it its base module's workflows", async () => {
+        const { service, publish, workflows } = await build()
+
+        const installed = await service.install(BUYER, REQUEST)
+
+        expect(publish.publishTemplate.mock.calls[0]?.slice(4)).toEqual([[], "wait"])
+        expect(workflows.install).toHaveBeenCalledWith({
+            workspaceId: "ws-buyer",
+            agentId: "agent-new",
+            installationId: installed.installationId,
+            moduleKey: "accounting",
+        })
+        const published = publish.setMode.mock.invocationCallOrder[0] ?? 0
+        expect(workflows.install.mock.invocationCallOrder[0]).toBeGreaterThan(published)
     })
 })

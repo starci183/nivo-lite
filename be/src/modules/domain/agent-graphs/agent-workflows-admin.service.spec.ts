@@ -26,13 +26,13 @@ const ACTOR = { workspaceId: "ws-1", principalId: "user-1" }
 
 const GRAPH: GraphSpec = {
     schema: "nivo/agent-graph@1",
-    moduleKey: "accounting",
+    moduleKey: "booking",
     trigger: { kind: "tag", sources: ["schedule"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [{ key: "end", kind: "output", step: "stop" }],
 }
 
-const WIDER: GraphSpec = { ...GRAPH, grant: { ...GRAPH.grant, tools: ["nivo.ledger.entry.append"] } }
+const WIDER: GraphSpec = { ...GRAPH, grant: { ...GRAPH.grant, tools: ["nivo.tool.ledger.entry.append"] } }
 
 const VIEW: WorkflowView = {
     id: "wf-1",
@@ -72,8 +72,6 @@ const NO_DIFF: WorkflowDiff = {
     steps: [],
     triggerChanged: false,
     grant: {
-        rightsAdded: [],
-        rightsRemoved: [],
         toolsAdded: [],
         toolsRemoved: [],
         effectsAdded: [],
@@ -99,7 +97,7 @@ const build = async (role: Role | null = "owner") => {
         role === null ? null : mock<MemberSeatRecord>({ memberId: "member-1", role }),
     )
     const installations = mock<InstallationRecordsService>()
-    installations.find.mockResolvedValue(mock<InstallationRecord>({ agentId: "agent-1", moduleKey: "accounting" }))
+    installations.find.mockResolvedValue(mock<InstallationRecord>({ agentId: "agent-1", moduleKey: "booking" }))
     const workflows = mock<AgentWorkflowsService>()
     workflows.detail.mockResolvedValue(DETAIL)
     workflows.list.mockResolvedValue([VIEW])
@@ -163,8 +161,9 @@ describe("AgentWorkflowsAdminService: seats", () => {
         const { admin, runs } = await build("staff")
         runs.pinsOf.mockResolvedValue([])
 
-        // Accounting ships three templates: reconcile (which took the payment claim in), the reports and the team chat turn (C1).
-        await expect(admin.templates(ACTOR, { moduleKey: "accounting" })).resolves.toHaveLength(3)
+        // Booking ships two templates: book and remind. Ledger (TOOLS-LEAD F2): the third, `booking.team-chat`, left with BIZ-MOVE-LEAD's
+        // booking agent (like content, it has no team-chat graph: the router only reaches a module that ships `<module>.team-chat`).
+        await expect(admin.templates(ACTOR, { moduleKey: "booking" })).resolves.toHaveLength(2)
         await expect(admin.template(ACTOR, { templateId: "sales.consult" })).resolves.toMatchObject({ primary: true })
         await expect(admin.runPins(ACTOR, { installationId: "inst-1", runIds: ["run-1"] })).resolves.toEqual([])
     })
@@ -181,7 +180,7 @@ describe("AgentWorkflowsAdminService: graph", () => {
         version: "latest",
         crossAgent: true,
     }
-    const OWN = { ...CALL, nodeKey: "own", agent: "accounting", agentLabel: "Accounting", crossAgent: false }
+    const OWN = { ...CALL, nodeKey: "own", agent: "booking", agentLabel: "Accounting", crossAgent: false }
     const ENTRY = {
         id: "wf-1",
         key: "reports",
@@ -201,7 +200,7 @@ describe("AgentWorkflowsAdminService: graph", () => {
     it("names the installed agent and the agent of each cross-agent target, for a manager", async () => {
         const { admin, workflows, installations, agents } = await build("manager")
         installations.find.mockResolvedValue(
-            mock<InstallationRecord>({ agentId: "agent-1", moduleKey: "accounting", name: "Accounting Ann" }),
+            mock<InstallationRecord>({ agentId: "agent-1", moduleKey: "booking", name: "Accounting Ann" }),
         )
         installations.firstOfModule.mockResolvedValue(
             mock<InstallationRecord>({ name: "Sales Ben", agentId: "agent-2" }),
@@ -315,21 +314,21 @@ describe("AgentWorkflowsAdminService: changes", () => {
         ).resolves.toMatchObject({ id: "wfv-2" })
     })
 
-    it("refuses a manager's version that makes a right reach the whole workspace instead of the turn", async () => {
+    it("lets a manager publish a version whose data right reaches the whole workspace instead of the turn: a data right is no widening", async () => {
         const manager = await build("manager")
         const turn: GraphSpec = {
             ...GRAPH,
-            grant: { ...GRAPH.grant, rights: [{ kind: "order", access: "read", scope: "turn", fields: ["id"] }] },
+            grant: { ...GRAPH.grant, },
         }
         const workspace: GraphSpec = {
             ...GRAPH,
-            grant: { ...GRAPH.grant, rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["id"] }] },
+            grant: { ...GRAPH.grant, },
         }
         manager.workflows.detail.mockResolvedValue({ ...DETAIL, graph: turn })
 
         await expect(
             manager.admin.publish(ACTOR, { ...publishing, graphJson: JSON.stringify(workspace) }),
-        ).rejects.toMatchObject({ code: AgentGraphsErrorCode.WidensNeedsOwner })
+        ).resolves.toMatchObject({ id: "wfv-2" })
     })
 
     it("refuses a graph text that is not a graph", async () => {
@@ -348,20 +347,20 @@ describe("AgentWorkflowsAdminService: adding and mapping", () => {
     it("adds a workflow from a template, or from scratch with a name", async () => {
         const { admin, workflows } = await build()
 
-        await admin.create(ACTOR, { installationId: "inst-1", templateId: "accounting.reports" })
+        await admin.create(ACTOR, { installationId: "inst-1", templateId: "booking.remind" })
         await admin.create(ACTOR, { installationId: "inst-1", name: " Chi " })
 
         expect(workflows.createFromTemplate).toHaveBeenCalledWith(
             "ws-1",
             "agent-1",
-            { templateId: "accounting.reports", version: null },
+            { templateId: "booking.remind", version: null },
             expect.objectContaining({ memberId: "member-1" }),
             "vi",
         )
         expect(workflows.createBlank).toHaveBeenCalledWith(
             "ws-1",
             "agent-1",
-            { name: "Chi", moduleKey: "accounting" },
+            { name: "Chi", moduleKey: "booking" },
             expect.anything(),
             "vi",
         )
@@ -379,8 +378,6 @@ describe("AgentWorkflowsAdminService: adding and mapping", () => {
                 steps: [],
                 triggerChanged: false,
                 grant: {
-                    rightsAdded: [],
-                    rightsRemoved: [],
                     toolsAdded: [],
                     toolsRemoved: [],
                     effectsAdded: [],
@@ -402,5 +399,46 @@ describe("AgentWorkflowsAdminService: adding and mapping", () => {
         expect(workflows.setStatus).toHaveBeenCalledWith("ws-1", "wf-1", "active")
         expect(workflows.versionDiff).toHaveBeenCalledWith("ws-1", "wf-1", 1, { kind: "previous" })
         expect(diff).toMatchObject({ beforeJson: null, afterJson: JSON.stringify(GRAPH) })
+    })
+})
+
+describe("AgentWorkflowsAdminService.agreeRights: the owner's picks of a stream's one source (nothing else is agreed)", () => {
+    const PICK = {
+        workflowId: "wf-1",
+        verb: "nivo.trigger.payment.credit.received",
+        stream: "bank-account:VCB:111",
+        connectionId: "c1",
+    }
+
+    it("takes no rights entries: it checks the owner's picks, records the checked ones, and answers that nothing was agreed", async () => {
+        const { admin, runs } = await build("owner")
+        runs.triggerPicksOf.mockResolvedValue([PICK])
+
+        const answer = await admin.agreeRights(ACTOR, { installationId: "inst-1", triggerPicks: [PICK] })
+
+        expect(answer).toEqual({ nodeRightsDecide: true, agreed: 0 })
+        expect(runs.triggerPicksOf).toHaveBeenCalledWith("ws-1", "agent-1", [PICK])
+        expect(runs.recordTriggerPicks).toHaveBeenCalledWith("ws-1", "agent-1", "member-1", [PICK])
+    })
+
+    it("refuses a manager's pick, writing nothing: only the owner picks a source", async () => {
+        const { admin, runs } = await build("manager")
+
+        await expect(admin.agreeRights(ACTOR, { installationId: "inst-1", triggerPicks: [PICK] })).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.Forbidden,
+        })
+        expect(runs.recordTriggerPicks).not.toHaveBeenCalled()
+    })
+
+    it("refuses staff and an account with no seat, whatever the request names", async () => {
+        const staff = await build("staff")
+        const none = await build(null)
+
+        await expect(staff.admin.agreeRights(ACTOR, { installationId: "inst-1" })).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.Forbidden,
+        })
+        await expect(none.admin.agreeRights(ACTOR, { installationId: "inst-1" })).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.Forbidden,
+        })
     })
 })

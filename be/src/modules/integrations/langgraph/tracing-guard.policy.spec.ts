@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
 import { EnvSource } from "@modules/platform/config"
 import { LanggraphErrorCode } from "./errors/langgraph.error"
 import { parseLanggraphConfig } from "./langgraph.config"
@@ -10,12 +11,24 @@ interface Subject {
     readonly requireNoTracing: typeof requireNoTracing
 }
 
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
+
 const SUBJECT = Symbol("tracing-guard.policy")
 
 /** The parser, read through the Nest testing module. */
 const build = async (): Promise<Subject> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { parseLanggraphConfig, requireNoTracing } }],
+        providers: [{ provide: SUBJECT, useValue: mock<Subject>({ parseLanggraphConfig, requireNoTracing }) }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -25,9 +38,7 @@ describe("tracing-guard.policy", () => {
         const subject = await build()
 
         expect(() => subject.requireNoTracing(() => false)).not.toThrow()
-        expect(() => subject.requireNoTracing((key) => key.startsWith("LANGCHAIN_"))).toThrow(
-            expect.objectContaining({ code: LanggraphErrorCode.TracingForbidden, params: { key: "LANGCHAIN_TRACING" } }),
-        )
+        expect(thrownBy(() => subject.requireNoTracing((key) => key.startsWith("LANGCHAIN_")))).toEqual(objectLike({ code: LanggraphErrorCode.TracingForbidden, params: { key: "LANGCHAIN_TRACING" } }))
     })
 
     it("boots with no tracing switch set and takes the default bounds", async () => {
@@ -58,9 +69,7 @@ describe("tracing-guard.policy", () => {
         async (key, value) => {
             const subject = await build()
 
-            expect(() => subject.parseLanggraphConfig(new EnvSource({ [key]: value }))).toThrow(
-                expect.objectContaining({ code: LanggraphErrorCode.TracingForbidden, params: { key } }),
-            )
+            expect(thrownBy(() => subject.parseLanggraphConfig(new EnvSource({ [key]: value })))).toEqual(objectLike({ code: LanggraphErrorCode.TracingForbidden, params: { key } }))
         },
     )
 

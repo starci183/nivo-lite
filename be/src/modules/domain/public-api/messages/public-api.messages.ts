@@ -3,6 +3,11 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the public-api codes, Vietnamese and English. */
 export const PUBLIC_API_MESSAGES: MessageBundle = {
     vi: {
+        "publicApi.held.title": "Tin nhắn API đang bị giữ",
+        "publicApi.held.sentence": "Một tin nhắn gửi qua API chưa được gửi cho khách. Hãy trả lời khách từ bàn làm việc của agent.",
+        "publicApi.held.reason.approval_asked": "bên gọi API yêu cầu duyệt trước khi gửi",
+        "publicApi.held.reason.stale": "tin nhắn chờ quá lâu nên không tự gửi",
+        "publicApi.held.fact.text": "Nội dung",
         "errors.PUBLIC_API_REQUEST_INVALID": "Yêu cầu API trong hàng đợi không hợp lệ; cần kiểm tra để khôi phục.",
         "errors.PUBLIC_API_REQUEST_NOT_FOUND": "Không tìm thấy yêu cầu API trong không gian làm việc này.",
         "errors.PUBLIC_API_INBOX_INCONSISTENT":
@@ -17,6 +22,11 @@ export const PUBLIC_API_MESSAGES: MessageBundle = {
             "Ch\u01b0a th\u00eam \u0111\u01b0\u1ee3c tri th\u1ee9c. Th\u1eed l\u1ea1i sau \u00edt ph\u00fat.",
     },
     en: {
+        "publicApi.held.title": "An API message is held",
+        "publicApi.held.sentence": "A message sent through the API was not sent to the customer. Answer the customer from the agent's workbench.",
+        "publicApi.held.reason.approval_asked": "the API caller asked for an approval before sending",
+        "publicApi.held.reason.stale": "the message waited too long to go out on its own",
+        "publicApi.held.fact.text": "Text",
         "errors.PUBLIC_API_REQUEST_INVALID":
             "The queued API request needs recovery because its recorded shape is invalid.",
         "errors.PUBLIC_API_REQUEST_NOT_FOUND": "No API request with this identity belongs to the workspace.",

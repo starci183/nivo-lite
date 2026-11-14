@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeJobsService } from "@modules/domain/knowledge"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the stale passages of the workspace of the claimed job get vectors of the model in use. */

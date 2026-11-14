@@ -1,19 +1,16 @@
-import { defineModule } from "@nivo-lite/agent-sdk/module"
-import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
+import { defineModule, type ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { TOOL } from "../../vocabulary/tool-ids"
-import { guidanceOf } from "../agent-policy"
-import { APPROVE_AND_SEND } from "./actions/approve-and-send.action"
+import { CHATBOT_CONTACT_BLOCKS } from "./contact-blocks"
 import { DECIDE } from "./actions/decide.action"
 import { HANDOFF } from "./actions/handoff.action"
-import { REJECT_PROPOSAL } from "./actions/reject-proposal.action"
 import { RELEASE } from "./actions/release.action"
 import { REPLY } from "./actions/reply.action"
 import { SAVE_SETTINGS } from "./actions/save-settings.action"
 import { CHANNEL_COUNTS, THREAD_COUNTS } from "./reads/counts.read"
+import { CONTACT_THREADS } from "./reads/contact-threads.read"
 import { DECISIONS } from "./reads/decisions.read"
 import { FIGURES } from "./reads/figures.read"
 import { THREAD_MESSAGES } from "./reads/messages.read"
-import { PROPOSALS } from "./reads/proposals.read"
 import { SETTINGS_READ } from "./reads/settings.read"
 import { THREAD } from "./reads/thread.read"
 import { THREADS } from "./reads/threads.read"
@@ -38,41 +35,25 @@ export const chatbotModule: ModuleDeclaration = defineModule({
             TOOL.agentTag,
             TOOL.customerMessageSend,
             TOOL.teamMessagePost,
-            TOOL.brainSearch,
-            TOOL.brainFactGet,
-            TOOL.brainFactRelated,
             TOOL.brainChangePropose,
         ],
-        abilities: {
-            kinds: { messaging: { "customer.send": "auto" } },
-        },
-        policy: {
-            limits: {},
-            guidance: guidanceOf({
-                vi:
-                    "Chỉ trả lời khách từ thông tin công khai của tiệm; không bịa giá, chính sách, ngày hay lời hứa, không xác nhận đơn, tiền hay giao hàng. " +
-                    "Tài liệu không có câu trả lời: nhắn khách một câu rằng em hỏi lại chủ tiệm rồi báo, và hỏi chủ tiệm. " +
-                    "Khiếu nại: xin lỗi khách, không nhận lỗi cũng không chối lỗi, không hứa đền bù; báo đội để chủ tiệm xử lý.",
-                en:
-                    "Answer customers only from the shop's public information; never invent a price, policy, date or promise, never confirm an order, a payment or a delivery. " +
-                    "When the documents do not answer: tell the customer in one line you will check with the shop owner, and ask the owner. " +
-                    "A complaint: apologise to the customer, neither admit nor deny fault, promise no compensation; tell the team so the owner handles it.",
-            }),
-        },
+        // No default abilities here: the engine derives them from the template agent (`abilitiesOfTemplateAgent`: the messaging
+        // accounts it lists, ticked from what its node steps ask), for attaching and for the pre-install review alike.
     },
     permissions: CHATBOT_PERMISSIONS,
     reads: [
         THREADS,
+        CONTACT_THREADS,
         THREAD_COUNTS,
         CHANNEL_COUNTS,
         THREAD,
         THREAD_MESSAGES,
         FIGURES,
         DECISIONS,
-        PROPOSALS,
         SETTINGS_READ,
     ],
-    actions: [REPLY, HANDOFF, RELEASE, DECIDE, APPROVE_AND_SEND, REJECT_PROPOSAL, SAVE_SETTINGS],
-    tools: ["nivo.chat.send"],
+    actions: [REPLY, HANDOFF, RELEASE, DECIDE, SAVE_SETTINGS],
+    tools: [TOOL.customerMessageSend],
     specs: [CHATBOT_WORKBENCH_SPEC],
+    contactBlocks: CHATBOT_CONTACT_BLOCKS,
 })

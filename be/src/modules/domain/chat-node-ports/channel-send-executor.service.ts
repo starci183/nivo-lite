@@ -1,67 +1,140 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import type { EffectCall, EffectPayload } from "@nivo-lite/agent-sdk/node"
-import { TOOL, refusalOf } from "@nivo-lite/blocks-core"
-import type { EffectFact, EffectFacts } from "@nivo-lite/blocks-core"
-import { ChannelDeliveryService, ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
-import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatTurnConversation } from "@modules/domain/chat-records"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import { ProviderAbilitiesService, providerOfChannel } from "@modules/domain/mcp-gateway"
-import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
+import type { EffectCall } from "@nivo-lite/agent-sdk/node"
+import { HOLDING_LINE_KEY_PREFIX } from "@nivo-lite/agent-sdk/customer-send"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { refusalOf, type EffectFact, type EffectFacts } from "@nivo-lite/agent-sdk/node"
 import {
-    RECIPIENT_NOT_LINKED,
+    ChannelDeliveryService,
+    ChannelsError,
+    ChannelsErrorCode,
+    ZALO_FREE_WINDOW_MS,
+} from "@modules/domain/channels"
+import { ConnectionsService } from "@modules/domain/connections"
+import { ContactsService } from "@modules/domain/contacts/contacts.service"
+import {
+    ChannelDeliveriesService,
+    CustomerMessagesService,
+    CustomerRoutesService,
+    type CustomerRoute,
+    type StoredDelivery,
+} from "@modules/domain/customer-routes"
+import {
+    GraphNodeRegistryService,
+    type NodeEffectExecutor,
+    type NodeEffectPayload,
+    type NodeTurn,
+} from "@modules/domain/graph-nodes"
+import { AgentAccountsService, providerOfChannel, type RightVerdict, type SendJudged } from "@modules/domain/tools"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import {
     SEND_REFUSAL,
     channelBusy,
-    draftNoticeOf,
     outboundOf,
     placeholderRecipient,
-    recipientLinked,
     recipientRefused,
     sendRightOf,
-    verdictOf,
+    type ChannelSend,
+    type ChannelVerdict,
+    type CustomerMessageReceipt,
+    type CustomerMessageSend,
+    type SendRight,
 } from "./chat-node-ports.policy"
-import type { ChannelSend, CustomerMessageSend, SendRight } from "./chat-node-ports.policy"
-import { ChatLineMediaService } from "./chat-line-media.service"
-import { CustomerDraftsService } from "./customer-drafts.service"
-import { channelSendSchema, customerMessageSendSchema } from "./chat-node-ports.schema"
+import { LeadMemoryService, contactMemorySubjectOf } from "@modules/domain/lead-memory"
+import { customerMessageSendSchema } from "./chat-node-ports.schema"
+import {
+    attachmentSummaryOf,
+    receiptOf,
+    receiptOfRow,
+    reachPicked,
+    windowClosedAt,
+    type Reach,
+    type ReceiptPlace,
+} from "./customer-send.policy"
 import { ChatNodePortsLogEvent } from "./chat-node-ports.log-events"
-import { draftCopyOf } from "./messages/chat-node-ports.messages"
 import { ChatNodePortsError, ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
 
-/** What one push answers: delivered, or why not. */
-type DeliveryReceipt = Awaited<ReturnType<ChannelDeliveryService["deliver"]>>
-
-/** Who is speaking: the agent answering in its conversation, or the shop writing unprompted (a care step, a message addressed by the customer). */
+/** Who is speaking: the agent answering on the route it was woken on, or the shop writing unprompted (a care step, a message to another person or channel). */
 type Speech = "reply" | "proactive"
 
 /** The kind of the fact a sent message answers. */
 const MESSAGE = "message"
 
-/** The data kind of the customers, read for the care opt-out. */
+/**
+ * What a refusal does to the delivery ledger: `fresh` claims the key and settles it refused (the message was never tried); `claimed`
+ * settles a key the send already claimed.
+ */
+type LedgerMode = "fresh" | "claimed"
 
-/** The data kind of a customer's lead memory, where what the consult learned (`careOptOut`) lives. */
-const MEMORY_KIND = "agent-lead-memory"
+/** The reason a delivery ledger row keeps when the provider's own busy answer stopped the attempt before anything went out. */
+const CHANNEL_BUSY = "channel_busy"
+
+/** Where a send goes once the person, the channel identity and the route are settled. */
+interface Addressed {
+    /** The person (current id). */
+    readonly contactId: string
+    /** What the notice to the owner calls them. */
+    readonly name: string | null
+    /** The channel identity reached. */
+    readonly reach: Reach
+    /** The route of the person on that entrance (empty only in a check that writes nothing, for a person with no route yet). */
+    readonly routeId: string
+    /** Reply on the route the run was woken on, or an unprompted message. */
+    readonly speech: Speech
+}
+
+/** Why a send cannot go: the refusal reason and the facts that go with it. */
+interface Stop {
+    readonly reason: string
+    readonly facts: Readonly<Record<string, string | null>>
+}
+
+/** The send as it goes out: the words, the card and the pictures (the `images` are the caller's, ten at most by the schema). */
+interface Outgoing {
+    /** What the channel is given. */
+    readonly send: ChannelSend
+    /** The once-key. */
+    readonly key: string
+    /** The words as the ledger keeps them. */
+    readonly text: string
+}
+
+/** The rights verdict of a send as the channel's policy reads it (`ChannelVerdict`): the right concerned is the send tool itself. */
+const channelVerdictOf = (verdict: RightVerdict | null, tool: string): ChannelVerdict | null =>
+    verdict === null ? null : { ...verdict, ability: tool }
+
+/** A receipt as the facts an answer carries (undefined members left out, so the facts are plain JSON). */
+const factsOf = (receipt: CustomerMessageReceipt): EffectFacts => ({
+    delivered: receipt.delivered,
+    state: receipt.state,
+    reason: receipt.reason,
+    contactId: receipt.contactId,
+    channel: receipt.channel,
+    accountId: receipt.accountId,
+    routeId: receipt.routeId,
+    providerMessageId: receipt.providerMessageId,
+    ...(receipt.via === undefined ? {} : { via: receipt.via }),
+    at: receipt.at,
+    sendKey: receipt.sendKey,
+})
 
 @Injectable()
 /**
- * The one way a step's agent says something to a customer: the executor of `nivo.lead.message.send` (a message addressed by
- * `leadId` is the shop writing unprompted, care steps included). The system, not the agent, picks the channel: the
- * conversation carries its channel and connection, and the channel layer routes by them (Zalo with its window and ZNS fallback,
- * Telegram, Meta, the website). The caller gives the words and record ids: an order becomes its card on the stored line and catalogue
- * items become pictures with the catalogue's own name and price, both built from the records.
+ * The one way a step's agent says something to a customer: the executor of `nivo.tool.customer.message.send`. A message addresses a
+ * PERSON: the core contact (absent: the person the run serves), on a channel and account (absent: the route the run was woken on, else
+ * the person's newest channel identity). The engine resolves the contact's channel identity and the route from its own rows and reads
+ * and writes NO chatbot record: every attempt is a row of the engine's delivery ledger (`ChannelDeliveriesService`: the once-key is
+ * claimed before the provider is asked and settled after; a key already delivered answers its earlier receipt, one in flight or ended
+ * uncertain answers `unknown` and is never sent again by a machine). The answer is the delivery RECEIPT; the node writes its own line.
  *
- * Every rule is a refusal fact the agent reads (`{ kind: "refused", id, facts }`), never a throw: no conversation, a conversation of
- * another run, a person or another agent holding it, the calling agent not holding the "send to customer" ability on the provider of
- * the conversation's channel, a customer who opted out of unprompted messages, no reachable recipient, Zalo's window closed, the plan
- * of the connection, a channel that refused. When that ability is ticked "ask" the message is not sent: it is stored as a draft for the owner, the owner is told in the team chat, and the call answers
- * `waits_owner` with the draft id; the same call made again once the owner approved sends it. A sent message answers
- * `{ kind: "message", id, facts: { channel, connectionId, conversationId, delivery } }`. Only an infrastructure failure throws: a
- * channel that is not taking messages for now (quota, night hours), so the run engine tries again.
+ * Every rule is a refusal fact the agent reads (`{ kind: "refused", id, facts }`), never a throw: no person, no channel identity, another
+ * agent keeping the route, the calling agent not attached to the account, a customer who opted out of unprompted messages, no
+ * reachable recipient, Zalo's window closed (read from the stored inbound messages), the plan of the connection, a channel that
+ * refused, and a member of the shop holding the route (the staff hold, ruling R43: only a member's typed reply goes). Whether a person approves the message first is
+ * NOT decided here: it is the node's mode, asked by the tool door at the call like every other tool (rights rule 11: the approval card,
+ * then the approved call is replayed once), so a send that reaches this executor is an `auto` one or an approved one, and the engine
+ * keeps no draft of it. Only an infrastructure failure throws: a channel that is not taking messages for now (quota, night hours), so the
+ * run engine tries again.
  */
 export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleInit {
     /** The effect it runs. */
@@ -70,13 +143,15 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     constructor(
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
-        private readonly conversations: ChatConversationsService,
-        private readonly messages: ChatMessagesService,
+        private readonly contacts: ContactsService,
+        private readonly routes: CustomerRoutesService,
+        private readonly deliveries: ChannelDeliveriesService,
         private readonly delivery: ChannelDeliveryService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
-        @Optional() private readonly media?: ChatLineMediaService,
-        @Optional() private readonly drafts?: CustomerDraftsService,
-        @Optional() private readonly abilities?: ProviderAbilitiesService,
+        @Optional() private readonly accounts?: AgentAccountsService,
+        @Optional() private readonly memory?: LeadMemoryService,
+        @Optional() private readonly connections?: ConnectionsService,
+        @Optional() private readonly lines?: CustomerMessagesService,
     ) {}
 
     /** Registers the executor once the app has started. */
@@ -84,237 +159,279 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         this.registry?.addExecutor(this)
     }
 
-    /** Says the message to the customer the payload addresses; answers the sent message, or why it was not sent. */
-    async execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<EffectFact> {
+    /**
+     * The refusal `execute` would answer for this call right now, or null when it would send: the same rules in the same order (no
+     * person or identity, a member of the shop holding the route, the connection gone, an opt-out, no attachment to the account, no linked
+     * recipient, Zalo's window closed), judged without writing a route, a ledger row or an audit line and without asking the provider.
+     * The tool door asks it before it raises a person's approval, so nobody approves a message that cannot go. A key already answered
+     * in the ledger is no refusal here (`execute` replays its receipt).
+     */
+    async refusalFor(turn: NodeTurn, payload: NodeEffectPayload, call: EffectCall): Promise<EffectFact | null> {
+        const given = customerMessageSendSchema.safeParse(payload)
+        if (!given.success) return null
+        const found = await this.addressed(turn, given.data, false)
+        if ("refused" in found) return found.refused
+        const key = call.dedupeKey ?? call.key
+        const prior = await this.deliveries.byKey(turn.workspaceId, key)
+        if (prior !== null && prior.state !== "refused") return null
+        const stop = await this.stopOf(turn, found, call.key.startsWith(HOLDING_LINE_KEY_PREFIX), false)
+        if (stop === null) return null
+        const receipt = receiptOf(placeOf(found), key, { state: "refused", reason: stop.reason })
+        return { kind: "refused", id: stop.reason, facts: { ...factsOf(receipt), ...stop.facts } }
+    }
+
+    /** Says the message to the person the payload addresses; answers the delivery receipt, or why it was not sent. */
+    async execute(turn: NodeTurn, payload: NodeEffectPayload, call: EffectCall): Promise<EffectFact> {
         const given = customerMessageSendSchema.safeParse(payload)
         if (!given.success) throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.InvalidPayload })
-        const found = await this.addressed(turn, given.data)
-        if ("refused" in found) return this.refuse(turn, found.refused)
         const asked = given.data
-        const plain = { conversationId: found.conversation.id, text: asked.text }
-        const send =
-            (await this.media?.resolved(turn, {
-                ...plain,
-                ...(asked.orderId === undefined ? {} : { orderId: asked.orderId }),
-                ...(asked.catalogueItemIds === undefined ? {} : { catalogueItemIds: asked.catalogueItemIds }),
-            })) ?? plain
-        const speech: Speech = "leadId" in asked || turn.conversationId === null ? "proactive" : "reply"
-        return this.say(turn, found.conversation, send, call, speech)
+        const found = await this.addressed(turn, asked, true)
+        if ("refused" in found) return this.refuse(turn, found.refused)
+        const key = call.dedupeKey ?? call.key
+        const prior = await this.deliveries.byKey(turn.workspaceId, key)
+        if (prior !== null && prior.state !== "refused") return this.settledAnswer(turn, prior)
+        const send: ChannelSend = {
+            text: asked.text,
+            ...(asked.order === undefined ? {} : { order: asked.order }),
+            ...(asked.images === undefined || asked.images.length === 0 ? {} : { images: asked.images }),
+        }
+        return this.say(turn, found, { send, key, text: asked.text }, call.key.startsWith(HOLDING_LINE_KEY_PREFIX))
     }
 
     /**
-     * The same send for a message the back end composed from the records (the payment details of an order with its QR and card): the
-     * pictures and the order card are the caller's, already built; the rules and the answer are those of `execute`.
+     * The person, the channel identity and the route a payload addresses. The person is the one named, else the one the run serves (the
+     * trigger's contact, else the one the woken route belongs to); the identity is picked by the channel and account named, else the
+     * route the run was woken on, else the newest. The route is made when the person has none on that entrance yet (`make`; a check
+     * that must write nothing only looks it up).
      */
-    async composed(turn: NodeTurn, payload: ChannelSend, call: EffectCall): Promise<EffectFact> {
-        const parsed = channelSendSchema.safeParse(payload)
-        if (!parsed.success) throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.InvalidPayload })
-        const found = await this.turnConversation(turn, parsed.data.conversationId)
-        if (found === null) return this.refuse(turn, refusalOf(SEND_REFUSAL.conversationMissing))
-        return this.say(turn, found, parsed.data, call, turn.conversationId === null ? "proactive" : "reply")
-    }
-
-    /** The conversation a payload addresses: the one named, or the customer's most recently active one (on the channel asked for). */
     private async addressed(
         turn: NodeTurn,
         asked: CustomerMessageSend,
-    ): Promise<{ readonly conversation: ChatTurnConversation } | { readonly refused: EffectFact }> {
-        if ("conversationId" in asked) {
-            const found = await this.turnConversation(turn, asked.conversationId)
-            return found === null ? { refused: refusalOf(SEND_REFUSAL.conversationMissing) } : { conversation: found }
-        }
-        const all = await this.conversations.ofLeads(turn.workspaceId, [asked.leadId])
-        const picked = all.find((conversation) => asked.channel === undefined || conversation.channel === asked.channel)
-        const found = picked === undefined ? null : await this.turnConversation(turn, picked.id)
-        if (found !== null) return { conversation: found }
-        return {
-            refused: refusalOf(SEND_REFUSAL.noConversation, {
-                leadId: asked.leadId,
-                channel: asked.channel ?? null,
-                channels: [...new Set(all.map((conversation) => conversation.channel))],
-            }),
-        }
-    }
-
-    /** The rules, then the draft or the store and the push, then the verdict. */
-    private async say(
-        turn: NodeTurn,
-        conversation: ChatTurnConversation,
-        send: ChannelSend,
-        call: EffectCall,
-        speech: Speech,
-    ): Promise<EffectFact> {
-        const where = factsOf(conversation)
-        const refused = await this.ruleRefusal(turn, conversation, speech)
-        if (refused !== null) return this.refuse(turn, refusalOf(refused, where))
-        const right = await this.rightOf(turn, conversation)
-        if (right.kind === "refused")
-            return this.refuse(turn, refusalOf(SEND_REFUSAL.channelNoAccess, { ...where, ...right.facts }))
-        const key = call.dedupeKey ?? call.key
-        if (right.kind === "draft") return this.drafted(turn, conversation, send, key)
-        const { text, images } = outboundOf(send, conversation.channel)
-        const media = (await this.media?.of(turn, send)) ?? {}
-        const stored = await this.messages.storeAgentLine({
-            workspaceId: conversation.workspaceId,
-            conversationId: conversation.id,
-            body: text,
-            key,
-            sentBy: turn.agentId,
-            ...media,
+        make: boolean,
+    ): Promise<Addressed | { readonly refused: EffectFact }> {
+        const woken = turn.conversationId === null ? null : await this.routes.get(turn.workspaceId, turn.conversationId)
+        const contactId = asked.contactId ?? turn.contactId ?? woken?.contactId ?? null
+        if (contactId === null) return { refused: refusalOf(SEND_REFUSAL.noRecipient) }
+        const contact = await this.contacts.get(turn.workspaceId, contactId)
+        if (contact === null) return { refused: refusalOf(SEND_REFUSAL.noRecipient, { contactId }) }
+        const picked = reachPicked(contact.identities, {
+            channel: asked.channel,
+            accountId: asked.accountId,
+            woken: woken !== null && woken.contactId === contact.id ? { channel: woken.channel, accountId: woken.accountId } : null,
         })
-        if (!linkedOf(conversation)) return this.keptUndelivered(turn, conversation, stored.id)
-        return this.pushed(turn, conversation, stored.id, text, images)
+        if (picked.kind !== "picked")
+            return {
+                refused: refusalOf(picked.reason, {
+                    contactId: contact.id,
+                    channel: asked.channel ?? null,
+                    accountId: asked.accountId ?? null,
+                    channels: [...picked.channels],
+                }),
+            }
+        const { reach } = picked
+        const entrance = { channel: reach.channel, accountId: reach.accountId }
+        const routeId = make
+            ? (await this.routes.ensure(turn.workspaceId, { contactId: contact.id, ...entrance })).routeId
+            : ((await this.routes.find(turn.workspaceId, contact.id, entrance))?.id ?? "")
+        return {
+            contactId: contact.id,
+            name: contact.displayName,
+            reach,
+            routeId,
+            speech: routeId !== "" && this.isWoken(turn, woken, routeId) ? "reply" : "proactive",
+        }
     }
 
-    /** The rule the send breaks before anything is stored, or null when it may speak. */
-    private async ruleRefusal(
-        turn: NodeTurn,
-        conversation: ChatTurnConversation,
-        speech: Speech,
-    ): Promise<string | null> {
-        if (speech === "reply" && turn.conversationId !== null && turn.conversationId !== conversation.id)
-            return SEND_REFUSAL.wrongConversation
-        if (conversation.handledBy !== null) return SEND_REFUSAL.heldByPerson
-        if (speech === "reply" && !this.speaks(turn, conversation)) return SEND_REFUSAL.notSpeaking
-        if (conversation.channel !== "website" && conversation.connectionId === null)
-            return SEND_REFUSAL.connectionMissing
-        if (speech === "proactive" && (await this.optedOut(turn, conversation.leadId))) return SEND_REFUSAL.optedOut
-        if (
-            linkedOf(conversation) &&
-            conversation.channel === "zalo" &&
-            (await this.windowClosed(conversation.workspaceId, conversation.id))
-        )
-            return SEND_REFUSAL.outsideWindow
+    /** True when the route is the one the run was woken on. */
+    private isWoken(turn: NodeTurn, woken: CustomerRoute | null, routeId: string): boolean {
+        return turn.conversationId === routeId || woken?.id === routeId
+    }
+
+    /** The rules, then the claim and the push, then the receipt. */
+    private async say(turn: NodeTurn, at: Addressed, out: Outgoing, engineLine: boolean): Promise<EffectFact> {
+        const stop = await this.stopOf(turn, at, engineLine, true)
+        if (stop !== null) return this.refusedOnRoute(turn, at, out, stop.reason, stop.facts)
+        const claimed = await this.deliveries.claim(turn.workspaceId, this.claimOf(turn, at, out))
+        if (claimed.verdict !== "send") return this.settledAnswer(turn, claimed.row)
+        return this.pushed(turn, at, out)
+    }
+
+    /**
+     * The rule that stops the send before anything is claimed, with the facts of why, or null when it may go: the one list of rules `say`
+     * runs and `refusalFor` checks. `audited` files the rights verdict in the audit (a real send); a check does not.
+     */
+    private async stopOf(turn: NodeTurn, at: Addressed, engineLine: boolean, audited: boolean): Promise<Stop | null> {
+        const rule = await this.ruleRefusal(turn, at)
+        if (rule !== null) return { reason: rule, facts: {} }
+        const right = await this.rightOf(turn, at, engineLine, audited)
+        if (right.kind === "refused") return { reason: SEND_REFUSAL.channelNoAccess, facts: right.facts }
+        if (this.unlinked(at.reach)) return { reason: SEND_REFUSAL.recipientNotLinked, facts: {} }
+        if (await this.windowClosed(turn, at)) return { reason: SEND_REFUSAL.outsideWindow, facts: {} }
         return null
     }
 
     /**
-     * What the send may do on the conversation's channel: the CALLING agent's "send to customer" ability on the very account the
-     * conversation came in on (its connection: with two Zalo OAs, being attached to the other one is not enough), whoever's
-     * conversation it is (a hand-off lends the right to speak there, not the ability). The website chat goes
-     * through no provider and is no provider right.
+     * The rule the send breaks before anything is claimed, or null when it may speak. The staff hold comes first (ruling R43): while a
+     * member of the shop holds the route, every send that is not a member's typed reply (`turn.memberId`) is refused `route_held`, an
+     * agent's step and the engine's holding line alike; the run reads the refusal as any refused send.
      */
-    private async rightOf(turn: NodeTurn, conversation: ChatTurnConversation): Promise<SendRight> {
-        const provider = providerOfChannel(conversation.channel)
-        const verdict =
-            provider === null || this.abilities === undefined
-                ? null
-                : await this.abilities.judge(conversation.workspaceId, turn.agentId, this.effect, false, {
-                      provider,
-                      ...(conversation.connectionId === null ? {} : { connectionId: conversation.connectionId }),
-                  })
-        return sendRightOf(verdict, conversation.agent.approvalRule)
+    private async ruleRefusal(turn: NodeTurn, at: Addressed): Promise<string | null> {
+        if (await this.heldFromAgents(turn, at)) return SEND_REFUSAL.routeHeld
+        if (await this.connectionGone(turn, at.reach)) return SEND_REFUSAL.connectionMissing
+        if (at.speech === "proactive" && (await this.optedOut(turn, at.contactId))) return SEND_REFUSAL.optedOut
+        return null
     }
 
     /**
-     * The "ask" path: the call's draft as the owner left it. Approved, it is sent (a delivery the approval already made is not made
-     * twice); turned down, the call is refused; still waiting, it waits. A call with no draft yet stores one, tells the owner in the
-     * team chat, and waits.
+     * What the send may do on the identity's channel: the CALLING agent's attachment to the very account the person is reached through
+     * (with two Zalo OAs, being attached to the other one is not enough), whoever's route it is (a hand-off lends the right to speak
+     * there, not the attachment). The website chat goes through no provider and is no provider right. The node's mode is not judged here:
+     * the tool door asked it at the call (rights rule 11), so a send that reaches this executor is an `auto` one or an approved one.
      */
-    private async drafted(
-        turn: NodeTurn,
-        conversation: ChatTurnConversation,
-        send: ChannelSend,
-        key: string,
-    ): Promise<EffectFact> {
-        if (this.drafts === undefined) throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.ProposalRefused })
-        const where = factsOf(conversation)
-        const known = await this.drafts.draftOf(conversation.workspaceId, key)
-        if (known?.status === "posted") {
-            if (!linkedOf(conversation)) return this.keptUndelivered(turn, conversation, known.id)
-            const { images } = outboundOf(send, conversation.channel)
-            return this.pushed(turn, conversation, known.id, known.text, images)
-        }
-        if (known?.status === "rejected")
-            return this.refuse(turn, refusalOf(SEND_REFUSAL.ownerRejected, { ...where, draftId: known.id }))
-        if (known !== null)
-            return this.refuse(turn, refusalOf(SEND_REFUSAL.waitsOwner, { ...where, draftId: known.id }))
-        const { text } = outboundOf(send, conversation.channel)
-        const draft = await this.drafts.propose(turn, { conversationId: conversation.id, text, key })
-        await this.toldOwner(turn, conversation, text, key)
-        this.logger.info(ChatNodePortsLogEvent.Drafted, { turnId: turn.turnId, messageId: draft.id })
-        return refusalOf(SEND_REFUSAL.waitsOwner, { ...where, draftId: draft.id })
+    private async rightOf(turn: NodeTurn, at: Addressed, engineLine: boolean, audited: boolean): Promise<SendRight> {
+        const provider = providerOfChannel(at.reach.channel)
+        const { accounts } = this
+        if (provider === null || accounts === undefined) return sendRightOf(null)
+        const send = this.sendOf(turn, at, provider)
+        const verdict = !audited
+            ? await accounts.attachmentOf(send.workspaceId, send.agentId, send.effect, send.target)
+            : engineLine
+              ? await accounts.judgeEngineLine(send)
+              : await accounts.judgeSend(send)
+        return sendRightOf(channelVerdictOf(verdict, this.effect))
     }
 
-    /** Tells the owner in the team chat that a draft waits, through the team post the app registers; nothing when it registers none. */
-    private async toldOwner(turn: NodeTurn, conversation: ChatTurnConversation, text: string, key: string): Promise<void> {
-        const post = this.registry?.optionalExecutorOf(TOOL.teamMessagePost)
-        if (post === undefined) return
-        const copy = draftCopyOf(turn.locale)
-        await post.execute(
-            turn,
-            {
-                kind: "message.text",
-                intent: "ask",
-                title: copy.title,
-                text: draftNoticeOf(copy, conversation.visitorName, text),
-            },
-            { key: `${key}:owner`, dedupeKey: null },
-        )
-    }
-
-    /** Pushes a stored line and answers the channel's verdict. */
-    private async pushed(
-        turn: NodeTurn,
-        conversation: ChatTurnConversation,
-        messageId: string,
-        text: string,
-        images: ChannelSend["images"],
-    ): Promise<EffectFact> {
-        const receipt = await this.delivery.deliver({
-            workspaceId: conversation.workspaceId,
-            conversationId: conversation.id,
-            messageId,
-            text,
-            ...(images === undefined || images.length === 0 ? {} : { images }),
-        })
-        if (!receipt.delivered && receipt.outcome === "rejected") return this.rejected(turn, conversation, messageId, receipt)
-        const verdict = verdictOf(receipt)
-        this.logger.info(ChatNodePortsLogEvent.Sent, { turnId: turn.turnId, messageId, delivery: verdict })
+    /** One send as the rights judge takes it: who speaks, the account reached, the turn's step, run and route. */
+    private sendOf(turn: NodeTurn, at: Addressed, provider: string): SendJudged {
         return {
-            kind: MESSAGE,
-            id: messageId,
-            facts: { ...factsOf(conversation), delivery: verdict, ...(receipt.via === undefined ? {} : { via: receipt.via }) },
+            workspaceId: turn.workspaceId,
+            agentId: turn.agentId,
+            effect: this.effect,
+            target: { provider, connectionId: at.reach.accountId },
+            step: turn.step,
+            runId: turn.turnId,
+            conversationId: at.routeId,
         }
     }
 
-    /** What a refused push answers: the plan, a recipient the channel cannot reach, a channel busy for now (thrown, tried again), or a plain refusal. */
-    private rejected(
+    /** Claims done: the provider is asked and the ledger settled with what it answered. */
+    private async pushed(turn: NodeTurn, at: Addressed, out: Outgoing): Promise<EffectFact> {
+        const { text, images } = outboundOf(out.send, at.reach.channel)
+        let receipt: Awaited<ReturnType<ChannelDeliveryService["deliverToPerson"]>>
+        try {
+            receipt = await this.delivery.deliverToPerson({
+                workspaceId: turn.workspaceId,
+                routeId: at.routeId,
+                channel: at.reach.channel,
+                accountId: at.reach.accountId,
+                userId: at.reach.userId,
+                sendKey: out.key,
+                text,
+                windowChecked: true,
+                ...(images.length === 0 ? {} : { images }),
+            })
+        } catch (cause) {
+            // A busy token refresh sent nothing: the key is settled as refused so the run engine's retry claims it again.
+            if (cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy) {
+                await this.deliveries.mark(turn.workspaceId, out.key, { state: "refused", reason: CHANNEL_BUSY })
+                throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.DeliveryRateLimited })
+            }
+            throw cause
+        }
+        return this.answerOfPush(turn, at, out, receipt)
+    }
+
+    /** What the provider's answer settles in the ledger (the key was claimed before the provider was asked) and the answer it makes. */
+    private async answerOfPush(
         turn: NodeTurn,
-        conversation: ChatTurnConversation,
-        messageId: string,
-        receipt: DeliveryReceipt,
-    ): Promise<EffectFact> | EffectFact {
-        const where = { ...factsOf(conversation), messageId, delivery: verdictOf(receipt) }
-        if (receipt.failure === "channel_plan") return this.refuse(turn, refusalOf(SEND_REFUSAL.planBlocked, where))
-        if (recipientRefused(receipt.failure)) return this.keptUndelivered(turn, conversation, messageId)
+        at: Addressed,
+        out: Outgoing,
+        receipt: Awaited<ReturnType<ChannelDeliveryService["deliverToPerson"]>>,
+    ): Promise<EffectFact> {
+        const place = placeOf(at)
+        if (receipt.delivered) {
+            const when = this.clock.now()
+            await this.deliveries.mark(turn.workspaceId, out.key, { state: "delivered", providerMessageId: null, at: when })
+            this.logger.info(ChatNodePortsLogEvent.Sent, { turnId: turn.turnId, sendKey: out.key, delivery: "delivered" })
+            return this.message(
+                receiptOf(place, out.key, { state: "delivered", reason: null, via: receipt.via, at: when.toISOString() }),
+            )
+        }
+        if (receipt.outcome !== "rejected") {
+            await this.deliveries.mark(turn.workspaceId, out.key, { state: "unknown", reason: null })
+            this.logger.info(ChatNodePortsLogEvent.Sent, { turnId: turn.turnId, sendKey: out.key, delivery: "unknown" })
+            return this.message(receiptOf(place, out.key, { state: "unknown", reason: "delivery_outcome_unknown" }))
+        }
+        const where = { failure: receipt.failure }
+        if (receipt.failure === "channel_plan")
+            return this.refusedOnRoute(turn, at, out, SEND_REFUSAL.planBlocked, where, "claimed")
+        if (recipientRefused(receipt.failure))
+            return this.refusedOnRoute(turn, at, out, SEND_REFUSAL.recipientNotLinked, where, "claimed")
         if (channelBusy(receipt.failure)) {
             this.logger.warn(ChatNodePortsLogEvent.SendFailed, { turnId: turn.turnId, reason: receipt.failure })
+            await this.deliveries.mark(turn.workspaceId, out.key, { state: "refused", reason: receipt.failure ?? CHANNEL_BUSY })
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.DeliveryRateLimited })
         }
-        return this.refuse(turn, refusalOf(SEND_REFUSAL.notDelivered, { ...where, failure: receipt.failure }))
+        return this.refusedOnRoute(turn, at, out, SEND_REFUSAL.notDelivered, where, "claimed")
     }
 
-    /** The message stays in the conversation for the owner to see, marked not sent for want of a recipient, and the call is refused. */
-    private async keptUndelivered(
+    /**
+     * Refuses on a route: the refusal is a ledger row of its own (claimed and settled refused, with the words that were not told), so the
+     * thread shows what was not delivered and a later try of the same key may be claimed again. `claimed` settles a key a push already
+     * claimed.
+     */
+    private async refusedOnRoute(
         turn: NodeTurn,
-        conversation: ChatTurnConversation,
-        messageId: string,
+        at: Addressed,
+        out: Outgoing,
+        reason: string,
+        extra: Readonly<Record<string, string | null>>,
+        ledger: LedgerMode = "fresh",
     ): Promise<EffectFact> {
-        await this.messages.markDelivery(conversation.workspaceId, messageId, false, RECIPIENT_NOT_LINKED)
-        this.logger.info(ChatNodePortsLogEvent.Undelivered, {
-            conversationId: conversation.id,
-            channel: conversation.channel,
-            reason: RECIPIENT_NOT_LINKED,
-        })
-        return this.refuse(
-            turn,
-            refusalOf(SEND_REFUSAL.recipientNotLinked, {
-                ...factsOf(conversation),
-                messageId,
-                delivery: "not_delivered",
-            }),
-        )
+        if (ledger === "fresh") {
+            const claimed = await this.deliveries.claim(turn.workspaceId, this.claimOf(turn, at, out))
+            if (claimed.verdict !== "send") return this.settledAnswer(turn, claimed.row)
+        }
+        await this.deliveries.mark(turn.workspaceId, out.key, { state: "refused", reason })
+        const receipt = receiptOf(placeOf(at), out.key, { state: "refused", reason })
+        return this.refuse(turn, { kind: "refused", id: reason, facts: { ...factsOf(receipt), ...extra } })
+    }
+
+    /** The answer a ledger row stands for: the same receipt however often the key is asked; a key in flight or ended uncertain is `unknown`. */
+    private settledAnswer(turn: NodeTurn, row: StoredDelivery): EffectFact {
+        this.logger.info(ChatNodePortsLogEvent.Sent, { turnId: turn.turnId, sendKey: row.sendKey, delivery: row.state })
+        return this.message(receiptOfRow(row))
+    }
+
+    /** A message answer: the receipt is the fact. */
+    private message(receipt: CustomerMessageReceipt): EffectFact {
+        return { kind: MESSAGE, id: receipt.sendKey, facts: factsOf(receipt) }
+    }
+
+    /** The claim of the key: who tells what, to whom, on which route and entrance. */
+    private claimOf(turn: NodeTurn, at: Addressed, out: Outgoing) {
+        return {
+            sendKey: out.key,
+            routeId: at.routeId,
+            contactId: at.contactId,
+            agentId: turn.agentId,
+            // A reply typed by a person (a job turn, no workflow step) has no run: only a step's send names its run.
+            runId: turn.step === undefined ? null : turn.turnId,
+            stepKey: turn.step?.nodeKey ?? null,
+            text: out.text,
+            channel: at.reach.channel,
+            accountId: at.reach.accountId,
+            ...attachmentSummaryOf(out.send.images),
+            // The core store keeps the line whole: its pictures by address, the order card, and the member who typed it.
+            files: (out.send.images ?? []).map((image) => ({
+                url: image.url,
+                name: "",
+                contentType: "",
+                ...(image.caption === undefined ? {} : { caption: image.caption }),
+            })),
+            ...(out.send.order === undefined ? {} : { order: { ...out.send.order } }),
+            memberId: turn.memberId ?? null,
+        }
     }
 
     /** Logs a refusal (its reason, never the words) and answers it. */
@@ -323,56 +440,51 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         return fact
     }
 
-    /**
-     * Whether the agent of the turn may speak in the conversation: it is the agent of the conversation, or the run was woken by a hand-off
-     * that the agent of the conversation made from that very conversation. The hand-off lends the right to speak for the run; it does not
-     * move the conversation.
-     */
-    private speaks(turn: NodeTurn, conversation: ChatTurnConversation): boolean {
-        if (conversation.agent.id === turn.agentId) return true
-        return turn.conversationId === conversation.id && turn.handedOffBy === conversation.agent.id
+    /** True when a member of the shop holds the route and this send is no member's typed reply (a route not made yet is held by nobody). */
+    private async heldFromAgents(turn: NodeTurn, at: Addressed): Promise<boolean> {
+        if (at.routeId === "" || (turn.memberId ?? null) !== null) return false
+        return (await this.routes.holdOf(turn.workspaceId, at.routeId)) !== null
+    }
+
+    /** True when the account the person is reached through is no connection the workspace still has (the website's account is a site, no connection). */
+    private async connectionGone(turn: NodeTurn, reach: Reach): Promise<boolean> {
+        if (reach.channel === "website") return false
+        if (reach.accountId === "") return true
+        if (this.connections === undefined) return false
+        return (await this.connections.find(turn.workspaceId, reach.accountId)) === null
     }
 
     /**
-     * True when the customer asked the shop to leave them alone (`careOptOut` among the facts the consult kept in the customer's lead
-     * memory, read by the key of their facts entry); a shop with no lead memory port has none.
+     * True when the customer asked the shop to leave them alone (`careOptOut` among the facts the consult kept in the contact's memory);
+     * a shop with no memory has none.
      */
-    private async optedOut(turn: NodeTurn, leadId: string | null): Promise<boolean> {
-        const port = this.registry?.optionalPortOf(MEMORY_KIND)
-        if (leadId === null || port === undefined) return false
-        const [entry] = await port.read(
-            turn,
-            { where: { entryKey: `lead:${leadId}|$lead|$facts` }, fields: ["output"], limit: 1 },
-            "workspace",
-        )
-        const output: unknown = entry?.output
-        const facts: unknown = isRecord(output) ? output["value"] : undefined
-        return isRecord(facts) && facts["careOptOut"] === true
+    private async optedOut(turn: NodeTurn, contactId: string): Promise<boolean> {
+        if (this.memory === undefined) return false
+        const snapshot = await this.memory.snapshot(turn.workspaceId, contactMemorySubjectOf(contactId, null), "step")
+        return snapshot?.lead.careOptOut === true
     }
 
-    private async turnConversation(turn: NodeTurn, conversationId: string): Promise<ChatTurnConversation | null> {
-        const found = await this.conversations.turnOf(turn.workspaceId, conversationId)
-        return found.kind === "ok" ? found.value : null
+    /** True when the channel knows no recipient for the identity: no id on the channel, or an imported placeholder sender. */
+    private unlinked(reach: Reach): boolean {
+        return reach.userId === "" || placeholderRecipient({ channel: reach.channel, externalId: reach.userId })
     }
 
-    /** True when the customer last wrote longer ago than the free window; a conversation they never wrote in is open. */
-    private async windowClosed(workspaceId: string, conversationId: string): Promise<boolean> {
-        const last = await this.messages.lastCustomerAt(workspaceId, conversationId)
-        return last.kind === "ok" && this.clock.now().getTime() - last.value.getTime() > ZALO_FREE_WINDOW_MS
+    /**
+     * True when the customer last wrote longer ago than the free window (Zalo). The start of the window is the person's last line on the
+     * route, read from the engine's own store of the conversation (`CustomerMessagesService.lastHeardAt`: only what THEY said counts, a
+     * line the shop sent never opens the window); a route the person never wrote on (or none yet) is open.
+     */
+    private async windowClosed(turn: NodeTurn, at: Addressed): Promise<boolean> {
+        if (at.reach.channel !== "zalo" || this.lines === undefined || at.routeId === "") return false
+        const last = await this.lines.lastHeardAt(turn.workspaceId, at.routeId)
+        return windowClosedAt(this.clock.now(), last, ZALO_FREE_WINDOW_MS)
     }
 }
 
-/** Where a message goes: the facts every answer of the send carries. */
-const factsOf = (conversation: ChatTurnConversation): EffectFacts => ({
-    conversationId: conversation.id,
-    channel: conversation.channel,
-    connectionId: conversation.connectionId,
+/** Where a message goes, for a receipt. */
+const placeOf = (at: Addressed): ReceiptPlace => ({
+    contactId: at.contactId,
+    channel: at.reach.channel,
+    accountId: at.reach.accountId,
+    routeId: at.routeId,
 })
-
-/** True when the channel knows the customer of the conversation. */
-const linkedOf = (conversation: ChatTurnConversation): boolean =>
-    recipientLinked(conversation) && !placeholderRecipient(conversation)
-
-/** True for a plain object. */
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-    typeof value === "object" && value !== null && !Array.isArray(value)

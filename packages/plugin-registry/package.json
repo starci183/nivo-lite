@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./kit": {
+      "types": "./dist/esm/kit/index.d.ts",
+      "default": "./dist/esm/kit/index.js"
+    },
     "./client": {
       "types": "./dist/esm/client/index.d.ts",
       "default": "./dist/esm/client/index.js"
@@ -19,11 +23,12 @@
   },
   "dependencies": {
     "@nivo-lite/agent-sdk": "*",
-    "@nivo-lite/blocks-core": "*"
+    "@nivo-lite/blocks-core": "*",
+    "@nivo-lite/nivo-web-core": "*"
   },
   "peerDependencies": {
     "@heroui/react": "3.2.6",
-    "@starci/grammar": "0.37.34",
+    "@starci/grammar": "0.39.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"

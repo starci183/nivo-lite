@@ -1,8 +1,14 @@
 import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { WizardFooter, backAction, closeAction, forwardAction, nextAction } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import {
+    WizardFooter,
+    backAction,
+    closeAction,
+    forwardAction,
+    nextAction,
+    type WizardAction,
+} from "@/components/branches/WizardFooter"
 import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
 import { WizardVerifyStep } from "@/components/composites/WizardVerifyStep"

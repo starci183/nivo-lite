@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState, useTransition, type SetStateAction, type Dispatch } from "react"
 import { allAgentIds, resumeNoteOf, resumeSlotOf, useAdoptOnce } from "@/hooks/connection-wizard"
 import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
@@ -18,7 +18,6 @@ import {
 } from "./zalo-wizard.shared"
 
 import { useZaloCommands } from "./useZaloCommands"
-import type { SetStateAction, Dispatch } from "react"
 
 /** What the Zalo wizard needs from its drawer. */
 interface ZaloWizardInput {

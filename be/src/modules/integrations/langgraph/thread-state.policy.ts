@@ -20,7 +20,10 @@ export interface ThreadHeld {
 }
 
 /** The keys of the state a node may write. */
-const WRITABLE = ["steps", "trouble", "founderAnswers", "loop"] as const
+const WRITABLE = ["steps", "trouble", "founderAnswers", "loop", "branches"] as const
+
+/** The keys of the state a node of a fan-out branch may write: the two that merge by key, so parallel branches never collide. */
+const BRANCH_WRITABLE: ReadonlySet<string> = new Set(["steps", "branches"])
 
 /** The values a new thread starts with: the trigger, every other key of the state empty, and the engine's marks. */
 export const openingOf = (input: ThreadStart, marks: ThreadMarks): Readonly<Record<string, unknown>> => {
@@ -41,6 +44,30 @@ export const mergeSteps = (
     added: Readonly<Record<string, unknown>>,
 ): Readonly<Record<string, unknown>> => ({ ...held, ...added })
 
+/** How `branches` takes an update: the ids it names are added or replaced, the others stay; `null` empties it. */
+export const mergeBranches = (
+    held: Readonly<Record<string, unknown>>,
+    added: Readonly<Record<string, unknown>> | null,
+): Readonly<Record<string, unknown>> => (added === null ? {} : { ...held, ...added })
+
+/** The first key of a branch's writes that a branch may not write (`trouble`, `founderAnswers`, `loop`), or null when there is none. */
+export const branchWriteRefusedOf = (writes: Readonly<Record<string, unknown>>): string | null =>
+    Object.keys(writes).find((key) => !BRANCH_WRITABLE.has(key)) ?? null
+
+/**
+ * The input of a branch a node sends: the values the sending node saw with its own writes applied (its `steps` merged, any other key it
+ * wrote replaced), the branch records left out (no node of a branch reads them; they stay in the shared state), and the branch's value.
+ */
+export const branchInputOf = (
+    values: Readonly<Record<string, unknown>>,
+    writes: Readonly<Record<string, unknown>>,
+    branch: unknown,
+): Readonly<Record<string, unknown>> => {
+    const held = isRecord(values.steps) ? values.steps : {}
+    const added = isRecord(writes.steps) ? writes.steps : {}
+    return { ...values, ...writes, steps: mergeSteps(held, added), branches: {}, branch }
+}
+
 /**
  * Reads the values of a checkpoint (or the result of a run) as a thread of this engine.
  *
@@ -59,6 +86,9 @@ export const heldOf = (values: unknown, thread: ThreadRef): ThreadHeld => {
             trouble: values.trouble ?? null,
             founderAnswers: Array.isArray(values.founderAnswers) ? values.founderAnswers : [],
             loop: values.loop ?? null,
+            // Only a fan-out has branch records, and only a run a `Send` started has a branch: a thread without either reads as it did.
+            ...(isRecord(values.branches) && Object.keys(values.branches).length > 0 ? { branches: values.branches } : {}),
+            ...(values.branch === undefined || values.branch === null ? {} : { branch: values.branch }),
         },
         marks: { pin: values.pin, cursor: values.cursor },
     }

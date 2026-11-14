@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ChannelSeedService } from "@modules/domain/channel-connections"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionActor } from "@modules/domain/connections"
 import { SmtpWizardService } from "@modules/domain/email-messages"
 import { OwnersService } from "@modules/domain/owners"
 import { WorkspacesService } from "@modules/domain/workspaces"

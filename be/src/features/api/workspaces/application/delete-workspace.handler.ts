@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { WorkspaceDeletionService } from "@modules/domain/workspace-invites"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DeleteWorkspaceCommand } from "./delete-workspace.command"
 
 @CommandHandler(DeleteWorkspaceCommand)

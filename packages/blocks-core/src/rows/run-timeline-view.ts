@@ -1,7 +1,6 @@
 import { z } from "zod"
 import { RUN_STEPS_MAX } from "./graph-view"
-import { RUN_STATES } from "./run-state"
-import type { RunState } from "./run-state"
+import { RUN_STATES, type RunState } from "./run-state"
 
 /** The most door calls one step lists. */
 export const RUN_CALLS_MAX = 20

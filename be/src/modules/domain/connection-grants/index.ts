@@ -1,6 +1,7 @@
 export { purposeFor } from "./connection-access.policy"
 export type {
     AgentGrantWish,
+    BindableAgent,
     ConnectionBoardEntry,
     ConnectionCandidate,
     ConnectionGrantWish,

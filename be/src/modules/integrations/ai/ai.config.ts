@@ -1,6 +1,6 @@
 import type { EnvSource } from "@modules/platform/config"
 import type { AiOptions } from "./ai.options"
-import { EMBEDDING_PROFILE } from "@nivo-lite/blocks-core"
+import { EMBEDDING_PROFILE } from "@nivo-lite/agent-sdk/models"
 
 const DEFAULT_CHAT_MODEL = "work"
 /** The pinned OpenAI embeddings profile (`embed-oa`); the old `embed` (Qwen on OpenRouter) is gone from the pool. */

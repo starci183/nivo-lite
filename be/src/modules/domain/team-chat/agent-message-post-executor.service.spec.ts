@@ -1,10 +1,17 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { EffectCall } from "@nivo-lite/agent-sdk/node"
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { defineAgentMessageKind, type AgentMessageKind } from "@nivo-lite/agent-sdk/team-chat"
+import { z } from "zod"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeDataPort, NodeEffectExecutor, NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
+import { ERROR_REPORTER, type ErrorReporter } from "@modules/platform/errors"
+import { LOGGER, type Logger } from "@modules/platform/logging"
+import { parseJsonText } from "@modules/platform/primitives"
+import { messageOf as storedMessageOf } from "@tests/fixtures/builders/team-chat.builder"
 import { AgentMessagePostExecutorService } from "./agent-message-post-executor.service"
+import { TEAM_CARD_KINDS } from "./team-chat.decorators"
 import { lineKeyOf } from "./team-chat.policy"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import { TeamChatAudienceService } from "./team-chat-audience.service"
@@ -23,23 +30,30 @@ const TURN: NodeTurn = {
 const CALL: EffectCall = { key: "run-1:0", dedupeKey: "order-notice:o1" }
 const TEXT = { kind: "message.text", intent: "notify", title: "Complaint", text: "A customer is unhappy with DH-1" }
 
-const ORDER: NodeRow = {
-    orderNo: "DH-1",
-    amountVnd: 2000,
-    items: { lines: [{ name: "Small basket", qty: 1, unitVnd: 2000, amountVnd: 2000 }] },
-    note: "25 Nguyen Hue",
-    leadId: "l1",
+/** A kind a package registers, as the fixture installation lists it: the engine knows only its id and the schema of its payload. */
+const TCORE_CARD: AgentMessageKind = defineAgentMessageKind({
+    id: "tcore.card",
+    payload: z.object({ no: z.string(), total: z.number() }),
+    actions: { approve: false, edit: "none", reject: false },
+})
+
+const TEAM_CARD = {
+    kind: "tcore.card",
+    intent: "notify",
+    title: "Card 7",
+    summary: "Card 7 · 12",
+    payload: { no: "7", total: 12 },
+    work: { label: "card", href: "/cards/7" },
 }
 
 const POSTED_FACTS = { requested: "own", audience: "own", purpose: "module", roomName: "Sales", roomId: "room-sales" }
 
 const build = async (
-    rows: Readonly<Record<string, ReadonlyArray<NodeRow>>> = {},
-    lines: ReadonlyArray<Partial<ChatRoomMessageEntity>> = [],
+    lines: ReadonlyArray<ChatRoomMessageEntity> = [],
 ) => {
     const store = mock<TeamChatStoreService>({
         messagesByIds: jest.fn((_ws: string, ids: ReadonlyArray<string>) =>
-            Promise.resolve(lines.filter((line) => ids.includes(line.id ?? "")) as Array<ChatRoomMessageEntity>),
+            Promise.resolve(lines.filter((line) => ids.includes(line.id))),
         ),
     })
     const cards = mock<TeamChatCardsService>({
@@ -49,19 +63,11 @@ const build = async (
         postTeamCard: jest.fn().mockResolvedValue({ messageId: "msg-1", facts: POSTED_FACTS }),
     })
     const added: Array<NodeEffectExecutor> = []
-    const stored: Readonly<Record<string, ReadonlyArray<NodeRow>>> = {
-        order: [ORDER],
-        "sales-lead": [{ contactName: "An" }],
-        "catalogue-item": [{ name: "small basket", imageUrl: "https://img/basket.png" }],
-        "bank-transaction": [{ amountVnd: 2000 }],
-        ...rows,
-    }
     const registry = mock<GraphNodeRegistryService>({
         addExecutor: jest.fn((executor: NodeEffectExecutor) => void added.push(executor)),
-        portOf: jest.fn((kind: string) =>
-            mock<NodeDataPort>({ kind, read: jest.fn().mockResolvedValue(stored[kind] ?? []) }),
-        ),
     })
+    const errors = mock<ErrorReporter>({ report: jest.fn().mockResolvedValue(undefined) })
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentMessagePostExecutorService,
@@ -69,12 +75,15 @@ const build = async (
             { provide: TeamChatStoreService, useValue: store },
             { provide: TeamChatCardsService, useValue: cards },
             { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: TEAM_CARD_KINDS, useValue: (id: string) => (id === TCORE_CARD.id ? TCORE_CARD : null) },
+            { provide: ERROR_REPORTER, useValue: errors },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
     moduleRef.get(AgentMessagePostExecutorService).onModuleInit()
     const postOf = () => chat.postTeamCard.mock.calls[0]?.[1]
     const messageOf = (): unknown => postOf()?.message
-    return { chat, cards, registry, executor: added[0], messageOf, postOf }
+    return { chat, cards, registry, executor: added[0], messageOf, postOf, errors, logger }
 }
 
 describe("AgentMessagePostExecutorService", () => {
@@ -82,72 +91,84 @@ describe("AgentMessagePostExecutorService", () => {
         expect((await build()).executor?.effect).toBe(TOOL.teamMessagePost)
     })
 
-    it("builds the order card from the order, its customer and the catalogue: the caller names the order alone", async () => {
-        const { chat, executor, messageOf, postOf } = await build()
+    it("stores a finished card of a registered kind as the package built it, without reading any record", async () => {
+        const { chat, executor, messageOf, postOf, registry } = await build()
 
-        await expect(executor?.execute(TURN, { kind: "order.summary", orderId: "o1" }, CALL)).resolves.toEqual({
+        await expect(executor?.execute(TURN, TEAM_CARD, CALL)).resolves.toEqual({
             kind: "chat-message",
             id: "msg-1",
-            facts: POSTED_FACTS,
+            facts: { messageId: "msg-1", ...POSTED_FACTS },
         })
         expect(chat.postTeamCard).toHaveBeenCalledWith("ws-1", expect.objectContaining({ agentId: "agent-1" }))
         expect(postOf()).toMatchObject({ audience: "own", key: "agent-message:order-notice:o1" })
         expect(messageOf()).toEqual({
-            kind: "order.summary",
+            kind: "tcore.card",
             intent: "notify",
-            title: "New order DH-1",
-            summary: "New order DH-1 · 1 x Small basket · 2.000 VND · customer An · deliver to 25 Nguyen Hue",
-            payload: {
-                orderNo: "DH-1",
-                lines: [
-                    {
-                        name: "Small basket",
-                        qty: 1,
-                        unitText: "2.000 VND",
-                        amountText: "2.000 VND",
-                        imageUrl: "https://img/basket.png",
-                    },
-                ],
-                amountText: "2.000 VND",
-                customer: "An",
-                address: "25 Nguyen Hue",
-            },
-            work: { label: "order", href: "/agents/sales/workbench" },
+            title: "Card 7",
+            summary: "Card 7 · 12",
+            payload: { no: "7", total: 12 },
+            work: { label: "card", href: "/cards/7" },
         })
+        expect(registry.portOf).not.toHaveBeenCalled()
     })
 
-    it("drops a line, a total or a summary the caller typed beside the order id", async () => {
-        const { executor, messageOf } = await build()
-        const typed = { kind: "order.summary", orderId: "o1", summary: "FREE", payload: { amountText: "1 VND" } }
-        await executor?.execute(TURN, typed, CALL)
-        expect(messageOf()).toMatchObject({ payload: { amountText: "2.000 VND" } })
-        expect(JSON.stringify(messageOf())).not.toContain("FREE")
+    it("R45: a refused or failed team post is never silent: one app error and one log line, nothing posted about it, the same answer", async () => {
+        const { chat, executor, errors, logger } = await build()
+        await expect(executor?.execute(TURN, { ...TEAM_CARD, kind: "tcore.unknown" }, CALL)).resolves.toMatchObject({ kind: "refused" })
+        expect(errors.report).toHaveBeenCalledWith(
+            "team_chat.post_refused",
+            expect.objectContaining({ code: TeamChatErrorCode.AgentMessageNotPosted }),
+            { workspaceId: "ws-1", agentId: "agent-1", runId: "turn-1", code: "kind_not_postable", key: "run-1:0" },
+        )
+        expect(logger.warn).toHaveBeenCalledWith("team_chat.post_refused", expect.objectContaining({ code: "kind_not_postable" }))
+
+        const down = new Error("db down")
+        chat.postTeamCard.mockRejectedValueOnce(down)
+        await expect(executor?.execute(TURN, TEAM_CARD, CALL)).rejects.toBe(down)
+        expect(errors.report).toHaveBeenLastCalledWith("team_chat.post_refused", down, expect.objectContaining({ code: "Error" }))
+        // No recursion: the failure is told to the console, never posted to the team chat again.
+        expect(chat.postTeamCard).toHaveBeenCalledTimes(1)
     })
 
-    it("builds the payment card with the amount of the bank credit that paid the order", async () => {
-        const { executor, messageOf } = await build({ "bank-transaction": [{ amountVnd: 1500 }] })
-        await executor?.execute(TURN, { kind: "payment.received", orderId: "o1" }, CALL)
-        expect(messageOf()).toMatchObject({
-            kind: "payment.received",
-            title: "1.500 VND",
-            summary: "Received 1.500 VND for DH-1",
-            payload: { orderNo: "DH-1", amountText: "1.500 VND", customer: "An" },
-        })
+    it("records nothing for a post that went through", async () => {
+        const { executor, errors } = await build()
+        await executor?.execute(TURN, TEAM_CARD, CALL)
+        expect(errors.report).not.toHaveBeenCalled()
     })
 
-    it("answers an order that is not there, and a payment card for an order no credit paid, as refusal facts and posts nothing", async () => {
-        const missing = await build({ order: [] })
-        await expect(missing.executor?.execute(TURN, { kind: "order.summary", orderId: "o9" }, CALL)).resolves.toEqual({
+    it("posts the card to the audience it names", async () => {
+        const { executor, postOf } = await build()
+        await executor?.execute(TURN, { ...TEAM_CARD, audience: "everyone" }, CALL)
+        expect(postOf()).toMatchObject({ audience: "everyone" })
+    })
+
+    it("answers a kind no plugin registers, and content that is not of its kind's shape, as refusal facts and posts nothing", async () => {
+        const { chat, executor } = await build()
+        await expect(executor?.execute(TURN, { ...TEAM_CARD, kind: "tcore.unknown" }, CALL)).resolves.toEqual({
             kind: "refused",
-            id: "order_missing",
+            id: "kind_not_postable",
             facts: {},
         })
-        const unpaid = await build({ "bank-transaction": [] })
-        await expect(
-            unpaid.executor?.execute(TURN, { kind: "payment.received", orderId: "o1" }, CALL),
-        ).resolves.toEqual({ kind: "refused", id: "not_paid", facts: {} })
-        expect(missing.chat.postTeamCard).not.toHaveBeenCalled()
-        expect(unpaid.chat.postTeamCard).not.toHaveBeenCalled()
+        await expect(executor?.execute(TURN, { ...TEAM_CARD, payload: { no: 7 } }, CALL)).resolves.toEqual({
+            kind: "refused",
+            id: "card_invalid",
+            facts: {},
+        })
+        expect(chat.postTeamCard).not.toHaveBeenCalled()
+    })
+
+    it("refuses a card of an engine kind that has no tool path (a stop card, a core table of rows) as an unregistered kind", async () => {
+        const { chat, executor } = await build()
+        await expect(executor?.execute(TURN, { ...TEAM_CARD, kind: "records.rows" }, CALL)).resolves.toMatchObject({ id: "kind_not_postable" })
+        expect(chat.postTeamCard).not.toHaveBeenCalled()
+    })
+
+    it("no longer builds a card from an order id: the old payload is not a post", async () => {
+        const { chat, executor } = await build()
+        await expect(executor?.execute(TURN, { kind: "order.summary", orderId: "o1" }, CALL)).rejects.toMatchObject({
+            code: TeamChatErrorCode.InvalidAgentMessage,
+        })
+        expect(chat.postTeamCard).not.toHaveBeenCalled()
     })
 })
 
@@ -193,29 +214,30 @@ describe("AgentMessagePostExecutorService words and audience", () => {
     })
 })
 
-describe("AgentMessagePostExecutorService the card of a stopped workflow", () => {
-    const CARD = {
-        workflow: { moduleKey: "accounting", key: "reconcile", title: "reconcile" },
-        step: { key: "settle", nodeId: "payment.settle", title: "settle" },
-        runId: "run-1",
-        leadId: "lead-1",
-        conversationId: "c-1",
-        by: "ai",
-        reason: "Khach chuyen du",
-        question: "Nhan khong?",
-        facts: [{ name: "differenceVnd", value: "1000" }],
-        suggestions: [
-            { text: "Nhan va ghi so", handledBy: "workflow" },
-            { text: "Hoan lai khach", handledBy: "person" },
-        ],
-        decisions: [],
-        repeats: 1,
-        firstAt: "2026-11-10T08:00:00.000Z",
-        lastAt: "2026-11-10T08:00:00.000Z",
-    }
-    const STOPPED = { kind: "workflow.stopped", title: "Dung", summary: "Khach chuyen du", card: CARD }
-    const STOP_CALL: EffectCall = { key: "run-stuck:run-1:settle:0:1", dedupeKey: "run-stuck:run-1:settle" }
+/** The card of a stopped workflow: the AI's words, one fact and two suggestions. */
+const CARD = {
+    workflow: { moduleKey: "accounting", key: "reconcile", title: "reconcile" },
+    step: { key: "settle", nodeId: "payment.settle", title: "settle" },
+    runId: "run-1",
+    leadId: "lead-1",
+    conversationId: "c-1",
+    by: "ai",
+    reason: "Khach chuyen du",
+    question: "Nhan khong?",
+    facts: [{ name: "differenceVnd", value: "1000" }],
+    suggestions: [
+        { text: "Nhan va ghi so", handledBy: "workflow" },
+        { text: "Hoan lai khach", handledBy: "person" },
+    ],
+    decisions: [],
+    repeats: 1,
+    firstAt: "2026-11-10T08:00:00.000Z",
+    lastAt: "2026-11-10T08:00:00.000Z",
+}
+const STOPPED = { kind: "workflow.stopped", title: "Dung", summary: "Khach chuyen du", card: CARD }
+const STOP_CALL: EffectCall = { key: "run-stuck:run-1:settle:0:1", dedupeKey: "run-stuck:run-1:settle" }
 
+describe("AgentMessagePostExecutorService the card of a stopped workflow: post and fold", () => {
     it("posts the common card as an ask whose options are the suggestions, once under the key of the stuck step", async () => {
         const { chat, executor, postOf } = await build()
         chat.storedCard.mockResolvedValue(null)
@@ -240,6 +262,47 @@ describe("AgentMessagePostExecutorService the card of a stopped workflow", () =>
             ],
             occurrence: STOP_CALL.key,
         })
+    })
+
+    it("carries the approval card of a permission request on the stop card, and keeps a package preview only when its kind accepts it", async () => {
+        const { chat, executor, postOf } = await build()
+        chat.storedCard.mockResolvedValue(null)
+        const decision = {
+            step: { nodeId: "payment.refund", title: "Hoan tien", description: "Hoan tien cho khach" },
+            call: { tool: "nivo.tool.payment.refund.create", account: "conn-mb" },
+            facts: [{ name: "So tien", value: "120.000 d" }],
+            text: "Agent xin hoan 120.000 d cho khach",
+            preview: { kind: "tcore.card", payload: { no: "7", total: 12 } },
+        }
+        const wrongPreview = { kind: "tcore.card", payload: { no: 7 } }
+
+        await executor?.execute(
+            TURN,
+            { ...STOPPED, card: { ...CARD, preview: wrongPreview }, decision },
+            STOP_CALL,
+        )
+
+        // The decision is stored with the stop (its valid preview kept); the stop's own preview failed its kind's schema and was dropped.
+        expect(postOf()?.message).toMatchObject({ kind: "workflow.stopped", payload: { ...CARD, decision } })
+        expect(postOf()?.message).not.toHaveProperty("payload.preview")
+    })
+
+    it("drops the approval card's preview of a kind no package registered, and still posts the card", async () => {
+        const { chat, executor, postOf } = await build()
+        chat.storedCard.mockResolvedValue(null)
+        const decision = {
+            step: { nodeId: "n", title: "t", description: "d" },
+            call: { tool: "nivo.tool.x.create", account: null },
+            facts: [],
+            text: "brief",
+            preview: { kind: "ghost.card", payload: {} },
+        }
+
+        await executor?.execute(TURN, { ...STOPPED, decision }, STOP_CALL)
+
+        const { preview: _dropped, ...kept } = decision
+        expect(postOf()?.message).toMatchObject({ payload: { ...CARD, decision: kept } })
+        expect(postOf()?.message).not.toHaveProperty("payload.decision.preview")
     })
 
     it("folds the same step stopping again into the card already there: one more repeat, the first time kept, the later time and the new words", async () => {
@@ -291,7 +354,9 @@ describe("AgentMessagePostExecutorService the card of a stopped workflow", () =>
 
         expect(chat.foldTeamCard.mock.calls[0]?.[2].payload).toMatchObject({ repeats: 3 })
     })
+})
 
+describe("AgentMessagePostExecutorService the card of a stopped workflow: engine words", () => {
     it("keeps the AI's words and adds the freeze decisions when the engine tells the same stop again: one message for one stop", async () => {
         const { chat, executor } = await build()
         chat.storedCard.mockResolvedValue({
@@ -323,7 +388,9 @@ describe("AgentMessagePostExecutorService the card of a stopped workflow", () =>
         expect(message).toMatchObject({ title: "Dung", summary: "Khach chuyen du" })
         expect(message?.payload).toEqual({ ...CARD, decisions: ["retry", "take_over", "skip"] })
     })
+})
 
+describe("AgentMessagePostExecutorService the card of a stopped workflow: resolution and refusal", () => {
     it("rewrites a stop whose run then ended well in place, as resolved and asking nothing, and posts nothing when there was no card", async () => {
         const { chat, executor } = await build()
         const RESOLVED = {
@@ -382,17 +449,17 @@ describe("AgentMessagePostExecutorService the card of a stopped workflow", () =>
 
 describe("AgentMessagePostExecutorService the answer of a team chat turn (chat.answer)", () => {
     const ROOM_TURN: NodeTurn = { ...TURN, subject: { kind: "chat-room", id: "room-1" } }
-    const ASKED: Partial<ChatRoomMessageEntity> = { id: "m-1", roomId: "room-1", authorKind: "user", authorId: "u-1" }
+    const ASKED = storedMessageOf({ id: "m-1", roomId: "room-1", authorKind: "user", authorId: "u-1" })
     const ANSWER = { kind: "chat.answer", messageId: "m-1", text: "Phi ship noi thanh la 20.000 d." }
     const ANSWER_CALL: EffectCall = { key: "run-9:0", dedupeKey: "chat-answer:m-1:agent-1" }
 
     it("posts once in the asked room as a reply to the person's line, a typed message.text", async () => {
-        const { cards, chat, executor } = await build({}, [ASKED])
+        const { cards, chat, executor } = await build([ASKED])
 
         await expect(executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)).resolves.toEqual({
             kind: "chat-message",
             id: "answer-1",
-            facts: { roomId: "room-1", replyTo: "m-1" },
+            facts: { messageId: "answer-1", roomId: "room-1", replyTo: "m-1" },
         })
         expect(cards.postMessage).toHaveBeenCalledTimes(1)
         const [workspaceId, line] = cards.postMessage.mock.calls[0] ?? []
@@ -405,12 +472,12 @@ describe("AgentMessagePostExecutorService the answer of a team chat turn (chat.a
             key: lineKeyOf("chat-answer:m-1:agent-1"),
             replyTo: "m-1",
         })
-        expect(JSON.parse(line?.agentMessage ?? "null")).toMatchObject({ kind: "message.text", intent: "notify" })
+        expect(parseJsonText(line?.agentMessage ?? "null")).toMatchObject({ ok: true, value: { kind: "message.text", intent: "notify" } })
         expect(chat.postTeamCard).not.toHaveBeenCalled()
     })
 
     it("answers the same dedupe key with the same line key (the store keeps one line)", async () => {
-        const { cards, executor } = await build({}, [ASKED])
+        const { cards, executor } = await build([ASKED])
         await executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)
         await executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)
         const keys = cards.postMessage.mock.calls.map((call) => call[1].key)
@@ -418,13 +485,13 @@ describe("AgentMessagePostExecutorService the answer of a team chat turn (chat.a
     })
 
     it("refuses another room or an agent's line, and posts nothing", async () => {
-        const other = await build({}, [ASKED])
+        const other = await build([ASKED])
         await expect(
             other.executor?.execute({ ...TURN, subject: { kind: "chat-room", id: "room-2" } }, ANSWER, ANSWER_CALL),
         ).resolves.toMatchObject({ id: "other_room" })
         expect(other.cards.postMessage).not.toHaveBeenCalled()
 
-        const agentLine = await build({}, [{ ...ASKED, authorKind: "agent" }])
+        const agentLine = await build([{ ...ASKED, authorKind: "agent" }])
         await expect(agentLine.executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)).resolves.toMatchObject({
             id: "not_person_line",
         })

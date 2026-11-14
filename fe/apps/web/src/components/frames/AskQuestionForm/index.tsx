@@ -59,7 +59,7 @@ export const AskQuestionForm = (props: AskQuestionFormProps) => {
             onRetry={on.retry}
             render={(agents, isLoading) => (
                 <Form label={view.copy.headTitle} onSubmit={on.ask} isPending={view.isPending}>
-                    <Stack gap="section">
+                    <Stack gap="row">
                         <Choices {...props} agents={agents} isLoading={isLoading} />
                         <Textarea
                             id="brain-ask-question"

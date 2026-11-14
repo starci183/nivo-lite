@@ -1,4 +1,5 @@
 import { linkKindOf, linesOfLinks } from "./links"
+import type { QuotaFailure } from "./limits"
 
 /** waiting: not sent yet. uploading: bytes on their way to storage. queued: handed to the job queue (a worker reads it from here). */
 export type ItemStatus = "waiting" | "uploading" | "queued" | "failed"
@@ -23,6 +24,8 @@ export interface QueueItem {
     readonly storagePath?: string | undefined
     /** How much of the file has reached storage while it uploads, 0 to 1; the browser holds it, no database does. */
     readonly uploaded?: number | undefined
+    /** Why the file was refused for room: the brain's 50 MB or the plan's storage; set together with the error `errQuota`. */
+    readonly refusal?: QuotaFailure | undefined
     /** The document the queue made of it once handed over: the progress of its reading is looked up by it. */
     readonly sourceId?: string | undefined
 }
@@ -52,12 +55,26 @@ export interface EnqueueItem {
     readonly meta: EnqueueMeta
 }
 
+/** What an upload came to: where the bytes are, or null with the reason when room was refused (a failure of another kind is toasted). */
+export interface UploadOutcome {
+    readonly path: string | null
+    readonly refusal?: QuotaFailure
+}
+
+/** What handing a document to the job queue came to: its id, or null with the reason when room was refused (a failure of another kind is toasted). */
+export interface EnqueueOutcome {
+    readonly id: string | null
+    readonly refusal?: QuotaFailure
+}
+
 /** The two things a send needs from the outside: bytes to storage, and a document to the queue. */
 export interface QueueActions {
-    /** Sends the bytes to storage; `onProgress` is told the fraction sent, 0 to 1, while they travel. */
-    readonly upload: (file: File, onProgress?: (fraction: number) => void) => Promise<string | null>
+    /** Sends the bytes to storage; `onProgress` is told the fraction sent, 0 to 1, while they travel. A file the allowance has no room for is refused before any byte is sent. */
+    readonly upload: (file: File, onProgress?: (fraction: number) => void) => Promise<UploadOutcome>
     /** Hands the document to the job queue; answers the id of the new document, or null when it was refused. */
     readonly enqueue: (input: EnqueueItem) => Promise<string | null>
+    /** The same command, answering also why the document was refused for room (the brain's limit checked again when the source is added). */
+    readonly enqueueOutcome: (input: EnqueueItem) => Promise<EnqueueOutcome>
 }
 
 /** The most bytes one file may have. */

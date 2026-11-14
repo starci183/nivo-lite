@@ -1,47 +1,44 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { DOC_ANSWERS, answers, keywordsOf } from "@modules/domain/knowledge-gaps"
 import { UsageMeterService } from "@modules/domain/knowledge"
+import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KNOWLEDGE_BLOCKED_CREDITS, isPublicDraftPayload } from "@modules/queues/knowledge"
-import { withoutExcluded } from "./exclusion.policy"
+import { shownSourcesOf } from "./draft-sources.policy"
 import { PublicDocumentsErrorCode } from "./errors/public-documents.error"
 import { InternalReaderService } from "./internal-reader.service"
 import { PublicDocumentEntity, PublicDocumentSourceEntity } from "./persistence/entities"
 import { PublicDraftWriterService } from "./public-draft-writer.service"
-import { MAX_DRAFT_SOURCES, MAX_TITLE_CHARS } from "./public-documents.contracts"
-import type { InternalText, LeftOut } from "./public-documents.contracts"
+import { MAX_DRAFT_SOURCES, MAX_TITLE_CHARS, type InternalText } from "./public-documents.contracts"
 import { PublicDocumentsLogEvent } from "./public-documents.log-events"
 
 /** What the job did with its row. */
 export type PublicDraftOutcome = "done" | "skipped"
 
-/** An internal text after the hard exclusions: what may go to the model and what was left out. */
-interface Cleaned {
-    readonly text: InternalText
-    readonly kept: string
-    readonly leftOut: ReadonlyArray<LeftOut>
-}
+/** What one draft call came to: a text, nothing to write (the documents do not answer), or no readable answer. */
+type Composed =
+    | { readonly kind: "written"; readonly body: string }
+    | { readonly kind: "nothing" }
+    | { readonly kind: "unavailable" }
 
-const cleaned = (text: InternalText): Cleaned => {
-    const split = withoutExcluded(text.text)
-    return { text, kept: split.kept, leftOut: split.leftOut }
-}
+/** The area a draft reads: what customers may read. Any other value, or none, is the internal area. */
+const PUBLIC_AREA = "public"
 
 @Injectable()
 /**
- * The job behind a public document in the status `drafting`. Either the owner asked NIVO to draft it from chosen internal documents,
- * or a customer asked something the public documents cannot answer and the Brain is searched for an internal answer. No customer is
- * present in either: the internal documents are read through NIVO MCP as an agent the owner granted the tools, the hard exclusions
- * (salary, identity numbers, contracts, capital, internal discounts) are cut out before the model sees the text and again from what
- * it wrote, and the result waits for a person: nothing here publishes.
+ * The job behind a public document in the status `drafting`. Either the owner asked NIVO to draft it from chosen documents, or a
+ * customer asked something and the Brain is searched for documents that answer it. Drafting is an EXIT of the public area only: a
+ * document's AREA is its audience, so only documents of the public area are read and shown to the model; nothing is labelled by a
+ * model or a word list. A chosen document that is not in the public area (or whose area cannot be read) is refused before anything
+ * is read; among the documents a search finds, only the public ones are read. ONE model call writes the text and says whether the
+ * documents answer what is asked; no answer writes nothing. The result waits for a person: nothing here publishes.
  */
 export class PublicDraftRunService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly reader: InternalReaderService,
+        private readonly sources: KnowledgeSourcesReadService,
         private readonly writer: PublicDraftWriterService,
         private readonly usage: UsageMeterService,
         @InjectLogger() private readonly logger: Logger,
@@ -79,27 +76,33 @@ export class PublicDraftRunService {
         else await this.drop(row, "job_failed")
     }
 
-    /** The owner's draft: each chosen internal document is read, cleaned, and written from. */
+    /**
+     * The owner's draft: the area of each chosen document is read first, and one that is not in the public area stops the draft
+     * (`SourceInternal`) before any text is read or sent; then each is read (a gone or unready one stops it: `SourceNotReady`) and
+     * written from.
+     */
     private async draft(row: PublicDocumentEntity): Promise<void> {
         const recorded = await this.entityManager.find(PublicDocumentSourceEntity, {
             where: { documentId: row.id, workspaceId: row.workspaceId },
             take: MAX_DRAFT_SOURCES,
         })
-        const reads = await Promise.all(recorded.map((source) => this.reader.read(row.workspaceId, source.sourceId)))
-        if (reads.some((read) => read.kind === "no_right"))
-            return this.stop(row, PublicDocumentsErrorCode.NoInternalRight)
-        const texts = reads.flatMap((read): ReadonlyArray<InternalText> => (read.kind === "ok" ? [read.text] : []))
-        if (texts.length !== reads.length) return this.stop(row, PublicDocumentsErrorCode.SourceNotReady)
-        const clean = texts.map(cleaned)
-        const written = await this.write(row, clean, null)
-        if (written === null) return undefined
+        const ids = recorded.map((source) => source.sourceId)
+        const states = await this.sources.statesOf(row.workspaceId, ids)
+        // The area is the audience: a source whose area is not exactly the public one (internal, or unreadable) stops the draft.
+        if (states.some((state) => state.visibility !== PUBLIC_AREA))
+            return this.stop(row, PublicDocumentsErrorCode.SourceInternal)
+        const texts = await this.publicTexts(row.workspaceId, ids)
+        if (texts.length !== ids.length) return this.stop(row, PublicDocumentsErrorCode.SourceNotReady)
+        const written = await this.compose(row, texts, null)
+        if (written.kind === "nothing") return this.stop(row, PublicDocumentsErrorCode.NothingLeft)
+        if (written.kind === "unavailable") return this.stop(row, PublicDocumentsErrorCode.DraftUnavailable)
         await this.entityManager.transaction(async (tx) => {
             const changed = await tx.update(
                 PublicDocumentEntity,
                 { id: row.id, workspaceId: row.workspaceId, status: "drafting", draftRevision: row.draftRevision },
                 {
                     body: written.body,
-                    leftOut: [...written.leftOut],
+                    leftOut: [],
                     status: this.settled(row),
                     failureCode: null,
                     draftRevision: row.draftRevision + 1,
@@ -119,27 +122,32 @@ export class PublicDraftRunService {
         return undefined
     }
 
-    /** The proposal for a customer question: the internal documents that cover it are cleaned and written from, or the row goes. */
+    /**
+     * The proposal for a customer question: of the documents the Brain finds, only those of the public area are read and shown to the
+     * same one call with the question. None of them, or a model that says they do not answer it (`answers: false` or an empty body),
+     * and the row goes (`no_answer`). No word of the question is compared with a word of a document here.
+     */
     private async answer(row: PublicDocumentEntity): Promise<void> {
         const question = row.question ?? row.title
         const found = await this.reader.hits(row.workspaceId, question)
+        // A refused search (the reader logged its typed code) is the Brain not answering, not a document that is not ready.
         if (found.kind !== "ok")
             return this.drop(
                 row,
                 found.kind,
                 found.kind === "no_right"
                     ? PublicDocumentsErrorCode.NoInternalRight
-                    : PublicDocumentsErrorCode.SourceNotReady,
+                    : PublicDocumentsErrorCode.DraftUnavailable,
             )
-        const reads = await Promise.all(found.sourceIds.map((id) => this.reader.read(row.workspaceId, id)))
-        const words = keywordsOf(question)
-        const covering = reads
-            .flatMap((read): ReadonlyArray<InternalText> => (read.kind === "ok" ? [read.text] : []))
-            .map(cleaned)
-            .filter((item) => answers(words, new Set(keywordsOf(item.kept)), DOC_ANSWERS))
-        if (covering.length === 0) return this.drop(row, "no_answer", PublicDocumentsErrorCode.NothingLeft)
-        const written = await this.write(row, covering, question)
-        if (written === null) return row.publishedBody === null ? this.drop(row, "no_draft") : undefined
+        const states = await this.sources.statesOf(row.workspaceId, found.sourceIds)
+        const publicIds = found.sourceIds.filter((id) =>
+            states.some((state) => state.id === id && state.visibility === PUBLIC_AREA),
+        )
+        const texts = await this.publicTexts(row.workspaceId, publicIds)
+        if (texts.length === 0) return this.drop(row, "no_answer", PublicDocumentsErrorCode.NothingLeft)
+        const written = await this.compose(row, texts, question)
+        if (written.kind === "nothing") return this.drop(row, "no_answer", PublicDocumentsErrorCode.NothingLeft)
+        if (written.kind === "unavailable") return this.drop(row, "no_draft")
         const committed = await this.entityManager.transaction(async (tx) => {
             const changed = await tx.update(
                 PublicDocumentEntity,
@@ -147,7 +155,7 @@ export class PublicDraftRunService {
                 {
                     title: question.slice(0, MAX_TITLE_CHARS),
                     body: written.body,
-                    leftOut: [...written.leftOut],
+                    leftOut: [],
                     status: this.settled(row),
                     failureCode: null,
                     draftRevision: row.draftRevision + 1,
@@ -157,12 +165,12 @@ export class PublicDraftRunService {
             await tx.delete(PublicDocumentSourceEntity, { documentId: row.id, workspaceId: row.workspaceId })
             await tx.insert(
                 PublicDocumentSourceEntity,
-                covering.map((item) => ({
+                texts.map((text) => ({
                     documentId: row.id,
-                    sourceId: item.text.sourceId,
+                    sourceId: text.sourceId,
                     workspaceId: row.workspaceId,
-                    sourceTitle: item.text.title,
-                    contentHash: item.text.contentHash,
+                    sourceTitle: text.title,
+                    contentHash: text.contentHash,
                 })),
             )
             return true
@@ -171,37 +179,45 @@ export class PublicDraftRunService {
     }
 
     /**
-     * The model's text for the cleaned sources, cleaned again, with everything left out listed. Null when there is nothing to write
-     * from or the model gave nothing; the row is then stopped (an owner's draft) or dropped (a proposal).
+     * The texts of these documents that are of the public area and fully read, in the order asked; any other is left out. The area is
+     * read again with the text, so a document moved to the internal area in between is never shown.
      */
-    private async write(
+    private async publicTexts(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyArray<InternalText>> {
+        const read = await Promise.all(ids.map((id) => this.sources.textOf(workspaceId, id)))
+        return read.flatMap((source): ReadonlyArray<InternalText> =>
+            source?.visibility === PUBLIC_AREA && source.status === "ready" && source.contentHash !== null
+                ? [{ sourceId: source.id, title: source.title, contentHash: source.contentHash, text: source.content }]
+                : [],
+        )
+    }
+
+    /**
+     * The one call for the documents, each within its share of what one call is shown (a cut is logged; the rest of that text is not
+     * written from). `nothing` when no text could be shown or the model says the documents do not answer (`answers: false` or an
+     * empty body); `unavailable` when the model gave no readable answer within its tries: nothing of the sources is written then.
+     */
+    private async compose(
         row: PublicDocumentEntity,
-        clean: ReadonlyArray<Cleaned>,
+        texts: ReadonlyArray<InternalText>,
         question: string | null,
-    ): Promise<{ readonly body: string; readonly leftOut: ReadonlyArray<LeftOut> } | null> {
-        const usable = clean.filter((item) => item.kept !== "")
-        const leftOut = clean.flatMap((item) => item.leftOut)
-        if (usable.length === 0) return this.refuse(row, PublicDocumentsErrorCode.NothingLeft)
-        const text = await this.writer.write({
+    ): Promise<Composed> {
+        const shown = shownSourcesOf(texts)
+        for (const source of shown.filter((one) => one.cut))
+            this.logger.warn(PublicDocumentsLogEvent.SourceCut, { documentId: row.id, sourceId: source.sourceId })
+        if (shown.every((source) => source.text === "")) return { kind: "nothing" }
+        const answer = await this.writer.write({
             workspaceId: row.workspaceId,
             title: row.title,
             question,
             instructions: row.instructions,
-            sources: usable.map((item) => ({ title: item.text.title, text: item.kept })),
+            sources: shown,
         })
-        if (text === null) return this.refuse(row, PublicDocumentsErrorCode.DraftUnavailable)
-        const out = withoutExcluded(text.body)
-        if (out.kept === "") return this.refuse(row, PublicDocumentsErrorCode.NothingLeft)
-        return { body: out.kept, leftOut: [...leftOut, ...out.leftOut] }
+        if (answer === null) return { kind: "unavailable" }
+        const body = answer.body.trim()
+        return answer.answers && body !== "" ? { kind: "written", body } : { kind: "nothing" }
     }
 
-    /** Ends a draft that cannot be written; a proposal is dropped instead, since nobody asked for it. */
-    private async refuse(row: PublicDocumentEntity, code: PublicDocumentsErrorCode): Promise<null> {
-        if (row.gapId === null || row.publishedBody !== null) await this.stop(row, code)
-        return null
-    }
-
-    /** The row is not wanted: a proposal with no internal answer, no right to look, or no text. */
+    /** The row is not wanted: a proposal with no public answer, no right to search, or no text. */
     private async drop(
         row: PublicDocumentEntity,
         reason: string,

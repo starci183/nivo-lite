@@ -1,15 +1,11 @@
 import { Test } from "@nestjs/testing"
-import type { DefaultRule } from "@modules/domain/authority-rules"
-import type { AuthorityActionDefinition, ModuleDefinition } from "../modules.contracts"
 import {
     agentNameOf as realAgentNameOf,
     cleanInstanceName as realCleanInstanceName,
-    defaultRulesOf as realDefaultRulesOf,
     freeHandle as realFreeHandle,
     instanceNameKey as realInstanceNameKey,
     nextInstanceName as realNextInstanceName,
     settingOf as realSettingOf,
-    tagGrantsOf as realTagGrantsOf,
     withSetting as realWithSetting,
 } from "./instance.policy"
 
@@ -17,12 +13,10 @@ const SUBJECT = Symbol("instance.policy")
 type Subject = {
     agentNameOf: typeof realAgentNameOf
     cleanInstanceName: typeof realCleanInstanceName
-    defaultRulesOf: typeof realDefaultRulesOf
     freeHandle: typeof realFreeHandle
     instanceNameKey: typeof realInstanceNameKey
     nextInstanceName: typeof realNextInstanceName
     settingOf: typeof realSettingOf
-    tagGrantsOf: typeof realTagGrantsOf
     withSetting: typeof realWithSetting
 }
 
@@ -34,12 +28,10 @@ const buildSubject = async () => {
                 useValue: {
                     agentNameOf: realAgentNameOf,
                     cleanInstanceName: realCleanInstanceName,
-                    defaultRulesOf: realDefaultRulesOf,
                     freeHandle: realFreeHandle,
                     instanceNameKey: realInstanceNameKey,
                     nextInstanceName: realNextInstanceName,
                     settingOf: realSettingOf,
-                    tagGrantsOf: realTagGrantsOf,
                     withSetting: realWithSetting,
                 },
             },
@@ -48,54 +40,6 @@ const buildSubject = async () => {
     const subject = moduleRef.get<Subject>(SUBJECT)
     return { subject }
 }
-
-const text = { vi: "v", en: "e" }
-const list = { vi: ["v"], en: ["e"] }
-
-const actionOf = (
-    action: string,
-    mode: AuthorityActionDefinition["mode"],
-    limitVnd: number | null,
-): AuthorityActionDefinition => ({
-    action,
-    label: text,
-    mode,
-    limitVnd,
-    requiredFields: ["lead_id"],
-    amountLimit: limitVnd !== null,
-    maxMode: null,
-    note: "",
-    next: [],
-})
-
-const moduleOf = (actions: ReadonlyArray<AuthorityActionDefinition>): ModuleDefinition => ({
-    key: "demo",
-    order: 1,
-    name: text,
-    shortName: text,
-    description: text,
-    points: list,
-    purpose: "Demo.",
-    icon: "bolt",
-    glyph: "M0 0",
-    mascot: "/m.png",
-    category: "ops",
-    status: "stable",
-    audience: "customer",
-    includedWithWorkspace: false,
-    available: true,
-    knowledgeFolder: "demo",
-    workbench: null,
-    settingsExtras: null,
-    requires: { capabilities: [], connections: [] },
-    connectionProviders: [],
-    defaultOperatingMode: "assist",
-    multiInstance: false,
-    agent: { label: text, handle: "demo", summary: text, capabilities: list, role: text, instructions: text },
-    gates: [],
-    authorityActions: actions,
-    accepts: [],
-})
 
 describe("instanceNameKey", () => {
     it("compares a trimmed name without case", async () => {
@@ -190,23 +134,6 @@ describe("agentNameOf", () => {
     })
 })
 
-describe("defaultRulesOf", () => {
-    it("grants one rule per action of the module", async () => {
-        const { subject } = await buildSubject()
-
-        const rules: ReadonlyArray<DefaultRule> = [
-            { action: "send_quote", mode: "ask", limit_vnd: 1000, required_fields: ["lead_id"] },
-            { action: "send_care", mode: "auto", limit_vnd: null, required_fields: ["lead_id"] },
-        ]
-
-        expect(
-            subject.defaultRulesOf(
-                moduleOf([actionOf("send_quote", "ask", 1000), actionOf("send_care", "auto", null)]),
-            ),
-        ).toEqual(rules)
-    })
-})
-
 describe("settingOf", () => {
     it("keeps the working hours as the web stores them, normalized, removes them on an empty text and refuses another shape", async () => {
         const { subject } = await buildSubject()
@@ -273,44 +200,5 @@ describe("withSetting", () => {
             other: 1,
             holdingMessage: "Wait",
         })
-    })
-})
-
-describe("tagGrantsOf", () => {
-    const tagging = { ...moduleOf([]), key: "chatbot", tags: ["sales"] }
-    const tagsOf = (key: string): ReadonlyArray<string> => (key === "chatbot" ? ["sales"] : [])
-
-    it("lets a new tagging agent tag the peers its module lists", async () => {
-        const { subject } = await buildSubject()
-
-        expect(subject.tagGrantsOf(tagging, "a1", [{ agentId: "a2", moduleKey: "sales" }], tagsOf)).toEqual([
-            { from: "a1", to: "a2" },
-        ])
-    })
-
-    it("lets the peers whose module lists the new agent tag it", async () => {
-        const { subject } = await buildSubject()
-        const sales = { ...moduleOf([]), key: "sales" }
-
-        expect(subject.tagGrantsOf(sales, "a2", [{ agentId: "a1", moduleKey: "chatbot" }], tagsOf)).toEqual([
-            { from: "a1", to: "a2" },
-        ])
-    })
-
-    it("grants nothing to itself, to an unlisted module or without peers", async () => {
-        const { subject } = await buildSubject()
-
-        expect(
-            subject.tagGrantsOf(
-                tagging,
-                "a1",
-                [
-                    { agentId: "a1", moduleKey: "chatbot" },
-                    { agentId: "a3", moduleKey: "video" },
-                ],
-                tagsOf,
-            ),
-        ).toEqual([])
-        expect(subject.tagGrantsOf(tagging, "a1", [], tagsOf)).toEqual([])
     })
 })

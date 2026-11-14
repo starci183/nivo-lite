@@ -150,19 +150,6 @@ describe("AiUsageOverviewService", () => {
             expect(work.byRefs).not.toHaveBeenCalled()
         })
 
-        it("refuses staff the workspace summary with the role guard, and answers it per day, module and kind to a manager", async () => {
-            const { service, work, members } = await build()
-            work.daily.mockResolvedValue([])
-
-            await expect(service.workSummary(USER, WORKSPACE)).resolves.toEqual([])
-            expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
-            expect(work.daily).toHaveBeenCalledWith(WORKSPACE, 30)
-
-            const refusal = new Error("role")
-            members.require.mockRejectedValue(refusal)
-            await expect(service.workSummary(USER, WORKSPACE)).rejects.toBe(refusal)
-        })
-
         it("a learning proposal: the sum of its lessons' calls (judgements and the draft), exact", async () => {
             const { service, work } = await build()
             work.byRefs.mockResolvedValue(

@@ -1,15 +1,19 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import {
+    InjectUsageNoticeDoor,
+    usageNoticeKeyOf,
+    type UsageNoticeDoor,
+    workColumnsOf,
+    workFactsJsonOf,
+} from "@modules/domain/ai-usage-events"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger, runInScope, workInScope } from "@modules/platform/logging"
-import { workColumnsOf, workFactsJsonOf } from "@modules/domain/ai-usage-events"
-import type { Logger } from "@modules/platform/logging"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, runInScope, workInScope, type Logger } from "@modules/platform/logging"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { QuotaStatus, UsageKind, UsageRecord } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
-import { figuresOf, isBlocked, quotaStatusOf } from "./usage.policy"
+import { figuresOf, isBlocked, quotaStatusOf, tokenFactsOf } from "./usage.policy"
 
 const number = new Intl.NumberFormat("vi-VN")
 
@@ -36,22 +40,25 @@ export class UsageMeterService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() @InjectUsageNoticeDoor() private readonly notices: UsageNoticeDoor | null = null,
     ) {}
 
     /**
      * Records one model call with the work it served: the run in scope, and the work in scope (the document or lesson a job reads,
-     * the step and agent of a node), so the document and run reads can show it. A failed try (`failure`) is booked estimated and
-     * never billed. Never throws: metering must not break the work it measures.
+     * the step and agent of a node), so the document and run reads can show it. A failed try (`failure`: timeout, provider error, cut at
+     * its cap, empty) is never billed (concept.tokens-and-credits): one that reported its usage (a cut try) is booked with those real
+     * figures, one that reported none is booked estimated from its prompt. Never throws: metering must not break the work it measures.
      */
     async record(input: UsageRecord): Promise<void> {
         try {
+            const reported = input.failure === undefined || input.usage !== null
             const priced = figuresOf({
                 model: input.model,
-                usage: input.failure === undefined ? input.usage : null,
+                usage: input.usage,
                 promptChars: input.promptChars ?? 0,
                 completionChars: input.failure === undefined ? (input.completionChars ?? 0) : 0,
             })
-            const figures = input.failure === undefined ? priced : { ...priced, estimated: true }
+            const figures = reported ? priced : { ...priced, estimated: true }
             const work = workColumnsOf(workInScope(), null, figures, input.failure)
             await callDbFunction(this.entityManager, "public.record_ai_usage_work", [
                 input.workspaceId,
@@ -62,7 +69,17 @@ export class UsageMeterService {
                 Math.round(figures.completionTokens),
                 Number(figures.costUsd.toFixed(8)),
                 figures.estimated,
-                JSON.stringify(workFactsJsonOf(work, runInScope(), { tryNumber: input.tryNumber ?? null })),
+                JSON.stringify({
+                    ...workFactsJsonOf(work, runInScope(), {
+                        // One record is one try of one call: a caller that retries says which; any other call is its first try.
+                        tryNumber: input.tryNumber ?? 1,
+                        durationMs: input.served?.durationMs ?? null,
+                        upstream: input.served?.upstream ?? null,
+                        finishReason: input.served?.finishReason ?? null,
+                    }),
+                    // What the provider served from its prompt cache, wrote to it, and thought: the row shows why a call cost what it did.
+                    ...tokenFactsOf(input.usage, figures.estimated),
+                }),
             ])
             const status = await this.statusOf(input.workspaceId)
             if (status === null) return
@@ -94,20 +111,16 @@ export class UsageMeterService {
         }
     }
 
-    /** Posts the notice of the month and level; the database function posts it once. */
+    /** Tells the founder in /chat once per month and level; where no chat is composed (the mcp gateway) nobody is told. */
     private async notify(workspaceId: string, status: QuotaStatus, level: "warn" | "exceeded"): Promise<void> {
+        if (this.notices === null) return
         try {
             const body = this.catalog.get(
                 `usage.notice.${level}`,
                 { percent: Math.round(status.ratio * 100), use: useOf(status) },
                 "vi",
             )
-            await callDbFunction(this.entityManager, "public.post_ai_usage_notice", [
-                workspaceId,
-                status.periodStart,
-                level,
-                body,
-            ])
+            await this.notices.postNotice(workspaceId, { key: usageNoticeKeyOf(status.periodStart, level), body })
         } catch (cause) {
             this.logger.error(KnowledgeLogEvent.NoticeFailed, cause, { workspaceId })
         }

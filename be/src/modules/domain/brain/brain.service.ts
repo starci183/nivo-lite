@@ -1,22 +1,43 @@
 import { Injectable } from "@nestjs/common"
-import { BrainFactsService, factLine } from "@modules/domain/brain-facts"
-import type { FactRecord, ProposeResult } from "@modules/domain/brain-facts"
-import { BrainLessonsService } from "@modules/domain/brain-lessons"
-import type { LessonRecord } from "@modules/domain/brain-lessons"
-import { FACT_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
+import { BrainFactsReadService, BrainFactsService, windowEndsBeforeStart, type FactRecord, type ProposeResult } from "@modules/domain/brain-facts"
+import { BrainLessonsService, type LessonRecord } from "@modules/domain/brain-lessons"
+import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { WorkspaceMembersService, type WorkspaceMember } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { FactDecision, FactForm, KeepCurrentInput, LessonDecision, LessonForm } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
+import { BrainError, BrainErrorCode } from "./errors/brain.error"
 import { DocumentFactsService } from "./document-facts.service"
-import { FactEmbeddingsService } from "./fact-embeddings.service"
-import { MANAGERS, rolesToDecide } from "./founder.policy"
+import { FactVectorsSweepService } from "./fact-vectors-sweep.service"
+import { MANAGERS, rolesToDecide, splitInForce } from "./founder.policy"
+
+/** A note without its edges; undefined when nothing is left. */
+const trimmedNoteOf = (note: string | null | undefined): string | undefined => {
+    const trimmed = note?.trim()
+    return trimmed === "" ? undefined : trimmed
+}
+
+/** The most workspaces one upkeep pass keeps current; the rest wait for the next tick. */
+const UPKEEP_WORKSPACES = 200
+
+/** What one pass of the timed upkeep did. */
+export interface BrainUpkeep {
+    /** Workspaces whose upkeep was due. */
+    readonly workspaces: number
+    /** Scheduled facts that came in force. */
+    readonly activated: number
+    /** Facts in force whose end had passed. */
+    readonly expired: number
+    /** Workspaces whose upkeep failed (retried at the next tick). */
+    readonly failed: number
+    /** Facts in force that got a vector in this tick's sweep (embedded or copied); the rest go on at the next tick. */
+    readonly vectors: number
+    /** Document readings that waited for credits and go on now that their workspace has credits again. */
+    readonly readingsResumed: number
+}
 
 @Injectable()
 /**
@@ -35,7 +56,8 @@ export class BrainService {
         private readonly gaps: KnowledgeGapsService,
         private readonly sources: KnowledgeSourcesService,
         private readonly documentFacts: DocumentFactsService,
-        private readonly vectors: FactEmbeddingsService,
+        private readonly vectorSweep: FactVectorsSweepService,
+        private readonly reads: BrainFactsReadService,
     ) {}
 
     /**
@@ -45,6 +67,10 @@ export class BrainService {
     async saveFact(userId: string, workspaceId: string, form: FactForm): Promise<ProposeResult> {
         const me = await this.manager(userId, workspaceId)
         const now = this.clock.now()
+        // A window that ends before (or when) it starts is refused (the store's check would fail later); an end already past is kept and
+        // filed as history (`stale`). The same value with a NEW window is the next version, never "reinforced" (`windowMovedOf`).
+        if (windowEndsBeforeStart(form.validFrom, form.validTo))
+            throw new BrainError({ code: BrainErrorCode.WindowInvalid })
         const result = await this.facts.propose(workspaceId, {
             subjectType: form.subjectType,
             subjectLabel: form.subjectLabel,
@@ -62,7 +88,7 @@ export class BrainService {
                     kind: "manual",
                     ref: `manual:${now.getTime()}`,
                     label: `${me.displayName} wrote this on the Second Brain page`,
-                    quote: form.note?.trim() || undefined,
+                    quote: trimmedNoteOf(form.note),
                     at: now.toISOString(),
                 },
             ],
@@ -74,11 +100,14 @@ export class BrainService {
         return result
     }
 
-    /** Decides a fact: apply, reject, choose among competing values, split into its own fact, or retire. Only rejecting is a manager's too. */
+    /**
+     * Decides a fact: apply, reject, choose among competing values, split into its own fact, or retire. Rejecting is a manager's too; so
+     * is splitting, but a manager's split files the situational value as a proposal for the founder (only the founder's puts it in force).
+     */
     async decideFact(userId: string, decision: FactDecision): Promise<FactRecord> {
         const me = await this.members.require(userId, decision.workspaceId, rolesToDecide(decision.action))
         const { workspaceId, id } = decision
-        const fact = await this.decided(workspaceId, id, me.displayName, decision)
+        const fact = await this.decided(workspaceId, id, me.displayName, decision, splitInForce(me.role))
         await this.answered(workspaceId, fact)
         return fact
     }
@@ -132,11 +161,68 @@ export class BrainService {
         await eachInOrder(deleted.parts, (part) => this.documentFacts.withdraw(workspaceId, part.id, part.title))
     }
 
-    /** Keeps the brain current before it is read: scheduled values take over, ended values expire. */
+    /**
+     * Keeps the brain current before it is read: scheduled values take over, ended values expire, and a truth a public document states
+     * that an older build left internal is given back to customers (`repairAudience`, D-BR-1; idempotent, no model call).
+     */
     async maintain(userId: string, workspaceId: string): Promise<void> {
         await this.members.require(userId, workspaceId)
         const done = await this.facts.maintain(workspaceId)
         await eachInOrder(done.activated, (fact) => this.answered(workspaceId, fact))
+        const widened = await this.facts.repairAudience(workspaceId, (ids) => this.publicSources(workspaceId, ids))
+        await eachInOrder(widened, (fact) => this.answered(workspaceId, fact))
+    }
+
+    /** Which of these documents customers may read (a document gone is not). */
+    private async publicSources(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlySet<string>> {
+        const open = new Set<string>()
+        await eachInOrder(ids, async (id) => {
+            const source = await this.sources.sourceOf(workspaceId, id)
+            if (source?.visibility === "public") open.add(id)
+        })
+        return open
+    }
+
+    /**
+     * The TIMED upkeep (BR1; tick `brain-upkeep` of the one app scheduler, every 5 minutes): in every workspace where a scheduled fact's
+     * start has come or a fact's end has passed, the same `maintain` the Second Brain page runs, as the brain itself (no person): the
+     * scheduled value comes in force (the value it replaces is superseded, relations carried), ended values expire, and a fact that came
+     * in force gets its vector and answers its gaps, exactly as on the page. Idempotent: `maintain` promotes only rows still
+     * `scheduled` and expires only rows still `active`, so a second tick, the page and the change door racing it change nothing twice.
+     * One failing workspace is logged and retried at the next tick; the others go on. Then the vectors' sweep: every fact in force that
+     * has no vector yet (the rest of a bulk apply, a write where no vector listener ran) gets one, within a bounded budget per tick.
+     */
+    async upkeep(): Promise<BrainUpkeep> {
+        const due = await this.reads.dueWorkspaces(UPKEEP_WORKSPACES)
+        let activated = 0
+        let expired = 0
+        let failed = 0
+        await eachInOrder(due, async (workspaceId) => {
+            try {
+                const done = await this.facts.maintain(workspaceId)
+                activated += done.activated.length
+                expired += done.expired
+                await eachInOrder(done.activated, (fact) => this.answered(workspaceId, fact))
+            } catch (cause) {
+                failed += 1
+                this.logger.error(BrainLogEvent.UpkeepFailed, cause, { workspaceId })
+            }
+        })
+        const swept = await this.vectorSweep.sweep()
+        // Documents stored word-only for want of credits are indexed again, and readings that waited for credits go on by themselves,
+        // once the workspace has credits again (nothing waits for a button).
+        await this.documentFacts.resumeIndexing()
+        const readingsResumed = await this.documentFacts.resumeParked()
+        const result = {
+            workspaces: due.length,
+            activated,
+            expired,
+            failed,
+            vectors: swept.embedded + swept.copied,
+            readingsResumed,
+        }
+        this.logger.info(BrainLogEvent.UpkeepDone, { ...result })
+        return result
     }
 
     /** The proof that the caller may change the brain, with the name decisions are filed under. */
@@ -145,7 +231,13 @@ export class BrainService {
     }
 
     /** Carries out the decision on the fact. */
-    private decided(workspaceId: string, id: string, by: string, decision: FactDecision): Promise<FactRecord> {
+    private decided(
+        workspaceId: string,
+        id: string,
+        by: string,
+        decision: FactDecision,
+        inForce: boolean,
+    ): Promise<FactRecord> {
         const note = decision.note ?? ""
         switch (decision.action) {
             case "apply":
@@ -155,23 +247,22 @@ export class BrainService {
             case "choose":
                 return this.facts.choose(workspaceId, id, by)
             case "split":
-                return this.facts.split(workspaceId, id, decision.situation ?? "", by)
+                return this.facts.split(workspaceId, id, decision.situation ?? "", by, inForce)
             case "retire":
                 return this.facts.retire(workspaceId, id, by, note)
         }
     }
 
     /**
-     * A fact that is in force gets its vector (only the facts whose line or identity changed are embedded), and a public one answers
-     * the customer questions it covers; a failure here never blocks the fact.
+     * A public fact in force answers the open gaps reported under its own subject and attribute (exact keys); a failure here never blocks the fact. (Its vector came with the
+     * facts store's announcement of the write, for that fact alone.)
      */
     private async answered(workspaceId: string, fact: FactRecord): Promise<void> {
-        if (fact.status === "active") await this.vectors.refresh(workspaceId)
         if (fact.status !== "active" || fact.scope !== "public") return
         try {
             await this.gaps.resolve(workspaceId, {
-                text: factLine(fact),
-                minimum: FACT_ANSWERS,
+                subject: fact.subjectLabel,
+                attribute: fact.attributeLabel,
                 module: null,
                 by: `fact:${fact.id}`,
             })

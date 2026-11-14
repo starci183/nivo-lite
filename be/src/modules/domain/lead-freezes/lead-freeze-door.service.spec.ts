@@ -11,7 +11,7 @@ const ON_STOP = stateOf(frozenFreezeOf({ frozenReason: "run_stop", workItemId: n
 const build = async () => {
     const access = mock<AgentWorkAccessService>({ manager: jest.fn().mockResolvedValue("member-1") })
     const freezes = mock<LeadFreezesService>({
-        stateOfLead: jest.fn().mockResolvedValue(ON_STOP),
+        stateOfContact: jest.fn().mockResolvedValue(ON_STOP),
         stateOfRun: jest.fn().mockResolvedValue(ON_STOP),
         stateOf: jest.fn().mockResolvedValue(ON_STOP),
     })
@@ -27,11 +27,25 @@ const build = async () => {
 
 const answerOf = (action: string) => ({ workspaceId: "ws-1", freezeId: "freeze-1", action, locale: "vi" as const })
 
+describe("LeadFreezeDoorService.readFor", () => {
+    it("answers the hold with the lead the page asked by, or null for the lead when it named none, and null when nothing holds", async () => {
+        const { door, freezes } = await build()
+
+        await expect(door.readFor("user-1", { workspaceId: "ws-1", runId: "run-7", leadId: "lead-1" })).resolves.toMatchObject({
+            id: "freeze-1",
+            leadId: "lead-1",
+        })
+        await expect(door.readFor("user-1", { workspaceId: "ws-1", runId: "run-7" })).resolves.toMatchObject({ leadId: null })
+        freezes.stateOfRun.mockResolvedValue(null)
+        await expect(door.readFor("user-1", { workspaceId: "ws-1", runId: "run-7", leadId: "lead-1" })).resolves.toBeNull()
+    })
+})
+
 describe("LeadFreezeDoorService.read", () => {
     it("answers the hold of a lead or of a run's customer for an owner or manager, and nothing when neither is named", async () => {
         const { door, access, freezes } = await build()
 
-        await expect(door.read("user-1", { workspaceId: "ws-1", leadId: "lead-1" })).resolves.toMatchObject({
+        await expect(door.read("user-1", { workspaceId: "ws-1", contactId: "lead-1" })).resolves.toMatchObject({
             id: "freeze-1",
             onStop: true,
         })
@@ -41,7 +55,7 @@ describe("LeadFreezeDoorService.read", () => {
         await expect(door.read("user-1", { workspaceId: "ws-1" })).resolves.toBeNull()
 
         expect(access.manager).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(freezes.stateOfLead).toHaveBeenCalledWith("ws-1", "lead-1")
+        expect(freezes.stateOfContact).toHaveBeenCalledWith("ws-1", "lead-1")
         expect(freezes.stateOfRun).toHaveBeenCalledWith("ws-1", "run-7")
     })
 })

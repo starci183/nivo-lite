@@ -1,6 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { useSWRConfig } from "swr"
 import { matchesSwrKey } from "@/modules/utils"
 import {
@@ -8,7 +8,6 @@ import {
     type MutateDecideLeadFreezeRequest,
 } from "@/modules/api/graphql/mutations/mutation-decide-lead-freeze"
 import { QUERY_LEAD_FREEZE_SWR_KEY } from "../queries/useQueryLeadFreezeSwr"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DecideLeadFreezeMutation } from "@/modules/api"
 
 /** What the DecideLeadFreeze mutation is triggered with. */

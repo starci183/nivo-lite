@@ -1,9 +1,7 @@
 import type { LineOrder } from "../../rules/chatbot/message-line"
 import { nameKey } from "../order/order.policy"
-import { summaryLinesOf } from "./order-notice.lines"
-import type { CatalogueImageRow } from "./order-notice.lines"
-import { amountTextOf } from "./order-notice.policy"
-import type { NoticeLocale } from "./order-notice.policy"
+import { summaryLinesOf, type CatalogueImageRow } from "./order-notice.lines"
+import { amountTextOf, type NoticeLocale } from "./order-notice.policy"
 
 /** What the order card of a customer message is made of. */
 export interface OrderCardFacts {
@@ -23,12 +21,12 @@ export interface OrderCardFacts {
  * Where an order row says it is delivered: its `deliveryAddress`, else (an order recorded before it had that field) its `note`, which then
  * held the address; empty when neither is text.
  */
-export const orderAddressOf = (row: Readonly<Record<string, unknown>>): string =>
-    typeof row.deliveryAddress === "string" && row.deliveryAddress !== ""
-        ? row.deliveryAddress
-        : typeof row.note === "string"
-          ? row.note
-          : ""
+export const orderAddressOf = (row: Readonly<Record<string, unknown>>): string => {
+    if (typeof row.deliveryAddress === "string" && row.deliveryAddress !== "") {
+        return row.deliveryAddress
+    }
+    return typeof row.note === "string" ? row.note : ""
+}
 
 /**
  * The order a message to the customer is about, as the thread draws it: the items with the photo of the catalogue item of the same name
@@ -65,3 +63,26 @@ export const orderCardWithPhotos = (card: LineOrder, catalogue: ReadonlyArray<Ca
         }),
     }
 }
+
+/**
+ * The card of the order a message to the customer is about, from the order record's own fields (`orderNo`, `amountVnd`, `items`,
+ * `deliveryAddress` or the older `note`, `status`): paid when the record says `paid`. A row with no order number is no order, so none.
+ * The step that sends the message builds it from the record it read and hands the finished card to `nivo.tool.customer.message.send`.
+ */
+export const lineOrderOfRow = (
+    row: Readonly<Record<string, unknown>> | undefined,
+    locale: NoticeLocale,
+): LineOrder | undefined =>
+    typeof row?.orderNo === "string"
+        ? orderCardOf(
+              {
+                  orderNo: row.orderNo,
+                  amountVnd: typeof row.amountVnd === "number" ? row.amountVnd : null,
+                  items: row.items,
+                  address: orderAddressOf(row),
+                  paid: row.status === "paid",
+              },
+              [],
+              locale,
+          )
+        : undefined

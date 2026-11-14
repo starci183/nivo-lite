@@ -1,6 +1,4 @@
 export { ChatNodePortsModule } from "./chat-node-ports.module"
-export { AuthorityRuleNodePortService } from "./authority-rule-node-port.service"
-export { CustomerDraftsService } from "./customer-drafts.service"
 export { CHAT_NODE_PORTS_ERROR_KINDS } from "./errors/chat-node-ports.error"
 export { CHAT_NODE_PORTS_MESSAGES } from "./messages/chat-node-ports.messages"
 export { ChannelSendExecutorService } from "./channel-send-executor.service"

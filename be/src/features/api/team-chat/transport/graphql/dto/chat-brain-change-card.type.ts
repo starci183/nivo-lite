@@ -40,8 +40,8 @@ export class ChatBrainChangeCurrentType {
     source!: string
 
     /**
-     * How it was found: `same` = the value in force of the same truth ("Hiện tại"); `near` = a value of another truth near in meaning
-     * ("có thể thay cho": Đồng ý replaces it, Giữ cả hai keeps both). Null on cards written before FX5 (read as `same`).
+     * How it was found: `same` = the value in force of the same truth (the "Current" line); `near` = a value of another truth near in meaning
+     * (the "may replace" line: Agree replaces it, Keep both keeps both). Null on cards written before FX5 (read as `same`).
      */
     @Field(() => String, { nullable: true })
     match?: string | null | undefined
@@ -49,6 +49,10 @@ export class ChatBrainChangeCurrentType {
     /** The truth the value in force belongs to (differs from the card's truth when `match` is `near`); null on older cards. */
     @Field(() => ChatBrainChangeFactKeyType, { nullable: true })
     factKey?: ChatBrainChangeFactKeyType | null | undefined
+
+    /** D-BR-6: the value is planned, not in force yet: the instant it starts (ISO), shown "applies from dd/MM"; null when in force now. */
+    @Field(() => String, { nullable: true })
+    startsAt?: string | null | undefined
 }
 
 @ObjectType()
@@ -178,7 +182,7 @@ export class ChatBrainChangeCardType {
     @Field(() => Boolean)
     canReject!: boolean
 
-    /** Whether this viewer is offered "Giữ cả hai": the workspace owner while open and the value in force is only a near-meaning candidate. */
+    /** Whether this viewer is offered "Keep both": the workspace owner while open and the value in force is only a near-meaning candidate. */
     @Field(() => Boolean)
     canKeepBoth!: boolean
 

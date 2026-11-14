@@ -4,15 +4,19 @@ import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import type { ContextVersionRecord, GateEntry } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { InstallationDirectoryService } from "./installation-directory.service"
 import { ModulesService } from "./modules.service"
+import { catalogModuleOf } from "./modules.testing"
+
+const SALES_MODULE = catalogModuleOf("sales")
+
+const gateLabelOf = (key: string): string | undefined => SALES_MODULE.gates.find((gate) => gate.key === key)?.label_vi
 
 const recordOf = builder<InstallationRecord>({
     id: "inst-1",
     workspaceId: "ws-1",
-    moduleKey: "accounting",
-    name: "Accounting",
+    moduleKey: "sales",
+    name: "Sales",
     isMulti: false,
     agentId: "agent-1",
     status: "live",
@@ -47,8 +51,8 @@ const versionOf = builder<ContextVersionRecord>({
 const INSTALLATION = {
     id: "inst-1",
     workspaceId: "ws-1",
-    module: "accounting",
-    name: "Accounting",
+    module: "sales",
+    name: "Sales",
     isMulti: false,
     agentId: "agent-1",
     operatingMode: "assist",
@@ -81,7 +85,7 @@ describe("InstallationDirectoryService > byId, firstOfModule and ofAgent", () =>
         installations.ofAgent.mockResolvedValue(recordOf())
 
         await expect(service.byId("ws-1", "inst-1")).resolves.toEqual(INSTALLATION)
-        await expect(service.firstOfModule("ws-1", "accounting")).resolves.toEqual(INSTALLATION)
+        await expect(service.firstOfModule("ws-1", "sales")).resolves.toEqual(INSTALLATION)
         await expect(service.ofAgent("ws-1", "agent-1")).resolves.toEqual(INSTALLATION)
         expect(installations.find).toHaveBeenCalledWith("ws-1", "inst-1")
     })
@@ -100,7 +104,7 @@ describe("InstallationDirectoryService > byId, firstOfModule and ofAgent", () =>
         installations.ofAgent.mockResolvedValue(null)
 
         await expect(service.byId("ws-1", "missing")).resolves.toBeNull()
-        await expect(service.firstOfModule("ws-1", "accounting")).resolves.toBeNull()
+        await expect(service.firstOfModule("ws-1", "sales")).resolves.toBeNull()
         await expect(service.ofAgent("ws-1", "agent-9")).resolves.toBeNull()
     })
 })
@@ -117,16 +121,19 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
         const { service, versions, installations, catalog } = await build()
         versions.find.mockResolvedValue(versionOf())
         installations.findById.mockResolvedValue(recordOf())
-        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+        catalog.find.mockResolvedValue(SALES_MODULE)
 
         await expect(service.contextVersionOf("version-1")).resolves.toEqual({
             version: 3,
             summary: "A bakery in Hanoi.",
-            gates: [{ label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "Invoices and reminders" }],
+            gates: [
+                { label: gateLabelOf("tone"), evidence: "Warm and short" },
+                { label: gateLabelOf("scope"), evidence: "Invoices and reminders" },
+            ],
             facts: ["Open 7 to 21", "VAT 8 percent"],
             toneEvidence: "Warm and short",
         })
-        expect(catalog.find).toHaveBeenCalledWith("accounting")
+        expect(catalog.find).toHaveBeenCalledWith("sales")
     })
 
     it("keeps empty confirmed evidence and uses catalog order rather than snapshot insertion order", async () => {
@@ -146,14 +153,15 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
             }),
         )
         installations.findById.mockResolvedValue(recordOf())
-        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+        catalog.find.mockResolvedValue(SALES_MODULE)
 
         await expect(service.contextVersionOf("version-1")).resolves.toEqual({
             version: 3,
             summary: "Confirmed setup",
             gates: [
-                { label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" },
-                { label: ACCOUNTING_MODULE.gates[1]?.label_vi, evidence: "VND" },
+                { label: gateLabelOf("tone"), evidence: "" },
+                { label: gateLabelOf("scope"), evidence: "" },
+                { label: gateLabelOf("currency_tax"), evidence: "VND" },
             ],
             facts: [],
             toneEvidence: "",
@@ -180,12 +188,12 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
             else Object.defineProperty(scope, "evidence", { value: evidence })
             versions.find.mockResolvedValue(version)
             installations.findById.mockResolvedValue(recordOf())
-            catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+            catalog.find.mockResolvedValue(SALES_MODULE)
 
             await expect(service.contextVersionOf("version-1")).resolves.toEqual({
                 version: 3,
                 summary: "Imported setup",
-                gates: [{ label: ACCOUNTING_MODULE.gates[0]?.label_vi, evidence: "" }],
+                gates: [{ label: gateLabelOf("scope"), evidence: "" }],
                 facts: [],
                 toneEvidence: "",
             })

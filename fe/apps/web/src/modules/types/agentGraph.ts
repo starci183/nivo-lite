@@ -5,7 +5,7 @@ export type AgentGraphNodeKind = "trigger" | "execute" | "condition" | "output"
 export type AgentGraphDoneBy = "agent" | "nivo" | "person"
 
 /** What a branch does: run alone, ask the approver, or stop. */
-export type AgentGraphThen = "auto" | "ask" | "stop"
+export type AgentGraphBranchMode = "auto" | "ask" | "stop"
 
 /** What happens when nobody answers in time; `unset` is a draft that is not finished and cannot be published. */
 export type AgentGraphOnTimeout = "backup" | "stop" | "agent_owner" | "unset"
@@ -65,7 +65,7 @@ export interface AgentGraphBranchData {
     readonly when: string
     /** The same with the name of the fact, "the order amount from 5 million to under 20 million". */
     readonly whenFull: string
-    readonly then: AgentGraphThen
+    readonly mode: AgentGraphBranchMode
     /** The node the branch goes to. */
     readonly next: string
     readonly approver: AgentGraphApproverData | null
@@ -266,7 +266,7 @@ export interface AgentGraphRowForm {
     readonly isLocked: boolean
     /** The terms, all of which must hold. */
     readonly terms: ReadonlyArray<AgentGraphTermForm>
-    readonly then: AgentGraphThen
+    readonly mode: AgentGraphBranchMode
     readonly approverId: string
     readonly timeoutHours: number
     readonly onTimeout: AgentGraphOnTimeout
@@ -280,7 +280,7 @@ export interface AgentGraphDecideForm {
 }
 
 /** A field of a branch the form changes. */
-export type AgentGraphRowField = "then" | "approverId" | "timeoutHours" | "onTimeout" | "backupId"
+export type AgentGraphRowField = "mode" | "approverId" | "timeoutHours" | "onTimeout" | "backupId"
 
 /** A field of a term the form changes. */
 export type AgentGraphTermField = "fact" | "op" | "amount" | "text"

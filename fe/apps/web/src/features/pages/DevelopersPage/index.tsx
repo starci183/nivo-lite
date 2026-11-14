@@ -9,5 +9,8 @@ export const developersMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** The "Advanced" page (owner or manager): outgoing webhooks, API keys, the quick guide. Staff see a friendly 403. */
+/** The "Developers" page: outgoing webhooks, the Claude connection, the keys and the quick guide, all for owner and manager; staff see a friendly 403. */
 export const DevelopersPage = () => <DevelopersPageBase props={{ apiBase: `${developerApiUrl()}/api/v1` }} />
+
+/** The same page while the route loads: the block keeps its band and sections and draws its own skeletons. */
+export const DevelopersLoadingPage = () => <DevelopersPageBase props={{ apiBase: `${developerApiUrl()}/api/v1` }} />

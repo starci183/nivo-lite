@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { Badge, Cluster, EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
+import { waitingChipOf } from "../../rows/count-chip"
 import type { KnowledgeGapsView } from "../../views/views.types"
 
 /** Copy and view of the knowledge gaps card. */
@@ -14,15 +15,11 @@ export const KnowledgeGapsCard = (props: KnowledgeGapsCardProps): ReactNode => (
     <SurfaceCard
         kind="list"
         label={props.view.label}
+        {...waitingChipOf(props.view.count)}
         labelEnd={
-            props.view.count === null ? undefined : (
-                <Cluster gap="inline" align="center">
-                    <Badge tone="warning" isDot isLoading={props.isLoading}>
-                        {props.view.count}
-                    </Badge>
-                    <Link href={props.view.openHref}>{props.view.openLabel}</Link>
-                </Cluster>
-            )
+            <Link variant="head" href={props.view.openHref}>
+                {props.view.openLabel}
+            </Link>
         }
         isLoading={props.isLoading}
         items={props.view.rows.map((row) => ({

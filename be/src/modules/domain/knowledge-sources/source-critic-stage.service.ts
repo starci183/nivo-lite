@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager, FindOptionsWhere } from "typeorm"
+import { IsNull, type EntityManager, type FindOptionsWhere } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
 import { KnowledgeSourcesLogEvent } from "./knowledge-sources.log-events"
@@ -15,7 +13,7 @@ const WAITING_MAX = 500
 
 @Injectable()
 /**
- * The fourth step of taking a document in. A document whose facts are read stays `ready`; while the critic checks its dossier it wears the
+ * The fourth step of taking a document in. A document whose facts are read stays `ready`; while the critic checks it, it wears the
  * stage `critic`, so the processing list lights the step, and the stage goes when the critic's run for that document ends, done, failed or
  * skipped. Neither call ever fails the run that makes it: a stage that could not be written is logged, and the next stream converges.
  */

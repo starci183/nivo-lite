@@ -144,6 +144,25 @@ describe("ConnectionBindingsReadService > owner and state", () => {
     })
 })
 
+describe("ConnectionBindingsReadService > accountOf", () => {
+    it("answers the workspace and the provider of the connection, read by its key on the handed manager", async () => {
+        const handed = mockEntityManager({ findOne: [ConnectionEntity, liveBotConnectionOf()] })
+        const service = await build(mockEntityManager())
+
+        await expect(service.accountOf("c1", handed)).resolves.toEqual({ workspaceId: "w1", provider: "telegram" })
+        expect(handed.findOne).toHaveBeenCalledWith(ConnectionEntity, {
+            select: { id: true, workspaceId: true, provider: true },
+            where: { id: "c1" },
+        })
+    })
+
+    it("answers null for a connection that does not exist", async () => {
+        const handed = mockEntityManager({ findOne: [ConnectionEntity, null] })
+
+        await expect((await build(mockEntityManager())).accountOf("c9", handed)).resolves.toBeNull()
+    })
+})
+
 describe("ConnectionBindingsReadService > recordOf", () => {
     it("answers the connection of the workspace as its record, read by workspace and id", async () => {
         const em = mockEntityManager()

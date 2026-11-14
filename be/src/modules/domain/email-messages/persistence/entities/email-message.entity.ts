@@ -2,7 +2,7 @@ import { UuidAbstractEntity } from "@modules/platform/database"
 import { Column, Entity } from "typeorm"
 
 /** How a recorded send attempt ended or waits. */
-export type EmailMessageStatus = "sent" | "failed" | "no_smtp" | "blocked" | "rate_limited" | "waiting_decision"
+export type EmailMessageStatus = "sent" | "failed" | "no_smtp" | "blocked" | "rate_limited"
 
 /** Which sender carried the message. */
 export type EmailMessageVia = "workspace" | "platform" | "none"

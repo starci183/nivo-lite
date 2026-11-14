@@ -1,5 +1,6 @@
 import type { PageHeaderBreadcrumbs } from "@starci/grammar/common"
-import { TeamChatPanes } from "@/components/blocks/TeamChatRoom"
+import { TeamChatRoom } from "@/components/blocks/TeamChatRoom"
+import { TeamChatRooms } from "@/components/blocks/TeamChatRooms"
 
 /** The words and the open room of the chat page. */
 export interface TeamChatPageBaseProps {
@@ -16,7 +17,8 @@ export interface TeamChatPageBaseProps {
 
 /** Draws the chat page: the trail, the rooms of the viewer in one pane and the one chat room of the app in the other. */
 export const TeamChatPageBase = (props: TeamChatPageBaseProps) => (
-    <TeamChatPanes
+    <TeamChatRoom
+        list={<TeamChatRooms />}
         roomId={props.props.room}
         breadcrumbs={props.props.breadcrumbs}
         gridLabel={props.props.gridLabel}

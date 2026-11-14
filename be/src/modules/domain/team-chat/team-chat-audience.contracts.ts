@@ -1,4 +1,5 @@
-import type { EffectFacts, TeamAudience } from "@nivo-lite/blocks-core"
+import type { EffectFacts } from "@nivo-lite/agent-sdk/node"
+import type { TeamAudience } from "@nivo-lite/agent-sdk/team-chat"
 import type { RoomPurpose } from "./team-chat.contracts"
 
 /** The purposes only one room of a workspace holds: the common room, and the room of each module. */

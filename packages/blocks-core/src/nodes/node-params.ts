@@ -1,7 +1,6 @@
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { messageNamed } from "../messages/catalog"
-import { namePartOf } from "./node-ui"
+import { namePartOf, type ViewNode } from "./node-ui"
 import type { NodeLocale } from "./node-schema.types"
 
 /** How the owner edits one setting: money in ₫, a length of time, a number, one of a few words, a line or a paragraph, a switch. */
@@ -51,22 +50,24 @@ const OCCASION_LEAD: ParamUi = { input: "number", unit: "days" }
  */
 export const NODE_PARAMS_UI: Readonly<Record<string, Readonly<Record<string, ParamUi>>>> = {
     "core.call-workflow": {
-        agent: { input: "enum", options: ["sales", "accounting", "chatbot"] },
+        agent: { input: "enum", options: ["sales", "chatbot"] },
         workflow: LINE,
         version: LINE,
     },
-    "core.for-each": { max: { input: "number", min: 1, max: 50 } },
+    "core.for-each": { max: { input: "number", min: 1, max: 50 }, collect: LINE, itemKey: LINE },
     "core.outcome": { outcome: HIDDEN },
     "core.if": {
         op: { input: "enum", options: ["equals", "not-equals", "in", "present", "absent", "greater", "less"] },
         compare: LINE,
     },
-    "sales.care-plan": { occasionLeadDays: OCCASION_LEAD },
-    "sales.care-occasion": { occasionLeadDays: OCCASION_LEAD },
+    "sales.consult-stage": { stage: HIDDEN },
+    "sales.care-plan-occasions": { occasionLeadDays: OCCASION_LEAD },
+    "sales.care-occasion-wait": { occasionLeadDays: OCCASION_LEAD },
+    "sales.care-occasion-rearm": { occasionLeadDays: OCCASION_LEAD },
 }
 
 /** The currency sign of a `money` setting. */
-export const MONEY_SIGN = "₫"
+export const MONEY_SIGN = "\u20ab"
 
 /** One choice of an `enum` setting. */
 export interface ParamOption {
@@ -123,8 +124,11 @@ const UNITS: Readonly<Record<ParamUnit, string>> = {
 /** The numbers a schema bounds a setting with; a bound too wide to be sensible (a safe-integer cap) is no bound. */
 const SENSIBLE = 1_000_000_000
 
-const factsOf = (node: NodeDefinition): Facts => {
-    const schema: Readonly<Record<string, unknown>> = z.toJSONSchema(node.params, {
+/** The settings of a node that declares none. */
+const NO_PARAMS = z.object({})
+
+const factsOf = (node: ViewNode): Facts => {
+    const schema: Readonly<Record<string, unknown>> = z.toJSONSchema(node.params ?? NO_PARAMS, {
         io: "input",
         unrepresentable: "any",
     })
@@ -167,7 +171,7 @@ const unitLabelOf = (ui: ParamUi, locale: NodeLocale): string | undefined => {
 }
 
 const fieldOf = (
-    node: NodeDefinition,
+    node: ViewNode,
     name: string,
     facts: Facts,
     locale: NodeLocale,
@@ -212,7 +216,7 @@ const fieldOf = (
  * `hidden: true` so a form can skip them but still send them back unchanged.
  */
 export const paramFieldsOf = (
-    node: NodeDefinition,
+    node: ViewNode,
     locale: NodeLocale,
     values: Readonly<Record<string, unknown>> = {},
 ): ReadonlyArray<ParamField> => {

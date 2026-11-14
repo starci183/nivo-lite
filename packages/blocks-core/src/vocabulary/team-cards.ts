@@ -1,16 +1,17 @@
+import type { TeamAudience, TeamCardPost } from "@nivo-lite/agent-sdk/team-chat"
 import { messageOf } from "../messages/catalog"
+import { orderAddressOf } from "../nodes/sales/order-card.policy"
 import type { OrderSummaryPayload, PaymentReceivedPayload } from "../modules/sales/agent-message-kinds"
 import { ORDER_HREF } from "../nodes/sales/order-notice.href"
-import { summaryLinesOf } from "../nodes/sales/order-notice.lines"
-import type { CatalogueImageRow } from "../nodes/sales/order-notice.lines"
+import { summaryLinesOf, type CatalogueImageRow } from "../nodes/sales/order-notice.lines"
 import {
     amountTextOf,
     noticeLinesOf,
     orderSummaryOf,
     orderTitleOf,
     paymentSummaryOf,
+    type NoticeLocale,
 } from "../nodes/sales/order-notice.policy"
-import type { NoticeLocale } from "../nodes/sales/order-notice.policy"
 
 /** An order as a card to the team reads it from the record. */
 export interface CardOrder {
@@ -23,6 +24,30 @@ export interface CardOrder {
     /** The delivery address and notes of the order; empty when none. */
     readonly note: string
 }
+
+/**
+ * The order of a row of the order record as a card reads it, or null when the row has no order number: the total is the row's own figure
+ * (null while a price is missing), the items as the record keeps them, the delivery line its address (or the note of an older order).
+ */
+export const cardOrderOf = (row: Readonly<Record<string, unknown>> | undefined): CardOrder | null =>
+    typeof row?.orderNo === "string"
+        ? {
+              orderNo: row.orderNo,
+              amountVnd: typeof row.amountVnd === "number" ? row.amountVnd : null,
+              items: row.items,
+              note: orderAddressOf(row),
+          }
+        : null
+
+/**
+ * The amounts of the bank credits that paid an order, oldest first, from the order's rows of the bank transaction record listed newest
+ * first: only a credit that was matched counts as money received (a debit, or a credit still to review, does not).
+ */
+export const matchedCreditsOf = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): ReadonlyArray<number> =>
+    rows
+        .filter((row) => row.direction === "credit" && row.status === "matched" && typeof row.amountVnd === "number")
+        .map((row) => Number(row.amountVnd))
+        .toReversed()
 
 /** A card to the team as the chat stores it: the heading, the one line where no card is drawn, the content of its kind and the record it opens. */
 export interface TeamCard<P> {
@@ -37,10 +62,18 @@ export interface TeamCard<P> {
     /** The content, in the shape its kind declares. */
     readonly payload: P
     /** The record the message is about, with where it opens. */
-    readonly work: { readonly label: string; readonly href: string }
+    readonly work: TeamCardWork
 }
 
-const workOf = (locale: NoticeLocale): { readonly label: string; readonly href: string } => ({
+/** The record a card to the team is about: its words and where it opens. */
+export interface TeamCardWork {
+    /** The record's words in the reader's language. */
+    readonly label: string
+    /** Where the record opens. */
+    readonly href: string
+}
+
+const workOf = (locale: NoticeLocale): TeamCardWork => ({
     label: messageOf(locale, "orderNoticeOrder"),
     href: ORDER_HREF,
 })
@@ -79,25 +112,44 @@ export const teamOrderCardOf = (
 })
 
 /**
- * The card of the money that paid an order, built from the order record and the amount of the bank credit that paid it: the amount
- * received, the order's lines, the customer.
+ * The card of the money that paid an order, built from the order record and the amounts of the bank credits that paid it (an order may
+ * be paid in parts): the TOTAL received, each credit when there were several, the order's lines, the customer.
  */
 export const teamPaymentCardOf = (
     order: CardOrder,
-    receivedVnd: number,
+    creditsVnd: ReadonlyArray<number>,
     customer: string,
     catalogue: ReadonlyArray<CatalogueImageRow>,
     locale: NoticeLocale,
-): TeamCard<PaymentReceivedPayload> => ({
-    kind: "payment.received",
-    intent: "notify",
-    title: amountTextOf(receivedVnd, locale),
-    summary: paymentSummaryOf(order.orderNo, receivedVnd, locale),
-    payload: {
-        orderNo: order.orderNo,
-        amountText: amountTextOf(receivedVnd, locale),
-        lines: summaryLinesOf(order.items, catalogue, locale),
-        customer,
-    },
-    work: workOf(locale),
+): TeamCard<PaymentReceivedPayload> => {
+    const receivedVnd = creditsVnd.reduce((total, one) => total + one, 0)
+    return {
+        kind: "payment.received",
+        intent: "notify",
+        title: amountTextOf(receivedVnd, locale),
+        summary: paymentSummaryOf(order.orderNo, receivedVnd, locale),
+        payload: {
+            orderNo: order.orderNo,
+            amountText: amountTextOf(receivedVnd, locale),
+            ...(creditsVnd.length > 1 ? { credits: creditsVnd.map((one) => amountTextOf(one, locale)) } : {}),
+            lines: summaryLinesOf(order.items, catalogue, locale),
+            customer,
+        },
+        work: workOf(locale),
+    }
+}
+
+/**
+ * The finished post of a card for the team post tool (`nivo.tool.team.message.post`): the card exactly as `teamOrderCardOf` /
+ * `teamPaymentCardOf` built it, with who reads it. The engine checks `payload` against the schema of the kind this package registered and
+ * stores it as it is, so what the chat shows is what the card builder gave.
+ */
+export const teamCardPostOf = <P extends object>(card: TeamCard<P>, audience?: TeamAudience): TeamCardPost => ({
+    kind: card.kind,
+    intent: card.intent,
+    title: card.title,
+    summary: card.summary,
+    payload: card.payload,
+    work: card.work,
+    ...(audience === undefined ? {} : { audience }),
 })

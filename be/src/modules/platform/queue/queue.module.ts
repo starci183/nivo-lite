@@ -1,6 +1,5 @@
 import { QueueTimeoutService } from "./queue-timeout.service"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { createRedisBackend, withBackend } from "bullmq"
 import {
     QUEUE_FACTORY,

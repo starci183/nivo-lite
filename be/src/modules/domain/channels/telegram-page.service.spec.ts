@@ -43,6 +43,7 @@ describe("TelegramPageService view", () => {
             name: "Bot CSKH",
             status: "connected",
             healthy: true,
+            attention: null,
             botUsername: "shop_bot",
             webhookUrl: "https://hooks.test/telegram/c-1",
             lastError: null,
@@ -50,6 +51,13 @@ describe("TelegramPageService view", () => {
             agentIds: ["agent-1"],
         })
         expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner", "manager"])
+    })
+
+    it("says what the connection asks of its owner: a refused credential, or a poll breaker open", async () => {
+        const refused = await build({ status: "error", lastError: "reauth", meta: {}, health: "needs_reauth" })
+        await expect(refused.service.view(actor, "c-1")).resolves.toMatchObject({ attention: "needs_reauth" })
+        const degraded = await build({ status: "connected", lastError: null, health: "degraded" })
+        await expect(degraded.service.view(actor, "c-1")).resolves.toMatchObject({ attention: "degraded", healthy: true })
     })
 
     it("calls a connection with an error unhealthy and keeps its code for the page to word", async () => {

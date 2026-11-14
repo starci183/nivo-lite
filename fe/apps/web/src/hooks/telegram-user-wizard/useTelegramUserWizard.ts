@@ -76,18 +76,18 @@ export const useTelegramUserWizard = (input: TelegramUserWizardInput): UseTelegr
     })
 
     // Once the server state is known, the wizard starts where it stands: blank, a resumed login or an edit.
+    const startAt = "items" in boot.slot && boot.slot.items.isConfigured ? boot.slot.items.initial : undefined
     const { reset: resetConsent } = forms.consent
     const { setStage } = login
     const { restore: restorePicks } = picks
     useEffect(() => {
-        if (seeded.current || boot.status !== "ready") return
-        const initial = boot.initial
+        if (seeded.current || startAt === undefined) return
         seeded.current = true
-        patchStep({ started: true, index: initial.index, editing: initial.editing })
-        resetConsent({ name: initial.name, consent: initial.consent })
-        setStage(initial.stage)
-        restorePicks(initial, resumeId)
-    }, [boot.status, boot.initial, resetConsent, setStage, restorePicks, resumeId])
+        patchStep({ started: true, index: startAt.index, editing: startAt.editing })
+        resetConsent({ name: startAt.name, consent: startAt.consent })
+        setStage(startAt.stage)
+        restorePicks(startAt, resumeId)
+    }, [startAt, resetConsent, setStage, restorePicks, resumeId])
 
     const { save, finish, field } = createTelegramUserWizardActions({
         startTransition,

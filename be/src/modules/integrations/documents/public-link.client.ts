@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { DOCUMENT_TEXT_MAX_CHARS, LINK_MAX_BYTES } from "./documents.contracts"
-import type { DocumentText } from "./documents.contracts"
+import { DOCUMENT_TEXT_MAX_CHARS, LINK_MAX_BYTES, type DocumentText } from "./documents.contracts"
 import { InjectDocumentsOptions } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
 import { DocumentsHttpClient } from "./documents-http.client"
@@ -58,7 +57,7 @@ export class PublicLinkClient {
         if (!/html/iu.test(type)) {
             throw new DocumentsError({
                 code: DocumentsErrorCode.TypeUnsupported,
-                params: { type: type.split(";")[0] || "unknown" },
+                params: { type: type.split(";", 1).find((first) => first !== "") ?? "unknown" },
             })
         }
         // A Google export that answers with a page is the sign-in wall or the Drive virus-scan page: not readable as a public file.

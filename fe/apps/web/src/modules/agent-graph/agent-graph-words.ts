@@ -8,7 +8,7 @@ import type {
     AgentGraphNodeKind,
     AgentGraphWaitData,
     AgentGraphOnTimeout,
-    AgentGraphThen,
+    AgentGraphBranchMode,
 } from "@/modules/types"
 
 /** The translator of the graph copy. */
@@ -73,13 +73,13 @@ export const sourceWordOf = (t: AgentGraphT, kind: AgentGraphSourceData["kind"])
 }
 
 /** The word of what a branch does. */
-export const thenWordOf = (t: AgentGraphT, then: AgentGraphThen): string => {
-    const words: Readonly<Record<AgentGraphThen, string>> = {
+export const branchModeWordOf = (t: AgentGraphT, mode: AgentGraphBranchMode): string => {
+    const words: Readonly<Record<AgentGraphBranchMode, string>> = {
         auto: t("then_auto"),
         ask: t("then_ask"),
         stop: t("then_stop"),
     }
-    return words[then]
+    return words[mode]
 }
 
 /** The word of what happens when nobody answers in time. */
@@ -135,7 +135,7 @@ export const waitWordOf = (t: AgentGraphT, wait: AgentGraphWaitData): string => 
 }
 
 /**
- * The key under the graph: the role colours of the agents (front desk, sales and accounting, as the agent marks paint them), the mark
+ * The key under the graph: the role colours of the agents (front desk and sales, as the agent marks paint them), the mark
  * of a wait when the graph has one, and the path and the current step while a run is traced.
  */
 export const legendOf = (
@@ -145,7 +145,6 @@ export const legendOf = (
 ): ReadonlyArray<AgentGraphLegendItem> => [
     { id: "role-chatbot", label: t("legend_chatbot"), tone: "accent" },
     { id: "role-sales", label: t("legend_sales"), tone: "danger" },
-    { id: "role-accounting", label: t("legend_accounting"), tone: "warning" },
     ...(nodes.some((node) => node.card.wait !== null)
         ? [{ id: "wait", label: t("legend_wait"), tone: "warning" as const }]
         : []),

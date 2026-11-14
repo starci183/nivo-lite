@@ -1,19 +1,14 @@
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { rightsGaps } from "@nivo-lite/agent-sdk/rights"
 import { AgentGraphsError, AgentGraphsErrorCode } from "../errors/agent-graphs.error"
 import { workflowDiffOf } from "./workflow-diff.policy"
 
 /**
- * Whether a new snapshot gives the agent more reach than the one running: any right the running grant does not cover (a new kind,
- * access or field, or a `turn` right made `workspace`), or any tool or effect it does not hold.
+ * Whether a new snapshot gives the agent more reach than the one running: any tool or effect it does not hold. A data right of the
+ * grant is no reach any more (nivo-frame `rights`: attachments and node modes are the only hard rights).
  */
 export const widens = (running: GraphSpec, next: GraphSpec): boolean => {
     const { grant } = workflowDiffOf(running, next)
-    return (
-        rightsGaps(running.grant, next.grant.rights).length > 0 ||
-        grant.toolsAdded.length > 0 ||
-        grant.effectsAdded.length > 0
-    )
+    return grant.toolsAdded.length > 0 || grant.effectsAdded.length > 0
 }
 
 /** Refuses a snapshot that widens the agent unless the owner publishes it; a manager may only keep or narrow the reach. */

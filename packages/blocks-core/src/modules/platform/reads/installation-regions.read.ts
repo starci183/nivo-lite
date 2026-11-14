@@ -1,11 +1,9 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import type { ConnectionsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import { PLATFORM_VIEW } from "../constants"
-import { agentConnectionsPort, agentGraphs, agentKnowledgePort } from "../ports"
-import { agentOfInstallation } from "./agent-run-scope"
+import { agentConnectionsPort, agentKnowledgePort, coreReadsPort } from "../ports"
 
 /** What the two reads take: the installation of the route, and the module whose tabs the links of the regions open. */
 const variables: z.ZodObject<{ installation: z.ZodUUID; module: z.ZodString }> = z.object({
@@ -29,9 +27,9 @@ export const installationConnectionsRead: ReadDefinition = defineRead({
     paths: { rows: "list" },
     variables,
     permission: PLATFORM_VIEW,
-    ports: { graphs: agentGraphs, connections: agentConnectionsPort },
-    run: async ({ graphs, connections }, given): Promise<ConnectionsRegionView> => {
-        const agent = await agentOfInstallation(graphs, given.installation)
+    ports: { core: coreReadsPort, connections: agentConnectionsPort },
+    run: async ({ core, connections }, given): Promise<ConnectionsRegionView> => {
+        const agent = await core.agentOf(given.installation)
         const region = agent === null ? NO_CONNECTIONS : await connections.of(agent)
         return { ...region, rightsHref: agentTabPath(given.module, given.installation, "connections") }
     },
@@ -67,9 +65,9 @@ export const installationKnowledgeRead: ReadDefinition = defineRead({
     paths: {},
     variables,
     permission: PLATFORM_VIEW,
-    ports: { graphs: agentGraphs, knowledge: agentKnowledgePort },
-    run: async ({ graphs, knowledge }, given): Promise<KnowledgeRegionView> => {
-        const agent = await agentOfInstallation(graphs, given.installation)
+    ports: { core: coreReadsPort, knowledge: agentKnowledgePort },
+    run: async ({ core, knowledge }, given): Promise<KnowledgeRegionView> => {
+        const agent = await core.agentOf(given.installation)
         const region = agent === null ? NO_KNOWLEDGE : await knowledge.of(agent)
         const href = agentTabPath(given.module, given.installation, "knowledge")
         return {

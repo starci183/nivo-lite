@@ -1,4 +1,3 @@
-import type { RuleMode } from "@modules/domain/authority-rules"
 import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
 
 /** The states of a confirm card of the setup chat. */
@@ -20,34 +19,6 @@ export interface FactCardPayload {
     readonly gapId?: string
 }
 
-/** A rule change the owner is asked to confirm: the complete resulting rule of one action. */
-export interface RuleCardPayload {
-    /** The authority action. */
-    readonly action: string
-    /** Which field the answer set. */
-    readonly field: "mode" | "limit_vnd"
-    /** The resulting mode. */
-    readonly mode: RuleMode
-    /** The resulting limit, VND; null for none. */
-    readonly limitVnd: number | null
-}
-
-/** A branch of an action graph the owner is asked to confirm: where the band that runs alone ends, and who is asked above it. */
-export interface BranchCardPayload {
-    /** The authority action whose bands the card is about. */
-    readonly action: string
-    /** The amount in dong where the lower band ends and the higher one begins. */
-    readonly boundaryVnd: number
-    /** Which band the amount itself belongs to; null until the owner has said, and the card cannot be confirmed before. */
-    readonly belongsTo: "lower" | "higher" | null
-    /** The name of the person the owner said is asked above the line, as the owner said it. */
-    readonly approverName: string
-    /** The seat of that person; null until it is found or chosen, and the card cannot be confirmed before. */
-    readonly approverMemberId: string | null
-    /** The words of the owner the card came from. */
-    readonly quote: string
-}
-
 /** What a decided card did. */
 export interface CardResult {
     /** `applied`, `rejected`, `kept_current` or the outcome of the brain. */
@@ -56,8 +27,6 @@ export interface CardResult {
     readonly factId?: string
     /** How a conflicting value was settled. */
     readonly resolution?: string
-    /** The rule written. */
-    readonly ruleId?: string
 }
 
 interface CardBase {
@@ -91,24 +60,8 @@ export interface FactCardRecord extends CardBase {
     readonly payload: FactCardPayload
 }
 
-/** A card that proposes a branch of an action graph. */
-export interface BranchCardRecord extends CardBase {
-    /** Discriminator. */
-    readonly kind: "branch"
-    /** The branch. */
-    readonly payload: BranchCardPayload
-}
-
-/** A card that proposes an authority rule. */
-export interface RuleCardRecord extends CardBase {
-    /** Discriminator. */
-    readonly kind: "rule"
-    /** The rule. */
-    readonly payload: RuleCardPayload
-}
-
-/** One confirm card. */
-export type CardRecord = FactCardRecord | RuleCardRecord | BranchCardRecord
+/** One confirm card: the setup chat proposes Second Brain facts only (rule and branch cards are gone with the authority rules, 2026-11-13). */
+export type CardRecord = FactCardRecord
 
 /** A card, or null when none matches. */
 export type OptionalCardRecord = CardRecord | null
@@ -117,12 +70,12 @@ export type OptionalCardRecord = CardRecord | null
 export interface ProposedCardRecord {
     /** The gate it answers. */
     readonly gate_key: string
-    /** Fact, rule or branch. */
-    readonly kind: "fact" | "rule" | "branch"
+    /** Always a fact. */
+    readonly kind: "fact"
     /** The target key. */
     readonly target_key: string
     /** The payload. */
-    readonly payload: FactCardPayload | RuleCardPayload | BranchCardPayload
+    readonly payload: FactCardPayload
 }
 
 /** How a waiting card was closed. */
@@ -130,7 +83,7 @@ export interface CardClosing {
     /** Applied or rejected. */
     readonly status: "applied" | "rejected"
     /** The payload as decided, with the edits of the owner. */
-    readonly payload: FactCardPayload | RuleCardPayload | BranchCardPayload
+    readonly payload: FactCardPayload
     /** What was written. */
     readonly result: CardResult
     /** Who decided. */

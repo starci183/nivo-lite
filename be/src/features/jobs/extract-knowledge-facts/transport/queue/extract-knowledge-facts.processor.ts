@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { DocumentFactsService } from "@modules/domain/brain"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { KnowledgeJobsService } from "@modules/domain/knowledge"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE, KnowledgeJob } from "@modules/queues/knowledge"
 import { ExtractFactsStep } from "../../steps/extract-facts.step"
@@ -15,9 +15,13 @@ export class ExtractKnowledgeFactsProcessor extends FencedProcessor {
     constructor(
         private readonly extractFacts: ExtractFactsStep,
         private readonly documentFacts: DocumentFactsService,
+        private readonly knowledge: KnowledgeJobsService,
     ) {
         super()
     }
+
+    /** The fair group of a truths job is the document it reads: a document with nothing running starts first (D-R-8). */
+    override readonly fairGroupOf = (payload: object): Promise<string | null> => this.knowledge.fairGroupOf(payload)
 
     /** Reads the facts; a stale token throws the fenced-out error from the guarded write before the effect. */
     async process(job: ClaimedJob): Promise<void> {

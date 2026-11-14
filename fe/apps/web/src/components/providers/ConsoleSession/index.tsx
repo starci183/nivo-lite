@@ -20,7 +20,7 @@ interface ConsoleSessionGateBaseProps {
 
 /** Draws the console subtree once the session is usable, and an announced busy region until then. */
 const ConsoleSessionGateBase = (props: ConsoleSessionGateBaseProps): ReactNode =>
-    props.isReady ? props.content : <div role="status" aria-busy="true" aria-label={props.loadingLabel} />
+    props.isReady ? props.content : <output aria-busy="true" aria-label={props.loadingLabel} />
 
 /** Supplies the real session to console readers after workspace bootstrap and redirects have settled; a workspace the person is not a member of answers not found before anything of it renders. */
 export const ConsoleSession = (props: ConsoleSessionProps) => {

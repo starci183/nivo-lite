@@ -6,7 +6,7 @@ import { jobsEntities } from "@modules/platform/jobs"
 const [JobEntity, JobOutboxEntity] = jobsEntities
 
 /** The queue every cutover proof seeds. */
-const QUEUE = "content_tick"
+const QUEUE = "connection_health"
 
 /** The columns of public.job_outbox that exist before the expand migration. */
 const OUTBOX_COLUMNS: Array<keyof InstanceType<typeof JobOutboxEntity>> = [

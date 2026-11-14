@@ -85,7 +85,6 @@ export interface BrainAskView {
         readonly isWaiting: boolean
     }
     readonly on: {
-        readonly reviewAll: () => void
         readonly selectTab: (id: string) => void
         readonly setQuestion: (value: string) => void
         readonly setAgent: (value: string | null) => void

@@ -1,7 +1,5 @@
 import assert from "node:assert/strict"
-import { DataSource } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { LeadEffectsService, OrderEffectsService } from "@modules/domain/sales-effects"
+import { DataSource, type EntityManager } from "typeorm"
 import { WorkbenchDoorService } from "@modules/domain/workbench-door"
 import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { parseJsonText } from "@modules/platform/primitives"
@@ -90,10 +88,4 @@ export const idsOfPage = (page: DoorObject): ReadonlyArray<string> => {
         assert(isObject(row) && typeof row["id"] === "string", "A row must carry its id")
         return row["id"]
     })
-}
-
-/** Registers the Sales executors with the graph node registry: the world compiles the app without starting it, so they register themselves here, as they do at start. */
-export const registerSalesEffects = (world: LiteWorld): void => {
-    world.resolve(LeadEffectsService).onModuleInit()
-    world.resolve(OrderEffectsService).onModuleInit()
 }

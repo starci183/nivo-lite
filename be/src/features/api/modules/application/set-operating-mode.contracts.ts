@@ -6,6 +6,6 @@ export interface SetOperatingModeRequest {
     readonly workspaceId: string
     /** The installation. */
     readonly installationId: string
-    /** Assist asks for everything, autopilot follows the authority rules. */
+    /** The mode the web sends; nothing reads it (the switch is gone). */
     readonly mode: InstallationMode
 }

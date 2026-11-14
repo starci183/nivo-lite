@@ -1,8 +1,7 @@
 "use client"
 
 import { argumentKey } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryOpenPlanPaymentOrder } from "@/modules/api/graphql/queries/query-open-plan-payment-order"
 import type { OpenPlanPaymentOrderQuery } from "@/modules/api"
 

@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { MAX_DISCOUNT_PCT, MAX_REMIND_DAYS, MAX_THRESHOLD_VND } from "../../../rules/sales/settings"
@@ -58,5 +57,5 @@ export const saveSettingsAction: ActionDefinition = defineAction({
         })
         return taken ? { ok: true } : refusedWith("settings_not_saved")
     },
-    refreshes: ["sales.settings", "sales.order", "sales.orders-waiting", "sales.orders", "sales.order-counts"],
+    refreshes: ["blocks-core.sales.api.settings.get", "blocks-core.sales.api.order.get", "blocks-core.sales.api.order.waiting", "blocks-core.sales.api.order.list", "blocks-core.sales.api.order.counts"],
 })

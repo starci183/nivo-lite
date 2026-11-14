@@ -1,8 +1,7 @@
 import { Link, Stack } from "@starci/grammar/common"
 import { AuthForm } from "@/components/frames/AuthForm"
 import { AuthPanel } from "../../frames/AuthPanel"
-import { CheckEmail } from "../../composites/CheckEmail"
-import type { CheckEmailProps } from "../../composites/CheckEmail"
+import { CheckEmail, type CheckEmailProps } from "../../composites/CheckEmail"
 import { EmailField } from "../../composites/EmailField"
 /** The two drawn shapes of the forgot-password card: the form, or the message once the request went out. */
 export type ForgotFormShape = "form" | "sent"

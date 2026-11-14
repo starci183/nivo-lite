@@ -1,50 +1,46 @@
 "use client"
 
-import { useAuthoritySheet, useSaveAuthorityRules } from "@/hooks/authority"
-import { useConsoleSessionRead } from "@/hooks/console"
-import { isManager } from "@/hooks/member"
+import { useInstallations } from "@/hooks/installations"
+import { useAgentNodeRights } from "@/hooks/nodeRights"
 import { useQueryAuthUserSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
-import type { StoredRule } from "@/modules/authority"
 import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 
-/** How the workspace answers a customer today: asks first, sends alone, or may not send; unknown while the rules load. */
-export type OnboardingApproval = "ask" | "auto" | "never" | "unknown"
+/**
+ * How the AI answers a customer today, as the steps that hold the customer send declare it (rights.md: each node declares `auto` or
+ * `ask`): some step asks first, every step sends alone, no step sends at all (a fact, not a mode), or unknown while the rights load.
+ */
+export type OnboardingApproval = "ask" | "auto" | "none" | "unknown"
 
-/** What the handover step shows: who holds new customers, whether the AI asks before it sends, and the way to change that. */
+/** What the handover step shows: who holds new customers and how the AI sends to a customer. */
 export interface OnboardingHandoverState {
     /** The person new customers go to first (the workspace owner); undefined while unread. */
     readonly owner: { readonly name: string; readonly isMe: boolean } | undefined
     readonly approval: OnboardingApproval
-    /** True when only an owner or manager may change the approval. */
-    readonly isLocked: boolean
-    readonly isSaving: boolean
-    /** Turns the approval on (the AI asks first) or off (the AI sends alone). */
-    readonly setApproval: (on: boolean) => void
 }
 
-/** The approval a stored rule means: no rule is the same as never (nothing without a rule runs), unknown until the rules load. */
-const approvalOf = (isRead: boolean, mode: StoredRule["mode"] | undefined): OnboardingApproval => {
+/** The agent that answers customers. */
+const REPLY_MODULE = "chatbot"
+/** The one tool that writes to a customer, as the be names it in the node-rights rows (data from the be, so the literal id, never `TOOL`). */
+const SEND_TOOL = "nivo.tool.customer.message.send"
+
+/** The approval the modes of the steps that hold the send mean: unknown until read, none when no step holds it, ask when any asks. */
+const approvalOf = (isRead: boolean, modes: ReadonlyArray<"auto" | "ask">): OnboardingApproval => {
     if (!isRead) return "unknown"
-    return mode === undefined ? "never" : mode
+    if (modes.length === 0) return "none"
+    return modes.includes("ask") ? "ask" : "auto"
 }
 
-/** The authority rule that gates the AI replying to a customer. */
-const REPLY_DEPARTMENT = "chatbot"
-const REPLY_ACTION = "reply_customer"
-
-/** Reads the real settings the handover step shows: the workspace owner and the `chatbot/reply_customer` rule, and writes that rule's mode. */
+/** Reads the workspace owner and the modes of the chatbot's steps that hold the customer send, both live. The mode is edited in each step. */
 export const useOnboardingHandover = (): OnboardingHandoverState => {
     const workspaceId = useOpenWorkspaceId()
     const user = useQueryAuthUserSwr()
     const members = useQueryWorkspaceMembersSwr(workspaceId)
-    const { slot } = useAuthoritySheet()
-    const session = useConsoleSessionRead()
-    const isLocked = !isManager(session?.member ?? null)
-    const { save, isSaving } = useSaveAuthorityRules()
+    const { installations } = useInstallations()
+    const chatbot = installations?.find((entry) => entry.moduleKey === REPLY_MODULE && entry.agentId !== null)
+    const nodeRights = useAgentNodeRights(chatbot?.agentId ?? null)
+    const sendRows = "items" in nodeRights.slot ? nodeRights.slot.items.rows.filter((row) => row.operation.id === SEND_TOOL) : []
+    const approval = approvalOf("items" in nodeRights.slot, sendRows.map((row) => row.mode))
     const ownerMember = members.data?.find((row) => row.role === "owner")
-    const rules = "items" in slot ? slot.items.rules : undefined
-    const rule = rules?.find((row) => row.department === REPLY_DEPARTMENT && row.action === REPLY_ACTION)
-    const approval = approvalOf(("items" in slot ? slot.items : undefined) !== undefined, rule?.mode)
     return {
         owner:
             ownerMember === undefined
@@ -54,19 +50,5 @@ export const useOnboardingHandover = (): OnboardingHandoverState => {
                       isMe: user.data?.id === ownerMember.userId,
                   },
         approval,
-        isLocked: isLocked || approval === "unknown" || approval === "never",
-        isSaving,
-        setApproval: (on) => {
-            if (rule === undefined) return
-            void save([
-                {
-                    department: REPLY_DEPARTMENT,
-                    action: REPLY_ACTION,
-                    mode: on ? "ask" : "auto",
-                    limit: rule.limit,
-                    required: rule.required,
-                },
-            ])
-        },
     }
 }

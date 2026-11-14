@@ -29,3 +29,13 @@ export const ConnectionProviderPage = (props: ConnectionProviderPageProps): Reac
     if (providerOf(props.segment) === undefined) notFound()
     return <ConnectionProviderPageBase props={{ segment: props.segment }} />
 }
+
+/** What a loading route hands the provider page: its fixed segment, or none for `[provider]` (the block then reads the address). */
+interface ConnectionProviderLoadingPageProps {
+    readonly segment?: string | undefined
+}
+
+/** The same provider page while the route loads: the band stays real, the figures and the list draw their own skeletons. */
+export const ConnectionProviderLoadingPage = (props: ConnectionProviderLoadingPageProps): ReactElement => (
+    <ConnectionProviderPageBase props={{ segment: props.segment }} />
+)

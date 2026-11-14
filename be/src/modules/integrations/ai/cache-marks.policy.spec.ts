@@ -1,11 +1,23 @@
-import {
-    automaticCacheFieldsOf,
-    CACHE_MARK_KINDS,
-    MAX_CACHE_BREAKPOINTS,
-    MAX_EXPLICIT_MARKS,
-    markedContentOf,
-    withinMarkLimit,
-} from "./cache-marks.policy"
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { automaticCacheFieldsOf as automaticCacheFieldsOfSubject, CACHE_MARK_KINDS as CACHE_MARK_KINDSSubject, MAX_CACHE_BREAKPOINTS as MAX_CACHE_BREAKPOINTSSubject, MAX_EXPLICIT_MARKS as MAX_EXPLICIT_MARKSSubject, markedContentOf as markedContentOfSubject, withinMarkLimit as withinMarkLimitSubject } from "./cache-marks.policy"
+
+const SUBJECT = Symbol("cache-marks.policy")
+
+describe("cache-marks.policy built the way Nest does", () => {
+    let automaticCacheFieldsOf: typeof automaticCacheFieldsOfSubject
+    let CACHE_MARK_KINDS: typeof CACHE_MARK_KINDSSubject
+    let MAX_CACHE_BREAKPOINTS: typeof MAX_CACHE_BREAKPOINTSSubject
+    let MAX_EXPLICIT_MARKS: typeof MAX_EXPLICIT_MARKSSubject
+    let markedContentOf: typeof markedContentOfSubject
+    let withinMarkLimit: typeof withinMarkLimitSubject
+
+    beforeAll(async () => {
+        const moduleRef = await Test.createTestingModule({
+            providers: [{ provide: SUBJECT, useValue: mock<{ automaticCacheFieldsOf: typeof automaticCacheFieldsOfSubject; CACHE_MARK_KINDS: typeof CACHE_MARK_KINDSSubject; MAX_CACHE_BREAKPOINTS: typeof MAX_CACHE_BREAKPOINTSSubject; MAX_EXPLICIT_MARKS: typeof MAX_EXPLICIT_MARKSSubject; markedContentOf: typeof markedContentOfSubject; withinMarkLimit: typeof withinMarkLimitSubject }>({ automaticCacheFieldsOf: automaticCacheFieldsOfSubject, CACHE_MARK_KINDS: CACHE_MARK_KINDSSubject, MAX_CACHE_BREAKPOINTS: MAX_CACHE_BREAKPOINTSSubject, MAX_EXPLICIT_MARKS: MAX_EXPLICIT_MARKSSubject, markedContentOf: markedContentOfSubject, withinMarkLimit: withinMarkLimitSubject }) }],
+        }).compile()
+        ;({ automaticCacheFieldsOf, CACHE_MARK_KINDS, MAX_CACHE_BREAKPOINTS, MAX_EXPLICIT_MARKS, markedContentOf, withinMarkLimit } = moduleRef.get<{ automaticCacheFieldsOf: typeof automaticCacheFieldsOfSubject; CACHE_MARK_KINDS: typeof CACHE_MARK_KINDSSubject; MAX_CACHE_BREAKPOINTS: typeof MAX_CACHE_BREAKPOINTSSubject; MAX_EXPLICIT_MARKS: typeof MAX_EXPLICIT_MARKSSubject; markedContentOf: typeof markedContentOfSubject; withinMarkLimit: typeof withinMarkLimitSubject }>(SUBJECT))
+    })
 
 describe("markedContentOf", () => {
     it("marks only on the protocol that takes breakpoints: anthropic yes, openai never", () => {
@@ -38,4 +50,5 @@ describe("automaticCacheFieldsOf", () => {
         expect(automaticCacheFieldsOf()).toEqual({ anthropic: { invocationKwargs: { cache_control: { type: "ephemeral" } } } })
         expect(automaticCacheFieldsOf()).not.toHaveProperty("openai")
     })
+})
 })

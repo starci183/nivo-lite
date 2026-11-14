@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentTemplateInstallerService } from "./agent-template-installer.service"
 import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import { AgentTemplatesService } from "./agent-templates.service"

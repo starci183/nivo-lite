@@ -40,8 +40,8 @@ export interface GuideRankFields {
 export const rankFieldsOf = (title: string, keywords: ReadonlyArray<string>, hint: string): GuideRankFields => ({
     title: wordsOf(title),
     titleText: normalize(title),
-    keywords: keywords.map(wordsOf),
-    keywordTexts: keywords.map(normalize),
+    keywords: keywords.map((entry) => wordsOf(entry)),
+    keywordTexts: keywords.map((entry) => normalize(entry)),
     hint: wordsOf(hint),
 })
 

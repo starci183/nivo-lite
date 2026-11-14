@@ -36,11 +36,11 @@ export const useBrain = (): BrainViewShape => {
             data === undefined
                 ? undefined
                 : {
-                      facts: data.facts.map(toBrainFact),
-                      lessons: data.lessons.map(toBrainLesson),
-                      gaps: data.gaps.map(toBrainGap),
-                      lenses: data.lenses.map(toBrainLens),
-                      extractions: data.extractions.map(toBrainExtraction),
+                      facts: data.facts.map((entry) => toBrainFact(entry)),
+                      lessons: data.lessons.map((entry) => toBrainLesson(entry)),
+                      gaps: data.gaps.map((entry) => toBrainGap(entry)),
+                      lenses: data.lenses.map((entry) => toBrainLens(entry)),
+                      extractions: data.extractions.map((entry) => toBrainExtraction(entry)),
                       gapsOpen: data.gapsOpen,
                   },
         [data],

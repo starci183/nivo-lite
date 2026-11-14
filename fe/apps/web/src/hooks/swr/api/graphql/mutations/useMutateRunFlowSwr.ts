@@ -14,7 +14,7 @@ export const MUTATE_RUN_FLOW_SWR_KEY = "MUTATE_RUN_FLOW_SWR"
 
 /**
  * SWR mutation for {@link mutateRunFlow}: one command of the operating flow as the caller's seat (kind `decide` answers a work item, as
- * the inbox does); the caller reads what it shows again.
+ * the team chat does); the caller reads what it shows again.
  */
 export const useMutateRunFlowSwr = (
     workspaceId: string,

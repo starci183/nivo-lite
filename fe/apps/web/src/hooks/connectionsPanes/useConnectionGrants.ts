@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { purposeFor } from "@/hooks/connection-access"
+import { bindableOf, useBindableAgents } from "@/hooks/bindable-agents"
 import { useConnectionsData, useConnectionsRole, useSetConnectionGrant } from "@/hooks/connections"
 import { slotOfReads } from "@/hooks/slot"
 import type { ConnectionGrantsView, DataSlot } from "@/modules/types"
@@ -28,21 +28,19 @@ export const useConnectionGrants = (connectionId: string): ConnectionGrantsRead 
     const access = useConnectionsRole()
     const setGrant = useSetConnectionGrant()
     const connection = data.items.find((item) => item.id === connectionId)
+    // Who may be bound comes from the back end; until it answers the slot loads, so no pair is guessed.
+    const bindable = useBindableAgents(connection?.provider)
     const bound = new Set(connection?.agentIds ?? [])
     const view: ConnectionGrantsView = {
         canManage: access.role === "owner",
         removeLabel: t("grantRemove"),
         rows: [...bound].map((agentId) => ({ id: agentId, name: data.agentNames[agentId] ?? agentId })),
-        candidates: data.activeAgents
-            .filter(
-                (agent) =>
-                    !bound.has(agent.id) &&
-                    connection !== undefined &&
-                    purposeFor(agent.module, connection.provider) !== null,
-            )
-            .map((agent) => ({ id: agent.id, label: agent.name })),
+        candidates: bindableOf(
+            data.activeAgents.filter((agent) => !bound.has(agent.id)),
+            bindable.data ?? [],
+        ).map((agent) => ({ id: agent.id, label: agent.name })),
     }
-    const slot = slotOfReads([access.read, ...data.reads], () => (connection === undefined ? undefined : view))
+    const slot = slotOfReads([access.read, ...data.reads, bindable], () => (connection === undefined ? undefined : view))
     const remove = useCallback(
         (agentId: string): void => void setGrant(connectionId, agentId, false),
         [connectionId, setGrant],
@@ -58,6 +56,7 @@ export const useConnectionGrants = (connectionId: string): ConnectionGrantsRead 
         retry: () => {
             access.retry()
             data.retry()
+            void bindable.mutate()
         },
     }
 }

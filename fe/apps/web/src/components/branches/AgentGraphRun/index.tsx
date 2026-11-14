@@ -15,7 +15,7 @@ type AgentGraphRunProps = {
 export const AgentGraphRun = (props: AgentGraphRunProps) => (
     <Section
         title={props.view.title}
-        description={props.view.summary}
+        caption={props.view.summary}
         isLoading={props.isLoading}
         action={
             <Badge tone="success" isLoading={props.isLoading}>

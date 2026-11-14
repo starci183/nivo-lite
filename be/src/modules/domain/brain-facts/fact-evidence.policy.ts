@@ -19,7 +19,12 @@ export interface UnchangedPassages {
 export const NOTHING_STANDS: UnchangedPassages = { hashes: [], folded: "" }
 
 /** Whether one piece of evidence of the document still stands: by its chunk hash, else (older evidence) by its quote or the value. */
-const itemStands = (item: Evidence, value: string, unchanged: UnchangedPassages, hashes: ReadonlySet<string>): boolean => {
+const itemStands = (
+    item: Evidence,
+    value: string,
+    unchanged: UnchangedPassages,
+    hashes: ReadonlySet<string>,
+): boolean => {
     if (item.chunkHash !== undefined) return hashes.has(item.chunkHash)
     const mark = foldedText(item.quote ?? value).slice(0, QUOTE_CHARS)
     return mark.length >= MIN_CHARS && unchanged.folded.includes(mark)
@@ -45,7 +50,8 @@ export const evidenceAfterChange = (
 ): EvidenceAfterChange => {
     const hashes = new Set(unchanged.hashes)
     const rest = fact.evidence.filter(
-        (item) => !(item.kind === "document" && item.ref === sourceId) || itemStands(item, fact.value, unchanged, hashes),
+        (item) =>
+            !(item.kind === "document" && item.ref === sourceId) || itemStands(item, fact.value, unchanged, hashes),
     )
     return { touched: rest.length !== fact.evidence.length, rest }
 }

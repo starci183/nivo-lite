@@ -6,10 +6,10 @@ import { useQueryAgentCatalogSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { slotOfReads } from "@/hooks/slot"
 import type { AgentCatalogEntry } from "@/modules/agentCatalog"
-import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
-import type { AgentLifecycle, SetupProgress } from "@/modules/installations"
+import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList, type ModuleKey } from "@/modules/catalog"
 import {
+    type AgentLifecycle,
+    type SetupProgress,
     installationPersonName,
     agentHref,
     agentLifecycleOf,
@@ -155,7 +155,7 @@ export const useCatalogEntries = (): {
             },
         ]
     })
-    const agents = (installations === undefined ? [] : installations).map((installation): InstalledAgent => {
+    const agents = (installations ?? []).map((installation): InstalledAgent => {
         const copy = catalog.modules[installation.moduleKey]
         const lifecycle = agentLifecycleOf(installation)
         return {

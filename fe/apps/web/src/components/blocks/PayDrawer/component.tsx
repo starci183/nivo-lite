@@ -1,4 +1,4 @@
-import { Alert, Button, DescriptionList, Drawer, Image, Input, MediaFrame, Text, Stack } from "@starci/grammar/common"
+import { Alert, Button, DescriptionList, Drawer, Image, Input, MediaFrame, Text, Stack, SurfaceCard } from "@starci/grammar/common"
 import { QR_CLASS_NAME } from "./classNames"
 
 type TransferDetail = {
@@ -146,16 +146,18 @@ const PaymentContent = (props: PayDrawerBaseProps) => {
         content = (
             <Stack gap="section">
                 <PaymentQr {...props} />
-                <DescriptionList
-                    layout="stacked"
-                    items={[
-                        {
-                            id: "credits-pay-amount",
-                            term: props.props.amountLabel,
-                            description: props.props.amount,
-                        },
-                    ]}
-                />
+                <SurfaceCard>
+                    <DescriptionList
+                        layout="stacked"
+                        items={[
+                            {
+                                id: "credits-pay-amount",
+                                term: props.props.amountLabel,
+                                description: props.props.amount,
+                            },
+                        ]}
+                    />
+                </SurfaceCard>
                 {props.props.proration === null ? null : (
                     <Text size="sm" tone="muted">
                         {props.props.proration}

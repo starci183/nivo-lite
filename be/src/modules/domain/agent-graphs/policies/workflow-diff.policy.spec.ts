@@ -27,7 +27,7 @@ const graph = (nodes: ReadonlyArray<GraphSpecNode>, extra: Partial<GraphSpec> = 
     schema: "nivo/agent-graph@1",
     moduleKey: "accounting",
     trigger: { kind: "tag", sources: ["channel"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes,
     ...extra,
 })
@@ -90,19 +90,17 @@ describe("workflowDiffOf: edges, first versions, trigger and grant", () => {
         expect(diff.triggerChanged).toBe(false)
     })
 
-    it("says what the trigger and the grant gained and lost", async () => {
+    it("says what the trigger and the grant gained and lost (a data right of the grant is not compared)", async () => {
         const subject = await build()
         const before = graph([node("a")], {
             grant: {
-                rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["id", "status"] }],
-                tools: ["nivo.ledger.entry.append"],
+                tools: ["nivo.tool.ledger.entry.append"],
                 effects: [],
             },
         })
         const after = graph([node("a")], {
             trigger: { kind: "tag", sources: ["schedule"] },
             grant: {
-                rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["id", "amountVnd"] }],
                 tools: [],
                 effects: ["channel.send"],
             },
@@ -111,13 +109,58 @@ describe("workflowDiffOf: edges, first versions, trigger and grant", () => {
         expect(subject.workflowDiffOf(before, after)).toMatchObject({
             triggerChanged: true,
             grant: {
-                rightsAdded: ["order:read.amountVnd"],
-                rightsRemoved: ["order:read.status"],
                 toolsAdded: [],
-                toolsRemoved: ["nivo.ledger.entry.append"],
+                toolsRemoved: ["nivo.tool.ledger.entry.append"],
                 effectsAdded: ["channel.send"],
                 effectsRemoved: [],
             },
         })
+    })
+})
+
+const account = (operations: Readonly<Record<string, "auto" | "ask">>, connectionId: string | null = null) => ({
+    kind: "books",
+    provider: null,
+    connectionId,
+    operations,
+})
+
+describe("workflowDiffOf: what the nodes ask for on accounts", () => {
+    it("names the operations added, removed and moved from ask to auto, and the accounts part of the step", async () => {
+        const subject = await build()
+        const before = graph([
+            node("ledger", { accounts: [account({ append: "ask", status: "auto" })] }),
+            node("gone", { accounts: [account({ old: "auto" })] }),
+        ])
+        const after = graph([
+            node("ledger", { accounts: [account({ append: "auto", void: "ask" })] }),
+            node("new", { accounts: [account({ fresh: "auto" }, "c-1")] }),
+        ])
+
+        const diff = subject.workflowDiffOf(before, after)
+
+        const ask = (nodeKey: string, operation: string, mode: string, connectionId: string | null = null) => ({
+            nodeKey,
+            kind: "books",
+            provider: null,
+            connectionId,
+            operation,
+            mode,
+        })
+        expect(diff.nodeRights).toEqual({
+            added: [ask("ledger", "void", "ask"), ask("new", "fresh", "auto", "c-1")],
+            removed: [ask("ledger", "status", "auto"), ask("gone", "old", "auto")],
+            loosened: [ask("ledger", "append", "auto")],
+        })
+        expect(diff.steps.find((step) => step.key === "ledger")?.parts).toEqual(["accounts"])
+    })
+
+    it("does not count a node from before node rights that now states its accounts: it asked for what its workflow had granted it", async () => {
+        const subject = await build()
+        const before = graph([node("ledger")])
+        const after = graph([node("ledger", { accounts: [account({ append: "auto" })] })])
+
+        expect(subject.workflowDiffOf(before, after).nodeRights).toEqual({ added: [], removed: [], loosened: [] })
+        expect(subject.workflowDiffOf(null, after).nodeRights?.added).toHaveLength(1)
     })
 })

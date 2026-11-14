@@ -10,9 +10,9 @@ import { SETTINGS } from "../ports"
 
 const variables: z.ZodObject<Record<string, never>> = z.object({})
 
-/** `chatbot.settings`: the rules the workspace saved for its Chatbot, with who saved them last; the defaults, with nobody, before the first save. */
+/** `blocks-core.chatbot.api.settings.get`: the rules the workspace saved for its Chatbot, with who saved them last; the defaults, with nobody, before the first save. */
 export const SETTINGS_READ: ReadDefinition = defineRead({
-    id: "chatbot.settings",
+    id: "blocks-core.chatbot.api.settings.get",
     dataKind: "chatbot-settings",
     shape: "record",
     fields: ["holdingMessage", "updatedBy"],

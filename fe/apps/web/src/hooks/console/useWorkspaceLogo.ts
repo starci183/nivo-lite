@@ -1,15 +1,10 @@
 "use client"
 
-import { useQueryVideoBrandSwr, useQueryVideoMediaSwr } from "@/hooks/swr"
+import { useQueryWorkspaceSettingsSwr } from "@/hooks/swr"
 
 /**
- * The workspace logo for the top bar: the logo of the brand kit (`video_brand_kits.logo_path`) as the signed URL the media library
- * answers, or null while loading, without a logo or when the brand kit cannot be read.
+ * The workspace logo for the top bar: the public address of the picture the owner or a manager uploaded on the settings page, or
+ * null while it is unread or when the workspace has none (the top bar then draws Grammar's mark). It reads the same cached answer
+ * as the settings page, so a saved or removed logo shows in the top bar at once.
  */
-export const useWorkspaceLogo = (): string | null => {
-    const brand = useQueryVideoBrandSwr()
-    const media = useQueryVideoMediaSwr()
-    const path = brand.data?.logoPath ?? null
-    if (path === null) return null
-    return media.data?.find((item) => item.path === path)?.url ?? null
-}
+export const useWorkspaceLogo = (): string | null => useQueryWorkspaceSettingsSwr().data?.logoUrl ?? null

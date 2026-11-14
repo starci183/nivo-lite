@@ -6,9 +6,6 @@ import { parseJsonText } from "@modules/platform/primitives"
  * workspace's time zone (`to` exclusive), and `afterHours` the "answer after hours" choice: true answers customers at any hour.
  */
 
-/** The time zone the hours are read in until a workspace names its own. */
-export const WORKING_HOURS_TIME_ZONE = "Asia/Ho_Chi_Minh"
-
 /** The days of a week, Monday first. */
 const WEEK_DAYS = 7
 
@@ -84,7 +81,7 @@ export const workingHoursOf = (value: unknown): OptionalWorkingHours => {
     const read = typeof value === "string" ? parseJsonText(value) : { ok: true as const, value }
     const raw: unknown = read.ok ? read.value : null
     if (!isRecord(raw) || raw.v !== 1 || !Array.isArray(raw.days) || raw.days.length !== WEEK_DAYS) return null
-    const days = raw.days.map(dayOf)
+    const days = raw.days.map((day) => dayOf(day))
     if (days.includes(null)) return null
     return { afterHours: raw.afterHours !== false, days: days.flatMap((day) => (day === null ? [] : [day])) }
 }
@@ -120,19 +117,19 @@ const localOf = (at: Date, timeZone: string): LocalMinute => {
 }
 
 /** Whether the agent is on duty at a moment. */
-export const onDutyAt = (hours: WorkingHours, at: Date, timeZone: string = WORKING_HOURS_TIME_ZONE): boolean => {
+export const onDutyAt = (hours: WorkingHours, at: Date, timeZone: string): boolean => {
     const { day, minute } = localOf(at, timeZone)
     return (hours.days[day] ?? []).some((range) => minute >= range.start && minute < range.end)
 }
 
 /**
  * The next moment the agent comes on duty after `at`, to the minute; null when the week holds no hour at all. Read in minutes from the
- * local clock of `at`, so it is exact in a zone without daylight saving (the product's) and off by the shift only across one.
+ * local clock of `at`, so it is exact in a zone without daylight saving and off by the shift only across one.
  */
 export const nextOnDutyAt = (
     hours: WorkingHours,
     at: Date,
-    timeZone: string = WORKING_HOURS_TIME_ZONE,
+    timeZone: string,
 ): OptionalMoment => {
     const { day, minute } = localOf(at, timeZone)
     for (let ahead = 0; ahead <= WEEK_DAYS; ahead += 1) {
@@ -150,6 +147,6 @@ export const nextOnDutyAt = (
 export const holdsCustomerAt = (
     hours: OptionalWorkingHours,
     at: Date,
-    timeZone: string = WORKING_HOURS_TIME_ZONE,
+    timeZone: string,
 ): boolean =>
     hours !== null && !hours.afterHours && hours.days.some((day) => day.length > 0) && !onDutyAt(hours, at, timeZone)

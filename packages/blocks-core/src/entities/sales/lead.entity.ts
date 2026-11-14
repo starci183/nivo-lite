@@ -1,8 +1,8 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 import { MAX_BODY, MAX_LINE } from "../../bounds"
 import { MAX_REASON_CHARS } from "../../rules/sales/stage"
+import { SALES_LEAD_ENTITY } from "./sales-entity-names"
 
 /** The channels a customer reaches the business through. */
 export const LEAD_CHANNELS: readonly [string, ...Array<string>] = [
@@ -29,6 +29,7 @@ export const CONSULT_STAGES: readonly [string, ...Array<string>] = [
 export const LEAD_STAGES: readonly [string, ...Array<string>] = ["new", "qualified", "proposal", "won", "lost"]
 
 type LeadFields = {
+    readonly contactId: FieldDef<"contact", true>
     readonly contactName: FieldDef<"text", false>
     readonly company: FieldDef<"text", true>
     readonly channel: FieldDef<"enum", false>
@@ -50,6 +51,8 @@ type LeadFields = {
 }
 
 const leadFields: LeadFields = {
+    /** The person (the core contact) this sale record is about: one sale record per contact; erased with the contact. */
+    contactId: field.contact({ nullable: true }),
     contactName: field.text({ maxLength: MAX_LINE, searchable: true }),
     company: field.text({ maxLength: MAX_LINE, searchable: true, nullable: true }),
     channel: field.enum({ of: LEAD_CHANNELS, default: { literal: "website" } }),
@@ -70,9 +73,13 @@ const leadFields: LeadFields = {
     consultStage: field.enum({ of: CONSULT_STAGES, nullable: true }),
 }
 
-/** One customer of a workspace. Graph node kind `sales-lead`. */
+/**
+ * The sale's record of one customer: the SALES data the core contact does not hold (the deal stage and the consult stage, the need, the
+ * quote and order totals, the owner, the next step, the source channel, the notes), keyed by the person's `contactId`. The person (identity,
+ * channels, memory) is the core contact. Graph node kind `sales-lead`.
+ */
 export const leadEntity: EntityDefinition<LeadFields> = defineEntity({
-    name: "sales.lead",
+    name: SALES_LEAD_ENTITY,
     dataKind: "sales-lead",
     fields: leadFields,
     indexes: [
@@ -86,6 +93,13 @@ export const leadEntity: EntityDefinition<LeadFields> = defineEntity({
         { name: "needs", on: ["needs", "id"] },
     ],
     constraints: [
+        {
+            kind: "unique",
+            name: "contact_key",
+            on: ["contactId"],
+            where: { op: "notNull", field: "contactId" },
+            refusal: "contact-taken",
+        },
         {
             kind: "unique",
             name: "phone_key",

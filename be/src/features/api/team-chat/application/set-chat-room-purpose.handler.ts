@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatAudienceService } from "@modules/domain/team-chat"
-import type { ChatRoomView, TeamChatResult } from "@modules/domain/team-chat"
+import { TeamChatAudienceService, type ChatRoomView, type TeamChatResult } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetChatRoomPurposeCommand } from "./set-chat-room-purpose.command"
 
 @CommandHandler(SetChatRoomPurposeCommand)
@@ -17,7 +15,11 @@ export class SetChatRoomPurposeHandler extends ICQRSHandler<SetChatRoomPurposeCo
     }
 
     protected override process(command: SetChatRoomPurposeCommand): Promise<TeamChatResult<ChatRoomView>> {
-        const r = command.params.request
-        return this.audience.setRoomPurpose(r.workspaceId, command.params.principal.id, r.roomId, r.purpose)
+        return this.audience.setRoomPurpose(
+            command.params.request.workspaceId,
+            command.params.principal.id,
+            command.params.request.roomId,
+            command.params.request.purpose,
+        )
     }
 }

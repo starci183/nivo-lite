@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AiClient } from "./ai.client"
 import { AiService } from "./ai.service"
 import { AI, AI_ENDPOINT_OPTIONS, AI_RUNNER } from "./ai.decorators"

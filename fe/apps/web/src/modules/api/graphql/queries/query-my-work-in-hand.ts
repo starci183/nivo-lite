@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { MyWorkInHandQuery } from "../__generated__/graphql"
 
 /** The response of the `myWorkInHand` query: the typed payload straight from the back end contract. */
@@ -20,4 +19,4 @@ type QueryMyWorkInHandParams = Omit<QueryParams<never>, "query" | "request">
 export const queryMyWorkInHand = (
     params: QueryMyWorkInHandParams,
 ): Promise<ApolloClient.QueryResult<QueryMyWorkInHandResponse>> =>
-    createAuthApolloClient({ signal: params.signal, headers: params.headers }).query({ query: query1 })
+    createAuthApolloClient(webApiTransport, { signal: params.signal, headers: params.headers }).query({ query: query1 })

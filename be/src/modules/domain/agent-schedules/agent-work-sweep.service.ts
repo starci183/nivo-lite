@@ -2,28 +2,43 @@ import { Injectable, Optional } from "@nestjs/common"
 import { ThreadSweepService } from "@modules/domain/agent-threads"
 import type { EntityManager } from "typeorm"
 import {
-    AgentTagService,
     AgentTasksService,
     AgentTriggersService,
     AgentTurnsService,
     AgentWakeRetentionService,
     AgentWakeService,
+    timerTaskOf,
+    timerWakeAtOf,
+    type AgentWorkDue,
+    type TimerTask,
 } from "@modules/domain/agent-work"
-import type { AgentWorkDue } from "@modules/domain/agent-work"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { careTaskOf } from "@nivo-lite/blocks-core"
-import type { CareTask } from "@nivo-lite/blocks-core"
-import { InjectAgentTurnQueue } from "@modules/queues/agent-turn"
-import type { AgentTurnQueue } from "@modules/queues/agent-turn"
+import { InjectAgentTurnQueue, type AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
-import { RETENTION_BATCH, SWEEP_LIMIT, careTagOf, isMissed, latestMissedSlot } from "./agent-schedules.policy"
+import { RETENTION_BATCH, SWEEP_LIMIT, isMissed, latestMissedSlot } from "./agent-schedules.policy"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
+import { ClockTickDeliveryService } from "./clock-tick-delivery.service"
 import type { SweepReport, TimerPress } from "./agent-schedules.contracts"
+
+/** What a failed part of the pass is logged with: the kind of part, and for a due item its agent and subject. */
+interface SweepPartContext {
+    /** A due item's kind (`lease`, `wake`, `task`, `trigger`), or `threads`, or `retention`. */
+    readonly kind: string
+    /** The agent of a due item. */
+    readonly agentId?: string
+    /** The subject of a due item, or null. */
+    readonly subjectId?: string | null
+}
+
+/** What a failed due item is logged with. */
+const itemContextOf = (item: AgentWorkDue): SweepPartContext => ({
+    kind: item.kind,
+    agentId: item.agentId,
+    subjectId: item.subjectId,
+})
 
 /** What handling one due item did, for the report. */
 type Done = keyof Omit<SweepReport, "removed"> | null
@@ -50,7 +65,7 @@ export class AgentWorkSweepService {
         private readonly triggers: AgentTriggersService,
         private readonly retention: AgentWakeRetentionService,
         private readonly sync: AgentTriggerSyncService,
-        private readonly tags: AgentTagService,
+        private readonly clockTicks: ClockTickDeliveryService,
         @Optional() private readonly threadSweep?: ThreadSweepService,
     ) {}
 
@@ -59,15 +74,23 @@ export class AgentWorkSweepService {
         const due = await this.turns.due(SWEEP_LIMIT)
         const done: Array<Done> = []
         await eachInOrder(due, async (item) => {
-            done.push(await this.guarded(item))
+            done.push(await this.guarded(() => this.handle(item), null, itemContextOf(item)))
         })
-        await this.sweepThreads()
+        await this.guarded(
+            async () => {
+                await this.threadSweep?.sweep()
+            },
+            undefined,
+            { kind: "threads" },
+        )
+        // A retention that fails is logged like any item: the drains, tasks and triggers above stand, and the next minute retries it.
+        const removed = await this.guarded(() => this.retention.sweep(RETENTION_BATCH), 0, { kind: "retention" })
         const report: SweepReport = {
             drains: done.filter((kind) => kind === "drains").length,
             tasks: done.filter((kind) => kind === "tasks").length,
             triggers: done.filter((kind) => kind === "triggers" || kind === "missed").length,
             missed: done.filter((kind) => kind === "missed").length,
-            removed: await this.retention.sweep(RETENTION_BATCH),
+            removed,
         }
         this.logger.info(AgentSchedulesLogEvent.SweepDone, { ...report })
         return report
@@ -75,41 +98,34 @@ export class AgentWorkSweepService {
 
     /**
      * A person runs a task's timer now ("run now"): the SAME wake this sweep writes when the timer comes, keyed by the task and its wake
-     * time, written now, with the time cleared in the same transaction, so the timer never fires it a second time. A care step is told its
+     * time, written now, with the time cleared in the same transaction, so the timer never fires it a second time. A generic timer is told its
      * moment has come (`dueAt` = now) and who pressed (`runNowBy` in its context); any other task wakes as the internal wake it is, under
      * the person. `already_ran`: the task has no wake time left (it fired, was moved on, closed) or its wake was already written.
      */
     async runTaskNow(item: AgentWorkDue, press: TimerPress): Promise<TaskRunNow> {
         const task = item.subjectId === null ? null : await this.tasks.byId(item.subjectId)
-        if (task === null || task.status !== "open" || task.nextActionAt === null || item.at === null) return "already_ran"
+        if (task?.status !== "open" || task.nextActionAt === null || item.at === null)
+            return "already_ran"
         if (task.nextActionAt.getTime() !== item.at.getTime()) return "already_ran"
-        const care = careTaskOf(task.dedupeKey, task.title)
+        const timer = timerTaskOf(task.dedupeKey, task.title, task.data)
         const woken =
-            care === null
+            timer === null
                 ? await this.wakeTask(item, task.id, item.at, press.memberId)
-                : await this.careWake(item, task.id, item.at, care, press)
+                : await this.timerWake(item, task.id, item.at, timer, press)
         return woken ? "woken" : "already_ran"
     }
 
-    /** The runs on LangGraph threads ride the same minute (deadlines, repairs, timers); a failing thread sweep never stops the work sweep. */
-    private async sweepThreads(): Promise<void> {
+    /**
+     * Runs one part of the pass so that its failure never fails the pass: a due item, the thread runs' sweep (deadlines, repairs, timers
+     * on LangGraph threads ride the same minute) and the retention each answer `failed` and log `SweepItemFailed` with what they were;
+     * the rest of the pass goes on and the next minute retries the part.
+     */
+    private async guarded<T>(work: () => Promise<T>, failed: T, context: SweepPartContext): Promise<T> {
         try {
-            await this.threadSweep?.sweep()
+            return await work()
         } catch (cause) {
-            this.logger.error(AgentSchedulesLogEvent.SweepItemFailed, cause, { kind: "threads" })
-        }
-    }
-
-    private async guarded(item: AgentWorkDue): Promise<Done> {
-        try {
-            return await this.handle(item)
-        } catch (cause) {
-            this.logger.error(AgentSchedulesLogEvent.SweepItemFailed, cause, {
-                kind: item.kind,
-                agentId: item.agentId,
-                subjectId: item.subjectId,
-            })
-            return null
+            this.logger.error(AgentSchedulesLogEvent.SweepItemFailed, cause, { ...context })
+            return failed
         }
     }
 
@@ -131,9 +147,9 @@ export class AgentWorkSweepService {
         if (item.subjectId === null || item.at === null) return null
         const { subjectId, at } = item
         const task = await this.tasks.byId(subjectId)
-        const care = task === null ? null : careTaskOf(task.dedupeKey, task.title)
-        if (care !== null) {
-            await this.careWake(item, subjectId, at, care, null)
+        const timer = task === null ? null : timerTaskOf(task.dedupeKey, task.title, task.data)
+        if (timer !== null) {
+            await this.timerWake(item, subjectId, at, timer, null)
             return "tasks"
         }
         await this.wakeTask(item, subjectId, at, null)
@@ -157,18 +173,30 @@ export class AgentWorkSweepService {
     }
 
     /**
-     * Wakes the Sales agent for a care step that fell due: a tag from the system whose context names the step, the record it is about and the
-     * moment it was really due (a task wakes at most seven days ahead, so the graph arms it again when it is early), keyed by the task and the
-     * moment so a replay is one wake. The task's wake time is cleared in the same transaction. A person's "run now" makes the moment now and
-     * names them. False when the wake of that time was already written.
+     * Wakes the agent for a generic timer that fell due: a tag from the system that is the `timer.due` verb, naming the `ref`, the data and
+     * the moment (`timerTagOf`), keyed by the task and the due instant so a retried sweep fires once; the task is closed in the same
+     * transaction. A task wakes at most seven days ahead, so a timer whose real due instant is still ahead is only moved forward (no wake,
+     * false). A person's "run now" fires at once. False when the wake of that time was already written or the timer is not due yet.
      */
-    private async careWake(item: AgentWorkDue, taskId: string, at: Date, care: CareTask, press: TimerPress | null): Promise<boolean> {
+    private async timerWake(
+        item: AgentWorkDue,
+        taskId: string,
+        at: Date,
+        timer: TimerTask,
+        press: TimerPress | null,
+    ): Promise<boolean> {
+        const now = this.clock.now()
+        const due = new Date(timer.dueAt)
+        if (press === null && due.getTime() > now.getTime()) {
+            await this.tasks.moveWake(taskId, at, timerWakeAtOf(due, now))
+            return false
+        }
         const tagged = await this.entityManager.transaction(async (tx) => {
-            const result = await this.tags.tagAgent(careTagOf(item, taskId, at, care, press), tx)
-            await this.tasks.markWoken(tx, taskId, at)
-            return result.tagged
+            const delivered = await this.clockTicks.deliverTimer(tx, item, taskId, timer, press)
+            await this.tasks.markFired(tx, taskId, at)
+            return delivered === "woken"
         })
-        this.logger.info(AgentSchedulesLogEvent.CareWoken, { agentId: item.agentId, kind: care.kind, early: press !== null })
+        this.logger.info(AgentSchedulesLogEvent.TimerWoken, { agentId: item.agentId, early: press !== null })
         return tagged
     }
 
@@ -181,18 +209,7 @@ export class AgentWorkSweepService {
         if (next === null || trigger.preset === null || item.at === null || !isMissed(item.at, now)) return "triggers"
         const slot = latestMissedSlot(item.at, next, { ...trigger, preset: trigger.preset }, item.agentId)
         await this.entityManager.transaction(async (tx) => {
-            await this.wakes.wake(tx, {
-                workspaceId: item.workspaceId,
-                agentId: item.agentId,
-                source: "schedule",
-                eventKey: `${trigger.id}:${String(slot.getTime())}`,
-                context: {
-                    triggerId: trigger.id,
-                    slot: String(slot.getTime()),
-                    ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
-                },
-                actorMemberId: null,
-            })
+            await this.clockTicks.deliverSlot(tx, item.workspaceId, trigger, String(slot.getTime()), null)
             await this.triggers.recordFire(tx, trigger.id, slot, next)
         })
         return "missed"

@@ -1,5 +1,5 @@
 /** Characters that draw nothing yet travel with text: zero-width marks, direction marks and the tag block, a way to hide words from a reader. */
-const HIDDEN = /[​-‏‪-‮⁠-⁤﻿\u{E0000}-\u{E007F}]/gu
+const HIDDEN = /[\u{200B}-\u{200F}\u{202A}-\u{202E}\u{2060}-\u{2064}\u{FEFF}\u{E0000}-\u{E007F}]/gu
 
 /** A run of digits that may hold separators between them, as a phone number, an account or a card is written. */
 const DIGIT_RUN = /\+?\d[\d .-]*/gu
@@ -49,4 +49,4 @@ const scrubToken = (token: string): string => {
  * no need of. Prices, dates and quantities stay.
  */
 export const scrubbed = (text: string): string =>
-    text.replaceAll(HIDDEN, "").split(/(\s+)/u).map(scrubToken).join("").replaceAll(DIGIT_RUN, scrubRun)
+    text.replaceAll(HIDDEN, "").split(/(\s+)/u).map((token) => scrubToken(token)).join("").replaceAll(DIGIT_RUN, scrubRun)

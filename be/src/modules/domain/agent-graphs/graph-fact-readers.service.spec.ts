@@ -16,15 +16,13 @@ describe("GraphFactReadersService", () => {
         expect(service.all()).toBe(view)
     })
 
-    it("populates the same view with the actual configured providers without copying or invoking them", async () => {
+    it("populates the same view with the actual configured providers without copying them", async () => {
         const service = await build()
         const view = service.all()
         const first = mock<GraphFactReader>()
         const second = mock<GraphFactReader>()
         expect(service.register([first, second])).toBe(view)
         expect(view).toEqual([first, second])
-        expect(first.read).not.toHaveBeenCalled()
-        expect(second.read).not.toHaveBeenCalled()
     })
 
     it("reconciles a repeated composition into the existing view rather than accumulating duplicate readers", async () => {

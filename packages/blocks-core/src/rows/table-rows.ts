@@ -1,6 +1,5 @@
 import { textOf, valueAt } from "../slots/paths"
-import { cellTextOf } from "./cell-format"
-import type { CellContext, CellFormat } from "./cell-format"
+import { cellTextOf, type CellContext, type CellFormat } from "./cell-format"
 
 /** The tones a badge cell may take. */
 export const CELL_TONES = ["neutral", "accent", "info", "success", "warning", "danger", "muted"] as const

@@ -1,6 +1,11 @@
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
-import { CONNECTION_GROUPS, groupOfConnector, unitOfProvider } from "@/modules/connection-groups"
-import type { ConnectionGroup, ProviderUnit } from "@/modules/connection-groups"
+import {
+    CONNECTION_GROUPS,
+    groupOfConnector,
+    unitOfProvider,
+    type ConnectionGroup,
+    type ProviderUnit,
+} from "@/modules/connection-groups"
 import type {
     Connection,
     ConnectorAudience,
@@ -60,9 +65,9 @@ const soon = (
 
 /** Every connector of the library. Adding the next one is one line here and its words in the catalog. */
 export const CATALOG: ReadonlyArray<CatalogEntry> = [
-    real("sepay", "payments", ["accounting"], 100, "wallet"),
-    real("payos", "payments", ["accounting"], 70, "wallet"),
-    real("casso", "payments", ["accounting"], 60, "wallet"),
+    real("sepay", "payments", ["sales"], 100, "wallet"),
+    real("payos", "payments", ["sales"], 70, "wallet"),
+    real("casso", "payments", ["sales"], 60, "wallet"),
     real("telegram", "chat", ["chatbot", "sales"], 95, "community"),
     real("zalo_oa", "chat", ["chatbot", "sales"], 98, "community"),
     real("meta", "chat", ["chatbot", "sales"], 97, "community"),
@@ -71,24 +76,24 @@ export const CATALOG: ReadonlyArray<CatalogEntry> = [
     real("openapi", "data", ["any"], 62, "code"),
     real("csv_import", "data", ["any"], 90, "apps"),
     real("imap", "email", ["any"], 75, "email"),
-    real("smtp", "email", ["accounting", "sales"], 58, "email"),
+    real("smtp", "email", ["sales"], 58, "email"),
     real("google", "productivity", ["sales"], 80, "apps"),
     real("google_drive", "productivity", ["any"], 61, "apps"),
     real("webhook", "automation", ["any"], 50, "trigger"),
     soon("tiktok_chat", "chat", ["chatbot"], 60, "community"),
-    soon("shopee", "commerce", ["sales", "accounting"], 96, "cart"),
-    soon("tiktok_shop", "commerce", ["sales", "accounting"], 88, "cart"),
-    soon("lazada", "commerce", ["sales", "accounting"], 70, "cart"),
-    soon("kiotviet", "commerce", ["sales", "accounting"], 85, "cart"),
-    soon("sapo", "commerce", ["sales", "accounting"], 78, "cart"),
-    soon("haravan", "commerce", ["sales", "accounting"], 66, "cart"),
-    soon("shopify", "commerce", ["sales", "accounting"], 55, "cart"),
-    soon("woocommerce", "commerce", ["sales", "accounting"], 45, "cart"),
-    soon("misa_amis", "accounting", ["accounting"], 84, "wallet"),
-    soon("misa_meinvoice", "accounting", ["accounting"], 80, "wallet"),
-    soon("viettel_sinvoice", "accounting", ["accounting"], 62, "wallet"),
-    soon("vnpay", "payments", ["accounting"], 64, "wallet"),
-    soon("momo", "payments", ["accounting"], 63, "wallet"),
+    soon("shopee", "commerce", ["sales"], 96, "cart"),
+    soon("tiktok_shop", "commerce", ["sales"], 88, "cart"),
+    soon("lazada", "commerce", ["sales"], 70, "cart"),
+    soon("kiotviet", "commerce", ["sales"], 85, "cart"),
+    soon("sapo", "commerce", ["sales"], 78, "cart"),
+    soon("haravan", "commerce", ["sales"], 66, "cart"),
+    soon("shopify", "commerce", ["sales"], 55, "cart"),
+    soon("woocommerce", "commerce", ["sales"], 45, "cart"),
+    soon("misa_amis", "accounting", ["sales"], 84, "wallet"),
+    soon("misa_meinvoice", "accounting", ["sales"], 80, "wallet"),
+    soon("viettel_sinvoice", "accounting", ["sales"], 62, "wallet"),
+    soon("vnpay", "payments", ["sales"], 64, "wallet"),
+    soon("momo", "payments", ["sales"], 63, "wallet"),
     soon("ghn", "commerce", ["sales"], 58, "cart"),
     soon("ghtk", "commerce", ["sales"], 57, "cart"),
     soon("google_calendar", "productivity", ["any"], 52, "apps", "/logos/connectors/calendar.svg"),
@@ -117,7 +122,7 @@ const STROKED_D = String.fromCodePoint(0x0111)
 const foldText = (text: string): string =>
     text
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replaceAll(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replaceAll(STROKED_D, "d")
 

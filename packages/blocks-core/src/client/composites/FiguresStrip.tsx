@@ -1,8 +1,7 @@
 import type { ReactNode } from "react"
-import { BarChart, EmptyNotice, Meter, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { Figure } from "@starci/grammar/common"
-import { proportionTotal } from "../../rows/figure-format"
-import type { ChartPoint } from "../../rows/figure-format"
+import { BarChart, EmptyNotice, Meter, Section, Stack, SurfaceCard, Text, type Figure } from "@starci/grammar/common"
+import { proportionTotal, type ChartPoint } from "../../rows/figure-format"
+import { useInCard } from "./CardScope"
 
 /** Props for {@link FiguresStrip}. */
 interface FiguresStripProps {
@@ -14,13 +13,24 @@ interface FiguresStripProps {
     readonly isLoading: boolean
 }
 
-/** Draws a ribbon of figures as a strip with no surface of its own; the status of the read is drawn by the block through SlotView. */
-export const FiguresStrip = (props: FiguresStripProps): ReactNode =>
-    props.isRibbon ? (
-        <SurfaceCard kind="figures" ariaLabel={props.label} isLoading={props.isLoading} items={props.items} />
+/**
+ * Draws a ribbon of figures as one card with its label as the heading (inside a card that already names it, the label only names the
+ * strip), or the figures bare, named for assistive technology only; the status of the read is drawn by the block through SlotView.
+ */
+export const FiguresStrip = (props: FiguresStripProps): ReactNode => {
+    const inCard = useInCard()
+    const head = inCard ? { ariaLabel: props.label } : { label: props.label, headingLevel: 3 as const }
+    return props.isRibbon ? (
+        <SurfaceCard
+            kind="figures"
+            {...head}
+            isLoading={props.isLoading}
+            items={props.items}
+        />
     ) : (
         <Section kind="figures" ariaLabel={props.label} isLoading={props.isLoading} items={props.items} />
     )
+}
 
 /** Props for the gauges of figures. */
 interface FiguresProportionProps {

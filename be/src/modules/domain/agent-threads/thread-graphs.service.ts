@@ -2,20 +2,26 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { AgentGraphsService } from "@modules/domain/agent-graphs"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import { InjectGraphThreads } from "@modules/integrations/langgraph"
-import type { GraphThreads, ThreadGraph, ThreadNodeScope, ThreadRef, ThreadState } from "@modules/integrations/langgraph"
+import {
+    InjectGraphThreads,
+    type GraphThreads,
+    type ThreadGraph,
+    type ThreadNodeScope,
+    type ThreadRef,
+    type ThreadState,
+} from "@modules/integrations/langgraph"
 import { InjectClock, type Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InjectAgentThreadsOptions } from "./agent-threads.decorators"
 import { RunStopsService } from "./stops/run-stops.service"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import type { AgentThreadsOptions } from "./agent-threads.options"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
-import { compileTemplate } from "./template-compiler.policy"
-import type { CompiledTemplate } from "./template-compiler.policy"
+import { compileTemplate, type CompiledTemplate } from "./template-compiler.policy"
 import { ThreadProjectionService } from "./thread-projection.service"
 import { ThreadStepService } from "./thread-step.service"
+import { templateStepIds, withTemplateRoutes } from "./template-steps.policy"
+import { untilCompileProblemsOf, untilStepBudgetOf, withUntilLoops } from "./compiler-until.policy"
 
 /** How many built graphs are kept unless the app says otherwise: one per workflow version, five or six nodes each. */
 const DEFAULT_GRAPHS_MAX = 200
@@ -130,15 +136,19 @@ export class ThreadGraphsService {
                 },
                 spec: flow,
             },
-            new Set(this.nodes.installed().nodes.keys()),
+            // Both forms run in one install: the `defineNode` nodes, and the template nodes with the engine's `if` of a @2 graph.
+            new Set([...this.nodes.installed().nodes.keys(), ...templateStepIds()]),
             // A for-each runs as a sequential cycle: the node function drives its frame (`compiler-loop.policy.ts`).
             { loops: true },
         )
-        if (compiled.kind === "refused") {
-            const [problem] = compiled.problems
+        // The engine's loop and cycle checks: a cycle only through a loop, an until loop's cap, branch and condition.
+        const loops = untilCompileProblemsOf(flow)
+        if (compiled.kind === "refused" || loops.length > 0) {
+            const [problem] = compiled.kind === "refused" ? compiled.problems : loops
             throw await this.refused(ref, versionId, problem?.code ?? NO_FLOW, problem?.at ?? versionId)
         }
-        const graph = this.graphFrom(compiled.graph, flow)
+        // A template routing node routes on its own output member (`routes.by`), never on `branch`; a `loop({ until })` is its cycle.
+        const graph = this.graphFrom(withTemplateRoutes(withUntilLoops(compiled.graph, flow)), flow)
         this.built.set(versionId, { graph, flow })
         const oldest = this.built.keys().next()
         if (this.built.size > (this.options.graphsMax ?? DEFAULT_GRAPHS_MAX) && oldest.done !== true)
@@ -175,6 +185,8 @@ export class ThreadGraphsService {
         return {
             version: versionId,
             entry: compiled.entry,
+            // The rounds of its until loops: LangGraph's recursion limit of one drive is never what stops a legal loop.
+            stepLimit: untilStepBudgetOf(flow),
             nodes: [
                 ...compiled.nodes.map((step) => ({
                     key: step.key,

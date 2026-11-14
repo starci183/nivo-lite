@@ -1,10 +1,7 @@
-import { isManagerRole } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import type { MemberGrant } from "@modules/domain/member-grants"
+import { isManagerRole, type WorkspaceRole } from "@modules/domain/workspace-members"
 
 /**
- * Whether a member holds a permission a read or an action declares. Owner and manager hold every permission of every module; a staff
- * member holds it when the workspace granted it to that seat (`member_grants`, the grant of the permission as an action key).
+ * Whether a member may run an action. The door is role-only: every member views every read; an owner or a manager runs every action;
+ * a staff member runs an action only when its module declared the staff mark on it (`staff: true`, absent by default).
  */
-export const holdsPermission = (role: WorkspaceRole, memberId: string, grants: ReadonlyArray<MemberGrant>): boolean =>
-    isManagerRole(role) || grants.some((grant) => grant.member_id === memberId)
+export const mayRunAction = (role: WorkspaceRole, staffMarked: boolean): boolean => isManagerRole(role) || staffMarked

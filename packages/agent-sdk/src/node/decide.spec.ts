@@ -15,7 +15,6 @@ const pickNode = defineNode({
     params: z.object({}),
     input: z.object({ text: z.string() }),
     output: z.object({ orderId: z.string() }),
-    rights: [],
     effects: [],
     run: async (input, context) => {
         const decision = await context.model.decide(ANSWER, {
@@ -47,7 +46,7 @@ const run = (model: ReadonlyArray<unknown>) => {
             params: {},
             input: { text: "DH-1" },
             turn: EXAMPLE_TURN,
-            grant: { rights: [] },
+            grant: {},
             effects: new Map(),
             tools: new Map(),
             key: "k",
@@ -74,7 +73,7 @@ describe("context.model.decide", () => {
     })
 
     it("answers the confusion, in the AI's own words, when the AI says it cannot decide", async () => {
-        const confusion = { reason: "Hai đơn cùng mã", question: "Đơn nào là của khách?" }
+        const confusion = { reason: "Hai \u0111\u01a1n c\u00f9ng m\u00e3", question: "\u0110\u01a1n n\u00e0o l\u00e0 c\u1ee7a kh\u00e1ch?" }
         const { ran } = run([{ confused: confusion }])
 
         const cause = await ran.then(

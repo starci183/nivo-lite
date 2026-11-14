@@ -1,51 +1,33 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type {
-    BranchCardPayload,
-    CardClosing,
-    CardRecord,
-    FactCardPayload,
-    FactCardRecord,
-    OptionalCardRecord,
-    ProposedCardRecord,
-    RuleCardPayload,
-} from "./module-setup-writes.contracts"
+import type { CardClosing, CardRecord, OptionalCardRecord, ProposedCardRecord } from "./module-setup-writes.contracts"
 import { ModuleSetupWriteEntity } from "./persistence/entities"
 
 /** How many cards of the given sessions are read at once. */
 const CARDS_LIMIT = 500
 
-/** The stored fields of a card that are the same for a fact and for a rule. */
-type CardBaseFields = Omit<FactCardRecord, "kind" | "payload">
+/** The only kind of card the setup chat writes and reads: a Second Brain fact. */
+const FACT = "fact"
 
-/** Joins the common fields to the payload; the shape of the payload says whether the card is a branch, a rule or a fact. */
-const cardOf = (base: CardBaseFields, payload: FactCardPayload | RuleCardPayload | BranchCardPayload): CardRecord => {
-    if ("boundaryVnd" in payload) return { ...base, kind: "branch", payload }
-    return "action" in payload ? { ...base, kind: "rule", payload } : { ...base, kind: "fact", payload }
-}
-
-/** Maps a stored card to its contract; the discriminated union follows the payload. */
-const toRecord = (row: ModuleSetupWriteEntity): CardRecord =>
-    cardOf(
-        {
-            id: row.id,
-            workspaceId: row.workspaceId,
-            setupSessionId: row.setupSessionId,
-            sourceMessageId: row.sourceMessageId,
-            gateKey: row.gateKey,
-            targetKey: row.targetKey,
-            status: row.status,
-            result: row.result,
-            decidedBy: row.decidedBy,
-            createdAt: row.createdAt.toISOString(),
-        },
-        row.payload,
-    )
+/** Maps a stored fact card to its contract. */
+const toRecord = (row: ModuleSetupWriteEntity): CardRecord => ({
+    id: row.id,
+    workspaceId: row.workspaceId,
+    setupSessionId: row.setupSessionId,
+    sourceMessageId: row.sourceMessageId,
+    gateKey: row.gateKey,
+    targetKey: row.targetKey,
+    status: row.status,
+    result: row.result,
+    decidedBy: row.decidedBy,
+    createdAt: row.createdAt.toISOString(),
+    kind: FACT,
+    payload: row.payload,
+})
 
 @Injectable()
-/** The confirm cards of the setup chat: the only owner of the module_setup_writes table. */
+/** The fact cards of the setup chat: the only owner of the module_setup_writes table. */
 export class SetupWritesService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
@@ -53,16 +35,18 @@ export class SetupWritesService {
     async ofSessions(sessionIds: ReadonlyArray<string>): Promise<ReadonlyArray<CardRecord>> {
         if (sessionIds.length === 0) return []
         const rows = await this.entityManager.find(ModuleSetupWriteEntity, {
-            where: { setupSessionId: In([...sessionIds]), status: Not("superseded") },
+            where: { setupSessionId: In([...sessionIds]), kind: FACT, status: Not("superseded") },
             order: { createdAt: "ASC", id: "ASC" },
             take: CARDS_LIMIT,
         })
-        return rows.map(toRecord)
+        return rows.map((item) => toRecord(item))
     }
 
     /** One card of the workspace by id; null when there is none. */
     async find(workspaceId: string, cardId: string): Promise<OptionalCardRecord> {
-        const row = await this.entityManager.findOne(ModuleSetupWriteEntity, { where: { id: cardId, workspaceId } })
+        const row = await this.entityManager.findOne(ModuleSetupWriteEntity, {
+            where: { id: cardId, workspaceId, kind: FACT },
+        })
         return row === null ? null : toRecord(row)
     }
 
@@ -107,7 +91,7 @@ export class SetupWritesService {
     async close(workspaceId: string, cardId: string, closing: CardClosing): Promise<OptionalCardRecord> {
         const closed = await this.entityManager.update(
             ModuleSetupWriteEntity,
-            { id: cardId, workspaceId, status: "proposed" },
+            { id: cardId, workspaceId, kind: FACT, status: "proposed" },
             {
                 status: closing.status,
                 payload: closing.payload,

@@ -1,18 +1,18 @@
-import { otherEnd } from "@modules/domain/brain-facts"
-import type { ChangeFiled, FactRecord, FactRelation } from "@modules/domain/brain-facts"
-import type { GatewayJson } from "@modules/domain/mcp-gateway"
-import { factLineOf } from "./native-view.policy"
+import { otherEnd, type ChangeFiled, type FactRelation } from "@modules/domain/brain-facts"
+import type { ToolJson } from "@modules/domain/tools"
+import type { ServedLine } from "./native-view.policy"
 
 /**
- * The truths an edge joins to one truth, read from that truth (`out` when it starts there), each answered as a Brain line with its
- * version. An edge whose other end is not among the readable truths is left out with it.
+ * The truths an edge joins to one truth, read from that truth (`out` when it starts there), each answered as the Brain line it is
+ * served as (`servedLineOf`: version, source, validity included). An edge whose other end is not among the readable truths is left out
+ * with it.
  */
 export const relatedLinesOf = (
     factId: string,
     edges: ReadonlyArray<FactRelation>,
-    readable: ReadonlyMap<string, FactRecord>,
+    readable: ReadonlyMap<string, ServedLine>,
     limit: number,
-): ReadonlyArray<GatewayJson> =>
+): ReadonlyArray<ToolJson> =>
     edges
         .flatMap((edge) => {
             const id = otherEnd(edge, factId)
@@ -23,14 +23,14 @@ export const relatedLinesOf = (
                     relation: edge.kind,
                     direction: edge.fromFactId === factId ? "out" : "in",
                     label: edge.label,
-                    fact: { ...factLineOf(other), version: other.version ?? null },
+                    fact: { ...other },
                 },
             ]
         })
         .slice(0, limit)
 
-/** What `nivo.brain.change.propose` answers: what happened and the change request, which waits for the founder while it is proposed. */
-export const changeAnswerOf = (filed: ChangeFiled): GatewayJson => ({
+/** What `nivo.tool.brain.change.propose` answers: what happened and the change request, which waits for the founder while it is proposed. */
+export const changeAnswerOf = (filed: ChangeFiled): ToolJson => ({
     outcome: filed.outcome,
     changeRequest: {
         id: filed.fact.id,

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { PublicDraftRunService } from "@modules/domain/public-documents"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the public document of the claimed job is written from the internal documents, or the customer question is looked up. */

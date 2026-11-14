@@ -18,6 +18,16 @@ const PROVIDERS: Readonly<Record<Provider, true>> = {
     imap: true,
     telegram_user: true,
     meta: true,
+    inet: true,
+    tino: true,
+    elevenlabs: true,
+    veo: true,
+    tiktok: true,
+    shotstack: true,
+    creatomate: true,
+    json2video: true,
+    misa_amis: true,
+    misa_meinvoice: true,
 }
 
 const STATUSES: Readonly<Record<ConnectionStatus, true>> = {
@@ -60,6 +70,13 @@ const asFirstEvent = (value: unknown): FirstEvent | null => {
 
 const asEnvironment = (value: string | null): Environment => (value === "test" ? "test" : "live")
 
+/** The health state the health job or the poll scheduler recorded in the public facts (`health.state`), when there is one. */
+const healthOf = (publicMeta: unknown): string | undefined => {
+    if (!isRecordObject(publicMeta)) return undefined
+    const { health } = publicMeta
+    return isRecordObject(health) && typeof health.state === "string" && health.state !== "" ? health.state : undefined
+}
+
 /** Maps a stored connection row to the record the capability answers; the secret is never part of it. */
 export const toConnectionRecord = (row: ConnectionProjection): ConnectionRecord => {
     const { provider, status } = row
@@ -80,5 +97,6 @@ export const toConnectionRecord = (row: ConnectionProjection): ConnectionRecord 
         firstEvent: asFirstEvent(row.firstEvent),
         createdBy: row.createdBy,
         createdAt: row.createdAt,
+        ...(healthOf(row.publicMeta) === undefined ? {} : { health: healthOf(row.publicMeta) }),
     }
 }

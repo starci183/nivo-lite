@@ -6,9 +6,9 @@ import type {
     AgentWorkView,
     WorkspaceAgentWorkView,
 } from "@modules/domain/agent-work"
-import type { WorkLogLine } from "../../application/read-agent-work-log.contracts"
-import type { CloseAgentTaskRequest } from "../../application/close-agent-task.contracts"
+import type { WorkLogLine } from "@modules/domain/agent-pages"
 import type { ReadAgentWorkLogRequest } from "../../application/read-agent-work-log.contracts"
+import type { CloseAgentTaskRequest } from "../../application/close-agent-task.contracts"
 import type { ReadAgentWorkRequest } from "../../application/read-agent-work.contracts"
 import type { RemoveAgentTriggerRequest } from "../../application/remove-agent-trigger.contracts"
 import type { SaveAgentGoalRequest } from "../../application/save-agent-goal.contracts"
@@ -115,6 +115,7 @@ export const toAgentWorkType = (view: AgentWorkView): AgentWorkType => ({
 /** Maps the workspace switch with its counts to the GraphQL type. */
 export const toWorkspaceAgentWorkType = (view: WorkspaceAgentWorkView): WorkspaceAgentWorkType => ({
     ...view.settings,
+    backgroundDailyCap: 0,
     agentsOff: view.agentsOff,
     pendingWakes: view.pendingWakes,
     heldWakes: view.heldWakes,
@@ -123,6 +124,7 @@ export const toWorkspaceAgentWorkType = (view: WorkspaceAgentWorkView): Workspac
 /** Maps the settings a workspace switch answers to the GraphQL type; the counts are read by the query, not here. */
 export const toWorkspaceSwitchType = (settings: AgentWorkSettingsRecord): WorkspaceAgentWorkType => ({
     ...settings,
+    backgroundDailyCap: 0,
     agentsOff: 0,
     pendingWakes: 0,
     heldWakes: 0,
@@ -138,7 +140,7 @@ export const toReadAgentWorkLogRequest = (
 export const toAgentWorkLogTypes = (lines: ReadonlyArray<WorkLogLine>): Array<AgentWorkLogLineType> =>
     lines.map((line) => ({
         ...line,
-        connection: line.connection === null ? null : { ...line.connection },
+        connection: line.connection,
         evidence: line.evidence.map((entry) => ({ ...entry })),
         steps: line.steps.map((step) => ({ ...step })),
     }))

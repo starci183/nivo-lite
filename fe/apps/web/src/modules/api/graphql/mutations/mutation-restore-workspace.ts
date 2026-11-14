@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { MutateParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type MutateParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { RestoreWorkspaceMutation } from "../__generated__/graphql"
 
 /** The response of the `restoreWorkspace` mutation: the typed payload straight from the back end contract. */
@@ -20,4 +19,4 @@ type MutateRestoreWorkspaceParams = Omit<MutateParams<never, never>, "request" |
 export const mutateRestoreWorkspace = (
     params: MutateRestoreWorkspaceParams,
 ): Promise<ApolloClient.MutateResult<MutateRestoreWorkspaceResponse>> =>
-    createAuthApolloClient({ signal: params.signal, headers: params.headers }).mutate({ mutation: mutation1 })
+    createAuthApolloClient(webApiTransport, { signal: params.signal, headers: params.headers }).mutate({ mutation: mutation1 })

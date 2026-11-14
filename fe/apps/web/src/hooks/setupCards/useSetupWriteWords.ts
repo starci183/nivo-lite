@@ -1,34 +1,21 @@
 "use client"
 
-import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { useTranslations } from "next-intl"
 import { sameValue } from "@/modules/brain"
-import type { FactScope, FlowRuleMode, SetupWriteWords } from "@/modules/types"
-import { actionDef, isActionKey, pickCopy } from "@/modules/catalog"
-
+import type { FactScope, SetupWriteWords } from "@/modules/types"
 import { WRITE_SCOPE_KEY, setupWriteDecidedOf } from "./setupCards.shared"
 
 /** The words and the small formatters of the confirm cards of the setup chat, in the reader language. */
 export const useSetupWriteWords = (): SetupWriteWords => {
     const t = useTranslations("moduleSetup")
-    const locale = useLocale() === "en" ? "en" : "vi"
-    const format = useFormatter()
-    const { modules, slot } = useModuleCatalog()
-    const actionCopies = Object.values(modules).flatMap((module) => module?.authorityActions ?? [])
     const words: Omit<SetupWriteWords, "decidedOf"> = {
         factTitle: t("wFactTitle"),
-        ruleTitle: t("wRuleTitle"),
         gap: t("wGap"),
         subject: t("wSubject"),
         attribute: t("wAttribute"),
         value: t("wValue"),
         scope: t("wScope"),
         forLabel: t("wFor"),
-        action: t("wAction"),
-        mode: t("wMode"),
-        limit: t("wLimit"),
-        now: t("wNow"),
-        nowNone: t("wNowNone"),
         conflictTitle: t("wConflictTitle"),
         situation: t("wSituation"),
         confirm: t("wConfirm"),
@@ -36,7 +23,6 @@ export const useSetupWriteWords = (): SetupWriteWords => {
         editDone: t("wEditDone"),
         reject: t("wReject"),
         applied: t("wApplied"),
-        appliedRule: t("wAppliedRule"),
         rejected: t("wRejected"),
         kept: t("wKept"),
         replace: t("wReplace"),
@@ -44,25 +30,9 @@ export const useSetupWriteWords = (): SetupWriteWords => {
         both: t("wBoth"),
         conflictBody: (current: string) => t("wConflictBody", { current }),
         scopeLabel: (scope: FactScope) => t(WRITE_SCOPE_KEY[scope]),
-        modeLabel: (mode: FlowRuleMode) => t(`mode_${mode}`),
-        money: (amount: number | null) =>
-            amount === null
-                ? t("wLimitNone")
-                : format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
-        actionLabel: (action: string) => {
-            if (!isActionKey(action)) return action
-            const copy = actionCopies.find((entry) => entry.action === action)
-            const fallbackLabel = "isError" in slot ? action : ""
-            return copy === undefined ? fallbackLabel : pickCopy(copy.label, locale)
-        },
-        actionRules: (action: string) =>
-            isActionKey(action)
-                ? { hasLimit: actionDef(action).amountLimit, allowsAuto: actionDef(action).maxMode === null }
-                : { hasLimit: false, allowsAuto: false },
         forAll: (typeName: string) => t("wForAll", { type: typeName }),
         forThis: (name: string) => t("wForThis", { name }),
         isSameValue: sameValue,
-        ruleShared: (typeName: string) => t("wRuleShared", { type: typeName }),
     }
     return { ...words, decidedOf: (write) => setupWriteDecidedOf(write, words) }
 }

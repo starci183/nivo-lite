@@ -5,8 +5,6 @@ area: agents-catalog
 ---
 Route: `/workspaces/<ws>/agents?create=chatbot`, opened from "Thêm Chatbot" / "Tạo agent". The dialog is open over the dimmed Agent page; a phone gets a full-height sheet. Grammar paths are under `node_modules/@starci/grammar/dist/core/`. Shots are taken in the Next dev server (the round "N" button and the "Compiling" pill are Next dev overlays, not app UI); the floating round button is the guide bubble.
 
-In this shot the channels of the Chatbot role are already answered by another agent, so both rows are disabled with "<Agent> đang trả lời kênh này".
-
 ## Dialog frame (title, close, fixed head and footer)
 Vì sao: title "Thêm agent Chatbot" (14/500) at the start and a round ✕ at the end; the head and the footer stay fixed and only the body scrolls. The footer holds the neutral "Huỷ" and the ONE primary "Tạo agent" (md, with the + icon) on the right.
 Luật: `surfacecard-select-subtitle.md` (footer carries the single primary), `page-header-left-sublabel-xs.md` (only a primary CTA has an icon; sm buttons none), `type-scale-14-12.md`.
@@ -22,10 +20,10 @@ Vì sao: two flat fields on the white dialog: title above the input (14/500, pin
 Luật: `surfacecard-select-subtitle.md` (flat fields: title Label 14/500 + description + content; spacing only between fields).
 Grammar: `Input label description isRequired` (`branch/Input/index.d.ts`). Code: `blocks/AgentCreateDialog/component.tsx` (`NameFields`).
 
-## Channels ("Kênh")
-Vì sao: a choice list = `SurfaceCard kind="select" selectionMode="multiple"`, bordered because it stands on the white dialog. One row per channel: the title is the provider ("Telegram", "Zalo OA"), the subtitle the account and its state ("@nivo_bot · đang trống"). A channel another agent of the role already answers is disabled and says "<Agent> đang trả lời kênh này". The title "Kênh" is the card label, with no description and no loose line about one agent per channel.
-Luật: `surfacecard-select-subtitle.md` (every choice list is SurfaceCard kind="select"; a subtitle only under a title; no loose lines), `WHITE-LIST-BORDERED-CARD`, `CARD-NO-DESCRIPTION`.
-Grammar: `SurfaceCard kind="select" selectionMode="multiple" items: SelectItemData` (`frame/SurfaceCard/index.d.ts`, `surfaceCardData.d.ts`). Code: `blocks/AgentCreateDialog/index.tsx` (`channelsOf`).
+## Provider (replaces the old "Kênh" list)
+Vì sao: the dialog no longer lists channels to assign (channels are attached as provider accounts: see ../sales-tao-agent/explain.md, section Provider); the channel read and the "<Agent> đang trả lời kênh này" rows are gone.
+Luật: `provider-rights-abilities`, `surfacecard-select-subtitle.md`.
+Code: `blocks/AgentCreateDialog/choices.tsx` (`ProvidersChoice`).
 
 ## Start from ("Bắt đầu từ")
 Vì sao: `SurfaceCard kind="select" selectionMode="single"`: "Bản sao của <agent>" ("Lấy sơ đồ, quyền, tri thức và cài đặt; không lấy kênh.") and "Thiết lập mặc định" ("Bắt đầu từ thiết lập gốc của vai trò."). Checkbox look for single choice too; no pink radio blocks.

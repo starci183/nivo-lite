@@ -19,7 +19,7 @@ describe("runView", () => {
             outputSummary: "out",
             durationMs: 12,
             calls: [
-                { tool: "nivo.chat.send", ok: false, summary: "loi" },
+                { tool: "nivo.tool.customer.message.send", ok: false, summary: "loi" },
                 { tool: "x.y", ok: true },
             ],
             effectKey: "k",

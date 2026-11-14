@@ -108,6 +108,8 @@ export interface KnowledgeAddDrawerView {
         /** Says that what is added here is internal: customers and the chatbot cannot read it. */
         readonly internalNote: string
         readonly summary: AddSummaryView | null
+        /** A file refused for room (the 50 MB of the brain, or the plan's storage): neutral words and the way to the documents; null when none was. */
+        readonly refusal: (AddSummaryView & { readonly body: string }) | null
         /** How much of the raw document allowance is used; nothing is drawn for it while undefined. */
         readonly usage: AddUsageView | undefined
         readonly options: AddOptionsView
@@ -118,6 +120,7 @@ export interface KnowledgeAddDrawerView {
         readonly close: () => void
         readonly connectDrive: () => void
         readonly seeQuestions: () => void
+        readonly seeDocuments: () => void
         readonly setMode: (value: string) => void
         readonly addFiles: (files: Array<File>) => void
         readonly setLink: (id: string, value: string) => void

@@ -85,7 +85,7 @@ const roleRowOf = (entry: RoleEntryView, props: CatalogSectionProps): ListRowDat
         avatar: { name: entry.card.name, src: `/agents/${entry.card.moduleKey}.webp`, shape: "square" },
         size: "sm",
     },
-    badges: [{ label: entry.card.stateLabel, tone: entry.card.isInstalled ? "success" : "neutral", isDot: entry.card.isInstalled }],
+    badges: [{ label: entry.card.stateLabel, tone: entry.card.isInstalled ? "success" : "neutral" }],
     ...(entry.card.needsLabel === "" ? {} : { meta: { text: entry.card.needsLabel } }),
     ...(entry.card.canInstall
         ? {

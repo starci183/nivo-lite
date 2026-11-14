@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { ModuleJobRunnerService } from "@modules/domain/entity-engine"
 import { EngineDoorService } from "./engine-door.service"
 

@@ -1,4 +1,3 @@
-import { approvalCardBlock } from "./approval-card.block"
 import { chatbotBlocks } from "./chatbot-blocks"
 import { inboxBlock } from "./inbox.block"
 import { rulesBlock } from "./rules.block"
@@ -11,8 +10,9 @@ describe("inboxBlock", () => {
         expect(Object.keys(inboxBlock.propsJson).length).toBeGreaterThan(0)
     })
 
-    it("takes one child, the approval card, and names the params it writes", () => {
-        expect(inboxBlock.children).toEqual({ max: 1, accepts: ["chatbot.approval-card"] })
+    // Design change (ruling R23): the chatbot's draft road is removed, so the approval card it took as its child is gone.
+    it("takes no child and names the params it writes", () => {
+        expect(inboxBlock.children).toBe(false)
         expect(inboxBlock.params).toEqual(["searchParam", "statusParam", "periodParam", "selectParam"])
     })
 
@@ -44,25 +44,6 @@ describe("inboxBlock", () => {
     })
 })
 
-describe("approvalCardBlock", () => {
-    it("is the card inside the thread, bound to the proposal read and the approving action", () => {
-        expect(approvalCardBlock.id).toBe("chatbot.approval-card")
-        expect(approvalCardBlock.children).toBe(false)
-        expect(approvalCardBlock.slots).toEqual({
-            proposal: { kind: "read", shape: "record", required: true },
-            approve: { kind: "action", required: true },
-            dismiss: { kind: "action", required: false },
-        })
-    })
-
-    it("lets a spec shorten the changed reply and refuses one over the reply limit", () => {
-        expect(approvalCardBlock.props.parse({}).maxLength).toBe(4000)
-        expect(approvalCardBlock.props.safeParse({ maxLength: 500 }).success).toBe(true)
-        expect(approvalCardBlock.props.safeParse({ maxLength: 4001 }).success).toBe(false)
-        expect(approvalCardBlock.props.safeParse({ maxLength: 0 }).success).toBe(false)
-    })
-})
-
 describe("rulesBlock", () => {
     it("takes no props: the two settings and their bounds are the module's", () => {
         expect(rulesBlock.id).toBe("chatbot.rules")
@@ -76,8 +57,8 @@ describe("rulesBlock", () => {
 })
 
 describe("chatbotBlocks", () => {
-    it("lists the module's three blocks, all in the chatbot namespace", () => {
-        expect(chatbotBlocks).toEqual([inboxBlock, approvalCardBlock, rulesBlock])
+    it("lists the module's two blocks, all in the chatbot namespace", () => {
+        expect(chatbotBlocks).toEqual([inboxBlock, rulesBlock])
         expect(chatbotBlocks.every((block) => block.id.startsWith("chatbot."))).toBe(true)
     })
 })

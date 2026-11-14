@@ -19,6 +19,10 @@
 //     rendered (empty body / empty <main>). The dev "N / Issues" badge alone is not fatal.
 //   - and no "error notice" marker is present: [data-grammar-error], [role="alert"] containing the soft retry notice
 //     (an error state is not a screen either). Disable with { allowError: true } only for a screen that IS an error design.
+// EXPECT-LOADING MODE (the one exception): a shot whose folder name ends `-dang-tai` is the approved loading design of a screen (owner law
+// "page loading own shape": loading mirrors the page). `shoot` detects it from the file path (or `{ expectLoading: true }`) and inverts the
+// busy check: the page is READY when a skeleton marker IS visible for `stable` ms in a row, and it is refused when no skeleton ever shows,
+// when a fatal page or an error notice shows, or when the page already settled into real content. The network is not awaited.
 // If it never settles inside `timeout` (default 20000 ms) it throws ShotRefusedError; `shoot` does not write the file, and a CLI
 // script should `process.exit(1)` (use `refuseAndExit(err)` below).
 //
@@ -121,9 +125,33 @@ async function waitReady(page, opts = {}) {
   throw new ShotRefusedError(`page never settled in ${timeout} ms (${page.url()})`, { inflight, busy: last.busy.slice(0, 8), error: last.error.slice(0, 8) })
 }
 
+// The loading folders: `<screen>-dang-tai` (the folder of the file, never the file name).
+const LOADING_FOLDER = /-dang-tai$/
+const isLoadingFile = (file) => LOADING_FOLDER.test(require('path').basename(require('path').dirname(file)))
+
+async function waitLoading(page, opts = {}) {
+  const { timeout = 20000, stable = 300 } = opts
+  const started = Date.now()
+  let okSince = 0
+  let last = { busy: [], error: [], fatal: [], ready: false }
+  await page.waitForLoadState('domcontentloaded', { timeout }).catch(() => {})
+  while (Date.now() - started < timeout) {
+    last = await probe(page, false)
+    if (last.fatal.length) throw new ShotRefusedError(`error page, not a screen: ${last.fatal.join('; ')} (${page.url()})`, { fatal: last.fatal })
+    if (last.error.length) throw new ShotRefusedError(`error notice, not a loading screen (${page.url()})`, { error: last.error.slice(0, 8) })
+    if (last.busy.length) {
+      okSince ||= Date.now()
+      if (Date.now() - okSince >= stable) return { waitedMs: Date.now() - started, skeletons: last.busy.length }
+    } else okSince = 0
+    await page.waitForTimeout(50)
+  }
+  throw new ShotRefusedError(`expected a loading screen but no skeleton showed in ${timeout} ms (${page.url()})`, { busy: [], error: last.error.slice(0, 8) })
+}
+
 async function shoot(page, file, opts = {}) {
-  const { screenshot = {}, ...wait } = opts
-  await waitReady(page, wait)
+  const { screenshot = {}, expectLoading = isLoadingFile(file), ...wait } = opts
+  if (expectLoading) await waitLoading(page, wait)
+  else await waitReady(page, wait)
   const fs = require('fs')
   fs.mkdirSync(require('path').dirname(file), { recursive: true })
   await page.screenshot({ path: file, ...screenshot })
@@ -138,7 +166,7 @@ function refuseAndExit(err) {
   throw err
 }
 
-module.exports = { waitReady, shoot, refuseAndExit, ShotRefusedError, BUSY_SELECTORS, ERROR_SELECTORS }
+module.exports = { waitReady, waitLoading, isLoadingFile, shoot, refuseAndExit, ShotRefusedError, BUSY_SELECTORS, ERROR_SELECTORS }
 
 // self-test: node wait-ready.cjs --selftest
 if (require.main === module && process.argv.includes('--selftest')) {
@@ -178,6 +206,20 @@ if (require.main === module && process.argv.includes('--selftest')) {
     await page.evaluate(() => document.querySelector('nextjs-portal').attachShadow({ mode: 'open' }).innerHTML = '<div>1 Issue</div>')
     await waitReady(page, { timeout: 3000 })
     console.log('dev Issues badge only + content: accepted')
+    // expect-loading mode: a skeleton IS the screen; real content or an error is refused
+    await page.setContent('<h1>Chat</h1><div data-grammar-skeleton="true" style="width:10px;height:10px"></div>')
+    await waitLoading(page, { timeout: 3000 })
+    console.log('expect loading, skeleton page: accepted')
+    await page.setContent('<div data-loading="false">ok</div><p>ready</p>')
+    let loadingRefused = false
+    try { await waitLoading(page, { timeout: 1200 }) } catch (e) { loadingRefused = e instanceof ShotRefusedError }
+    console.log('expect loading, settled page: ' + (loadingRefused ? 'refused' : 'WRONGLY ACCEPTED'))
+    await page.setContent('<html><body><h1>Internal Server Error</h1><div data-grammar-skeleton="true" style="width:10px;height:10px"></div></body></html>')
+    let loadingFatal = false
+    try { await waitLoading(page, { timeout: 1200 }) } catch (e) { loadingFatal = e instanceof ShotRefusedError }
+    console.log('expect loading, 500 page: ' + (loadingFatal ? 'refused' : 'WRONGLY ACCEPTED'))
+    console.log('folder detection: ' + (isLoadingFile('gallery/pages/a/sales-dang-tai/1440.png') && !isLoadingFile('gallery/pages/a/sales/1440.png') ? 'ok' : 'WRONG'))
+    allOk = allOk && loadingRefused && loadingFatal
     await browser.close()
     process.exit(allOk ? 0 : 1)
   })()

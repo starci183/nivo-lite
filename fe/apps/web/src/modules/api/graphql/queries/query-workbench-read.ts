@@ -1,24 +1,14 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
 import type { ReadVariables } from "@nivo-lite/agent-sdk/block"
-import { createAuthApolloClient } from "../clients"
-import type { GraphQLOperationContext } from "../types"
-
-/** What the generic read operation answers: the data of the named read, as JSON text. */
-interface WorkbenchReadData {
-    readonly workbenchRead: { readonly data: string }
-}
-
-/** The variables of the generic read operation: the `WorkbenchReadInput` of the door, the read name and the literal variables of the binding as JSON text (`vars`). */
-interface WorkbenchReadVariables {
-    readonly input: { readonly name: string; readonly vars: string }
-}
+import { createAuthApolloClient, type GraphQLOperationContext } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
+import type { WorkbenchReadQuery, WorkbenchReadQueryVariables } from "../__generated__/graphql"
 
 /**
  * The one generic read operation of the back end door: it runs any read of the module declarations by its name, under the viewer
- * rights. The document is hand-written and typed here: the schema snapshot holds `workbenchRead`, so the codegen of the typed documents reads
- * it with the other queries.
+ * rights. A read is not installation-scoped (it sees the workspace, filtered by the viewer's rights), so it carries no installation.
  */
-const query1: TypedDocumentNode<WorkbenchReadData, WorkbenchReadVariables> = gql`
+const query1: TypedDocumentNode<WorkbenchReadQuery, WorkbenchReadQueryVariables> = gql`
     query WorkbenchRead($input: WorkbenchReadInput!) {
         workbenchRead(input: $input) {
             data
@@ -39,7 +29,7 @@ export const queryWorkbenchRead = async ({
     name,
     variables,
     signal,
-}: QueryWorkbenchReadParams): Promise<ApolloClient.QueryResult<WorkbenchReadData>> => {
-    const apollo = createAuthApolloClient({ signal })
+}: QueryWorkbenchReadParams): Promise<ApolloClient.QueryResult<WorkbenchReadQuery>> => {
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: query1, variables: { input: { name, vars: JSON.stringify(variables) } } })
 }

@@ -2,8 +2,14 @@
 
 import { useTranslations } from "next-intl"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { PROPOSAL_PREVIEW_CHARS, clippedText, leftOutLabelsOf, proposalsOf, sourceTitlesOf } from "@/modules/brain"
-import type { PublicDocument } from "@/modules/brain"
+import {
+    PROPOSAL_PREVIEW_CHARS,
+    clippedText,
+    leftOutLabelsOf,
+    proposalsOf,
+    sourceTitlesOf,
+    type PublicDocument,
+} from "@/modules/brain"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { KnowledgeListView, KnowledgeRowView } from "@/modules/types"
 import { useBrainRowAction } from "./useBrainRowAction"
@@ -76,7 +82,7 @@ export const usePublicProposals = (): PublicProposalsView => {
         label: t("proposalsTitle"),
         footer: t("proposalsFooter"),
         isPending: command.isPending,
-        slot: mapSlot(read.slot, (documents) => proposalsOf(documents).map(rowOf)),
+        slot: mapSlot(read.slot, (documents) => proposalsOf(documents).map((entry) => rowOf(entry))),
         slotLabels: labels(""),
     }
     return { list, dispatch, retry: read.reload, count: proposalsOf(read.documents).length }

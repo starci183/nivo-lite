@@ -1,5 +1,6 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
@@ -13,16 +14,13 @@ import {
     useAgentWorkActions,
 } from "@/hooks/agentWork"
 import { useSlotLabels } from "@/hooks/slot"
-import type { AgentWorkViewKey } from "@/hooks/agentWork"
 import type { AgentWorkPreset } from "@/modules/types"
-import { AgentWorkPanesBase } from "./component"
-import type { AgentWorkCopy } from "./component"
+import { AgentWorkPanesBase, type AgentWorkCopy } from "./component"
 
 /** The instance whose work the tab shows. */
 type AgentWorkPanesProps = {
-    readonly module: string
-    readonly installationId: string
-    readonly view: AgentWorkViewKey
+    readonly module?: string | undefined
+    readonly installationId?: string | undefined
 }
 
 const presetOf = (value: string | null): AgentWorkPreset | null =>
@@ -51,9 +49,6 @@ const copyOf = (t: ReturnType<typeof useTranslations<"agentWork">>): AgentWorkCo
     timePlaceholder: t("timePlaceholder"),
     timeInvalid: t("timeInvalid"),
     scheduleAdd: t("scheduleAdd"),
-    turnsTitle: t("turnsTitle"),
-    turnsEmpty: t("turnsEmpty"),
-    turnOpenItem: t("openWorkItem"),
     readOnlyHint: t("readOnlyHint"),
     formOpen: t("formOpen"),
     formCancel: t("formCancel"),
@@ -61,10 +56,11 @@ const copyOf = (t: ReturnType<typeof useTranslations<"agentWork">>): AgentWorkCo
 
 /** The connected Work tab: it reads the work of the instance, keeps the two small forms, and sends the commands. */
 export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("agentWork")
     const slotLabels = useSlotLabels()
-    const { slot, reload } = useAgentWork(props.module, props.installationId)
-    const actions = useAgentWorkActions(props.installationId)
+    const { slot, reload } = useAgentWork(route.module, route.installationId)
+    const actions = useAgentWorkActions(route.installationId)
     const [goalTitle, setGoalTitle] = useState("")
     const [preset, setPreset] = useState<AgentWorkPreset>("daily_at")
     const [atTime, setAtTime] = useState("09:00")
@@ -81,8 +77,6 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
     return (
         <AgentWorkPanesBase
             props={{
-                installationId: props.installationId,
-                view: props.view,
                 copy: copyOf(t),
                 slot,
                 placeholder: WORK_PLACEHOLDER,

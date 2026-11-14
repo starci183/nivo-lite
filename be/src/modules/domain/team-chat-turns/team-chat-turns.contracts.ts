@@ -1,48 +1,4 @@
-import type { TeamChatIntent, TeamChatLine, TeamChatRoom, TeamChatStanding } from "@nivo-lite/blocks-core"
-
-/** The room a person wrote in, as the team chat already holds it (no read is made to know it). */
-export interface HeardRoom {
-    /** The room. */
-    readonly id: string
-    /** `direct` (a pair) or `group`. */
-    readonly kind: "direct" | "group"
-    /** The sorted pair of a direct room (`"agent:<id>|user:<id>"`); null for a group. */
-    readonly directKey: string | null
-}
-
-/** The line a person's message replies to, as the team chat already read it to check the reply. */
-export interface HeardReply {
-    /** The message. */
-    readonly id: string
-    /** `user`, `agent` or `system`. */
-    readonly authorKind: string
-    /** The account or the agent; null for a system line. */
-    readonly authorId: string | null
-    /** `text`, `report`, `approval` or `system`. */
-    readonly kind: string
-    /** The structured message an agent line carries, as stored JSON text; null for a plain line. */
-    readonly agentMessage: string | null
-    /** Its words. */
-    readonly body: string
-    /** When it was written, ISO. */
-    readonly createdAt: string
-}
-
-/** A person's new message in the team chat, as the team chat tells its one listener right after storing it. */
-export interface PersonLineHeard {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The account of the person who wrote it. */
-    readonly userId: string
-    /** Where. */
-    readonly room: HeardRoom
-    /** The message. */
-    readonly message: { readonly id: string; readonly body: string; readonly createdAt: string }
-    /** The agents the message names, in the order written, once each. */
-    readonly agentMentions: ReadonlyArray<string>
-    /** The line it replies to, or null. */
-    readonly repliedTo: HeardReply | null
-}
+import type { TeamChatIntent, TeamChatLine, TeamChatRoom, TeamChatStanding } from "@nivo-lite/agent-sdk/team-chat"
 
 /** Whom a person's message is for: the agents that take a turn, in order, and the kind of room. */
 export interface TurnTargets {
@@ -64,15 +20,55 @@ export interface AskerSeat {
 
 /** The params a chat turn's workflow receives (its contract), as the router writes them into the pinned tag. */
 export interface TurnParams {
+    /** The room the person wrote in. */
     readonly roomId: string
+    /** The person's message. */
     readonly messageId: string
+    /** The asked words. */
     readonly text: string
+    /** A private room with the agent, or a room of several people. */
     readonly room: TeamChatRoom
+    /** What the turn was started for. */
     readonly intent: TeamChatIntent
-    readonly asker: { readonly name: string; readonly standing: TeamChatStanding }
+    /** Who asked: the name and the standing. */
+    readonly asker: TurnAsker
+    /** The room lines before the asked message, oldest first. */
     readonly lines: ReadonlyArray<TeamChatLine>
+    /** The line the message replies to, or null. */
     readonly replyTo: TeamChatLine | null
+    /** The language the turn answers in. */
     readonly locale: "vi" | "en"
+}
+
+/** Who asked a chat turn, as its params name them. */
+export interface TurnAsker {
+    /** The display name. */
+    readonly name: string
+    /** Owner, manager or staff. */
+    readonly standing: TeamChatStanding
+}
+
+/** The one line an agent says when its room reached the limit of turns. */
+export interface PauseLine {
+    /** The title of the line. */
+    readonly title: string
+    /** Its words. */
+    readonly text: string
+}
+
+/**
+ * Why a message named an agent and started no chat turn of it: its module ships no chat turn, it is no agent of the workspace, the
+ * tag was not written (the asker is no active member, or the tag door refused), the router failed, or the message is one the router
+ * starts no turn for (a reply to a card a person decides on, an agent named in another agent's private room).
+ */
+export type UnroutedCode = "no_chat_turn" | "no_agent" | "not_tagged" | "route_failed" | "outside_turn"
+
+/** One agent a message named whose chat turn did not start. */
+export interface UnroutedTurn {
+    /** The agent the message named. */
+    readonly agentId: string
+    /** Why its turn did not start. */
+    readonly code: UnroutedCode
 }
 
 /** What the rate limit says of one more turn in a room: run it, say once that the agent pauses, or stay quiet. */
@@ -86,28 +82,33 @@ export interface ChatTurnLimit {
     readonly windowMs: number
 }
 
-/** What pressing "Ghi vào Second Brain" on a message asks. */
+/** What pressing "Save to Second Brain" on a message asks. */
 export interface CaptureRequest {
     /** The person's message to file. */
     readonly messageId: string
     /** The agent that files it; absent in a private room with an agent (that agent), required in a room of several people. */
-    readonly agentId: string | null
+    readonly agentId?: string | null | undefined
     /**
      * The truth as the person wrote it in the form: filed at once through the truth graph's change requests, with no AI call. Absent:
      * the agent drafts it in a chat turn of intent `capture`.
      */
-    readonly fact: CaptureFact | null
+    readonly fact?: CaptureFact | null | undefined
 }
 
 /** A truth the person names on the form. */
 export interface CaptureFact {
+    /** The subject, as people write it. */
     readonly subjectLabel: string
+    /** The attribute, as people write it. */
     readonly attributeLabel: string
     /** The new value; null retires the truth in force. */
-    readonly value: string | null
-    readonly unit: string | null
-    readonly validFrom: string | null
-    readonly validTo: string | null
+    readonly value?: string | null | undefined
+    /** The unit of a number value, or null. */
+    readonly unit?: string | null | undefined
+    /** From when the value holds (ISO date), or null for now. */
+    readonly validFrom?: string | null | undefined
+    /** Until when the value holds (ISO date), or null for no stated end. */
+    readonly validTo?: string | null | undefined
 }
 
 /** What the capture did. */

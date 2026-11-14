@@ -9,10 +9,14 @@ import type {
     PageRow,
     RecordRow,
 } from "@nivo-lite/agent-sdk/entity/port"
-import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { CompareExpr, EntityCatalog, FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
+import { unprovided, type PortDefinition, type PortProvider } from "@nivo-lite/agent-sdk/port"
+import {
+    queryProblems,
+    type CompareExpr,
+    type EntityCatalog,
+    type FilterExpr,
+    type OrderBy,
+} from "@nivo-lite/agent-sdk/query"
 import { FLOW_F_ENTITIES } from "../../entities/flow-f.entities"
 import type { SalesSettings } from "../../rules/sales/settings"
 import { matchesQuery } from "../../rules/sales/search"
@@ -31,6 +35,14 @@ import {
 } from "./ports"
 import { leadRowOf, orderRowOf, settingsRowOf } from "./sales-records"
 import type { LeadRow, OrderRow } from "./sales.types"
+import {
+    SALES_CLAIM_ENTITY,
+    SALES_LEAD_ENTITY,
+    SALES_ORDER_ENTITY,
+    SALES_SETTINGS_ENTITY,
+    SALES_INVOICE_ENTITY,
+    SALES_TRANSACTION_ENTITY,
+} from "../../entities/sales/sales-entity-names"
 
 /** A record of another module that points at an order: a payment allocated to it, an invoice issued for it, a claim made about it. */
 export interface OrderLinkRow {
@@ -384,8 +396,8 @@ const rightsDirectory = (state: MemoryState): RightsDirectory => ({
  */
 export const memoryProvider = (state: MemoryState): PortProvider => {
     const leads: Table = {
-        entity: "sales.lead",
-        records: () => state.leads.map(recordOf),
+        entity: SALES_LEAD_ENTITY,
+        records: () => state.leads.map((item) => recordOf(item)),
         replace: (index, record) => {
             const row = leadRowOf(record)
             if (row !== null) state.leads[index] = row
@@ -395,19 +407,19 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
         joins: {},
     }
     const orders: Table = {
-        entity: "sales.order",
-        records: () => state.orders.map(recordOf),
+        entity: SALES_ORDER_ENTITY,
+        records: () => state.orders.map((item) => recordOf(item)),
         replace: (index, record) => {
             const row = orderRowOf(record)
             if (row !== null) state.orders[index] = row
             return row !== null
         },
         now: state.now,
-        joins: { lead: leads.records },
+        joins: {},
     }
     const linked = (entity: string, rows: Array<OrderLinkRow>, joins: Table["joins"]): Table => ({
         entity,
-        records: () => rows.map(recordOf),
+        records: () => rows.map((item) => recordOf(item)),
         replace: (index, record) => {
             const row = orderLinkRowOf(record)
             if (row !== null) rows[index] = row
@@ -421,7 +433,7 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
         data,
     })
     const settings: Table = {
-        entity: "sales.settings",
+        entity: SALES_SETTINGS_ENTITY,
         records: () => (state.settings === null ? [] : [stamped({ key: SALES_SETTINGS_KEY, ...state.settings })]),
         replace: (_index, record) => {
             const saved = settingsRowOf(record)
@@ -445,10 +457,10 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
             if (port.id === salesLeads.id) return entityApi(leads)
             if (port.id === salesOrders.id) return entityApi(orders)
             if (port.id === salesTransactions.id)
-                return entityApi(linked("payment.transaction", state.transactions, {}))
-            if (port.id === salesInvoices.id) return entityApi(linked("accounting.invoice", state.invoices, {}))
+                return entityApi(linked(SALES_TRANSACTION_ENTITY, state.transactions, {}))
+            if (port.id === salesInvoices.id) return entityApi(linked(SALES_INVOICE_ENTITY, state.invoices, {}))
             if (port.id === salesClaims.id)
-                return entityApi(linked("payment.claim", state.claims, { order: orders.records }))
+                return entityApi(linked(SALES_CLAIM_ENTITY, state.claims, { order: orders.records }))
             if (port.id === rightsPort.id) return rightsDirectory(state)
             return unprovided(port)
         },

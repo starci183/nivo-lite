@@ -1,7 +1,12 @@
-import { configureStore } from "@reduxjs/toolkit"
-import { viewerReducer } from "./slices/viewer"
-import type { UnknownAction, Tuple, ThunkDispatch, StoreEnhancer, EnhancedStore } from "@reduxjs/toolkit"
-import type { ViewerSliceState } from "./slices/viewer"
+import {
+    configureStore,
+    type UnknownAction,
+    type Tuple,
+    type ThunkDispatch,
+    type StoreEnhancer,
+    type EnhancedStore,
+} from "@reduxjs/toolkit"
+import { viewerReducer, type ViewerSliceState } from "./slices/viewer"
 
 type MakeStoreResult = EnhancedStore<
     {

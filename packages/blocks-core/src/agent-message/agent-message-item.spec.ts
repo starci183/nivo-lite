@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { agentMessageBlock } from "../blocks/agent-message.block"
 import { agentMessageItemOf } from "./agent-message-item"
-import { agentMessageKindOf, coreAgentMessageKinds, defineAgentMessageKind } from "./agent-message-kinds"
+import { agentMessageKindOf, coreAgentMessageKinds, defineAgentMessageKind } from "@nivo-lite/agent-sdk/team-chat"
 import { orderSummaryKind } from "../modules/sales/agent-message-kinds"
 import { agentMessageKinds } from "./module-agent-message-kinds"
 
@@ -158,16 +158,16 @@ describe("agentMessageItemOf", () => {
 
 describe("the workflow.stopped kind", () => {
     const payload = {
-        workflow: { moduleKey: "accounting", key: "reconcile", title: "Đối soát" },
-        step: { key: "match", nodeId: "accounting.match-payment", title: "Khớp tiền" },
+        workflow: { moduleKey: "accounting", key: "reconcile", title: "\u0110\u1ed1i so\u00e1t" },
+        step: { key: "match", nodeId: "accounting.match-payment", title: "Kh\u1edbp ti\u1ec1n" },
         runId: "r1",
         leadId: null,
         conversationId: null,
         by: "ai",
-        reason: "Khách chuyển thiếu",
-        question: "Có nhận không?",
+        reason: "Kh\u00e1ch chuy\u1ec3n thi\u1ebfu",
+        question: "C\u00f3 nh\u1eadn kh\u00f4ng?",
         facts: [{ name: "expectedVnd", value: "100" }],
-        suggestions: [{ text: "Nhận và ghi nợ", handledBy: "workflow" }],
+        suggestions: [{ text: "Nh\u1eadn v\u00e0 ghi n\u1ee3", handledBy: "workflow" }],
         decisions: [],
         repeats: 1,
         firstAt: "2026-11-10T00:00:00.000Z",
@@ -176,7 +176,7 @@ describe("the workflow.stopped kind", () => {
     const base = { id: "m1", kind: "workflow.stopped", intent: "ask", payload }
 
     it("is a core kind whose payload parses, and offers the suggestions as the envelope's options", () => {
-        const item = agentMessageItemOf({ ...base, options: [{ id: "0", label: "Nhận và ghi nợ" }] }, agentMessageKinds)
+        const item = agentMessageItemOf({ ...base, options: [{ id: "0", label: "Nh\u1eadn v\u00e0 ghi n\u1ee3" }] }, agentMessageKinds)
         expect(item?.kind?.id).toBe("workflow.stopped")
         expect(item?.record.options).toHaveLength(1)
         expect(item?.isOpen).toBe(true)

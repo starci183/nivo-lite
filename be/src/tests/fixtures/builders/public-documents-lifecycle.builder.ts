@@ -4,7 +4,7 @@ import { agentsEntities } from "@modules/domain/agents"
 import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
 import { knowledgeGapsEntities } from "@modules/domain/knowledge-gaps"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
-import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
+import { toolGrantsEntities } from "@modules/domain/tool-grants"
 import { publicDocumentsEntities } from "@modules/domain/public-documents"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
@@ -14,7 +14,7 @@ const AgentEntity: (typeof agentsEntities)[0] = agentsEntities[0]
 const KnowledgeChunkEntity: (typeof knowledgeChunksEntities)[0] = knowledgeChunksEntities[0]
 const KnowledgeGapEntity: (typeof knowledgeGapsEntities)[0] = knowledgeGapsEntities[0]
 const KnowledgeSourceEntity: (typeof knowledgeSourcesEntities)[0] = knowledgeSourcesEntities[0]
-const McpToolGrantEntity: (typeof mcpToolGrantsEntities)[0] = mcpToolGrantsEntities[0]
+const ToolGrantEntity: (typeof toolGrantsEntities)[0] = toolGrantsEntities[0]
 const PublicDocumentEntity: (typeof publicDocumentsEntities)[0] = publicDocumentsEntities[0]
 const PublicDocumentSourceEntity: (typeof publicDocumentsEntities)[1] = publicDocumentsEntities[1]
 const PublicDocumentApprovalEntity: (typeof publicDocumentsEntities)[2] = publicDocumentsEntities[2]
@@ -113,11 +113,11 @@ const agentOf = builder<AgentWrite>({
     role: "Reads internal source evidence",
     instructions: "Read the internal evidence through its granted Brain tools.",
 })
-type GrantWrite = Pick<InstanceType<typeof McpToolGrantEntity>, "workspaceId" | "agentId" | "tool" | "mode">
+type GrantWrite = Pick<InstanceType<typeof ToolGrantEntity>, "workspaceId" | "agentId" | "tool" | "mode">
 const grantOf = builder<GrantWrite>({
     workspaceId: "22222222-2222-4222-8222-222222222222",
     agentId: "77777777-7777-4777-8777-777777777777",
-    tool: "nivo.brain.search",
+    tool: "nivo.tool.brain.search",
     mode: "auto",
 })
 type GapWrite = Pick<
@@ -185,8 +185,8 @@ export const persistPublicDraftingAgent = (manager: EntityManager, id: PublicLif
     manager.transaction(async (tx) => {
         await tx.insert(AgentEntity, agentOf({ id: id.agentId, workspaceId: id.workspaceId }))
         await tx.insert(
-            McpToolGrantEntity,
-            ["nivo.brain.search", "nivo.brain.document.read"].map((tool) =>
+            ToolGrantEntity,
+            ["nivo.tool.brain.search", "nivo.tool.brain.document.read"].map((tool) =>
                 grantOf({
                     workspaceId: id.workspaceId,
                     agentId: id.agentId,

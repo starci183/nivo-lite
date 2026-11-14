@@ -48,7 +48,7 @@ const incomplete = (): never => {
  * Cleans a database down to the kept workspaces. A dry run prints the receipt (each workspace to remove with its row counts per
  * cascading table, each account no kept workspace holds) and its digest; it already refuses an account whose delete kept data
  * would block, or would cascade into without `--allow-kept-cascade`. An execute runs a fresh dry run first and goes on only when
- * its digest is the reviewed one; it deletes the workspaces through the workspaces owner's prune (the schema cascade), then the
+ * its digest is the reviewed one; it deletes the workspaces through the workspaces owner's prune (a SOFT delete since owner ruling R36: the rows stay, marked deleted; the row counts of the receipt are what stays hidden, nothing cascades), then the
  * orphan accounts one at a time through Auth, stopping at the first failure. A re-run surveys again and finds what is left. It
  * never runs DELETE of its own and never resets the database.
  */

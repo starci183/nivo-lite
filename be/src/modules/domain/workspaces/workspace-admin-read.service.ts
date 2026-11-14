@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceEntity } from "./persistence/entities"
 
@@ -65,7 +64,7 @@ export class WorkspaceAdminReadService {
             order: { createdAt: "DESC" },
             take: limit,
         })
-        return rows.map(toRow)
+        return rows.map((item) => toRow(item))
     }
 
     /** One workspace by id; undefined when it does not exist. */

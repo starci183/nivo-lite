@@ -1,6 +1,5 @@
 import { GuideTarget } from "@/components/leaves/GuideTarget"
-import { Button, Page } from "@starci/grammar/common"
-import type { PageHeaderBreadcrumbs, PageHeaderTabs } from "@starci/grammar/common"
+import { Button, Page, type PageHeaderBreadcrumbs, type PageHeaderTabs } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** The words and the state of the Connections page band. */

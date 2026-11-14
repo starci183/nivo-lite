@@ -1,6 +1,6 @@
 import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { CreditUsageSummaryQuery } from "../__generated__/graphql"
 
 type QueryCreditUsageSummaryResponse = CreditUsageSummaryQuery
@@ -54,7 +54,7 @@ export const queryCreditUsageSummary = async ({
     query = QueryCreditUsageSummary.Query1,
     signal,
 }: QueryParams<QueryCreditUsageSummary> = {}): Promise<ApolloClient.QueryResult<QueryCreditUsageSummaryResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
     })

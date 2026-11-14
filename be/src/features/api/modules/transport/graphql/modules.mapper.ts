@@ -1,8 +1,7 @@
 import type {
     InstallResult,
     InstallationView,
-    ModuleDefinition,
-    ModulesCatalog,
+    CatalogModule,
     SetupState,
     SetupVersions,
 } from "@modules/domain/modules"
@@ -37,7 +36,6 @@ import type { ModuleInstallationIdInput } from "./dto/module-installation-id.inp
 import type { ModuleInstallationType } from "./dto/module-installation.type"
 import type { ModuleKeyInput } from "./dto/module-key.input"
 import type { ModuleRequirementFactsType } from "./dto/module-requirement-facts.type"
-import type { ModulesCatalogType } from "./dto/modules-catalog.type"
 import type { PostSetupMessageInput } from "./dto/post-setup-message.input"
 import type { RenameInstallationAgentInput } from "./dto/rename-installation-agent.input"
 import type { RenameModuleInstallationInput } from "./dto/rename-module-installation.input"
@@ -53,17 +51,23 @@ import type { SetupSessionType } from "./dto/setup-session.type"
 import type { SetupStateType } from "./dto/setup-state.type"
 import type { SetupVersionsType } from "./dto/setup-versions.type"
 
-/** The catalogue request: it takes no input. */
-export const toCatalogRequest = (): GetCatalogRequest => ({})
+/** The catalogue request: the workspace it is shown to, when the caller names one. */
+export const toCatalogRequest = (workspaceId: string | null): GetCatalogRequest => ({ workspaceId })
 
-/** Maps one module definition to the GraphQL type. */
-export const toModuleDefinitionType = (module: ModuleDefinition): ModuleDefinitionType => ({ ...module })
+/**
+ * Maps one module definition to the GraphQL type. `authorityActions` is retired (the authority rules are gone) and answers an empty
+ * list: the web catalogue still selects it, so the field leaves the schema together with the web documents that read it.
+ */
+export const toModuleDefinitionType = (module: CatalogModule): ModuleDefinitionType => ({
+    ...module,
+    authorityActions: [],
+})
 
 /** Maps the key of the GraphQL input to the query request. */
-export const toGetModuleRequest = (input: ModuleKeyInput): GetModuleRequest => ({ ...input })
-
-/** Maps the catalogue to the GraphQL type. */
-export const toModulesCatalogType = (catalog: ModulesCatalog): ModulesCatalogType => ({ ...catalog })
+export const toGetModuleRequest = (input: ModuleKeyInput): GetModuleRequest => ({
+    key: input.key,
+    workspaceId: input.workspaceId,
+})
 
 /** Maps the workspace of the request to the listing request. */
 export const toListInstallationsRequest = (workspaceId: string): ListInstallationsRequest => ({ workspaceId })
@@ -76,10 +80,6 @@ export const toGetInstallationRequest = (
     workspaceId: string,
     input: ModuleInstallationIdInput,
 ): GetInstallationRequest => ({ workspaceId, ...input })
-
-/** Maps the installed agents to the GraphQL type. */
-export const toModuleInstallationsType = (records: ReadonlyArray<InstallationView>): Array<ModuleInstallationType> =>
-    records.map(toModuleInstallationType)
 
 /** Maps what installing answered to the GraphQL type. */
 export const toModuleInstallResultType = (result: InstallResult): ModuleInstallResultType => ({ ...result })

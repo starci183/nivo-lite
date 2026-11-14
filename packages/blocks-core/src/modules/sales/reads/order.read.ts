@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { cancelVerdictOf } from "../../../rules/sales/order-status"
@@ -7,7 +6,7 @@ import { SALES_VIEW } from "../constants"
 import { orderDetailOf } from "../details"
 import { cancelFactsOf } from "../order-links"
 import { salesInvoices, salesLeads, salesOrders, salesSettings, salesTransactions } from "../ports"
-import { leadNameOf, orderRowOf } from "../sales-records"
+import { leadNameOf, leadOfContact, orderRowOf } from "../sales-records"
 import { settingsOf } from "../settings-store"
 import type { OrderDetail } from "../sales.types"
 
@@ -39,9 +38,9 @@ export const ORDER_DETAIL_FIELDS: ReadonlyArray<keyof OrderDetail> = [
     "trackingCode",
 ]
 
-/** `sales.order`: one order with its customer's name and who confirms it; null when the workspace has no such order. */
+/** `blocks-core.sales.api.order.get`: one order with its customer's name and who confirms it; null when the workspace has no such order. */
 export const orderRead: ReadDefinition = defineRead({
-    id: "sales.order",
+    id: "blocks-core.sales.api.order.get",
     dataKind: "order",
     shape: "record",
     fields: ORDER_DETAIL_FIELDS,
@@ -59,9 +58,9 @@ export const orderRead: ReadDefinition = defineRead({
         const record = await orders.get(id)
         const order = record === null ? null : orderRowOf(record)
         if (order === null) return null
-        const buyer = order.leadId === null ? null : await leads.get(order.leadId)
+        const buyer = await leadOfContact(leads, order.contactId)
         const customer = buyer === null ? null : leadNameOf(buyer.data)
         const verdict = cancelVerdictOf(await cancelFactsOf({ transactions, invoices }, order))
-        return orderDetailOf(order, customer, await settingsOf(settings), verdict.ok)
+        return orderDetailOf(order, buyer?.id ?? null, customer, await settingsOf(settings), verdict.ok)
     },
 })

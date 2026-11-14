@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+} from "@modules/domain/connections"
 import { MetaConnectionsService } from "@modules/domain/meta-connections"
 
 const OWNER = ["owner"] as const

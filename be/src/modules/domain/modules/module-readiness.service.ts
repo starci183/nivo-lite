@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { McpGatewayService } from "@modules/domain/mcp-gateway"
+import { roleReadinessOf } from "@modules/domain/tools"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
-import { InstallationRecordsService, lifecycleOf } from "@modules/domain/module-installations"
+import {
+    InstallationRecordsService,
+    lifecycleOf,
+    type InstallationRecord,
+    type InstallationStatus,
+} from "@modules/domain/module-installations"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
-import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { ConnectionNeed, InstallationView } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
@@ -12,33 +16,32 @@ import { setupProgressOf } from "./policies/setup-gates.policy"
 
 @Injectable()
 /**
- * Whether the connections an installed agent requires are there: its module's required capability roles, each played by a usable
- * connector of the workspace (through the gateway, never a named connector). Without them an applied agent waits in
- * `needs_connection` and does not run; with them it is live again.
+ * Whether the connections an installed agent requires are there: its module's required capability roles, each played by a tool family
+ * of the code (read from the families' manifests, never a named connector and never a tool registry, so an app that runs no tool reads
+ * it too). Without them an applied agent waits in `needs_connection` and does not run; with them it is live again.
  */
 export class ModuleReadinessService {
     constructor(
         private readonly installations: InstallationRecordsService,
         private readonly catalog: ModulesService,
-        private readonly gateway: McpGatewayService,
         private readonly agents: AgentDirectoryService,
         private readonly versions: ContextVersionsService,
         private readonly sessions: SetupSessionsService,
     ) {}
 
     /** The required roles of a module that the workspace cannot play now, each with the connectors that could play it. */
-    async needsOf(workspaceId: string, moduleKey: string): Promise<ReadonlyArray<ConnectionNeed>> {
+    async needsOf(moduleKey: string): Promise<ReadonlyArray<ConnectionNeed>> {
         const module = await this.catalog.find(moduleKey)
         const required = module.requires.roles?.requires ?? []
         if (required.length === 0) return []
-        const readiness = await this.gateway.readiness(workspaceId, required)
+        const readiness = roleReadinessOf(required)
         return readiness.missing.map((role) => ({ role, providers: readiness.providers[role] }))
     }
 
     /** An installation with its agent, the number of its active version, how far its setup got and what it still needs connected. */
     async withNeeds(record: InstallationRecord): Promise<InstallationView> {
         const [connectionNeeds, [identity], [version], module, session] = await Promise.all([
-            this.needsOf(record.workspaceId, record.moduleKey),
+            this.needsOf(record.moduleKey),
             this.agents.identitiesOf(record.workspaceId, record.agentId === null ? [] : [record.agentId]),
             this.versions.numbersOf(record.activeContextVersionId === null ? [] : [record.activeContextVersionId]),
             this.catalog.find(record.moduleKey),
@@ -66,7 +69,7 @@ export class ModuleReadinessService {
     async settle(workspaceId: string, installationId: string): Promise<InstallationStatus> {
         const installation = await this.installations.find(workspaceId, installationId)
         if (installation === null) throw new ModulesError({ code: ModulesErrorCode.InstallationNotFound })
-        const needs = await this.needsOf(workspaceId, installation.moduleKey)
+        const needs = await this.needsOf(installation.moduleKey)
         const moved = await this.installations.settleConnection(workspaceId, installation.id, needs.length === 0)
         return moved ?? installation.status
     }

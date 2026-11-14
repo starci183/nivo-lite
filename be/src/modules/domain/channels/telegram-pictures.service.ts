@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
-import { InjectTelegram, TelegramError } from "@modules/integrations/telegram"
-import type { TelegramClient } from "@modules/integrations/telegram"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import type { ChannelTarget } from "./channels.contracts"
+import { InjectTelegram, TelegramError, type TelegramClient } from "@modules/integrations/telegram"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { ChannelImage } from "./channel-image.contracts"
 import { IMAGES_MAX, imageRouteOf, telegramCaptionOf } from "./channel-image.policy"
@@ -34,7 +32,7 @@ export class TelegramPicturesService {
 
     /** Sends the pictures to the chat with the bot of `token`; never throws. */
     async send(
-        target: ChatConversationTarget,
+        target: ChannelTarget,
         token: string,
         chatId: string,
         images: ReadonlyArray<ChannelImage>,
@@ -42,7 +40,7 @@ export class TelegramPicturesService {
         const photos = images
             .slice(0, IMAGES_MAX)
             .map((image) => ({ url: image.url, caption: telegramCaptionOf(image.caption) }))
-        const route = imageRouteOf("telegram", photos.length, false)
+        const route = imageRouteOf("telegram", photos.length)
         try {
             if (route === "album") await this.telegram.sendMediaGroup(token, chatId, photos)
             else if (route === "single") await this.sendOne(token, chatId, photos[0])
@@ -58,7 +56,7 @@ export class TelegramPicturesService {
     }
 
     /** Sends one photo of a refused album on its own; one that Telegram refuses is skipped and logged. */
-    private sendOneQuietly(target: ChatConversationTarget, token: string, chatId: string, photo: Photo): Promise<void> {
+    private sendOneQuietly(target: ChannelTarget, token: string, chatId: string, photo: Photo): Promise<void> {
         return this.sendOne(token, chatId, photo).catch((cause: unknown) => {
             this.logger.warn(ChannelsLogEvent.AlbumFailed, { conversationId: target.id, failure: failureOf(cause) })
         })

@@ -7,9 +7,13 @@ import { useQueryWorkbenchMoreSwr, useQueryWorkbenchReadSwr } from "@/hooks/swr"
 import { readError } from "@/hooks/workspaceread"
 import { isForbiddenFailure } from "@/modules/failure"
 import { accumulated, currentMore, pageOf, withPage } from "@/modules/workbench-host"
+import { useReportReadFreshness } from "./useReportReadFreshness"
 
 /** The variable a list read pages with: the cursor the last page left. */
 const CURSOR_VARIABLE = "cursor"
+
+/** The variable that asks the back end for a live answer instead of the one it stored for the account (it strips it before the provider). */
+const FRESH_VARIABLE = "fresh"
 
 /** Where the pages after the first stand: loaded, loading, or failed. */
 interface Paging {
@@ -29,7 +33,8 @@ const statusOf = (isLoading: boolean, error: unknown): HostRead["status"] => {
 /**
  * One read of the live data port: the generic read operation under the SWR key `[name, workspace, operation, variables]` (null
  * variables do not fetch). A paged read answers `{ rows, cursor }`; `loadMore` reads the next page with the cursor and appends its
- * rows, and a first page that changed drops the appended ones.
+ * rows, and a first page that changed drops the appended ones. `reload` asks the back end for a fresh answer (`fresh: true`) and puts it
+ * under the same key without a second read; loads and revalidations send no `fresh` and may get the stored answer.
  */
 export const useWorkbenchGraphqlRead = (
     operation: string,
@@ -40,6 +45,7 @@ export const useWorkbenchGraphqlRead = (
     const { trigger } = useQueryWorkbenchMoreSwr()
     const [paging, setPaging] = useState<Paging>(FIRST_PAGE_ONLY)
     const first: unknown = read.data
+    useReportReadFreshness(operation, first)
     const more = currentMore(paging.more, first)
     const data = accumulated(first, more)
     const cursor = pageOf(data)?.cursor ?? null
@@ -64,7 +70,9 @@ export const useWorkbenchGraphqlRead = (
         isValidating: read.isValidating,
         reload: () => {
             setPaging(FIRST_PAGE_ONLY)
-            void read.mutate()
+            if (variables === null) return
+            const fresh = trigger({ name: operation, variables: { ...variables, [FRESH_VARIABLE]: true } })
+            void read.mutate(fresh, { revalidate: false }).catch(() => read.mutate())
         },
         page,
     }

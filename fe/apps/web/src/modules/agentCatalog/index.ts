@@ -20,10 +20,6 @@ export interface CatalogGrantChip {
 export interface AgentCatalogRow {
     readonly key: string
     readonly name: string
-    /** The 3D emblem of the kind of agent. */
-    readonly emblem: string
-    /** The key of the kind, the name the emblem avatar carries. */
-    readonly emblemKind: string
     /** The role the agent belongs to: the group it is listed under. */
     readonly roleKey: ModuleKey
     /** The agent's own picture (an upload or a preset image); null draws the default sprout, or the initials. */
@@ -35,19 +31,8 @@ export interface AgentCatalogRow {
     /** "@handle - role". */
     readonly subtitle: string
     readonly grants: ReadonlyArray<CatalogGrantChip>
-    /** "5 connections". */
-    readonly countLabel: string
-    /** "+2" when more than three logos are granted, else empty. */
-    readonly overflowLabel: string
     /** Names the menu of the granted connections. */
     readonly menuLabel: string
-    /** Where "Grant access" and the last menu item go: the Connections tab of the agent. */
-    readonly grantHref: string
-    readonly knowledgeLine: string
-    /** "Does not read internal documents" for a customer facing agent, else empty. */
-    readonly knowledgeNote: string
-    /** "68 waiting" in the warning tone, or empty. */
-    readonly waitingLabel: string
     readonly statusLabel: string
     readonly statusTone: "neutral" | "accent" | "success" | "warning"
     /** Where the row opens the agent. */
@@ -100,36 +85,6 @@ export const filterRows = (
             (filter !== FILTER_WAITING || row.hasWaitingFacts) &&
             tokens.every((token) => row.searchText.includes(token)),
     )
-}
-
-/** The installed agents of one role, under the head of the role ("Sales - 2 agents", "+ Add Sales"). */
-export interface AgentCatalogGroup {
-    readonly key: ModuleKey
-    /** The 3D mark of the role. */
-    readonly mark: string
-    /** "Sales - 2 agents". */
-    readonly title: string
-    /** "Add Sales"; empty when the role runs one agent only or the person may not add one. */
-    readonly addLabel: string
-    /** The rows of the role the chip and the search keep. */
-    readonly rows: ReadonlyArray<AgentCatalogRow>
-}
-
-/**
- * The kept rows grouped by role, in the order the roles first appear; a role whose rows the chip and the search all drop is left out.
- * `headOf` gives the words of a role's head.
- */
-export const groupRows = (
-    rows: ReadonlyArray<AgentCatalogRow>,
-    headOf: (roleKey: ModuleKey) => Pick<AgentCatalogGroup, "title" | "addLabel">,
-): ReadonlyArray<AgentCatalogGroup> => {
-    const roles = [...new Set(rows.map((row) => row.roleKey))]
-    return roles.map((roleKey) => ({
-        key: roleKey,
-        mark: `/agents/${roleKey}.webp`,
-        ...headOf(roleKey),
-        rows: rows.filter((row) => row.roleKey === roleKey),
-    }))
 }
 
 /** What one role card shows, already in the reader language. */

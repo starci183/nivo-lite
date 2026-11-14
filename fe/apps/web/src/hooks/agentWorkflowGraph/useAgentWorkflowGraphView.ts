@@ -12,7 +12,7 @@ import { agentHref } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 import type { DataSlot } from "@/modules/types"
 import { useMutateSaveAgentGraphLayoutSwr, useQueryAgentGraphLayoutSwr, useQueryAgentWorkflowGraphSwr } from "@/hooks/swr"
-import { paramLabelOf } from "@nivo-lite/blocks-core/graph"
+import { paramLabelOf } from "@/modules/plugin-registry"
 
 export type { WorkflowGraphView } from "@/modules/agentWorkflowGraph"
 

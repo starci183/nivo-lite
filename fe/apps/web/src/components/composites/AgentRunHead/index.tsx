@@ -70,12 +70,12 @@ export const AgentRunHead = (props: AgentRunHeadProps) => {
     const { copy, head, switches } = props.props
     return (
         <Stack gap="inline">
-            <Cluster gap="row" justify="between">
+            <Cluster gap="identity" justify="between">
                 <Stack gap="identity">
                     <Cluster gap="inline">
                         <Heading level={2}>{head.title}</Heading>
                         <Text tone="muted">{`#${head.shortId}`}</Text>
-                        <Cluster gap="inline" wrap={false}>
+                        <Cluster gap="identity" wrap={false}>
                             <AgentRunStatusMark props={{ status: head.status, label: head.statusLabel }} />
                             <Text>{head.statusLabel}</Text>
                         </Cluster>

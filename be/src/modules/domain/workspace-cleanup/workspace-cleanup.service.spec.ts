@@ -3,12 +3,12 @@ import { mock, mockEntityManager } from "@starci/jest-preset"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { WorkspacePruneService, WorkspacesService } from "@modules/domain/workspaces"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { WorkspaceCleanupErrorCode } from "./errors/workspace-cleanup.error"
+import { WorkspaceCleanupError, WorkspaceCleanupErrorCode } from "./errors/workspace-cleanup.error"
 import { CLEANUP_RECEIPT_PREFIX } from "./messages/workspace-cleanup.messages"
 import type { UserReferenceRow, WorkspaceFootprintRow } from "./persistence/workspace-cleanup.rows"
 import type { CleanupCommand, CleanupReport } from "./workspace-cleanup.contracts"
 import { CLEANUP_ACCOUNTS, WORKSPACE_CLEANUP_OPTIONS } from "./workspace-cleanup.decorators"
-import type { CleanupAccounts, CleanupAuthUser, CleanupUserDeleted } from "./workspace-cleanup.options"
+import type { CleanupAccounts, CleanupAuthUser } from "./workspace-cleanup.options"
 import { WorkspaceCleanupService } from "./workspace-cleanup.service"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
@@ -288,14 +288,25 @@ describe("WorkspaceCleanupService execute", () => {
 describe("WorkspaceCleanupService execute stops at a failed account", () => {
     const users = [OWNER, { id: "u-a" }, { id: "u-b" }, { id: "u-c" }]
 
-    it.each<[string, () => Promise<CleanupUserDeleted>]>([
-        ["an Auth refusal", () => Promise.resolve({ error: { message: "user has rows" } })],
-        ["a thrown error", () => Promise.reject(new Error("user has rows"))],
-        ["a thrown value", () => Promise.reject("user has rows")],
-    ])("stops at %s and reports the accounts deleted and remaining", async (_label, failure) => {
+    type DeleteUserMock = jest.MockedFunction<CleanupAccounts["deleteUser"]>
+
+    it.each<[string, string, (deleteUser: DeleteUserMock) => unknown]>([
+        [
+            "an Auth refusal",
+            "user has rows",
+            (deleteUser) => deleteUser.mockResolvedValueOnce({ error: { message: "user has rows" } }),
+        ],
+        [
+            "a thrown error",
+            WorkspaceCleanupErrorCode.AuthFailed,
+            (deleteUser) =>
+                deleteUser.mockRejectedValueOnce(new WorkspaceCleanupError({ code: WorkspaceCleanupErrorCode.AuthFailed })),
+        ],
+        ["a thrown value", "user has rows", (deleteUser) => deleteUser.mockRejectedValueOnce("user has rows")],
+    ])("stops at %s and reports the accounts deleted and remaining", async (_label, reason, failWith) => {
         const digest = await digestOf({ users })
         const { cleanup, accounts, print } = await build({ users })
-        accounts.deleteUser.mockResolvedValueOnce({ error: null }).mockImplementationOnce(failure)
+        failWith(accounts.deleteUser.mockResolvedValueOnce({ error: null }))
 
         await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.UserDeleteFailed, { deleted: 1, remaining: "u-b,u-c" }),
@@ -303,7 +314,7 @@ describe("WorkspaceCleanupService execute stops at a failed account", () => {
 
         expect(accounts.deleteUser).toHaveBeenCalledTimes(2)
         expect(accounts.deleteUser).not.toHaveBeenCalledWith("u-c")
-        expect(print).toHaveBeenCalledWith("  FAILED account u-b: user has rows")
+        expect(print).toHaveBeenCalledWith(`  FAILED account u-b: ${reason}`)
         expect(print).toHaveBeenCalledWith(stringLike('"deletedUsers":["u-a"],"remainingUsers":["u-b","u-c"]'))
     })
 

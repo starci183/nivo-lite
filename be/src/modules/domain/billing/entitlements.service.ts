@@ -8,6 +8,9 @@ import { BillingError, BillingErrorCode } from "./errors/billing.error"
 
 const BYTES_PER_GB = 1024 ** 3
 
+/** The bytes of storage a plan includes, or null when the plan names none. */
+type StorageLimit = number | null
+
 @Injectable()
 /** What the plan of a workspace allows: other members (none on an individual plan, paid seats on Team) and stored bytes. */
 export class EntitlementsService {
@@ -53,6 +56,12 @@ export class EntitlementsService {
                 params: { quotaGb: Math.round(storage.quotaBytes / BYTES_PER_GB) },
             })
         }
+    }
+
+    /** The bytes of storage the workspace's plan includes, or null when the plan names none (or the workspace has no plan). */
+    async storageLimitOf(workspaceId: string): Promise<StorageLimit> {
+        const plan = await this.planOf(workspaceId)
+        return plan?.storageGb == null ? null : plan.storageGb * BYTES_PER_GB
     }
 
     /** The storage a workspace keeps and the room its plan includes, for one of its members. */

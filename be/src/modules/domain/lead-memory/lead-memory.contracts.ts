@@ -2,15 +2,15 @@ import type { LeadMemorySnapshot, MemorySubject, Sensitivity, StepMemory } from 
 
 /** The trigger scope of a run, as the memory reads who it is about. */
 export interface TriggerScope {
-    /** The lead the run is about, when it names one. */
-    readonly leadId?: unknown
+    /** The contact the run is about, when it names one. */
+    readonly contactId?: unknown
     /** The conversation the run is about, when it names one. */
     readonly conversationId?: unknown
     /** Every other member of the scope. */
     readonly [member: string]: unknown
 }
 
-/** An optional text: the conversation of a lead, when it is known. */
+/** An optional text: the conversation of a contact, when it is known. */
 export type OptionalText = string | null
 
 /** An optional subject: the customer a run is about, null for a run about nobody. */

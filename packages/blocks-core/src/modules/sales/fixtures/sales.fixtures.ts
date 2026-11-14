@@ -1,20 +1,20 @@
 import type { CountsResult, ListPage } from "@nivo-lite/agent-sdk/block"
 import { salesDecisionQueueOf } from "../../../rules/sales/decisions"
 import { awaitingRowsOf, needsRowsOf, overdueRowsOf, ownerRowsOf } from "../../../rules/sales/attention"
-import { salesFiguresOf } from "../../../rules/sales/figures"
-import type { OrderTotals } from "../../../rules/sales/figures"
+import { salesFiguresOf, type OrderTotals } from "../../../rules/sales/figures"
 import { orderSummaryOf } from "../../../rules/sales/lead-orders"
 import { waitsForOwner } from "../../../rules/sales/order-confirm"
 import { CONFIRMED_STATUSES, ORDER_STATUSES } from "../../../rules/sales/order-status"
 import { SALES_SETTINGS_DEFAULTS } from "../../../rules/sales/settings"
 import { LEAD_STAGES } from "../../../rules/sales/stage"
-import { waitingViewOf } from "../../../rules/sales/waiting"
-import type { WaitingView } from "../../../rules/sales/waiting"
+import { waitingViewOf, type WaitingView } from "../../../rules/sales/waiting"
 import { WAITING_SHOWN } from "../constants"
 import { leadDetailOf, orderDetailOf } from "../details"
 import { waitingHrefOf } from "../reads/orders-waiting.read"
 import type { ModuleFixtures } from "../../module-fixtures"
-import type { OrderRow } from "../sales.types"
+import { ACCOUNTING_FIXTURES } from "../ledger/fixtures/accounting.fixtures"
+import { LOYALTY_FIXTURES } from "../loyalty/fixtures/loyalty.fixtures"
+import type { LeadRow, OrderRow } from "../sales.types"
 import { LEAD_PROPOSAL, ORDER_CONFIRMED, ORDER_WAITING, SAMPLE_LEADS, SAMPLE_ORDERS } from "./sales.data"
 
 const countsOf = (values: ReadonlyArray<string>, keys: ReadonlyArray<string>): CountsResult => ({
@@ -22,13 +22,17 @@ const countsOf = (values: ReadonlyArray<string>, keys: ReadonlyArray<string>): C
     total: values.length,
 })
 
-const NAMES: Readonly<Record<string, string>> = Object.fromEntries(
-    SAMPLE_LEADS.map((lead) => [lead.id, lead.contactName]),
+const LEADS_BY_CONTACT: Readonly<Record<string, LeadRow>> = Object.fromEntries(
+    SAMPLE_LEADS.flatMap((lead) => (lead.contactId === null ? [] : [[lead.contactId, lead]])),
 )
 
 /** The name of the customer of a sample order; null for an order with no customer or one whose customer is gone. */
 export const customerOf = (order: OrderRow): string | null =>
-    order.leadId === null ? null : (NAMES[order.leadId] ?? null)
+    order.contactId === null ? null : (LEADS_BY_CONTACT[order.contactId]?.contactName ?? null)
+
+/** The sample customer record of an order's person; null for none. */
+const leadIdOf = (order: OrderRow): string | null =>
+    order.contactId === null ? null : (LEADS_BY_CONTACT[order.contactId]?.id ?? null)
 
 const waitingOrders = SAMPLE_ORDERS.filter((order) => waitsForOwner(order, SALES_SETTINGS_DEFAULTS))
 
@@ -83,41 +87,41 @@ const WAITING_VIEW: WaitingView = waitingViewOf(
  * The Sales reads in the states a prototype draws (ready, empty, and the draft order that waits for the owner) and the answer of
  * each action. Built from one set of sample customers and orders through the module's own mappers. Loading and error need no data.
  */
-export const SALES_FIXTURES: ModuleFixtures = {
+const OWN_FIXTURES: ModuleFixtures = {
     reads: {
-        "sales.leads": { ready: { rows: SAMPLE_LEADS, cursor: null }, empty: NO_ROWS },
-        "sales.lead-counts": {
+        "blocks-core.sales.api.lead.list": { ready: { rows: SAMPLE_LEADS, cursor: null }, empty: NO_ROWS },
+        "blocks-core.sales.api.lead.counts": {
             ready: countsOf(
                 SAMPLE_LEADS.map((lead) => lead.stage),
                 LEAD_STAGES,
             ),
             empty: zeroCounts(LEAD_STAGES),
         },
-        "sales.lead": {
+        "blocks-core.sales.api.lead.get": {
             ready: leadDetailOf(
                 LEAD_PROPOSAL,
-                orderSummaryOf(SAMPLE_ORDERS.filter((order) => order.leadId === LEAD_PROPOSAL.id)),
+                orderSummaryOf(SAMPLE_ORDERS.filter((order) => order.contactId === LEAD_PROPOSAL.contactId)),
             ),
             empty: null,
         },
-        "sales.orders": { ready: { rows: SAMPLE_ORDERS, cursor: null }, empty: NO_ROWS },
-        "sales.order-counts": {
+        "blocks-core.sales.api.order.list": { ready: { rows: SAMPLE_ORDERS, cursor: null }, empty: NO_ROWS },
+        "blocks-core.sales.api.order.counts": {
             ready: countsOf(
                 SAMPLE_ORDERS.map((order) => order.status),
                 ORDER_STATUSES,
             ),
             empty: zeroCounts(ORDER_STATUSES),
         },
-        "sales.order": {
-            ready: orderDetailOf(ORDER_CONFIRMED, customerOf(ORDER_CONFIRMED), SALES_SETTINGS_DEFAULTS, true),
+        "blocks-core.sales.api.order.get": {
+            ready: orderDetailOf(ORDER_CONFIRMED, leadIdOf(ORDER_CONFIRMED), customerOf(ORDER_CONFIRMED), SALES_SETTINGS_DEFAULTS, true),
             empty: null,
-            waiting: orderDetailOf(ORDER_WAITING, customerOf(ORDER_WAITING), SALES_SETTINGS_DEFAULTS, true),
+            waiting: orderDetailOf(ORDER_WAITING, leadIdOf(ORDER_WAITING), customerOf(ORDER_WAITING), SALES_SETTINGS_DEFAULTS, true),
         },
-        "sales.figures": {
+        "blocks-core.sales.api.order.figures": {
             ready: salesFiguresOf(STAGE_COUNTS, TOTALS),
             empty: salesFiguresOf({}, { draftCount: 0, draftVnd: 0, closedCount: 0, closedVnd: 0 }),
         },
-        "sales.attention": {
+        "blocks-core.sales.api.lead.attention": {
             ready: {
                 rows: [
                     ...overdueRowsOf(SAMPLE_LEADS.filter((lead) => lead.nextDueAt !== null)),
@@ -128,16 +132,16 @@ export const SALES_FIXTURES: ModuleFixtures = {
             },
             empty: NO_ROWS,
         },
-        "sales.awaiting-reply": {
+        "blocks-core.sales.api.lead.awaiting-reply": {
             ready: { rows: awaitingRowsOf(SAMPLE_LEADS.filter((lead) => lead.awaitingSince !== null)), cursor: null },
             empty: NO_ROWS,
         },
-        "sales.decisions": {
+        "blocks-core.sales.api.order.decisions": {
             ready: salesDecisionQueueOf(WAITING_ORDERS, WAITING_ORDERS.length),
             empty: salesDecisionQueueOf([], 0),
         },
-        "sales.settings": { ready: SALES_SETTINGS_DEFAULTS, empty: null },
-        "sales.orders-waiting": { ready: WAITING_VIEW, empty: waitingViewOf([], 0, WAITING_SHOWN, waitingHrefOf) },
+        "blocks-core.sales.api.settings.get": { ready: SALES_SETTINGS_DEFAULTS, empty: null },
+        "blocks-core.sales.api.order.waiting": { ready: WAITING_VIEW, empty: waitingViewOf([], 0, WAITING_SHOWN, waitingHrefOf) },
     },
     actions: {
         "sales.move-stage": { ok: true, data: { stage: "qualified" } },
@@ -149,4 +153,10 @@ export const SALES_FIXTURES: ModuleFixtures = {
         "sales.follow": { ok: true },
         "sales.reply": { ok: true },
     },
+}
+
+/** The fixtures of the Sales module: its own reads and actions, then those of its ledger area (the books of the sale) and its loyalty area. */
+export const SALES_FIXTURES: ModuleFixtures = {
+    reads: { ...OWN_FIXTURES.reads, ...ACCOUNTING_FIXTURES.reads, ...LOYALTY_FIXTURES.reads },
+    actions: { ...OWN_FIXTURES.actions, ...ACCOUNTING_FIXTURES.actions, ...LOYALTY_FIXTURES.actions },
 }

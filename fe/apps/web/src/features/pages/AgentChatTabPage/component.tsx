@@ -3,7 +3,7 @@ import { AgentTeamChatPanes } from "@/components/blocks/TeamChatRoom"
 /** The instance whose chat the tab draws, and the names of its panes. */
 export interface AgentChatTabPageBaseProps {
     readonly props: {
-        readonly installationId: string
+        readonly installationId: string | undefined
         readonly gridLabel: string
         readonly roomLabel: string
     }

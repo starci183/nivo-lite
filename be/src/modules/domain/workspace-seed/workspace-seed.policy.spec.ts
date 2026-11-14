@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
-import { assertSeedScope, readEnsureFor, readProfileInput, readSeedInput } from "./workspace-seed.policy"
+import { assertSeedScope, readSeedInput } from "./workspace-seed.policy"
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -31,14 +31,12 @@ const WIRE = {
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: SUBJECT, useValue: { readSeedInput, assertSeedScope, readProfileInput, readEnsureFor } },
+            { provide: SUBJECT, useValue: { readSeedInput, assertSeedScope } },
         ],
     }).compile()
     return moduleRef.get<{
         readSeedInput: typeof readSeedInput
         assertSeedScope: typeof assertSeedScope
-        readProfileInput: typeof readProfileInput
-        readEnsureFor: typeof readEnsureFor
     }>(SUBJECT)
 }
 
@@ -193,112 +191,5 @@ describe("workspace seed domain selector", () => {
         expect(() =>
             subject.assertSeedScope({ ...parsed.request, workspaceId: undefined, workspaceName: "Named" }),
         ).not.toThrow()
-    })
-})
-
-describe("workspace profile private input", () => {
-    const PROFILE_WIRE = {
-        schema: "nivo/workspace-profile-input@1",
-        connectors: { hakuen: { url: "https://mcp.example.test/mcp" } },
-    }
-    const secretOf = (value: unknown) => new Secret(JSON.stringify(value))
-
-    it("answers the endpoint of each connector by key", async () => {
-        const subject = await build()
-        expect(subject.readProfileInput(secretOf(PROFILE_WIRE)).urls).toEqual(
-            new Map([["hakuen", "https://mcp.example.test/mcp"]]),
-        )
-    })
-
-    it.each(["http://localhost:23002/mcp", "http://127.0.0.1:23002/mcp", "http://[::1]:23002/mcp"])(
-        "accepts plain http to the loopback host of a local stack: %s",
-        async (url) => {
-            const subject = await build()
-            expect(
-                subject
-                    .readProfileInput(secretOf({ ...PROFILE_WIRE, connectors: { hakuen: { url } } }))
-                    .urls.get("hakuen"),
-            ).toBe(url)
-        },
-    )
-
-    it("requires the input", async () => {
-        const subject = await build()
-        expect(thrownBy(() => subject.readProfileInput(undefined))).toEqual(
-            objectLike({ code: WorkspaceSeedErrorCode.InputRequired }),
-        )
-    })
-
-    it.each([
-        ["text that is not JSON", "{"],
-        ["another schema", JSON.stringify({ ...PROFILE_WIRE, schema: "other@1" })],
-        ["an array", JSON.stringify([PROFILE_WIRE])],
-        ["an unknown top-level key", JSON.stringify({ ...PROFILE_WIRE, extra: true })],
-        ["connectors that are not an object", JSON.stringify({ ...PROFILE_WIRE, connectors: [] })],
-        [
-            "a malformed connector key",
-            JSON.stringify({ ...PROFILE_WIRE, connectors: { Hakuen: { url: "https://a.test" } } }),
-        ],
-        [
-            "a connector that is not an object",
-            JSON.stringify({ ...PROFILE_WIRE, connectors: { hakuen: "https://a.test" } }),
-        ],
-        [
-            "an unknown connector field",
-            JSON.stringify({ ...PROFILE_WIRE, connectors: { hakuen: { url: "https://a.test", token: "x" } } }),
-        ],
-        ["a missing url", JSON.stringify({ ...PROFILE_WIRE, connectors: { hakuen: {} } })],
-        [
-            "a plain http url to a remote host",
-            JSON.stringify({ ...PROFILE_WIRE, connectors: { hakuen: { url: "http://a.test" } } }),
-        ],
-        ["another protocol", JSON.stringify({ ...PROFILE_WIRE, connectors: { hakuen: { url: "ftp://a.test" } } })],
-        ["text that is no url", JSON.stringify({ ...PROFILE_WIRE, connectors: { hakuen: { url: "not a url" } } })],
-    ])("refuses %s without echoing it", async (_name, wire) => {
-        const subject = await build()
-        expect(() => subject.readProfileInput(new Secret(wire))).toThrow(WorkspaceSeedError)
-        expect(thrownBy(() => subject.readProfileInput(new Secret(wire)))).toEqual(
-            objectLike({ code: WorkspaceSeedErrorCode.InputInvalid }),
-        )
-    })
-})
-
-describe("workspace seed ensure input bound to a workspace and an owner", () => {
-    const NAMED = { ...WIRE, workspaceId: undefined, workspaceName: "Named Workspace" }
-    const secretOf = (value: unknown): Secret => new Secret(JSON.stringify(value))
-
-    it("answers the request when the owner and the workspace name match, ignoring case and spaces of the owner", async () => {
-        const subject = await build()
-
-        expect(subject.readEnsureFor(secretOf(NAMED), " OWNER@example.test ", "Named Workspace")).toMatchObject({
-            workspaceName: "Named Workspace",
-            owner: { email: "owner@example.test" },
-        })
-    })
-
-    it.each([
-        { name: "another owner", owner: "other@example.test", workspace: "Named Workspace" },
-        { name: "no owner", owner: undefined, workspace: "Named Workspace" },
-        { name: "another workspace", owner: "owner@example.test", workspace: "Production" },
-    ])("refuses $name", async ({ owner, workspace }) => {
-        const subject = await build()
-
-        expect(() => subject.readEnsureFor(secretOf(NAMED), owner, workspace)).toThrow(WorkspaceSeedError)
-    })
-
-    it("refuses a role-change input", async () => {
-        const subject = await build()
-        const role = {
-            schema: "starci/app-workspace-input@1",
-            action: "role",
-            workspaceId: WS,
-            memberId: USER,
-            role: "staff",
-            principalToken: "token",
-        }
-
-        expect(() => subject.readEnsureFor(secretOf(role), "owner@example.test", "Named Workspace")).toThrow(
-            WorkspaceSeedError,
-        )
     })
 })

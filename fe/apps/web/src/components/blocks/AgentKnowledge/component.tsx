@@ -13,8 +13,8 @@ import {
     Stack,
     SurfaceCard,
     Text,
+    type DataTableRow,
 } from "@starci/grammar/common"
-import type { DataTableRow } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -87,7 +87,7 @@ const sourceCellOf = (row: SourceTableRow, columnId: string) => {
     if (columnId === "kind") return <Text size="sm">{source.kindLabel}</Text>
     if (columnId === "updated") return <Text size="sm">{source.updatedLabel}</Text>
     return (
-        <Badge isDot tone={statusToneOf(source)}>
+        <Badge tone={statusToneOf(source)}>
             {source.statusLabel}
         </Badge>
     )

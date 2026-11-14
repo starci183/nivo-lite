@@ -1,13 +1,15 @@
 import { ok, refused } from "@modules/platform/primitives"
-import { DocumentRefusalCode, DocumentWarningCode, LibraryMissingError } from "./document-readers.contracts"
-import type {
-    DocumentLibraries,
-    DocumentReadOutcome,
-    DocumentReaderKind,
-    PageImage,
-    TranscriptRefusal,
-    Transcriber,
+import {
+    DocumentRefusalCode,
+    DocumentWarningCode,
+    type DocumentLibraries,
+    type DocumentReadOutcome,
+    type DocumentReaderKind,
+    type PageImage,
+    type TranscriptRefusal,
+    type Transcriber,
 } from "./document-readers.contracts"
+import { isLibraryMissing } from "./library-missing.policy"
 
 /** The long side a picture is sent at: enough for hand-writing, small enough to stay cheap. */
 export const PICTURE_SIDE = 2000
@@ -38,7 +40,7 @@ const jpegOf = async (
         const decoded = kind === "heic" ? await libraries.heicToJpeg(bytes) : bytes
         return await (await libraries.pictures()).toJpeg(decoded, PICTURE_SIDE)
     } catch (cause) {
-        return cause instanceof LibraryMissingError
+        return isLibraryMissing(cause)
             ? DocumentRefusalCode.ReaderUnavailable
             : DocumentRefusalCode.Unreadable
     }

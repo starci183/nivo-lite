@@ -29,7 +29,7 @@ export const PickSelectionBar = (props: PickSelectionBarProps) => {
                 {bar.summary}
             </Text>
             {hasPick ? (
-                <Cluster gap="inline" label={bar.summary}>
+                <Cluster gap="identity" label={bar.summary}>
                     <Button onPress={props.on.clear} intent="dismiss" isDisabled={bar.isPending} size="sm">
                         {bar.clearLabel}
                     </Button>

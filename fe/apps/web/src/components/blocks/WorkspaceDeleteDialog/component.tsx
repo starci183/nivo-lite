@@ -1,4 +1,4 @@
-import { AlertDialog, DescriptionList, Input, Stack, Text } from "@starci/grammar/common"
+import { AlertDialog, DescriptionList, Input, Stack, Text, SurfaceCard } from "@starci/grammar/common"
 import type { WorkspaceDeleteView } from "@/modules/types"
 
 /** Copy and state the connected delete dialog supplies. */
@@ -42,7 +42,7 @@ export const WorkspaceDeleteDialogBase = (props: WorkspaceDeleteDialogBaseProps)
         onCancel={props.on.close}
     >
         <Stack gap="row">
-            <DescriptionList items={rowsOf(props)} />
+            <SurfaceCard><DescriptionList items={rowsOf(props)} /></SurfaceCard>
             {props.props.view.restoreDays === null ? null : <Text size="sm">{props.props.restoreText}</Text>}
             <Input
                 id="workspace-delete-name"

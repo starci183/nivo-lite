@@ -12,17 +12,16 @@ const flawOf = (value: unknown, at: string, seen: ReadonlySet<object>): string |
     if (typeof value === "number") return Number.isFinite(value) ? null : at
     if (typeof value !== "object" || seen.has(value)) return at
     const below = new Set(seen).add(value)
-    if (Array.isArray(value)) {
-        for (const [index, item] of value.entries()) {
-            const flaw = flawOf(item, `${at}[${index}]`, below)
-            if (flaw !== null) return flaw
-        }
-        return null
-    }
+    if (Array.isArray(value)) return firstFlaw(value.map((item, index) => [`${at}[${index}]`, item]), below)
     if (!isLiteral(value)) return at
-    for (const [key, item] of Object.entries(value)) {
-        if (item === undefined) continue
-        const flaw = flawOf(item, `${at}.${key}`, below)
+    const members = Object.entries(value).filter(([, item]) => item !== undefined)
+    return firstFlaw(members.map(([key, item]) => [`${at}.${key}`, item]), below)
+}
+
+/** The first flaw among the children of a value, each given with the place that names it; null when all are plain. */
+const firstFlaw = (children: ReadonlyArray<readonly [string, unknown]>, below: ReadonlySet<object>): string | null => {
+    for (const [place, child] of children) {
+        const flaw = flawOf(child, place, below)
         if (flaw !== null) return flaw
     }
     return null

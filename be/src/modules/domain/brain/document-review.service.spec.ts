@@ -24,13 +24,21 @@ const build = async () => {
 
 describe("DocumentReviewService", () => {
     describe("requestForSource", () => {
-        it("asks the review of the dossier of the source once", async () => {
+        it("asks the critic to read the source once", async () => {
             const { service, reviews } = await build()
 
             await service.requestForSource(WS, SOURCE)
 
             expect(reviews.requestForSource).toHaveBeenCalledTimes(1)
-            expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
+            expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE, {})
+        })
+
+        it("passes a resume of the upkeep tick through: the critique keeps its count of runs without progress (D-V-1)", async () => {
+            const { service, reviews } = await build()
+
+            await service.requestForSource(WS, SOURCE, { resume: true })
+
+            expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE, { resume: true })
         })
 
         it("logs a failed request and still completes", async () => {
@@ -45,12 +53,12 @@ describe("DocumentReviewService", () => {
     })
 
     describe("requestForGoneSource", () => {
-        it("asks the review of the dossiers that cited a deleted source, with no topic and its title", async () => {
+        it("lets the critic forget a deleted source", async () => {
             const { service, reviews } = await build()
 
-            await service.requestForGoneSource(WS, SOURCE, "02. Charter")
+            await service.requestForGoneSource(WS, SOURCE)
 
-            expect(reviews.requestForGoneSource).toHaveBeenCalledWith(WS, SOURCE, null, "02. Charter")
+            expect(reviews.requestForGoneSource).toHaveBeenCalledWith(WS, SOURCE)
         })
 
         it("logs a failed request and still completes", async () => {
@@ -58,7 +66,7 @@ describe("DocumentReviewService", () => {
             const cause = new Error("queue down")
             reviews.requestForGoneSource.mockRejectedValue(cause)
 
-            await expect(service.requestForGoneSource(WS, SOURCE, "Menu")).resolves.toBeUndefined()
+            await expect(service.requestForGoneSource(WS, SOURCE)).resolves.toBeUndefined()
 
             expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.ReviewRequestFailed, cause, { sourceId: SOURCE })
         })

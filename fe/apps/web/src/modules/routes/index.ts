@@ -31,19 +31,7 @@ export {
     workspaceReadyPath,
     workspaceRenewalPaymentPath,
 } from "./workspace-routes"
-export {
-    AGENTS_ROUTE,
-    AGENT_ROLES_ANCHOR,
-    AGENT_ROLES_HREF,
-    CONSOLE_ROUTES,
-    agentProfileHref,
-    chatRoomHref,
-    authoritySectionPath,
-    teamInviteHref,
-    workItemHref,
-    zaloConnectionHref,
-    zaloReturnPath,
-} from "./console-routes"
+export { AGENTS_ROUTE, AGENT_ROLES_ANCHOR, AGENT_ROLES_HREF, CONSOLE_ROUTES, agentProfileHref, chatRoomHref, contactHref, workItemHref, zaloConnectionHref, zaloReturnPath, WORKFLOW_STEP_PARAM, workflowStepPath } from "./console-routes"
 export { AUTOMATION_ROUTES } from "./automations-routes"
 export {
     BRAIN_PARTS,
@@ -54,11 +42,10 @@ export {
     KNOWLEDGE_CHIPS,
     KNOWLEDGE_ROUTES,
     LEGACY_BRAIN_TABS,
-    brainDossierHref,
     brainStripTabOf,
     brainTabHref,
     brainTabOfAddress,
-    brainUploadHref,
     knowledgeSourceHref,
+    knowledgeQuestionsHref,
 } from "./knowledge-routes"
 export type { BrainPart, BrainStripTab, BrainTab, KnowledgeChip } from "./knowledge-routes"

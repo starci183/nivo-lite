@@ -1,4 +1,4 @@
-import { THREAD_STOP_REASON, leadSubjectOf, subjectOfTrigger } from "./lead-freeze.policy"
+import { THREAD_STOP_REASON, contactSubjectOf, subjectOfTrigger } from "./lead-freeze.policy"
 import type { FreezeSubject, FreezeValues, HeldStop, LeadFreeze } from "./lead-freezes.contracts"
 
 /** Who releases the hold of a stop that closed: the engine, never a person on the freeze. */
@@ -28,14 +28,14 @@ export const stopToldSubject = (
 ): boolean => subject.conversationId !== null && (stop.toldConversationIds ?? []).includes(subject.conversationId)
 
 /**
- * Whether an open stop is about the customer: the same lead, else the same conversation, else a conversation the stopped step told a
+ * Whether an open stop is about the person: the same contact (or one merged into it), else the same conversation, else a conversation the stopped step told a
  * line (a bank-fed run has no customer of its own; the customer it told is the one it is about). A stop with none holds nobody.
  */
 export const stopIsAbout = (
-    stop: Pick<HeldStop, "leadId" | "conversationId"> & Partial<Pick<HeldStop, "toldConversationIds">>,
+    stop: Pick<HeldStop, "contactId" | "conversationId"> & Partial<Pick<HeldStop, "toldConversationIds">>,
     subject: FreezeSubject,
 ): boolean =>
-    (subject.leadId !== null && stop.leadId === subject.leadId) ||
+    (subject.contactId !== null && stop.contactId !== null && [subject.contactId, ...(subject.aliases ?? [])].includes(stop.contactId)) ||
     (subject.conversationId !== null && stop.conversationId === subject.conversationId) ||
     stopToldSubject(stop, subject)
 
@@ -43,7 +43,7 @@ export const stopIsAbout = (
  * Whether an open stop holds a wake of the customer: a wake of the stop's workflow (`stopHoldsWorkflow`), or ANY wake about a
  * conversation the stopped step told a line, whatever its workflow (the customer's next line goes to the front desk, not to the
  * workflow that stopped). The customer was told the shop is checking; what they write next waits for the founder's answer and is
- * replayed once after it, so no second run talks over the open stop. A wake about the lead alone (a timer, a payment) keeps the
+ * replayed once after it, so no second run talks over the open stop. A wake about the contact alone (a timer, a payment) keeps the
  * workflow rule.
  */
 export const stopHoldsWake = (
@@ -58,10 +58,10 @@ export const oldestStopOf = (stops: ReadonlyArray<HeldStop>): HeldStop | null =>
         one.stoppedAt === other.stoppedAt ? one.runId.localeCompare(other.runId) : one.stoppedAt.localeCompare(other.stoppedAt),
     )[0] ?? null
 
-/** The freeze key a stop holds its customer under: the customer's lead (else conversation), in the stop's workflow. */
+/** The freeze key a stop holds its customer under: the customer's contact (else conversation), in the stop's workflow. */
 export const stopSubjectOf = (subject: FreezeSubject, stop: Pick<HeldStop, "workflowId">): FreezeSubject =>
-    subject.leadId !== null
-        ? leadSubjectOf(subject.leadId, subject.conversationId, stop.workflowId)
+    subject.contactId !== null
+        ? contactSubjectOf(subject.contactId, subject.conversationId, stop.workflowId)
         : (subjectOfTrigger({ conversationId: subject.conversationId, workflowId: stop.workflowId }) ?? subject)
 
 /**

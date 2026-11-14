@@ -1,7 +1,5 @@
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { jobsEntities } from "@modules/platform/jobs"
-import { messagesEntities } from "@modules/domain/messages"
 import { agentWorkEntities } from "../../modules/domain/agent-work"
 import type { AgentWakeSource } from "../../modules/domain/agent-work/agent-work.contracts"
 
@@ -13,8 +11,6 @@ const AgentTurnEntity: (typeof agentWorkEntities)[7] = agentWorkEntities[7]
 type AgentTurnEntity = InstanceType<typeof AgentTurnEntity>
 const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
 type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>
-const MessageEntity: (typeof messagesEntities)[0] = messagesEntities[0]
-type MessageEntity = InstanceType<typeof MessageEntity>
 
 /** The most rows one read of the proofs takes. */
 const ROWS_MAX = 20
@@ -68,7 +64,3 @@ export const settleAgentWork = async (manager: EntityManager, workspaceId: strin
 export const removeDrainJobs = async (manager: EntityManager, workspaceId: string): Promise<void> => {
     await manager.delete(JobOutboxEntity, { queue: "agent_turn", workspaceId })
 }
-
-/** The lines of the workspace's chat, oldest first. */
-export const linesOfWorkspace = (manager: EntityManager, workspaceId: string): Promise<Array<MessageEntity>> =>
-    manager.find(MessageEntity, { where: { workspaceId }, order: { createdAt: "ASC" }, take: ROWS_MAX })

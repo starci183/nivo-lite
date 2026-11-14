@@ -149,7 +149,7 @@ const registerDatabaseCleanup = () => {
         session.close.mockRejectedValue(cleanupFailure)
         jest.spyOn(drivers, "openPostgres").mockResolvedValue(session)
 
-        await expect(client.read(target("postgres"), () => Promise.reject(readFailure))).rejects.toBe(cleanupFailure)
+        await expect(client.read(target("postgres"), jest.fn().mockRejectedValue(readFailure))).rejects.toBe(cleanupFailure)
         expect(session.close).toHaveBeenCalledTimes(1)
         expect(session.query).not.toHaveBeenCalled()
     })

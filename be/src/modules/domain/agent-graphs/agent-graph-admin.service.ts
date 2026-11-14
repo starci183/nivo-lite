@@ -3,30 +3,26 @@ import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { IntentBusiness } from "@modules/domain/intent-contracts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import { AgentGraphContextService } from "./agent-graph-context.service"
-import type { AskCoverage } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
-import { AgentGraphPublishService } from "./agent-graph-publish.service"
-import type { Publisher } from "./agent-graph-publish.service"
-import { AgentGraphRunService } from "./agent-graph-run.service"
+import { AgentGraphPublishService, type Publisher } from "./agent-graph-publish.service"
+import type { AgreedRightRequest } from "./agent-workflows-door.contracts"
+import { agreedRightsOf, type AgreedRight } from "./policies/node-rights-gate.policy"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import { AgentGraphsService } from "./agent-graphs.service"
+import { AgentGraphsService, type GraphState } from "./agent-graphs.service"
 import type { GraphDocument, GraphMode, GraphVersionView } from "./agent-graphs.contracts"
-import type { GraphState } from "./agent-graphs.service"
-import { applyConflict } from "./policies/conflict-patch.policy"
-import type { ConflictPatch } from "./policies/conflict-patch.policy"
+import { applyConflict, type ConflictPatch } from "./policies/conflict-patch.policy"
 import { applyContract } from "./policies/contract-patch.policy"
 import { requireKnownModels } from "./policies/graph-models.policy"
-import { localeOf, wireOfView } from "./policies/graph-wire.policy"
-import { applyLearned } from "./policies/proposal-patch.policy"
-import type {
-    AgentGraphRunEntryWire,
-    AgentGraphRunWire,
-    AgentGraphWire,
-    OptionalLanguage,
+import {
+    localeOf,
+    wireOfView,
+    type AgentGraphRunWire,
+    type AgentGraphWire,
+    type OptionalLanguage,
 } from "./policies/graph-wire.policy"
+import { applyLearned } from "./policies/proposal-patch.policy"
 
 /** Who asks: the account and the workspace it acts in. */
 export interface GraphActor {
@@ -51,8 +47,31 @@ const parsed = (text: string): unknown => {
     }
 }
 
-/** The most runs one listing answers. */
-const RUNS_MAX = 100
+/** The person confirming a proposal, with what the owner agreed about the rights the confirmed graph asks for. */
+interface Confirmer {
+    readonly by: Publisher
+    readonly agreed: ReadonlyArray<AgreedRight>
+}
+
+/** The entries the owner agreed, as the last argument of a publish: none when nothing was agreed. */
+const agreedArgs = (agreed: ReadonlyArray<AgreedRight>): [] | [ReadonlyArray<AgreedRight>] =>
+    agreed.length === 0 ? [] : [agreed]
+
+/** Who can answer one ask of the graph, and who was left out: the shape the coverage door still answers (always empty). */
+export interface AskCoverage {
+    /** The node that asks. */
+    readonly nodeKey: string
+    /** The branch that asks, or null for an approval step. */
+    readonly branchKey: string | null
+    /** The top of the amounts the branch covers, or null when it has none. */
+    readonly top: number | null
+    /** The names of the people a request would go to. */
+    readonly approvers: ReadonlyArray<string>
+    /** The people of the group left out, with the reason. */
+    readonly excluded: ReadonlyArray<{ readonly name: string; readonly reason: string }>
+    /** False when nobody can approve up to the top of the branch. */
+    readonly covered: boolean
+}
 
 @Injectable()
 /**
@@ -68,8 +87,6 @@ export class AgentGraphAdminService {
         private readonly publishing: AgentGraphPublishService,
         private readonly proposals: AgentGraphProposalsService,
         private readonly installations: InstallationRecordsService,
-        private readonly running: AgentGraphRunService,
-        private readonly context: AgentGraphContextService,
         private readonly brain: BrainFactsService,
     ) {}
 
@@ -100,13 +117,28 @@ export class AgentGraphAdminService {
     }
 
     /** Publishes the draft as the next version. */
-    async publish(actor: GraphActor, agentId: string, note: string): Promise<GraphVersionView> {
-        return this.publishing.publishDraft(actor.workspaceId, agentId, await this.publisherOf(actor), note)
+    async publish(
+        actor: GraphActor,
+        agentId: string,
+        note: string,
+        agreedRights?: ReadonlyArray<AgreedRightRequest> | null,
+    ): Promise<GraphVersionView> {
+        const agreed = agreedRightsOf(agreedRights)
+        const by = await this.publisherOf(actor)
+        if (agreed.length === 0) return this.publishing.publishDraft(actor.workspaceId, agentId, by, note)
+        return this.publishing.publishDraft(actor.workspaceId, agentId, by, note, "edit", null, undefined, agreed)
     }
 
     /** Publishes an older version again as a new one. */
-    async restore(actor: GraphActor, agentId: string, versionId: string): Promise<GraphVersionView> {
-        return this.publishing.restore(actor.workspaceId, agentId, versionId, await this.publisherOf(actor))
+    async restore(
+        actor: GraphActor,
+        agentId: string,
+        versionId: string,
+        agreedRights?: ReadonlyArray<AgreedRightRequest> | null,
+    ): Promise<GraphVersionView> {
+        const agreed = agreedRightsOf(agreedRights)
+        const by = await this.publisherOf(actor)
+        return this.publishing.restore(actor.workspaceId, agentId, versionId, by, ...agreedArgs(agreed))
     }
 
     /** Sets whether the graph decides or only records. */
@@ -119,17 +151,23 @@ export class AgentGraphAdminService {
      * proposal whose change no longer applies (the branch is gone, the boundary already stands there) is overtaken, and a change that
      * widens what the agent may do is the owner's alone.
      */
-    async confirm(actor: GraphActor, agentId: string, proposalId: string): Promise<GraphVersionView> {
+    async confirm(
+        actor: GraphActor,
+        agentId: string,
+        proposalId: string,
+        agreedRights?: ReadonlyArray<AgreedRightRequest> | null,
+    ): Promise<GraphVersionView> {
+        const agreed = agreedRightsOf(agreedRights)
         const by = await this.publisherOf(actor)
         const contract = await this.proposals.contractOf(actor.workspaceId, agentId, proposalId)
-        if (contract !== null) return this.confirmContract(actor, agentId, by, proposalId, contract)
+        if (contract !== null) return this.confirmContract(actor, agentId, { by, agreed }, proposalId, contract)
         const [patch, conflict, state] = await Promise.all([
             this.proposals.learnedOf(actor.workspaceId, agentId, proposalId),
             this.proposals.conflictOf(actor.workspaceId, agentId, proposalId),
             this.graphs.stateOfAgent(actor.workspaceId, agentId),
         ])
         if (state?.active != null && conflict !== null)
-            return this.confirmConflict(actor, by, proposalId, conflict, { state, active: state.active })
+            return this.confirmConflict(actor, { by, agreed }, proposalId, conflict, { state, active: state.active })
         if (patch === null || state?.active == null)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
         const document = applyLearned(state.active, patch)
@@ -137,7 +175,13 @@ export class AgentGraphAdminService {
             await this.proposals.supersede(actor.workspaceId, agentId, proposalId)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
         }
-        const version = await this.publishing.publishLearned(actor.workspaceId, agentId, document, by)
+        const version = await this.publishing.publishLearned(
+            actor.workspaceId,
+            agentId,
+            document,
+            by,
+            ...agreedArgs(agreed),
+        )
         await this.proposals.confirm(actor.workspaceId, agentId, proposalId, by.memberId, version.id)
         return version
     }
@@ -149,10 +193,11 @@ export class AgentGraphAdminService {
     private async confirmContract(
         actor: GraphActor,
         agentId: string,
-        by: Publisher,
+        confirmer: Confirmer,
         proposalId: string,
         business: IntentBusiness,
     ): Promise<GraphVersionView> {
+        const { by, agreed } = confirmer
         const { workspaceId } = actor
         const state = await this.graphs.stateOfAgent(workspaceId, agentId)
         const document = state?.active == null ? null : applyContract(state.active, business)
@@ -160,7 +205,7 @@ export class AgentGraphAdminService {
             await this.proposals.supersede(workspaceId, agentId, proposalId)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
         }
-        const version = await this.publishing.publishContract(workspaceId, agentId, document, by)
+        const version = await this.publishing.publishContract(workspaceId, agentId, document, by, ...agreedArgs(agreed))
         await this.proposals.confirm(workspaceId, agentId, proposalId, by.memberId, version.id)
         if (JSON.stringify(state.draft) !== JSON.stringify(state.active)) {
             const now = await this.graphs.stateOfAgent(workspaceId, agentId)
@@ -182,12 +227,13 @@ export class AgentGraphAdminService {
      */
     private async confirmConflict(
         actor: GraphActor,
-        by: Publisher,
+        confirmer: Confirmer,
         proposalId: string,
         conflict: ConflictPatch,
         graph: ConflictGraph,
     ): Promise<GraphVersionView> {
         const { workspaceId } = actor
+        const { by, agreed } = confirmer
         const { state, active } = graph
         const agentId = state.agentId
         const fact = await this.brain.get(workspaceId, conflict.newFactId)
@@ -196,7 +242,7 @@ export class AgentGraphAdminService {
             await this.proposals.supersede(workspaceId, agentId, proposalId)
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
         }
-        const version = await this.publishing.publishConflict(workspaceId, agentId, swapped, by)
+        const version = await this.publishing.publishConflict(workspaceId, agentId, swapped, by, ...agreedArgs(agreed))
         await this.proposals.confirm(workspaceId, agentId, proposalId, by.memberId, version.id)
         if (JSON.stringify(state.draft) !== JSON.stringify(active)) {
             const now = await this.graphs.stateOfAgent(workspaceId, agentId)
@@ -206,26 +252,22 @@ export class AgentGraphAdminService {
         return version
     }
 
-    /** The trace of the run of a work item through the graph. */
-    async run(actor: GraphActor, workItemId: string): Promise<AgentGraphRunWire> {
+    /**
+     * The trace of the run of a work item through the graph: none exists. No engine gate walks a graph (2026-11-13), so no graph decision is
+     * written; the door stays for the screen that still asks and answers not found.
+     */
+    async run(actor: GraphActor, _workItemId: string): Promise<AgentGraphRunWire> {
         await this.publisherOf(actor)
-        return this.running.runOf(actor.workspaceId, workItemId)
+        throw new AgentGraphsError({ code: AgentGraphsErrorCode.RunNotFound })
     }
 
-    /** The latest runs of the agent against its graph, newest first. */
-    async runs(actor: GraphActor, agentId: string, limit: number): Promise<ReadonlyArray<AgentGraphRunEntryWire>> {
+    /**
+     * Who can answer each ask of the draft graph: none is computed. The coverage read the approvers' grants for an authority action, and
+     * the rules decide nothing since the engine gate was removed (2026-11-13); the door stays for the screen that still asks.
+     */
+    async coverage(actor: GraphActor, _agentId: string): Promise<ReadonlyArray<AskCoverage>> {
         await this.publisherOf(actor)
-        return this.running.runsOf(actor.workspaceId, agentId, Math.min(RUNS_MAX, Math.max(1, limit)))
-    }
-
-    /** Who can answer each ask of the draft graph. An agent without a graph has no asks, so its coverage is empty. */
-    async coverage(actor: GraphActor, agentId: string): Promise<ReadonlyArray<AskCoverage>> {
-        await this.publisherOf(actor)
-        const state = await this.graphs.stateOfAgent(actor.workspaceId, agentId)
-        if (state === null) return []
-        const installation = await this.installations.findById(state.installationId)
-        if (installation === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
-        return this.context.coverageOf({ ...state, moduleKey: installation.moduleKey }, state.draft)
+        return []
     }
 
     /** Declines a proposal. */

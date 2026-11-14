@@ -46,7 +46,7 @@ export const readingOf = (raw: unknown): MaybeReading => {
         sheetCount: countField(raw, "sheetCount"),
         transcribed: field(raw, "transcribed") === true,
         warnings: Array.isArray(warnings)
-            ? warnings.map(warningOf).filter((warning): warning is ReadingWarning => warning !== null)
+            ? warnings.map((item) => warningOf(item)).filter((warning): warning is ReadingWarning => warning !== null)
             : [],
         refusal: textField(raw, "refusal"),
         reason: textField(raw, "reason"),

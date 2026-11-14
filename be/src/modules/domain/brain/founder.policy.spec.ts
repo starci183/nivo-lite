@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FOUNDER, MANAGERS, rolesToDecide as realRolesToDecide } from "./founder.policy"
+import { FOUNDER, MANAGERS, rolesToDecide as realRolesToDecide, splitInForce } from "./founder.policy"
 
 
 const SUBJECT = Symbol("founder.policy")
@@ -20,11 +20,14 @@ describe("founder.policy as a Nest value", () => {
     describe("founder.policy", () => {
         it("lets the founder alone put a truth in force or take it out of force", () => {
             expect(FOUNDER).toEqual(["owner"])
-            for (const action of ["apply", "choose", "split", "retire"] as const) expect(rolesToDecide(action)).toBe(FOUNDER)
+            for (const action of ["apply", "choose", "retire"] as const) expect(rolesToDecide(action)).toBe(FOUNDER)
         })
 
-        it("lets a manager turn a proposal down: nothing in force changes", () => {
+        it("lets a manager turn a proposal down or split it (a manager's split is a proposal): nothing in force changes", () => {
             expect(rolesToDecide("reject")).toBe(MANAGERS)
+            expect(rolesToDecide("split")).toBe(MANAGERS)
+            expect(splitInForce("owner")).toBe(true)
+            expect(splitInForce("manager")).toBe(false)
             expect(MANAGERS).toEqual(["owner", "manager"])
         })
     })

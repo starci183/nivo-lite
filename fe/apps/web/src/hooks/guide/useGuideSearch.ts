@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { indexDocs, resultCount, searchDocs } from "@/modules/guide"
-import type { GuideDoc, GuideResults } from "@/modules/guide"
+import { indexDocs, resultCount, searchDocs, type GuideDoc, type GuideResults } from "@/modules/guide"
 
 /** The query of the drawer and what it finds. */
 export interface GuideSearchView {

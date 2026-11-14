@@ -3,7 +3,6 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ConnectionsListView } from "@/modules/types"
 import { AttentionSection } from "./attention"
-import { DefaultAccountSection } from "./defaultAccount"
 import { ConnectionsTable } from "./table"
 import type { ConnectionsHomeBaseProps, ConnectionsHomeCopy } from "./types"
 
@@ -46,7 +45,7 @@ interface BodyProps {
     readonly isLoading: boolean
 }
 
-/** The page body: what needs the owner, the default receiving account (owner only), the health figures, then every connection with its filters and search. */
+/** The page body: what needs the owner, the health figures, then every connection with its filters and search. */
 const Body = (input: BodyProps) => {
     const { props, on } = input.home
     return (
@@ -58,7 +57,6 @@ const Body = (input: BodyProps) => {
                 on={on}
                 isLoading={input.isLoading}
             />
-            <DefaultAccountSection view={props.defaultAccount} on={on} />
             <SurfaceCard
                 kind="figures"
                 ariaLabel={props.copy.figuresLabel}

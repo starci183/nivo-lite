@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AiUsageOverviewService } from "@modules/domain/ai-usage-events"
-import type { UsageSummary } from "@modules/domain/ai-usage-events"
+import { AiUsageOverviewService, type UsageSummary } from "@modules/domain/ai-usage-events"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetCreditUsageSummaryQuery } from "./get-credit-usage-summary.query"
 
 @QueryHandler(GetCreditUsageSummaryQuery)

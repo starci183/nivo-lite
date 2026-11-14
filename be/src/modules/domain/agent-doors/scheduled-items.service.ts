@@ -1,14 +1,17 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { careTaskOf } from "@nivo-lite/blocks-core"
-import { AgentWorkflowRunsService } from "@modules/domain/agent-graphs"
-import type { FlowWake, RunPinView } from "@modules/domain/agent-graphs"
-import { AgentScheduleFireService, AgentWorkSweepService, careTagOf } from "@modules/domain/agent-schedules"
-import { ThreadDeadlinesService } from "@modules/domain/agent-threads"
-import type { DeadlineFiring, PendingDeadline } from "@modules/domain/agent-threads"
-import { AgentTasksService, AgentTriggersService, AgentWorkAccessService, tagContextOf } from "@modules/domain/agent-work"
-import type { AgentTaskRecord, AgentTriggerRecord } from "@modules/domain/agent-work"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import { AgentWorkflowRunsService, type FlowWake, type RunPinView } from "@modules/domain/agent-graphs"
+import { AgentScheduleFireService, AgentWorkSweepService } from "@modules/domain/agent-schedules"
+import { ThreadDeadlinesService, type DeadlineFiring, type PendingDeadline } from "@modules/domain/agent-threads"
+import { CLOCK_TICK_TRIGGER, TIMER_DUE_TRIGGER } from "@modules/domain/agent-schedules/engine-time.triggers"
+import {
+    AgentTasksService,
+    AgentTriggersService,
+    AgentWorkAccessService,
+    timerTaskOf,
+    type AgentTaskRecord,
+    type AgentTriggerRecord,
+} from "@modules/domain/agent-work"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
@@ -23,8 +26,14 @@ import type {
     ScheduledWorkflow,
 } from "./agent-doors.contracts"
 import { DoorPressesService } from "./door-presses.service"
-import { bySoonest, deadlineKeyOf, scheduleKeyOf, scheduledKeyOf, taskKeyOf } from "./scheduled-items.policy"
-import type { ScheduledKey } from "./scheduled-items.policy"
+import {
+    bySoonest,
+    deadlineKeyOf,
+    scheduleKeyOf,
+    scheduledKeyOf,
+    taskKeyOf,
+    type ScheduledKey,
+} from "./scheduled-items.policy"
 
 /** The door a run-now press is recorded under. */
 const RUN_NOW = "schedule.run_now"
@@ -50,24 +59,44 @@ const outcomeOfFiring = (firing: DeadlineFiring): RunNowOutcome => {
     return firing === "refused" ? "refused" : "already_ran"
 }
 
-/** The wake a task's timer writes, as the workflows judge it (the care tag, else the internal wake). */
-const taskWakeOf = (workspaceId: string, task: AgentTaskRecord, at: Date): FlowWake => {
-    const care = careTaskOf(task.dedupeKey, task.title)
-    if (care === null) return { source: "internal", context: { taskId: task.id, subjectId: task.id }, actorMemberId: null }
-    const tag = careTagOf({ workspaceId, agentId: task.agentId }, task.id, at, care, null)
-    return { source: "tag", context: tagContextOf(tag, JSON.stringify(tag.context)), actorMemberId: null }
+/**
+ * The wake a task writes when it falls due, as the workflows judge it: a timer's `timer.due` event as the delivery writes it (its verb,
+ * its data from the timer's own pure translate: `ClockTickDeliveryService.deliverTimer`), else the internal wake of a plain task.
+ */
+const taskWakeOf = (task: AgentTaskRecord): FlowWake => {
+    const timer = timerTaskOf(task.dedupeKey, task.title, task.data)
+    const event =
+        timer === null
+            ? null
+            : TIMER_DUE_TRIGGER.translate(
+                  {
+                      taskId: task.id,
+                      ref: timer.ref,
+                      ...(timer.data === undefined ? {} : { data: timer.data }),
+                      dueAt: timer.dueAt,
+                  },
+                  { connectionId: null },
+              )
+    if (event === null)
+        return { source: "internal", context: { taskId: task.id, subjectId: task.id }, actorMemberId: null }
+    const context = { verb: TIMER_DUE_TRIGGER.verb, eventId: event.id, dataJson: JSON.stringify(event.data) }
+    return { source: "trigger", context, actorMemberId: null }
 }
 
-/** The wake a clock slot writes. */
-const slotWakeOf = (trigger: AgentTriggerRecord, slot: Date): FlowWake => ({
-    source: "schedule",
-    context: {
-        triggerId: trigger.id,
-        slot: String(slot.getTime()),
-        ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
-    },
-    actorMemberId: null,
-})
+/** The wake a clock slot writes: its `clock.tick` event as the delivery writes it (`ClockTickDeliveryService.deliverSlot`). */
+const slotWakeOf = (trigger: AgentTriggerRecord, slot: Date): FlowWake => {
+    const event = CLOCK_TICK_TRIGGER.translate(
+        {
+            triggerId: trigger.id,
+            slot: String(slot.getTime()),
+            ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
+        },
+        { connectionId: null },
+    )
+    const context =
+        event === null ? {} : { verb: CLOCK_TICK_TRIGGER.verb, eventId: event.id, dataJson: JSON.stringify(event.data) }
+    return { source: "trigger", context, actorMemberId: null }
+}
 
 /** The workflow a stopped run executes: its pin (with the workflow's name), else the stop's own workflow id, else none. */
 const pinnedWorkflowOf = (pin: RunPinView | undefined, workflowId: string | null): ScheduledWorkflow | null => {
@@ -85,7 +114,7 @@ const isSlotted = (trigger: AgentTriggerRecord): trigger is AgentTriggerRecord &
 
 @Injectable()
 /**
- * the schedule list with "run now": what is scheduled in a workspace (the care timers and other tasks of its agents, the next slot of
+ * the schedule list with "run now": what is scheduled in a workspace (the tasks of its agents, the next slot of
  * each clock trigger, the deadline of each open stop), for whom, due when and which workflow and step it will wake; and "run now" for
  * one item, which moves the item's OWN job to now through its own mechanism, never a second job: a task's wake is written now under
  * the key its timer would write (so the timer finds it written), a slot's wake likewise (so the cron's fire adds nothing), a stop's
@@ -167,7 +196,12 @@ export class ScheduledItemsService {
         return woken === "woken" ? "ran" : "already_ran"
     }
 
-    private async slotNow(workspaceId: string, triggerId: string, slot: Date, actor: DoorActor): Promise<RunNowOutcome> {
+    private async slotNow(
+        workspaceId: string,
+        triggerId: string,
+        slot: Date,
+        actor: DoorActor,
+    ): Promise<RunNowOutcome> {
         const trigger = await this.triggers.byId(triggerId)
         if (trigger === null) return "not_scheduled"
         await this.access.agent(workspaceId, trigger.agentId)
@@ -175,7 +209,10 @@ export class ScheduledItemsService {
         return fired === "woken" ? "ran" : fired
     }
 
-    private async deadlineNow(workspaceId: string, key: ScheduledKey & { readonly kind: "deadline" }): Promise<RunNowOutcome> {
+    private async deadlineNow(
+        workspaceId: string,
+        key: ScheduledKey & { readonly kind: "deadline" },
+    ): Promise<RunNowOutcome> {
         if (this.deadlines === undefined) return "not_scheduled"
         const firing = await this.deadlines.fireNow({
             workspaceId,
@@ -196,27 +233,28 @@ export class ScheduledItemsService {
         const timed = (await this.tasks.alive(seat.agentId)).filter(isTimed)
         const slotted = (await this.triggers.ofAgent(seat.agentId)).filter(isSlotted)
         const wakes = [
-            ...timed.map((task) => taskWakeOf(workspaceId, task, task.nextActionAt)),
+            ...timed.map((task) => taskWakeOf(task)),
             ...slotted.map((trigger) => slotWakeOf(trigger, trigger.nextRunAt)),
         ]
         const takers = (await this.workflows?.takersOf(workspaceId, seat.agentId, wakes)) ?? []
         const workflowAt = (index: number): ScheduledWorkflow | null => takers[index] ?? null
-        const base = { agentId: seat.agentId, installationId: seat.installation.id, agentName: seat.installation.name, runId: null, stepKey: null }
+        const base = {
+            agentId: seat.agentId,
+            installationId: seat.installation.id,
+            agentName: seat.installation.name,
+            runId: null,
+            stepKey: null,
+        }
         const ofTasks = timed.map((task, index): ScheduledItem => {
-            const care = careTaskOf(task.dedupeKey, task.title)
             const id = taskKeyOf(task.id, task.nextActionAt)
-            const realDueAt = care === null ? null : new Date(care.dueAt)
             return {
                 ...base,
                 id,
-                kind: care === null ? "task" : "care",
-                what: care === null ? task.title : care.kind,
-                subject:
-                    care === null
-                        ? { kind: "task", id: task.id }
-                        : { kind: care.kind === "occasion" ? "lead" : "order", id: care.ref },
+                kind: "task",
+                what: task.title,
+                subject: { kind: "task", id: task.id },
                 dueAt: task.nextActionAt,
-                realDueAt,
+                realDueAt: null,
                 workflow: workflowAt(index),
                 lastPress: pressed.get(id) ?? null,
             }
@@ -244,9 +282,14 @@ export class ScheduledItemsService {
         seats: ReadonlyArray<Seat>,
         pressed: ReadonlyMap<string, DoorPress>,
     ): Promise<ReadonlyArray<ScheduledItem>> {
-        const pending: ReadonlyArray<PendingDeadline> = (await this.deadlines?.pending(workspaceId, DEADLINES_MAX)) ?? []
+        const pending: ReadonlyArray<PendingDeadline> =
+            (await this.deadlines?.pending(workspaceId, DEADLINES_MAX)) ?? []
         if (pending.length === 0) return []
-        const pins = (await this.workflows?.pinsOf(workspaceId, pending.map(({ stop }) => stop.runId))) ?? []
+        const pins =
+            (await this.workflows?.pinsOf(
+                workspaceId,
+                pending.map(({ stop }) => stop.runId),
+            )) ?? []
         return pending.map(({ stop, deadline }): ScheduledItem => {
             const id = deadlineKeyOf(stop.runId, stop.stepKey, deadline.payload.repeats, deadline.payload.answered)
             const seat = seats.find((one) => one.agentId === stop.agentId)

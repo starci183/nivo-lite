@@ -29,18 +29,16 @@ export interface CreateAgentInstanceRequest {
     /** The installation of the same role to copy the setup of, when the setup starts from a copy. */
     readonly copyFrom: string | null
     /**
-     * The rights of the new agent on the providers the workspace connected, as the owner left the proposal: each provider to attach
-     * with its abilities (`off`, `auto` or `ask`). Null or absent takes the module's proposal as it is; an empty list attaches nothing.
+     * The accounts the new agent is attached to, as the owner left the proposal: each connected account to attach. Null or absent takes
+     * the module's proposal as it is; an empty list attaches nothing.
      */
     readonly providerRights?: ReadonlyArray<AgentProviderRight> | null | undefined
 }
 
-/** One connected account a new agent is attached to, with the abilities wanted. */
+/** One connected account a new agent is attached to. */
 export interface AgentProviderRight {
     /** The connected account (the connection id). */
     readonly connectionId: string
-    /** The abilities wanted, by id: `off`, `auto` or `ask`; an ability left out is off. */
-    readonly abilities: Readonly<Record<string, string>>
 }
 
 /** What a request asks for once it is checked: the cleaned name and handle, and the picture. */
@@ -76,8 +74,6 @@ export interface CopiedSetup extends KnowledgeCopy {
     readonly settings: boolean
     /** The applied setup (context) version. */
     readonly contextVersion: boolean
-    /** The permission rules that now list the new agent too. */
-    readonly rules: number
     /** The graph version. */
     readonly graph: GraphCopy
     /** The shared connections (data sources, tools) granted like the sibling's; channels never come over. */

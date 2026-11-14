@@ -1,7 +1,7 @@
 import { createTranslator } from "next-intl"
 import { DEFAULT_LOCALE } from "@/modules/i18n"
 import messages from "@/modules/i18n/messages/vi.json"
-import { AppGlobalErrorPageBase } from "./component"
+import { AppGlobalErrorPageBase } from "@nivo-lite/fe-shared/app-global-error-page-base"
 
 /** The provider-free translator of the last-resort boundary: the default catalog, read directly. */
 const t = createTranslator({ locale: DEFAULT_LOCALE, messages })

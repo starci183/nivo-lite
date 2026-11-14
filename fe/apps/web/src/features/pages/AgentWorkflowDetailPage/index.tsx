@@ -24,3 +24,13 @@ export const AgentWorkflowDetailPage = (props: AgentWorkflowDetailPageProps) => 
     if (!isModuleKey(props.module)) notFound()
     return <AgentWorkflowDetail module={props.module} installationId={props.installationId} workflowKey={props.workflowKey} part={props.part} />
 }
+
+/** What a loading route hands the workflow page: the part it opens on (a loading boundary knows no params). */
+type AgentWorkflowDetailLoadingPageProps = {
+    readonly part: AgentWorkflowDetailPageProps["part"]
+}
+
+/** The same workflow page while the route loads: the block reads the agent and the workflow from the address and draws its own skeletons. */
+export const AgentWorkflowDetailLoadingPage = (props: AgentWorkflowDetailLoadingPageProps) => (
+    <AgentWorkflowDetail part={props.part} />
+)

@@ -1,5 +1,4 @@
-import { DocumentRefusalCode } from "./document-readers.contracts"
-import type { DocumentReaderKind } from "./document-readers.contracts"
+import { DocumentRefusalCode, type DocumentReaderKind } from "./document-readers.contracts"
 
 /** The kind of a file, or why no reader takes it. */
 export type KindVerdict =
@@ -57,7 +56,7 @@ export const isCompoundFile = (bytes: Uint8Array): boolean =>
     startsWith(bytes, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
 
 /** The name `EncryptedPackage` in UTF-16, which a password-locked Office file carries as a stream name. */
-const ENCRYPTED_PACKAGE = new Uint8Array([...Buffer.from("EncryptedPackage", "utf16le")])
+const ENCRYPTED_PACKAGE = new Uint8Array(Buffer.from("EncryptedPackage", "utf16le"))
 
 /** True when a compound file is a new Office file locked with a password (it holds an `EncryptedPackage` stream). */
 export const isLockedOffice = (bytes: Uint8Array): boolean =>

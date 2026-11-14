@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { draftOf, leakyGraph, packageOf } from "@tests/fixtures/builders/agent-template.builder"
-import { runListingChecks } from "./listing-checks.policy"
-import type { ListingChecksContext } from "./listing-checks.policy"
+import { runListingChecks, type ListingChecksContext } from "./listing-checks.policy"
 
 const SUBJECT = Symbol("listing-checks.policy")
 
@@ -14,9 +13,7 @@ const build = async (): Promise<typeof runListingChecks> => {
 
 const CONTEXT: ListingChecksContext = {
     pluginKeys: new Set(["shop"]),
-    allowedRightKinds: new Set(["brain", "customers"]),
     knownTool: (tool) => tool.startsWith("drive."),
-    askOnlyActions: new Set<string>(),
     consented: true,
 }
 
@@ -33,9 +30,7 @@ describe("runListingChecks", () => {
             "schema",
             "no_creator_data",
             "plugins",
-            "rights",
             "tools",
-            "always_ask",
             "likeness_consent",
         ])
     })
@@ -58,13 +53,9 @@ describe("runListingChecks", () => {
 })
 
 describe("runListingChecks what a package must not bring", () => {
-    it("fails a plug-in that is not registered, a right the kind of agent does not need and a tool the gateway does not know", async () => {
+    it("fails a plug-in that is not registered and a tool the gateway does not know", async () => {
         const check = await build()
         const withPlugin = packageOf(leakyGraph(), draftOf({ requiresPlugins: [{ key: "ghost", minVersion: 1 }] }))
-        const wide = {
-            ...packageOf(),
-            proposedRights: [{ kind: "payments" as const, scope: "workspace" as const, hide: [], mask: [] }],
-        }
         const graph = leakyGraph()
         const tooled = packageOf(
             {
@@ -82,7 +73,6 @@ describe("runListingChecks what a package must not bring", () => {
         )
 
         expect(failing(check(withPlugin, CONTEXT))).toContain("plugins")
-        expect(failing(check(wide, CONTEXT))).toContain("rights")
         expect(failing(check(tooled, CONTEXT))).toContain("tools")
     })
 
@@ -102,13 +92,6 @@ describe("runListingChecks what a package must not bring", () => {
         )
 
         expect(failing(check(open, CONTEXT))).not.toContain("tools")
-    })
-
-    it("fails a branch that runs alone for an action that must always ask", async () => {
-        const check = await build()
-        const checks = check(packageOf(), { ...CONTEXT, askOnlyActions: new Set(["pay_supplier"]) })
-
-        expect(failing(checks)).toEqual(["always_ask"])
     })
 
     it("fails a persona of a real person with no valid consent, and passes one that has it", async () => {

@@ -1,7 +1,18 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { fakeIds, mockEntityManager } from "@starci/jest-preset"
 import { In, IsNull, MoreThanOrEqual } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { IDS } from "@modules/platform/ids"
+import {
+    ANSWER_MASKED_VI,
+    ANSWER_PENDING_ORDER_VI,
+    ANSWER_RAW_VI,
+    KEY_ATTRIBUTE_VI,
+    KEY_SUBJECT_VI,
+    QUESTION_MASKED_VI,
+    QUESTION_RAW_VI,
+    QUESTION_ROW_VI,
+} from "@tests/fixtures/i18n/brain-lessons-spec.messages"
 import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
@@ -22,9 +33,9 @@ const rowOf = entityRowBuilder<BrainLessonCandidateEntity>({
     stepKey: "match",
     agentId: "a1",
     workflowId: "w1",
-    question: "Chuyển khoản sai mã, có ghi nhận không?",
-    keywords: ["chuyen", "khoan", "sai", "ghi", "nhan"],
-    answer: "Ghi nhận cho đơn đang chờ",
+    question: QUESTION_ROW_VI,
+    keywords: [],
+    answer: ANSWER_PENDING_ORDER_VI,
     answeredBy: "m1",
     answeredAt: new Date(AT),
     thenDid: "completed",
@@ -45,8 +56,8 @@ const input: LessonCandidateInput = {
     stepKey: "match",
     agentId: "a1",
     workflowId: "w1",
-    question: "Chuyển khoản mã DH202611118888 sai mã, có ghi nhận không? Khách 0912 345 678",
-    answer: "Cứ ghi nhận cho đơn đang chờ, email a@b.vn",
+    question: QUESTION_RAW_VI,
+    answer: ANSWER_RAW_VI,
     answeredBy: "m1",
     answeredAt: "2026-11-11T10:00:00.000Z",
     thenDid: "completed",
@@ -54,7 +65,11 @@ const input: LessonCandidateInput = {
 
 const build = async (em: ReturnType<typeof mockEntityManager>): Promise<LessonCandidatesService> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [LessonCandidatesService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            LessonCandidatesService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: IDS, useValue: fakeIds() },
+        ],
     }).compile()
     return moduleRef.get(LessonCandidatesService)
 }
@@ -79,7 +94,7 @@ describe("LessonCandidatesService", () => {
         ])
     })
 
-    it("keeps a new answer masked, in the group of the nearest question, and says it is new", async () => {
+    it("keeps a new answer masked, in a group of its own (no code reads its words), and says it is new", async () => {
         const em = mockEntityManager({
             find: [BrainLessonCandidateEntity, [rowOf()]],
             findOne: [BrainLessonCandidateEntity, rowOf({ id: "c2", stopId: "s2" })],
@@ -87,29 +102,35 @@ describe("LessonCandidatesService", () => {
         const [insert] = queueQueryBuilders(em, [{ execute: { raw: [{ id: "c2" }] } }])
         const service = await build(em)
 
-        const kept = await service.keep(WS, input, SINCE)
+        const kept = await service.keep(WS, input)
 
         expect(kept).toMatchObject({ isNew: true, candidate: { id: "c2" } })
         const [values] = insert?.callsOf("values")[0] ?? []
         expect(values).toMatchObject({
-            groupId: "g1",
-            question: "Chuyển khoản mã DH… sai mã, có ghi nhận không? Khách …",
-            answer: "Cứ ghi nhận cho đơn đang chờ, email …",
+            // A group of its own: the first id the deterministic ids double hands out.
+            groupId: "00000000-0000-4000-8000-000000000001",
+            question: QUESTION_MASKED_VI,
+            answer: ANSWER_MASKED_VI,
             stopId: "s2",
         })
-        expect(Object.keys(values as object)).not.toContain("leadId")
+        // No earlier candidate is read to place it: the draft call's model groups the answers.
+        expect(em.find).not.toHaveBeenCalled()
+        expect(Object.keys(values ?? {})).not.toContain("keywords")
+        expect(Object.keys(values ?? {})).not.toContain("leadId")
         expect(insert?.callsOf("orIgnore")).toEqual([[]])
     })
+})
 
+describe("LessonCandidatesService claims, cards and keys", () => {
     it("answers not-new when the unique key ignored the insert, and refuses a row it cannot read back", async () => {
         const em = mockEntityManager({ find: [BrainLessonCandidateEntity, []], findOne: [BrainLessonCandidateEntity, rowOf()] })
         queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const service = await build(em)
-        await expect(service.keep(WS, input, SINCE)).resolves.toMatchObject({ isNew: false })
+        await expect(service.keep(WS, input)).resolves.toMatchObject({ isNew: false })
 
         const lost = mockEntityManager({ find: [BrainLessonCandidateEntity, []], findOne: [BrainLessonCandidateEntity, null] })
         queueQueryBuilders(lost, [{ execute: { raw: [] } }])
-        await expect((await build(lost)).keep(WS, input, SINCE)).rejects.toMatchObject({
+        await expect((await build(lost)).keep(WS, input)).rejects.toMatchObject({
             code: BrainLessonsErrorCode.CandidateLost,
         })
     })
@@ -146,7 +167,7 @@ describe("LessonCandidatesService", () => {
     it("finds the open card of a key by its slug", async () => {
         const em = mockEntityManager({ findOne: [BrainLessonCandidateEntity, rowOf({ changeId: "ch1", status: "proposed" })] })
         const service = await build(em)
-        const key = { subjectLabel: "Chuyển khoản sai mã", attributeLabel: "Đúng số tiền" }
+        const key = { subjectLabel: KEY_SUBJECT_VI, attributeLabel: KEY_ATTRIBUTE_VI }
 
         await expect(service.openOfKey(WS, key)).resolves.toBe("ch1")
         expect(factKeySlugOf(key)).toBe("chuyen-khoan-sai-ma|dung-so-tien")

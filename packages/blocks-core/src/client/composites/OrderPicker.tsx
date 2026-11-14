@@ -1,9 +1,6 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
-import { Badge, Dialog, ListBox, SearchField, Stack, Text } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
-import { rankedOrders } from "../../rules/accounting/open-orders"
-import type { OpenOrderRow, RankedOrder } from "../../rules/accounting/open-orders"
+import { useState, type ReactNode } from "react"
+import { Badge, Dialog, ListBox, SearchField, Stack, Text, type ListBoxItem } from "@starci/grammar/common"
+import { rankedOrders, type OpenOrderRow, type RankedOrder } from "../../rules/sales/ledger/open-orders"
 import { chosenRow } from "../../rows/rows"
 
 /** The words of the picker. */

@@ -15,7 +15,7 @@ interface AddPresetView {
 }
 
 /**
- * The drawer that adds documents, as the address asks for it: with nothing chosen, with the files of a dossier (topic and tag), or
+ * The drawer that adds documents, as the address asks for it: with nothing chosen, with the files of a category (topic and tag), or
  * with a note about an idea (the topic of the suggestion).
  */
 export const useAddPreset = (): AddPresetView => {

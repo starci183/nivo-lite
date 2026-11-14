@@ -1,10 +1,8 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule, OnModuleInit } from "@nestjs/common"
+import { Module, type DynamicModule, type OnModuleInit } from "@nestjs/common"
 import { LedgerRegistryService } from "@modules/domain/provider-registry"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsService } from "./google-connections.service"
 import { GoogleLedgerService } from "./google-ledger.service"
-import { GoogleSheetsService } from "./google-sheets.service"
 import { GoogleTokensService } from "./google-tokens.service"
 import { SheetsGrantService } from "./sheets-grant.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./google-connections.module-definition"
@@ -35,9 +33,8 @@ export class GoogleConnectionsModule extends ConfigurableModuleClass implements 
                 SheetsGrantService,
                 GoogleLedgerService,
                 GoogleConnectionsService,
-                GoogleSheetsService,
             ],
-            exports: [GoogleConnectionsService, DriveGrantService, SheetsGrantService],
+            exports: [GoogleConnectionsService, DriveGrantService, SheetsGrantService, GoogleTokensService],
         }
     }
 

@@ -1,18 +1,16 @@
-import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
-import { readError } from "@/hooks/workspaceread"
-import { workspaceRoleOf, workspaceStateOf } from "./workspaces.shared"
-import type { WorkspaceCardView } from "./workspaces.shared"
+"use client"
 
-/** Where the workspaces list stands: still loading, failed, loaded empty, or loaded with workspaces. */
-export type WorkspacesStatus = "loading" | "error" | "empty" | "ready"
+import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
+import type { DataSlot } from "@/modules/types"
+import { workspaceRoleOf, workspaceStateOf, type WorkspaceCardView } from "./workspaces.shared"
 
 /** What the workspaces list readers get. */
 interface WorkspaceCards {
     readonly read: ReturnType<typeof useQueryMyWorkspacesSwr>
+    /** The status of the read with the usable workspaces once they arrived (`isEmpty` when the person has none). */
+    readonly slot: DataSlot<ReadonlyArray<WorkspaceCardView>>
     readonly cards: ReadonlyArray<WorkspaceCardView>
-    readonly status: WorkspacesStatus
-    /** The failure text (localized by the back end) when the status is `error`. */
-    readonly error: string | undefined
     /** Reads the list again after a failure. */
     readonly reload: () => void
 }
@@ -20,19 +18,16 @@ interface WorkspaceCards {
 /** The signed-in person's usable workspaces as the screens draw them, read from the back end GraphQL API through SWR. */
 export const useWorkspaceCards = (): WorkspaceCards => {
     const read = useQueryMyWorkspacesSwr()
-    const { data, isLoading } = read
-    const error = readError(read)
-    const cards = (data ?? [])
-        .filter((membership) => membership.member.status === "active")
-        .map((membership): WorkspaceCardView => ({
-            id: membership.workspace.id,
-            name: membership.workspace.name,
-            role: workspaceRoleOf(membership.member.role),
-            state: workspaceStateOf(membership.workspace.status),
-        }))
+    const cardsOf = (memberships: NonNullable<typeof read.data>): ReadonlyArray<WorkspaceCardView> =>
+        memberships
+            .filter((membership) => membership.member.status === "active")
+            .map((membership): WorkspaceCardView => ({
+                id: membership.workspace.id,
+                name: membership.workspace.name,
+                role: workspaceRoleOf(membership.member.role),
+                state: workspaceStateOf(membership.workspace.status),
+            }))
+    const slot = mapSlot(slotOfSwr(read), cardsOf)
     const reload = () => void read.mutate()
-    const failure = error instanceof Error ? error.message : undefined
-    if (isLoading) return { read, cards, status: "loading", error: undefined, reload }
-    if (error !== undefined) return { read, cards, status: "error", error: failure ?? "", reload }
-    return { read, cards, status: cards.length === 0 ? "empty" : "ready", error: undefined, reload }
+    return { read, slot, cards: "items" in slot ? slot.items : [], reload }
 }

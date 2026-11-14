@@ -1,5 +1,5 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { SALES_SETTINGS_ENTITY } from "./sales-entity-names"
 
 /** The one key the settings record of a workspace is saved under. */
 export const SALES_SETTINGS_KEY = "sales"
@@ -30,7 +30,7 @@ const settingsFields: SettingsFields = {
 
 /** The rules a workspace chose for its sales: one record, saved under the key `sales`. Graph node kind `sales-settings`. */
 export const salesSettingsEntity: EntityDefinition<SettingsFields> = defineEntity({
-    name: "sales.settings",
+    name: SALES_SETTINGS_ENTITY,
     dataKind: "sales-settings",
     fields: settingsFields,
     indexes: [{ name: "key", on: ["key", "id"] }],

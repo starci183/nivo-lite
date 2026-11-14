@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentWorkflowsAdminService } from "@modules/domain/agent-graphs"
-import type { TemplateWire } from "@modules/domain/agent-graphs"
+import { AgentWorkflowsAdminService, type TemplateWire } from "@modules/domain/agent-graphs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { WorkflowTemplateQuery } from "./workflow-template.query"
 
 @QueryHandler(WorkflowTemplateQuery)

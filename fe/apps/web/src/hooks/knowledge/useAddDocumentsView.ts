@@ -137,11 +137,7 @@ export interface AddDocumentsViewShape {
                               | "chatbot"
                               | "lead_gen"
                               | "sales"
-                              | "accounting"
-                              | "shifts"
                               | "booking"
-                              | "inventory"
-                              | "loyalty"
                               | "video"
                               | "hiring"
                           label: string
@@ -167,7 +163,7 @@ export const useAddDocumentsView = (props: AddDocumentsViewInput): AddDocumentsV
     const t = useTranslations("knowledge")
     const formatter = useFormatter()
     const { data: usage } = useQueryKnowledgeUsageSwr()
-    const usageView = useUsageView(usage)
+    const usageView = useUsageView(usage?.documents)
     const router = navigation.useRouter()
     const actions = useQueueActions()
     const { canWrite, instances } = useAddInstances()

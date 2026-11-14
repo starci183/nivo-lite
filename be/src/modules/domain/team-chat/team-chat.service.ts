@@ -1,8 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OptionalId } from "@modules/domain/agents"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import type { ChatRoomEntity, ChatRoomMessageEntity } from "./persistence/entities"
 import { InjectTeamChatTags } from "./team-chat.decorators"
+import { TeamChatLogEvent } from "./team-chat.log-events"
 import type { TeamChatTags } from "./team-chat.port"
 import {
     chatDone,
@@ -11,24 +13,23 @@ import {
     directKeyOf,
     groupNameOf,
     isPurposeValid,
+    isReadOnlyRoom,
     isUniqueViolation,
     pageSizeOf,
     positionOf,
     sendProblem,
     storedMentionsOf,
     uniqueMembers,
+    lineKeyOf,
 } from "./team-chat.policy"
 import { TeamChatAccessService } from "./team-chat-access.service"
-import { TeamChatApprovalsService } from "./team-chat-approvals.service"
 import { TeamChatCardsService } from "./team-chat-cards.service"
 import { TeamChatFilesService } from "./team-chat-files.service"
-import { lineKeyOf } from "./team-chat.policy"
 import { TeamChatStoreService } from "./team-chat-store.service"
 import { compareRooms } from "./team-chat-view.policy"
 import { TeamChatViewsService } from "./team-chat-views.service"
 import type {
     AgentPostInput,
-    ApprovalPostInput,
     ChatMemberRef,
     ChatUpload,
     CreateRoomInput,
@@ -46,63 +47,18 @@ import type {
 } from "./team-chat.contracts"
 import type {
     OptionalAgentLine,
-    OptionalApprovalRequest,
-    OptionalApprovalState,
     OptionalCount,
     OptionalKind,
     OptionalLine,
     OptionalReport,
     OptionalRoomView,
 } from "./team-chat-store.contracts"
-
-/** A person's reply to a line an agent wrote under a key. */
-export interface AgentLineReplied {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The person who replied. */
-    readonly byUserId: string
-    /** The stored key of the agent's line (`lineKeyOf` of the key it was posted under). */
-    readonly lineKey: string
-    /** The reply message itself (always set by the chat; optional only so older callers still compile). */
-    readonly messageId?: string | undefined
-    /** The words of the reply (always set by the chat). */
-    readonly text?: string | undefined
-    /** When the reply was written, ISO text from the database clock (always set by the chat). */
-    readonly at?: string | undefined
-}
-
-/** What hears a person's reply to an agent's line. */
-export type AgentLineReplyListener = (reply: AgentLineReplied) => Promise<void>
-
-/** A person's new message as its one line listener hears it (C1's router reads only these fields; no read is needed). */
-export interface PersonLineHeard {
-    readonly workspaceId: string
-    readonly userId: string
-    readonly room: { readonly id: string; readonly kind: "direct" | "group"; readonly directKey: string | null }
-    readonly message: { readonly id: string; readonly body: string; readonly createdAt: string }
-    /** The AGENTS the message names, in the order written, once each. */
-    readonly agentMentions: ReadonlyArray<string>
-    readonly repliedTo: {
-        readonly id: string
-        readonly authorKind: string
-        readonly authorId: string | null
-        readonly kind: string
-        readonly agentMessage: string | null
-        readonly body: string
-        readonly createdAt: string
-    } | null
-}
-
-/** Hears a person's new message; answers the agents whose chat turn it took (the old tag path skips them). */
-export type PersonLineListener = (line: PersonLineHeard) => Promise<ReadonlyArray<string>>
-
-/** One reply of a person, as the engine reads it. */
-export interface AgentLineReply {
-    /** The words. */
-    readonly text: string
-    /** When they were written, ISO text. */
-    readonly at: string
-}
+import type {
+    AgentLineReplied,
+    AgentLineReply,
+    AgentLineReplyListener,
+    PersonLineListener,
+} from "./team-chat-lines.contracts"
 
 @Injectable()
 /**
@@ -122,8 +78,8 @@ export class TeamChatRoomsService {
         private readonly views: TeamChatViewsService,
         private readonly files: TeamChatFilesService,
         private readonly cards: TeamChatCardsService,
-        private readonly approvals: TeamChatApprovalsService,
         @Optional() @InjectTeamChatTags() private readonly tags: TeamChatTags | null = null,
+        @Optional() @InjectLogger() private readonly logger: Logger | null = null,
     ) {}
 
     /**
@@ -177,7 +133,8 @@ export class TeamChatRoomsService {
                               createdAt: repliedTo.createdAt.toISOString(),
                           },
             })
-        } catch {
+        } catch (error: unknown) {
+            this.logger?.error(TeamChatLogEvent.LineListenerFailed, error, { roomId: room.id })
             return []
         }
     }
@@ -186,8 +143,9 @@ export class TeamChatRoomsService {
     private async heard(reply: AgentLineReplied): Promise<void> {
         try {
             await this.replyListener?.(reply)
-        } catch {
-            // The message is written; the listener's own failure is its own to report.
+        } catch (error: unknown) {
+            // The message is written; the listener's failure is logged and never fails the person's message.
+            this.logger?.error(TeamChatLogEvent.ReplyListenerFailed, error, { lineKey: reply.lineKey })
         }
     }
 
@@ -311,11 +269,15 @@ export class TeamChatRoomsService {
         return chatDone(await this.room(workspaceId, viewerId, roomId))
     }
 
-    /** Writes a text message; the same client id from the same author in the same room is the same message. */
+    /**
+     * Writes a text message; the same client id from the same author in the same room is the same message. A read-only room (the
+     * founder's NIVO room) refuses it before anything is stored, so no `@agent` tag and no reply can start from there.
+     */
     async send(workspaceId: string, viewerId: string, input: SendInput): Promise<TeamChatResult<MessageView>> {
         const roomId = input.roomId ?? (await this.directRoomTo(workspaceId, viewerId, input.to))
         const found = roomId === null ? null : await this.access.visibleRoom(workspaceId, viewerId, roomId)
         if (found === null) return chatRefusal(TeamChatErrorCode.NotFound)
+        if (isReadOnlyRoom(found)) return chatRefusal(TeamChatErrorCode.Forbidden)
         const mentions = uniqueMembers(input.mentions, null)
         const problem = sendProblem(input.body, mentions.length, input.fileKeys.length)
         if (problem !== null) return chatRefusal(problem)
@@ -360,8 +322,10 @@ export class TeamChatRoomsService {
         roomId: string,
         ask: UploadAsk,
     ): Promise<TeamChatResult<ChatUpload>> {
-        if ((await this.access.visibleRoom(workspaceId, viewerId, roomId)) === null)
-            return chatRefusal(TeamChatErrorCode.NotFound)
+        const found = await this.access.visibleRoom(workspaceId, viewerId, roomId)
+        if (found === null) return chatRefusal(TeamChatErrorCode.NotFound)
+        // A file is only ever sent with a message, and nobody writes in a read-only room.
+        if (isReadOnlyRoom(found)) return chatRefusal(TeamChatErrorCode.Forbidden)
         return this.files.requestUpload(workspaceId, roomId, ask)
     }
 
@@ -422,29 +386,9 @@ export class TeamChatRoomsService {
         return chatDone(await this.views.viewOf(workspaceId, message, viewerId))
     }
 
-    /** Where one decision stands, for the viewer; null when the workspace has no such request. */
-    approvalOf(workspaceId: string, viewerId: string, decisionId: string): Promise<OptionalApprovalState> {
-        return this.approvals.stateOf(workspaceId, viewerId, decisionId)
-    }
-
-    /** The request a decision card is about, with the group it stored; null when the workspace has no such request. */
-    approvalRequest(workspaceId: string, decisionId: string): Promise<OptionalApprovalRequest> {
-        return this.approvals.requestOf(workspaceId, decisionId)
-    }
-
     /** Writes the report of a finished run into the room its agent reports to; one card per run, null when no room can be found. */
     postReport(workspaceId: string, report: ReportInput): Promise<OptionalReport> {
         return this.cards.postReport(workspaceId, report)
-    }
-
-    /** Posts the approval card of one decision to the rooms its rule names and the approvers' direct rooms; answers how many cards exist. */
-    postApproval(workspaceId: string, approval: ApprovalPostInput): Promise<number> {
-        return this.cards.postApproval(workspaceId, approval)
-    }
-
-    /** In how many rooms the approval card of a decision stands; 0 when none was posted (no request opened, or nobody to show it to). */
-    cardRooms(workspaceId: string, decisionId: string): Promise<number> {
-        return this.cards.cardRooms(workspaceId, decisionId)
     }
 
     /** Writes one line of an agent or of the system into a room, or into the direct room with one person. */

@@ -9,7 +9,7 @@ type FoundingBadgeProps = {
 /** Small top-bar mark, earned by a real module purchase inside the Founding 50 window, drawn as an accent dot badge. */
 export const FoundingBadge = (props: FoundingBadgeProps) =>
     props.isFoundingMember ? (
-        <Badge tone="accent" isDot>
+        <Badge tone="accent">
             {props.label}
         </Badge>
     ) : null

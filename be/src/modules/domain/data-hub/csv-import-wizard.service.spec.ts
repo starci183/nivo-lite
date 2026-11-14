@@ -1,3 +1,4 @@
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
@@ -114,6 +115,7 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             CsvImportWizardService,
+            { provide: WorkspaceTimeZoneService, useValue: mock<WorkspaceTimeZoneService>({ timeZoneOf: jest.fn().mockResolvedValue("Asia/Ho_Chi_Minh") }) },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: transaction.em },
             { provide: DataHubService, useValue: hub },
             { provide: ConnectionsService, useValue: connections },
@@ -159,7 +161,7 @@ describe("CsvImportWizardService", () => {
         expect(hub.agentIds).not.toHaveBeenCalled()
     })
 
-    it("previews pasted rows with an exact suggested mapping", async () => {
+    it("previews pasted rows with a blank mapping", async () => {
         const { service, table } = await build()
 
         await expect(service.preview(actor, request)).resolves.toEqual({
@@ -170,8 +172,8 @@ describe("CsvImportWizardService", () => {
             sheet: "",
             delimiter: ",",
             mapping: {
-                idColumn: "id",
-                titleColumn: "name",
+                idColumn: null,
+                titleColumn: null,
                 dateColumn: null,
                 kinds: { id: "text", name: "text" },
                 columns: ["id", "name"],
@@ -203,7 +205,7 @@ describe("CsvImportWizardService", () => {
             delimiter: ",",
             mapping: {
                 idColumn: "id",
-                titleColumn: "name",
+                titleColumn: null,
                 dateColumn: null,
                 kinds: { id: "text", name: "email" },
                 columns: ["id", "name"],

@@ -1,5 +1,4 @@
-import { ACTION_KEYS, MODULE_KEYS } from "./catalog.keys"
-import type { ActionKey, ModuleKey } from "./catalog.keys"
+import { ACTION_KEYS, MODULE_KEYS, type ActionKey, type ModuleKey } from "./catalog.keys"
 
 const MODULE_KEY_SET: ReadonlySet<string> = new Set(MODULE_KEYS)
 const ACTION_KEY_SET: ReadonlySet<string> = new Set(ACTION_KEYS)

@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing"
 import { In, Not } from "typeorm"
 import { writeExpressionOf } from "@tests/fixtures/builders/write-expression.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import type { CardClosing, FactCardRecord, ProposedCardRecord, RuleCardPayload } from "./module-setup-writes.contracts"
+import type { CardClosing, FactCardRecord, ProposedCardRecord } from "./module-setup-writes.contracts"
 import { ModuleSetupWriteEntity } from "./persistence/entities"
 import { SetupWritesService } from "./setup-writes.service"
 
@@ -47,13 +47,6 @@ const proposed: ProposedCardRecord = {
     payload,
 }
 
-const rule: ProposedCardRecord = {
-    gate_key: "authority",
-    kind: "rule",
-    target_key: "rule:send_quote",
-    payload: { action: "send_quote", field: "mode", mode: "ask", limitVnd: null },
-}
-
 const closing: CardClosing = {
     status: "applied",
     payload,
@@ -75,7 +68,7 @@ describe("SetupWritesService", () => {
         await expect((await build(em)).ofSessions(["ses-1", "ses-2"])).resolves.toEqual([card])
 
         expect(em.find).toHaveBeenCalledWith(ModuleSetupWriteEntity, {
-            where: { setupSessionId: In(["ses-1", "ses-2"]), status: Not("superseded") },
+            where: { setupSessionId: In(["ses-1", "ses-2"]), kind: "fact", status: Not("superseded") },
             order: { createdAt: "ASC", id: "ASC" },
             take: 500,
         })
@@ -95,29 +88,7 @@ describe("SetupWritesService", () => {
         await expect((await build(em)).find("ws-1", "card-1")).resolves.toEqual(card)
 
         expect(em.findOne).toHaveBeenCalledWith(ModuleSetupWriteEntity, {
-            where: { id: "card-1", workspaceId: "ws-1" },
-        })
-    })
-
-    it("reads a stored branch card as a branch of the line", async () => {
-        const branch = {
-            action: "pay_supplier",
-            boundaryVnd: 8_000_000,
-            belongsTo: "higher",
-            approverName: "Nam",
-            approverMemberId: "nam",
-            quote: "above 8 million Nam",
-        } as const
-        const em = mockEntityManager({
-            findOne: [
-                ModuleSetupWriteEntity,
-                Object.assign(new ModuleSetupWriteEntity(), { ...row, kind: "branch", payload: branch }),
-            ],
-        })
-
-        await expect((await build(em)).find("ws-1", "card-1")).resolves.toMatchObject({
-            kind: "branch",
-            payload: branch,
+            where: { id: "card-1", workspaceId: "ws-1", kind: "fact" },
         })
     })
 
@@ -136,7 +107,7 @@ describe("SetupWritesService", () => {
                 insert: [ModuleSetupWriteEntity, {}],
             }),
         )
-        const cards = [proposed, rule]
+        const cards = [proposed]
 
         await expect((await build(tx.em)).propose("ws-1", "ses-1", "msg-1", cards)).resolves.toBeUndefined()
 
@@ -148,7 +119,7 @@ describe("SetupWritesService", () => {
         )
         expect(tx.em.update).toHaveBeenCalledWith(
             ModuleSetupWriteEntity,
-            { setupSessionId: "ses-1", targetKey: In(["fact:city", "rule:send_quote"]), status: "proposed" },
+            { setupSessionId: "ses-1", targetKey: In(["fact:city"]), status: "proposed" },
             { status: "superseded" },
         )
         expect(tx.em.insert).toHaveBeenCalledWith(ModuleSetupWriteEntity, [
@@ -160,15 +131,6 @@ describe("SetupWritesService", () => {
                 kind: "fact",
                 targetKey: "fact:city",
                 payload,
-            },
-            {
-                workspaceId: "ws-1",
-                setupSessionId: "ses-1",
-                sourceMessageId: "msg-1",
-                gateKey: "authority",
-                kind: "rule",
-                targetKey: "rule:send_quote",
-                payload: rule.payload,
             },
         ])
         expect(tx.committedWrites.map((write) => write.method)).toEqual(["update", "update", "insert"])
@@ -204,27 +166,10 @@ describe("SetupWritesService > close", () => {
 
         expect(em.update).toHaveBeenCalledWith(
             ModuleSetupWriteEntity,
-            { id: "card-1", workspaceId: "ws-1", status: "proposed" },
+            { id: "card-1", workspaceId: "ws-1", kind: "fact", status: "proposed" },
             { status: "applied", payload, result: closing.result, decidedBy: "Lan", decidedAt: SQL_EXPRESSION },
         )
         expect(writeExpressionOf(em.update.mock.calls[0]?.[2], "decidedAt")).toBe("now()")
-    })
-
-    it("closes a rule card", async () => {
-        const rulePayload: RuleCardPayload = { action: "refund", field: "mode", mode: "ask", limitVnd: null }
-        const ruleCard = Object.assign(new ModuleSetupWriteEntity(), row, {
-            kind: "rule" as const,
-            payload: rulePayload,
-        })
-        const em = mockEntityManager({
-            update: [ModuleSetupWriteEntity, { affected: 1 }],
-            findOne: [ModuleSetupWriteEntity, ruleCard],
-        })
-
-        await expect((await build(em)).close("ws-1", "card-1", closing)).resolves.toMatchObject({
-            kind: "rule",
-            payload: rulePayload,
-        })
     })
 
     it("answers nothing when the card was decided already", async () => {

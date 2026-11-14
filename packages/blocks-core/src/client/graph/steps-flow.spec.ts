@@ -1,9 +1,19 @@
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import vi from "../../messages/vi.json"
-import { latestTemplateVersion, workflowTemplateOf } from "../../modules/workflow-templates"
+import { latestTemplateVersion, parseWorkflowTemplate, type WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
+import consult from "../../rows/legacy-templates/consult.template.json"
+import frontDesk from "../../rows/legacy-templates/front-desk.template.json"
+import reconcile from "../../rows/legacy-templates/reconcile.template.json"
 import { graphViewOfSpec } from "../../rows/graph-spec-view"
 import type { GraphNodeView, GraphView } from "../../rows/graph-view"
 import { STEP_ICONS, stepsFlowOf, stepsLegendOf, stepsStatusLabelsOf } from "./steps-flow"
+
+/**
+ * The last JSON templates of the front desk, the consult and the reconciliation, kept as data for the views of an @1 graph spec (the
+ * agents' graphs are `nivo/agent-graph@2` since the flip; the back end reads them into @1 for these views).
+ */
+const LEGACY_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [frontDesk, consult, reconcile].map((raw) => parseWorkflowTemplate(raw))
+const workflowTemplateOf = (id: string): WorkflowTemplate | null => LEGACY_TEMPLATES.find((one) => one.id === id) ?? null
 
 /** The graph a template ships now. */
 const graphOf = (id: string): GraphSpec => {
@@ -41,6 +51,12 @@ describe.each(GRAPHS)("stepsFlowOf of the %s graph", (_name, spec) => {
     })
 })
 
+const ORDER_ID_CHIP = "= order.id"
+const NOTE_CHIP = "note: hello"
+const ORDER_ITEMS_CHIP = "= order.items"
+const WON = "Won"
+const LOST = "Lost"
+
 describe("stepsFlowOf", () => {
     it("draws the end with its outcome words and a step with the glyph its card names", () => {
         const view = graphViewOfSpec(graphOf("sales.consult"), { locale: "vi" })
@@ -50,7 +66,7 @@ describe("stepsFlowOf", () => {
         const end = flow.nodes.find((node) => node.kind === "end")
         const outcome = view.nodes.find((node) => node.id === end?.id)?.outcome
         expect(end?.label).toBe(outcome?.label ?? vi.graphStepEnd)
-        expect(of("send-qr")).toMatchObject({ kind: "action", icon: STEP_ICONS.qr })
+        expect(of("consult")).toMatchObject({ kind: "action", icon: STEP_ICONS.message })
     })
 
     it("names the legend and the run statuses in the language asked", () => {
@@ -85,8 +101,8 @@ describe("stepsFlowOf chips and failure ports", () => {
     it("draws a bound param as an accent chip and a fixed one as a neutral chip", () => {
         const flow = flowOf([node("a", { orderId: { $ref: "steps.order.output.id" }, note: "hello" })])
         expect(flow.nodes[0]?.chips).toEqual([
-            { label: "= order.id", tone: "accent" },
-            { label: "note: hello", tone: "neutral" },
+            { label: ORDER_ID_CHIP, tone: "accent" },
+            { label: NOTE_CHIP, tone: "neutral" },
         ])
     })
 
@@ -99,12 +115,12 @@ describe("stepsFlowOf chips and failure ports", () => {
     it("draws a for-each step as a loop card around its body, with the list it walks as a chip", () => {
         const loop: GraphNodeView = {
             ...node("each", {}),
-            loop: { items: { name: "items", label: "items", kind: "ref", text: "= order.items", ref: "order.items", fallback: null }, max: 50, bodyKeys: ["b"] },
+            loop: { items: { name: "items", label: "items", kind: "ref", text: ORDER_ITEMS_CHIP, ref: "order.items", fallback: null }, max: 50, bodyKeys: ["b"] },
         }
         const flow = flowOf([loop, node("b", {})])
         expect(flow.nodes[0]?.container).toEqual({
             label: "each",
-            chips: [{ label: "= order.items", tone: "accent" }],
+            chips: [{ label: ORDER_ITEMS_CHIP, tone: "accent" }],
             childIds: ["b"],
         })
         expect(flow.nodes[1]?.container).toBeUndefined()
@@ -117,16 +133,16 @@ describe("stepsFlowOf chips and failure ports", () => {
             outcome: { key, label, bindings: [] },
         })
         const view: GraphView = {
-            nodes: [end("a", "won", "Won"), end("b", "lost", "Lost")],
+            nodes: [end("a", "won", WON), end("b", "lost", LOST)],
             edges: [],
             outcomes: [
-                { key: "won", label: "Won", outputs: [] },
-                { key: "lost", label: "Lost", outputs: [] },
+                { key: "won", label: WON, outputs: [] },
+                { key: "lost", label: LOST, outputs: [] },
             ],
         }
         const flow = stepsFlowOf(view, "vi")
-        expect(flow.nodes[0]).toMatchObject({ label: "Won", kind: "end", tone: "accent" })
-        expect(flow.nodes[1]).toMatchObject({ label: "Lost", kind: "end" })
+        expect(flow.nodes[0]).toMatchObject({ label: WON, kind: "end", tone: "accent" })
+        expect(flow.nodes[1]).toMatchObject({ label: LOST, kind: "end" })
         expect(flow.nodes[1]?.tone).toBeUndefined()
     })
 })

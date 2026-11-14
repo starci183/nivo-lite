@@ -34,6 +34,7 @@ export const AgentWorkflowVersionBase = (props: AgentWorkflowVersionBaseProps) =
                     placeholder={props.props.placeholder}
                     labels={props.props.slotLabels}
                     onRetry={props.on.retry}
+                    frame={(notice) => <PaneSection>{notice}</PaneSection>}
                     render={(diff, isLoading) => (
                         <>
                             <PaneHead

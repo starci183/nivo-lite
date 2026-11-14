@@ -33,7 +33,7 @@ export class ApiKnowledgeSourcesService {
             KnowledgeSourcesError,
         )
         const sizeBytes = rawBytesOf(source, 0)
-        await this.quota.admit(tx, input.workspaceId, sizeBytes)
+        await this.quota.admit(tx, input.workspaceId, sizeBytes, source.visibility)
         const inserted = await tx.insert(KnowledgeSourceEntity, {
             id: input.sourceId,
             workspaceId: input.workspaceId,

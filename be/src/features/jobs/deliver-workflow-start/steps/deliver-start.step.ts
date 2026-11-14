@@ -1,0 +1,18 @@
+import { Injectable } from "@nestjs/common"
+import { AgentWorkflowStartDeliveryService } from "@modules/domain/agent-graphs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
+
+@Injectable()
+/** The one effect of the job: the start the job names is handed to the one event pipeline, in the api (the one app that drives runs). */
+export class DeliverStartStep implements JobStep {
+    constructor(
+        @InjectJobClaims() private readonly claims: JobClaims,
+        private readonly starts: AgentWorkflowStartDeliveryService,
+    ) {}
+
+    /** Records the step with the token this worker holds FIRST, so a stale token stops here before any effect; then delivers. */
+    async run(job: ClaimedJob): Promise<void> {
+        await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "deliver" })
+        await this.starts.deliverJob(job.payload)
+    }
+}

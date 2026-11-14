@@ -1,10 +1,10 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
-import { ModuleAcceptedCommandType } from "./module-accepted-command.type"
 import { ModuleAgentType } from "./module-agent.type"
 import { ModuleAuthorityActionType } from "./module-authority-action.type"
 import { ModuleBilingualListType } from "./module-bilingual-list.type"
 import { ModuleBilingualType } from "./module-bilingual.type"
 import { ModuleGateType } from "./module-gate.type"
+import { ModulePluginType } from "./module-plugin.type"
 import { ModuleRequirementsType } from "./module-requirements.type"
 
 @ObjectType()
@@ -13,6 +13,10 @@ export class ModuleDefinitionType {
     /** The stable module key. */
     @Field()
     key!: string
+
+    /** The plugin the module belongs to, whose label goes in front of the agent's name in the catalogue. */
+    @Field(() => ModulePluginType)
+    plugin!: ModulePluginType
 
     /** The display order in the catalogue. */
     @Field(() => Int)
@@ -106,11 +110,8 @@ export class ModuleDefinitionType {
     @Field(() => [ModuleGateType])
     gates!: ReadonlyArray<ModuleGateType>
 
-    /** The actions the authority matrix governs. */
+    /** Always empty: the authority actions are gone (2026-11-13); the web still selects the list. */
     @Field(() => [ModuleAuthorityActionType])
     authorityActions!: ReadonlyArray<ModuleAuthorityActionType>
 
-    /** The commands other agents may ask the module to run. */
-    @Field(() => [ModuleAcceptedCommandType])
-    accepts!: ReadonlyArray<ModuleAcceptedCommandType>
 }

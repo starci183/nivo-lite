@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
-import { BrainFactRelationsService, BrainFactsReadService } from "@modules/domain/brain-facts"
+import { BrainFactRelationsService, BrainFactsPagingService, BrainFactsReadService } from "@modules/domain/brain-facts"
 import type { FactRecord, FactRelation } from "@modules/domain/brain-facts"
 import { BrainExtractionsService } from "@modules/domain/brain-extractions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -90,8 +90,22 @@ const build = async () => {
     reads.byIds.mockResolvedValue([previous])
     relations.ofFacts.mockResolvedValue([edge("e1", "express", "ship"), edge("e2", "hours", "ship"), edge("e3", "ship", "gone")])
     extractions.progress.mockResolvedValue([
-        { sourceId: DOC, status: "running", windowsDone: 0, windowsTotal: 1, factsProposed: 0 },
+        {
+            sourceId: DOC,
+            status: "running",
+            windowsDone: 0,
+            windowsTotal: 1,
+            factsProposed: 0,
+            stage: "extract",
+            error: null,
+            counts: { passagesTotal: 1, passagesTriaged: 1, passagesKept: 1, factsApplied: 0, factsAsked: 0, factsWaiting: 0 },
+            windowsSkipped: 0,
+            linesRefused: 0,
+        },
     ])
+    // The SQL counts of the workspace: what the reads above hold (the graph is whole).
+    const counts = mock<BrainFactsPagingService>()
+    counts.countByStatus.mockResolvedValue(new Map([["active", 3], ["proposed", 1]]))
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainGraphService,
@@ -100,9 +114,10 @@ const build = async () => {
             { provide: BrainFactsReadService, useValue: reads },
             { provide: BrainFactRelationsService, useValue: relations },
             { provide: BrainExtractionsService, useValue: extractions },
+            { provide: BrainFactsPagingService, useValue: counts },
         ],
     }).compile()
-    return { service: moduleRef.get(BrainGraphService), members, reads, relations }
+    return { service: moduleRef.get(BrainGraphService), members, reads, relations, counts }
 }
 
 describe("BrainGraphService: the API of the second-brain picture", () => {
@@ -146,8 +161,18 @@ describe("BrainGraphService: the API of the second-brain picture", () => {
                 reading: { status: "running", windowsDone: 0, windowsTotal: 1, factsProposed: 0 },
             },
         ])
-        expect(graph.totals).toEqual({ nodes: 3, relations: 2, recentlyChanged: 1, pending: 1 })
+        expect(graph.totals).toEqual({ nodes: 3, relations: 2, recentlyChanged: 1, pending: 1, nodesNotShown: 0, pendingNotShown: 0 })
         expect(graph.nextCursor).toBeNull()
+    })
+
+    it("a capped read says it is capped: the totals carry the SQL counts and how many are not shown (BRAIN-LIMITS item 3)", async () => {
+        const { service, counts } = await build()
+        counts.countByStatus.mockResolvedValue(new Map([["active", 4800], ["scheduled", 200], ["proposed", 2600]]))
+
+        const graph = await service.graph("u1", { workspaceId: WS, subjectKey: "giao-hang" })
+
+        expect(counts.countByStatus).toHaveBeenCalledWith(WS, ["active", "scheduled", "proposed"])
+        expect(graph.totals).toMatchObject({ nodes: 5000, nodesNotShown: 4997, pending: 2600, pendingNotShown: 2599 })
     })
 
     it("lets a manager draw and remove edges under their own name; staff read nothing", async () => {

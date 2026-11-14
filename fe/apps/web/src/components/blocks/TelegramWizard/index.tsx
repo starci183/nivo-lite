@@ -1,8 +1,7 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, slotOfReads, useSlotLabels } from "@/hooks/slot"
 
-import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { GUIDES } from "@/hooks/connection-guides"
@@ -74,7 +73,7 @@ export const TelegramWizard = (props: TelegramWizardProps) => {
                 agentStep: {
                     title: tw("agentTitleChannel"),
                     notice: null,
-                    agents: agentChoicesOf(props.agents, "telegram", tw),
+                    agents: agentChoicesOf(props.agents, tw),
                     value: wizard.agentIds,
                     hint: tw("agentHint"),
                     none: tw("agentNone"),

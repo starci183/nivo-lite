@@ -21,7 +21,7 @@ export enum PublicReason {
     AuthHandshake = "auth-handshake",
     /** A webhook whose signature is verified before its domain intake runs. */
     SignedWebhook = "signed-webhook",
-    /** A published catalog page (booking page, loyalty check) read without a session; always rate limited. */
+    /** A published page read or filled without a session (the website intake form); always rate limited. */
     CatalogRead = "catalog-read",
 }
 

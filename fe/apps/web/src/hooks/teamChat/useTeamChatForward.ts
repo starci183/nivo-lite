@@ -44,15 +44,12 @@ export const useTeamChatForward = (input: TeamChatForwardInput): TeamChatForward
     const [sendingId, setSendingId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const targets = roomRowsOf(rooms.data ?? [], null, input.viewerId, words)
-        .filter((row) => row.id !== input.roomId)
+        .filter((row) => row.id !== input.roomId && !row.isNivo)
         .map<TeamChatForwardTarget>((row) => ({
             id: row.id,
             title: row.title,
             subtitle: row.preview,
-            mark:
-                row.other === null
-                    ? { kind: "group", id: row.id, name: row.title, picture: null }
-                    : { kind: row.other.kind, id: row.other.id, name: row.title, picture: row.other.picture ?? null },
+            mark: row.mark,
         }))
     const close = (): void => {
         setMessageId(null)

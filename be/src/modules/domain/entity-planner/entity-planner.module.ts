@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-planner.module-definition"
 import { EntityPlannerService } from "./entity-planner.service"
 import { MigrationFilesClient } from "./migration-files.client"

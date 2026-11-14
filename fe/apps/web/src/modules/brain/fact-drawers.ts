@@ -8,10 +8,8 @@ import type {
     FactSubjectType,
     PickBadgeView,
 } from "@/modules/types"
-import { trustBadgeOf, valueOf } from "./fact-pick"
-import type { FactPickWords } from "./fact-pick"
-import { documentsOfFact, factKeyOf } from "./inbox"
-import type { FactKey } from "./inbox"
+import { trustBadgeOf, valueOf, type FactPickWords } from "./fact-pick"
+import { documentsOfFact, factKeyOf, type FactKey } from "./inbox"
 
 /** The id of the choice that keeps the value in force. */
 export const KEEP_CHOICE = "keep"

@@ -2,7 +2,7 @@ import { z } from "zod"
 import { keyText } from "../schema/bounded.schema"
 import { jsonValue } from "../schema/json-value.schema"
 import type { JsonValue } from "../schema/schema.types"
-import type { GraphTagSource } from "./graph-spec.types"
+import { TRIGGER_KEY_MEMBERS, isTriggerKeyPath, type TriggerKeyPath } from "./trigger-event"
 
 /*
  * The contracts of NIVO workflows (owner-approved law, 2026-11-09): every workflow version declares the inputs it needs; a trigger names
@@ -29,6 +29,12 @@ export interface WorkflowInput {
     readonly type: ContractType
     /** True when a caller must supply it; an optional input reads as null when not given. */
     readonly required: boolean
+    /**
+     * On the `data` input of a workflow a `workflow.called` trigger wakes, only: the params a caller maps, one level (each a name, a type and
+     * whether it is required), which the run reads as `trigger.data.<name>` (lane concept triggers rule 13: an event's own members live in
+     * `data`). Absent on every other input.
+     */
+    readonly members?: ReadonlyArray<WorkflowInput> | undefined
 }
 
 /** The input contract of a workflow version. */
@@ -37,38 +43,92 @@ export interface WorkflowContract {
     readonly inputs: ReadonlyArray<WorkflowInput>
 }
 
+/** The `data` input of a contract that declares its members (a workflow a `workflow.called` trigger wakes), or undefined. */
+const dataInputOf = (contract: WorkflowContract | undefined): WorkflowInput | undefined =>
+    (contract?.inputs ?? []).find((input) => input.name === TRIGGER_DATA_MEMBER && input.members !== undefined)
+
+/**
+ * The inputs a hand-off maps for a workflow: the members of its `data` input when it declares them (a workflow a `workflow.called` trigger
+ * wakes: the caller's params arrive as the event's `data`), else its inputs (a contract stored before the params moved under `data`).
+ */
+export const callInputsOf = (contract: WorkflowContract | undefined): ReadonlyArray<WorkflowInput> =>
+    dataInputOf(contract)?.members ?? contract?.inputs ?? []
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 // Trigger sources
 // ---------------------------------------------------------------------------------------------------------------------------------
 
 /**
- * Where a workflow is woken from: a customer channel (Zalo, Telegram, the website order form), the bank feed (SePay), a care timer, the
- * clock, a person in a group chat, or another workflow's end hand-off.
+ * Where a workflow is woken from: a customer channel (Zalo, Telegram, Facebook, Instagram, the website order form), the bank feed (SePay), a care timer, the
+ * clock, a person in a group chat, another workflow's end hand-off, or a trigger a provider declares (`provider`: a bank movement, new
+ * mail). Every kind arrives on the ONE event pipeline (lane concept `triggers` rule 13): the kind says only what the trigger scope's `data`
+ * holds and which connection kind it listens on, never a road of its own.
  */
-export type TriggerSourceKind = "zalo" | "telegram" | "website" | "sepay" | "timer" | "schedule" | "chats-group" | "workflow"
+export type TriggerSourceKind =
+    | "zalo"
+    | "telegram"
+    | "facebook"
+    | "instagram"
+    | "website"
+    | "sepay"
+    | "timer"
+    | "schedule"
+    | "chats-group"
+    | "workflow"
+    | "provider"
 
 /** Every source kind, in the order the editor lists them. */
 export const TRIGGER_SOURCE_KINDS: ReadonlyArray<TriggerSourceKind> = [
     "zalo",
     "telegram",
+    "facebook",
+    "instagram",
     "website",
     "sepay",
     "timer",
     "schedule",
     "chats-group",
     "workflow",
+    "provider",
 ]
 
-/** The source of a trigger: its kind and the connection (channel account) it listens on; null listens on every one of the kind. */
+/** The kind of a source that registers on a provider's trigger. */
+export const PROVIDER_SOURCE_KIND = "provider"
+
+/**
+ * The source of a trigger: its kind and the connection (channel account) it listens on; null listens on every one of the kind. A
+ * source of kind `provider` also names the provider and the trigger it registers on (`sepay`, `transaction.received`); its filter is
+ * the trigger's `conditions`, which may only compare the fields the provider declares as filterable.
+ */
 export interface TriggerSource {
     /** The kind. */
     readonly kind: TriggerSourceKind
     /** The connection id; null for any connection of the kind, and always null for a kind with no connection. */
     readonly connectionId: string | null
+    /** Kind `provider` only: the provider key. */
+    readonly provider?: string | undefined
+    /** Kind `provider` only: the trigger name inside the provider. */
+    readonly trigger?: string | undefined
 }
 
-/** How a trigger condition compares a param of the wake. */
-export type TriggerConditionOp = "equals" | "not-equals" | "contains" | "present"
+/** The member of a wake's plain data that names the provider trigger it comes from, as `<provider>:<trigger>`. */
+export const PROVIDER_TRIGGER_MEMBER = "providerTrigger"
+
+/** `<provider>:<trigger>`: how a provider trigger is named in a wake. */
+export const providerTriggerKeyOf = (provider: string, trigger: string): string => `${provider}:${trigger}`
+
+/** The provider trigger a source registers on, as `<provider>:<trigger>`; null for any other source and for one that names none. */
+export const providerTriggerOf = (source: TriggerSource): string | null =>
+    source.kind === PROVIDER_SOURCE_KIND &&
+    source.provider !== undefined &&
+    source.provider !== "" &&
+    source.trigger !== undefined &&
+    source.trigger !== ""
+        ? providerTriggerKeyOf(source.provider, source.trigger)
+        : null
+
+/** How a trigger condition compares a param of the wake; `in`: equal to one member of the list `value` (exact, never a substring). */
+export type TriggerConditionOp = "equals" | "not-equals" | "in" | "contains" | "present"
 
 /** One condition a wake must meet for the trigger to take it: a supplied param compared with a value. */
 export interface TriggerCondition {
@@ -80,96 +140,204 @@ export interface TriggerCondition {
     readonly value?: JsonValue | undefined
 }
 
-/** One param a source supplies: its name and type. */
+/** One member of the event's `data` a verb declares: its name, its type, and whether it is an open flat record (a timer's own `data`). */
+export interface DataMember {
+    /** The name, as `trigger.data.<name>` reads it. */
+    readonly name: string
+    /** Its JSON type. */
+    readonly type: ContractType
+    /**
+     * Set on an `object` member that is an OPEN flat record of text, numbers and yes/no (a timer's own `data`): a trigger `where` may then
+     * name one key of it by the path `data.<member>.<key>` (exact equality on scalars only).
+     */
+    readonly open?: "scalars" | undefined
+}
+
+/** One param a source supplies at the top of the trigger scope: its name and type (and, on `data`, the members the verb declares in it). */
 export interface SuppliedParam {
     /** The name, as `trigger.<name>` reads it. */
     readonly name: string
     /** Its JSON type. */
     readonly type: ContractType
+    /**
+     * Set on an `object` member that is an OPEN flat record of text, numbers and yes/no: a trigger `where` may name one key of it by the path
+     * `<member>.<key>` (exact equality on scalars only). Absent: the member is no legal path head (but `data`, whose `members` say its paths).
+     */
+    readonly open?: "scalars" | undefined
+    /** On `data` only: the members the verb declares in it; absent where no host told them (any `data.<member>` is then judged later). */
+    readonly members?: ReadonlyArray<DataMember> | undefined
 }
 
-/** What the catalogue knows of a source kind: the wake it arrives as, the connection kind it listens on and the params it supplies. */
+/** What the catalogue knows of a source kind: the connection kind it listens on and the params it supplies. */
 export interface TriggerSourceInfo {
     /** The kind. */
     readonly kind: TriggerSourceKind
-    /** The tag source its wakes arrive as, which routing reads. */
-    readonly wake: GraphTagSource
     /** The connection kind of its account (`zalo`, `telegram`, `sepay`); null for a kind with no connection. */
     readonly connectionKind: string | null
     /** The params it supplies; empty for `workflow`, which supplies exactly the contract its caller covers. */
     readonly supplies: ReadonlyArray<SuppliedParam>
 }
 
-const CHANNEL_PARAMS: ReadonlyArray<SuppliedParam> = [
-    { name: "conversationId", type: "string" },
-    { name: "leadId", type: "string" },
-    { name: "channel", type: "string" },
-    { name: "text", type: "string" },
-    { name: "messages", type: "array" },
-    { name: "messageIds", type: "array" },
+/** The member of the trigger scope that holds the event's data. */
+export const TRIGGER_DATA_MEMBER = "data"
+
+/**
+ * THE TRIGGER SCOPE (ROAD-API section 3.1, triggers rule 13): the generic members every verb supplies, nothing chat-specific. The check
+ * `engine-business-contracts` compares this list with the triggers concept's table "Generic members of the trigger scope".
+ */
+export const TRIGGER_SCOPE: ReadonlyArray<SuppliedParam> = [
+    // The event's id: the provider's own id of the event, or an engine source's once-key.
+    { name: "eventId", type: "string" },
+    // The connection of an account event.
+    { name: "accountId", type: "string" },
+    // The contact ENRICH met, and the route it ensured for the person on the account (or what an engine source already knew).
+    { name: "contactId", type: "string" },
+    { name: "routeId", type: "string" },
+    // The event's own subject as the provider's translate gave it: a channel identity `{ channel, id, name?, picture? }`.
+    { name: "subject", type: "object" },
+    // The event's data, as the verb declares it.
+    { name: TRIGGER_DATA_MEMBER, type: "object" },
+    // The run's language.
+    { name: "locale", type: "string" },
 ]
 
-/** The catalogue of trigger sources, by kind. */
+/** The generic members every event has: its id, its data and the run's language. */
+const ALWAYS: ReadonlySet<string> = new Set(["eventId", TRIGGER_DATA_MEMBER, "locale"])
+
+/** An event of a person on an account (a channel line, a website form): the account, the contact, the route and the subject ENRICH read. */
+const PERSON_ON_ACCOUNT: ReadonlyArray<string> = ["accountId", "contactId", "routeId", "subject"]
+
+/**
+ * The trigger scope of a verb: the generic members it supplies (besides the id, the data and the language) in the scope's order, its `data`
+ * holding the given members. A member a kind never fills is not supplied, so a contract that requires it is refused at save.
+ */
+const scopeWith = (
+    members: ReadonlyArray<DataMember>,
+    generic: ReadonlyArray<string> = [],
+): ReadonlyArray<SuppliedParam> =>
+    TRIGGER_SCOPE.filter((param) => ALWAYS.has(param.name) || generic.includes(param.name)).map((param) =>
+        param.name === TRIGGER_DATA_MEMBER ? { ...param, members } : param,
+    )
+
+/**
+ * The data of a customer channel's message, the four channels alike (ROAD-API 3.2): one event is ONE line; the other lines of a burst are the
+ * run's queue. `resume` is set (`held`) only on the release door's event, which carries no words.
+ */
+const CHANNEL_DATA: ReadonlyArray<DataMember> = [
+    { name: "messageKey", type: "string" },
+    { name: "text", type: "string" },
+    { name: "at", type: "string" },
+    { name: "files", type: "array" },
+    { name: "resume", type: "string" },
+]
+
+/**
+ * The catalogue of trigger sources, by kind: the @1 vocabulary. The engine's trigger registry (`trigger-specs` of the back end) is the one
+ * source of what each verb supplies per provider; this table stays for what a @1 document needs to be read and checked (a stored @1
+ * graph): the connection kind of a kind and the scope it supplies (the generic members, its `data` declared per kind).
+ */
 export const TRIGGER_SOURCES: Readonly<Record<TriggerSourceKind, TriggerSourceInfo>> = {
-    zalo: { kind: "zalo", wake: "channel", connectionKind: "zalo", supplies: CHANNEL_PARAMS },
-    telegram: { kind: "telegram", wake: "channel", connectionKind: "telegram", supplies: CHANNEL_PARAMS },
+    zalo: { kind: "zalo", connectionKind: "zalo", supplies: scopeWith(CHANNEL_DATA, PERSON_ON_ACCOUNT) },
+    telegram: { kind: "telegram", connectionKind: "telegram", supplies: scopeWith(CHANNEL_DATA, PERSON_ON_ACCOUNT) },
+    // The two channels of one Meta connection (a Page and its Instagram account): each its own kind, as a conversation names its channel.
+    facebook: { kind: "facebook", connectionKind: "meta", supplies: scopeWith(CHANNEL_DATA, PERSON_ON_ACCOUNT) },
+    instagram: { kind: "instagram", connectionKind: "meta", supplies: scopeWith(CHANNEL_DATA, PERSON_ON_ACCOUNT) },
     website: {
         kind: "website",
-        wake: "system-event",
         connectionKind: null,
-        supplies: [
-            { name: "leadId", type: "string" },
-            { name: "request", type: "string" },
-            { name: "contact", type: "object" },
-        ],
+        supplies: scopeWith(
+            [
+                { name: "siteId", type: "string" },
+                { name: "inboundEventId", type: "string" },
+                { name: "request", type: "string" },
+                { name: "contact", type: "object" },
+            ],
+            PERSON_ON_ACCOUNT,
+        ),
     },
     sepay: {
         kind: "sepay",
-        wake: "system-event",
         connectionKind: "sepay",
-        supplies: [{ name: "transactionId", type: "string" }],
+        supplies: scopeWith([{ name: "transactionId", type: "string" }], ["accountId"]),
     },
     timer: {
         kind: "timer",
-        wake: "system-event",
         connectionKind: null,
-        supplies: [
-            { name: "careKind", type: "string" },
-            { name: "ref", type: "string" },
-            { name: "suffix", type: "string" },
-            { name: "dueAt", type: "string" },
-        ],
+        supplies: scopeWith(
+            [
+                // The timer's task row (its correlation key), the caller's key and the moment.
+                { name: "taskId", type: "string" },
+                { name: "ref", type: "string" },
+                { name: "dueAt", type: "string" },
+                { name: "careKind", type: "string" },
+                { name: "suffix", type: "string" },
+                // The item the timer is for (the occasion's id) and what the arm carries back (`data.data.shipWaits`): present only when given.
+                { name: "item", type: "string" },
+                { name: "data", type: "object", open: "scalars" },
+                // The person: the contact and the route the arming run had, each when it had one.
+            ],
+            ["contactId", "routeId"],
+        ),
     },
-    schedule: {
-        kind: "schedule",
-        wake: "schedule",
-        connectionKind: null,
-        supplies: [{ name: "slotMs", type: "integer" }],
-    },
+    schedule: { kind: "schedule", connectionKind: null, supplies: scopeWith([{ name: "slotMs", type: "integer" }]) },
     "chats-group": {
         kind: "chats-group",
-        wake: "chats-group",
         connectionKind: null,
-        supplies: [
+        supplies: scopeWith([
             { name: "text", type: "string" },
             { name: "actorMemberId", type: "string" },
-        ],
+            { name: "threadId", type: "string" },
+        ]),
     },
-    workflow: { kind: "workflow", wake: "agent", connectionKind: null, supplies: [] },
+    workflow: { kind: "workflow", connectionKind: null, supplies: [] },
+    // What it supplies is what the provider declares for the trigger it names: the host passes the declarations to the checks.
+    provider: { kind: "provider", connectionKind: "provider", supplies: [] },
 }
+
+/** What a host tells the contract checks of one declared provider trigger. */
+export interface ProviderTriggerInfo {
+    /** The params a wake of the trigger supplies. */
+    readonly supplies: ReadonlyArray<SuppliedParam>
+    /** The names of the supplied params a filter may compare: closed choices only, never an id or a text. */
+    readonly filterable: ReadonlyArray<string>
+}
+
+/** The declared provider triggers by `<provider>:<trigger>`, as the host that owns the providers knows them. */
+export type ProviderTriggerLookup = (providerTrigger: string) => ProviderTriggerInfo | undefined
 
 /** Whether a value of type `found` may fill an input of type `wanted`: the same type, or an integer where a number is wanted. */
 export const contractTypeFits = (wanted: ContractType | "unknown", found: ContractType | "unknown"): boolean =>
     wanted === "unknown" || found === "unknown" || wanted === found || (wanted === "number" && found === "integer")
 
-/** The params a trigger supplies: its source's catalogue params, or the whole contract for a workflow hand-off. */
+/** The generic members a call supplies besides its id, its data and the language: the caller's person and route. */
+const CALLER_PERSON: ReadonlyArray<string> = ["contactId", "routeId"]
+
+/**
+ * The params a trigger supplies: its source's catalogue params; for a workflow hand-off the generic members with the callee's `data`
+ * members (the params its caller maps), or the whole contract of one stored before the params moved under `data`; for a provider trigger
+ * what the provider declares, or, where no host told the declarations (a package's own check, the editor), the whole contract, which
+ * the host then judges when the workflow is saved.
+ */
 export const suppliedParamsOf = (
     source: TriggerSource,
     contract: WorkflowContract | undefined,
-): ReadonlyArray<SuppliedParam> =>
-    source.kind === "workflow"
-        ? (contract?.inputs ?? []).map((input) => ({ name: input.name, type: input.type }))
-        : TRIGGER_SOURCES[source.kind].supplies
+    declared?: ProviderTriggerLookup,
+): ReadonlyArray<SuppliedParam> => {
+    const whole = (): ReadonlyArray<SuppliedParam> =>
+        (contract?.inputs ?? []).map((input) => ({ name: input.name, type: input.type }))
+    if (source.kind === "workflow") {
+        const members = dataInputOf(contract)?.members
+        return members === undefined
+            ? whole()
+            : scopeWith(
+                  members.map((member) => ({ name: member.name, type: member.type })),
+                  CALLER_PERSON,
+              )
+    }
+    if (source.kind !== PROVIDER_SOURCE_KIND) return TRIGGER_SOURCES[source.kind].supplies
+    if (declared === undefined) return whole()
+    return declared(providerTriggerOf(source) ?? "")?.supplies ?? []
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 // End hand-off
@@ -232,8 +400,12 @@ export type ContractProblemCode =
     | "TRIGGER_CONNECTION_INVALID"
     /** A condition on a param the source does not supply. */
     | "TRIGGER_CONDITION_UNKNOWN"
-    /** The wake envelope's `sources` are not exactly the wakes of the workflow's triggers. */
-    | "TRIGGER_SOURCES_MISMATCH"
+    /** A provider source that names no provider or trigger, or another source that names one. */
+    | "TRIGGER_PROVIDER_UNNAMED"
+    /** A provider source that names a trigger no provider declares. */
+    | "TRIGGER_PROVIDER_UNKNOWN"
+    /** A filter of a provider trigger that compares a field the provider does not declare as filterable, or by containment. */
+    | "TRIGGER_FILTER_INVALID"
     /** Two triggers with one key. */
     | "TRIGGER_KEY_DUPLICATE"
     /** Two outcomes, or two outputs of one outcome, with one name. */
@@ -248,8 +420,6 @@ export type ContractProblemCode =
     | "OUTCOME_OUTPUT_TYPE"
     /** A call from another agent to a workflow whose entry is open to its own agent only. */
     | "CALL_ENTRY_CLOSED"
-    /** A workflow that holds the conversation but whose contract does not require the conversation. */
-    | "ENTRY_HOLD_WITHOUT_CONVERSATION"
     /** Two inputs of the contract with one name. */
     | "CONTRACT_INPUT_DUPLICATE"
     /** A hand-off to a workflow the workspace does not have. */
@@ -282,7 +452,7 @@ export const contractProblems = (contract: WorkflowContract | undefined): Readon
 
 /**
  * One input of a workflow: where it is woken from and the conditions it takes a wake on. A workflow may have several (Zalo, Facebook and
- * Telegram all start "Tư vấn"), each supplying the full input contract; `trigger.channel` and `trigger.triggerKey` tell them apart.
+ * Telegram all start "Tu van"), each supplying the full input contract; `trigger.channel` and `trigger.triggerKey` tell them apart.
  */
 export interface WorkflowTrigger {
     /** The id of the trigger within its workflow, what `trigger.triggerKey` reads and save problems name. */
@@ -291,38 +461,112 @@ export interface WorkflowTrigger {
     readonly source: TriggerSource
     /** What a wake must meet; none takes every wake of the source. */
     readonly conditions?: ReadonlyArray<TriggerCondition> | undefined
+    /**
+     * The registration's own correlation key (a generic member or `data.<member>`); absent: the verb's default. An event whose key value
+     * matches a run of this workflow in flight goes onto that run's queue instead of starting a run (triggers rule 13, stage 5).
+     */
+    readonly correlationKey?: TriggerKeyPath | undefined
 }
 
-/** The order the tag sources are listed in. */
-const WAKE_ORDER: ReadonlyArray<GraphTagSource> = ["channel", "chats-group", "agent", "system-event", "schedule"]
+/**
+ * The problems of a trigger's provider registration: a `provider` source names its provider and trigger (and no other kind names one),
+ * the trigger is one the host knows when it told its declarations, and the filter compares only fields the provider declares as
+ * filterable, by equality or presence: a payload holds ids, counts and closed choices, so no filter reads words.
+ */
+const providerProblems = (
+    trigger: WorkflowTrigger,
+    declared: ProviderTriggerLookup | undefined,
+): ReadonlyArray<ContractProblem> => {
+    const { source } = trigger
+    const at = (member: string): string => `triggers.${trigger.key}.${member}`
+    const named = source.provider !== undefined || source.trigger !== undefined
+    if (source.kind !== PROVIDER_SOURCE_KIND)
+        return named ? [{ code: "TRIGGER_PROVIDER_UNNAMED", at: at("source") }] : []
+    const key = providerTriggerOf(source)
+    if (key === null) return [{ code: "TRIGGER_PROVIDER_UNNAMED", at: at("source") }]
+    const info = declared?.(key)
+    if (declared !== undefined && info === undefined) return [{ code: "TRIGGER_PROVIDER_UNKNOWN", at: at("source") }]
+    return (trigger.conditions ?? [])
+        .filter(
+            (condition) =>
+                condition.op === "contains" || (info !== undefined && !info.filterable.includes(condition.param)),
+        )
+        .map((condition): ContractProblem => ({ code: "TRIGGER_FILTER_INVALID", at: at(condition.param) }))
+}
 
-/** The tag sources a set of triggers wakes on, in catalogue order, once each: what `GraphSpecTrigger.sources` must be. */
-export const wakesOfTriggers = (triggers: ReadonlyArray<WorkflowTrigger>): ReadonlyArray<GraphTagSource> => {
-    const wakes = new Set(triggers.map((trigger) => TRIGGER_SOURCES[trigger.source.kind].wake))
-    return WAKE_ORDER.filter((wake) => wakes.has(wake))
+/** Whether a value is a JSON scalar (the only value an exact key into an open record compares). */
+const isScalarValue = (value: unknown): boolean =>
+    value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+
+/** Whether a condition compares exactly on JSON scalars (`equals`, `in`, `present`): what a key into an open record allows. */
+const exactOnScalars = (condition: TriggerCondition): boolean => {
+    if (condition.op === "present") return true
+    if (condition.op === "equals") return isScalarValue(condition.value)
+    return (
+        condition.op === "in" &&
+        Array.isArray(condition.value) &&
+        condition.value.every((entry) => isScalarValue(entry))
+    )
+}
+
+/**
+ * Whether a path names something the trigger supplies (ROAD-API 3.1): a supplied member; `data.<member>` of a member the verb declares in
+ * `data` (any member where no host told them); `data.<member>.<key>` of a data member that is an open flat record, or `<member>.<key>` of a
+ * top member that is one, then only exactly on scalars. The `data.` prefix is the root of the event's own members, not a level.
+ * `condition` is null for a correlation key (no comparison).
+ */
+const pathLegal = (
+    path: string,
+    condition: TriggerCondition | null,
+    supplied: ReadonlyArray<SuppliedParam>,
+): boolean => {
+    const [head = "", member, key, ...rest] = path.split(PATH_SEPARATOR)
+    if (rest.length > 0) return false
+    const top = supplied.find((param) => param.name === head)
+    if (top === undefined) return false
+    if (member === undefined) return true
+    const exact = condition === null || exactOnScalars(condition)
+    if (head !== TRIGGER_DATA_MEMBER || (top.members === undefined && top.open !== undefined))
+        return key === undefined && top.open !== undefined && exact
+    if (top.members === undefined) return true
+    const declared = top.members.find((one) => one.name === member)
+    if (declared === undefined) return false
+    return key === undefined || (declared.open !== undefined && exact)
 }
 
 /** The problems of one trigger against the workflow's contract; `at` is `triggers.<key>.<member>`. */
 const oneTriggerProblems = (
     trigger: WorkflowTrigger,
     contract: WorkflowContract | undefined,
+    declared: ProviderTriggerLookup | undefined,
 ): ReadonlyArray<ContractProblem> => {
     const { source } = trigger
     const info = TRIGGER_SOURCES[source.kind]
-    const supplied = new Map(suppliedParamsOf(source, contract).map((param) => [param.name, param.type]))
+    const suppliedList = suppliedParamsOf(source, contract, declared)
+    const supplied = new Map(suppliedList.map((param) => [param.name, param.type]))
+    // A provider trigger's filter reads the provider's payload, which only the host knows: judged when the host told it.
+    const judged = !(source.kind === PROVIDER_SOURCE_KIND && declared === undefined)
     const at = (member: string): string => `triggers.${trigger.key}.${member}`
     return [
+        ...providerProblems(trigger, declared),
         ...(contract?.inputs ?? []).flatMap((input): ReadonlyArray<ContractProblem> => {
             const found = supplied.get(input.name)
-            if (found === undefined) return input.required ? [{ code: "TRIGGER_INPUT_UNSUPPLIED", at: at(input.name) }] : []
+            if (found === undefined)
+                return input.required ? [{ code: "TRIGGER_INPUT_UNSUPPLIED", at: at(input.name) }] : []
             return contractTypeFits(input.type, found) ? [] : [{ code: "TRIGGER_INPUT_TYPE", at: at(input.name) }]
         }),
         ...(source.connectionId !== null && info.connectionKind === null
             ? [{ code: "TRIGGER_CONNECTION_INVALID" as const, at: at("source") }]
             : []),
-        ...(trigger.conditions ?? [])
-            .filter((condition) => !supplied.has(condition.param))
+        ...(judged ? (trigger.conditions ?? []) : [])
+            .filter((condition) => !pathLegal(condition.param, condition, suppliedList))
             .map((condition): ContractProblem => ({ code: "TRIGGER_CONDITION_UNKNOWN", at: at(condition.param) })),
+        // The registration's own correlation key names a member the scope supplies (a generic one, or one of `data`).
+        ...(judged &&
+        trigger.correlationKey !== undefined &&
+        !(isTriggerKeyPath(trigger.correlationKey) && pathLegal(trigger.correlationKey, null, suppliedList))
+            ? [{ code: "TRIGGER_CONDITION_UNKNOWN" as const, at: at("correlationKey") }]
+            : []),
     ]
 }
 
@@ -333,24 +577,23 @@ const duplicatesOf = (names: ReadonlyArray<string>): ReadonlyArray<string> => [
 
 /**
  * The problems of a workflow's triggers: each must supply every required input of the contract with a fitting type (a workflow with
- * several inputs runs the same steps from each), a connection is named only on a kind that has one, a condition reads a supplied param,
- * keys are unique, and the wake envelope's `sources` are exactly the triggers' wakes. A graph with no `triggers` (from before contracts)
- * is judged by nothing here.
+ * several inputs runs the same steps from each), a connection is named only on a kind that has one, a condition and a registration's own
+ * key read a supplied member, and keys are unique. Every kind arrives on the one event pipeline, so there is no road to agree with. A graph
+ * with no `triggers` (from before contracts) is judged by nothing here. `declared` is the host's provider triggers: with it a registration
+ * on a provider trigger is judged against what the provider declares; without it only its shape is.
  */
 export const triggerProblems = (
     triggers: ReadonlyArray<WorkflowTrigger> | undefined,
-    sources: ReadonlyArray<GraphTagSource>,
     contract: WorkflowContract | undefined,
+    declared?: ProviderTriggerLookup,
 ): ReadonlyArray<ContractProblem> => {
     if (triggers === undefined) return []
-    const wakes = wakesOfTriggers(triggers)
-    const sameWakes = wakes.length === new Set(sources).size && wakes.every((wake) => sources.includes(wake))
     return [
-        ...duplicatesOf(triggers.map((trigger) => trigger.key)).map(
-            (key): ContractProblem => ({ code: "TRIGGER_KEY_DUPLICATE", at: `triggers.${key}` }),
-        ),
-        ...triggers.flatMap((trigger) => oneTriggerProblems(trigger, contract)),
-        ...(sameWakes ? [] : [{ code: "TRIGGER_SOURCES_MISMATCH" as const, at: "trigger.sources" }]),
+        ...duplicatesOf(triggers.map((trigger) => trigger.key)).map((key): ContractProblem => ({
+            code: "TRIGGER_KEY_DUPLICATE",
+            at: `triggers.${key}`,
+        })),
+        ...triggers.flatMap((trigger) => oneTriggerProblems(trigger, contract, declared)),
     ]
 }
 
@@ -366,7 +609,7 @@ export interface OutcomeOutput {
     readonly type: ContractType
 }
 
-/** A named business end of a workflow ("Chốt mua", "Khách không mua") with the fields it hands on. Editable by the owner. */
+/** A named business end of a workflow ("Chot mua", "Khach khong mua") with the fields it hands on. Editable by the owner. */
 export interface WorkflowOutcome {
     /** The id, what an end node names (`won`). */
     readonly key: string
@@ -386,11 +629,6 @@ export type EntryOpenTo = "any" | "agent"
 export interface WorkflowEntry {
     /** Who may call it. */
     readonly openTo: EntryOpenTo
-    /**
-     * True for a workflow that keeps the customer's conversation while it is open (the sales consult): the engine does not release the
-     * conversation between its turns, and the customer's next lines go back to it instead of to the front desk.
-     */
-    readonly holdsConversation?: boolean | undefined
 }
 
 /** The entry rule a workflow without one has: open to any caller with the full params. */
@@ -416,13 +654,15 @@ export const outcomeProblems = (
 ): ReadonlyArray<ContractProblem> => {
     const declared = new Map((outcomes ?? []).map((outcome) => [outcome.key, outcome]))
     return [
-        ...duplicatesOf((outcomes ?? []).map((outcome) => outcome.key)).map(
-            (key): ContractProblem => ({ code: "OUTCOME_DUPLICATE", at: `outcomes.${key}` }),
-        ),
+        ...duplicatesOf((outcomes ?? []).map((outcome) => outcome.key)).map((key): ContractProblem => ({
+            code: "OUTCOME_DUPLICATE",
+            at: `outcomes.${key}`,
+        })),
         ...(outcomes ?? []).flatMap((outcome) =>
-            duplicatesOf(outcome.outputs.map((output) => output.name)).map(
-                (name): ContractProblem => ({ code: "OUTCOME_DUPLICATE", at: `outcomes.${outcome.key}.${name}` }),
-            ),
+            duplicatesOf(outcome.outputs.map((output) => output.name)).map((name): ContractProblem => ({
+                code: "OUTCOME_DUPLICATE",
+                at: `outcomes.${outcome.key}.${name}`,
+            })),
         ),
         ...ends.flatMap((end): ReadonlyArray<ContractProblem> => {
             const outcome = declared.get(end.outcome)
@@ -439,11 +679,23 @@ export const outcomeProblems = (
     ]
 }
 
+/** A binding that reads another value: an object whose `$ref` is a text, with the value to use when that one is missing. */
+interface RefBinding {
+    /** The path of the value this binding reads. */
+    readonly $ref: string
+    /** The value used when the reference resolves to nothing. */
+    readonly default?: unknown
+}
+
 /** A binding is a ref when it is an object with a `$ref` text. */
-const refOf = (binding: unknown): { readonly $ref: string; readonly default?: unknown } | null =>
-    typeof binding === "object" && binding !== null && !Array.isArray(binding) && typeof Reflect.get(binding, "$ref") === "string"
-        ? (binding as { readonly $ref: string; readonly default?: unknown })
-        : null
+const isRefBinding = (binding: unknown): binding is RefBinding =>
+    typeof binding === "object" &&
+    binding !== null &&
+    !Array.isArray(binding) &&
+    typeof Reflect.get(binding, "$ref") === "string"
+
+/** The ref a binding holds, or null when the binding is a plain value. */
+const refOf = (binding: unknown): RefBinding | null => (isRefBinding(binding) ? binding : null)
 
 /**
  * The mapped params of a record of bindings, as the contract checks see them: a fixed value typed by what it is; a ref typed by
@@ -457,7 +709,7 @@ export const mappedOf = (
         ? Object.entries(bindings).map(([name, binding]: [string, unknown]): MappedParam => {
               const ref = refOf(binding)
               if (ref !== null) return { name, type: typeOfRef(ref.$ref), mayBeEmpty: false }
-              return { name, type: contractTypeOfValue(binding as JsonValue), mayBeEmpty: binding === null }
+              return { name, type: contractTypeOfValue(binding), mayBeEmpty: binding === null }
           })
         : []
 
@@ -481,7 +733,7 @@ const OUTCOME_CODES: Partial<Record<ContractProblemCode, ContractProblemCode>> =
 }
 
 /**
- * The problems of one hand-off's mapping against the target's contract: each required input mapped (with a value that cannot read
+ * The problems of one hand-off's mapping against the target's contract (its call inputs, `callInputsOf`): each required input mapped (with a value that cannot read
  * nothing), no name the contract lacks, every type fitting. `at` is `<nodeKey>.<input>`.
  */
 export const callProblems = (
@@ -490,21 +742,28 @@ export const callProblems = (
     target: WorkflowContract,
 ): ReadonlyArray<ContractProblem> => {
     const byName = new Map(mapped.map((param) => [param.name, param]))
-    const declared = new Map(target.inputs.map((input) => [input.name, input]))
+    const inputs = callInputsOf(target)
+    const declared = new Map(inputs.map((input) => [input.name, input]))
     return [
-        ...target.inputs
-            .filter((input) => input.required && (byName.get(input.name) === undefined || byName.get(input.name)?.mayBeEmpty === true))
+        ...inputs
+            .filter(
+                (input) =>
+                    input.required &&
+                    (byName.get(input.name) === undefined || byName.get(input.name)?.mayBeEmpty === true),
+            )
             .map((input): ContractProblem => ({ code: "CALL_INPUT_MISSING", at: `${nodeKey}.${input.name}` })),
         ...mapped.flatMap((param): ReadonlyArray<ContractProblem> => {
             const input = declared.get(param.name)
             if (input === undefined) return [{ code: "CALL_INPUT_UNKNOWN", at: `${nodeKey}.${param.name}` }]
-            return contractTypeFits(input.type, param.type) ? [] : [{ code: "CALL_INPUT_TYPE", at: `${nodeKey}.${param.name}` }]
+            return contractTypeFits(input.type, param.type)
+                ? []
+                : [{ code: "CALL_INPUT_TYPE", at: `${nodeKey}.${param.name}` }]
         }),
     ]
 }
 
 /** The JSON type of a fixed value. */
-export const contractTypeOfValue = (value: JsonValue): ContractType | "unknown" => {
+export const contractTypeOfValue = (value: unknown): ContractType | "unknown" => {
     if (value === null) return "unknown"
     if (Array.isArray(value)) return "array"
     if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number"
@@ -518,29 +777,45 @@ export const contractTypeOfValue = (value: JsonValue): ContractType | "unknown" 
 
 const inputName = keyText.regex(/^[a-z][a-zA-Z0-9]{0,63}$/)
 
-/** The zod schema of an input contract. */
+/** A condition's param: a supplied member, or `<member>.<key>`, one key of a member that is an open flat record (`data.kind`). */
+const conditionParam = keyText.regex(/^[a-z][a-zA-Z0-9]{0,63}(\.[A-Za-z][A-Za-z0-9_-]{0,63}){0,2}$/)
+
+/** The zod schema of one input with no members (a member of `data`, or any input but `data`). */
+const plainInputSchema = z.strictObject({
+    name: inputName,
+    type: z.enum(["string", "number", "integer", "boolean", "object", "array"]),
+    required: z.boolean(),
+})
+
+/** The zod schema of an input contract: an input may carry its members one level deep (the `data` of a called workflow). */
 export const workflowContractSchema: z.ZodType<WorkflowContract> = z.strictObject({
-    inputs: z
-        .array(
-            z.strictObject({
-                name: inputName,
-                type: z.enum(["string", "number", "integer", "boolean", "object", "array"]),
-                required: z.boolean(),
-            }),
-        )
-        .max(40),
+    inputs: z.array(plainInputSchema.extend({ members: z.array(plainInputSchema).max(40).optional() })).max(40),
 })
 
 /** The zod schema of a trigger source. */
 export const triggerSourceSchema: z.ZodType<TriggerSource> = z.strictObject({
-    kind: z.enum(["zalo", "telegram", "website", "sepay", "timer", "schedule", "chats-group", "workflow"]),
+    kind: z.enum([
+        "zalo",
+        "telegram",
+        "facebook",
+        "instagram",
+        "website",
+        "sepay",
+        "timer",
+        "schedule",
+        "chats-group",
+        "workflow",
+        "provider",
+    ]),
     connectionId: keyText.min(1).nullable(),
+    provider: keyText.regex(/^[a-z][a-z0-9_]{1,30}$/).optional(),
+    trigger: keyText.regex(/^[a-z][a-z0-9.-]{1,60}$/).optional(),
 })
 
 /** The zod schema of a trigger condition. */
 export const triggerConditionSchema: z.ZodType<TriggerCondition> = z.strictObject({
-    param: inputName,
-    op: z.enum(["equals", "not-equals", "contains", "present"]),
+    param: conditionParam,
+    op: z.enum(["equals", "not-equals", "in", "contains", "present"]),
     value: jsonValue.optional(),
 })
 
@@ -560,6 +835,12 @@ export const workflowTriggersSchema: z.ZodType<ReadonlyArray<WorkflowTrigger>> =
             key: slug,
             source: triggerSourceSchema,
             conditions: z.array(triggerConditionSchema).max(20).optional(),
+            correlationKey: z
+                .union([
+                    z.enum(TRIGGER_KEY_MEMBERS),
+                    z.templateLiteral(["data.", z.string().regex(/^[a-z][a-zA-Z0-9]{0,63}$/)]),
+                ])
+                .optional(),
         }),
     )
     .min(1)
@@ -586,12 +867,29 @@ export const workflowOutcomesSchema: z.ZodType<ReadonlyArray<WorkflowOutcome>> =
 /** The zod schema of the entry rule. */
 export const workflowEntrySchema: z.ZodType<WorkflowEntry> = z.strictObject({
     openTo: z.enum(["any", "agent"]),
-    holdsConversation: z.boolean().optional(),
 })
+
+/** The separator of a condition param's path into an open record (`data.kind`). */
+const PATH_SEPARATOR = "."
+
+/**
+ * The value a condition param names on a wake's scope: a plain member, or the path's keys one record after the other (`data.text`,
+ * `data.data.kind`), as each record holds it; undefined where a step is no record or holds no such key (never read through the prototype).
+ */
+const paramValueOf = (params: Readonly<Record<string, unknown>>, param: string): unknown => {
+    const [head = "", ...keys] = param.split(PATH_SEPARATOR)
+    let value: unknown = Object.hasOwn(params, head) ? params[head] : undefined
+    for (const key of keys) {
+        if (typeof value !== "object" || value === null || Array.isArray(value) || !Object.hasOwn(value, key))
+            return undefined
+        value = Object.getOwnPropertyDescriptor(value, key)?.value
+    }
+    return value
+}
 
 /** Whether a wake's trigger params meet one condition. */
 export const conditionHolds = (condition: TriggerCondition, params: Readonly<Record<string, unknown>>): boolean => {
-    const value = params[condition.param]
+    const value = paramValueOf(params, condition.param)
     switch (condition.op) {
         case "present":
             return value !== undefined && value !== null && value !== ""
@@ -599,10 +897,16 @@ export const conditionHolds = (condition: TriggerCondition, params: Readonly<Rec
             return JSON.stringify(value ?? null) === JSON.stringify(condition.value ?? null)
         case "not-equals":
             return JSON.stringify(value ?? null) !== JSON.stringify(condition.value ?? null)
+        case "in":
+            return (
+                Array.isArray(condition.value) &&
+                condition.value.some((member) => JSON.stringify(member) === JSON.stringify(value ?? null))
+            )
         case "contains":
             return typeof value === "string" && typeof condition.value === "string"
                 ? value.toLowerCase().includes(condition.value.toLowerCase())
-                : Array.isArray(value) && value.some((member) => JSON.stringify(member) === JSON.stringify(condition.value))
+                : Array.isArray(value) &&
+                      value.some((member) => JSON.stringify(member) === JSON.stringify(condition.value))
     }
 }
 
@@ -619,15 +923,12 @@ const CONTRACT_PREFIXES: ReadonlyArray<string> = ["TRIGGER_", "CONTRACT_", "CALL
 export const isContractProblem = (problem: { readonly code: string }): problem is ContractProblem =>
     CONTRACT_PREFIXES.some((prefix) => problem.code.startsWith(prefix))
 
-/** The member of the input contract a workflow that holds the conversation must require. */
-const CONVERSATION_INPUT = "conversationId"
-
-/** The problems of the entry rule: a workflow that holds the conversation must require the conversation as an input. */
+/**
+ * The problems of the entry rule: none since the conversation hold went (R35: a waiting run takes the person's next line; `holdsConversation`
+ * deleted, R43). R28 LEFTOVER held for ONE caller in the frozen fe (`fe/apps/web/src/modules/workflowSteps/workflowEdits.ts`): delete this
+ * and that call in the fe pass.
+ */
 export const entryProblems = (
-    entry: WorkflowEntry | undefined,
-    contract: WorkflowContract | undefined,
-): ReadonlyArray<ContractProblem> =>
-    entry?.holdsConversation === true &&
-    !(contract?.inputs ?? []).some((input) => input.name === CONVERSATION_INPUT && input.required && input.type === "string")
-        ? [{ code: "ENTRY_HOLD_WITHOUT_CONVERSATION", at: "entry.holdsConversation" }]
-        : []
+    _entry: WorkflowEntry | undefined,
+    _contract: WorkflowContract | undefined,
+): ReadonlyArray<ContractProblem> => []

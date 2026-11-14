@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { KNOWLEDGE_STAGE_KEYS } from "@/modules/documents"
-import type { KnowledgeProgressRowView, LiveProgress } from "@/modules/documents"
+import { KNOWLEDGE_STAGE_KEYS, type KnowledgeProgressRowView, type LiveProgress } from "@/modules/documents"
 
 /**
  * The words and numbers of the processing row of a document, from what `useKnowledgeSources` gives as `live`: the title (Dang xu ly),

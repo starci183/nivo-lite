@@ -93,13 +93,13 @@ const answer = (text: string): AiChatAnswer => ({
 describe("DocumentRelationsService: the relation pass over the facts of one document (scripted model)", () => {
     it("asks once over the facts of the document, meters the call and links what the answer holds", async () => {
         const { service, ai, reads, relations, usage } = await build()
-        ai.chat.mockResolvedValue(answer(JSON.stringify(SCRIPTED)))
+        ai.attempt.mockResolvedValue({ ok: true, answer: answer(JSON.stringify(SCRIPTED)) })
 
         await expect(service.link(docSourceOf())).resolves.toBe(1)
 
         expect(reads.ofSources).toHaveBeenCalledWith(DOC_WS, [DOC_SOURCE], ["proposed", "active"], 80)
-        expect(ai.chat).toHaveBeenCalledTimes(1)
-        expect(ai.chat.mock.calls[0]?.[0].messages).toEqual([
+        expect(ai.attempt).toHaveBeenCalledTimes(1)
+        expect(ai.attempt.mock.calls[0]?.[0].messages).toEqual([
             { role: "system", content: RELATIONS_PROMPT },
             { role: "user", content: relationsPrompt(FACTS) },
         ])
@@ -113,18 +113,47 @@ describe("DocumentRelationsService: the relation pass over the facts of one docu
         const one = await build()
         one.reads.ofSources.mockResolvedValue([factOf()])
         await expect(one.service.link(docSourceOf())).resolves.toBe(0)
-        expect(one.ai.chat).not.toHaveBeenCalled()
+        expect(one.ai.attempt).not.toHaveBeenCalled()
 
         const broke = await build()
         broke.usage.blockedBy.mockResolvedValue(true)
         await expect(broke.service.link(docSourceOf())).resolves.toBe(0)
-        expect(broke.ai.chat).not.toHaveBeenCalled()
+        expect(broke.ai.attempt).not.toHaveBeenCalled()
+    })
+
+    it("books a try cut at its cap with what it spent, once, and links nothing from it", async () => {
+        const { service, ai, relations, usage } = await build()
+        const spent = { promptTokens: 900, completionTokens: 3000, totalTokens: 3900, costUsd: null }
+        ai.attempt.mockResolvedValue({
+            ok: false,
+            failure: "length",
+            spent: {
+                model: "claude-haiku-5-5",
+                usage: spent,
+                served: { upstream: null, finishReason: "max_tokens", durationMs: 1 },
+                cap: 3000,
+            },
+        })
+
+        await expect(service.link(docSourceOf())).resolves.toBe(0)
+
+        expect(usage.record).toHaveBeenCalledTimes(1)
+        expect(usage.record).toHaveBeenCalledWith(
+            expect.objectContaining({
+                workspaceId: DOC_WS,
+                kind: "brain",
+                model: "claude-haiku-5-5",
+                usage: spent,
+                completionChars: 0,
+            }),
+        )
+        expect(relations.linkMany).not.toHaveBeenCalled()
     })
 
     it("logs a failure and answers 0: the facts stand without edges", async () => {
         const { service, ai, logger } = await build()
         const cause = new Error("down")
-        ai.chat.mockRejectedValue(cause)
+        ai.attempt.mockRejectedValue(cause)
 
         await expect(service.link(docSourceOf())).resolves.toBe(0)
         expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.RelationsFailed, cause, { sourceId: DOC_SOURCE })

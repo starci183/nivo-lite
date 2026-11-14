@@ -36,15 +36,18 @@ export const templateWaitMsOf = (text: string | undefined): number | null => {
  * How long a stop waits before a NIVO deadline answers it `timeout`, or null when no deadline applies. A stop of kind `engine` has none
  * (only a person can decide it). A stop that a deadline already answered has none either: a deadline fires ONCE per stop, so a step that
  * stops again after its timeout waits for a person, never on a ladder of timeouts. A step whose template declares a wait (`wait.timeout`)
- * waits that long; otherwise an approval waits 24 hours and a stop for the founder 3 days. Mechanics only: what a timeout means is the
- * step's to decide when it runs again.
+ * waits that long; otherwise an approval waits 24 hours and a stop for the founder 3 days. A stop a person took over (its last decision
+ * `take_over`) has none (ruling R52): the person holds the route, so a timeout would run the step again under the hold and race the
+ * hand-back's close; once a hand-back, retry or words moves it on, the normal windows apply to the stop it leaves. Mechanics only: what a
+ * timeout means is the step's to decide when it runs again.
  */
 export const deadlineWindowOf = (
-    stop: Pick<RunStop, "kind" | "answers">,
+    stop: Pick<RunStop, "kind" | "answers"> & Partial<Pick<RunStop, "decision">>,
     templateWait: string | undefined,
     windows: DeadlineWindows = {},
 ): number | null => {
     if (stop.kind === "engine") return null
+    if (stop.decision?.kind === "take_over") return null
     if (stop.answers.some((answer) => answer.kind === "timeout")) return null
     const declared = templateWaitMsOf(templateWait)
     if (declared !== null) return declared

@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateCreateAgentWorkflow, type MutateCreateAgentWorkflowRequest } from "@/modules/api/graphql/mutations/mutation-create-agent-workflow"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { CreateAgentWorkflowMutation } from "@/modules/api"
 
 /** What the CreateAgentWorkflow mutation is triggered with. */

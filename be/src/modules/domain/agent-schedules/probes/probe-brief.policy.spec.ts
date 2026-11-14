@@ -25,6 +25,7 @@ const task = (over: Partial<AgentTaskRecord> = {}): AgentTaskRecord => ({
     waitingOn: null,
     nextActionAt: AT(-5),
     workItemId: null,
+    data: null,
     ...over,
 })
 

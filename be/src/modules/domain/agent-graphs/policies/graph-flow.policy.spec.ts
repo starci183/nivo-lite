@@ -61,14 +61,13 @@ describe("tagSourceOf", () => {
         expect(policy.tagSourceOf(wake({ context: { authorAgentId: "a-2" } }))).toBe("agent")
         expect(policy.tagSourceOf(wake({ actorMemberId: "m-1" }))).toBe("chats-group")
         expect(policy.tagSourceOf(wake({ context: { authorUserId: "u-1" } }))).toBe("chats-group")
-        expect(policy.tagSourceOf(wake({ source: "customer" }))).toBe("channel")
         expect(policy.tagSourceOf(wake({ context: { conversationId: "c-1" } }))).toBe("channel")
         expect(policy.tagSourceOf(wake())).toBe("agent")
     })
 })
 
 describe("triggerScopeOf", () => {
-    it("keeps the flat context, parses the tag's data as context, and names the source, origin and language", async () => {
+    it("keeps the flat context, supplies the tag's data, names the source, origin and language, and writes no `context` member", async () => {
         const policy = await build()
         const scope = policy.triggerScopeOf(
             wake({
@@ -90,7 +89,6 @@ describe("triggerScopeOf", () => {
             authorAgentId: "a-2",
             locale: "en",
             subject: { kind: "order", id: "o-1" },
-            context: { items: [{ name: "Lan" }] },
             items: [{ name: "Lan" }],
             source: "agent",
             origin: "agent",
@@ -99,9 +97,9 @@ describe("triggerScopeOf", () => {
             source: "sepay",
             origin: "system-event",
             subject: null,
-            context: {},
             locale: "vi",
         })
+        expect(policy.triggerScopeOf(wake({ context: { tagSource: "sepay" } }))).not.toHaveProperty("context")
     })
 
     it("speaks Vietnamese unless the trigger says English", async () => {
@@ -128,17 +126,24 @@ describe("graphNodeStepOf", () => {
         expect(policy.graphNodeStepOf(node, input, "read").effect).toEqual({ kind: "read" })
     })
 
-    it("keys a step by the node it ran: an iteration of a for-each body is its node", async () => {
+    it("keys a step by the node it ran: a body step of a for-each item is its node, whatever the item's identity", async () => {
         const policy = await build()
         expect(policy.nodeStepKeyOf("record")).toBe("record")
-        expect(policy.nodeStepKeyOf("ship[2]")).toBe("ship")
+        expect(policy.nodeStepKeyOf("each[2].ship")).toBe("ship")
+        expect(policy.nodeStepKeyOf("each[INV-7.a].ship")).toBe("ship")
         expect(
             policy.graphNodeStepOf(
                 { key: "ship", kind: "output", step: "s" },
-                { versionId: "v", nodeKey: "ship", trigger: {}, item: { value: 1, index: 2 } },
+                {
+                    versionId: "v",
+                    nodeKey: "ship",
+                    trigger: {},
+                    item: { value: 1, index: 2, key: "order-9" },
+                    loop: { nodeKey: "each", index: 2, items: [1, 2, 1] },
+                },
                 "read",
             ).stepKey,
-        ).toBe("ship[2]")
+        ).toBe("each[order-9].ship")
     })
 })
 

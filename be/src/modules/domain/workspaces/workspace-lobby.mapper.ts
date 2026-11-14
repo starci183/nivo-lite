@@ -1,6 +1,5 @@
 import type { LobbySeat } from "@modules/domain/workspace-members"
-import { RESTORE_DAYS } from "./workspaces.contracts"
-import type { WorkspaceMembership } from "./workspaces.contracts"
+import { RESTORE_DAYS, type WorkspaceMembership } from "./workspaces.contracts"
 import type { WorkspaceEntity } from "./persistence/entities"
 
 const DAY_MS = 86_400_000

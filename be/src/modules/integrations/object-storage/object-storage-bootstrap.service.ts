@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { ObjectStorage } from "@starci/object-storage"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"
 import { StorageLogEvent } from "./object-storage.log-events"

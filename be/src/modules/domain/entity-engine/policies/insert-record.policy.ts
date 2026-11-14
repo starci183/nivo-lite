@@ -5,6 +5,7 @@ import { entityOf } from "./catalog-access.policy"
 import type { EntityCatalog, InsertStamp } from "./compiler.contracts"
 import { dataOf, defaultsOf, sequenceFieldsOf } from "./record-data.policy"
 import { onlyRecord, RECORD_RETURNING, recordRowsOf } from "./record-row.policy"
+import { stampedAgentOf } from "./agent-scope.policy"
 import type { ScopedTx } from "./scoped-tx.contracts"
 import { nextSequenceValue } from "./sequence-next.policy"
 
@@ -21,7 +22,7 @@ export interface InsertInput {
 }
 
 /**
- * Inserts one record into the scope's workspace: the declared defaults, then the given values (a jsonb value parsed by its shape),
+ * Inserts one record into the scope's workspace, stamped with the scope's agent (null when none): the declared defaults, then the given values (a jsonb value parsed by its shape),
  * then each sequence field's next counter value formatted. One `INSERT ... RETURNING` builder statement; a unique, check or
  * foreign-key violation surfaces as the database error the caller maps.
  */
@@ -37,7 +38,13 @@ export const insertRecord = async (tx: ScopedTx, catalog: EntityCatalog, input: 
         .createQueryBuilder(RecordEntity, "r")
         .insert()
         .into(RecordEntity)
-        .values({ id: input.id, workspaceId: tx.workspaceId, entity: entity.name, data: () => "CAST(:data AS jsonb)" })
+        .values({
+            id: input.id,
+            workspaceId: tx.workspaceId,
+            entity: entity.name,
+            agentId: stampedAgentOf(tx),
+            data: () => "CAST(:data AS jsonb)",
+        })
         .setParameter("data", JSON.stringify(data))
         .returning(RECORD_RETURNING)
         .execute()

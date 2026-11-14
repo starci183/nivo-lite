@@ -20,27 +20,28 @@ interface PaneBodyProps {
     readonly overlay?: ReactNode
 }
 
+/** The pane's one filled command, full width and shown on a phone only. */
+const phoneButtonOf = (primary: PanePrimary) => (
+    <div className={PHONE_ONLY_CLASS_NAME}>
+        <Button
+            intent="commit"
+            width="fill"
+            isPending={primary.isPending === true}
+            onPress={primary.onPress}
+            {...(primary.startContent === undefined ? {} : { startContent: primary.startContent })}
+        >
+            {primary.label}
+        </Button>
+    </div>
+)
+
 /**
  * The body of a pane that scrolls as a whole: one band with the section gap between its blocks. Put it inside a `Pane` that has
  * `scroll` and a `label`; a pane that needs a fixed band above a scrolling one places its own `PaneSection`s instead.
  */
 export const PaneBody = (props: PaneBodyProps) => (
     <PaneSection gap="section" isLoading={props.isWaiting === true}>
-        {props.phonePrimary === undefined ? null : (
-            <div className={PHONE_ONLY_CLASS_NAME}>
-                <Button
-                    intent="commit"
-                    width="fill"
-                    isPending={props.phonePrimary.isPending === true}
-                    onPress={props.phonePrimary.onPress}
-                    {...(props.phonePrimary.startContent === undefined
-                        ? {}
-                        : { startContent: props.phonePrimary.startContent })}
-                >
-                    {props.phonePrimary.label}
-                </Button>
-            </div>
-        )}
+        {props.phonePrimary === undefined ? null : phoneButtonOf(props.phonePrimary)}
         {props.children}
         {props.overlay}
     </PaneSection>

@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentRunAiCallsQuery, AgentRunAiCallsQueryVariables } from "../__generated__/graphql"
 
 /** Generated input of the agentRun query read for its AI calls. */
@@ -17,6 +17,7 @@ const query1: Document = gql`
         agentRun(input: $input) {
             aiCalls {
                 purpose
+                label
                 calls
                 maxTry
                 promptTokens
@@ -52,6 +53,6 @@ export const queryAgentRunAiCalls = async ({
     request,
     signal,
 }: QueryAgentRunAiCallsParams): Promise<ApolloClient.QueryResult<QueryAgentRunAiCallsResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

@@ -1,10 +1,23 @@
 import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import type { ModuleFixtures } from "../../module-fixtures"
 import { RUN_PARKED } from "../../../fixtures/run-timeline.fixtures"
-import type { AgentRunCounts, AgentRunsPage } from "../agent-runs"
+import type { AgentRunCounts } from "../agent-runs"
+import { deskRunRowOf } from "../agent-desk"
+import type { DeskRunsPage } from "../reads/agent-runs.read"
+import {
+    DESK_FLOWS_NONE,
+    DESK_FLOWS_VIEW,
+    DESK_REACH_NONE,
+    DESK_REACH_VIEW,
+    DESK_TODAY_UNCOUNTED,
+    DESK_TODAY_VIEW,
+    DESK_WAITING_NONE,
+    DESK_WAITING_VIEW,
+} from "./agent-desk.fixtures"
 import en from "../messages/en.json"
 import vi from "../messages/vi.json"
 import type { InstallationFacts, InstallationView, ParkedRunsView } from "../platform.types"
+import { SALES_ORDER_ENTITY } from "../../../entities/sales/sales-entity-names"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
 export const INSTALLATION: InstallationView = {
@@ -14,15 +27,15 @@ export const INSTALLATION: InstallationView = {
             key: "sales",
             enabled: true,
             permissions: ["sales.view", "sales.manage"],
-            reads: ["sales.leads"],
+            reads: ["blocks-core.sales.api.lead.list"],
             actions: ["sales.move-stage"],
             views: ["pipeline"],
         },
         {
             key: "loyalty",
             enabled: false,
-            permissions: ["loyalty.view"],
-            reads: ["loyalty.members"],
+            permissions: ["sales.view"],
+            reads: ["blocks-core.sales.api.loyalty-member.list"],
             actions: [],
             views: [],
         },
@@ -36,11 +49,11 @@ export const INSTALLATION_FACTS: InstallationFacts = {
         {
             key: "sales",
             permissions: ["sales.view", "sales.manage"],
-            reads: ["sales.leads"],
+            reads: ["blocks-core.sales.api.lead.list"],
             actions: ["sales.move-stage"],
             views: ["pipeline"],
         },
-        { key: "loyalty", permissions: ["loyalty.view"], reads: ["loyalty.members"], actions: [], views: [] },
+        { key: "loyalty", permissions: ["sales.view"], reads: ["blocks-core.sales.api.loyalty-member.list"], actions: [], views: [] },
     ],
     enabled: ["sales"],
 }
@@ -101,7 +114,7 @@ export const CONNECTIONS_VIEW: ConnectionsRegionView = {
 
 /** The agent has no connection. */
 export const CONNECTIONS_NONE: ConnectionsRegionView = {
-    label: "Tài khoản đã gắn",
+    label: "T\u00e0i kho\u1ea3n \u0111\u00e3 g\u1eafn",
     rightsLabel: "Quy\u1ec1n",
     rightsHref: "",
     rows: [],
@@ -154,7 +167,7 @@ const parkedRunsIn = (words: ParkedWords): ParkedRunsView => ({
         {
             id: "run-2",
             module: "sales",
-            subjectKind: "sales.order",
+            subjectKind: SALES_ORDER_ENTITY,
             subjectId: "order-2",
             step: words.parked_step_confirm,
             errorCode: "DELIVERY_FAILED",
@@ -164,7 +177,7 @@ const parkedRunsIn = (words: ParkedWords): ParkedRunsView => ({
         {
             id: "run-1",
             module: "sales",
-            subjectKind: "sales.order",
+            subjectKind: SALES_ORDER_ENTITY,
             subjectId: "order-1",
             step: words.parked_step_notify,
             errorCode: "TIMEOUT",
@@ -186,19 +199,59 @@ export const PARKED_RUNS_NONE: ParkedRunsView = {
     rows: [],
 }
 
-/** The runs of an agent: one parked on a refused send, one failed, one running and one done. */
-export const AGENT_RUNS_VIEW: AgentRunsPage = {
+/** The runs of an agent: one parked on a refused send, one failed, one running and one done; the desk counted records for two of them. */
+export const AGENT_RUNS_VIEW: DeskRunsPage = {
     rows: [
-        { id: "run-3", status: "parked", trigger: "zalo.message", when: "05/11/2026 15:00", duration: "1:12" },
-        { id: "run-4", status: "failed", trigger: "schedule.daily", when: "05/11/2026 09:00", duration: "0:04" },
-        { id: "run-5", status: "running", trigger: "zalo.message", when: "05/11/2026 15:20", duration: "0:09" },
-        { id: "run-1", status: "done", trigger: "zalo.message", when: "05/11/2026 08:00", duration: "1:07" },
+        deskRunRowOf(
+            { id: "run-3", status: "parked", trigger: "zalo.message", when: "05/11/2026 15:00", duration: "1:12" },
+            {
+                runId: "run-3",
+                ask: "Minh An c\u00f2n d\u1ecbch v\u1ee5 n\u00e0o s\u1eafp h\u1ebft h\u1ea1n?",
+                askedBy: "Ch\u1ecb Lan",
+                readCount: 4,
+                changedCount: 0,
+                uncounted: 0,
+                outcome: "stopped",
+            },
+            "vi",
+        ),
+        deskRunRowOf(
+            { id: "run-4", status: "failed", trigger: "schedule.daily", when: "05/11/2026 09:00", duration: "0:04" },
+            undefined,
+            "vi",
+        ),
+        deskRunRowOf(
+            { id: "run-5", status: "running", trigger: "zalo.message", when: "05/11/2026 15:20", duration: "0:09" },
+            {
+                runId: "run-5",
+                ask: null,
+                askedBy: null,
+                readCount: null,
+                changedCount: null,
+                uncounted: 2,
+                outcome: "running",
+            },
+            "vi",
+        ),
+        deskRunRowOf(
+            { id: "run-1", status: "done", trigger: "zalo.message", when: "05/11/2026 08:00", duration: "1:07" },
+            {
+                runId: "run-1",
+                ask: "Ghi l\u1ea1i email m\u1edbi c\u1ee7a anh Phong",
+                askedBy: "Anh T\u00fa",
+                readCount: 1,
+                changedCount: 1,
+                uncounted: 0,
+                outcome: "changed",
+            },
+            "vi",
+        ),
     ],
     cursor: null,
 }
 
 /** The agent has not run yet. */
-export const AGENT_RUNS_NONE: AgentRunsPage = {
+export const AGENT_RUNS_NONE: DeskRunsPage = {
     rows: [],
     cursor: null,
 }
@@ -226,6 +279,16 @@ export const PLATFORM_FIXTURES: ModuleFixtures = {
         "platform.agent-runs": { ready: AGENT_RUNS_VIEW, empty: AGENT_RUNS_NONE },
         "platform.agent-run-counts": { ready: AGENT_RUN_COUNTS, empty: AGENT_RUN_COUNTS_NONE },
         "platform.agent-run": { ready: RUN_PARKED },
+        "platform.agent-flows": { ready: DESK_FLOWS_VIEW, empty: DESK_FLOWS_NONE },
+        "platform.waiting-on-person": { ready: DESK_WAITING_VIEW, empty: DESK_WAITING_NONE },
+        "platform.agent-today": { ready: DESK_TODAY_VIEW, empty: DESK_TODAY_UNCOUNTED },
+        "platform.agent-reach": { ready: DESK_REACH_VIEW, empty: DESK_REACH_NONE },
     },
-    actions: { "platform.resume-run": { ok: true } },
+    actions: {
+        "platform.resume-run": { ok: true },
+        "platform.approval-decide": { ok: true },
+    },
 }
+
+/** The key of the approval row of the desk fixture, for a prototype that presses its verdict. */
+export { DESK_APPROVAL_KEY } from "./agent-desk.fixtures"

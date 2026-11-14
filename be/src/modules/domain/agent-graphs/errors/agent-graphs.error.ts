@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the agent-graphs capability. */
 export enum AgentGraphsErrorCode {
@@ -17,18 +16,24 @@ export enum AgentGraphsErrorCode {
     RefsRefused = "AGENT_GRAPHS_REFS_REFUSED",
     /** A draft whose flow names a model the vocabulary does not know, or a model on a node that calls no AI. */
     ModelRefused = "AGENT_GRAPHS_MODEL_REFUSED",
+    /** The agent's module belongs to a private plugin the workspace may no longer use (its enterprise identifier does not match). */
+    ModuleClosed = "AGENT_GRAPHS_MODULE_CLOSED",
     /** A new version whose triggers, outcomes or end hand-offs break a workflow contract, or that would break a workflow that calls it. */
     ContractRefused = "AGENT_GRAPHS_CONTRACT_REFUSED",
     /** The change gives the agent more reach, and only the owner may publish that. */
     WidensNeedsOwner = "AGENT_GRAPHS_WIDENS_NEEDS_OWNER",
+    /**
+     * The version asks for operations on connected accounts beyond what its workflow holds (a new operation, or `auto` where it holds
+     * `ask`): it activates only when the owner agrees to every one of them. `params.rights` lists them as JSON, each with the
+     * title of the step that asks (`stepTitle`, in the owner's two languages; null for a step no installed node is).
+     */
+    RightsNeedOwner = "AGENT_GRAPHS_RIGHTS_NEED_OWNER",
     /** The graph is not a graph the product can read. */
     DocumentInvalid = "AGENT_GRAPHS_DOCUMENT_INVALID",
     /** Only the owner or a manager of the workspace may read or change an agent graph. */
     Forbidden = "AGENT_GRAPHS_FORBIDDEN",
     /** The graph never decided this work item. */
     RunNotFound = "AGENT_GRAPHS_RUN_NOT_FOUND",
-    /** The action the owner spoke of has no bands in the graph that a boundary could move. */
-    BranchNotApplicable = "AGENT_GRAPHS_BRANCH_NOT_APPLICABLE",
     /** A stored record is not the shape its entity declares. */
     RecordUnreadable = "AGENT_GRAPHS_RECORD_UNREADABLE",
     /** The workflow is not a workflow of the agent, or the version is not a version of the workflow. */
@@ -41,6 +46,11 @@ export enum AgentGraphsErrorCode {
     WorkflowRefused = "AGENT_GRAPHS_WORKFLOW_REFUSED",
     /** A workflow wake reached the flow before the thread engine registered: the app composed no engine to run it. */
     EngineMissing = "AGENT_GRAPHS_ENGINE_MISSING",
+    /**
+     * A pick of a trigger's source names a workflow not of the agent, a stream its attached accounts do not contest for that purpose, or
+     * an account that does not read that stream (owner key `triggerOneSource2026_11_12`): nothing is written.
+     */
+    TriggerPickRefused = "AGENT_GRAPHS_TRIGGER_PICK_REFUSED",
 }
 
 /** How each agent-graphs code travels. */
@@ -52,18 +62,20 @@ export const AGENT_GRAPHS_ERROR_KINDS: Record<AgentGraphsErrorCode, ErrorKind> =
     [AgentGraphsErrorCode.PublishRefused]: "invalid",
     [AgentGraphsErrorCode.RefsRefused]: "invalid",
     [AgentGraphsErrorCode.ModelRefused]: "invalid",
+    [AgentGraphsErrorCode.ModuleClosed]: "forbidden",
     [AgentGraphsErrorCode.ContractRefused]: "invalid",
     [AgentGraphsErrorCode.WidensNeedsOwner]: "forbidden",
+    [AgentGraphsErrorCode.RightsNeedOwner]: "forbidden",
     [AgentGraphsErrorCode.DocumentInvalid]: "internal",
     [AgentGraphsErrorCode.Forbidden]: "forbidden",
     [AgentGraphsErrorCode.RunNotFound]: "not-found",
-    [AgentGraphsErrorCode.BranchNotApplicable]: "invalid",
     [AgentGraphsErrorCode.RecordUnreadable]: "internal",
     [AgentGraphsErrorCode.WorkflowNotFound]: "not-found",
     [AgentGraphsErrorCode.TemplateNotFound]: "not-found",
     [AgentGraphsErrorCode.WorkflowConflict]: "conflict",
     [AgentGraphsErrorCode.WorkflowRefused]: "invalid",
     [AgentGraphsErrorCode.EngineMissing]: "internal",
+    [AgentGraphsErrorCode.TriggerPickRefused]: "invalid",
 }
 
 /** The one error class of the agent-graphs capability. */

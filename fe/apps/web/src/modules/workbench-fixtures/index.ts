@@ -1,5 +1,5 @@
 import { outcomeOf } from "@nivo-lite/agent-sdk/block"
-import type { ModuleFixtures } from "@nivo-lite/blocks-core/fixtures"
+import { type ModuleFixtures } from "@/modules/plugin-registry"
 import type { FixtureTables } from "@/modules/workbench-host"
 
 /**

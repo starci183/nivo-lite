@@ -1,6 +1,5 @@
-import { BaseEvent } from "@modules/platform/event-bus"
-import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, isText, isTextOrAbsent, whenPresent, openEnvelope } from "./money-event.policy"
+import { BaseEvent, type EventPayload, type ParsedEvent } from "@modules/platform/event-bus"
+import { isKey, isText, isTextOrAbsent, whenPresent, openEnvelope } from "./event-payload.policy"
 
 /**
  * The payload of the `decision_made` event: a person decided a work item (approved, edited or rejected it). A reactor settles the

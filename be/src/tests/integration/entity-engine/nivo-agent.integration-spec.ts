@@ -1,16 +1,12 @@
-import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
 import { agentsEntities } from "@modules/domain/agents"
-import { ModuleJobRunnerService } from "@modules/domain/entity-engine"
-import { JobRetry } from "@nivo-lite/agent-sdk/mutation"
-import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
-import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { EngineDoorService } from "@modules/domain/entity-engine-door"
+import { toolCallLogEntities } from "@modules/domain/tool-call-log"
+import { toolGrantsEntities } from "@modules/domain/tool-grants"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox } from "../../world/backend-role-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
-import { bindJobDoor } from "../../world/nivo-door-proof.service"
 import { useSeedConnection } from "../../world/sales-door-world.service"
 
 /** The real app opens in about a minute on the world; the whole suite shares that one boot. */
@@ -38,8 +34,8 @@ beforeAll(async () => {
 const ROWS_MAX = 20
 
 const [AgentEntity] = agentsEntities
-const [McpToolGrantEntity] = mcpToolGrantsEntities
-const [McpCallLogEntity] = mcpCallLogEntities
+const [ToolGrantEntity] = toolGrantsEntities
+const [ToolCallLogEntity] = toolCallLogEntities
 
 /** The seeded nivo agents of the workspace. */
 const nivoAgentsOf = (workspaceId: string) =>
@@ -48,7 +44,7 @@ const nivoAgentsOf = (workspaceId: string) =>
 /** The grants of the seeded nivo agent, by tool. */
 const grantsOf = async (workspaceId: string, agentId: string) =>
     (
-        await seed.manager.find(McpToolGrantEntity, {
+        await seed.manager.find(ToolGrantEntity, {
             select: { tool: true, mode: true },
             where: { workspaceId, agentId },
             order: { tool: "ASC" },
@@ -56,67 +52,57 @@ const grantsOf = async (workspaceId: string, agentId: string) =>
         })
     ).map(({ tool, mode }) => ({ tool, mode }))
 
+/** The door of a job run the way the job runner opens it: the workspace, the job run, the module agent when the job reaches records. */
+const doorOf = (agentId: string | undefined) => {
+    const jobId = world.id()
+    return world.resolve(EngineDoorService).doorApi({
+        workspaceId: who.workspaceId,
+        jobId,
+        agentId,
+        effectKey: (step) => `${jobId}:${step}`,
+        scopeOpen: () => false,
+    })
+}
+
 describe("the internal nivo agent of a workspace", () => {
-    it("is laid down with the workspace row and holds exactly the door grants of the declared jobs", async () => {
+    it("is laid down with the workspace row, and the baseline's grant rows are the ones the declared jobs held (the customer send no longer reads its row)", async () => {
         const agents = await nivoAgentsOf(who.workspaceId)
         expect(agents).toHaveLength(1)
         expect(await grantsOf(who.workspaceId, String(agents[0]?.id))).toEqual([
-            { tool: "nivo.chat.profile.get", mode: "auto" },
-            { tool: "nivo.chat.send", mode: "auto" },
-            { tool: "nivo.ledger.entry.append", mode: "auto" },
-            { tool: "nivo.ledger.status.get", mode: "auto" },
+            { tool: "nivo.tool.chat.profile.get", mode: "auto" },
+            { tool: "nivo.tool.chat.send", mode: "auto" },
+            { tool: "nivo.tool.ledger.entry.append", mode: "auto" },
+            { tool: "nivo.tool.ledger.status.get", mode: "auto" },
         ])
     })
 
-    it("passes the grant check of the gateway for a declared job's door call, and the call log names the agent", async () => {
-        bindJobDoor(world)
-        const met = await world.resolve(ChatConversationsService).meet({
-            workspaceId: who.workspaceId,
-            agentId: who.agentId,
-            channel: "website",
-            customerId: world.id(),
-            visitor: "Lan",
-            connectionId: world.id(),
-        })
-        const heard = await world
-            .resolve(ChatMessagesService)
-            .storeCustomer(who.workspaceId, met.conversation.id, "Shop mo cua may gio?", null, null)
-        const reply = await world.resolve(ChatMessagesService).storeAgentLine({
-            workspaceId: who.workspaceId,
-            conversationId: met.conversation.id,
-            body: "Shop mo cua tu 8 gio sang.",
-            key: `reply:${heard.id}`,
-            inReplyTo: heard.id,
-        })
-
-        const delivery = {
-            jobId: world.id(),
-            kind: "chatbot.deliver-reply",
-            fencingToken: 1,
-            currentStep: null,
-            payload: { job: "chatbot.deliver-reply", workspaceId: who.workspaceId, input: { messageId: reply.id } },
-        }
-        const runner = world.resolve(ModuleJobRunnerService)
-        // The chat tool marks the line sent itself, so the job's own write of the old version asks the queue for one more delivery.
-        await expect(runner.run(delivery)).rejects.toBeInstanceOf(JobRetry)
-        await expect(runner.run(delivery)).resolves.toBeUndefined()
-
+    it("refuses the customer send of a job whose module has no installed agent, and reaches no gateway", async () => {
         const [nivo] = await nivoAgentsOf(who.workspaceId)
-        const logged = await seed.manager.find(McpCallLogEntity, {
-            select: { connector: true, tool: true, outcome: true },
-            where: { workspaceId: who.workspaceId, agentId: String(nivo?.id) },
+        const result = await doorOf(undefined).call("nivo.tool.customer.message.send", { contactId: world.id(), text: "Xin chao" })
+        expect(result).toEqual({ ok: false, reason: "forbidden", message: "no_agent" })
+        const logged = await seed.manager.count(ToolCallLogEntity, { where: { workspaceId: who.workspaceId, agentId: String(nivo?.id) } })
+        expect(logged).toBe(0)
+    })
+
+    it("lets a declared job tell a person through the one send tool as its module agent: the call is judged and logged under that agent, and a person the workspace does not know is answered as a refusal fact", async () => {
+        const result = await doorOf(who.agentId).call(
+            "nivo.tool.customer.message.send",
+            { contactId: world.id(), text: "Shop mo cua tu 8 gio sang." },
+            { onceBy: world.id() },
+        )
+        expect(result).toMatchObject({ ok: true, output: { kind: "refused", id: "no_recipient" } })
+        const logged = await seed.manager.find(ToolCallLogEntity, {
+            select: { connector: true, tool: true },
+            where: { workspaceId: who.workspaceId, agentId: who.agentId },
             take: ROWS_MAX,
         })
-        expect(logged.map(({ connector, tool, outcome }) => ({ connector, tool, outcome }))).toEqual([
-            { connector: "chat", tool: "nivo.chat.send", outcome: "ok" },
+        expect(logged.map(({ connector, tool }) => ({ connector, tool }))).toEqual([
+            { connector: "customer", tool: "nivo.tool.customer.message.send" },
         ])
-        const stored = await world.resolve(ChatMessagesService).storeAgentLine({
-            workspaceId: who.workspaceId,
-            conversationId: met.conversation.id,
-            body: "Shop mo cua tu 8 gio sang.",
-            key: `reply:${heard.id}`,
-            inReplyTo: heard.id,
-        })
-        expect(stored).toMatchObject({ id: reply.id, sent: true })
+    })
+
+    it("denies a door tool no job holds, as before", async () => {
+        const result = await doorOf(who.agentId).call("nivo.tool.ledger.entry.void", { a: 1 })
+        expect(result).toEqual({ ok: false, reason: "forbidden", message: "not_granted" })
     })
 })

@@ -15,12 +15,14 @@ import { listRead } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { definePort } from "@nivo-lite/agent-sdk/port"
 import type { PortProvider } from "@nivo-lite/agent-sdk/port"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { AuthorityRule } from "@modules/domain/authority-rules"
-import { EntityEngineService } from "@modules/domain/entity-engine"
+import {
+    EntityEngineError,
+    EntityEngineErrorCode,
+    EntityEngineService,
+    ModuleAgentService,
+} from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
-import { MemberGrantsService } from "@modules/domain/member-grants"
-import type { MemberGrant } from "@modules/domain/member-grants"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -31,7 +33,8 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DoorPortsService } from "./door-ports.service"
-import { WorkspaceTimeZoneService } from "./workspace-time-zone.service"
+import { DoorProviderReadsService } from "./door-provider-reads.service"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import type { DoorRun } from "./door-ports.service"
 import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
 import { WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
@@ -65,6 +68,7 @@ const actionOf = (
     id: ActionDefinition["id"],
     execute: ActionDefinition["execute"],
     transactional = false,
+    staff = false,
 ): ActionDefinition => ({
     entry: "action",
     id,
@@ -73,6 +77,7 @@ const actionOf = (
     label: { key: "sales.label" },
     transactional,
     execute,
+    ...(staff ? { staff: true as const } : {}),
 })
 
 const memberOf = (role: WorkspaceRole): WorkspaceMember => ({
@@ -84,42 +89,23 @@ const memberOf = (role: WorkspaceRole): WorkspaceMember => ({
     status: "active",
 })
 
-const grantOf = (memberId: string): MemberGrant => ({
-    id: `grant-${memberId}`,
-    workspace_id: WORKSPACE,
-    member_id: memberId,
-    action: "sales.view",
-    unit: "count",
-    max_amount: null,
-    updated_at: NOW,
-})
-
-const ruleOf = (overrides: Partial<AuthorityRule> = {}): AuthorityRule => ({
-    id: "rule-1",
-    department: "sales",
-    action: "sales.move-stage",
-    mode: "auto",
-    limit_vnd: null,
-    required_fields: [],
-    ...overrides,
-})
+const SALES_AGENT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
 interface Arranged {
     readonly role?: WorkspaceRole
-    readonly grants?: ReadonlyArray<MemberGrant>
-    readonly rule?: AuthorityRule | null
     readonly read?: ReadDefinition["execute"]
     readonly act?: ActionDefinition["execute"]
     readonly transactionalAct?: ActionDefinition["execute"]
+    /** The agent of the workspace's installed sales module; null when it has none, undefined for the default agent. */
+    readonly agentId?: string | null
 }
 
 const build = async ({
     role = "manager",
-    grants = [],
-    rule = null,
     read = () => Promise.resolve({ ok: true, data: { rows: [] } }),
     act = () => Promise.resolve(ACTION_OK),
     transactionalAct = () => Promise.resolve(ACTION_OK),
+    agentId = SALES_AGENT,
 }: Arranged = {}) => {
     const declaration: ModuleDeclaration = {
         entry: "module",
@@ -127,7 +113,11 @@ const build = async ({
         namespace: "sales",
         permissions: ["sales.view", "sales.manage"],
         reads: [{ ...LEADS, execute: read }],
-        actions: [actionOf("sales.move-stage", act), actionOf("sales.settle", transactionalAct, true)],
+        actions: [
+            actionOf("sales.move-stage", act),
+            actionOf("sales.settle", transactionalAct, true),
+            actionOf("sales.note-add", act, false, true),
+        ],
         specs: [],
     }
     const lead = mock<EntityDefinition>({ name: "sales.lead", dataKind: "lead" })
@@ -135,12 +125,13 @@ const build = async ({
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(memberOf(role))
     members.idOf.mockResolvedValue("member-1")
-    const memberGrants = mock<MemberGrantsService>()
-    memberGrants.forAction.mockResolvedValue(grants)
-    const rules = mock<AuthorityRulesService>()
-    rules.ownerRuleFor.mockResolvedValue(rule)
     const engine = mock<EntityEngineService>()
     engine.scoped.mockImplementation((_workspace, work) => work(tx))
+    const installations = mock<InstallationRecordsService>()
+    const agents = mock<ModuleAgentService>()
+    if (agentId === null)
+        agents.scopeOf.mockRejectedValue(new EntityEngineError({ code: EntityEngineErrorCode.AgentMissing }))
+    else agents.scopeOf.mockResolvedValue({ id: agentId, sees: "all" })
     const provider = mock<PortProvider>()
     const ports = mock<DoorPortsService>()
     const zones = mock<WorkspaceTimeZoneService>({ timeZoneOf: jest.fn().mockResolvedValue("Asia/Ho_Chi_Minh") })
@@ -160,19 +151,19 @@ const build = async ({
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: MemberGrantsService, useValue: memberGrants },
-            { provide: AuthorityRulesService, useValue: rules },
             { provide: EntityEngineService, useValue: engine },
             { provide: DoorPortsService, useValue: ports },
+            DoorProviderReadsService,
             { provide: WorkspaceTimeZoneService, useValue: zones },
+            { provide: InstallationRecordsService, useValue: installations },
+            { provide: ModuleAgentService, useValue: agents },
         ],
     }).compile()
     return {
         door: moduleRef.get(WorkbenchDoorService),
         members,
-        memberGrants,
-        rules,
         engine,
+        agents,
         ports,
         provider,
         logger,
@@ -210,16 +201,11 @@ describe("WorkbenchDoorService.read", () => {
         const read = jest.fn((): Promise<ReadRunResult> =>
             Promise.resolve({ ok: true, data: { rows: [{ id: "lead-1" }] } }),
         )
-        const { door, engine, ports, provider, memberGrants, tx } = await build({
-            role: "staff",
-            grants: [grantOf("member-1")],
-            read,
-        })
+        const { door, engine, ports, provider, tx } = await build({ role: "staff", read })
 
         const answer = await door.read(USER, callOf("sales.leads", '{"q":"an"}'))
 
         expect(answer).toEqual({ data: '{"rows":[{"id":"lead-1"}]}' })
-        expect(memberGrants.forAction).toHaveBeenCalledWith(WORKSPACE, "sales.view")
         expect(engine.scoped).toHaveBeenCalledWith(WORKSPACE, expect.any(Function))
         const run: DoorRun | undefined = ports.providerFor.mock.calls[0]?.[0]
         expect(run).toMatchObject({ name: "sales.leads", dataKind: "lead" })
@@ -246,16 +232,29 @@ describe("WorkbenchDoorService.read", () => {
         })
     })
 
-    it("refuses a staff member who does not hold the permission, and never runs the read", async () => {
-        const read = jest.fn()
-        const { door, engine } = await build({ role: "staff", grants: [grantOf("member-2")], read })
+    it.each(["owner", "manager", "staff"] as const)(
+        "lets a %s view every declared read: the door judges a read by membership alone",
+        async (role) => {
+            const read = jest.fn((): Promise<ReadRunResult> => Promise.resolve({ ok: true, data: { rows: [] } }))
+            const { door } = await build({ role, read })
 
-        await expect(door.read(USER, callOf("sales.leads"))).rejects.toMatchObject({
-            code: WorkbenchDoorErrorCode.PermissionDenied,
-            params: { permission: "sales.view" },
-        })
+            await expect(door.read(USER, callOf("sales.leads"))).resolves.toEqual({ data: '{"rows":[]}' })
+            expect(read).toHaveBeenCalledTimes(1)
+        },
+    )
+
+    it("refuses a member of another workspace: membership is proved for the workspace of the call", async () => {
+        const { door, members, engine } = await build({ role: "staff" })
+        members.require.mockImplementation((_user, workspaceId) =>
+            workspaceId === WORKSPACE
+                ? Promise.resolve(memberOf("staff"))
+                : Promise.reject(new StandInError({ code: "WORKSPACE_MEMBERS_NOT_MEMBER" })),
+        )
+
+        await expect(
+            door.read(USER, { workspaceId: "ws-2", name: "sales.leads", payload: "{}", locale: "vi" }),
+        ).rejects.toMatchObject({ code: "WORKSPACE_MEMBERS_NOT_MEMBER" })
         expect(engine.scoped).not.toHaveBeenCalled()
-        expect(read).not.toHaveBeenCalled()
     })
 })
 
@@ -298,36 +297,58 @@ describe("WorkbenchDoorService.read refusals", () => {
     })
 
     it("lets any other failure of the read propagate to the error filter", async () => {
-        const broken = new Error("boom")
+        const broken = new StandInError({ code: "WORKBENCH_DOOR_TEST_UNKNOWN" })
         const { door } = await build({ read: () => Promise.reject(broken) })
 
         await expect(door.read(USER, callOf("sales.leads"))).rejects.toBe(broken)
     })
 })
 
-const FAILURE_REASONS: ReadonlyArray<"conflict" | "invalid" | "failed" | "forbidden" | "refused"> = [
-    "conflict",
-    "invalid",
-    "failed",
-    "forbidden",
-    "refused",
-]
+const FAILURE_REASONS: ReadonlyArray<"conflict" | "invalid" | "failed" | "forbidden" | "refused"> = ["conflict", "invalid", "failed", "forbidden", "refused"]
 
 describe("WorkbenchDoorService.act", () => {
     it("runs an action that is not transactional with a transaction of its own per port call", async () => {
         const act = jest.fn(() => Promise.resolve(ACTION_OK))
-        const { door, engine, ports, provider, rules, tx } = await build({ act })
+        const { door, engine, ports, provider, tx } = await build({ act })
 
         const answer = await door.act(USER, callOf("sales.move-stage", '{"id":"lead-1"}'))
 
         expect(parsed(answer)).toEqual(ACTION_OK)
-        expect(rules.ownerRuleFor).toHaveBeenCalledWith({ workspaceId: WORKSPACE }, "sales.move-stage")
         expect(act).toHaveBeenCalledWith(provider, { id: "lead-1" }, RUN_CONTEXT)
         expect(engine.scoped).not.toHaveBeenCalled()
         const run: DoorRun | undefined = ports.providerFor.mock.calls[0]?.[0]
         expect(run).toMatchObject({ name: "sales.move-stage", dataKind: null })
         await expect(run?.runIn((scoped) => Promise.resolve(scoped))).resolves.toBe(tx)
-        expect(engine.scoped).toHaveBeenCalledWith(WORKSPACE, expect.any(Function))
+        expect(engine.scoped).toHaveBeenCalledWith(WORKSPACE, expect.any(Function), { id: SALES_AGENT, sees: "all" })
+    })
+
+    it("stamps a person's write for the installed agent of the action's module, who still sees every record their rights allow", async () => {
+        const { door, engine, agents, ports } = await build({})
+
+        await door.act(USER, callOf("sales.move-stage", '{"id":"lead-1"}'))
+        const run: DoorRun | undefined = ports.providerFor.mock.calls[0]?.[0]
+        await run?.runIn((scoped) => Promise.resolve(scoped))
+
+        expect(agents.scopeOf).toHaveBeenCalledWith(WORKSPACE, "sales", undefined)
+        expect(engine.scoped).toHaveBeenCalledWith(WORKSPACE, expect.any(Function), { id: SALES_AGENT, sees: "all" })
+    })
+
+    it("stamps the write for the agent of the installation the screen carries", async () => {
+        const { door, agents } = await build({})
+
+        await door.act(USER, { ...callOf("sales.move-stage", '{"id":"lead-1"}'), installationId: "inst-2" })
+
+        expect(agents.scopeOf).toHaveBeenCalledWith(WORKSPACE, "sales", "inst-2")
+    })
+
+    it("refuses the action, writing nothing, when the module has no installed agent in the workspace", async () => {
+        const { door, engine, ports } = await build({ agentId: null })
+
+        const answer = parsed(await door.act(USER, callOf("sales.move-stage", '{"id":"lead-1"}')))
+
+        expect(answer).toMatchObject({ ok: false, reason: "forbidden" })
+        expect(engine.scoped).not.toHaveBeenCalled()
+        expect(ports.providerFor).not.toHaveBeenCalled()
     })
 
     it("runs a transactional action as one transaction whose ports all use it", async () => {
@@ -386,13 +407,13 @@ describe("WorkbenchDoorService.act rollback", () => {
 
 describe("WorkbenchDoorService.act refusals", () => {
     it("refuses a caller who is not a member before it looks at the name", async () => {
-        const { door, members, rules } = await build()
+        const { door, members, engine } = await build()
         members.require.mockRejectedValue(new StandInError({ code: "WORKSPACE_MEMBERS_NOT_MEMBER" }))
 
         await expect(door.act(USER, callOf("sales.nothing"))).rejects.toMatchObject({
             code: "WORKSPACE_MEMBERS_NOT_MEMBER",
         })
-        expect(rules.ownerRuleFor).not.toHaveBeenCalled()
+        expect(engine.scoped).not.toHaveBeenCalled()
     })
 
     it("answers not found for an action no module declares", async () => {
@@ -404,9 +425,9 @@ describe("WorkbenchDoorService.act refusals", () => {
         })
     })
 
-    it("answers forbidden to a staff member who does not hold the permission, and never runs the action", async () => {
+    it("answers forbidden to a staff member for an action that carries no staff mark, and never runs it", async () => {
         const act = jest.fn()
-        const { door } = await build({ role: "staff", grants: [], act })
+        const { door } = await build({ role: "staff", act })
 
         const answer = await door.act(USER, callOf("sales.move-stage"))
 
@@ -414,13 +435,44 @@ describe("WorkbenchDoorService.act refusals", () => {
         expect(act).not.toHaveBeenCalled()
     })
 
+    it("lets a staff member run an action that declares the staff mark", async () => {
+        const act = jest.fn(() => Promise.resolve(ACTION_OK))
+        const { door } = await build({ role: "staff", act })
+
+        const answer = await door.act(USER, callOf("sales.note-add"))
+
+        expect(parsed(answer)).toEqual(ACTION_OK)
+        expect(act).toHaveBeenCalledTimes(1)
+    })
+
+    it.each(["owner", "manager"] as const)("lets a %s run an action whether or not it carries the staff mark", async (role) => {
+        const act = jest.fn(() => Promise.resolve(ACTION_OK))
+        const { door } = await build({ role, act })
+
+        expect(parsed(await door.act(USER, callOf("sales.move-stage")))).toEqual(ACTION_OK)
+        expect(parsed(await door.act(USER, callOf("sales.note-add")))).toEqual(ACTION_OK)
+        expect(act).toHaveBeenCalledTimes(2)
+    })
+
+    it("refuses a member of another workspace an action, even one with the staff mark, and never runs it", async () => {
+        const act = jest.fn()
+        const { door, members } = await build({ role: "staff", act })
+        members.require.mockRejectedValue(new StandInError({ code: "WORKSPACE_MEMBERS_NOT_MEMBER" }))
+
+        await expect(
+            door.act(USER, { workspaceId: "ws-2", name: "sales.note-add", payload: "{}", locale: "vi" }),
+        ).rejects.toMatchObject({ code: "WORKSPACE_MEMBERS_NOT_MEMBER" })
+        expect(act).not.toHaveBeenCalled()
+    })
+
     it("answers invalid with the words of the payload refusal when the payload is not a JSON object", async () => {
-        const { door, rules } = await build()
+        const act = jest.fn()
+        const { door } = await build({ act })
 
         const answer = await door.act(USER, callOf("sales.move-stage", "[]"))
 
         expect(parsed(answer)).toEqual(failure("invalid", WorkbenchDoorErrorCode.PayloadInvalid))
-        expect(rules.ownerRuleFor).not.toHaveBeenCalled()
+        expect(act).not.toHaveBeenCalled()
     })
 
     it("logs the action and the field keys of an input it refused", async () => {
@@ -432,35 +484,14 @@ describe("WorkbenchDoorService.act refusals", () => {
         expect(logger.warn).toHaveBeenCalledWith(WorkbenchDoorLogEvent.InputInvalid, meta)
     })
 })
-describe("WorkbenchDoorService.act authority and failures", () => {
-    it("answers forbidden when the owner rule says never, and never runs the action", async () => {
-        const act = jest.fn()
-        const { door } = await build({ rule: ruleOf({ mode: "never" }), act })
-
-        const answer = await door.act(USER, callOf("sales.move-stage"))
-
-        expect(parsed(answer)).toEqual(failure("forbidden", WorkbenchDoorErrorCode.PermissionDenied))
-        expect(act).not.toHaveBeenCalled()
-    })
-
-    it("answers refused with approvalRequired when the owner rule asks, and never runs the action", async () => {
-        const act = jest.fn()
-        const { door } = await build({ rule: ruleOf({ mode: "ask" }), act })
+describe("WorkbenchDoorService.act failures", () => {
+    it("runs an action whose permission the member holds, with an amount in its input: no rule gate stands between", async () => {
+        const act = jest.fn(() => Promise.resolve(ACTION_OK))
+        const { door } = await build({ act })
 
         const answer = await door.act(USER, callOf("sales.move-stage", '{"amount_vnd":1500000}'))
 
-        expect(parsed(answer)).toEqual(
-            failure("refused", WorkbenchDoorErrorCode.ActionRefused, { approvalRequired: true }),
-        )
-        expect(act).not.toHaveBeenCalled()
-    })
-
-    it("runs the action when the owner rule lets it run alone", async () => {
-        const act = jest.fn(() => Promise.resolve(ACTION_OK))
-        const { door } = await build({ rule: ruleOf(), act })
-
-        await door.act(USER, callOf("sales.move-stage"))
-
+        expect(parsed(answer)).toEqual(ACTION_OK)
         expect(act).toHaveBeenCalledTimes(1)
     })
 
@@ -492,7 +523,7 @@ describe("WorkbenchDoorService.act authority and failures", () => {
     })
 
     it("lets a failure the door does not know propagate to the error filter", async () => {
-        const broken = new Error("boom")
+        const broken = new StandInError({ code: "WORKBENCH_DOOR_TEST_UNKNOWN" })
         const { door } = await build({ act: () => Promise.reject(broken) })
 
         await expect(door.act(USER, callOf("sales.move-stage"))).rejects.toBe(broken)

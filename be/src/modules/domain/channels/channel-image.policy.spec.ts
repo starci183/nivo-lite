@@ -27,36 +27,35 @@ describe("imageRouteOf", () => {
     it("shows nothing when there is no picture", async () => {
         const subject = await build()
 
-        expect(subject.imageRouteOf("zalo", 0, true)).toBe("none")
-        expect(subject.imageRouteOf("telegram", 0, false)).toBe("none")
+        expect(subject.imageRouteOf("zalo", 0)).toBe("none")
+        expect(subject.imageRouteOf("telegram", 0)).toBe("none")
     })
 
     it("sends one picture as itself on a channel that shows pictures", async () => {
         const subject = await build()
 
-        expect(subject.imageRouteOf("zalo", 1, true)).toBe("single")
-        expect(subject.imageRouteOf("telegram", 1, false)).toBe("single")
+        expect(subject.imageRouteOf("zalo", 1)).toBe("single")
+        expect(subject.imageRouteOf("telegram", 1)).toBe("single")
     })
 
-    it("lays several Zalo pictures into one collage when a collage can be built, else sends them one by one", async () => {
+    it("sends several Zalo pictures one by one", async () => {
         const subject = await build()
 
-        expect(subject.imageRouteOf("zalo", 5, true)).toBe("collage")
-        expect(subject.imageRouteOf("zalo", 5, false)).toBe("each")
+        expect(subject.imageRouteOf("zalo", 5)).toBe("each")
     })
 
-    it("sends several Telegram pictures as one album whatever the collage", async () => {
+    it("sends several Telegram pictures as one album", async () => {
         const subject = await build()
 
-        expect(subject.imageRouteOf("telegram", 3, true)).toBe("album")
-        expect(subject.imageRouteOf("telegram", 10, false)).toBe("album")
+        expect(subject.imageRouteOf("telegram", 3)).toBe("album")
+        expect(subject.imageRouteOf("telegram", 10)).toBe("album")
     })
 
     it("gives a channel that shows no pictures none, since its reply carries them as links", async () => {
         const subject = await build()
 
-        expect(subject.imageRouteOf("website", 4, true)).toBe("none")
-        expect(subject.imageRouteOf("facebook", 2, true)).toBe("none")
+        expect(subject.imageRouteOf("website", 4)).toBe("none")
+        expect(subject.imageRouteOf("facebook", 2)).toBe("none")
         expect(subject.showsPictures("zalo")).toBe(true)
         expect(subject.showsPictures("telegram")).toBe(true)
         expect(subject.showsPictures("website")).toBe(false)

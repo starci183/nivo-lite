@@ -17,9 +17,11 @@ export const ZaloConnectionNotices = (props: ZaloConnectionNoticesProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
-    const { head, notice } = useZaloHead(props.connectionId)
+    const { head, notice, reconnect, isOwner } = useZaloHead(props.connectionId)
     const refusal = useConnectionRefusal()
-    const banner = ("items" in head ? head.items : undefined)?.banner ?? ""
+    const headView = "items" in head ? head.items : undefined
+    const banner = headView?.banner ?? ""
+    const attention = headView?.attention ?? null
     return (
         <ZaloConnectionNoticesBase
             props={{
@@ -27,6 +29,21 @@ export const ZaloConnectionNotices = (props: ZaloConnectionNoticesProps) => {
                 slotLabels: slotLabels(t("headEmpty")),
                 notices: [
                     ...(banner === "" ? [] : [{ id: "banner", tone: "negative" as const, title: banner }]),
+                    // The provider refused the sign-in: the owner connects again (its own reconnect action); another member is told to ask.
+                    ...(attention !== "needs_reauth" || banner !== ""
+                        ? []
+                        : [
+                              {
+                                  id: "needs-reauth",
+                                  tone: "negative" as const,
+                                  title: t(isOwner ? "bannerNeedsReauth" : "bannerNeedsReauthAsk"),
+                                  ...(isOwner ? { action: { label: t("reconnect"), run: () => void reconnect() } } : {}),
+                              },
+                          ]),
+                    // Connected, yet the provider cannot be read at the moment: neutral and informative, nothing to fix by hand.
+                    ...(attention === "degraded"
+                        ? [{ id: "degraded", tone: "informative" as const, title: t("degradedTitle"), description: t("degradedBody") }]
+                        : []),
                     ...(notice === "" ? [] : [{ id: "notice", tone: "negative" as const, title: notice }]),
                 ],
                 ...(refusal === undefined ? {} : { refusal }),

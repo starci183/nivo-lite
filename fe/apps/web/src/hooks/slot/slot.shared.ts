@@ -1,4 +1,4 @@
-import { slotOfRead, slotOfReads as slotOfReadsWith } from "@nivo-lite/agent-sdk/client"
+import { slotOfReads as slotOfReadsWith } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotRead } from "@/modules/types"
 import { isForbiddenFailure } from "@/modules/failure"
 
@@ -8,8 +8,6 @@ export { loadingSlot, mapSlot } from "@nivo-lite/agent-sdk/client"
 export const slotOfReads = <T>(reads: ReadonlyArray<SlotRead<unknown>>, items: () => T | undefined): DataSlot<T> =>
     slotOfReadsWith(reads, items, isForbiddenFailure)
 
-/** Folds the state of one SWR read into a slot, through the SDK recipe and this app's failure vocabulary. */
-export const slotOfSwr = <T>(read: SlotRead<T>): DataSlot<T> => slotOfRead(read, isForbiddenFailure)
 
 /**
  * The page-level "first load" flag of skeleton coherence: true while any of the page's slots has no data yet, so every region

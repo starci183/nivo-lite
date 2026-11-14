@@ -1,17 +1,17 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import type { ModuleIconName } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { useAgentInstallation, useAgentPictureEdit, useAgentRights } from "@/hooks/agentSettings"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentIdentityCardBase } from "./component"
-import type { IdentityView } from "./component"
+import { AgentIdentityCardBase, type IdentityView } from "./component"
 
 /** The agent the card dresses: the instance of the url, and the glyph of its type. */
 type AgentIdentityCardProps = {
-    readonly installationId: string
-    readonly module: string
-    readonly glyph: ModuleIconName
+    readonly installationId?: string | undefined
+    readonly module?: string | undefined
+    readonly glyph?: ModuleIconName | undefined
 }
 
 const PLACEHOLDER: IdentityView = {
@@ -25,21 +25,22 @@ const PLACEHOLDER: IdentityView = {
  * mark), each change saved at once. The display name is part of the general form beside it.
  */
 export const AgentIdentityCard = (props: AgentIdentityCardProps) => {
+    const route = useAgentRoute(props)
     const t = useTranslations("modulesCore")
     const tc = useTranslations("agentCreate")
     const tg = useTranslations("agentGeneral")
     const slotLabels = useSlotLabels()
     const { canEdit } = useAgentRights()
-    const { slot, reload } = useAgentInstallation(props.installationId, props.module)
+    const { slot, reload } = useAgentInstallation(route.installationId, route.module)
     const agent = "items" in slot ? slot.items : undefined
     const hasUpload = agent !== undefined && agent.agentAvatarUrl !== null && agent.agentAvatarPreset === null
-    const picture = useAgentPictureEdit(agent?.agentId ?? null, props.module, hasUpload)
+    const picture = useAgentPictureEdit(agent?.agentId ?? null, route.module, hasUpload)
     return (
         <AgentIdentityCardBase
             props={{
                 title: tg("sublabelPicture"),
-                glyph: props.glyph,
-                module: props.module,
+                glyph: props.glyph ?? route.glyph,
+                module: route.module,
                 isDisabled: !canEdit || picture.isBusy,
                 editor: { ...picture.editor, pickLabel: tc("pictureUpload"), removeLabel: tg("useSprout"), isRemoveCompact: true },
                 read: {

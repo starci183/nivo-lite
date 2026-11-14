@@ -3,14 +3,13 @@ import type { DynamicModule } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import {
     AgentGraphAiCoreService,
     AgentGraphStepMemoryService,
     AgentGraphsService,
     AgentWorkflowRunsService,
 } from "@modules/domain/agent-graphs"
-import { ChatConversationsService } from "@modules/domain/chat-records"
 import { GraphNodeEffectsService, GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeRunInput } from "@modules/domain/graph-nodes"
 import { CHECKPOINT_STORE, GRAPH_THREADS, LanggraphModule } from "@modules/integrations/langgraph"
@@ -32,8 +31,8 @@ import { ThreadProjectionService } from "./thread-projection.service"
 import { ThreadStepService } from "./thread-step.service"
 
 // Package T (phase 3): the for-each RUNTIME. The real node function (`ThreadStepService.run` / `gate`) drives a compiled for-each on the
-// real LangGraph port: one iteration after the other, each body step under `<node>[<i>]` (its own ledger key) with the element in its
-// input, the loop's output in the old engine's shape; a kill mid-iteration goes on in that iteration, never one already joined; a stop
+// real LangGraph port: one iteration after the other, each body step under `<loop>[<item>].<node>` (its own ledger key) with the element
+// in its input, the loop's output `{ items, held }`; a kill mid-iteration goes on in that iteration, never one already joined; a stop
 // inside an iteration is keyed by the iteration and the founder's answer goes back to the same node in the same iteration.
 
 const NOW = "2026-11-11T10:00:00.000Z"
@@ -47,7 +46,7 @@ const LOOP_SPEC: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["agent"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [
         node("list", "spec.list", { next: "each" }),
         node("each", "core.for-each", { routes: { body: "price" }, next: "after" }),
@@ -79,7 +78,7 @@ class LoopRuntimeWorldModule {}
 interface World {
     killAt?: string | null
     failAt?: string | null
-    /** The step key (`<node>[<i>]`) whose own customer send the ledger keeps (FX2: one customer line per stop). */
+    /** The step key (`<loop>[<item>].<node>`) whose own customer send the ledger keeps (FX2: one customer line per stop). */
     toldAt?: string
     /** The holding line the AI core's report chooses for the customer; absent, the AI core decides nothing (an AI-error stop). */
     holdingLine?: string
@@ -99,7 +98,7 @@ const build = async (world: World) => {
             return { code: "SPEC_FAILED", text: "the price list was unreachable" } as never
         }
         const item: unknown = Reflect.get(input.input ?? {}, "item")
-        if (input.nodeId === "core.for-each") return { output: { results: ITEMS.map(() => null), okCount: 3, failed: [] }, effects: [] }
+        if (input.nodeId === "core.for-each") return { output: { items: [], held: null, results: [] }, effects: [] }
         if (input.nodeId === "spec.price") return { output: { priced: item }, effects: [] }
         if (input.nodeId === "spec.note") return { output: { noted: item }, effects: [] }
         return { output: { done: true }, effects: [] }
@@ -127,7 +126,7 @@ const build = async (world: World) => {
                 stepKey: input.stepKey,
                 agentId: input.agentId,
                 workflowId: input.workflowId,
-                leadId: input.leadId,
+                contactId: input.contactId,
                 conversationId: input.conversationId,
                 kind: input.kind,
                 state: "open",
@@ -203,7 +202,7 @@ const build = async (world: World) => {
             },
             {
                 provide: AgentGraphsService,
-                useValue: mock<AgentGraphsService>({ runGrantOf: jest.fn().mockResolvedValue({ rights: [], tools: [], effects: null }) }),
+                useValue: mock<AgentGraphsService>({ runGrantOf: jest.fn().mockResolvedValue({ tools: [], effects: null }) }),
             },
             { provide: GraphNodeHostService, useValue: host },
             {
@@ -225,13 +224,6 @@ const build = async (world: World) => {
             },
             { provide: AgentGraphStepMemoryService, useValue: memory },
             { provide: AgentWorkflowRunsService, useValue: mock<AgentWorkflowRunsService>({ pinsOf: jest.fn().mockResolvedValue([]) }) },
-            {
-                provide: ChatConversationsService,
-                useValue: mock<ChatConversationsService>({
-                    leadIdOf: jest.fn().mockResolvedValue(null),
-                    ofLeads: jest.fn().mockResolvedValue([]),
-                }),
-            },
             { provide: ThreadProjectionService, useValue: projection },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
@@ -262,14 +254,14 @@ const build = async (world: World) => {
     return { threads, graph, ran, stopOf: () => stop, sent, ledger }
 }
 
-/** The loop's output in the old engine's shape: every element, the output of its last body step. */
+/** The loop's output: every item's identity (its index: the graph declares no itemKey) and the output of the step it ended on (no collect). */
 const SUMMARY = {
-    results: ITEMS.map((item, index) => ({ index, item, output: { noted: item } })),
-    okCount: 3,
-    failed: [],
+    items: ITEMS.map((item, index) => ({ key: String(index), output: { noted: item } })),
+    held: null,
+    results: ITEMS.map((item) => ({ noted: item })),
 }
 
-const BODY_ORDER = ["list", "each", "price[0]", "note[0]", "price[1]", "note[1]", "price[2]", "note[2]", "after"]
+const BODY_ORDER = ["list", "each", "each[0].price", "each[0].note", "each[1].price", "each[1].note", "each[2].price", "each[2].note", "after"]
 
 describe("the for-each runtime on the real node function and the real LangGraph port", () => {
     it("runs the body once per element, in order, each step under its iteration's key with the element, then the step after", async () => {
@@ -281,15 +273,15 @@ describe("the for-each runtime on the real node function and the real LangGraph 
         expect(outcome.status).toBe("ended")
         const state = outcome.status === "ended" ? outcome.state : null
         expect(state?.steps.each).toEqual({ output: SUMMARY })
-        expect(state?.steps["price[1]"]).toEqual({ output: { priced: "lily" } })
+        expect(state?.steps["each[1].price"]).toEqual({ output: { priced: "lily" } })
         expect(state?.loop).toBeNull()
     })
 
     it("a kill mid-iteration goes on in that iteration: no iteration already joined runs again, no step twice", async () => {
-        const { threads, graph, ran } = await build({ killAt: "note[1]" })
+        const { threads, graph, ran } = await build({ killAt: "each[1].note" })
 
-        await expect(threads.start(REF, graph, { trigger: { locale: "vi" } })).rejects.toThrow("killed at note[1]")
-        expect(ran).toEqual(["list", "each", "price[0]", "note[0]", "price[1]"])
+        await expect(threads.start(REF, graph, { trigger: { locale: "vi" } })).rejects.toThrow("killed at each[1].note")
+        expect(ran).toEqual(["list", "each", "each[0].price", "each[0].note", "each[1].price"])
         const outcome = await threads.drive(REF, graph)
 
         expect(ran).toEqual(BODY_ORDER)
@@ -297,36 +289,36 @@ describe("the for-each runtime on the real node function and the real LangGraph 
     })
 
     it("stops inside an iteration under the iteration's key, and the founder's retry runs the same node in the same iteration", async () => {
-        const { threads, graph, ran, stopOf } = await build({ failAt: "price[1]" })
+        const { threads, graph, ran, stopOf } = await build({ failAt: "each[1].price" })
 
         const stopped = await threads.start(REF, graph, { trigger: { locale: "vi" } })
 
         expect(stopped.status).toBe("stopped")
-        expect(stopOf()?.stepKey).toBe("price[1]")
+        expect(stopOf()?.stepKey).toBe("each[1].price")
         const resumed = await threads.resume(REF, graph, { kind: "retry", by: "user-owner", at: NOW })
 
-        expect(ran).toEqual(["list", "each", "price[0]", "note[0]", "price[1]", "price[1]", "note[1]", "price[2]", "note[2]", "after"])
+        expect(ran).toEqual(["list", "each", "each[0].price", "each[0].note", "each[1].price", "each[1].price", "each[1].note", "each[2].price", "each[2].note", "after"])
         expect(resumed.status === "ended" ? resumed.state.steps.each : null).toEqual({ output: SUMMARY })
     })
 
     // FX2 (D-P11-2): one customer line per stop, read by the iteration's own key.
     it("an iteration whose step already told the customer stops with that line on the stop; the engine adds no holding line", async () => {
-        const { threads, graph, stopOf, sent, ledger } = await build({ failAt: "price[1]", toldAt: "price[1]", holdingLine: "Shop kiem tra gia a." })
+        const { threads, graph, stopOf, sent, ledger } = await build({ failAt: "each[1].price", toldAt: "each[1].price", holdingLine: "Shop kiem tra gia a." })
 
-        const stopped = await threads.start(REF, graph, { trigger: { locale: "vi", conversationId: "conv-1" } })
+        const stopped = await threads.start(REF, graph, { trigger: { locale: "vi", routeId: "conv-1" } })
 
         expect(stopped.status).toBe("stopped")
-        expect(ledger.recordsOf).toHaveBeenCalledWith(REF.workspaceId, { runId: REF.runId, stepKey: "price[1]" }, [TOOL.customerMessageSend])
+        expect(ledger.recordsOf).toHaveBeenCalledWith(REF.workspaceId, { runId: REF.runId, stepKey: "each[1].price" }, [TOOL.customerMessageSend])
         expect(stopOf()?.customerLines.map((line) => line.text)).toEqual([STEP_LINE])
         expect(sent).toEqual([])
     })
 
     it("the send of ANOTHER iteration does not count: the engine's holding line goes out once, under this iteration's key", async () => {
-        const { threads, graph, stopOf, sent } = await build({ failAt: "price[1]", toldAt: "price[0]", holdingLine: "Shop kiem tra gia a." })
+        const { threads, graph, stopOf, sent } = await build({ failAt: "each[1].price", toldAt: "each[0].price", holdingLine: "Shop kiem tra gia a." })
 
-        await threads.start(REF, graph, { trigger: { locale: "vi", conversationId: "conv-1" } })
+        await threads.start(REF, graph, { trigger: { locale: "vi", routeId: "conv-1" } })
 
-        expect(sent).toEqual([{ key: `honest-line:${REF.runId}:price[1]`, text: "Shop kiem tra gia a." }])
+        expect(sent).toEqual([{ key: `honest-line:${REF.runId}:each[1].price`, text: "Shop kiem tra gia a." }])
         expect(stopOf()?.customerLines.map((line) => line.text)).toEqual(["Shop kiem tra gia a."])
     })
 })

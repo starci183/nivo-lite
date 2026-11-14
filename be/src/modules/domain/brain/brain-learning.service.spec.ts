@@ -1,10 +1,10 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import { BrainEvalCasesService } from "@modules/domain/brain-eval-cases"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import type { LessonRecord } from "@modules/domain/brain-lessons"
-import { DecisionCorrectionsService } from "@modules/domain/decisions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { BRAIN_CORRECTIONS } from "./brain.decorators"
@@ -208,7 +208,7 @@ describe("BrainLearningService", () => {
                 { role: "user", content: prompt },
             ],
         })
-        expect(json.jsonOf).toHaveBeenCalledWith("model answer")
+        expect(json.jsonOf).toHaveBeenCalledWith("model answer", "ws1")
         expect(lessons.propose).toHaveBeenCalledTimes(2)
         expect(lessons.propose).toHaveBeenNthCalledWith(1, "ws1", {
             module: "chatbot",
@@ -278,14 +278,25 @@ describe("BrainLearningService", () => {
             proposed: 0,
         })
 
-        expect(json.jsonOf).toHaveBeenCalledWith("model answer")
+        expect(json.jsonOf).toHaveBeenCalledWith("model answer", "ws1")
         expect(lessons.propose).not.toHaveBeenCalled()
     })
 
-    it("registers the decisions correction source for learning", () => {
-        expect(BrainModule.register({ corrections: DecisionCorrectionsService }).providers).toContainEqual({
+    it("registers a correction source a composition names, and one that answers none when it names none", async () => {
+        class NamedSource implements CorrectionSource {
+            recent(): Promise<ReadonlyArray<Correction>> {
+                return Promise.resolve(corrections())
+            }
+        }
+        expect(BrainModule.register({ corrections: NamedSource }).providers).toContainEqual({
             provide: BRAIN_CORRECTIONS,
-            useClass: DecisionCorrectionsService,
+            useClass: NamedSource,
         })
+        const none = (BrainModule.register({}).providers ?? []).find(
+            (provider) => typeof provider === "object" && "provide" in provider && provider.provide === BRAIN_CORRECTIONS,
+        )
+        assert(none !== undefined && typeof none === "object" && "useValue" in none)
+        const source: CorrectionSource = none.useValue
+        await expect(source.recent("ws1", "sales", new Date(AT), 60)).resolves.toEqual([])
     })
 })

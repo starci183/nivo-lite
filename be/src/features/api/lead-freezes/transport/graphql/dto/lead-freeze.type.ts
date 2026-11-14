@@ -15,9 +15,13 @@ export class LeadFreezeType {
     @Field(() => ID, { nullable: true })
     workflowId!: string | null
 
-    /** The lead, or null for a customer who is not a lead yet. */
+    /** The lead the page asked by (the sales lead page), or null. */
     @Field(() => ID, { nullable: true })
     leadId!: string | null
+
+    /** The contact (the person) the hold is about, or null for a conversation no contact holds. */
+    @Field(() => ID, { nullable: true })
+    contactId!: string | null
 
     /** The run that failed. */
     @Field(() => ID, { nullable: true })

@@ -1,6 +1,5 @@
 import { Badge, Button, Cluster, DropdownMenu, IconButton, Link, Stack, Text } from "@starci/grammar/common"
-import { ConnectionRowBody, rowMenuEntriesOf } from "@/components/frames/ConnectionRowBody"
-import type { RowCommandSet } from "@/components/frames/ConnectionRowBody"
+import { ConnectionRowBody, rowMenuEntriesOf, type RowCommandSet } from "@/components/frames/ConnectionRowBody"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { RowView } from "@/modules/types"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -56,7 +55,7 @@ export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
                 )}
             </Cluster>
             <Stack gap="inline">
-                <Cluster gap="inline" align="center">
+                <Cluster gap="identity" align="center">
                     <ProviderLogo {...view.logo} glyph="email" />
                     <Badge isDot tone={view.statusTone}>
                         {view.statusLabel}

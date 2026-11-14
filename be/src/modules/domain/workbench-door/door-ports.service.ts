@@ -1,25 +1,34 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
+import { unprovided, type PortDefinition, type PortProvider } from "@nivo-lite/agent-sdk/port"
 import type { ListPage, ListSource } from "@nivo-lite/agent-sdk/block"
 import type {
     AgentConnections,
     AgentKnowledge,
+    CoreReads,
+    CustomerMessages,
     InstallationSource,
     MemberDirectory,
     ParkedRuns,
     RightsDirectory,
-} from "@nivo-lite/blocks-core/modules"
+    RouteHolds,
+} from "@nivo-lite/agent-sdk/platform"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
-import { MemberGrantsService } from "@modules/domain/member-grants"
-import { ParkedRunsService, PlatformRegionsService } from "@modules/domain/platform-ports"
+import { EntityEngineService, EntityPortsService, ListSourceService, type RunIn } from "@modules/domain/entity-engine"
+import {
+  AgentDeskService,
+  CoreReadsService,
+  CustomerMessagesPortService,
+  ParkedRunsService,
+  PlatformRegionsService,
+  RouteHoldsPortService,
+  type AgentDesk,
+} from "@modules/domain/platform-ports"
 import { MemberLookupService } from "@modules/domain/workspace-members"
-import type { RunIn } from "@modules/domain/entity-engine"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { Locale } from "@modules/platform/i18n"
 import { portKindOf } from "./door-port-kind.policy"
+import { WorkbenchDoorError, WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 import { installationFactsOf } from "./installation-facts.policy"
 import { InjectWorkbenchDoorOptions } from "./workbench-door.decorators"
 import type { WorkbenchDoorOptions } from "./workbench-door.options"
@@ -64,9 +73,12 @@ export class DoorPortsService {
         private readonly ports: EntityPortsService,
         private readonly lists: ListSourceService,
         private readonly seats: MemberLookupService,
-        private readonly grants: MemberGrantsService,
         @Optional() private readonly regions?: PlatformRegionsService,
         @Optional() private readonly parked?: ParkedRunsService,
+        @Optional() private readonly desk?: AgentDeskService,
+        @Optional() private readonly core?: CoreReadsService,
+        @Optional() private readonly conversations?: CustomerMessagesPortService,
+        @Optional() private readonly holds?: RouteHoldsPortService,
     ) {}
 
     /** The provider of the ports of one run. */
@@ -82,6 +94,10 @@ export class DoorPortsService {
         if (kind === "agent-connections") return this.agentConnections(run, port)
         if (kind === "agent-knowledge") return this.agentKnowledge(run, port)
         if (kind === "parked-runs") return this.parkedRuns(run, port)
+        if (kind === "agent-desk") return this.agentDesk(run, port)
+        if (kind === "core") return this.coreReads(run, port)
+        if (kind === "customer-messages") return this.customerMessages(run, port)
+        if (kind === "route-holds") return this.routeHolds(run, port)
         if (kind === "engine") return this.ports.portsFor(run.runIn, "action", { port })["port"]
         const entity = [...this.engine.catalog.values()].find((declared) => declared.dataKind === run.dataKind)
         return kind === "list" && entity !== undefined ? this.listSource(run, entity) : unprovided(port)
@@ -92,6 +108,41 @@ export class DoorPortsService {
             this.parked?.portFor({ workspaceId: run.workspaceId, memberId: run.memberId, locale: run.locale }) ??
             unprovided(port)
         )
+    }
+
+    private agentDesk(run: DoorRun, port: PortDefinition<unknown>): AgentDesk | never {
+        const asker = { workspaceId: run.workspaceId, memberId: run.memberId, locale: run.locale }
+        return this.desk?.portFor(asker) ?? unprovided(port)
+    }
+
+    private coreReads(run: DoorRun, port: PortDefinition<unknown>): CoreReads | never {
+        return this.core?.portFor(run.workspaceId) ?? unprovided(port)
+    }
+
+    private customerMessages(run: DoorRun, port: PortDefinition<unknown>): CustomerMessages | never {
+        return this.conversations?.portFor(run.workspaceId) ?? unprovided(port)
+    }
+
+    /**
+     * The staff hold of a customer's route, acting as the run's seat. A run with no seat (a job) may read who holds a route and the held
+     * routes of the workspace, but taking
+     * or handing one back refuses with the typed `PermissionDenied` (reason `no_member`), never a silent act.
+     */
+    private routeHolds(run: DoorRun, port: PortDefinition<unknown>): RouteHolds | never {
+        const holds = this.holds
+        if (holds === undefined) return unprovided(port)
+        const memberId = run.memberId
+        if (memberId !== null) return holds.portFor({ workspaceId: run.workspaceId, memberId }) ?? unprovided(port)
+        const reader = holds.portFor({ workspaceId: run.workspaceId, memberId: "" })
+        if (reader === null) return unprovided(port)
+        const refused = (): Promise<never> =>
+            Promise.reject(
+                new WorkbenchDoorError({
+                    code: WorkbenchDoorErrorCode.PermissionDenied,
+                    params: { port: port.id, reason: "no_member" },
+                }),
+            )
+        return { take: refused, holderOf: (routeId) => reader.holderOf(routeId), handBack: refused, held: (limit) => reader.held(limit) }
     }
 
     private agentConnections(run: DoorRun, port: PortDefinition<unknown>): AgentConnections | never {
@@ -113,16 +164,14 @@ export class DoorPortsService {
         return { get: (memberId) => this.seats.activeSeatById(workspaceId, memberId) }
     }
 
-    /** Owners and managers hold every permission of every module; a staff member holds the ones the workspace granted to the seat. */
+    /** Owners and managers hold every permission of every module; a staff member holds none (a person's power is their role). */
     private rightsDirectory(workspaceId: string): RightsDirectory {
         return {
-            holds: async (memberId, permission) => {
+            holds: async (memberId) => {
                 if (memberId === null) return false
                 const seat = await this.seats.activeSeatById(workspaceId, memberId)
                 if (seat === null) return false
-                if (seat.isManager) return true
-                const grants = await this.grants.forAction(workspaceId, permission)
-                return grants.some((grant) => grant.member_id === memberId)
+                return seat.isManager
             },
         }
     }
@@ -153,7 +202,7 @@ export class DoorPortsService {
                 const found = await run.runIn((tx) =>
                     this.lists.page(tx, { read: run.name, entity, shape, query, select }),
                 )
-                return { rows: found.rows.map(rowOf), cursor: found.next }
+                return { rows: found.rows.map((record) => rowOf(record)), cursor: found.next }
             },
             counts: (shape, by, query) => run.runIn((tx) => this.lists.counts(tx, { entity, shape, by, query })),
         }

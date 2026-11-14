@@ -1,7 +1,6 @@
-import { gql } from "@apollo/client"
-import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentTemplatePreviewQuery, AgentTemplatePreviewQueryVariables } from "../__generated__/graphql"
 
 /** The input of the `agentTemplatePreview` query. */
@@ -22,7 +21,6 @@ const query1: TypedDocumentNode<
                 brainRefs
                 privateSources
                 people
-                rights
             }
             suggestions {
                 parameter
@@ -62,10 +60,6 @@ const query1: TypedDocumentNode<
                         }
                     }
                 }
-                proposedRights {
-                    kind
-                    scope
-                }
                 personName
             }
         }
@@ -93,6 +87,6 @@ export const queryAgentTemplatePreview = async ({
     request,
     signal,
 }: QueryAgentTemplatePreviewParams): Promise<ApolloClient.QueryResult<QueryAgentTemplatePreviewResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

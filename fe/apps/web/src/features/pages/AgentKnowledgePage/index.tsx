@@ -27,3 +27,8 @@ export const AgentKnowledgePage = (props: AgentKnowledgePageProps): ReactElement
         />
     )
 }
+
+/** The same Knowledge tab while the route loads: the block reads the agent from the address and draws its own skeletons. */
+export const AgentKnowledgeLoadingPage = (): ReactElement => (
+    <AgentKnowledgePageBase props={{ workspaceId: undefined, module: undefined, installationId: undefined }} />
+)

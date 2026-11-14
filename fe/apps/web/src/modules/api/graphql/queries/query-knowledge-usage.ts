@@ -1,6 +1,6 @@
 import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { KnowledgeUsageQuery } from "../__generated__/graphql"
 
 type QueryKnowledgeUsageResponse = KnowledgeUsageQuery
@@ -8,8 +8,25 @@ type QueryKnowledgeUsageResponse = KnowledgeUsageQuery
 const query1: TypedDocumentNode<QueryKnowledgeUsageResponse> = gql`
     query KnowledgeUsage {
         knowledgeUsage {
+            documents {
+                usedBytes
+                limitBytes
+                count
+            }
+            truths {
+                count
+                limitCount
+                usedBytes
+                limitBytes
+            }
             limitBytes
+            limitMb
+            truthBytes
+            truthBytesCeiling
+            truthsCeiling
+            truthsInForce
             usedBytes
+            usedMb
         }
     }
 `
@@ -24,7 +41,7 @@ export const queryKnowledgeUsage = async ({
     query = QueryKnowledgeUsage.Query1,
     signal,
 }: QueryParams<QueryKnowledgeUsage> = {}): Promise<ApolloClient.QueryResult<QueryKnowledgeUsageResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
     })

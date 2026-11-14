@@ -1,8 +1,8 @@
-import { fakeQueryBuilder as presetFakeQueryBuilder } from "@starci/jest-preset"
-import type {
-    FakeQueryBuilder as PresetFakeQueryBuilder,
-    QueryBuilderAnswers,
-    QueryBuilderCall,
+import {
+    fakeQueryBuilder as presetFakeQueryBuilder,
+    type FakeQueryBuilder as PresetFakeQueryBuilder,
+    type QueryBuilderAnswers,
+    type QueryBuilderCall,
 } from "@starci/jest-preset"
 
 export type { QueryBuilderAnswers, QueryBuilderCall }

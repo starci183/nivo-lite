@@ -7,7 +7,7 @@ import { SetChatRoomPostRightHandler } from "./set-chat-room-post-right.handler"
 const commandOf = (mayPost: boolean) =>
     new SetChatRoomPostRightCommand({
         request: { workspaceId: "ws-1", roomId: "room-1", agentId: "agent-1", mayPost },
-        principal: { id: "user-1" } as never,
+        principal: { id: "user-1", role: "authenticated" },
     })
 
 describe("SetChatRoomPostRightHandler", () => {

@@ -136,6 +136,7 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
     trace: traceView.nullable(),
     expiry: nullableText,
     primary: commandView.nullable(),
+    alternative: commandView.nullable().optional(),
     edit: commandView.nullable(),
     menu: list(commandView),
     draft: z

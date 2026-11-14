@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { ProviderRightsQuery } from "../__generated__/graphql"
 
 /** Generated response of the providerRights query. */
@@ -23,32 +23,19 @@ const query1: Document = gql`
                     en
                 }
                 connected
-                abilities {
-                    id
-                    label {
-                        vi
-                        en
-                    }
-                    scope
-                    tools
-                }
+                tools
                 accounts {
                     connectionId
                     provider
                     kind
                     accountLabel
                     connected
-                    isDefaultReceiving
                 }
             }
             attachments {
                 agentId
                 connectionId
                 provider
-                abilities {
-                    id
-                    mode
-                }
             }
         }
     }
@@ -64,11 +51,11 @@ const queryMap: Record<QueryProviderRightsDocument, Document> = {
 
 type QueryProviderRightsParams = QueryParams<QueryProviderRightsDocument>
 
-/** Every provider of the shop with its abilities and connected accounts, and the accounts attached to the agents (owner or manager). Rejects with the back end failure. */
+/** Every provider of the shop with the tools it serves and its connected accounts, and the accounts attached to the agents (owner or manager). Rejects with the back end failure. */
 export const queryProviderRights = async ({
     query = QueryProviderRightsDocument.Query1,
     signal,
 }: QueryProviderRightsParams = {}): Promise<ApolloClient.QueryResult<QueryProviderRightsResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], fetchPolicy: "no-cache" })
 }

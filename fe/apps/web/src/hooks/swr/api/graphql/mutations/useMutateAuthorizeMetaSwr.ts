@@ -5,8 +5,7 @@ import {
     type mutateAuthorizeMeta as MutateAuthorizeMetaOperation,
 } from "@/modules/api/graphql/mutations/mutation-authorize-meta"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { AuthorizeMetaMutation } from "@/modules/api"
 
 /** The SWR key of the authorizeMeta mutation. */

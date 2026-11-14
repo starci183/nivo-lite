@@ -1,112 +1,7 @@
 import type { ModuleDef } from "./catalog.types"
 
-type SalesShape = {
-    key: "sales"
-    order: number
-    icon: string
-    glyph: "moduleSales"
-    mascot: string
-    category: "sales_customer"
-    status: "stable"
-    audience: "internal"
-    includedWithWorkspace: true
-    available: false
-    knowledgeFolder: string
-    workbench: string
-    settingsExtras: null
-    requires: {
-        capabilities: never[]
-        connections: never[]
-    }
-    connectionProviders: string[]
-    defaultOperatingMode: "assist"
-    multiInstance: true
-    gates: {
-        key: string
-    }[]
-    authorityActions: (
-        | {
-              action: "classify_lead"
-              mode: "auto"
-              limitVnd: null
-              requiredFields: never[]
-              amountLimit: false
-              maxMode: null
-              next: "send_follow_up"[]
-          }
-        | {
-              action: "send_follow_up"
-              mode: "ask"
-              limitVnd: null
-              requiredFields: string[]
-              amountLimit: false
-              maxMode: null
-              next: never[]
-          }
-        | {
-              action: "send_quote"
-              mode: "ask"
-              limitVnd: null
-              requiredFields: string[]
-              amountLimit: true
-              maxMode: null
-              next: never[]
-          }
-        | {
-              action: "confirm_order"
-              mode: "auto"
-              limitVnd: number
-              requiredFields: string[]
-              amountLimit: true
-              maxMode: null
-              next: "issue_invoice"[]
-          }
-        | {
-              action: "send_care"
-              mode: "auto"
-              limitVnd: null
-              requiredFields: never[]
-              amountLimit: false
-              maxMode: null
-              next: never[]
-          }
-    )[]
-    accepts: (
-        | {
-              command: string
-              action: "classify_lead"
-              subjectType: string
-              requiredFields: string[]
-          }
-        | {
-              command: string
-              action: "send_follow_up"
-              subjectType: string
-              requiredFields: string[]
-          }
-        | {
-              command: string
-              action: "send_quote"
-              subjectType: string
-              requiredFields: string[]
-          }
-        | {
-              command: string
-              action: "confirm_order"
-              subjectType: string
-              requiredFields: string[]
-          }
-        | {
-              command: string
-              action: "send_care"
-              subjectType: string
-              requiredFields: string[]
-          }
-    )[]
-}
-
-/** The sales module. */
-export const SALES: SalesShape = {
+/** The sales module: leads, orders and care, the books (invoices, payments, receivables, supplier bills) and the points programme, in one agent. */
+export const SALES: ModuleDef = {
     key: "sales",
     order: 20,
     icon: "cart",
@@ -124,28 +19,31 @@ export const SALES: SalesShape = {
         capabilities: [],
         connections: [],
     },
-    connectionProviders: ["telegram", "zalo_oa", "meta"],
+    connectionProviders: ["telegram", "zalo_oa", "meta", "sepay", "payos", "casso"],
     defaultOperatingMode: "assist",
     multiInstance: true,
     gates: [
-        {
-            key: "offer_pricing",
-        },
-        {
-            key: "qualification",
-        },
-        {
-            key: "followup_cadence",
-        },
-        {
-            key: "approval_thresholds",
-        },
-        {
-            key: "handoff_accounting",
-        },
-        {
-            key: "tone",
-        },
+        { key: "offer_pricing" },
+        { key: "qualification" },
+        { key: "followup_cadence" },
+        { key: "approval_thresholds" },
+        { key: "handoff_accounting" },
+        { key: "tone" },
+        { key: "scope" },
+        { key: "currency_tax" },
+        { key: "source_evidence" },
+        { key: "approval_policy" },
+        { key: "evidence_requirements" },
+        { key: "prohibited_actions" },
+        { key: "earn_rules" },
+        { key: "tiers" },
+        { key: "rewards" },
+        { key: "limits" },
+        { key: "expiry" },
+        { key: "birthday" },
+        { key: "promo_rules" },
+        { key: "prohibited" },
+        { key: "loyalty_tone" },
     ],
     authorityActions: [
         {
@@ -193,6 +91,69 @@ export const SALES: SalesShape = {
             maxMode: null,
             next: [],
         },
+        {
+            action: "issue_invoice",
+            mode: "auto",
+            limitVnd: 20000000,
+            requiredFields: ["customer", "amount_vnd"],
+            amountLimit: true,
+            maxMode: null,
+            next: [],
+        },
+        {
+            action: "reconcile_payment",
+            mode: "auto",
+            limitVnd: 50000000,
+            requiredFields: ["amount_vnd"],
+            amountLimit: true,
+            maxMode: null,
+            next: ["send_care"],
+        },
+        {
+            action: "send_email",
+            mode: "ask",
+            limitVnd: null,
+            requiredFields: ["contact"],
+            amountLimit: false,
+            maxMode: null,
+            next: [],
+        },
+        {
+            action: "award_points",
+            mode: "auto",
+            limitVnd: null,
+            requiredFields: [],
+            amountLimit: false,
+            maxMode: null,
+            next: [],
+        },
+        {
+            action: "redeem_reward",
+            mode: "auto",
+            limitVnd: 500000,
+            requiredFields: [],
+            amountLimit: true,
+            maxMode: null,
+            next: [],
+        },
+        {
+            action: "send_promo",
+            mode: "ask",
+            limitVnd: null,
+            requiredFields: ["contact"],
+            amountLimit: false,
+            maxMode: null,
+            next: [],
+        },
+        {
+            action: "adjust_points",
+            mode: "ask",
+            limitVnd: null,
+            requiredFields: [],
+            amountLimit: false,
+            maxMode: "ask",
+            next: [],
+        },
     ],
     accepts: [
         {
@@ -225,5 +186,47 @@ export const SALES: SalesShape = {
             subjectType: "invoice",
             requiredFields: ["subject_id", "lead_id"],
         },
+        {
+            command: "issue_invoice",
+            action: "issue_invoice",
+            subjectType: "order",
+            requiredFields: ["subject_id"],
+        },
+        {
+            command: "reconcile_payment",
+            action: "reconcile_payment",
+            subjectType: "invoice",
+            requiredFields: ["subject_id"],
+        },
+        {
+            command: "send_email",
+            action: "send_email",
+            subjectType: "inbound",
+            requiredFields: [],
+        },
+        {
+            command: "award_points",
+            action: "award_points",
+            subjectType: "lead",
+            requiredFields: [],
+        },
+        {
+            command: "redeem_reward",
+            action: "redeem_reward",
+            subjectType: "lead",
+            requiredFields: ["lead_id"],
+        },
+        {
+            command: "send_promo",
+            action: "send_promo",
+            subjectType: "lead",
+            requiredFields: [],
+        },
+        {
+            command: "adjust_points",
+            action: "adjust_points",
+            subjectType: "lead",
+            requiredFields: ["lead_id"],
+        },
     ],
-} satisfies ModuleDef
+}

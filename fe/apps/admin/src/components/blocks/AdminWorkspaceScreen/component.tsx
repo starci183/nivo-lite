@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Grid, Page, Section, Stack } from "@starci/grammar/common"
-import type { BadgeTone, Figure } from "@starci/grammar/common"
+import { Badge, Button, Grid, Page, Section, Stack, type BadgeTone, type Figure } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { AdminRowsCard } from "@/components/composites/AdminRowsCard"
 import type { AdminCardView, DataSlot, SlotLabels } from "@/modules/types"

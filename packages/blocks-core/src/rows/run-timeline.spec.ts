@@ -34,8 +34,8 @@ const RUN: RunView = {
             outputSummary: "out",
             durationMs: 1500,
             calls: [
-                { tool: "nivo.chat.send", ok: true, summary: "sent" },
-                { tool: "nivo.ledger.entry.append", ok: false },
+                { tool: "nivo.tool.customer.message.send", ok: true, summary: "sent" },
+                { tool: "nivo.tool.ledger.entry.append", ok: false },
             ],
             effectKey: "k1",
             approvalPath: "/approvals/ignored",
@@ -99,8 +99,8 @@ describe("runStepsOf", () => {
 
     it("lists the calls of a step with their verdict and a summary that may be empty", () => {
         expect(rows[0]?.calls).toEqual([
-            { id: "a:0", tool: "nivo.chat.send", ok: true, summary: "sent" },
-            { id: "a:1", tool: "nivo.ledger.entry.append", ok: false, summary: "" },
+            { id: "a:0", tool: "nivo.tool.customer.message.send", ok: true, summary: "sent" },
+            { id: "a:1", tool: "nivo.tool.ledger.entry.append", ok: false, summary: "" },
         ])
     })
 
@@ -150,7 +150,7 @@ describe("runStepsOf", () => {
 
 describe("RUN_PLACEHOLDER and runWithSteps", () => {
     it("holds steps with the geometry of settled ones", () => {
-        expect(RUN_PLACEHOLDER.steps.length).toBe(3)
+        expect(RUN_PLACEHOLDER.steps).toHaveLength(3)
         expect(runStepsOf(RUN_PLACEHOLDER, CONTEXT).every((row) => row.title !== "")).toBe(true)
     })
 

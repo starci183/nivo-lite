@@ -1,17 +1,22 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type SetStateAction, type Dispatch } from "react"
 import { allAgentIds, useAdoptOnce } from "@/hooks/connection-wizard"
 import { wizardConnectionOf } from "@/hooks/connection-wire"
 import { useFirstEvent } from "@/hooks/connections"
 import { useQueryMoneyConnectionSwr } from "@/hooks/swr"
 import type { FirstEvent, WizardConnection, WizardNote } from "@/modules/types"
 import type { ProviderDef } from "@/hooks/connection-providers"
-import { MONEY_STEPS, moneyFlagsOf, webhookNameOf } from "./money-wizard.shared"
-import type { AccountForm, FollowDraft, MoneyFlags } from "./money-wizard.shared"
+import {
+    MONEY_STEPS,
+    moneyFlagsOf,
+    webhookNameOf,
+    type AccountForm,
+    type FollowDraft,
+    type MoneyFlags,
+} from "./money-wizard.shared"
 import type { MoneyWizardInput } from "./useMoneyWizard"
 
-import type { SetStateAction, Dispatch } from "react"
 
 /** The draft after a stored connection is adopted; the key is in clear only when the server just created it, a masked one never replaces it. */
 const followAfterAdopt = (current: FollowDraft, stored: WizardConnection): FollowDraft => ({

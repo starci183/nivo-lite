@@ -2,15 +2,14 @@ import type { CommandBus } from "@nestjs/cqrs"
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
-import { InjectCommandBus } from "@modules/platform/cqrs"
-import type { Principal } from "@modules/platform/cqrs"
+import { InjectCommandBus, type Principal } from "@modules/platform/cqrs"
 import { DecideBrainChangeCommand } from "../../application/decide-brain-change.command"
 import { BrainChangeDecisionType } from "./dto/brain-change-decision.type"
 import { DecideBrainChangeInput } from "./dto/decide-brain-change.input"
 import { toBrainChangeDecisionType, toDecideBrainChangeRequest } from "./brain-graph.mapper"
 
 @Resolver()
-/** GraphQL door of Đồng ý / Không on a truth-graph change card. */
+/** GraphQL door of Dong y / Khong on a truth-graph change card. */
 export class DecideBrainChangeResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

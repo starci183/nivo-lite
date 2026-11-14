@@ -1,6 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { useSWRConfig } from "swr"
 import { matchesSwrKey } from "@/modules/utils"
 import { QUERY_CHAT_ROOMS_SWR_KEY } from "../queries/useQueryChatRoomsSwr"
@@ -8,7 +8,6 @@ import {
     mutateDecideChatApproval,
     type mutateDecideChatApproval as DecideChatApprovalOperation,
 } from "@/modules/api/graphql/mutations/mutation-decide-chat-approval"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DecideChatApprovalMutation } from "@/modules/api"
 
 /** What the DecideChatApproval mutation is triggered with. */

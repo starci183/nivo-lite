@@ -1,4 +1,5 @@
 import { FixtureError } from "./fixture-error"
+import { thrownFailureOf } from "../thrown-failure"
 import { sampleVocabulary, graphOf, nodeOf, packageOf } from "./index"
 
 describe("the testing kit", () => {
@@ -13,7 +14,9 @@ describe("the testing kit", () => {
         const refused = { ...graphOf(), nodes: graphOf().nodes.map((node) => ({ ...node, does: "mail boss@shop.vn" })) }
 
         expect(() => packageOf(refused)).toThrow(FixtureError)
-        expect(() => packageOf(refused)).toThrow("the builder graph is refused")
+        const failure = thrownFailureOf(() => packageOf(refused))
+        expect(failure?.code).toBe("FIXTURE_REFUSED")
+        expect(failure?.at).toContain("the builder graph is refused")
     })
 
     it("builds a node with every answer filled, and lets a spec change any of them", () => {

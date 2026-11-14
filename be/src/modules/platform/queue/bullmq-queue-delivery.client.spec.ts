@@ -18,6 +18,10 @@ import { deferMsOf } from "./queue.policy"
 import type { BullmqJob, QueueRedisGuard } from "./queue-transport.port"
 import type { QueueStartRow } from "./persistence/queue.rows"
 
+/** A failure of the given reason, as a collaborator rejects with it. */
+const failureOf = (reason: string): QueueError =>
+    new QueueError({ code: QueueErrorCode.FlowFailure, params: { reason } })
+
 const RUN_TOKEN = "76f0baf0-1815-4b96-b487-68e0bb4e7042"
 
 const options: QueueOptions = {
@@ -130,6 +134,33 @@ describe("admission", () => {
         expect(paramsOf(em, "job_done")).toEqual(["row-1", RUN_TOKEN])
     })
 
+    it("admits under the app's workspace limit, plus the headroom the router names for the job (an index job beside truths work)", async () => {
+        const { client, em, redis } = await build()
+
+        await client.deliver(handlerOf(), brokerJob(), undefined, redis)
+        const plain = paramsOf(em, "job_start")
+        em.query.mockClear()
+        await client.deliver(
+            handlerOf({ headroomOf: (job: string) => (job === "knowledge.index" ? 2 : 0) }),
+            brokerJob(),
+            undefined,
+            redis,
+        )
+
+        // The lease is the visibility timeout in seconds (30,000 ms): only the workspace limit moves.
+        expect(plain).toEqual(["knowledge", "row-1", 2, 30])
+        expect(paramsOf(em, "job_start")).toEqual(["knowledge", "row-1", 4, 30])
+    })
+
+    it("admits a job of a fair group by the five-argument job_start, and every other job as before", async () => {
+        const { client, em, redis } = await build()
+        const handler = handlerOf({ fairGroupOf: (job: string) => Promise.resolve(job === "knowledge.index" ? "document:d1" : null) })
+
+        await client.deliver(handler, brokerJob(), undefined, redis)
+
+        expect(paramsOf(em, "job_start")).toEqual(["knowledge", "row-1", 2, 30, "document:d1"])
+    })
+
     it("moves a job the workspace limit refuses back to delayed and never runs it", async () => {
         const { client, redis } = await build(refused("busy", "queued"))
         const handler = handlerOf()
@@ -187,7 +218,7 @@ describe("admission refusals", () => {
                 return finish.promise
             },
         })
-        const cause = new Error("lease database unavailable")
+        const cause = failureOf("lease database unavailable")
         const leases = () => em.query.mock.calls.filter(([sql]) => String(sql).includes("job_lease"))
         em.query.mockImplementation((sql: unknown) => {
             if (String(sql).includes("job_start")) return Promise.resolve(started(3))
@@ -215,7 +246,7 @@ describe("admission refusals", () => {
 describe("failures", () => {
     it("retries a failed delivery on the durable row and lets the broker keep the pause", async () => {
         const { client, em, redis } = await build()
-        const failure = new Error("provider down")
+        const failure = failureOf("provider down")
         const handler = handlerOf({ handle: jest.fn(() => Promise.reject(failure)) })
 
         await expect(client.deliver(handler, brokerJob(), "token", redis)).rejects.toBe(failure)
@@ -262,9 +293,9 @@ describe("failures", () => {
 describe("failure settlement", () => {
     it("preserves a failed settlement as failure and re-runs the recovered attempt", async () => {
         const { client, em, logger, redis } = await build()
-        const databaseFailure = new Error("settle unavailable")
+        const databaseFailure = failureOf("settle unavailable")
         const handler = handlerOf({
-            handle: jest.fn().mockRejectedValueOnce(new Error("provider unavailable")).mockResolvedValue(undefined),
+            handle: jest.fn().mockRejectedValueOnce(failureOf("provider unavailable")).mockResolvedValue(undefined),
         })
         em.query.mockImplementation((sql: unknown) => {
             if (String(sql).includes("job_start")) return Promise.resolve(started(2))
@@ -285,7 +316,7 @@ describe("failure settlement", () => {
 
     it("propagates completion persistence failures without a successful delivery", async () => {
         const { client, em, logger, redis } = await build()
-        const cause = new Error("completion unavailable")
+        const cause = failureOf("completion unavailable")
         em.query.mockImplementation((sql: unknown) =>
             String(sql).includes("job_start") ? Promise.resolve(started()) : Promise.reject(cause),
         )
@@ -318,7 +349,7 @@ describe("failure dead letters", () => {
         const handler: QueueHandler = {
             queue: "knowledge",
             job: "index",
-            handle: () => Promise.reject(new Error("provider unavailable")),
+            handle: () => Promise.reject(failureOf("provider unavailable")),
         }
 
         await expect(client.deliver(handler, brokerJob(), undefined, redis)).rejects.toBeInstanceOf(UnrecoverableError)
@@ -328,7 +359,7 @@ describe("failure dead letters", () => {
 
     it("logs a failed failure hook and still persists the durable dead letter", async () => {
         const { client, em, logger, redis } = await build()
-        const hookFailure = new Error("owner failure write unavailable")
+        const hookFailure = failureOf("owner failure write unavailable")
         const handler = handlerOf({
             handle: () => Promise.reject(new QueueError({ code: QueueErrorCode.Unrecoverable })),
             failed: () => Promise.reject(hookFailure),
@@ -352,7 +383,7 @@ describe("shutdown", () => {
             handle: (delivery) =>
                 new Promise<void>((_resolve, reject) => {
                     began.resolve()
-                    delivery.signal.addEventListener("abort", () => reject(new Error("aborted")))
+                    delivery.signal.addEventListener("abort", () => reject(failureOf("aborted")))
                 }),
         })
         const job = brokerJob()
@@ -377,9 +408,9 @@ describe("shutdown", () => {
                 return finish.promise
             },
         })
-        const running = expect(client.deliver(handler, brokerJob(), undefined, redis)).rejects.toThrow(
-            "provider failure",
-        )
+        const running = expect(client.deliver(handler, brokerJob(), undefined, redis)).rejects.toMatchObject({
+            params: { reason: "provider failure" },
+        })
         await began.promise
         let settled = false
         const waiting = client.settled().then(() => {
@@ -388,7 +419,7 @@ describe("shutdown", () => {
         await Promise.resolve()
         expect(settled).toBe(false)
 
-        finish.reject(new Error("provider failure"))
+        finish.reject(failureOf("provider failure"))
         await running
         await waiting
 

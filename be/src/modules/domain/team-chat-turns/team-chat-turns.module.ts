@@ -1,5 +1,5 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
+import { ChatFallbackService } from "./chat-fallback.service"
 import { ChatTurnLimiterService } from "./chat-turn-limiter.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./team-chat-turns.module-definition"
 import { TeamChatTurnsService } from "./team-chat-turns.service"
@@ -12,7 +12,7 @@ export class TeamChatTurnsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ChatTurnLimiterService, TeamChatTurnsService],
+            providers: [...(base.providers ?? []), ChatTurnLimiterService, ChatFallbackService, TeamChatTurnsService],
             exports: [TeamChatTurnsService],
         }
     }

@@ -1,6 +1,6 @@
 import { isProposedText, messageFactGroupsOf } from "./agent-message-facts"
 import { agentMessageItemOf } from "./agent-message-item"
-import { coreAgentMessageKinds, reportFactsKind, workflowStoppedPayload } from "./agent-message-kinds"
+import { coreAgentMessageKinds, reportFactsKind, workflowStoppedPayload } from "@nivo-lite/agent-sdk/team-chat"
 
 describe("messageFactGroupsOf", () => {
     it("keeps worded facts apart from technical ones, each in its given order, with distinct ids", () => {

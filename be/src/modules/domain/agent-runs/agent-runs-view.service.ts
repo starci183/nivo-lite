@@ -1,20 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import { isRecord } from "@modules/platform/primitives"
-import type { AggregateRow, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { runEngineOf, runRecordOf, stepRecordOf } from "./agent-runs.mapper"
 import type { OptionalRunDetail, RunListEntry, RunStepCall, RunStepDetail } from "./agent-runs-view.contracts"
-
-/** The entity of a run, read whole for one run's page. */
-const RUN = "agent.run"
+import type { RunWorkItem, StoredStep } from "./agent-runs-rows.contracts"
 
 /** The most runs the list of an agent holds. */
 export const RUNS_LISTED = 50
 
-const numberOf = (value: unknown): number => (typeof value === "number" ? value : Number(value ?? 0))
-
-const dateOf = (value: unknown): Date | null => (typeof value === "string" ? new Date(value) : null)
+const dateOf = (value: string | null): Date | null => (value === null ? null : new Date(value))
 
 /** The door calls a step recorded, in order; none where it recorded none. */
 const callsOf = (value: unknown): ReadonlyArray<RunStepCall> => {
@@ -27,9 +22,8 @@ const callsOf = (value: unknown): ReadonlyArray<RunStepCall> => {
 }
 
 /** One step row as the run page reads it. */
-export const stepDetailOf = (row: RecordRow): RunStepDetail => {
+export const stepDetailOf = (row: StoredStep): RunStepDetail => {
     const step = stepRecordOf(row)
-    const durationMs = row.data.durationMs
     return {
         stepKey: step.stepKey,
         nodeKey: step.nodeKey,
@@ -38,26 +32,22 @@ export const stepDetailOf = (row: RecordRow): RunStepDetail => {
         status: step.status,
         attempt: step.attempt,
         maxAttempts: step.maxAttempts,
-        startedAt: dateOf(row.data.startedAt),
-        endedAt: dateOf(row.data.endedAt),
-        durationMs: typeof durationMs === "number" ? durationMs : null,
+        startedAt: dateOf(row.startedAt),
+        endedAt: dateOf(row.endedAt),
+        durationMs: row.durationMs,
         errorCode: step.errorCode,
         waitItemId: step.waitItemId,
         workItemId: step.workItemId,
         input: step.input,
         result: step.result,
-        calls: callsOf(row.data.doorCalls),
+        calls: callsOf(row.doorCalls),
     }
 }
 
-/** The first work item of each run, from the groups of the aggregate that names them. */
-const firstItemsOf = (rows: ReadonlyArray<AggregateRow>): ReadonlyMap<string, string> => {
+/** The first work item of each run. */
+const firstItemsOf = (rows: ReadonlyArray<RunWorkItem>): ReadonlyMap<string, string> => {
     const items = new Map<string, string>()
-    for (const row of rows) {
-        const run = row.groups.runId
-        const item = row.groups.workItemId
-        if (run != null && item != null && !items.has(run)) items.set(run, item)
-    }
+    for (const row of rows) if (!items.has(row.runId)) items.set(row.runId, row.workItemId)
     return items
 }
 
@@ -83,13 +73,13 @@ export class AgentRunsViewService {
             ])
             const items = firstItemsOf(linked)
             return runs.map((run): RunListEntry => {
-                const measures = counts.find((row) => row.groups.runId === run.id)?.measures ?? {}
+                const measures = counts.find((row) => row.runId === run.id)
                 return {
                     run,
-                    stepTotal: numberOf(measures.total),
-                    stepDone: numberOf(measures.done),
-                    stepBegun: numberOf(measures.begun),
-                    stepFailed: numberOf(measures.failed),
+                    stepTotal: measures?.total ?? 0,
+                    stepDone: measures?.done ?? 0,
+                    stepBegun: measures?.begun ?? 0,
+                    stepFailed: measures?.failed ?? 0,
                     workItemId: items.get(run.id) ?? null,
                 }
             })
@@ -99,7 +89,7 @@ export class AgentRunsViewService {
     /** One run of the agent with its steps in order and the engine it is on, or null when the agent has no such run. */
     detail(workspaceId: string, agentId: string, runId: string): Promise<OptionalRunDetail> {
         return this.engine.scoped(workspaceId, async (tx) => {
-            const row = await this.engine.get(tx, RUN, runId)
+            const row = await this.records.runRow(tx, runId)
             if (row === null) return null
             const run = runRecordOf(row)
             if (run.agentId !== agentId) return null

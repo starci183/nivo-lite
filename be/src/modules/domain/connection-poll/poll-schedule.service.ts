@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectConnectionPollOptions } from "./connection-poll.decorators"
 import { ConnectionPollScheduleEntity } from "./persistence/entities"
@@ -53,14 +52,21 @@ export class PollScheduleService {
         ])
     }
 
-    /** Claims up to `size` due connections of the providers, oldest first, and holds them for the lease. */
+    /**
+     * Claims up to `size` due connections of the providers, oldest first, and holds them for the lease. A REMOVED connection (owner ruling R36:
+     * `connections.deleted_at` set) keeps its schedule row but is never claimed.
+     */
     claimDue(providers: ReadonlyArray<string>, size: number): Promise<ReadonlyArray<DueConnection>> {
         return this.entityManager.transaction(async (tx) => {
             const due = await tx
                 .createQueryBuilder(ConnectionPollScheduleEntity, "s")
-                .where("s.provider IN (:...providers) AND s.needs_reauth = false AND s.next_poll_at <= now()", {
-                    providers: [...providers],
-                })
+                .where(
+                    "s.provider IN (:...providers) AND s.needs_reauth = false AND s.next_poll_at <= now() " +
+                        "AND EXISTS (SELECT 1 FROM public.connections c WHERE c.id = s.connection_id AND c.deleted_at IS NULL)",
+                    {
+                        providers: [...providers],
+                    },
+                )
                 .orderBy("s.next_poll_at")
                 .limit(size)
                 .setLock("pessimistic_write")

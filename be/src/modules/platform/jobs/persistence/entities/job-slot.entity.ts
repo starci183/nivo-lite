@@ -19,4 +19,8 @@ export class JobSlotEntity extends AbstractEntity {
     /** Until when the slot is held; a lapsed lease frees it. */
     @Column({ name: "lease_until", type: "timestamptz" })
     leaseUntil!: Date
+
+    /** The fair group of the running job (a document, the critique runs), or null: a group with nothing running may take one slot beyond the limit. */
+    @Column({ name: "group_key", type: "text", nullable: true })
+    groupKey!: string | null
 }

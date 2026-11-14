@@ -10,4 +10,12 @@ export enum AgentInstancesLogEvent {
     CreationUndone = "agent_instances.creation_undone",
     /** A creation failed and its installation could not be removed again: a half-made agent is left, named by its installation. */
     CreationUndoFailed = "agent_instances.creation_undo_failed",
+    /** A customer channel was connected and the agent that answers it was installed for it. */
+    FrontDoorInstalled = "agent_instances.front_door_installed",
+    /** A customer channel was connected and the workspace's existing front door was attached to it. */
+    FrontDoorAttached = "agent_instances.front_door_attached",
+    /** A customer channel was connected and no installed template declares a front door for it: nobody answers it. */
+    FrontDoorMissing = "agent_instances.front_door_missing",
+    /** A customer channel was connected, its front door could not be installed, and the connection was marked in error. */
+    FrontDoorFailed = "agent_instances.front_door_failed",
 }

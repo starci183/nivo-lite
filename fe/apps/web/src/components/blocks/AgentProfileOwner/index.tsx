@@ -2,14 +2,17 @@
 
 import { useTranslations } from "next-intl"
 import { personNameOf, useAgentProfile } from "@/hooks/agentProfile"
-import { useInstallations } from "@/hooks/installations"
+import { useAgentRoute, useInstallations } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentProfileOwnerBase, type OwnerView } from "./component"
 
-/** The agent whose owner the card shows: named by its id, or by the instance that drives it (the card waits until that is known). */
+/**
+ * The agent whose owner the card shows: named by its id, or by the instance that drives it (the card waits until that is known). Neither,
+ * on the loading route of an agent page: the instance of the address.
+ */
 type AgentProfileOwnerProps = {
-    readonly agentId?: string
-    readonly installationId?: string
+    readonly agentId?: string | undefined
+    readonly installationId?: string | undefined
 }
 
 const PLACEHOLDER: OwnerView = { name: "-", roleLabel: "-", notice: null, fallback: null }
@@ -19,7 +22,9 @@ export const AgentProfileOwner = (props: AgentProfileOwnerProps) => {
     const t = useTranslations("agentProfile")
     const slotLabels = useSlotLabels()
     const { installations } = useInstallations()
-    const ofInstance = installations?.find((entry) => entry.id === props.installationId)?.agentId ?? null
+    const route = useAgentRoute()
+    const installationId = props.agentId === undefined ? (props.installationId ?? route.installationId) : undefined
+    const ofInstance = installations?.find((entry) => entry.id === installationId)?.agentId ?? null
     const { slot, reload } = useAgentProfile(props.agentId ?? ofInstance)
     return (
         <AgentProfileOwnerBase

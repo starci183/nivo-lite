@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateDecideBrainFact,
     type MutateDecideBrainFactRequest,
 } from "@/modules/api/graphql/mutations/mutation-decide-brain-fact"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DecideBrainFactMutation } from "@/modules/api"
 
 /** What the DecideBrainFact mutation is triggered with. */

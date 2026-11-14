@@ -1,23 +1,25 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
+import { EntityEngineService, type ScopedTx, type ScopedWork } from "@modules/domain/entity-engine"
 import type { Locale } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
+import { AgentGraphRightsService, type WorkflowRightsQuestion, type WorkflowStanding } from "./agent-graph-rights.service"
+import { AgentRightsRecordsService, type RightsPlace } from "./agent-rights-records.service"
 import { AgentWorkflowAdoptionService } from "./agent-workflow-adoption.service"
 import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
 import { AgentWorkflowStoreService, VERSION_LIMIT, WORKFLOW_LIMIT } from "./agent-workflow-store.service"
 import type {
+    ActiveWorkflowGraph,
     AgentWorkflowGraph,
     BlankWorkflow,
     DiffAgainst,
     ExpectedLatest,
-    MergeOutcome,
     SnapshotDiff,
     TemplateLink,
     TemplatePick,
     TemplatePreview,
+    VersionWrite,
     WorkflowAuthor,
     WorkflowCopy,
     WorkflowDetail,
@@ -27,13 +29,23 @@ import type {
     WorkflowVersionView,
     WorkflowView,
 } from "./agent-workflows.contracts"
+import type { FirstVersion, MadeWorkflow } from "./agent-workflow-rights.contracts"
+import {
+    consentOfAuthor,
+    settledOr,
+    type AgreedRight,
+    type RightsConsent,
+    type RightsSettlement,
+} from "./policies/node-rights-gate.policy"
 import { workflowGraphEntryOf } from "./policies/workflow-graph.policy"
 import { workflowDiffOf } from "./policies/workflow-diff.policy"
-import { mergeTemplate } from "./policies/workflow-merge.policy"
-import { acceptableTemplateVersion, statusAllowed, workflowKeyOf } from "./policies/workflow-version.policy"
+import { blankGraphOf, templateMergeOf } from "./policies/workflow-template-merge.policy"
+import { statusAllowed, workflowKeyOf } from "./policies/workflow-version.policy"
 import {
     againstGraphOf,
     linkedGraphOf,
+    optionalSnapshotOf,
+    snapshotHashOf,
     snapshotOf,
     templateGraphOf,
     templateRequired,
@@ -46,16 +58,9 @@ import {
 /** The system as the author of what a seed makes. */
 const SYSTEM: WorkflowAuthor = { kind: "system", memberId: null }
 
-/** What the first version of a new workflow is made of. */
-interface FirstVersion {
-    readonly agentId: string
-    readonly key: string
-    readonly name: string
-    readonly link: TemplateLink | null
-    readonly graph: GraphSpec
-    readonly author: WorkflowAuthor
-    readonly locale: Locale
-}
+/** What the gate settled for a graph, or the settlement of a world with no gate. */
+const rightsOf = (settlement: RightsSettlement | undefined, graph: GraphSpec, workflow: WorkflowRecord): RightsSettlement =>
+    settledOr(settlement, snapshotHashOf(graph), workflow.agentId, workflow.id)
 
 /** The most workflows of a workspace the Graph page reads. */
 const GRAPH_WORKFLOW_LIMIT = 500
@@ -65,7 +70,8 @@ const GRAPH_WORKFLOW_LIMIT = 500
  * The workflows of an agent: each a named graph with its OWN append-only history of full snapshots. A workflow made from a template
  * copies the template's graph as version 1 and keeps only the provenance `{ templateId, templateVersion }`; a template that changes
  * never changes a workflow, and its newer version is offered, merged and written as a NEW version only when the owner accepts it. A
- * rollback is a new version copying an old snapshot. Checks of who may act are the caller's.
+ * rollback is a new version copying an old snapshot. Checks of who may act are the caller's. Every road that makes a version the one
+ * that runs (and `setStatus`, which turns a workflow on) asks the rights gate first and writes the rows it settled with the version.
  */
 export class AgentWorkflowsService {
     constructor(
@@ -73,6 +79,8 @@ export class AgentWorkflowsService {
         private readonly records: AgentWorkflowRecordsService,
         private readonly store: AgentWorkflowStoreService,
         private readonly adoption: AgentWorkflowAdoptionService,
+        @Optional() private readonly rights?: AgentGraphRightsService,
+        @Optional() private readonly rows?: AgentRightsRecordsService,
     ) {}
 
     /** The workflows of an agent in list order, with the primary one adopted from the agent's graph first when it has none yet. */
@@ -125,6 +133,25 @@ export class AgentWorkflowsService {
         })
     }
 
+    /**
+     * The graph every workflow of the workspace runs now: one entry per workflow that has an active version whose snapshot reads, of
+     * every agent, in agent then list order. Read only (nothing is adopted or written). A workflow with no active version, or whose
+     * snapshot no longer parses, has no entry.
+     */
+    activeGraphsOf(workspaceId: string): Promise<ReadonlyArray<ActiveWorkflowGraph>> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const active: Array<ActiveWorkflowGraph> = []
+            await eachInOrder(await this.records.workflowsOfWorkspace(tx, GRAPH_WORKFLOW_LIMIT), async (workflow) => {
+                if (workflow.activeVersionId === null) return
+                const version = await this.records.version(tx, workflow.activeVersionId)
+                const graph = version === null ? null : optionalSnapshotOf(version)
+                if (version === null || graph === null) return
+                active.push({ workflowId: workflow.id, agentId: workflow.agentId, versionId: version.id, graph })
+            })
+            return active
+        })
+    }
+
     /** One workflow with the graph that runs, its history and how it differs from its template version. */
     detail(workspaceId: string, workflowId: string, locale: Locale): Promise<WorkflowDetail> {
         return this.engine.scoped(workspaceId, async (tx) => {
@@ -165,7 +192,8 @@ export class AgentWorkflowsService {
         return this.engine.scoped(workspaceId, async (tx) => {
             const workflow = await this.store.workflowRequired(tx, workflowId)
             const current = snapshotOf(await this.store.runningRequired(tx, workflow))
-            const { merged, template, link } = this.mergeOf(workflow, current, templateVersion)
+            const versions = await this.records.versionsOf(tx, workflowId, VERSION_LIMIT)
+            const { merged, template, link } = templateMergeOf(workflow, current, templateVersion, versions)
             return {
                 templateVersion,
                 changes: template.versions
@@ -183,7 +211,7 @@ export class AgentWorkflowsService {
     }
 
     /** Makes a draft workflow of the agent from a template version (the newest when none is named): version 1 is a full copy of its graph. */
-    createFromTemplate(
+    async createFromTemplate(
         workspaceId: string,
         agentId: string,
         pick: TemplatePick,
@@ -196,17 +224,32 @@ export class AgentWorkflowsService {
         this.store.requireSound(graph)
         const link: TemplateLink = { templateId: template.id, templateVersion: at }
         const slug = template.id.split(".").at(-1) ?? template.id
-        return this.engine.scoped(workspaceId, async (tx) =>
-            this.firstVersion(tx, {
-                agentId,
-                key: workflowKeyOf(slug, await this.store.keysOf(tx, agentId)),
-                name: template.name[locale],
-                link,
-                graph,
-                author,
-                locale,
-            }),
+        // A new workflow is a draft that never runs: what the agent's ticks grant is agreed with it, the rest waits for `setStatus`.
+        const rights = await this.rights?.decide({
+            workspaceId,
+            agentId,
+            workflowId: null,
+            before: null,
+            after: graph,
+            byTemplate: true,
+        })
+        const made = await this.write(
+            workspaceId,
+            rights,
+            async (tx) =>
+                this.firstVersion(tx, {
+                    agentId,
+                    key: workflowKeyOf(slug, await this.store.keysOf(tx, agentId)),
+                    name: template.name[locale],
+                    link,
+                    graph,
+                    author,
+                    locale,
+                    rights,
+                }),
+            (written) => ({ workflowId: written.view.id, versionId: written.versionId }),
         )
+        return made.view
     }
 
     /** Makes a draft workflow from scratch: version 1 holds a graph of the agent's module with one step that ends the run. */
@@ -217,15 +260,9 @@ export class AgentWorkflowsService {
         author: WorkflowAuthor,
         locale: Locale,
     ): Promise<WorkflowView> {
-        const graph: GraphSpec = {
-            schema: "nivo/agent-graph@1",
-            moduleKey: blank.moduleKey,
-            trigger: { kind: "tag", sources: ["agent"] },
-            grant: { rights: [], tools: [], effects: [] },
-            nodes: [{ key: "end", kind: "output", step: "stop" }],
-        }
-        return this.engine.scoped(workspaceId, async (tx) =>
-            this.firstVersion(tx, {
+        const graph = blankGraphOf(blank.moduleKey)
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const made = await this.firstVersion(tx, {
                 agentId,
                 key: workflowKeyOf(blank.name, await this.store.keysOf(tx, agentId)),
                 name: blank.name,
@@ -233,18 +270,23 @@ export class AgentWorkflowsService {
                 graph,
                 author,
                 locale,
-            }),
-        )
+                rights: undefined,
+            })
+            return made.view
+        })
     }
 
     /**
      * Seeds the workflows of an agent: its own graph adopted as the primary workflow, then a workflow from each other template of its
      * module it holds none of yet (a demo shop's), copied from the template's newest version: active when the template is a link of the
      * seeded chain (`seedActive`), else a draft that never runs until the owner turns it on. A rerun adds nothing. Answers how many drafts it made.
+     * With `only`, nothing is adopted and only that template is copied: how an agent no seed reached (one a person installed through
+     * the app) gets a workflow the engine calls by key, its chat turn; one it holds from the template stays as its owner set it.
      */
-    async seedAgent(workspaceId: string, agentId: string, moduleKey: string): Promise<number> {
-        await this.adoption.adoptAgentGraph(workspaceId, agentId)
-        const missing = await this.adoption.missingTemplatesOf(workspaceId, agentId, moduleKey)
+    async seedAgent(workspaceId: string, agentId: string, moduleKey: string, only?: string): Promise<number> {
+        if (only === undefined) await this.adoption.adoptAgentGraph(workspaceId, agentId)
+        const held = await this.adoption.missingTemplatesOf(workspaceId, agentId, moduleKey)
+        const missing = only === undefined ? held : held.filter((template) => template.id === only)
         await eachInOrder(missing, async (template) => {
             const made = await this.createFromTemplate(
                 workspaceId,
@@ -275,14 +317,14 @@ export class AgentWorkflowsService {
         author: WorkflowAuthor,
         expected: ExpectedLatest,
         note: string,
+        agreed?: ReadonlyArray<AgreedRight>,
     ): Promise<WorkflowVersionView> {
         this.store.requireSound(graph)
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const workflow = await this.store.workflowRequired(tx, workflowId)
-            const before = snapshotOf(await this.store.runningRequired(tx, workflow))
+        const consent = consentOfAuthor(author, agreed)
+        const asked = { afterOf: () => Promise.resolve(graph), consent, byTemplate: false }
+        return this.version(workspaceId, workflowId, asked, async (tx, workflow) => {
             await this.store.requireCallsSound(tx, workflow, graph)
-            const written = await this.store.writeVersion(tx, {
-                workflow,
+            return {
                 graph,
                 kind: author.kind === "nivo" ? "proposal" : "edit",
                 author,
@@ -291,8 +333,7 @@ export class AgentWorkflowsService {
                 fromNumber: null,
                 graphVersionId: null,
                 expected,
-            })
-            return workflowVersionViewOf(written.version, before, true)
+            }
         })
     }
 
@@ -304,16 +345,20 @@ export class AgentWorkflowsService {
         author: WorkflowAuthor,
         expected: ExpectedLatest,
         note: string,
+        agreed?: ReadonlyArray<AgreedRight>,
     ): Promise<WorkflowVersionView> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const workflow = await this.store.workflowRequired(tx, workflowId)
+        const consent = consentOfAuthor(author, agreed)
+        const sourceOf = async (tx: ScopedTx): Promise<WorkflowVersionRecord> => {
             const versions = await this.records.versionsOf(tx, workflowId, VERSION_LIMIT)
             const source = versions.find((version) => version.number === number)
             if (source === undefined) throw workflowRefused("version")
+            return source
+        }
+        const asked = { afterOf: async (tx: ScopedTx) => snapshotOf(await sourceOf(tx)), consent, byTemplate: false }
+        return this.version(workspaceId, workflowId, asked, async (tx, workflow) => {
+            const source = await sourceOf(tx)
             if (source.id === workflow.activeVersionId) throw workflowRefused("already-running")
-            const before = snapshotOf(await this.store.runningRequired(tx, workflow))
-            const written = await this.store.writeVersion(tx, {
-                workflow,
+            return {
                 graph: snapshotOf(source),
                 kind: "rollback",
                 author,
@@ -322,15 +367,15 @@ export class AgentWorkflowsService {
                 fromNumber: source.number,
                 graphVersionId: null,
                 expected,
-            })
-            return workflowVersionViewOf(written.version, before, true)
+            }
         })
     }
 
     /**
      * Accepts a newer version of the workflow's template, after the owner reviewed `templatePreview`: the merge (the template's changes
      * on the steps the owner left alone, the owner's side kept wherever both changed) becomes a NEW version, its grant cut to what its
-     * steps need, and the provenance moves to that template version. The template itself is never written.
+     * steps need, and the provenance moves to that template version. The template itself is never written. What the version asks for
+     * on accounts that the agent's ticks grant today is agreed with it; what it asks beyond them needs the owner's yes.
      */
     acceptTemplate(
         workspaceId: string,
@@ -339,15 +384,25 @@ export class AgentWorkflowsService {
         author: WorkflowAuthor,
         expected: ExpectedLatest,
         note: string,
+        agreed?: ReadonlyArray<AgreedRight>,
     ): Promise<WorkflowVersionView> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const workflow = await this.store.workflowRequired(tx, workflowId)
-            const current = snapshotOf(await this.store.runningRequired(tx, workflow))
-            const { merged, link } = this.mergeOf(workflow, current, templateVersion)
-            const graph: GraphSpec = { ...merged.graph, grant: this.store.trimmedGrantOf(merged.graph) }
+        const consent = consentOfAuthor(author, agreed)
+        const acceptedOf = async (tx: ScopedTx, workflow: WorkflowRecord, current: GraphSpec): Promise<GraphSpec> => {
+            const versions = await this.records.versionsOf(tx, workflow.id, VERSION_LIMIT)
+            const { merged } = templateMergeOf(workflow, current, templateVersion, versions)
+            return { ...merged.graph, grant: this.store.trimmedGrantOf(merged.graph) }
+        }
+        const asked = {
+            afterOf: (tx: ScopedTx, standing: WorkflowStanding) => acceptedOf(tx, standing.workflow, standing.before),
+            consent,
+            byTemplate: true,
+        }
+        return this.version(workspaceId, workflowId, asked, async (tx, workflow, current) => {
+            const link = workflow.template
+            if (link === null) throw workflowRefused("no-template")
+            const graph = await acceptedOf(tx, workflow, current)
             this.store.requireSound(graph)
-            const written = await this.store.writeVersion(tx, {
-                workflow,
+            return {
                 graph,
                 kind: "accept_template",
                 author,
@@ -356,12 +411,77 @@ export class AgentWorkflowsService {
                 fromNumber: null,
                 graphVersionId: null,
                 expected,
-            })
-            return workflowVersionViewOf(written.version, current, true)
+            }
         })
     }
 
-    /** Moves a workflow to `active`, `draft` or `paused`, as `statusAllowed` permits. */
+    /**
+     * Puts a workflow on a template version AS SHIPPED, with no merge: a NEW version holding that version's graph exactly, and the
+     * provenance moved to it (`templateId` may name the successor of the workflow's own template). The re-seed's road: after it, the
+     * workflow's link names a version the installation still ships, so a later template update merges from a base that exists. The
+     * gate judges it as a template's version (`byTemplate`).
+     */
+    adoptTemplateVersion(
+        workspaceId: string,
+        workflowId: string,
+        pick: { readonly templateId: string; readonly templateVersion: number },
+        author: WorkflowAuthor,
+        expected: ExpectedLatest,
+        note: string,
+    ): Promise<WorkflowVersionView> {
+        // Read when asked, so a version the installation does not ship is a refused promise like every other refusal here.
+        const shipped = (): GraphSpec => {
+            const graph = templateGraphOf(templateRequired(pick.templateId), pick.templateVersion)
+            this.store.requireSound(graph)
+            return graph
+        }
+        const asked = { afterOf: () => Promise.resolve().then(shipped), consent: consentOfAuthor(author, undefined), byTemplate: true }
+        return this.version(workspaceId, workflowId, asked, async (tx, workflow) => {
+            const graph = shipped()
+            await this.store.requireCallsSound(tx, workflow, graph)
+            return {
+                graph,
+                kind: "accept_template",
+                author,
+                note,
+                template: { templateId: pick.templateId, templateVersion: pick.templateVersion },
+                fromNumber: null,
+                graphVersionId: null,
+                expected,
+            }
+        })
+    }
+
+    /**
+     * Writes the next version of a workflow: the gate decides the graph that would run first (nothing is written when it refuses),
+     * then the version is written with the rows the gate settled, against the workflow and the running graph read in its transaction.
+     */
+    private async version(
+        workspaceId: string,
+        workflowId: string,
+        asked: Pick<WorkflowRightsQuestion, "afterOf" | "consent" | "byTemplate">,
+        writeOf: (tx: ScopedTx, workflow: WorkflowRecord, before: GraphSpec) => Promise<Omit<VersionWrite, "workflow" | "rights">>,
+    ): Promise<WorkflowVersionView> {
+        const rights = await this.rights?.decideWorkflow({ workspaceId, workflowId, ...asked })
+        const work: ScopedWork<WorkflowVersionView> = async (tx) => {
+            const workflow = await this.store.workflowRequired(tx, workflowId)
+            const before = snapshotOf(await this.store.runningRequired(tx, workflow))
+            const write = await writeOf(tx, workflow, before)
+            const written = await this.store.writeVersion(tx, {
+                ...write,
+                workflow,
+                rights: rightsOf(rights, write.graph, workflow),
+            })
+            return workflowVersionViewOf(written.version, before, true)
+        }
+        return this.write(workspaceId, rights, work, (view) => ({ workflowId, versionId: view.id }))
+    }
+
+    /**
+     * Moves a workflow to `active`, `draft` or `paused`, as `statusAllowed` permits. It writes no version and grants nothing: a
+     * person turning a workflow ON passes `requireRights` first (the door does), and the seed turns on what it made with the rows
+     * the ticks gave it.
+     */
     setStatus(workspaceId: string, workflowId: string, status: WorkflowStatus): Promise<void> {
         return this.engine.scoped(workspaceId, async (tx) => {
             const workflow = await this.store.workflowRequired(tx, workflowId)
@@ -373,20 +493,30 @@ export class AgentWorkflowsService {
         })
     }
 
-    private mergeOf(workflow: WorkflowRecord, current: GraphSpec, templateVersion: number): MergeOutcome {
-        const link = workflow.template
-        if (link === null) throw workflowRefused("no-template")
-        const template = templateRequired(link.templateId)
-        if (!acceptableTemplateVersion(link, template.id, templateVersion)) throw workflowRefused("template-version")
-        const merged = mergeTemplate(
-            templateGraphOf(template, link.templateVersion),
-            current,
-            templateGraphOf(template, templateVersion),
-        )
-        return { merged, template, link }
+    /**
+     * The gate of an activation that writes no version (turning a workflow ON): what the running version asks for beyond the
+     * workflow's grant rows refuses a person who is not the owner, and the owner until every such entry is agreed; the agreed
+     * entries are recorded as grant rows.
+     */
+    async requireRights(workspaceId: string, workflowId: string, consent: RightsConsent): Promise<void> {
+        if (this.rights === undefined || this.rows === undefined) return
+        const afterOf = (_tx: ScopedTx, standing: WorkflowStanding): Promise<GraphSpec> => Promise.resolve(standing.before)
+        const asked = { workspaceId, workflowId, afterOf, consent, byTemplate: false }
+        await this.rows.recordRunning(workspaceId, await this.rights.decideWorkflow(asked))
     }
 
-    private async firstVersion(tx: ScopedTx, first: FirstVersion): Promise<WorkflowView> {
+    /** Runs a write with the rows the gate settled for it; with none it is the scoped transaction. */
+    private write<T>(
+        workspaceId: string,
+        rights: RightsSettlement | undefined,
+        work: ScopedWork<T>,
+        placeOf: (written: T) => RightsPlace,
+    ): Promise<T> {
+        if (this.rows === undefined || rights === undefined) return this.engine.scoped(workspaceId, work)
+        return this.rows.run(workspaceId, rights, work, placeOf)
+    }
+
+    private async firstVersion(tx: ScopedTx, first: FirstVersion): Promise<MadeWorkflow> {
         const workflow = await this.store.insertWorkflow(tx, {
             agentId: first.agentId,
             key: first.key,
@@ -406,7 +536,8 @@ export class AgentWorkflowsService {
             fromNumber: null,
             graphVersionId: null,
             expected: 0,
+            rights: rightsOf(first.rights, first.graph, workflow),
         })
-        return workflowViewOf(written.workflow, written.version, first.locale)
+        return { view: workflowViewOf(written.workflow, written.version, first.locale), versionId: written.version.id }
     }
 }

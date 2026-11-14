@@ -13,12 +13,12 @@ export class SendMessageRequest {
     @MaxLength(2000)
     text!: string
 
-    /** The customer conversation to message. */
+    /** The person to message on their channel: the ROUTE id (the engine's id of this person on this account). The old name `conversation_id` is refused. */
     @TrimmedField()
     @IsString()
     @MaxLength(36)
     @Matches(UUID)
-    conversation_id!: string
+    route_id!: string
 
     /** True forces a waiting decision whatever the owner's rule says; the string "true" counts as true. */
     @IsOptional()

@@ -50,6 +50,11 @@ Vì sao: mỗi nhánh một dòng, nhánh lượt này đã đi có chip "Đã �
 Luật: workflow-memory-contracts (cổng "lỗi" và nhánh); ui-laws.md (Language: no raw keys).
 Grammar: `SurfaceCard kind="list" layout="rows"`, `ListRowData.badges`, `D:/starci-lanes/nivo-auth-ux/node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.
 
+## Thẻ "Đã đọc trong lượt này" (khi lượt đã đọc sự thật; không có thì không vẽ)
+Vì sao: một dòng cho mỗi sự thật agent đã đọc (tên, "Sự thật · bản N · nguồn" cỡ 12 xám, giá trị tiệm đang giữ ở cuối), nhãn nhóm 12 phía trên, thẻ riêng trên nền hồng, nằm trước bảng "Gọi AI". Lượt không đọc gì thì bỏ hẳn thẻ, như bảng "Gọi AI". Chi tiết từng dòng: `agent-work/sales-luot-chay-da-doc`. Đoạn tài liệu đã đọc chưa có trên dây (backend đang được xin), nên chưa vẽ.
+Luật: pink-page-surface-rule; page-header-left-sublabel-xs; type-scale-14-12; table-heroui-native-section-head.
+Grammar: `Sublabel` + `SurfaceCard kind="list"` (`ListRowData.value`), `D:/starci-lanes/nivo-auth-ux/node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.
+
 ## Bảng "Gọi AI" dưới sơ đồ (chip số loại; Loại gọi, Lần gọi, Token vào + từ cache, Token ra + suy luận, Thời gian + chậm nhất, Chi phí, Mô hình)
 Vì sao: một dòng cho mỗi loại gọi AI của lượt, để chủ thấy lượt này tốn bao nhiêu và gọi mô hình nào; số căn phải, số phụ (cache, suy luận, chậm nhất) cỡ 12 xám dưới số chính; chi phí đổi sang US$. Cột "Loại gọi" là tên tiếng Việt của bước ("Hiểu ý khách").
 Luật: table-heroui-native-section-head (bảng HeroUI gốc, đầu mục = nhãn + chip); type-scale-14-12; ui-laws.md (Language: no raw keys).

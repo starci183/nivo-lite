@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConnectionLifecycleService } from "./connection-lifecycle.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connection-lifecycle.module-definition"
 

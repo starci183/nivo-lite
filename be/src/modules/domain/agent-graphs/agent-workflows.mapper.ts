@@ -1,9 +1,7 @@
 import { fieldTextOf, fieldTextOrNullOf, isRecord } from "@modules/platform/primitives"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type {
-    RunWorkflowPin,
     TemplateLink,
     WorkflowAuthorKind,
     WorkflowChangeKind,
@@ -12,7 +10,18 @@ import type {
     WorkflowVersionRecord,
 } from "./agent-workflows.contracts"
 
-type Data = RecordRow["data"]
+/** A stored row of the workflow tables by its entity members (a TypeORM entity, or a store double's row); times are instants or ISO text. */
+export type StoredWorkflowRow = object
+
+type Data = Readonly<Record<string, unknown>>
+
+/** The members of a stored row, by name. */
+const membersOfRow = (row: StoredWorkflowRow): Data => Object.fromEntries(Object.entries(row))
+
+const dateOf = (data: Data, key: string): Date => {
+    const value = data[key]
+    return value instanceof Date ? value : new Date(textOf(data, key))
+}
 
 const STATUSES: ReadonlyArray<WorkflowStatus> = ["active", "draft", "paused"]
 const CHANGE_KINDS: ReadonlyArray<WorkflowChangeKind> = [
@@ -75,48 +84,46 @@ const linkOf = (data: Data): TemplateLink | null => {
     return templateId === null || templateVersion === null ? null : { templateId, templateVersion }
 }
 
-/** A workflow record read from the engine's row. */
-export const workflowRecordOf = (row: RecordRow): WorkflowRecord => ({
-    id: row.id,
-    workspaceId: row.workspaceId,
-    fence: row.version,
-    agentId: textOf(row.data, "agentId"),
-    key: textOf(row.data, "key"),
-    name: textOf(row.data, "name"),
-    status: enumOf(row.data, "status", STATUSES),
-    primary: flagOf(row.data, "primary"),
-    position: intOf(row.data, "position"),
-    activeVersionId: textOrNull(row.data, "activeVersionId"),
-    latestNumber: intOf(row.data, "latestNumber"),
-    template: linkOf(row.data),
-    createdBy: textOrNull(row.data, "createdBy"),
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
-})
+/** A workflow record read from its stored row. */
+export const workflowRecordOf = (stored: StoredWorkflowRow): WorkflowRecord => {
+    const row = membersOfRow(stored)
+    return {
+        id: textOf(row, "id"),
+        workspaceId: textOf(row, "workspaceId"),
+        fence: String(intOf(row, "version")),
+        agentId: textOf(row, "agentId"),
+        key: textOf(row, "key"),
+        name: textOf(row, "name"),
+        status: enumOf(row, "status", STATUSES),
+        primary: flagOf(row, "primary"),
+        position: intOf(row, "position"),
+        activeVersionId: textOrNull(row, "activeVersionId"),
+        latestNumber: intOf(row, "latestNumber"),
+        template: linkOf(row),
+        createdBy: textOrNull(row, "createdBy"),
+        createdAt: dateOf(row, "createdAt"),
+        updatedAt: dateOf(row, "updatedAt"),
+    }
+}
 
-/** A workflow version record read from the engine's row. */
-export const workflowVersionRecordOf = (row: RecordRow): WorkflowVersionRecord => ({
-    id: row.id,
-    workspaceId: row.workspaceId,
-    workflowId: textOf(row.data, "workflowId"),
-    agentId: textOf(row.data, "agentId"),
-    number: intOf(row.data, "number"),
-    document: documentOf(row.data),
-    documentHash: textOf(row.data, "documentHash"),
-    changeKind: enumOf(row.data, "changeKind", CHANGE_KINDS),
-    authorKind: enumOf(row.data, "authorKind", AUTHOR_KINDS),
-    authorId: textOrNull(row.data, "authorId"),
-    note: textOf(row.data, "note"),
-    template: linkOf(row.data),
-    fromNumber: intOrNull(row.data, "fromNumber"),
-    graphVersionId: textOrNull(row.data, "graphVersionId"),
-    publishedAt: new Date(textOf(row.data, "publishedAt")),
-})
-
-/** A run pin read from the engine's row. */
-export const runWorkflowPinOf = (row: RecordRow): RunWorkflowPin => ({
-    runId: textOf(row.data, "runId"),
-    workflowId: textOf(row.data, "workflowId"),
-    workflowVersionId: textOf(row.data, "workflowVersionId"),
-    workflowVersion: intOf(row.data, "workflowVersion"),
-})
+/** A workflow version record read from its stored row. */
+export const workflowVersionRecordOf = (stored: StoredWorkflowRow): WorkflowVersionRecord => {
+    const row = membersOfRow(stored)
+    return {
+        id: textOf(row, "id"),
+        workspaceId: textOf(row, "workspaceId"),
+        workflowId: textOf(row, "workflowId"),
+        agentId: textOf(row, "agentId"),
+        number: intOf(row, "number"),
+        document: documentOf(row),
+        documentHash: textOf(row, "documentHash"),
+        changeKind: enumOf(row, "changeKind", CHANGE_KINDS),
+        authorKind: enumOf(row, "authorKind", AUTHOR_KINDS),
+        authorId: textOrNull(row, "authorId"),
+        note: textOf(row, "note"),
+        template: linkOf(row),
+        fromNumber: intOrNull(row, "fromNumber"),
+        graphVersionId: textOrNull(row, "graphVersionId"),
+        publishedAt: dateOf(row, "publishedAt"),
+    }
+}

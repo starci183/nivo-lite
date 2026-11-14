@@ -20,7 +20,7 @@ import { useWorkspaceId } from "@/hooks/workspaces"
 /** The health figures: what runs, what waits, what needs the owner, and how many agents work through a connection. */
 const figuresOf = (connections: ReadonlyArray<Connection>, agentsTotal: number): ConnectionsFigures => {
     const live = connections.filter((connection) => connection.status !== "disconnected")
-    const lives = live.map(lifecycleOf)
+    const lives = live.map((connection) => lifecycleOf(connection))
     return {
         total: live.length,
         running: lives.filter((life) => life.id === "running").length,

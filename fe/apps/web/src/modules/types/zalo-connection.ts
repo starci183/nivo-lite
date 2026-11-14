@@ -12,6 +12,8 @@ export interface ZaloHeadView {
     readonly facts: string
     /** Why the OA cannot send; empty when it can. */
     readonly banner: string
+    /** What the connection asks beyond its status: connect again (the provider refused the credential), informative (cannot be read at the moment), or nothing. */
+    readonly attention: "needs_reauth" | "degraded" | null
 }
 
 /** One row of the check list. */
@@ -47,7 +49,6 @@ export interface ZaloFactView {
 /** The two addresses the owner pastes into Zalo. */
 export interface ZaloPasteView {
     readonly callbackUrl: string
-    readonly webhookUrl: string
 }
 
 /** One agent of the workspace and whether it works through the connection. */

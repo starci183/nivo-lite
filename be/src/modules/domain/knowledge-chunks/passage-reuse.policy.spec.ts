@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import { embeddingIdentityOf } from "@nivo-lite/blocks-core"
+import { embeddingIdentityOf } from "@nivo-lite/agent-sdk/models"
 import type { EmbeddedChunk } from "./knowledge-chunks.contracts"
 import { passageHashOf } from "./passage-hash.policy"
 import { reusePlanOf } from "./passage-reuse.policy"

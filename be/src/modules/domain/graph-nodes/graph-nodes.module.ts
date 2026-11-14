@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
+import { NODE_EFFECT_STORE } from "./node-effect-store.port"
+import { TypeormNodeEffectStore } from "./node-effect-store.typeorm"
 import { GraphNodeHostService } from "./graph-node-host.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
 import { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
@@ -38,6 +39,9 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                 },
                 { provide: GRAPH_NODE_MODEL, useExisting: options.model },
                 GraphNodeRegistryService,
+                // The effect ledger (public.agent_node_effects): the one store every once-key read and write goes through.
+                TypeormNodeEffectStore,
+                { provide: NODE_EFFECT_STORE, useExisting: TypeormNodeEffectStore },
                 GraphNodeEffectsService,
                 GraphNodeHostService,
                 GraphNodeRunTokensService,
@@ -52,6 +56,7 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                 GraphNodeHostService,
                 GraphNodeRunTokensService,
                 GraphNodeEffectsService,
+                NODE_EFFECT_STORE,
                 GRAPH_EFFECT_ONCE,
                 GRAPH_NODE_TOOL_DOOR,
             ],

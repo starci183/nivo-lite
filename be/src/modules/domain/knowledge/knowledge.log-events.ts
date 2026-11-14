@@ -16,4 +16,10 @@ export enum KnowledgeLogEvent {
     ModelMismatch = "knowledge.reembed.model_mismatch",
     /** The embeddings endpoint answered another count or size of vectors than asked; the passages are stored without vectors. */
     EmbeddingUnexpected = "knowledge.embedding.unexpected",
+    /** The vector index did not answer a search; the search went on with words alone. */
+    IndexUnavailable = "knowledge.search.index_unavailable",
+    /** A document that waited for credits with its passages stored word-only was queued for indexing again by the upkeep tick. */
+    SourceResumed = "knowledge.source.resumed",
+    /** The upkeep tick could not look at the documents that wait for credits; the next tick looks again. */
+    SourceResumeFailed = "knowledge.source.resume_failed",
 }

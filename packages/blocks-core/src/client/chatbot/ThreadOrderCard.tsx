@@ -27,7 +27,7 @@ interface ThreadOrderCardProps {
  */
 export const ThreadOrderCard = (props: ThreadOrderCardProps): ReactNode => (
     <Stack gap="inline">
-        <Cluster gap="inline" justify="between" align="center" wrap={false}>
+        <Cluster gap="identity" justify="between" align="center" wrap={false}>
             <Text size="sm" isStrong>
                 {props.order.orderNo}
             </Text>

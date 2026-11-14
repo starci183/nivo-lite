@@ -68,10 +68,10 @@ export interface NoteDraft extends NoteDraftFields {
     readonly reset: () => void
 }
 
-/** Opens the form with a topic (and tags) already chosen: on "Write" for a suggestion, on the files for a dossier. */
+/** Opens the form with a topic (and tags) already chosen: on "Write" for a suggestion, on the files of a category. */
 export interface AddPreset {
     readonly topic: string
-    /** Comma-separated tags the batch carries, e.g. the one that files a document under a dossier. */
+    /** Comma-separated tags the batch carries, e.g. the one that files a document under a category. */
     readonly tags?: string
     /** The mode the drawer opens on; "write" when absent. */
     readonly mode?: "files" | "write"

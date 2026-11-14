@@ -2,7 +2,7 @@ import { Field, ID, InputType } from "@nestjs/graphql"
 import { ArrayMaxSize, IsArray, IsIn, IsUUID, MaxLength } from "class-validator"
 
 @InputType()
-/** Replaces who is in charge of an agent, who may give it work and whom it may pass work to. */
+/** Replaces who is in charge of an agent and who may give it work. */
 export class SetAgentOwnershipInput {
     /** The agent. */
     @Field(() => ID)
@@ -29,17 +29,10 @@ export class SetAgentOwnershipInput {
     @IsIn(["owner", "manager", "staff"], { each: true })
     assignableRoles!: Array<string>
 
-    /** The department room keys whose members may hand the agent work. */
+    /** The ids of the team-chat groups whose members may hand the agent work. */
     @Field(() => [String])
     @IsArray()
-    @ArrayMaxSize(6)
-    @IsIn(["executive", "frontdesk", "sales", "marketing", "care", "accounting"], { each: true })
-    assignableRooms!: Array<string>
-
-    /** The other agents it may pass work to. */
-    @Field(() => [ID])
-    @IsArray()
-    @ArrayMaxSize(50)
+    @ArrayMaxSize(10)
     @IsUUID("4", { each: true })
-    canTagAgentIds!: Array<string>
+    assignableRooms!: Array<string>
 }

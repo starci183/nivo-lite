@@ -40,7 +40,7 @@ describe("buildRecords", () => {
     it("normalises phones, emails, numbers and dates and keeps the original text", async () => {
         const subject = await buildSubject()
 
-        const built = subject.buildRecords(
+        const built = subject.buildRecords("Asia/Ho_Chi_Minh", 
             {
                 headers: mapping.columns,
                 rows: [["KH1", "Lan", "+84 912 345 678", "Lan@Example.com", "1.200", "14/10/2026", "hi"]],
@@ -75,7 +75,7 @@ describe("buildRecords", () => {
     it("keeps a phone that is already digits and skips a value that is not a number or a date", async () => {
         const subject = await buildSubject()
 
-        const built = subject.buildRecords(
+        const built = subject.buildRecords("Asia/Ho_Chi_Minh", 
             {
                 headers: ["phone", "amount", "when"],
                 rows: [["0912", "abc", "later"]],
@@ -96,12 +96,12 @@ describe("buildRecords", () => {
     it("uses the raw phone text when it has no digits, and a phone id when the id column is a phone", async () => {
         const subject = await buildSubject()
 
-        const built = subject.buildRecords(
+        const built = subject.buildRecords("Asia/Ho_Chi_Minh", 
             { headers: ["id", "name"], rows: [["+84 912 345 678", ""]] },
             { ...mapping, idColumn: "id", titleColumn: "name", kinds: { id: "phone", name: "text" } },
         )
         expect(built.records[0]).toMatchObject({ externalId: "0912345678", title: "0912345678" })
-        const words = subject.buildRecords(
+        const words = subject.buildRecords("Asia/Ho_Chi_Minh", 
             { headers: ["phone"], rows: [["abc"]] },
             { ...mapping, idColumn: null, titleColumn: null, dateColumn: null, kinds: { phone: "phone" } },
         )
@@ -113,7 +113,7 @@ describe("buildRecords", () => {
     it("skips a blank id or an id over 300 characters and counts a repeated id once", async () => {
         const subject = await buildSubject()
 
-        const built = subject.buildRecords(
+        const built = subject.buildRecords("Asia/Ho_Chi_Minh", 
             {
                 headers: ["id", "name"],
                 rows: [
@@ -138,7 +138,7 @@ describe("buildRecords", () => {
 
         const kinds: CsvMapping["kinds"] = { id: "text", name: "text" }
         Reflect.set(kinds, "name", "nope")
-        const built = subject.buildRecords(
+        const built = subject.buildRecords("Asia/Ho_Chi_Minh", 
             { headers: ["id", "name"], rows: [["KH1", "n".repeat(400)]] },
             {
                 ...mapping,
@@ -153,7 +153,7 @@ describe("buildRecords", () => {
     it("reads a missing cell as empty and skips a row with nothing in it", async () => {
         const subject = await buildSubject()
 
-        const built = subject.buildRecords(
+        const built = subject.buildRecords("Asia/Ho_Chi_Minh", 
             { headers: ["id", "name"], rows: [[]] },
             { ...mapping, idColumn: null, titleColumn: "name", dateColumn: null },
         )
@@ -164,13 +164,13 @@ describe("buildRecords", () => {
         const subject = await buildSubject()
 
         expect(
-            subject.buildRecords(
+            subject.buildRecords("Asia/Ho_Chi_Minh", 
                 { headers: ["note", "id"], rows: [["Present"]] },
                 { ...mapping, idColumn: "id", titleColumn: null, dateColumn: null, kinds: {} },
             ),
         ).toEqual({ records: [], skipped: 1, duplicates: 0 })
         expect(
-            subject.buildRecords(
+            subject.buildRecords("Asia/Ho_Chi_Minh", 
                 { headers: ["note", "name", "when"], rows: [["Present"]] },
                 { ...mapping, idColumn: null, titleColumn: "name", dateColumn: "when", kinds: {} },
             ),
@@ -189,7 +189,7 @@ describe("buildRecords", () => {
         const subject = await buildSubject()
 
         expect(
-            subject.buildRecords(
+            subject.buildRecords("Asia/Ho_Chi_Minh", 
                 { headers: ["id"], rows: [["words"]] },
                 { ...mapping, idColumn: "id", titleColumn: null, dateColumn: null, kinds: { id: "phone" } },
             ),

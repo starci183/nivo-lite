@@ -28,11 +28,12 @@ export interface CreditsLedgerView {
 export const useCreditsLedger = (workspaceId: string | undefined, canSeeLots: boolean): CreditsLedgerView => {
     const lots = useQueryCreditTopupLotsSwr(workspaceId, canSeeLots)
     const bought = useQueryCreditPacksBoughtSwr(workspaceId)
+    const lotsError = canSeeLots ? readError(lots) : undefined
     return {
         lots: lots.data,
         bought: bought.data,
         isReady: (!canSeeLots || lots.data !== undefined) && bought.data !== undefined,
-        error: (canSeeLots ? readError(lots) : undefined) || readError(bought),
+        error: lotsError ?? readError(bought),
         refresh: async () => {
             await Promise.all([...(canSeeLots ? [lots.mutate()] : []), bought.mutate()])
         },

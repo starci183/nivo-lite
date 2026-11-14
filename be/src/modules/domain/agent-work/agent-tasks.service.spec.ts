@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
+import { In, IsNull, Not } from "typeorm"
 import { agentTaskRowOf } from "@tests/fixtures/builders/agent-work.builder"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -237,5 +237,58 @@ describe("AgentTasksService.markWoken", () => {
             { id: "task-1", nextActionAt: AT(-3) },
             { nextActionAt: null },
         )
+    })
+})
+
+describe("AgentTasksService, the generic timer's task", () => {
+    it("arms a timer as one open task under its key, the wake time NOT bounded to five minutes, the data kept (null clears it)", async () => {
+        const { service, em } = await build(mockEntityManager({ upsert: [AgentTaskEntity, {}] }))
+        const wakeAt = AT(1)
+
+        await service.armTimer("ws-1", "agent-1", { key: "timer:contact:c-1:r", title: "timer due x", wakeAt, data: { tries: 1 } })
+
+        expect(em.upsert).toHaveBeenCalledWith(
+            AgentTaskEntity,
+            {
+                workspaceId: "ws-1",
+                agentId: "agent-1",
+                dedupeKey: "timer:contact:c-1:r",
+                title: "timer due x",
+                status: "open",
+                waitingOn: null,
+                nextActionAt: wakeAt,
+                doneAt: null,
+                data: { tries: 1 },
+            },
+            ["agentId", "dedupeKey"],
+        )
+    })
+
+    it("cancels the open, armed timer of the agent by its key and says whether there was one", async () => {
+        const hit = await build(mockEntityManager({ update: [AgentTaskEntity, { affected: 1 }] }))
+        await expect(hit.service.cancelTimer("agent-1", "timer:contact:c-1:r")).resolves.toBe(true)
+        expect(hit.em.update).toHaveBeenCalledWith(
+            AgentTaskEntity,
+            { agentId: "agent-1", dedupeKey: "timer:contact:c-1:r", status: "open", nextActionAt: Not(IsNull()) },
+            { status: "done", doneAt: new Date(NOW), nextActionAt: null },
+        )
+        const miss = await build(mockEntityManager({ update: [AgentTaskEntity, { affected: 0 }] }))
+        await expect(miss.service.cancelTimer("agent-1", "timer:contact:c-1:r")).resolves.toBe(false)
+    })
+
+    it("closes a fired timer's task only when its time is still the one that woke, and moves a wake time only from the time it was read at", async () => {
+        const { service, em } = await build(mockEntityManager({ update: [AgentTaskEntity, { affected: 1 }] }))
+        const tx = mockEntityManager({ update: [AgentTaskEntity, { affected: 1 }] })
+        const at = AT(-2)
+
+        await service.markFired(tx, "task-1", at)
+        await service.moveWake("task-1", at, AT(60))
+
+        expect(tx.update).toHaveBeenCalledWith(
+            AgentTaskEntity,
+            { id: "task-1", nextActionAt: at },
+            { nextActionAt: null, status: "done", doneAt: new Date(NOW) },
+        )
+        expect(em.update).toHaveBeenCalledWith(AgentTaskEntity, { id: "task-1", nextActionAt: at }, { nextActionAt: AT(60) })
     })
 })

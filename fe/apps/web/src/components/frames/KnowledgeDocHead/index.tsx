@@ -1,4 +1,4 @@
-import { AlertDialog, Badge, Button, Cluster, DropdownMenu, IconButton } from "@starci/grammar/common"
+import { AlertDialog, Badge, Button, DropdownMenu, IconButton } from "@starci/grammar/common"
 import { KnowledgeDocMark } from "@/components/composites/KnowledgeDocMark"
 import { PaneHead } from "@/components/composites/PaneHead"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -50,23 +50,21 @@ const HeadMenu = (props: HeadMenuProps) =>
  */
 export const KnowledgeDocHead = (props: KnowledgeDocHeadProps) => {
     const { head } = props
+    /** A pane head holds ONE status chip beside the title (two chips squeeze a long title to a few letters): the state stays a chip, the rest say themselves in the line under the title. */
+    const [first] = head.chips
     return (
         <>
             <PaneHead
                 title={head.title}
                 headingLevel={1}
-                description={head.meta}
+                description={[...head.chips.slice(1).map((chip) => chip.label), head.meta]
+                    .filter((part) => part !== "")
+                    .join(" · ")}
                 mark={<KnowledgeDocMark glyph={head.glyph} />}
                 status={
-                    head.chips.length === 0 ? undefined : (
+                    first === undefined ? undefined : (
                         <div className={WIDE_ONLY_CLASS_NAME}>
-                            <Cluster gap="inline">
-                                {head.chips.map((chip) => (
-                                    <Badge key={chip.label} tone={chip.tone}>
-                                        {chip.label}
-                                    </Badge>
-                                ))}
-                            </Cluster>
+                            <Badge tone={first.tone}>{first.label}</Badge>
                         </div>
                     )
                 }

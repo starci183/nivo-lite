@@ -7,7 +7,6 @@ import {
     AgentGraphsService,
     AgentWorkflowsService,
 } from "@modules/domain/agent-graphs"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import type { ContextVersionRecord } from "@modules/domain/module-context-versions"
@@ -40,7 +39,7 @@ const SOURCE: InstallationRecord = {
 const KNOWLEDGE = { knowledgeFacts: 2, knowledgeDocuments: 1, knowledgeWaiting: 1, knowledgeSkipped: 0 }
 const TARGET = { installationId: "inst-minh", agentId: "agent-minh" }
 const BY = { userId: "u-owner", memberId: "m-owner", role: "owner" as const }
-const DOCUMENT = { nodes: [], rights: [] }
+const DOCUMENT = { nodes: [] }
 
 const VERSION: ContextVersionRecord = {
     id: "ver-lan-3",
@@ -71,13 +70,10 @@ const stateOf = (overrides: Partial<GraphState> = {}): GraphState =>
 const build = async () => {
     const installations = mock<InstallationRecordsService>()
     installations.saveSettings.mockResolvedValue("done")
-    installations.setOperatingMode.mockResolvedValue("done")
     installations.activateVersion.mockResolvedValue("done")
     const versions = mock<ContextVersionsService>()
     versions.find.mockResolvedValue(VERSION)
     versions.insert.mockResolvedValue({ ...VERSION, id: "ver-minh-1", installationId: "inst-minh", version: 1 })
-    const rules = mock<AuthorityRulesService>()
-    rules.extendToAgent.mockResolvedValue(2)
     const graphs = mock<AgentGraphsService>()
     graphs.stateOfAgent.mockResolvedValue(stateOf())
     const seed = mock<AgentGraphSeedService>()
@@ -116,7 +112,6 @@ const build = async () => {
             AgentSetupCopyService,
             { provide: InstallationRecordsService, useValue: installations },
             { provide: ContextVersionsService, useValue: versions },
-            { provide: AuthorityRulesService, useValue: rules },
             { provide: AgentGraphsService, useValue: graphs },
             { provide: AgentGraphSeedService, useValue: seed },
             { provide: AgentGraphPublishService, useValue: publish },
@@ -130,7 +125,6 @@ const build = async () => {
         service: moduleRef.get(AgentSetupCopyService),
         installations,
         versions,
-        rules,
         graphs,
         seed,
         publish,
@@ -142,8 +136,8 @@ const build = async () => {
 }
 
 describe("AgentSetupCopyService", () => {
-    it("copies the settings, the setup version, the permission levels, the graph and the shared connections", async () => {
-        const { service, installations, versions, rules, seed, publish } = await build()
+    it("copies the settings, the setup version, the graph and the shared connections", async () => {
+        const { service, installations, versions, seed, publish } = await build()
 
         const outcome = await service.copy(SOURCE, TARGET, BY, "vi")
 
@@ -152,14 +146,12 @@ describe("AgentSetupCopyService", () => {
                 fromInstallationId: "inst-lan",
                 settings: true,
                 contextVersion: true,
-                rules: 2,
                 graph: "copied",
                 ...KNOWLEDGE,
             },
             grants: [{ connectionId: "db1" }],
         })
         expect(installations.saveSettings).toHaveBeenCalledWith("w1", "inst-minh", SOURCE.settings)
-        expect(installations.setOperatingMode).toHaveBeenCalledWith("w1", "inst-minh", "autopilot")
         expect(versions.insert).toHaveBeenCalledWith({
             workspaceId: "w1",
             installationId: "inst-minh",
@@ -168,9 +160,9 @@ describe("AgentSetupCopyService", () => {
             appliedBy: "Owner",
         })
         expect(installations.activateVersion).toHaveBeenCalledWith("w1", "inst-minh", "ver-minh-1", "ready")
-        expect(rules.extendToAgent).toHaveBeenCalledWith("w1", "sales", "agent-lan", "agent-minh")
         expect(seed.ensureFor).toHaveBeenCalledWith("inst-minh", "vi")
-        expect(publish.publishCopy).toHaveBeenCalledWith("w1", "agent-minh", DOCUMENT, BY)
+        // The target was made in the same call: what its flow asks beyond what is agreed waits, it never refuses the copy.
+        expect(publish.publishCopy).toHaveBeenCalledWith("w1", "agent-minh", DOCUMENT, BY, [], "wait")
     })
 
     it("copies every workflow of the sibling after its graph, as the member who copies", async () => {
@@ -217,7 +209,12 @@ describe("AgentSetupCopyService, refusals and nothing to copy", () => {
             Object.assign(Object.create(AgentGraphsError.prototype), { code: WIDENS_NEEDS_OWNER }),
         )
 
-        const outcome = await service.copy(SOURCE, TARGET, { userId: "u-mgr", memberId: "m-mgr", role: "manager" }, "vi")
+        const outcome = await service.copy(
+            SOURCE,
+            TARGET,
+            { userId: "u-mgr", memberId: "m-mgr", role: "manager" },
+            "vi",
+        )
 
         expect(outcome.copied.graph).toBe("refused")
         expect(workflows.copyWorkflows).not.toHaveBeenCalled()
@@ -249,7 +246,7 @@ describe("AgentSetupCopyService, refusals and nothing to copy", () => {
     })
 
     it("copies only the settings and the version of a sibling that has no agent", async () => {
-        const { service, rules, grants } = await build()
+        const { service, grants } = await build()
 
         const outcome = await service.copy({ ...SOURCE, agentId: null }, TARGET, BY, "vi")
 
@@ -258,13 +255,11 @@ describe("AgentSetupCopyService, refusals and nothing to copy", () => {
                 fromInstallationId: "inst-lan",
                 settings: true,
                 contextVersion: true,
-                rules: 0,
                 graph: "none",
                 ...KNOWLEDGE,
             },
             grants: [],
         })
-        expect(rules.extendToAgent).not.toHaveBeenCalled()
         expect(grants.candidatesOf).not.toHaveBeenCalled()
     })
 })

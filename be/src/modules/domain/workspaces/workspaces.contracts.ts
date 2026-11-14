@@ -1,6 +1,6 @@
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
-/** The business type a workspace names at onboarding: a known key the knowledge ideas and inventory starters read (`spa`, `retail`, `cafe`, `technology`...) or the owner's own words; none leaves it unset. */
+/** The business type a workspace names at onboarding: a known key the knowledge ideas read (`spa`, `retail`, `cafe`, `technology`...) or the owner's own words; none leaves it unset. */
 export type NamedBusinessType = string | null
 
 /** One workspace as a member sees it. */
@@ -80,6 +80,23 @@ export interface FirstWorkspace {
 
 /** The billing statuses support can set by hand. */
 export type SupportStatus = "active" | "past_due"
+
+/** The enterprise identifier of a workspace (`nivo-web`); null for an ordinary workspace, known by its uuid alone. */
+export type EnterpriseKey = string | null
+
+/** A change of a workspace enterprise identifier: what it was and what it is. */
+export interface EnterpriseKeyChange {
+    /** The identifier before. */
+    readonly from: EnterpriseKey
+    /** The identifier now. */
+    readonly to: EnterpriseKey
+}
+
+/** What the enterprise filter reads of a listed module: its key. */
+export interface KeyedModule {
+    /** The module key. */
+    readonly key: string
+}
 
 /** An account id, or null when there is none. */
 export type OptionalAccountId = string | null

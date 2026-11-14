@@ -1,17 +1,19 @@
-import { MEMBERS_MAX } from "./team-chat.contracts"
-import type {
-    ApprovalState,
-    ChatMemberRef,
-    MessageView,
-    RoomMemberView,
-    RoomUnread,
-    ChatRoomView,
+import {
+    MEMBERS_MAX,
+    type ApprovalState,
+    type ChatMemberRef,
+    type MessageView,
+    type RoomMemberView,
+    type RoomUnread,
+    type ChatRoomView,
 } from "./team-chat.contracts"
 import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
 import { quoteBodyOf } from "./team-chat-reaction.policy"
 import type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
 import { stopCardViewOf, stopReplyUsersOf } from "./stop-card.policy"
 import { brainChangeCardViewOf, storedBrainChangeOf } from "./brain-change-card.policy"
+import { backgroundStoppedCardViewOf } from "./background-stop-card.policy"
+import { isNivoRoomKey, isReadOnlyRoom } from "./team-chat.policy"
 import type { BrainChangeCost, BrainChangeViewerRole } from "./brain-change-card.contracts"
 
 /** What a thread of messages is read against: the names, the pins, the file addresses and the decisions of its cards. */
@@ -73,13 +75,6 @@ export const stopReplierIdsOf = (messages: ReadonlyArray<ChatRoomMessageEntity>)
     ...new Set(messages.flatMap((message) => stopReplyUsersOf(message.ref?.agent_message ?? null))),
 ]
 
-/** The decisions the approval cards among the messages are about. */
-export const decisionIdsOf = (messages: ReadonlyArray<ChatRoomMessageEntity>): Array<string> =>
-    messages.flatMap((message) => {
-        const decisionId = message.ref?.decision_id
-        return message.kind === "approval" && decisionId !== undefined ? [decisionId] : []
-    })
-
 /** The quote of the message a reply answers; null when it answers none or the quoted message is gone. */
 const replyViewOf = (replyTo: string | null, context: MessageViewContext): ReplyView | null => {
     const quoted = replyTo === null ? undefined : context.quoted.get(replyTo)
@@ -131,13 +126,19 @@ export const messageViewOf = (message: ChatRoomMessageEntity, context: MessageVi
             context.viewerRole ?? "member",
             context.brainChangeCosts,
         ),
+        backgroundStopped: backgroundStoppedCardViewOf(message.ref?.agent_message ?? null),
     }
 }
 
-/** The members of a room as a screen lists them: owners first, then by name, at most the bound of a room view. */
+/**
+ * The members of a room as a screen lists them: owners first, then by name, at most the bound of a room view. `mayPost` is whether the
+ * seat may write there: an agent seat only with the right to post it holds, a person seat in every room but a read-only one (the
+ * founder's NIVO room, `isReadOnlyRoom`).
+ */
 export const memberViewsOf = (
     seated: ReadonlyArray<ChatRoomMemberEntity>,
     names: ReadonlyMap<string, string>,
+    readOnly: boolean = false,
 ): Array<RoomMemberView> =>
     seated
         .map<RoomMemberView>((member) => ({
@@ -147,7 +148,7 @@ export const memberViewsOf = (
             role: member.role,
             lastReadAt: member.lastReadAt,
             muted: member.muted,
-            mayPost: member.memberKind === "agent" && member.mayPost,
+            mayPost: member.memberKind === "agent" ? member.mayPost : !readOnly,
         }))
         .toSorted(
             (left, right) =>
@@ -155,29 +156,40 @@ export const memberViewsOf = (
         )
         .slice(0, MEMBERS_MAX)
 
+/** The name NIVO's room is printed under: the product's own name, never translated. */
+const NIVO_ROOM_NAME = "NIVO"
+
+/** The name of a room: a group's own name, NIVO for a NIVO room, else the other member of the pair. */
+const roomNameOf = (room: ChatRoomEntity, withNivo: boolean, otherName: string): string => {
+    if (room.kind === "group") return room.name ?? ""
+    return withNivo ? NIVO_ROOM_NAME : otherName
+}
+
 /** One room as a screen shows it for the viewer: its members, what is unread, the viewer's mute and the newest message. */
 export const roomViewOf = (
     room: ChatRoomEntity,
     seated: ReadonlyArray<ChatRoomMemberEntity>,
     context: RoomViewContext,
 ): ChatRoomView => {
-    const members = memberViewsOf(seated, context.names)
+    const members = memberViewsOf(seated, context.names, isReadOnlyRoom(room))
     const isViewer = (member: ChatMemberRef): boolean =>
         member.memberKind === "user" && member.memberId === context.viewerId
     const unread = context.unread.get(room.id)
+    const withNivo = room.kind === "direct" && isNivoRoomKey(room.directKey)
     return {
         id: room.id,
         kind: room.kind,
         purpose: room.purpose,
         purposeModule: room.purposeModule,
-        name: room.kind === "group" ? (room.name ?? "") : (members.find((member) => !isViewer(member))?.name ?? ""),
+        name: roomNameOf(room, withNivo, members.find((member) => !isViewer(member))?.name ?? ""),
+        withNivo,
         position: room.position,
         createdBy: room.createdBy,
         createdAt: room.createdAt,
         members,
         unreadCount: unread?.unreadCount ?? 0,
         mentionCount: unread?.mentionCount ?? 0,
-        muted: seated.find(isViewer)?.muted ?? false,
+        muted: seated.find((member) => isViewer(member))?.muted ?? false,
         lastMessage: context.lasts.get(room.id) ?? null,
     }
 }

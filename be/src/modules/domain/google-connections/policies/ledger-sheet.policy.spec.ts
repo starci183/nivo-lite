@@ -94,22 +94,22 @@ describe("spreadsheetIdOf", () => {
     })
 })
 
-describe("the rows of the ledger", () => {
-    const SALE = {
-        date: "2026-11-04",
-        orderNo: "DH-7",
-        customer: "Dinh",
-        amountVnd: 5000,
-        transactionId: "sepay:1",
-        status: "paid",
-        note: "",
-        direction: "in",
-        documentNo: "DH-7",
-        description: "CK DH7 mua hoa",
-        counterpart: "Dinh",
-        category: "sale",
-    } as const
+const SALE = {
+    date: "2026-11-04",
+    orderNo: "DH-7",
+    customer: "Dinh",
+    amountVnd: 5000,
+    transactionId: "sepay:1",
+    status: "paid",
+    note: "",
+    direction: "in",
+    documentNo: "DH-7",
+    description: "CK DH7 mua hoa",
+    counterpart: "Dinh",
+    category: "sale",
+} as const
 
+describe("the rows of the ledger", () => {
     it("has the eight columns of the cash book", () => {
         expect(LEDGER_HEADER).toHaveLength(8)
         expect(LEDGER_HEADER).toEqual(ledgerHeader())
@@ -140,6 +140,9 @@ describe("the rows of the ledger", () => {
         expect(row[6]).toBe(`'${ledgerCategoryText("expense")}`)
     })
 
+})
+
+describe("the rows of the ledger: older shapes, strangers' text and voids", () => {
     it("defaults an entry of the older shape to a sale, in, with the order number as the document and the customer as the counterpart", async () => {
         const subject = await build()
 
@@ -193,11 +196,21 @@ describe("the rows of the ledger", () => {
         ])
     })
 
-    it("dates an instant by the wall of Vietnam", async () => {
+})
+
+describe("the rows of the ledger: the day of an instant", () => {
+    it("dates an instant by the wall of Asia/Ho_Chi_Minh", async () => {
         const subject = await build()
 
-        expect(subject.dayOf(new Date("2026-11-03T18:30:00.000Z"))).toBe("2026-11-04")
-        expect(subject.dayOf(new Date("2026-11-03T16:30:00.000Z"))).toBe("2026-11-03")
+        expect(subject.dayOf(new Date("2026-11-03T18:30:00.000Z"), "Asia/Ho_Chi_Minh")).toBe("2026-11-04")
+        expect(subject.dayOf(new Date("2026-11-03T16:30:00.000Z"), "Asia/Ho_Chi_Minh")).toBe("2026-11-03")
+    })
+
+    it("dates an instant by the wall of the workspace's own zone", async () => {
+        const subject = await build()
+
+        expect(subject.dayOf(new Date("2026-11-03T18:30:00.000Z"), "Europe/London")).toBe("2026-11-03")
+        expect(subject.dayOf(new Date("2026-11-04T03:30:00.000Z"), "America/New_York")).toBe("2026-11-03")
     })
 })
 

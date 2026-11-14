@@ -1,16 +1,20 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { Board, EmptyNotice, Section, SurfaceCard, Text } from "@starci/grammar/common"
-import type { BoardColumn, BoardMove } from "@starci/grammar/common"
+import {
+    Board,
+    EmptyNotice,
+    Section,
+    SurfaceCard,
+    Text,
+    type BoardColumn,
+    type BoardMove,
+} from "@starci/grammar/common"
 import type { salesPipelineBlock } from "../../blocks/sales/pipeline.block"
-import { announceOf, boardColumnsOf } from "../../rows/board-rows"
-import type { BoardColumnView } from "../../rows/board-rows"
-import { cellContextOf, formatValue } from "../../rows/cell-format"
-import type { CellContext } from "../../rows/cell-format"
-import { countsView } from "../../rows/filter-tabs"
+import { announceOf, boardColumnsOf, type BoardColumnView } from "../../rows/board-rows"
+import { cellContextOf, formatValue, type CellContext } from "../../rows/cell-format"
+import { countsView, type TabCounts } from "../../rows/filter-tabs"
 import { paneHeadersOf } from "../../rows/pane-headers"
-import type { TabCounts } from "../../rows/filter-tabs"
 import { recordsView } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
 import {
@@ -19,8 +23,8 @@ import {
     pipelineCardsOf,
     pipelineStagesOf,
     stageKeyOf,
+    type PipelineCard,
 } from "../../rules/sales/pipeline"
-import type { PipelineCard } from "../../rules/sales/pipeline"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { usePaneSearch } from "../composites/usePaneSearch"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"

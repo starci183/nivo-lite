@@ -25,8 +25,8 @@ Vì sao: là tập hợp agent nên mới là thẻ; đầu mục tên + chip đ
 Luật: `surfacecard-select-subtitle.md` (tiêu đề dòng + phụ đề), `table-heroui-native-section-head.md`, contexts `card.md` ROW-TITLES-NOUNS, CARDS-FOR-COLLECTIONS.
 Grammar: `Section kind="list" count`, `ListRowData { onPress, leading.avatar, description }` (cả dòng bấm, chevron tự vẽ) (`node_modules/@starci/grammar/dist/core/frame/Section/index.d.ts`, `.../composite/ListRow/index.d.ts`, `.../surfaceCardData.d.ts`); block `AgentProfileTags`.
 
-## Quy tắc áp dụng (đầu có chip đếm và "Sửa ở Giao quyền →", thẻ danh sách)
-Vì sao: đầu mục như mọi danh sách: tên + chip đếm xám (6) và MỘT liên kết điều hướng "Sửa ở Giao quyền →" ở cuối hàng; dòng chú thích rời "Quy tắc chỉ xem ở đây…" đã bỏ. Tiêu đề dòng là danh từ ("Thanh toán nhà cung cấp", "Hóa đơn xuất", "Email gửi khách"; khóa `agentProfile.ruleName_*`, không dùng cụm động từ chung `governance.action_*`). Phụ đề là lời giải thích của chính quy tắc; chế độ là chip cuối dòng (Tự động trung tính, Hỏi trước cam).
+## Quy tắc áp dụng (đầu có chip đếm và "Sửa ở tab Quyền →", thẻ danh sách)
+Vì sao: đầu mục như mọi danh sách: tên + chip đếm xám (6) và MỘT liên kết điều hướng "Sửa ở tab Quyền →" ở cuối hàng (mở tab Quyền của agent `/agents/<module>/<id>/connections`); dòng chú thích rời "Quy tắc chỉ xem ở đây…" đã bỏ. Tiêu đề dòng là danh từ ("Thanh toán nhà cung cấp", "Hóa đơn xuất", "Email gửi khách"; khóa `agentProfile.ruleName_*`, không dùng cụm động từ chung `governance.action_*`). Phụ đề là lời giải thích của chính quy tắc; chế độ là chip cuối dòng (Tự động trung tính, Hỏi trước cam).
 Luật: `table-heroui-native-section-head.md`, `surfacecard-select-subtitle.md`, contexts `card.md` ROW-TITLES-NOUNS, `CARD-NO-DESCRIPTION`.
 Grammar: `Section kind="list" count action`, `Link variant="head"` (`node_modules/@starci/grammar/dist/core/frame/Section/index.d.ts`, `.../frame/Section/head.d.ts`); block `AgentProfileRules`.
 

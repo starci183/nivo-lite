@@ -12,3 +12,13 @@ export interface DataRecordInput {
     /** The mapped fields. */
     readonly data: Readonly<Record<string, unknown>>
 }
+
+/** Who reads, and which hub rows: an agent over the rows of one entity of its connections. */
+export interface HubReader {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The hub entity it reads (`message` for a mailbox). */
+    readonly entity: DataEntity
+}

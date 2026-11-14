@@ -59,11 +59,11 @@ export const resolveValues = (parameters: ReadonlyArray<TemplateParameter>, give
 }
 
 const fill = (text: string, values: ParameterValues, max: number): string => {
-    const filled = text.replace(/\{\{([a-z]\w*)\}\}/g, (whole, key: string) => {
+    const filled = text.replaceAll(/\{\{([a-z]\w*)\}\}/g, (whole, key: string) => {
         const value = values[key]
         return value === undefined ? whole : String(value)
     })
-    return filled.length > max ? `${filled.slice(0, max - 1).trimEnd()}…` : filled
+    return filled.length > max ? `${filled.slice(0, max - 1).trimEnd()}\u2026` : filled
 }
 
 const bindingsOf = (
@@ -123,7 +123,6 @@ export const instantiate = (pkg: AgentTemplatePackage, values: ParameterValues):
                   },
               }),
     })),
-    rights: [],
     ...(pkg.graph.contracts === undefined
         ? {}
         : {

@@ -4,6 +4,22 @@ import type { useTranslations } from "next-intl"
 
 /** Client-safe estimates of the credits page; the back end determines every charge. */
 
+/** Millionths of a credit: credits are fractions with 6 decimals, compared as integers so float drift never decides a rounding. */
+const MICRO = 1_000_000
+const microOf = (credits: number): number => (Number.isFinite(credits) ? Math.round(credits * MICRO) : 0)
+
+/** Credits USED as shown: the exact figure rounded half up to a whole number. */
+export const creditsUsedShown = (exact: number): number => Math.floor((microOf(exact) + MICRO / 2) / MICRO)
+
+/** Credits LEFT as shown: the exact remainder floored (never more than is left), nothing left is 0. */
+export const creditsLeftShown = (exact: number): number => Math.max(0, Math.floor(microOf(exact) / MICRO))
+
+/** A call's, node's or run's credits: a figure under half a credit is the text "<1", exactly nothing is 0, else the whole number. */
+export const creditsFigureShown = (exact: number): number | "<1" => {
+    const micro = microOf(exact)
+    return micro > 0 && micro < MICRO / 2 ? "<1" : creditsUsedShown(exact)
+}
+
 interface RunoutInput {
     readonly remaining: number
     readonly last7Credits: number

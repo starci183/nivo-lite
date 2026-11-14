@@ -3,8 +3,7 @@ import type { ZaloConnectService, ZaloCredentialsService } from "@modules/domain
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { CompleteAuthorizationStep } from "./complete-authorization.step"
 
-const job = (payload: object): ClaimedJob =>
-    ({ jobId: "job-1", kind: "zalo-authorization", fencingToken: 3, currentStep: null, payload }) as unknown as ClaimedJob
+const job = (payload: object): ClaimedJob => ({ jobId: "job-1", kind: "zalo-authorization", fencingToken: 3, currentStep: null, payload })
 
 const build = () => {
     const claims = mock<JobClaims>({ advance: jest.fn().mockResolvedValue(undefined) })

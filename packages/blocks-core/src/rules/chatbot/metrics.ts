@@ -1,8 +1,7 @@
+import { zoneDayOf, zoneDayStartMs } from "../zone-time"
 import type { MessageRole } from "./message"
 
-const DAY_MS = 86_400_000
 const MINUTE_MS = 60_000
-const VN_OFFSET_MS = 7 * 3_600_000
 
 /** One line of a conversation, as far as the response time cares. */
 export interface TimedLine {
@@ -35,6 +34,6 @@ export const responseMedianOf = (minutes: ReadonlyArray<number>): number | null 
     return median === null ? null : Math.round(median * 100) / 100
 }
 
-/** The start of the Vietnam day (UTC+7) that contains the instant, in epoch milliseconds. */
-export const vietnamDayStart = (nowMs: number): number =>
-    Math.floor((nowMs + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS
+/** The start of the day, in the workspace's time zone, that contains the instant, in epoch milliseconds. */
+export const shopDayStartOf = (nowMs: number, timeZone: string): number =>
+    zoneDayStartMs(zoneDayOf(nowMs, timeZone), timeZone)

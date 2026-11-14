@@ -7,22 +7,23 @@ import type { QuotaLookup } from "@modules/domain/ai-usage-events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkItemsDashboardReadService } from "@modules/domain/work-items"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { CLOCK } from "@modules/platform/clock"
+import { DomainError } from "@modules/platform/errors"
 import { DashboardRecordsReadService } from "./dashboard-records-read.service"
 import type { RecordsFacts } from "./workspace-dashboard.contracts"
 import { WorkspaceDashboardService } from "./workspace-dashboard.service"
 
+/** A spec-local stand-in for the members capability error: the coded `DomainError` its role check rejects with. */
+class RoleForbiddenError extends DomainError<"WORKSPACE_MEMBERS_ROLE_FORBIDDEN"> {}
+
 const NOW = "2026-11-09T05:00:00.000Z"
 
 const FACTS: RecordsFacts = {
-    revenueVnd: { current: 3_120_000, previous: 2_640_000 },
-    matchedPayments: 38,
-    ordersPlaced: { current: 46, previous: 37 },
-    ordersPaid: { current: 41, previous: 36 },
-    leads: { current: 120, previous: 100 },
-    leadsConsulted: { current: 96, previous: 80 },
-    channels: [{ channel: "zalo", leads: 21, revenueVnd: 1_900_000 }],
-    days: [{ day: "2026-11-09", revenueVnd: 750_000, orders: 9 }],
+    conversations: { current: 210, previous: 180 },
+    newContacts: { current: 120, previous: 100 },
+    runsDone: { current: 300, previous: 250 },
+    runsFailed: { current: 4, previous: 6 },
     messagesAnswered: 527,
     failedRunsByAgent: new Map([["a-1", 1]]),
 }
@@ -60,7 +61,7 @@ const QUOTA = builder<NonNullable<QuotaLookup>>({
 const build = async (role: "owner" | "staff" = "owner") => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockImplementation((_user, _workspace, roles) => {
-        if (roles !== undefined && !roles.includes(role)) return Promise.reject(new Error("forbidden"))
+        if (roles !== undefined && !roles.includes(role)) return Promise.reject(new RoleForbiddenError({ code: "WORKSPACE_MEMBERS_ROLE_FORBIDDEN" }))
         return Promise.resolve({
             userId: "u-1",
             workspaceId: "ws-1",
@@ -77,7 +78,7 @@ const build = async (role: "owner" | "staff" = "owner") => {
         {
             department: "sales",
             installationId: null,
-            action: "confirm_order",
+            action: "send_lead_offer",
             done: 10,
             autoDone: 8,
             failed: 1,
@@ -94,9 +95,9 @@ const build = async (role: "owner" | "staff" = "owner") => {
                 id: "w-1",
                 department: "sales",
                 installationId: null,
-                action: "confirm_order",
+                action: "send_lead_offer",
                 createdAt: "2026-11-09T01:00:00.000Z",
-                summary: "Order DH-1",
+                summary: "Offer DH-1",
                 customer: null,
             },
         ],
@@ -108,6 +109,8 @@ const build = async (role: "owner" | "staff" = "owner") => {
     agents.list.mockResolvedValue([AGENT])
     const installations = mock<InstallationRecordsService>()
     installations.list.mockResolvedValue([])
+    const zones = mock<WorkspaceTimeZoneService>()
+    zones.timeZoneOf.mockResolvedValue("Asia/Ho_Chi_Minh")
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceDashboardService,
@@ -118,16 +121,17 @@ const build = async (role: "owner" | "staff" = "owner") => {
             { provide: AiUsageEventsService, useValue: usage },
             { provide: AgentsService, useValue: agents },
             { provide: InstallationRecordsService, useValue: installations },
+            { provide: WorkspaceTimeZoneService, useValue: zones },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkspaceDashboardService), members, records, items, usage }
+    return { service: moduleRef.get(WorkspaceDashboardService), members, records, items, usage, zones }
 }
 
 describe("WorkspaceDashboardService > read", () => {
     it("lets only an owner or a manager read, and reads nothing for anyone else", async () => {
         const { service, records } = await build("staff")
 
-        await expect(service.read("u-1", "ws-1", "last_7_days")).rejects.toThrow("forbidden")
+        await expect(service.read("u-1", "ws-1", "last_7_days")).rejects.toMatchObject({ code: "WORKSPACE_MEMBERS_ROLE_FORBIDDEN" })
         expect(records.read).not.toHaveBeenCalled()
     })
 
@@ -146,18 +150,47 @@ describe("WorkspaceDashboardService > read", () => {
         expect(usage.creditsByModule).toHaveBeenCalledWith("ws-1", data.window.from, data.window.to)
     })
 
-    it("computes the headline figures", async () => {
+    it("lays the window on the workspace's own calendar", async () => {
+        const { service, zones } = await build()
+        zones.timeZoneOf.mockResolvedValue("Europe/London")
+
+        const data = await service.read("u-1", "ws-1", "last_7_days")
+
+        expect(zones.timeZoneOf).toHaveBeenCalledWith("ws-1")
+        expect(data.window.from.toISOString()).toBe("2026-11-03T00:00:00.000Z")
+    })
+
+    it("computes the core figures", async () => {
         const { service } = await build()
 
         const data = await service.read("u-1", "ws-1", "last_7_days")
 
-        expect(data.revenue).toEqual({ current: 3_120_000, previous: 2_640_000 })
-        expect(data.orders).toEqual({ current: 46, previous: 37 })
-        expect(data.newCustomers).toEqual({ current: 120, previous: 100 })
-        expect(data.closeRate.current).toBeCloseTo(41 / 120)
-        expect(data.closeRate.previous).toBeCloseTo(0.36)
+        expect(data.conversations).toEqual({ current: 210, previous: 180 })
+        expect(data.newContacts).toEqual({ current: 120, previous: 100 })
+        expect(data.runsDone).toEqual({ current: 300, previous: 250 })
+        expect(data.runsFailed).toEqual({ current: 4, previous: 6 })
         expect(data.agentAutoRate).toEqual({ current: 0.8, previous: 0.5 })
-        expect(data.funnel).toEqual({ visitors: 120, consulted: 96, ordered: 46, paid: 41 })
+    })
+
+})
+
+describe("WorkspaceDashboardService > read: what it leaves out and what waits", () => {
+    it("reads no figure of a module: no revenue, orders, close rate, funnel, channels or chart days", async () => {
+        const { service } = await build()
+
+        const data = await service.read("u-1", "ws-1", "last_7_days")
+
+        expect(Object.keys(data).sort()).toEqual([
+            "agentAutoRate",
+            "agents",
+            "approvals",
+            "conversations",
+            "newContacts",
+            "runsDone",
+            "runsFailed",
+            "savings",
+            "window",
+        ])
     })
 
     it("lists what waits for the owner with the agent named and the item's path", async () => {
@@ -170,8 +203,8 @@ describe("WorkspaceDashboardService > read", () => {
             {
                 id: "w-1",
                 agentName: "Sales",
-                action: "confirm_order",
-                summary: "Order DH-1",
+                action: "send_lead_offer",
+                summary: "Offer DH-1",
                 customer: null,
                 createdAt: "2026-11-09T01:00:00.000Z",
                 href: "/agents/sales/workbench?focus=w-1",
@@ -181,18 +214,16 @@ describe("WorkspaceDashboardService > read", () => {
 })
 
 describe("WorkspaceDashboardService > what the agents did", () => {
-    it("sums what the agents did with the minutes of the table, and reads the month's credits", async () => {
+    it("sums what the agents did with the default minutes, and reads the month's credits", async () => {
         const { service } = await build()
 
         const { savings } = await service.read("u-1", "ws-1", "last_7_days")
 
         expect(savings).toEqual({
-            minutesSaved: 50,
-            lines: [{ action: "confirm_order", count: 10, minutesEach: 5 }],
+            minutesSaved: 20,
+            lines: [{ action: "send_lead_offer", count: 10, minutesEach: 2 }],
             defaultMinutes: 2,
             messagesAnswered: 527,
-            ordersCreated: 46,
-            paymentsMatched: 38,
             creditsUsed: 686,
             creditsLimit: 2000,
         })
@@ -214,7 +245,7 @@ describe("WorkspaceDashboardService > what the agents did", () => {
                 waiting: 2,
                 errors: 2,
                 medianResponseSeconds: 41,
-                minutesSaved: 50,
+                minutesSaved: 20,
                 credits: 210,
             },
         ])

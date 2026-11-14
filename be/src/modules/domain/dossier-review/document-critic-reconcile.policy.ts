@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto"
-import { foldText } from "./document-state.policy"
+import { isRecord, parseJsonText } from "@modules/platform/primitives"
+import { foldText } from "./text-fold.policy"
 import {
+    ANSWER_KINDS,
     CRITIC_CAPS,
     GROUP_OF,
     STORED_KIND_OF,
     criticKindOfRule,
     criticRuleKey,
+    isProducedKind,
     type CriticAgainst,
     type CriticAnswer,
     type CriticChoice,
@@ -16,7 +19,7 @@ import {
 } from "./document-critic.contracts"
 import { ownHashesOf } from "./document-critic-rules.policy"
 import { DOSSIER_REVIEW_CAPS, type FindingEvidence } from "./dossier-review.contracts"
-import { evidenceHashOf } from "./fingerprint.policy"
+import { evidenceHashOf } from "./evidence.policy"
 import type { DossierFindingEntity } from "./persistence/entities"
 
 /** The note a point takes when its passage is no longer in the document, and when the rules no longer find it. */
@@ -62,7 +65,24 @@ export interface CriticParams {
     readonly subject: string
     /** Where a typed answer is filed when no fact stands for the point, JSON or "". */
     readonly target: string
+    /** "true" when every line the point quotes from this document gave a truth: it holds only the truths it names (D-R-3). */
+    readonly namesAll: string
 }
+
+/** The param of a stored point that says it names every truth it is about. */
+export const NAMES_ALL_PARAM = "namesAll"
+
+/** True when a stored point holds only the truths it names (a point stored before the param existed holds its passages whole). */
+export const namesAllOf = (row: Pick<DossierFindingEntity, "params">): boolean => row.params[NAMES_ALL_PARAM] === "true"
+
+/**
+ * The param an OLD point carries when it was the verdict of the deleted per-truth verification (stored rows only: nothing writes it
+ * any more). Such a point is a point of a removed kind: it holds nothing and closes at its document's next critique.
+ */
+export const VERDICT_OF_PARAM = "verdictOf"
+
+/** True when a stored point was a verdict of the deleted verification (an old row). */
+const isOldVerdict = (row: Pick<DossierFindingEntity, "params">): boolean => (row.params[VERDICT_OF_PARAM] ?? "") !== ""
 
 const paramsOf = (sourceId: string, point: CriticPoint): Record<string, string> => {
     const params: CriticParams = {
@@ -74,6 +94,7 @@ const paramsOf = (sourceId: string, point: CriticPoint): Record<string, string> 
         against: point.against === null ? "" : JSON.stringify(point.against),
         subject: point.subject.slice(0, 200),
         target: point.target === undefined || point.target === null ? "" : JSON.stringify(point.target),
+        namesAll: point.namesAll === true ? "true" : "false",
     }
     return { ...params }
 }
@@ -101,7 +122,7 @@ export const pointColumns = (
     | "dossierId"
     | "relatedDossierIds"
 > => {
-    const evidence = point.quotes.slice(0, DOSSIER_REVIEW_CAPS.evidenceMax).map(toEvidence)
+    const evidence = point.quotes.slice(0, DOSSIER_REVIEW_CAPS.evidenceMax).map((quote) => toEvidence(quote))
     return {
         kind: STORED_KIND_OF[point.kind],
         severity: point.severity,
@@ -113,8 +134,8 @@ export const pointColumns = (
         detail: point.why.slice(0, DOSSIER_REVIEW_CAPS.detailMax),
         evidence,
         evidenceHash: evidenceHashOf(evidence),
-        sourceIds: [...new Set([sourceId, ...evidence.flatMap((item) => (item.sourceId === null ? [] : [item.sourceId]))])].sort(),
-        factIds: [...new Set(evidence.flatMap((item) => (item.factId === null ? [] : [item.factId])))].sort(),
+        sourceIds: [...new Set([sourceId, ...evidence.flatMap((item) => (item.sourceId === null ? [] : [item.sourceId]))])].sort((a, b) => a.localeCompare(b)),
+        factIds: [...new Set([...evidence.flatMap((item) => (item.factId === null ? [] : [item.factId])), ...(point.names ?? [])])].sort((a, b) => a.localeCompare(b)),
         remedyAction: "decide",
         remedyDocumentType: null,
         dossierId: null,
@@ -144,6 +165,19 @@ export interface CriticReconcileInput {
     readonly reread: ReadonlySet<string>
 }
 
+/** The row a new point is stored as. */
+export type NewPointRow = ReturnType<typeof pointColumns> & Pick<DossierFindingEntity, "workspaceId" | "fingerprint" | "firstSeenAt" | "lastSeenAt">
+
+/** The rows of the new points of a document, first seen now. */
+export const newPointRows = (workspaceId: string, sourceId: string, inserts: ReadonlyArray<KeyedPoint>, now: Date): Array<NewPointRow> =>
+    inserts.map((item) => ({
+        ...pointColumns(sourceId, item.point),
+        workspaceId,
+        fingerprint: item.fingerprint,
+        firstSeenAt: now,
+        lastSeenAt: now,
+    }))
+
 /** A change to a stored point. */
 export interface CriticChange {
     /** The row id. */
@@ -160,7 +194,22 @@ export interface CriticReconciliation {
     readonly changes: ReadonlyArray<CriticChange>
 }
 
-const isActive = (row: DossierFindingEntity): boolean => row.status === "open" || row.status === "confirmed"
+const isActive = (row: Pick<DossierFindingEntity, "status">): boolean => row.status === "open" || row.status === "confirmed"
+
+/**
+ * The severities a point of a produced kind holds with (every produced kind is raised high or medium; a LOW point lets its passage
+ * through).
+ */
+export const HOLDING_SEVERITIES: ReadonlySet<string> = new Set(["critical", "high", "medium"])
+
+/**
+ * THE ONE TEST of whether a stored point may hold anything: its kind is still produced, by the side that produces it
+ * (`isProducedKind`: a contradiction raised by the rules, text addressed to an AI raised by the model), it is no verdict of the
+ * deleted verification, and its severity holds. Every holding read goes through it: the truth gate's `holds` and `held`, the
+ * customer gate (`heldHashes`), the read side's count of held passages. By kind, origin, params and severity only.
+ */
+export const holdingPoint = (row: Pick<DossierFindingEntity, "ruleKey" | "origin" | "params" | "severity">): boolean =>
+    isProducedKind(criticKindOfRule(row.ruleKey), row.origin) && !isOldVerdict(row) && HOLDING_SEVERITIES.has(row.severity)
 
 const closed = (now: Date, note: string): Partial<DossierFindingEntity> => ({
     status: "resolved",
@@ -175,7 +224,10 @@ const unseen = (row: DossierFindingEntity, input: CriticReconcileInput, now: Dat
     if (!isActive(row)) return null
     const own = storedOwnHashes(row)
     if (own.some((hash) => !input.present.has(hash))) return { id: row.id, changes: closed(now, GONE_NOTES.gone) }
-    if (row.origin === "rule") return { id: row.id, changes: closed(now, GONE_NOTES.notFound) }
+    // A point of a removed kind (an old typo, vague, template ... point, an old verdict, a contradiction the old model read) is
+    // never raised again: it closes at this critique (D5), whoever raised it.
+    if (row.origin === "rule" || !isProducedKind(criticKindOfRule(row.ruleKey), row.origin) || isOldVerdict(row))
+        return { id: row.id, changes: closed(now, GONE_NOTES.notFound) }
     // A model point is closed only when the model read its passage again and did not raise it; never by being forgotten.
     if (own.some((hash) => input.reread.has(hash))) return { id: row.id, changes: closed(now, GONE_NOTES.notFound) }
     return null
@@ -205,7 +257,8 @@ const seen = (row: DossierFindingEntity, found: KeyedPoint, sourceId: string, no
  * Sets the stored points of one document against what the critique found: a new point is inserted; a point found again keeps the state the
  * founder gave it (answered and skipped points stay as they are, open ones are refreshed); a point whose passage is no longer in the
  * document closes itself as "no longer in the document"; a rule point the rules (which read the whole document) no longer find closes;
- * a model point closes only when the model read its passage again.
+ * a point of a removed kind closes (`not_detected`, D5); a model point of the produced kind closes only when the model read its
+ * passage again.
  */
 export const reconcileCritique = (input: CriticReconcileInput, now: Date): CriticReconciliation => {
     const byFingerprint = new Map(input.found.map((item) => [item.fingerprint, item]))
@@ -225,13 +278,49 @@ export const pointStateOf = (row: Pick<DossierFindingEntity, "status" | "resolut
     return row.resolution === "manual" ? "answered" : "gone"
 }
 
-const parsed = <T>(text: string | undefined, fallback: T): T => {
+/** True when a value is a string or null. */
+const isTextOrNull = (value: unknown): value is string | null => value === null || typeof value === "string"
+
+const isAnswerKind = (kind: string): boolean => {
+    const kinds: ReadonlyArray<string> = ANSWER_KINDS
+    return kinds.includes(kind)
+}
+
+const isAnswer = (value: unknown): value is CriticAnswer =>
+    isRecord(value) &&
+    typeof value.kind === "string" &&
+    isAnswerKind(value.kind) &&
+    isTextOrNull(value.factId) &&
+    isTextOrNull(value.value)
+
+const isChoice = (value: unknown): value is CriticChoice =>
+    isRecord(value) &&
+    (value.id === "a" || value.id === "b") &&
+    typeof value.label === "string" &&
+    typeof value.needsInput === "boolean" &&
+    isTextOrNull(value.inputHint) &&
+    isAnswer(value.answer)
+
+const isChoices = (value: unknown): value is ReadonlyArray<CriticChoice> => Array.isArray(value) && value.every((item) => isChoice(item))
+
+const isAgainst = (value: unknown): value is CriticAgainst | null =>
+    value === null ||
+    (isRecord(value) &&
+        (value.kind === "truth" || value.kind === "proposal" || value.kind === "document") &&
+        typeof value.value === "string" &&
+        isTextOrNull(value.sourceTitle) &&
+        isTextOrNull(value.factId))
+
+const isAnswerOrNull = (value: unknown): value is CriticAnswer | null => value === null || isAnswer(value)
+
+const isTarget = (value: unknown): value is CriticTarget | null =>
+    value === null || (isRecord(value) && typeof value.subjectLabel === "string" && typeof value.attributeLabel === "string")
+
+/** The stored JSON text read back as the shape `isShape` accepts, else the fallback (a text that does not parse, or has another shape, is the fallback). */
+const parsed = <T>(text: string | undefined, fallback: T, isShape: (value: unknown) => value is T): T => {
     if (text === undefined || text === "") return fallback
-    try {
-        return JSON.parse(text) as T
-    } catch {
-        return fallback
-    }
+    const read = parseJsonText(text)
+    return read.ok && isShape(read.value) ? read.value : fallback
 }
 
 /** A stored point read back: what the API lists. */
@@ -260,22 +349,41 @@ export interface StoredPoint {
 export const storedPointOf = (row: DossierFindingEntity): StoredPoint => ({
     id: row.id,
     kind: criticKindOfRule(row.ruleKey),
-    choices: parsed<ReadonlyArray<CriticChoice>>(row.params.choices, []),
-    against: parsed<CriticAgainst | null>(row.params.against, null),
+    choices: parsed<ReadonlyArray<CriticChoice>>(row.params.choices, [], isChoices),
+    against: parsed<CriticAgainst | null>(row.params.against, null, isAgainst),
     question: row.params.question ?? "",
-    answer: parsed<CriticAnswer | null>(row.params.answer, null),
+    answer: parsed<CriticAnswer | null>(row.params.answer, null, isAnswerOrNull),
     proposalFactId: row.params.proposalFactId ?? null,
     sourceId: row.params.sourceId ?? null,
-    target: parsed<CriticTarget | null>(row.params.target, null),
+    target: parsed<CriticTarget | null>(row.params.target, null, isTarget),
 })
 
 /** The folded subject of a model point: its first quote of this document. */
 export const modelSubjectOf = (quotes: ReadonlyArray<CriticQuote>): string =>
     foldText(quotes.find((quote) => quote.role === "this")?.text ?? "").slice(0, 120)
 
-/** The hashes held back from customers: those quoted by an open HIGH point. */
+/** True when a stored point offers the founder nothing to choose: text addressed to the AI, or a roll-up of many points. */
+const offersNoChoice = (row: Pick<DossierFindingEntity, "params">): boolean => {
+    const choices = row.params.choices ?? ""
+    return choices === "" || choices === "[]"
+}
+
+/**
+ * The hashes whose truths ALL wait (the truth gate). A finding holds only the truths it names (`OpenFinding.factIds`), so a point
+ * about a line no truth was read from holds no truth. Two holding points still hold their passages WHOLE, because they do not speak
+ * of one line: text addressed to the AI (nothing of that passage is the business's word) and a roll-up that stands for many points;
+ * both are the points that offer no choice.
+ */
+export const wholeHeldHashes = (rows: ReadonlyArray<DossierFindingEntity>): ReadonlySet<string> =>
+    new Set(
+        rows
+            .filter((row) => isActive(row) && holdingPoint(row) && !namesAllOf(row) && offersNoChoice(row))
+            .flatMap((row) => storedOwnHashes(row)),
+    )
+
+/** The hashes held back from customers: those quoted by an open HOLDING point (`holdingPoint`). */
 export const heldHashes = (rows: ReadonlyArray<DossierFindingEntity>): ReadonlySet<string> =>
-    new Set(rows.filter((row) => isActive(row) && (row.severity === "high" || row.severity === "critical")).flatMap(storedOwnHashes))
+    new Set(rows.filter((row) => isActive(row) && holdingPoint(row)).flatMap((row) => storedOwnHashes(row)))
 
 /** The longest quote a critic point stores. */
-export const CRITIC_QUOTE_MAX = CRITIC_CAPS.quoteMax
+export const CRITIC_QUOTE_MAX: number = CRITIC_CAPS.quoteMax

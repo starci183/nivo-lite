@@ -1,3 +1,4 @@
+import { creditsUsedShown } from "@modules/domain/ai-usage-events"
 import type { AgentActionActivity, AgentResponseTime, AgentWaiting, WaitingApproval } from "@modules/domain/work-items"
 import type { AgentRow, ApprovalRow, Rate } from "../workspace-dashboard.contracts"
 import { rateOf } from "./dashboard-facts.policy"
@@ -110,7 +111,7 @@ export const agentRowsOf = (input: AgentTableInput): ReadonlyArray<AgentRow> => 
             errors: sumBy(activity, (row) => row.failed) + (input.failedRunsByAgent.get(agent.id) ?? 0),
             medianResponseSeconds: meanOf(medians),
             minutesSaved: minutesSavedBy(activity.map((row) => ({ action: row.action, count: row.done }))),
-            credits: firstOfModule ? (input.creditsByModule.get(agent.module) ?? 0) : 0,
+            credits: firstOfModule ? creditsUsedShown(input.creditsByModule.get(agent.module) ?? 0) : 0,
         }
     })
 }

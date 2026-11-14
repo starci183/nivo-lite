@@ -22,7 +22,7 @@ export class KnowledgeSourceReadingType {
 
     /** The parts it could not read whole, and the pages transcribed from pictures. */
     @Field(() => [KnowledgeReadingWarningType])
-    warnings!: Array<KnowledgeReadingWarningType>
+    warnings!: ReadonlyArray<KnowledgeReadingWarningType>
 
     /** The stored code of why the file was refused, or null when it was read. */
     @Field(() => String, { nullable: true })

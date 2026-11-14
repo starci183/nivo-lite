@@ -1,7 +1,7 @@
 "use client"
 
 import type { CreditsData, CreditsOverviewView, PlanView } from "@/modules/types"
-import { creditsSummaryOf } from "@/modules/utils"
+import { creditsSummaryOf, creditsUsedShown } from "@/modules/utils"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 
 /** The view `useCreditsView` returns. */
@@ -29,7 +29,7 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null): C
     const t = useTranslations("credits")
     const locale = useLocale()
     const formatter = useFormatter()
-    const credit = (value: number) => formatter.number(Math.round(value))
+    const credit = (value: number) => formatter.number(creditsUsedShown(value))
     const money = (value: number) =>
         formatter.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
     const day = (value: string) => formatter.dateTime(new Date(value), { dateStyle: "medium" })

@@ -5,7 +5,7 @@ import { mapSlot } from "@/hooks/slot"
 import type { DataSlot, SepayConnectionView, ZaloFactView } from "@/modules/types"
 import { useSepayConnection } from "./useSepayConnection"
 
-/** The connection details of a SePay connection as term and value rows: bank, account, holder, environment, webhook, key, health. */
+/** What the webhook has done, as term and value rows: the latest webhook, the valid ones in 24 hours, the duplicates blocked. The bank, account, holder, environment, address and key are fields of the form. */
 export const useSepayFacts = (connectionId: string): DataSlot<ReadonlyArray<ZaloFactView>> => {
     const t = useTranslations("sepayConnection")
     const format = useFormatter()
@@ -13,16 +13,6 @@ export const useSepayFacts = (connectionId: string): DataSlot<ReadonlyArray<Zalo
     const factsOf = (connection: SepayConnectionView): ReadonlyArray<ZaloFactView> => {
         const last = connection.health.lastWebhookAt
         return [
-            { id: "bank", label: t("factBank"), value: connection.bank },
-            { id: "account", label: t("factAccount"), value: connection.accountMasked },
-            { id: "holder", label: t("factHolder"), value: connection.holder },
-            {
-                id: "environment",
-                label: t("factEnvironment"),
-                value: t(connection.environment === "test" ? "envTest" : "envLive"),
-            },
-            { id: "webhook", label: t("factWebhookUrl"), value: connection.webhookUrl },
-            { id: "key", label: t("factApiKey"), value: connection.apiKeyMasked },
             {
                 id: "last",
                 label: t("tileLast"),

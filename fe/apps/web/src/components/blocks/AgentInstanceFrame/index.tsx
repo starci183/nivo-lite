@@ -1,5 +1,6 @@
 "use client"
 
+import { AgentSetupPendingNotice } from "@/components/blocks/AgentSetupPendingNotice"
 import { useSearchParams } from "next/navigation"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { useTranslations } from "next-intl"
@@ -20,7 +21,7 @@ import { AGENT_ROLES_HREF, workspaceHref } from "@/modules/routes"
 import { useAgentWorkView } from "@/hooks/agentWork"
 import { navigation } from "@/modules/i18n"
 import { AgentInstanceFrameBase, type InstanceHeaderView, type InstanceSwitch } from "./component"
-import { RUN_PATH, agentCrumbsOf, instanceViewOf, frameSubTabsOf, rootCrumbsOf, tabOf, versionCrumbOf } from "./parts"
+import { RUN_PATH, agentCrumbsOf, instanceViewOf, frameSubTabsOf, rootCrumbsOf, instanceTabOf, versionCrumbOf } from "./parts"
 
 const PLACEHOLDER: InstanceHeaderView = {
     name: "-",
@@ -127,11 +128,20 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 tabsLabel: t("tabsLabel"),
                 selectedTab: selected,
                 subTabs,
-                tabs: tabs.map((tab) => tabOf(tab, t(`tab_${tab}`), hrefOf(tab), header.counts)),
+                tabs: tabs.map((tab) => instanceTabOf(tab, t(`tab_${tab}`), hrefOf(tab), header.counts)),
                 earlyLabel: t("earlyBadge"),
                 profileLabel: t("profileShort"),
                 packageLabel: tt("packageTitle"),
                 notice: query.get("notice") === OWNER_SETUP_NOTICE ? t("ownerSetupNotice") : "",
+                // The Setup tab is where the notice leads: there it would point at itself.
+                setupNotice:
+                    selected === "setup" ? null : (
+                        <AgentSetupPendingNotice
+                            module={props.module}
+                            installationId={props.installationId}
+                            setupHref={hrefOf("setup")}
+                        />
+                    ),
                 moreLabel: pane.moreActions,
                 isLoading,
                 read: mapSlot(header.slot, () => true),

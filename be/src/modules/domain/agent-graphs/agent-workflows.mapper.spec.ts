@@ -1,16 +1,14 @@
 import { Test } from "@nestjs/testing"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { runWorkflowPinOf, workflowRecordOf, workflowVersionRecordOf } from "./agent-workflows.mapper"
+import { workflowRecordOf, workflowVersionRecordOf } from "./agent-workflows.mapper"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 
 const SUBJECT = Symbol("agent-workflows.mapper")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { runWorkflowPinOf, workflowRecordOf, workflowVersionRecordOf } }],
+        providers: [{ provide: SUBJECT, useValue: { workflowRecordOf, workflowVersionRecordOf } }],
     }).compile()
     return moduleRef.get<{
-        runWorkflowPinOf: typeof runWorkflowPinOf
         workflowRecordOf: typeof workflowRecordOf
         workflowVersionRecordOf: typeof workflowVersionRecordOf
     }>(SUBJECT)
@@ -26,13 +24,14 @@ const codeOf = (work: () => unknown): string | null => {
     }
 }
 
-const row = (data: RecordRow["data"]): RecordRow => ({
+/** A stored row of a workflow table: its members at the top, as a TypeORM entity holds them. */
+const row = (data: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> => ({
     id: "row-1",
     workspaceId: "ws-1",
-    version: "3",
-    createdAt: "2026-11-01T00:00:00.000Z",
-    updatedAt: "2026-11-02T00:00:00.000Z",
-    data,
+    version: 3,
+    createdAt: new Date("2026-11-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-11-02T00:00:00.000Z"),
+    ...data,
 })
 
 const WORKFLOW = {
@@ -75,8 +74,8 @@ describe("workflowRecordOf", () => {
     })
 })
 
-describe("workflowVersionRecordOf and runWorkflowPinOf", () => {
-    it("reads an immutable snapshot version and a run pin", async () => {
+describe("workflowVersionRecordOf", () => {
+    it("reads an immutable snapshot version", async () => {
         const subject = await build()
         const version = subject.workflowVersionRecordOf(
             row({
@@ -98,11 +97,6 @@ describe("workflowVersionRecordOf and runWorkflowPinOf", () => {
         )
 
         expect(version).toMatchObject({ number: 3, changeKind: "rollback", fromNumber: 1, template: null })
-        expect(
-            subject.runWorkflowPinOf(
-                row({ runId: "run-1", workflowId: "wf-1", workflowVersionId: "wfv-3", workflowVersion: 3 }),
-            ),
-        ).toEqual({ runId: "run-1", workflowId: "wf-1", workflowVersionId: "wfv-3", workflowVersion: 3 })
     })
 
     it("refuses a version without a snapshot", async () => {

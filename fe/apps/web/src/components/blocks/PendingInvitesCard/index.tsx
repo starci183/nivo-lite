@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useLobbyInvites, useLobbyWide } from "@/hooks/lobby"
-import type { LobbyInvite } from "@/hooks/lobby"
+import { useLobbyInvites, useLobbyWide, type LobbyInvite } from "@/hooks/lobby"
 import type { PendingInviteView } from "@/modules/types"
 import { PendingInvitesCardBase } from "./component"
 

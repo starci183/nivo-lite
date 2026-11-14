@@ -1,12 +1,16 @@
 import { textOf } from "../slots/paths"
-import { formatValue, numberOf } from "./cell-format"
-import type { CellContext } from "./cell-format"
+import { formatValue, numberOf, type CellContext } from "./cell-format"
 
 /**
  * The formats a figure may draw its value in: a number with grouping, money in the block's currency, a percent (the value is a
- * fraction, so 0.25 draws as 25%) and a count (a whole number).
+ * fraction, so 0.25 draws as 25%), a count (a whole number) and a tally: a count that may be unknown, where null (nobody stated it)
+ * draws a dash, never 0.
  */
-export const FIGURE_FORMATS = ["number", "money", "percent", "count"] as const
+export const FIGURE_FORMATS = ["number", "money", "percent", "count", "tally"] as const
+
+/** What a tally draws for a value nobody stated. */
+export const UNSTATED_TALLY = "\u2014"
+
 
 /** One format of a figure. */
 export type FigureFormat = (typeof FIGURE_FORMATS)[number]
@@ -33,6 +37,8 @@ export const figureTextOf = (value: unknown, format: FigureFormat | undefined, c
             return intlText(value, context, { style: "percent", maximumFractionDigits: PERCENT_DIGITS })
         case "count":
             return intlText(value, context, { maximumFractionDigits: 0 })
+        case "tally":
+            return value === null ? UNSTATED_TALLY : intlText(value, context, { maximumFractionDigits: 0 })
         case undefined:
             return textOf(value)
     }

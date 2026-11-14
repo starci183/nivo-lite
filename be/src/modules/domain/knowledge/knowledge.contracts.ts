@@ -1,14 +1,11 @@
 import type { LocatedText, PassageView } from "@modules/domain/knowledge-chunks"
 import type { SourceDetail } from "@modules/domain/knowledge-sources"
 import type { DriveFolderListing, MaybeDriveAccess } from "@modules/integrations/documents"
-import type { AiUsage } from "@modules/integrations/ai"
+import type { AiServed, AiUsage } from "@modules/integrations/ai"
 import type { Outcome } from "@modules/platform/primitives"
 
 /** Who the answer is for; `customer` only ever sees public passages. */
 export type Audience = "customer" | "internal"
-
-/** Above this many passages a document is a bulk embedding: it stops when the workspace has no credits left. */
-export const BULK_CHUNKS = 40
 
 /** How many passages one embeddings call takes. */
 export const EMBED_BATCH = 32
@@ -18,6 +15,9 @@ export const REEMBED_BATCH = 32
 
 /** How many batches one re-embedding job does before it hands over to a follow-up job. */
 export const REEMBED_MAX_BATCHES = 100
+
+/** The fair group of a knowledge job for the queue's admission (`document:<id>`, the critique runs), or null for none. */
+export type OptionalFairGroup = string | null
 
 /** How a re-embedding run ended. */
 export type ReembedOutcome = "done" | "more" | "blocked" | "unavailable" | "mismatch"
@@ -51,7 +51,7 @@ export interface AgentSearch {
     /** How long the embedding of the question may take before the search falls back to words, milliseconds; absent = 8000. */
     readonly embedTimeoutMs?: number
     /**
-     * The question already embedded by the caller with the embedding model in use (nivo.brain.search embeds it for its fact half): when it
+     * The question already embedded by the caller with the embedding model in use (nivo.tool.brain.search embeds it for its fact half): when it
      * has EMBEDDING_DIMENSIONS numbers the search uses it and makes no embedding call of its own; absent = the search embeds it.
      */
     readonly questionVector?: ReadonlyArray<number>
@@ -106,12 +106,14 @@ export interface UsageRecord {
     /** The characters received, to estimate tokens when the provider reported none. */
     readonly completionChars?: number
     /**
-     * Set for a FAILED try (`timeout`, `provider`, `length`, `empty`): booked estimated from `promptChars`, priced, never billed (U1).
-     * Absent for an answered call.
+     * Set for a FAILED try (`timeout`, `provider`, `length`, `empty`): never billed (U1). With `usage` (a try cut at its cap reports
+     * it) it is booked with those real figures; without, estimated from `promptChars`. Absent for an answered call.
      */
     readonly failure?: string | undefined
-    /** Which try of the call this was, from one; absent when the caller does not count. */
+    /** Which try of the call this was, from one; absent, the call's first (one record is one try). */
     readonly tryNumber?: number | undefined
+    /** Which upstream served the try, why the model stopped and how long it took (`spendOf` carries it); absent when not said. */
+    readonly served?: AiServed | undefined
 }
 
 /** This month's use against the allowance of a workspace. */

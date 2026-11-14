@@ -1,49 +1,51 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import {
     AgentGraphFlowRunsService,
     AgentWorkflowRunsService,
     THREAD_SCOPE_MEMBER,
     namespaceOf,
+    type FlowThreadRun,
+    type FlowThreads,
 } from "@modules/domain/agent-graphs"
-import type { FlowThreadRun, FlowThreads } from "@modules/domain/agent-graphs"
 import { AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
-import { AgentTagService, AgentWakeService, AgentWorkReadService, ENGINE_THREAD_SOURCE } from "@modules/domain/agent-work"
-import type { AgentHandlerEnding, AgentTurnView } from "@modules/domain/agent-work"
-import { InjectGraphThreads, LanggraphError, LanggraphErrorCode } from "@modules/integrations/langgraph"
-import type {
-    GraphThreads,
-    ThreadGraph,
-    ThreadLease,
-    ThreadOutcome,
-    ThreadRef,
-    ThreadState,
-    ThreadView,
+import {
+    AgentWakeService,
+    AgentWorkReadService,
+    type AgentHandlerEnding,
+    type AgentTurnView,
+} from "@modules/domain/agent-work"
+import {
+    InjectGraphThreads,
+    LanggraphError,
+    LanggraphErrorCode,
+    type GraphThreads,
+    type ThreadGraph,
+    type ThreadLease,
+    type ThreadOutcome,
+    type ThreadRef,
+    type ThreadView,
 } from "@modules/integrations/langgraph"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger, withRunScope } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, withRunScope, type Logger } from "@modules/platform/logging"
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 import { RunStopsService } from "./stops/run-stops.service"
-import { stopDecisionOf } from "./stops/stop-gate.policy"
+import { answerIndexOf, stopAnswerOf } from "./stops/stop-gate.policy"
 import type { StopDecision } from "./stops/run-stop.contracts"
-import { ThreadGraphsService } from "./thread-graphs.service"
-import type { DrivenRun } from "./thread-graphs.service"
+import { ThreadGraphsService, type DrivenRun } from "./thread-graphs.service"
 import { ThreadProjectionService } from "./thread-projection.service"
-
-/**
- * The source of the wakes a thread writes for itself: the work core's `thread` source (a person waits on a decision, so it is not
- * background work and is never skipped by the daily cap; it is restored when the agent's work is switched back on; three tries). The
- * wake names the lock scope itself, so it takes the lease of the run's own scope, never the agent's.
- */
-export const THREAD_WAKE_SOURCE = ENGINE_THREAD_SOURCE
-
-/** The source thread wakes were written under before they had their own (restart TWELVE): such a wake still in the table is still run. */
-const LEGACY_THREAD_WAKE_SOURCE = "internal"
+import { UNTIL_PARK_KIND, parkOfQuestion, type UntilPark, type UntilRoundDecision } from "./until-rounds.policy"
+import { WAIT_PARK_KIND, eventOf, parkOfWaitQuestion, waitOnceKeyOf, type WaitCame, type WaitDecision } from "./thread-waits.policy"
+import {
+    LEGACY_THREAD_WAKE_SOURCE,
+    THREAD_RESUME_EVENT,
+    THREAD_WAKE_SOURCE,
+    resumeCarryOf,
+    type ResumeCarry,
+} from "./thread-wakes.policy"
 
 /** Told when a drive left a thread stopped for a person at a step (the deadlines arm here); it never fails the wake. */
 export type ThreadStoppedListener = (ref: ThreadRef, stepKey: string) => Promise<void>
@@ -54,11 +56,47 @@ export type ThreadStoppedListener = (ref: ThreadRef, stepKey: string) => Promise
  */
 export type ThreadSettledListener = (ref: ThreadRef) => Promise<void>
 
-/** The event of a wake that carries a person's decision to a stopped thread. */
-export const THREAD_RESUME_EVENT = "engine.thread.resume"
+/** The source a wait's wake is written under (the thread's own): what `sameWaitKept` reads it back by. */
+const THREAD_WAIT_EVENT_SOURCE = THREAD_WAKE_SOURCE
 
 /** The event of a wake that continues a thread whose drive was cut. */
 export const THREAD_DRIVE_EVENT = "engine.thread.drive"
+
+/** The event of a wake that starts the next round of a `loop({ until, every })` parked between two rounds (its timer came). */
+export const THREAD_ROUND_EVENT = "engine.thread.round"
+
+/** The event of a wake that resumes a thread parked on a `wait` with what came (an event it takes, or its timeout). */
+export const THREAD_WAIT_EVENT = "engine.thread.wait"
+
+/** What a wait wake carries: the park it answers, what came, and the wake of the event (when one came); null when unreadable. */
+interface WaitCarry {
+    readonly parkKey: string
+    readonly came: WaitCame
+    readonly wakeId: string | null
+}
+
+/** What came to a wait, read from a wake's context: the timeout, or an event under a trigger's key; null when it is neither. */
+const cameOf = (came: Readonly<Record<string, unknown>>): WaitCame | null => {
+    if (came.timeout === true) return { timeout: true }
+    return typeof came.key === "string" && isRecord(came.event) ? { key: came.key, event: eventOf(came.event) } : null
+}
+
+const waitCarryOf = (text: string | undefined): WaitCarry | null => {
+    const read = text === undefined ? null : parseJsonText(text)
+    if (read === null || !read.ok || !isRecord(read.value)) return null
+    const { parkKey, came, wakeId } = read.value
+    if (typeof parkKey !== "string" || !isRecord(came)) return null
+    const what = cameOf(came)
+    return what === null ? null : { parkKey, came: what, wakeId: typeof wakeId === "string" ? wakeId : null }
+}
+
+/** What a round wake carries: the park it answers, read back from its context; null when it is not what `roundDue` wrote. */
+const roundCarryOf = (text: string | undefined): Pick<UntilPark, "parkKey" | "round"> | null => {
+    const read = text === undefined ? null : parseJsonText(text)
+    if (read === null || !read.ok || !isRecord(read.value)) return null
+    const { parkKey, round } = read.value
+    return typeof parkKey === "string" && typeof round === "number" ? { parkKey, round } : null
+}
 
 /** What a decision or a re-drive was refused for before any wake was written. */
 export type ThreadWakeRefusal =
@@ -89,15 +127,6 @@ export interface ThreadWakeRefused {
 
 /** What became of a decision or a re-drive handed to the thread runs. */
 export type ThreadWakeAdmission = ThreadWakeAdmitted | ThreadWakeRefused
-
-/** What a resume wake carries beside the run: the decision, and the stop it answers as it stood when the decision was admitted. */
-interface ResumeCarry {
-    readonly decision: StopDecision
-    /** The step whose stop it answers. */
-    readonly stepKey: string
-    /** How many answers that stop had: the decision is applied only while it still has that many, so never twice. */
-    readonly answered: number
-}
 
 /** A run a wake may be written for: a thread's, with a checkpoint, that names its scope. */
 interface AdmissibleRun {
@@ -146,33 +175,6 @@ const plainOf = (value: unknown): unknown => {
 const isFenced = (cause: unknown): boolean =>
     cause instanceof LanggraphError && cause.code === LanggraphErrorCode.CheckpointFenced
 
-/** What a resume wake carries, read back from its context; null when it is not what `resume` wrote. */
-const carryOf = (text: string | undefined): ResumeCarry | null => {
-    const read = text === undefined ? null : parseJsonText(text)
-    if (read === null || !read.ok || !isRecord(read.value)) return null
-    const decision = stopDecisionOf(read.value.decision)
-    const { stepKey, answered } = read.value
-    if (decision === null || typeof stepKey !== "string" || typeof answered !== "number") return null
-    return { decision, stepKey, answered }
-}
-
-/** Whether two carried decisions are the same decision for the same stop state (their JSON read back, so key order cannot differ). */
-const sameCarry = (kept: string | undefined, carry: string | null): boolean => {
-    const left = carryOf(kept)
-    const right = carry === null ? null : carryOf(carry)
-    return left !== null && right !== null && JSON.stringify(left) === JSON.stringify(right)
-}
-
-/** A member id as the wake's actor column (a uuid) takes it. */
-const MEMBER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
-
-/**
- * Who a decision names as the wake's actor: a member id only. Anything else (`deadline`, an engine actor, an approver the log could not
- * name) stays in the wake's payload, where the decision keeps its `by`, and the actor column is left empty.
- */
-const actorOf = (decision: StopDecision): string | null =>
-    decision.kind !== "timeout" && MEMBER_ID.test(decision.by) ? decision.by : null
-
 /** The step a stopped thread waits on, as its stop's question names it; null for a thread that waits on nothing it can read. */
 const stoppedStepOf = (seen: ThreadView): string | null => {
     const question: unknown = seen.stop?.question
@@ -187,7 +189,8 @@ const stoppedStepOf = (seen: ThreadView): string | null => {
  * work core: the drain took the lease of the run's scope (`agent_work_leases`), renews it on its heartbeat while the drive runs and
  * aborts the signal when it loses it. The turn's fence goes to the saver with every write, so a driver whose lease was taken over
  * cannot move the thread. A run starts inside the wake that opened it; a person's decision and a re-drive are WRITTEN AS WAKES of the
- * same scope (`resume`, `redrive`), so they queue behind whatever holds the lease and survive a restart. A wake that is tried again
+ * same scope (`ThreadResumeRequestsService.resume`, admitted from the stores in any app; `redrive` here), so they queue behind whatever
+ * holds the lease and survive a restart. A wake that is tried again
  * (its drive threw, its process died) continues the thread from its last checkpoint instead of starting it twice.
  *
  * PINNED VERSION. A thread is driven on the graph of the version its run started on (`ThreadGraphsService`), never on the version
@@ -216,7 +219,6 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         private readonly projection: ThreadProjectionService,
         @Optional() @InjectGraphThreads() private readonly port?: GraphThreads,
         @Optional() private readonly workflows?: AgentWorkflowRunsService,
-        @Optional() private readonly tags?: AgentTagService,
         @Optional() private readonly wakeReader?: AgentWorkReadService,
     ) {}
 
@@ -243,7 +245,13 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
     owns(turn: AgentTurnView): boolean {
         const event = turn.context.eventName
         const source = turn.source === THREAD_WAKE_SOURCE || turn.source === LEGACY_THREAD_WAKE_SOURCE
-        return source && (event === THREAD_RESUME_EVENT || event === THREAD_DRIVE_EVENT)
+        return (
+            source &&
+            (event === THREAD_RESUME_EVENT ||
+                event === THREAD_DRIVE_EVENT ||
+                event === THREAD_ROUND_EVENT ||
+                event === THREAD_WAIT_EVENT)
+        )
     }
 
     /** Marks the run as a thread's in the transaction that opened it; a run that cannot be marked starts no thread. */
@@ -277,9 +285,12 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
     }
 
     /**
-     * Runs a wake this capability wrote, under its lease. A decision is handed to the thread only while the stop it answers stands as
-     * it did when the decision was admitted (same step, same number of answers): a wake that is tried again after its decision was
-     * applied, and a second decision for the same stop, continue the thread instead and never answer a later stop.
+     * Runs a wake this capability wrote, under its lease. A person's decision is RECORDED by the resume requests
+     * (`ThreadResumeRequestsService`, admitted from the stores in any app) as a resume wake; here, in the app that holds the threads, it
+     * is handed to the thread only while the stop it answers stands as it did when the decision was recorded (the checkpoint waits on
+     * that step, and the stop holds as many answers): the SECOND guard. A wake that is tried again after its decision was applied
+     * continues the thread instead and never answers a later stop; a decision that no longer stands and was never applied is STALE: one
+     * log line names it, and the thread is driven as it stands (a stopped thread runs nothing).
      */
     async woken(turn: AgentTurnView, signal: AbortSignal): Promise<AgentHandlerEnding> {
         const runId = turn.context.subjectId
@@ -290,7 +301,7 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         if ((await this.engineOf(turn.workspaceId, run.agentId, runId)) !== "langgraph")
             return this.skipped(turn, "thread_run_legacy")
         const resumes = turn.context.eventName === THREAD_RESUME_EVENT
-        const carry = resumes ? carryOf(turn.context.tagContext) : null
+        const carry = resumes ? resumeCarryOf(turn.context.tagContext) : null
         if (resumes && carry === null) return this.skipped(turn, "thread_decision_unreadable")
         const seen = await this.portOf().stateOf(ref)
         if (seen === null) return this.skipped(turn, "thread_absent")
@@ -303,55 +314,99 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
             workflowId: pin?.workflowId ?? null,
         }
         const decision = carry !== null && (await this.stands(ref, seen, carry)) ? carry.decision : null
+        if (carry !== null && decision === null) await this.staleTold(ref, carry)
+        if (turn.context.eventName === THREAD_ROUND_EVENT) return this.roundWoken({ turn, signal, ref, run: driven, decision: null }, seen, graph)
+        if (turn.context.eventName === THREAD_WAIT_EVENT) return this.waitWoken({ turn, signal, ref, run: driven, decision: null }, seen, graph)
         return this.drivenUnder({ turn, signal, ref, run: driven, decision }, (port, lease) =>
             decision === null ? port.drive(ref, graph, lease) : port.resume(ref, graph, decision, lease),
         )
     }
 
     /**
-     * Hands a stopped thread a person's decision: `{ kind: "answer", text, by, at }`, a button (`retry`, `take_over`, `skip`) or a
-     * deadline (`timeout`). It writes a wake of the run's own scope and runs nothing here: the drain applies the decision under the
-     * lease, so two decisions, or a decision and a customer's new message, never drive one thread at once. Refused, with nothing
-     * written, for a value that is no decision, a run of the old engine and a thread that does not wait for a person.
-     *
-     * ONE DECISION PER STOP STATE. The wake is keyed by the stop and its count of answers, so of two decisions on the same stop the
-     * first written wins (the database's unique key serialises them) and is the one applied under the lease. The same decision handed
-     * again is `admitted` with `fresh: false`; a DIFFERENT one is refused `already_answered`, never silently dropped, never applied.
+     * The next round of a `loop({ until, every })` is due: a wake of the run's scope that resumes the thread parked on exactly that park
+     * (`UntilRoundWakesService` asks, when the park's timer came). Written once per park; refused, with nothing written, for a thread
+     * that waits on no park or on another one. It runs nothing here: the drain resumes the thread under the lease.
      */
-    async resume(ref: ThreadRef, value: unknown, tx?: EntityManager): Promise<ThreadWakeAdmission> {
-        const decision = stopDecisionOf(value)
-        if (decision === null) return this.refused(ref, "decision_invalid")
+    async roundDue(ref: ThreadRef, park: UntilPark, tx?: EntityManager): Promise<ThreadWakeAdmission> {
         const run = await this.admissible(ref)
         if (run.kind === "refused") return this.refused(ref, run.code)
-        const stepKey = stoppedStepOf(run.seen)
-        const stop = stepKey === null ? null : await this.stops.stopOf(ref, stepKey)
-        if (stepKey === null || stop?.state !== "open") return this.refused(ref, "thread_not_stopped")
-        const carry: ResumeCarry = { decision, stepKey, answered: stop.answers.length }
+        const parked = run.seen.status === "stopped" ? parkOfQuestion(run.seen.stop?.question) : null
+        if (parked?.parkKey !== park.parkKey) return this.refused(ref, "thread_not_stopped")
         const draft: WakeDraft = {
-            eventKey: `thread:${ref.runId}:${stepKey}:${carry.answered}`,
-            eventName: THREAD_RESUME_EVENT,
-            carry: JSON.stringify(carry),
-            actorMemberId: actorOf(decision),
+            eventKey: `thread:${ref.runId}:round:${park.parkKey}`,
+            eventName: THREAD_ROUND_EVENT,
+            carry: JSON.stringify({ parkKey: park.parkKey, round: park.round }),
+            actorMemberId: null,
         }
-        const admission = await this.admit(ref, run, draft, tx)
-        if (admission.kind !== "admitted" || admission.fresh) return admission
-        return (await this.sameDecisionKept(ref, run.agentId, draft)) ? admission : this.refused(ref, "already_answered")
+        return this.admit(ref, run, draft, tx)
     }
 
     /**
-     * Whether the wake already written for this stop state carries this very decision (read after the unique key settled the race);
-     * without the work core's reader (a test world) the earlier wake is taken as this one, as before.
+     * Runs a round wake under its lease: the thread still parked on the park the wake carries is resumed with the round's decision (the
+     * loop node runs again from its first line and starts the round); any other thread is driven as it stands (a stopped one runs nothing).
      */
-    private async sameDecisionKept(ref: ThreadRef, agentId: string, draft: WakeDraft): Promise<boolean> {
-        if (this.wakeReader === undefined) return true
-        const kept = await this.wakeReader.wakeContextOf(ref.workspaceId, agentId, THREAD_WAKE_SOURCE, draft.eventKey)
-        // A wake of the same key written under the old source before the switch.
-        const legacy =
-            kept === null
-                ? await this.wakeReader.wakeContextOf(ref.workspaceId, agentId, LEGACY_THREAD_WAKE_SOURCE, draft.eventKey)
+    private roundWoken(drive: Drive, seen: ThreadView, graph: ThreadGraph): Promise<AgentHandlerEnding> {
+        const carry = roundCarryOf(drive.turn.context.tagContext)
+        const parked = seen.status === "stopped" ? parkOfQuestion(seen.stop?.question) : null
+        const stands = carry !== null && parked !== null && parked.parkKey === carry.parkKey
+        const decision: UntilRoundDecision | null =
+            stands && carry !== null
+                ? { kind: UNTIL_PARK_KIND, parkKey: carry.parkKey, round: carry.round, at: this.clock.now().toISOString() }
                 : null
-        const context = kept ?? legacy
-        return context !== null && sameCarry(context.tagContext, draft.carry)
+        return this.drivenUnder(drive, (port, lease) =>
+            decision === null ? port.drive(drive.ref, graph, lease) : port.resume(drive.ref, graph, decision, lease),
+        )
+    }
+
+    /**
+     * What came to a thread parked on a `wait`: one of its triggers' events (`wakeId`: the event's own wake) or its timeout. ONE wake of
+     * the run's scope per park (the once-key `waitOnceKeyOf`), so of an event and the deadline, of two events, the first written is the
+     * one applied; `fresh: false` for every later comer, whose carry is the first one's (`sameWaitKept` says whether it was this one).
+     * Refused, with nothing written, for a thread that waits on no park or on another one. It runs nothing here.
+     */
+    async waitAnswered(ref: ThreadRef, parkKey: string, came: WaitCame, wakeId: string | null, tx?: EntityManager): Promise<ThreadWakeAdmission> {
+        const run = await this.admissible(ref)
+        if (run.kind === "refused") return this.refused(ref, run.code)
+        const parked = run.seen.status === "stopped" ? parkOfWaitQuestion(run.seen.stop?.question) : null
+        if (parked?.parkKey !== parkKey) return this.refused(ref, "thread_not_stopped")
+        const carry: WaitCarry = { parkKey, came, wakeId }
+        return this.admit(
+            ref,
+            run,
+            { eventKey: waitOnceKeyOf(ref.runId, parkKey), eventName: THREAD_WAIT_EVENT, carry: JSON.stringify(carry), actorMemberId: null },
+            tx,
+        )
+    }
+
+    /**
+     * Whether the wake kept for a park carries this very event: the wake of `wakeId` (an event's wake tried again finds it took the park
+     * itself), or the same event through another agent's wake of it (`eventId`: one event is delivered once per agent it reaches, and the
+     * first of them that the park admitted took it for all). `agentId` is the RUN's agent, whose wake the park's is.
+     */
+    async sameWaitKept(ref: ThreadRef, agentId: string, parkKey: string, wakeId: string, eventId: string | null = null): Promise<boolean> {
+        if (this.wakeReader === undefined) return false
+        const kept = await this.wakeReader.wakeContextOf(ref.workspaceId, agentId, THREAD_WAIT_EVENT_SOURCE, waitOnceKeyOf(ref.runId, parkKey))
+        const carry = waitCarryOf(kept?.tagContext)
+        if (carry === null) return false
+        if (carry.wakeId === wakeId) return true
+        if (eventId === null || eventId === "" || "timeout" in carry.came) return false
+        return carry.came.event.eventId === eventId
+    }
+
+    /**
+     * Runs a wait wake under its lease: the thread still parked on the park the wake carries is resumed with what came (the wait node runs
+     * again from its first line and answers it); any other thread is driven as it stands (a stopped one runs nothing).
+     */
+    private waitWoken(drive: Drive, seen: ThreadView, graph: ThreadGraph): Promise<AgentHandlerEnding> {
+        const carry = waitCarryOf(drive.turn.context.tagContext)
+        const parked = seen.status === "stopped" ? parkOfWaitQuestion(seen.stop?.question) : null
+        const decision: WaitDecision | null =
+            carry !== null && parked !== null && parked.parkKey === carry.parkKey
+                ? { kind: WAIT_PARK_KIND, parkKey: carry.parkKey, came: carry.came, at: this.clock.now().toISOString() }
+                : null
+        return this.drivenUnder(drive, (port, lease) =>
+            decision === null ? port.drive(drive.ref, graph, lease) : port.resume(drive.ref, graph, decision, lease),
+        )
     }
 
     /**
@@ -417,6 +472,21 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
     private skipped(turn: AgentTurnView, code: string): AgentHandlerEnding {
         this.logger.warn(AgentThreadsLogEvent.WakeSkipped, { agentId: turn.agentId, wakeId: turn.wakeId, code })
         return { status: "skipped", reason: code, outcome: null }
+    }
+
+    /**
+     * A decision that does not stand: applied already (its answer is among the stop's answers: this wake was tried again), or STALE (the
+     * stop resolved, or the thread moved on, before it was applied): only a stale one is told, once per run of its wake.
+     */
+    private async staleTold(ref: ThreadRef, carry: ResumeCarry): Promise<void> {
+        const stop = await this.stops.stopOf(ref, carry.stepKey)
+        if (stop !== null && answerIndexOf(stop.answers, stopAnswerOf(carry.decision)) >= 0) return
+        this.logger.warn(AgentThreadsLogEvent.DecisionStale, {
+            runId: ref.runId,
+            stepKey: carry.stepKey,
+            kind: carry.decision.kind,
+            by: carry.decision.kind === "timeout" ? "deadline" : carry.decision.by,
+        })
     }
 
     /** Whether the stop a decision was admitted against still stands as it did: the thread waits on that step, and no answer was added. */
@@ -488,28 +558,19 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
             await this.toldSettled(ref)
             return doneOf(ref.runId)
         }
-        await this.ended(drive, outcome.state)
+        await this.ended(drive)
         await this.toldSettled(ref)
         return doneOf(ref.runId)
     }
 
-    /**
-     * The end hook of a thread. A thread that reached its end closes its run as done (the step that ended the path already gave the
-     * right to speak back, or kept it for its workflow). A thread a founder skipped was closed by the gate; no step ended its path,
-     * so the right to speak in the run's conversation is given back here (an agent that does not hold it changes nothing).
-     */
-    private async ended(drive: Drive, state: ThreadState): Promise<void> {
+    /** The end hook of a thread. A thread that reached its end closes its run as done; a thread a founder skipped was closed by the gate. */
+    private async ended(drive: Drive): Promise<void> {
         const { ref } = drive
         const skippedByFounder = drive.decision?.kind === "skip"
         this.logger.info(AgentThreadsLogEvent.ThreadEnded, { runId: ref.runId, skipped: skippedByFounder })
-        if (!skippedByFounder) {
-            const wrote = await this.projection.runEnded(ref, { outcome: "done", code: null, by: null, at: this.clock.now() })
-            if (wrote === "refused") this.logger.warn(AgentThreadsLogEvent.ProjectionRefused, { runId: ref.runId })
-            return
-        }
-        const conversationId: unknown = isRecord(state.trigger) ? state.trigger.conversationId : undefined
-        if (typeof conversationId === "string")
-            await this.tags?.release(ref.workspaceId, conversationId, drive.run.agentId)
+        if (skippedByFounder) return
+        const wrote = await this.projection.runEnded(ref, { outcome: "done", code: null, by: null, at: this.clock.now() })
+        if (wrote === "refused") this.logger.warn(AgentThreadsLogEvent.ProjectionRefused, { runId: ref.runId })
     }
 
     /** Tells the listeners which step the thread stopped at; a listener that fails is logged (the sweep arms what it missed). */

@@ -57,6 +57,9 @@ describe("routerOptionsOf", () => {
         })
     })
 
+})
+
+describe("routerOptionsOf: chat profiles and keys", () => {
     it("puts every chat profile on Anthropic: `work` cheap then strong, explicit profiles alone, Auto in both orders", async () => {
         const subject = await buildSubject()
 

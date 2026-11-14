@@ -4,18 +4,18 @@ import { join } from "node:path"
 import type { ExecutionContext } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import { AuthGuard, Credential, CredentialGuard } from "@modules/domain/identity"
-import type { CredentialPrincipal } from "@modules/domain/identity"
-import { GatewaySurfaceService } from "@modules/domain/mcp-gateway"
+import { issueApiKey } from "@modules/integrations/passport"
+import { AuthGuard, Credential, CredentialGuard, type CredentialPrincipal } from "@modules/domain/identity"
+import { McpSurfaceService } from "@modules/domain/mcp-endpoint"
 import { parseJsonText, isRecord } from "@modules/platform/primitives"
-import { ERRORS_SERVICE } from "@modules/platform/errors"
-import type { ErrorsService } from "@modules/platform/errors"
+import { ERRORS_SERVICE, type ErrorsService } from "@modules/platform/errors"
 import type { OperationRequest } from "@modules/platform/http-security"
 import { persistMcpAgentRows } from "../../fixtures/builders/mcp-agent.builder"
 import { MCP_CREDENTIAL_MODULES } from "../../world/mcp-credential-capabilities.options"
 import { cleanupWorkspace } from "../../world/proof-database.service"
 import { useTestWorld } from "../../world/use-test-world"
 import { mcpCallsOfAgent, deleteAgent } from "../../world/inbox-database.service"
+import { mcpCallOf, mcpPost, rpcOf } from "../../fixtures/builders/mcp-endpoint.builder"
 
 /** The door of the mcp app's endpoint, with the same credential metadata as its controller. */
 @Credential({ kind: "tool-token", workflow: "mcp-gateway" })
@@ -48,28 +48,23 @@ const statusOf = async (authorization: string | undefined): Promise<number> => {
 }
 
 const callBankTool = (workspaceId: string, principal: CredentialPrincipal) =>
-    world.resolve(GatewaySurfaceService).answer({
-        workspaceId,
-        principal: { agentId: principal.subject, workspaceId: principal.workspaceId },
-        message: {
-            jsonrpc: "2.0",
-            id: 1,
-            method: "tools/call",
-            params: { name: "tool.call", arguments: { name: "sepay.transaction.list", arguments: { limit: 5 } } },
-        },
+    world.resolve(McpSurfaceService).answer({
+        pathWorkspaceId: workspaceId,
+        principal: { keyId: principal.subject, workspaceId: principal.workspaceId },
+        http: mcpCallOf("nivo.tool.payment.credit.list", { limit: 5 }),
     })
 
 /** The committed `tools/list` catalog of the endpoint (R302). */
-const SNAPSHOT_PATH = join(__dirname, "..", "..", "..", "..", "contracts", "mcp", "nivo-mcp@1.tools.json")
+const SNAPSHOT_PATH = join(__dirname, "..", "..", "..", "..", "contracts", "mcp", "nivo-mcp@2.tools.json")
 
 /** The `result` of one `tools/list` answer for an agent. */
 const listTools = async (workspaceId: string, principal: CredentialPrincipal): Promise<unknown> => {
-    const reply = await world.resolve(GatewaySurfaceService).answer({
-        workspaceId,
-        principal: { agentId: principal.subject, workspaceId: principal.workspaceId },
-        message: { jsonrpc: "2.0", id: 2, method: "tools/list" },
+    const reply = await world.resolve(McpSurfaceService).answer({
+        pathWorkspaceId: workspaceId,
+        principal: { keyId: principal.subject, workspaceId: principal.workspaceId },
+        http: mcpPost({ jsonrpc: "2.0", id: 2, method: "tools/list" }),
     })
-    return reply.body?.result
+    return rpcOf(reply).result
 }
 
 /** The `tools` of the committed catalog. */
@@ -79,55 +74,62 @@ const committedTools = (): unknown => {
     return read.value["tools"]
 }
 
-describe("MCP endpoint per-agent credential", () => {
+describe("MCP endpoint key credential (an agent-scoped key of the workspace owner)", () => {
     const identity = { userId: world.id(), workspaceId: world.id(), agentId: world.id(), module: "sales" }
     let agentKey = ""
+    let agentKeyId = ""
 
     beforeAll(async () => {
         cleanupWorkspace(world, identity.userId, identity.workspaceId)
         await persistMcpAgentRows(world.db.primary, identity)
         const created = await world
             .resolve(ApiKeysService)
-            .createKey(identity.userId, identity.workspaceId, "Desk agent", identity.agentId)
+            .createKey(identity.userId, identity.workspaceId, "Desk agent", "mcp", identity.agentId)
         agentKey = created.key
+        agentKeyId = created.item.id
     })
 
-    it("lets the agent key through as its agent and the call reaches the granted tool", async () => {
+    it("lets the key through as itself, and offers no node tool of the scoped agent: the call answers unknown_op and runs nothing", async () => {
         const { passed, principal } = await admit(`Bearer ${agentKey}`)
 
         expect(passed).toBe(true)
-        expect(principal).toEqual({ kind: "tool-token", subject: identity.agentId, workspaceId: identity.workspaceId })
+        expect(principal).toEqual({ kind: "tool-token", subject: agentKeyId, workspaceId: identity.workspaceId })
         const reply = await callBankTool(identity.workspaceId, {
             kind: "tool-token",
-            subject: identity.agentId,
+            subject: agentKeyId,
             workspaceId: identity.workspaceId,
         })
-        expect(reply.body).toMatchObject({ jsonrpc: "2.0", id: 1, result: { isError: false } })
-        await expect(mcpCallsOfAgent(world.db.primary, identity.agentId)).resolves.toEqual([
-            { tool: "sepay.transaction.list", outcome: "ok" },
-        ])
+        expect(rpcOf(reply)).toMatchObject({
+            jsonrpc: "2.0",
+            id: 1,
+            result: { isError: true, structuredContent: { error: "unknown_op" } },
+        })
+        await expect(mcpCallsOfAgent(world.db.primary, identity.agentId)).resolves.toEqual([])
     })
 
-    it("answers tools/list with exactly the three meta-tools, equal to the committed catalog", async () => {
+    it("answers tools/list equal to the committed catalog: the discovery tools first", async () => {
         const { principal } = await admit(`Bearer ${agentKey}`)
         assert(principal !== undefined, "the guards did not admit the agent key")
 
         const result = await listTools(identity.workspaceId, principal)
 
         const tools = committedTools()
-        expect(tools).toMatchObject([{ name: "tool.search" }, { name: "tool.describe" }, { name: "tool.call" }])
+        expect(tools).toMatchObject([{ name: "nivo_search_ops" }, { name: "nivo_describe_op" }, { name: "nivo_call" }])
         expect(result).toEqual({ tools })
     })
 
     it("answers 401 to a request without a key and to a key no workspace issued", async () => {
         await expect(statusOf(undefined)).resolves.toBe(401)
         await expect(statusOf("Bearer nvk_not-a-key")).resolves.toBe(401)
+        // An old-format key (prefix and secret only, no id part) has no lookup any more; a well-formed key no row holds is unknown.
+        await expect(statusOf(`Bearer nvk_${"a".repeat(43)}`)).resolves.toBe(401)
+        await expect(statusOf(`Bearer ${issueApiKey({ prefix: "nvk_" }).key.reveal()}`)).resolves.toBe(401)
     })
 
     it("answers 401 to a revoked key", async () => {
         const revoked = await world
             .resolve(ApiKeysService)
-            .createKey(identity.userId, identity.workspaceId, "Old desk agent", identity.agentId)
+            .createKey(identity.userId, identity.workspaceId, "Old desk agent", "mcp", identity.agentId)
         await world.resolve(ApiKeysService).revokeKey(identity.userId, identity.workspaceId, revoked.item.id)
 
         await expect(statusOf(`Bearer ${revoked.key}`)).resolves.toBe(401)

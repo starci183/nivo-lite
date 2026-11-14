@@ -35,7 +35,7 @@ export const useKnowledgeSource = (id: string | undefined): KnowledgeSourceView 
                 ? undefined
                 : {
                       source: toKnowledgeDocumentDetail(data.source),
-                      chunks: data.chunks.map(toDocumentPassage),
+                      chunks: data.chunks.map((entry) => toDocumentPassage(entry)),
                   },
         [data],
     )

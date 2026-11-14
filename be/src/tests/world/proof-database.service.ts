@@ -8,7 +8,7 @@ import type {
     ObservedMessageRow,
 } from "../fixtures/persistence/proof.rows"
 import type { EntityManager } from "typeorm"
-import { metaInboxEntities } from "@modules/domain/meta-inbox"
+import { accountDataEntities } from "@modules/domain/account-data"
 import { jobsEntities } from "@modules/platform/jobs"
 import type { LiteWorld } from "./lite-world.service"
 import { removeAuthUsers, removeWorkspace } from "./proof-accounts.service"
@@ -16,7 +16,7 @@ import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
 const JobEntity: (typeof jobsEntities)[0] = jobsEntities[0]
 const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
-const MetaInboxEntity: (typeof metaInboxEntities)[0] = metaInboxEntities[0]
+const [AccountDataEntity] = accountDataEntities
 
 /** One outbox row as the entity reads it. */
 type OutboxRecord = InstanceType<typeof JobOutboxEntity>
@@ -24,8 +24,8 @@ type OutboxRecord = InstanceType<typeof JobOutboxEntity>
 /** The most outbox rows one proof read takes; the proofs seed a handful. */
 const OUTBOX_ROWS_MAX = 1000
 
-/** The queue the content tick publishes to. */
-const CONTENT_TICK_QUEUE = "content_tick"
+/** The queue the isolated proofs publish their sample messages to: any migration-owned queue with no business payload of its own. */
+const PROOF_QUEUE = "connection_health"
 
 /** The publication identity and handoff state of an outbox row. */
 const publicationOf = (row: OutboxRecord): WebhookJobRow => ({
@@ -56,7 +56,7 @@ export const deliveryPublications = async (
     manager: EntityManager,
     queue: string,
     deliveryId: string,
-): Promise<Array<WebhookJobRow>> => (await deliveryRows(manager, queue, deliveryId)).map(publicationOf)
+): Promise<Array<WebhookJobRow>> => (await deliveryRows(manager, queue, deliveryId)).map((row) => publicationOf(row))
 
 /** The broker-bound envelopes one delivery committed to `queue`, reconstructed from the outbox. */
 export const deliveryEnvelopes = async (
@@ -88,11 +88,11 @@ export const removeCreditOutbox = async (manager: EntityManager, workspaceId: st
         .execute()
 }
 
-/** The outbox rows the content tick published for one isolated proof. */
+/** The outbox rows one isolated proof published. */
 const proofTicks = (manager: EntityManager, proof: string): Promise<Array<OutboxRecord>> =>
     manager
         .createQueryBuilder(JobOutboxEntity, "o")
-        .where("o.queue = :queue AND o.payload->>'proofId' = :proof", { queue: CONTENT_TICK_QUEUE, proof })
+        .where("o.queue = :queue AND o.payload->>'proofId' = :proof", { queue: PROOF_QUEUE, proof })
         .take(OUTBOX_ROWS_MAX)
         .getMany()
 
@@ -108,15 +108,19 @@ const webhookRows = (manager: EntityManager, mid: string): Promise<Array<OutboxR
         .take(OUTBOX_ROWS_MAX)
         .getMany()
 
-/** Removes the outbox rows of a Meta event, and the delivery rows its stored receipt names. */
-const removeWebhookOutbox = async (manager: EntityManager, mid: string): Promise<void> => {
-    const receipts = await manager
-        .createQueryBuilder(MetaInboxEntity, "i")
-        .select("i.deliveryId", "deliveryId")
-        .where("i.payload->'entry'->0->'messaging'->0->'message'->>'mid' = :mid", { mid })
+/** The delivery ids of a Meta event's receipts: the `meta.event` rows of the accounts that hold the event. */
+const metaDeliveryIdsOf = async (manager: EntityManager, mid: string): Promise<Array<string>> => {
+    const rows = await manager
+        .createQueryBuilder(AccountDataEntity, "r")
+        .where("r.type = 'meta.event' AND r.value->'raw'->>'mid' = :mid", { mid })
         .take(OUTBOX_ROWS_MAX)
-        .getRawMany<{ deliveryId: string }>()
-    const deliveryIds = receipts.map((row) => row.deliveryId)
+        .getMany()
+    return rows.map((row) => `${row.connectionId}:${row.key}`)
+}
+
+/** Removes the outbox rows of a Meta event, and the delivery rows its stored receipts name. */
+const removeWebhookOutbox = async (manager: EntityManager, mid: string): Promise<void> => {
+    const deliveryIds = await metaDeliveryIdsOf(manager, mid)
     await manager
         .createQueryBuilder(JobOutboxEntity, "o")
         .delete()
@@ -130,12 +134,12 @@ const removeWebhookOutbox = async (manager: EntityManager, mid: string): Promise
         .execute()
 }
 
-/** Removes the content ticks one isolated proof published. */
+/** Removes the outbox rows one isolated proof published. */
 const removeProofTicks = async (manager: EntityManager, proof: string): Promise<void> => {
     await manager
         .createQueryBuilder(JobOutboxEntity, "o")
         .delete()
-        .where("queue = :queue AND payload->>'proofId' = :proof", { queue: CONTENT_TICK_QUEUE, proof })
+        .where("queue = :queue AND payload->>'proofId' = :proof", { queue: PROOF_QUEUE, proof })
         .execute()
 }
 
@@ -197,7 +201,7 @@ export const receipts = (manager: EntityManager, id: string): Promise<ReadonlyAr
     receiptsOf(manager, "meta", id)
 /** Finds the work published by one provider event. */
 export const webhookJobs = async (manager: EntityManager, id: string): Promise<Array<WebhookJobRow>> =>
-    (await webhookRows(manager, id)).map(publicationOf)
+    (await webhookRows(manager, id)).map((row) => publicationOf(row))
 /** Reads the actual queue handoff of one provider event. */
 export const webhookMessages = async (manager: EntityManager, id: string): Promise<Array<WebhookMessageRow>> =>
     (await webhookRows(manager, id)).map((row) => ({ message: envelopeOf(row) }))

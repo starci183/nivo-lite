@@ -43,8 +43,10 @@ const options = {
         shutdownGraceMs: 1000,
     },
     connectionSecrets: { tokenKey: new Secret(Buffer.alloc(32, 9).toString("base64")) },
-    mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 },
+    toolsConfig: { defaultTimeoutMs: 4000 },
     ai: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
+    // No vector index in a proof: vectors stay in Postgres (the one switch is QDRANT_URL).
+    qdrant: { url: null, apiKey: null, timeoutMs: 5000 },
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
     entityEngine: { cursorKey: new Secret(Buffer.alloc(32, 9).toString("base64")), buildId: undefined },
 }
@@ -99,12 +101,13 @@ type BuildWiringProofResultOptionsAiShape = {
     embeddingModel: string
 }
 
-type BuildWiringProofResultOptionsMcpGatewayRemoteShape = {
-    clientName: string
+type BuildWiringProofResultOptionsQdrantShape = {
+    url: string | null
+    apiKey: null
+    timeoutMs: number
 }
 
-type BuildWiringProofResultOptionsMcpGatewayShape = {
-    remote: BuildWiringProofResultOptionsMcpGatewayRemoteShape
+type BuildWiringProofResultOptionsToolsConfigShape = {
     defaultTimeoutMs: number
 }
 
@@ -169,8 +172,9 @@ type BuildWiringProofResultOptionsShape = {
     database: BuildWiringProofResultOptionsDatabaseShape
     queue: BuildWiringProofResultOptionsQueueShape
     connectionSecrets: BuildWiringProofResultOptionsConnectionSecretsShape
-    mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
+    toolsConfig: BuildWiringProofResultOptionsToolsConfigShape
     ai: BuildWiringProofResultOptionsAiShape
+    qdrant: BuildWiringProofResultOptionsQdrantShape
     sepay: BuildWiringProofResultOptionsSepayShape
     entityEngine: BuildWiringProofResultOptionsEntityEngineShape
 }

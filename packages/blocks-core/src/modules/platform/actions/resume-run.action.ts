@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { PLATFORM_VIEW } from "../constants"
@@ -16,7 +15,7 @@ const input: z.ZodObject<{ id: z.ZodString }> = z.object({ id: z.string().min(1)
 export const resumeRunAction: ActionDefinition = defineAction({
     id: "platform.resume-run",
     permission: PLATFORM_VIEW,
-    label: { key: "action_resume_run" },
+    label: { vi: "Ch\u1ea1y l\u1ea1i", en: "Run again" },
     input,
     ports: { runs: parkedRunsPort, members: membersPort, rights: rightsPort },
     transactional: false,

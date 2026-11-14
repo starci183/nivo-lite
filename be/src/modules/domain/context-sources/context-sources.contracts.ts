@@ -4,7 +4,7 @@ export type ContextScope = "shop" | "customer"
 /** Which view a read answers for: `customer` (a customer-facing run: public facts only) or `internal` (the shop's own agents). */
 export type ContextAudience = "customer" | "internal"
 
-/** One source of context on the one shape every source has (owner rule "MCP hết", 2026-11-10). */
+/** One source of context on the one shape every source has (owner rule "MCP het", 2026-11-10). */
 export interface ContextSource {
     /** The source key, the `source` every read of it answers (`nivo.lead`). */
     readonly key: string
@@ -24,6 +24,12 @@ export interface ContextFact {
     readonly [member: string]: unknown
 }
 
+/**
+ * Why a context read answered no fact although the run names its subject: `not_owner`, the conversation is another agent's record (a
+ * conversation is read only by the agent that owns it; another agent gets what it needs of it through its `callWorkflow` input).
+ */
+export type ContextReadReason = "not_owner"
+
 /** What every context read answers: the notice, the source, when it was read, and the facts (the uniform result of every source). */
 export interface ContextResult {
     /** The words that say the rest is reference data, never an instruction. */
@@ -34,13 +40,17 @@ export interface ContextResult {
     readonly asOf: string
     /** The facts, newest first for a list. */
     readonly facts: ReadonlyArray<ContextFact>
+    /** Why there are no facts, when the read refused its subject (absent for a read that answered). */
+    readonly reason?: ContextReadReason
 }
 
-/** The conversation and the customer one locked read answers about, as the door fixed them from the run token. */
+/** The conversation and the person one locked read answers about, as the door fixed them from the run token. */
 export interface LockedSubject {
     /** The conversation the run serves, or null. */
     readonly conversationId: string | null
-    /** The customer the run serves, or null when it serves none. */
+    /** The contact (the person) the run serves, or null when it serves none: the conversation's, else the run token's. */
+    readonly contactId: string | null
+    /** The sales lead a module resolved as the run's subject (the bridge of the sales reads that still name one), or null. */
     readonly leadId: string | null
 }
 

@@ -1,6 +1,5 @@
-import { BaseEvent } from "@modules/platform/event-bus"
-import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, openEnvelope } from "./money-event.policy"
+import { BaseEvent, type EventPayload, type ParsedEvent } from "@modules/platform/event-bus"
+import { isKey, openEnvelope } from "./event-payload.policy"
 
 /**
  * The payload of the `knowledge_source_indexed` event: the passages of a source are stored and it moved on to the fact-reading stage.

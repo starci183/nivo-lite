@@ -47,13 +47,14 @@ export const useCreditsPayDrawer = (): CreditsPayDrawerView => {
     const onRegenerate = useCallback(() => {
         if (target && workspaceId) void requestHandler?.(target)
     }, [target, workspaceId, requestHandler])
+    const generalError = payment.error ? t("errGeneric") : null
     return {
         target,
         order,
         workspaceId: workspaceId ?? "",
         bank: value?.bank ?? { account: "", bank: "", holder: "" },
         isRegenerating: isRequesting || payment.isLoading,
-        regenerateError: error || (payment.error ? t("errGeneric") : null),
+        regenerateError: error === null || error === "" ? generalError : error,
         onRegenerate,
         onPaid,
         onClose: close,

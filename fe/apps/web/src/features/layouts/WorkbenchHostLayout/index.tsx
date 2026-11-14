@@ -1,4 +1,4 @@
-import { blocks } from "@nivo-lite/plugin-registry/client"
+import { blocks } from "@/modules/plugin-registry/client"
 import type { ReactNode } from "react"
 import { useGraphqlWorkbenchHost } from "@/hooks/workbenchHost"
 import { useLiveInstallation } from "@/hooks/workbenchInstallation"

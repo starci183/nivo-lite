@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { Cluster, Section, Stack, Stepper } from "@starci/grammar/common"
-import { WizardFooter } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import { WizardFooter, type WizardAction } from "@/components/branches/WizardFooter"
 import type { WizardPhases } from "@/modules/types"
 
 /** What the shared wizard frame draws. */
@@ -80,15 +79,15 @@ export const frameOf = (view: WizardFrameHead): WizardFrameHead => ({
  */
 export const WizardFrame = (props: WizardFrameProps) => (
     <Section title={props.steps[props.index] ?? props.title} description={props.stepLabel} headingLevel={3}>
-        <Stack gap="section">
+        <Stack gap="inline">
             <FrameStepper
                 stepLabel={props.stepLabel}
                 steps={props.steps}
                 index={props.index}
                 {...(props.phases === undefined ? {} : { phases: props.phases })}
             />
-            <Stack gap="row">{props.children}</Stack>
-            <Cluster gap="inline">
+            <Stack gap="identity">{props.children}</Stack>
+            <Cluster gap="identity">
                 {props.actions === undefined ? props.footer : <WizardFooter actions={props.actions} />}
             </Cluster>
         </Stack>

@@ -2,8 +2,7 @@ import type { CommandBus } from "@nestjs/cqrs"
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
-import { InjectCommandBus } from "@modules/platform/cqrs"
-import type { Principal } from "@modules/platform/cqrs"
+import { InjectCommandBus, type Principal } from "@modules/platform/cqrs"
 import { CreateApiKeyCommand } from "../../application/create-api-key.command"
 import { toCreatedApiKeyType } from "./api-keys.mapper"
 import { CreateApiKeyInput } from "./dto/create-api-key.input"
@@ -22,7 +21,10 @@ export class CreateApiKeyResolver {
         @Args("input") input: CreateApiKeyInput,
     ): Promise<CreatedApiKeyType> {
         const result = await this.commandBus.execute(
-            new CreateApiKeyCommand({ request: { workspaceId, name: input.name, agentId: input.agentId }, principal }),
+            new CreateApiKeyCommand({
+                request: { workspaceId, name: input.name, kind: input.kind, agentId: input.agentId },
+                principal,
+            }),
         )
         return toCreatedApiKeyType(result)
     }

@@ -25,6 +25,8 @@ Vì sao: the section label "Provider" carries the chip "Theo mẫu <Agent>": eve
 Luật: `provider-rights-abilities` (per account; payment = default receiving account only), `surfacecard-select-subtitle.md` (every choice list is SurfaceCard kind="select"), `row-control-clearance`, `table-heroui-native-section-head.md` (label + chip at the start).
 Grammar: `Section kind="region" title fact`, `SurfaceCard kind="select" selectionMode="multiple"` with `control` (`frame/SurfaceCard/index.d.ts`, `surfaceCardData.d.ts`), `IdentityLockup` (`composite/IdentityLockup/index.d.ts`), `Badge tone="success"` (`leaf/Badge/index.d.ts`). Code: `blocks/AgentCreateDialog/choices.tsx` (`ProvidersChoice`), `blocks/AgentCreateDialog/index.tsx` (`providersOf`), `composites/ProviderRightsCard`, `hooks/providerRights/useAgentAbilityProposal.ts`.
 
+Retired by the 2026-11-13 rights model (one mode `auto | ask` per NODE; the agent attaches ACCOUNTS only): the per-ability checkbox rows and the per-ability "Tự động | Hỏi" pill in this section are being replaced by a plain list of accounts (ticked by the template), shared component `ProviderRightsCard` (see POLISH-SHARED). The shot predates that change.
+
 ## Start from ("Bắt đầu từ")
 Vì sao: `SurfaceCard kind="select" selectionMode="single"`: "Bản sao của <agent>" ("Lấy sơ đồ, quyền, tri thức và cài đặt; không lấy kênh.") and "Thiết lập mặc định" ("Bắt đầu từ thiết lập gốc của vai trò."). Checkbox look for single choice too; no pink radio blocks.
 Luật: `surfacecard-select-subtitle.md` (one look only), `ROW-TITLES-NOUNS`.

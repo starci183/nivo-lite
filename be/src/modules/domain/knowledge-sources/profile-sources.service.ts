@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
@@ -11,7 +10,7 @@ import { NOW, metaChanges } from "./source-input.policy"
 
 @Injectable()
 /**
- * The text documents a workspace configuration run keeps (the cli `seed-workspace profile`): each is found again by its origin
+ * The text documents a seed run keeps (the brain seed): each is found again by its origin
  * and title, and every row change is queued for the normal indexing in the same transaction. The caller has already proven the
  * workspace owner; the knowledge pages keep using KnowledgeSourcesService.
  */

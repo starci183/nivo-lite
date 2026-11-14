@@ -76,11 +76,7 @@ export const PublicBrainBase = (props: PublicBrainBaseProps) => {
                 actions: (
                     <>
                         <ComposeAction view={view} />
-                        <BrainHeaderActions
-                            review={view.header.actions.review}
-                            add={null}
-                            onReview={props.on.reviewAll}
-                        />
+                        <BrainHeaderActions add={null} />
                     </>
                 ),
                 tabs: brainHeaderTabs({ tabs: view.header.tabs, onSelect: props.on.selectTab }),

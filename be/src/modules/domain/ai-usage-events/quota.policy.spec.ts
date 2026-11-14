@@ -92,7 +92,7 @@ describe("quota policy > quotaOf", () => {
             messagesLimit: null,
             tokensLimit: null,
             creditsLimit: null,
-            creditsUsed: 531,
+            creditsUsed: 530.973451,
             creditsCarried: 0,
             fallbackReply: null,
             ratio: 0,
@@ -149,6 +149,15 @@ describe("quota policy > quotaOf", () => {
             ratio: 1,
             level: "exceeded",
         })
+    })
+
+    it("gates on the exact remainder at 6 decimals: a fraction of a credit left still allows the call", async () => {
+        const subject = await build()
+
+        expect(subject.quotaOf({ ...row, credits_used: 499.5 }).creditsExceeded).toBe(false)
+        expect(subject.quotaOf({ ...row, credits_used: 499.999999 }).creditsExceeded).toBe(false)
+        expect(subject.quotaOf({ ...row, credits_used: 499.9999996 }).creditsExceeded).toBe(true)
+        expect(subject.quotaOf({ ...row, credits_used: 0.1 + 0.2, credits_limit: 0.3 }).creditsExceeded).toBe(true)
     })
 })
 

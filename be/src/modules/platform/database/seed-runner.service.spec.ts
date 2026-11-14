@@ -3,6 +3,7 @@ import type { PathLike } from "node:fs"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 import { PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
 import { DEFAULT_SEED_ENV, SeedRunnerService, seedDirectoryOf } from "./seed-runner.service"
 
@@ -87,7 +88,7 @@ describe("SeedRunnerService", () => {
     it("fails when a seed folder cannot be read", async () => {
         const em = mockEntityManager()
         const runner = await build(em, {})
-        const failure = Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" })
+        const failure = new DatabaseError({ code: DatabaseErrorCode.MigrationFailed })
         jest.spyOn(fsPromises, "readdir").mockRejectedValue(failure)
 
         await expect(runner.run()).rejects.toBe(failure)

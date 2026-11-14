@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateUpdatePublicDocument,
     type MutateUpdatePublicDocumentRequest,
 } from "@/modules/api/graphql/mutations/mutation-update-public-document"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UpdatePublicDocumentMutation } from "@/modules/api"
 
 /** What the UpdatePublicDocument mutation is triggered with. */

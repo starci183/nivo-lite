@@ -24,3 +24,8 @@ export const AgentRunPage = (props: AgentRunPageProps) => {
         <AgentRunPageBase props={{ module: props.module, installationId: props.installationId, runId: props.runId }} />
     )
 }
+
+/** The same run page while the route loads: the panes read the agent and the run from the address and draw their own skeletons. */
+export const AgentRunLoadingPage = () => (
+    <AgentRunPageBase props={{ module: undefined, installationId: undefined, runId: undefined }} />
+)

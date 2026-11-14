@@ -12,19 +12,11 @@ const build = async () => {
     return moduleRef.get<{ requireNoWidening: typeof requireNoWidening; widens: typeof widens }>(SUBJECT)
 }
 
-const graph = (tools: ReadonlyArray<string>, extraField: string | null = null): GraphSpec => ({
+const graph = (tools: ReadonlyArray<string>): GraphSpec => ({
     schema: "nivo/agent-graph@1",
     moduleKey: "accounting",
     trigger: { kind: "tag", sources: ["channel"] },
     grant: {
-        rights: [
-            {
-                kind: "order",
-                access: "read",
-                scope: "workspace",
-                fields: extraField === null ? ["id"] : ["id", extraField],
-            },
-        ],
         tools,
         effects: [],
     },
@@ -42,29 +34,21 @@ const codeOf = (work: () => void): string | null => {
 }
 
 describe("widens", () => {
-    it("is true for a new tool or a new right field, false for the same or less", async () => {
+    it("is true for a new tool, false for the same or less", async () => {
         const subject = await build()
 
-        expect(subject.widens(graph([]), graph(["nivo.ledger.entry.append"]))).toBe(true)
-        expect(subject.widens(graph([]), graph([], "amountVnd"))).toBe(true)
-        expect(subject.widens(graph(["nivo.ledger.entry.append"]), graph([]))).toBe(false)
+        expect(subject.widens(graph([]), graph(["nivo.tool.ledger.entry.append"]))).toBe(true)
+        expect(subject.widens(graph(["nivo.tool.ledger.entry.append"]), graph([]))).toBe(false)
         expect(subject.widens(graph([]), graph([]))).toBe(false)
     })
 
-    it("is true for a right made wider in scope or a new effect, false for a right made narrower", async () => {
+    it("is true for a new effect", async () => {
         const subject = await build()
-        const scoped = (scope: "turn" | "workspace"): GraphSpec => {
-            const base = graph([])
-            const rights = base.grant.rights.map((right) => ({ ...right, scope }))
-            return { ...base, grant: { ...base.grant, rights } }
-        }
         const withEffect = (effects: ReadonlyArray<string>): GraphSpec => ({
             ...graph([]),
             grant: { ...graph([]).grant, effects },
         })
 
-        expect(subject.widens(scoped("turn"), scoped("workspace"))).toBe(true)
-        expect(subject.widens(scoped("workspace"), scoped("turn"))).toBe(false)
         expect(subject.widens(withEffect([]), withEffect(["ledger.post"]))).toBe(true)
     })
 })
@@ -73,10 +57,14 @@ describe("requireNoWidening", () => {
     it("lets the owner widen and refuses a manager", async () => {
         const subject = await build()
 
-        expect(codeOf(() => subject.requireNoWidening(graph([]), graph(["nivo.ledger.entry.append"]), "owner"))).toBeNull()
-        expect(codeOf(() => subject.requireNoWidening(graph([]), graph(["nivo.ledger.entry.append"]), "manager"))).toBe(
-            AgentGraphsErrorCode.WidensNeedsOwner,
-        )
-        expect(codeOf(() => subject.requireNoWidening(graph(["nivo.ledger.entry.append"]), graph([]), "manager"))).toBeNull()
+        expect(
+            codeOf(() => subject.requireNoWidening(graph([]), graph(["nivo.tool.ledger.entry.append"]), "owner")),
+        ).toBeNull()
+        expect(
+            codeOf(() => subject.requireNoWidening(graph([]), graph(["nivo.tool.ledger.entry.append"]), "manager")),
+        ).toBe(AgentGraphsErrorCode.WidensNeedsOwner)
+        expect(
+            codeOf(() => subject.requireNoWidening(graph(["nivo.tool.ledger.entry.append"]), graph([]), "manager")),
+        ).toBeNull()
     })
 })

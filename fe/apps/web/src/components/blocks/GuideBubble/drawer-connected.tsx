@@ -1,20 +1,20 @@
-"use client"
-
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import {
+    GROUP_WORDS,
+    KIND_ICONS,
+    KIND_WORDS,
+    pageDocAt,
     useGuideConversation,
     useGuideData,
     useGuideDocs,
     useGuideGo,
     useGuideSearch,
 } from "@/hooks/guide"
-import { GROUP_WORDS, KIND_ICONS, KIND_WORDS, pageDocAt } from "@/hooks/guide/guideRows"
 import { isManager, useMember } from "@/hooks/member"
 import { navigation } from "@/modules/i18n"
 import { pathInWorkspace } from "@/modules/routes"
-import { GUIDE_GROUPS, firstHit, todosFor } from "@/modules/guide"
-import type { GuideDoc, GuideHit } from "@/modules/guide"
+import { GUIDE_GROUPS, firstHit, todosFor, type GuideDoc, type GuideHit } from "@/modules/guide"
 import { GuideDrawerBase } from "./drawer"
 import type { GuideGroupView, GuideRowView } from "./types"
 
@@ -89,12 +89,12 @@ export const GuideDrawer = (props: GuideDrawerProps) => {
         const doc = byId.get(id)
         if (doc !== undefined) go(doc)
     }
-    const here =
-        page === undefined
-            ? t("hereUnknown")
-            : todos.length === 0
-              ? t("hereNone", { page: page.title })
-              : t("here", { page: page.title, count: todos.length })
+    const hereOf = (): string => {
+        if (page === undefined) return t("hereUnknown")
+        if (todos.length === 0) return t("hereNone", { page: page.title })
+        return t("here", { page: page.title, count: todos.length })
+    }
+    const here = hereOf()
 
     return (
         <GuideDrawerBase

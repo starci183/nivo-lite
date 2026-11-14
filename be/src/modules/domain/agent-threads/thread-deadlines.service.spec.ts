@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import type { RunStopAnswer } from "@nivo-lite/blocks-core/entities"
+import type { RunStopAnswer } from "./stops/run-stop.shapes"
 import { AgentGraphsService } from "@modules/domain/agent-graphs"
 import { GRAPH_THREADS } from "@modules/integrations/langgraph"
 import type { GraphThreads, ThreadRef, ThreadView } from "@modules/integrations/langgraph"
@@ -12,6 +12,7 @@ import type { Logger } from "@modules/platform/logging"
 import { ThreadDeadlineQueue } from "@modules/queues/thread-deadline"
 import type { ThreadDeadlinePayload } from "@modules/queues/thread-deadline"
 import { jobRecordingOutbox } from "@tests/fixtures/builders/queue-job-outbox.builder"
+import type { QueueStatusService } from "@modules/platform/queue"
 import { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 import type { AgentThreadsOptions } from "./agent-threads.options"
 import type { RunStop } from "./stops/run-stop.contracts"
@@ -19,6 +20,7 @@ import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
+import { ThreadResumeRequestsService } from "./thread-resume-requests.service"
 import { ThreadRunsService } from "./thread-runs.service"
 import type { ThreadStoppedListener, ThreadWakeAdmission } from "./thread-runs.service"
 
@@ -33,12 +35,12 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
     stepKey: "match",
     agentId: "agent-1",
     workflowId: "wf-1",
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_report",
     state: "open",
-    reason: "Không khớp",
-    question: "Đây là tiền gì?",
+    reason: "Kh\u00f4ng kh\u1edbp",
+    question: "\u0110\u00e2y l\u00e0 ti\u1ec1n g\u00ec?",
     detail: { suggestions: [], facts: [] },
     cardMessageId: "chat-1",
     customerLines: [],
@@ -74,22 +76,31 @@ const build = async (world: World = {}) => {
     const outbox = jobRecordingOutbox()
     const listeners: Array<ThreadStoppedListener> = []
     const stops = mock<RunStopsService>({ stopOf: jest.fn().mockResolvedValue(world.stop === undefined ? stopOf() : world.stop) })
-    const runs = mock<ThreadRunsService>({
-        resume: jest.fn().mockResolvedValue(world.admission ?? { kind: "admitted", fresh: true }),
+    const threads = mock<ThreadRunsService>({
         whenStopped: jest.fn((listener: ThreadStoppedListener) => {
             listeners.push(listener)
         }),
     })
+    // The resume request: the one door a deadline's `timeout` takes, as a person's decision does.
+    const runs = mock<ThreadResumeRequestsService>({
+        resume: jest.fn().mockResolvedValue(world.admission ?? { kind: "admitted", fresh: true }),
+    })
     const view = { version: "version-1" } as unknown as ThreadView
     const port = mock<GraphThreads>({ stateOf: jest.fn().mockResolvedValue(view) })
     const graphs = mock<AgentGraphsService>({
-        versionAt: jest.fn().mockResolvedValue({ version: 1, document: { nodes: [], rights: [], flow: flowOf(world.wait) } }),
+        versionAt: jest.fn().mockResolvedValue({ version: 1, document: { nodes: [], flow: flowOf(world.wait) } }),
     })
     const approvals = mock<ThreadApprovalsService>({
         expired: jest.fn().mockResolvedValue(world.expired === undefined ? { kind: "admitted", fresh: true } : world.expired),
     })
     const records = mock<RunStopRecordsService>({ newest: jest.fn().mockResolvedValue(world.open ?? []) })
     const logger = mock<Logger>()
+    // The queue's status reader: a job stands once one was written under its key (the outbox keeps one row per key).
+    const standing = mock<QueueStatusService>({
+        stands: jest.fn((_tx, _ws, _queue, _job, key: string) =>
+            Promise.resolve(outbox.written.some((job) => job.dedupeKey === key)),
+        ),
+    })
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -99,12 +110,13 @@ const build = async (world: World = {}) => {
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
             { provide: RunStopsService, useValue: stops },
-            { provide: ThreadRunsService, useValue: runs },
+            { provide: ThreadRunsService, useValue: threads },
+            { provide: ThreadResumeRequestsService, useValue: runs },
             { provide: AgentGraphsService, useValue: graphs },
             { provide: GRAPH_THREADS, useValue: port },
             { provide: ThreadApprovalsService, useValue: approvals },
             { provide: RunStopRecordsService, useValue: records },
-            ...(world.queueless === true ? [] : [{ provide: ThreadDeadlineQueue, useValue: new ThreadDeadlineQueue(outbox) }]),
+            ...(world.queueless === true ? [] : [{ provide: ThreadDeadlineQueue, useValue: new ThreadDeadlineQueue(outbox, standing) }]),
         ],
     }).compile()
     const service = moduleRef.get(ThreadDeadlinesService)
@@ -158,6 +170,16 @@ describe("ThreadDeadlinesService", () => {
             expect([engine, timedOut, closed].flatMap((one) => one.outbox.written)).toEqual([])
         })
 
+        it("re-arms a stop whose job already stands without writing or logging again (the minute sweep, live: run 8540f26b)", async () => {
+            const world = await build()
+
+            await expect(world.service.armed(REF, "match")).resolves.toBe("armed")
+            await expect(world.service.armed(REF, "match")).resolves.toBe("standing")
+
+            expect(world.outbox.written).toHaveLength(1)
+            expect(world.logger.info.mock.calls.filter(([event]) => event === "agent_threads.deadline_armed")).toHaveLength(1)
+        })
+
         it("counts the window from the moment the stop last stopped, so a deadline armed late keeps its time", async () => {
             const world = await build({ now: "2026-11-11T10:00:00.000Z" })
 
@@ -176,7 +198,7 @@ describe("ThreadDeadlinesService", () => {
 
             await expect(world.service.fire(PAYLOAD)).resolves.toBe("admitted")
 
-            expect(world.runs.resume).toHaveBeenCalledWith(REF, { kind: "timeout", at: DUE })
+            expect(world.runs.resume).toHaveBeenCalledWith({ ...REF, stepKey: "match" }, { kind: "timeout", at: DUE })
         })
 
         it("does nothing for a stop already closed, answered or stopped again since, or a deadline not due yet", async () => {
@@ -210,6 +232,26 @@ describe("ThreadDeadlinesService", () => {
 
             await expect(world.service.fire(PAYLOAD)).resolves.toBe("refused")
         })
+
+        // Ruling R52: a take-over disarms the stop's deadline. The stop as it stands after the take-over (one answer, the take-over) is
+        // neither armed (the drive's stop listener, the minute sweep's re-arm) nor fired (a job armed for it, the sweep's lost-job fire,
+        // a person's run now), and the schedule list leaves it out: no step re-run under the hold, no race with the hand-back's close.
+        it("arms, fires and lists nothing for a stop a person took over", async () => {
+            const taken = answer("take_over")
+            const takenOver = stopOf({ conversationId: "route-1", answers: [taken], decision: taken })
+            const world = await build({ now: DUE, stop: takenOver, open: [takenOver] })
+            const asItStands = { ...PAYLOAD, answered: 1 }
+
+            const [listener] = world.listeners
+            await listener?.(REF, "match")
+            await expect(world.service.armed(REF, "match")).resolves.toBe("none")
+            await expect(world.service.fire(asItStands)).resolves.toBe("moved")
+            await expect(world.service.fireNow(asItStands)).resolves.toBe("moved")
+            await expect(world.service.pending("ws-1", 10)).resolves.toEqual([])
+
+            expect(world.outbox.written).toEqual([])
+            expect(world.runs.resume).not.toHaveBeenCalled()
+        })
     })
     describe("run now (the schedule list's \"run now\")", () => {
         const PRESSED: ThreadDeadlinePayload = { workspaceId: "ws-1", runId: "run-1", stepKey: "match", repeats: 1, answered: 0 }
@@ -223,7 +265,7 @@ describe("ThreadDeadlinesService", () => {
             await expect(world.service.fire(PRESSED)).resolves.toBe("moved")
 
             expect(world.runs.resume).toHaveBeenCalledTimes(1)
-            expect(world.runs.resume).toHaveBeenCalledWith(REF, { kind: "timeout", at: "2026-11-10T11:00:00.000Z" })
+            expect(world.runs.resume).toHaveBeenCalledWith({ ...REF, stepKey: "match" }, { kind: "timeout", at: "2026-11-10T11:00:00.000Z" })
             expect(world.outbox.written).toEqual([])
         })
 

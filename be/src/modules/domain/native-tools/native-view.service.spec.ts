@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentViewScopeService } from "@modules/domain/agents"
-import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { ToolsErrorCode } from "@modules/domain/tools"
 import { NativeViewService } from "./native-view.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -43,7 +43,7 @@ describe("NativeViewService", () => {
         scopes.lensOf.mockResolvedValue(null)
 
         await expect(view.of(WS, { agentId: "gone", conversationId: null })).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
+            code: ToolsErrorCode.NativeRefused,
             params: { reason: "not_found" },
         })
     })
@@ -79,7 +79,7 @@ describe("NativeViewService internalOf", () => {
         const { view, scopes } = await build()
 
         await expect(view.internalOf(WS, { agentId: "a1", conversationId: "c1" })).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
+            code: ToolsErrorCode.NativeRefused,
             params: { reason: "internal_only" },
         })
         expect(scopes.lensOf).not.toHaveBeenCalled()
@@ -102,11 +102,11 @@ describe("NativeViewService internalOf", () => {
 describe("NativeViewService internalOf, for a workflow step", () => {
     it("gives the step of an internal agent its internal view whatever conversation its run carries", async () => {
         const { view, scopes } = await build()
-        scopes.lensOf.mockResolvedValue({ module: "accounting", installationId: null })
+        scopes.lensOf.mockResolvedValue({ module: "sales", installationId: null })
 
         await expect(
             view.internalOf(WS, { agentId: "a1", conversationId: "c1", graphStep: true }),
-        ).resolves.toMatchObject({ module: "accounting", audience: "internal" })
+        ).resolves.toMatchObject({ module: "sales", audience: "internal" })
     })
 
     it("refuses the step of a customer-facing agent, with or without a conversation", async () => {

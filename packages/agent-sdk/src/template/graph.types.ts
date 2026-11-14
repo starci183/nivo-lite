@@ -114,8 +114,8 @@ export interface GraphBranch {
     readonly key: string
     /** The condition, or the else. */
     readonly when: Condition | "else"
-    /** What it does. */
-    readonly then: "auto" | "ask" | "stop"
+    /** What it does: runs by itself, asks its approver first, or stops. */
+    readonly mode: "auto" | "ask" | "stop"
     /** The next node. */
     readonly next: string
     /** The approver. */
@@ -188,18 +188,6 @@ export interface GraphNode {
     readonly triggerSources?: ReadonlyArray<string> | undefined
 }
 
-/** A right over a kind of data, which a package only proposes. */
-export interface GraphRight {
-    /** The kind of data. */
-    readonly kind: string
-    /** The rows. */
-    readonly scope: "conversation" | "workspace"
-    /** The fields never seen. */
-    readonly hide: ReadonlyArray<string>
-    /** The fields masked. */
-    readonly mask: ReadonlyArray<string>
-}
-
 /** One limit of the business half of a contract. */
 export interface ContractLimit {
     /** The text. */
@@ -234,8 +222,6 @@ export interface GraphContract {
 export interface GraphDocument {
     /** The nodes. */
     readonly nodes: ReadonlyArray<GraphNode>
-    /** The rights. */
-    readonly rights: ReadonlyArray<GraphRight>
     /** The business half of the contracts. */
     readonly contracts?: ReadonlyArray<GraphContract> | undefined
 }

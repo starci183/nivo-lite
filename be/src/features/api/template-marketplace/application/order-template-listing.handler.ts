@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { TemplatePurchasesService } from "@modules/domain/template-marketplace"
 import type { PayableOrder } from "@modules/domain/billing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { OrderTemplateListingCommand } from "./order-template-listing.command"
 
 @CommandHandler(OrderTemplateListingCommand)

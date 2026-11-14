@@ -1,17 +1,16 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ModuleInstallService } from "@modules/domain/modules"
+import { ModuleInstallDoorService } from "@modules/domain/agent-pages"
 import type { InstallResult } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InstallModuleCommand } from "./install-module.command"
 
 @CommandHandler(InstallModuleCommand)
-/** Installs the module through the module install service. */
+/** Installs the module, then gives its agent the workflows its plugin ships: both through the capability. */
 export class InstallModuleHandler extends ICQRSHandler<InstallModuleCommand, InstallResult> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly installs: ModuleInstallService,
+        private readonly installs: ModuleInstallDoorService,
     ) {
         super(logger)
     }

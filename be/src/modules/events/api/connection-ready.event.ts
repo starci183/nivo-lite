@@ -1,6 +1,5 @@
-import { BaseEvent } from "@modules/platform/event-bus"
-import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
-import { isKey, openEnvelope } from "./money-event.policy"
+import { BaseEvent, type EventPayload, type ParsedEvent } from "@modules/platform/event-bus"
+import { isKey, openEnvelope } from "./event-payload.policy"
 
 /**
  * The payload of the `connection_ready` event: a connection became ready to be read back from its provider (its API token was stored).

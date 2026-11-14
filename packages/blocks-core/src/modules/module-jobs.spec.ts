@@ -7,12 +7,9 @@ describe("MODULE_JOBS", () => {
         expect(new Set(names).size).toBe(names.length)
         expect(names).toEqual([
             "chatbot.deliver-reply",
-            "accounting.ledger-append",
-            "accounting.book-project",
-            "payment.confirm-notice",
-            "payment.rematch",
+            "sales.ledger-append",
+            "sales.book-project",
             "platform.post-report",
-            "platform.post-approval",
         ])
     })
 

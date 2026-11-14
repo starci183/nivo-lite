@@ -1,8 +1,10 @@
+import { Test } from "@nestjs/testing"
 import { AccountingCloseProbeService, ACCOUNTING_CLOSE_PROBE } from "./accounting-close-probe.service"
 
 describe("AccountingCloseProbeService", () => {
     it("is named by the key the graph reads, and always has work, even on a day with no money", async () => {
-        const probe = new AccountingCloseProbeService()
+        const moduleRef = await Test.createTestingModule({ providers: [AccountingCloseProbeService] }).compile()
+        const probe = moduleRef.get(AccountingCloseProbeService)
 
         expect(probe.key).toBe(ACCOUNTING_CLOSE_PROBE)
         expect(probe.key).toBe("accounting_close")

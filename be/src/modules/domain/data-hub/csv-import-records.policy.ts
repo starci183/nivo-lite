@@ -1,5 +1,4 @@
-import { DOCUMENT_MAX_TEXT } from "@modules/integrations/data-sources"
-import type { Table, UploadedDocumentText } from "@modules/integrations/data-sources"
+import { DOCUMENT_MAX_TEXT, type Table, type UploadedDocumentText } from "@modules/integrations/data-sources"
 import type { DataRecordInput } from "./data-hub.contracts"
 import type { CsvMapping } from "./csv-import.contracts"
 import { CSV_COPY } from "./messages/csv-import.messages"
@@ -25,7 +24,7 @@ export interface CsvBuiltRecords {
 }
 
 /** Writes one non-empty cell into the row data: phones as digit text with the original kept, emails lowercased, numbers and dates also parsed. */
-const writeCell = (data: Record<string, unknown>, header: string, raw: string, kind: string): void => {
+const writeCell = (data: Record<string, unknown>, header: string, raw: string, kind: string, timeZone: string): void => {
     if (kind === "phone") {
         const phone = normalisePhone(raw)
         data[header] = phone || raw
@@ -39,7 +38,7 @@ const writeCell = (data: Record<string, unknown>, header: string, raw: string, k
     data[header] = raw
     const number = kind === "number" ? parseNumberLoose(raw) : null
     if (number !== null) data[`${header}__number`] = number
-    const date = kind === "date" ? parseDateLoose(raw) : null
+    const date = kind === "date" ? parseDateLoose(raw, timeZone) : null
     if (date !== null) data[`${header}__date`] = date
 }
 
@@ -47,11 +46,12 @@ const rowData = (
     headers: ReadonlyArray<string>,
     row: ReadonlyArray<string>,
     mapping: CsvMapping,
+    timeZone: string,
 ): Record<string, unknown> => {
     const data: Record<string, unknown> = {}
     headers.forEach((header, index) => {
         const raw = (row[index] ?? "").trim()
-        if (raw !== "") writeCell(data, header, raw, mapping.kinds[header] ?? "text")
+        if (raw !== "") writeCell(data, header, raw, mapping.kinds[header] ?? "text", timeZone)
     })
     return data
 }
@@ -71,8 +71,15 @@ const externalIdOf = (
         : value
 }
 
-/** Rows to hub records: trimmed text, phones as digit text, parsed numbers and dates in separate fields, the original text kept. */
-export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: CsvMapping): CsvBuiltRecords => {
+/**
+ * Rows to hub records: trimmed text, phones as digit text, parsed numbers and dates in separate fields, the original text kept; a date
+ * with no zone of its own is read on the clock of the workspace's `timeZone`.
+ */
+export const buildRecords = (
+    timeZone: string,
+    table: Pick<Table, "headers" | "rows">,
+    mapping: CsvMapping,
+): CsvBuiltRecords => {
     const { headers, rows } = table
     const column = (name: string | null): number => (name === null ? -1 : headers.indexOf(name))
     const idIndex = column(mapping.idColumn)
@@ -82,7 +89,7 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
     let skipped = 0
     let duplicates = 0
     rows.forEach((row, n) => {
-        const data = rowData(headers, row, mapping)
+        const data = rowData(headers, row, mapping, timeZone)
         if (Object.keys(data).length === 0) return
         const lineNo = n + 1
         const externalId = externalIdOf(row, idIndex, mapping, lineNo)
@@ -92,7 +99,7 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
         }
         const titled = titleIndex >= 0 ? (row[titleIndex] ?? "").trim() : ""
         const title = titled || (idIndex >= 0 ? externalId : CSV_COPY.rowTitle(lineNo))
-        const when = dateIndex >= 0 ? parseDateLoose((row[dateIndex] ?? "").trim()) : null
+        const when = dateIndex >= 0 ? parseDateLoose((row[dateIndex] ?? "").trim(), timeZone) : null
         if (byId.has(externalId)) duplicates += 1
         byId.set(externalId, { externalId, title: title.slice(0, 300), occurredAt: when, data })
     })
@@ -100,7 +107,7 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
 }
 
 const clip = (text: string): ClippedText => {
-    const clean = text.replace(/\r\n?/gu, "\n").replaceAll(String.fromCodePoint(0), "").trim()
+    const clean = text.replaceAll(/\r\n?/gu, "\n").replaceAll(String.fromCodePoint(0), "").trim()
     return clean.length > DOCUMENT_MAX_TEXT
         ? { text: clean.slice(0, DOCUMENT_MAX_TEXT), truncated: true }
         : { text: clean, truncated: false }

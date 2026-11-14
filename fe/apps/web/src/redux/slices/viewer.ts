@@ -1,5 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit"
-import type { ActionCreatorWithPayload, PayloadAction, Reducer } from "@reduxjs/toolkit"
+import { createSlice, type ActionCreatorWithPayload, type PayloadAction, type Reducer } from "@reduxjs/toolkit"
 
 /** The app-wide viewer identity. */
 export interface ViewerSliceState {

@@ -1,7 +1,5 @@
-import { Alert, AlertDialog, Stack, Text } from "@starci/grammar/common"
-import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { Alert, AlertDialog, Badge, Cluster, Link, Stack, Text, type DropdownMenuEntry } from "@starci/grammar/common"
 import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
-import { ConnectionSmtpPanel } from "@/components/composites/ConnectionSmtpPanel"
 import type { RowDialog, RowPrimary, RowView } from "@/modules/types"
 
 /** The commands a connection's detail, menu and dialogs give. */
@@ -9,13 +7,6 @@ export interface RowCommandSet {
     readonly primary: (id: RowPrimary["id"]) => void
     readonly menu: (id: string) => void
     readonly dialog: (kind: "disconnect" | "remove", action: "confirm" | "cancel") => void
-    readonly smtpToggle: (panel: "test" | "password") => void
-    readonly smtpTo: (value: string) => void
-    readonly smtpPassword: (value: string) => void
-    readonly smtpTest: () => void
-    readonly smtpSavePassword: () => void
-    readonly smtpMakeDefault: () => void
-    readonly smtpClose: () => void
 }
 
 /** The menu entries of a connection: the editing commands first, the destructive one last. */
@@ -68,6 +59,8 @@ interface ConnectionRowBodyProps {
     readonly on: RowCommandSet
     /** The page's band draws the two questions (its menu opens them); a row inside a drawer keeps them here. */
     readonly withoutQuestions?: boolean
+    /** The page of the account itself: its form owns the sender's password, test send and default, so no link to it is drawn. */
+    readonly onAccountPage?: boolean
 }
 
 /** Whether the connection says anything beyond its name (the two questions aside). */
@@ -92,17 +85,14 @@ export const ConnectionRowBody = (props: ConnectionRowBodyProps) => {
                 </Text>
             ))}
             {view.smtp === null ? null : (
-                <ConnectionSmtpPanel
-                    {...view.smtp}
-                    id={view.id}
-                    onToggle={on.smtpToggle}
-                    onTo={on.smtpTo}
-                    onPassword={on.smtpPassword}
-                    onTest={on.smtpTest}
-                    onSavePassword={on.smtpSavePassword}
-                    onMakeDefault={on.smtpMakeDefault}
-                    onClose={on.smtpClose}
-                />
+                <Cluster gap="inline" align="center">
+                    {view.smtp.isDefault ? <Badge tone="success">{view.smtp.defaultBadge}</Badge> : null}
+                    {props.onAccountPage === true ? null : (
+                        <Link variant="head" href={view.smtp.page.href}>
+                            {view.smtp.page.label}
+                        </Link>
+                    )}
+                </Cluster>
             )}
             {view.keys === null ? null : (
                 <Stack gap="inline">

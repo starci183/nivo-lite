@@ -17,6 +17,6 @@ export const OverviewKpiCard = (props: OverviewKpiCardProps) => (
         kind="figures"
         ariaLabel={props.props.label}
         isLoading={props.props.isLoading}
-        items={props.props.kpis.map((kpi) => ({ id: kpi.id, term: kpi.term, value: kpi.value, meta: kpi.meta }))}
+        items={props.props.kpis}
     />
 )

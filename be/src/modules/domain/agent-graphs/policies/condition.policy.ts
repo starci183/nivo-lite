@@ -1,5 +1,13 @@
-import { MAX_CONDITION_DEPTH, MAX_CONDITION_TERMS } from "../agent-graphs.contracts"
-import type { Condition, FactRegistry, FactSpec, FactValue, FactValues, Say } from "../agent-graphs.contracts"
+import {
+    MAX_CONDITION_DEPTH,
+    MAX_CONDITION_TERMS,
+    type Condition,
+    type FactRegistry,
+    type FactSpec,
+    type FactValue,
+    type FactValues,
+    type Say,
+} from "../agent-graphs.contracts"
 
 type Comparison = Extract<Condition, { readonly fact: string }>
 type Group = Exclude<Condition, Comparison>

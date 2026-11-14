@@ -1,5 +1,6 @@
 import {
     sampleActionHandle,
+    sampleBlockFiles,
     sampleBlockHost,
     sampleHostRead,
     sampleParamHandle,
@@ -69,6 +70,45 @@ describe("sampleBlockHost", () => {
         host.report("CODE", "at")
         expect(host.notices()).toEqual(["boom"])
         expect(host.reports()).toEqual(["CODE @ at"])
+    })
+})
+
+describe("sampleBlockFiles", () => {
+    const photo = new File(["x"], "photo.png", { type: "image/png" })
+
+    it("records every call with its via, reports full progress and answers an upload as the reference of the file", async () => {
+        const files = sampleBlockFiles()
+        const shares: Array<number> = []
+        await expect(
+            files.upload("video.save", "video.render", "r1", "poster", photo, { onProgress: (share) => shares.push(share) }),
+        ).resolves.toEqual({
+            key: "ws/video.render/r1/poster/object",
+            mime: "image/png",
+            size: 1,
+            name: "photo.png",
+        })
+        await expect(files.url("video.get", "video.render", "r1", "poster")).resolves.toMatchObject({ expiresAt: "2099-01-01T00:00:00Z" })
+        await expect(files.remove("video.save", "video.render", "r1", "poster")).resolves.toBeUndefined()
+        await expect(files.url("video.get", "video.render", "r1", "photos", "k1")).resolves.toMatchObject({
+            url: "https://files.test/video.render/r1/photos#k1",
+        })
+        await expect(files.remove("video.save", "video.render", "r1", "photos", "k1")).resolves.toBeUndefined()
+        expect(shares).toEqual([1])
+        expect(files.calls()).toEqual([
+            "upload video.save video.render/r1/poster: photo.png",
+            "url video.get video.render/r1/poster",
+            "remove video.save video.render/r1/poster",
+            "url video.get video.render/r1/photos#k1",
+            "remove video.save video.render/r1/photos#k1",
+        ])
+    })
+
+    it("is on every sample block host, and a test may swap one port", async () => {
+        const host = sampleBlockHost()
+        await host.files.remove("a.save", "a.b", "1", "f")
+        expect(host.files.calls()).toEqual(["remove a.save a.b/1/f"])
+        const refusing = sampleBlockHost({ files: sampleBlockFiles({ remove: () => Promise.reject(new Error("no")) }) })
+        await expect(refusing.files.remove("a.save", "a.b", "1", "f")).rejects.toThrow("no")
     })
 })
 

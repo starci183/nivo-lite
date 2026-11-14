@@ -46,7 +46,7 @@ export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
                                 <Text size="xs">{props.props.panelLabel}</Text>
                                 <Text isStrong>{props.props.panelText}</Text>
                             </Stack>
-                            <Cluster gap="row">
+                            <Cluster gap="inline">
                                 <Avatar
                                     name={props.props.author}
                                     src={props.props.authorMarkSrc}

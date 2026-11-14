@@ -1,7 +1,6 @@
 import type { Provider } from "@nestjs/common"
 import { ChatFilesModule } from "@modules/domain/chat-files"
-import { ChatFileReadsService } from "../../../modules/domain/chat-files/chat-file-reads.service"
-import { ChatFilesService } from "../../../modules/domain/chat-files/chat-files.service"
+import { CustomerFilesService } from "../../../modules/domain/chat-files/customer-files.service"
 
 /** What a provider binds its token to: the token it reuses, the value it holds or the name of the class it builds. */
 const targetOf = (provider: object): unknown => {
@@ -19,18 +18,22 @@ const bindingsOf = (providers: ReadonlyArray<Provider> | undefined): Array<[stri
     )
 
 describe("ChatFilesModule", () => {
-    const registered = ChatFilesModule.register({ storage: "OBJECTS" })
+    const registered = ChatFilesModule.register({ storage: "OBJECTS", assets: "ASSETS" })
 
-    it("binds the store the app root names", () => {
+    it("binds the stores the app root names (the whole-file store keeps the pictures customers send)", () => {
         expect(bindingsOf(registered.providers)).toEqual(
-            expect.arrayContaining([["domain.chat-files.storage", "OBJECTS"]]),
+            expect.arrayContaining([
+                ["domain.chat-files.storage", "OBJECTS"],
+                ["domain.chat-files.assets", "ASSETS"],
+            ]),
+        )
+        expect(bindingsOf(ChatFilesModule.register({ storage: "OBJECTS" }).providers).map(([token]) => token)).not.toContain(
+            "domain.chat-files.assets",
         )
     })
 
-    it("provides and exports the files of the Office", () => {
-        const services = [ChatFilesService, ChatFileReadsService]
-
-        expect(registered.providers).toEqual(expect.arrayContaining(services))
-        expect(registered.exports).toEqual(services)
+    it("provides and exports the files of the customers", () => {
+        expect(registered.providers).toEqual(expect.arrayContaining([CustomerFilesService]))
+        expect(registered.exports).toEqual([CustomerFilesService])
     })
 })

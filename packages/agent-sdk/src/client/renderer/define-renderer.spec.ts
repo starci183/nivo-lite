@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { defineBlock } from "../../block/block"
 import { sampleParamHandle } from "../../tests/fixtures/fakes"
+import { thrownFailureOf } from "../../tests/thrown-failure"
 import { UNBOUND_ACTION, UNBOUND_READ, MISSING_READ } from "./inert"
 import { defineRenderer } from "./define-renderer"
 import { RendererError } from "./renderer-error"
@@ -38,7 +39,7 @@ describe("defineRenderer", () => {
         const renderer = defineRenderer(BLOCK, () => null)
         const bare = { props: {}, slots: {}, children: null, nodeId: "n1", params: sampleParamHandle() }
         expect(() => renderer.Component(bare)).toThrow(RendererError)
-        expect(() => renderer.Component(bare)).toThrow("RENDERER_SLOTS_MISSING: test.label")
+        expect(thrownFailureOf(() => renderer.Component(bare))).toEqual({ code: "RENDERER_SLOTS_MISSING", at: "test.label" })
     })
 })
 

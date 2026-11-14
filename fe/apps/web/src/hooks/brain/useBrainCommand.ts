@@ -2,13 +2,11 @@
 
 import { useTranslations } from "next-intl"
 import { mutate } from "@/modules/viewer-cache"
-import { QUERY_BRAIN_SWR_KEY, QUERY_BRAIN_TODO_SWR_KEY } from "@/hooks/swr"
+import { QUERY_BRAIN_FACTS_PAGE_SWR_KEY, QUERY_BRAIN_SWR_KEY, QUERY_BRAIN_TODO_SWR_KEY } from "@/hooks/swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
-import { useBrainFactTriggers } from "./useBrainFactTriggers"
-import type { BrainFactRequests } from "./useBrainFactTriggers"
-import { useBrainLessonTriggers } from "./useBrainLessonTriggers"
-import type { BrainLessonRequests } from "./useBrainLessonTriggers"
+import { useBrainFactTriggers, type BrainFactRequests } from "./useBrainFactTriggers"
+import { useBrainLessonTriggers, type BrainLessonRequests } from "./useBrainLessonTriggers"
 
 /** The requests of every kind of work a card of the Second Brain asks the back end for. */
 type BrainCommandRequests = BrainFactRequests & BrainLessonRequests
@@ -65,7 +63,9 @@ export const useBrainCommand = (): BrainCommand => {
                 (key) =>
                     Array.isArray(key) &&
                     key[1] === workspace[1] &&
-                    (key[0] === QUERY_BRAIN_SWR_KEY || key[0] === QUERY_BRAIN_TODO_SWR_KEY),
+                    (key[0] === QUERY_BRAIN_SWR_KEY ||
+                        key[0] === QUERY_BRAIN_TODO_SWR_KEY ||
+                        key[0] === QUERY_BRAIN_FACTS_PAGE_SWR_KEY),
             )
             return true as const
         } catch {

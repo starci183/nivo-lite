@@ -33,7 +33,7 @@ export interface SepayHealthBaseProps {
 
 /**
  * Draws the overview regions of a SePay connection: while it is set up or waits for its first transaction, the four phases with the
- * one step left; then the connection's details (bank, account, holder, environment, webhook, key, health) as term and value rows.
+ * one step left; then what the webhook has done (the latest one, the valid ones, the duplicates blocked) as term and value rows.
  */
 export const SepayHealthBase = (props: SepayHealthBaseProps) => {
     const setup = props.props.setup

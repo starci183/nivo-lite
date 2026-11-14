@@ -1,8 +1,4 @@
 export { useSepayConnection } from "./useSepayConnection"
 export { useSepayEventsView } from "./useSepayEventsView"
-export { useSepayLiveSwitch } from "./useSepayLiveSwitch"
 export { useSepayFacts } from "./useSepayFacts"
-export { useSepayHead } from "./useSepayHead"
-export type { SepayHeadCommand } from "./useSepayHead"
-export { useSepaySetup } from "./useSepaySetup"
 export { useSepayStepViews } from "./useSepayStepViews"

@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { LeadFreezeDoorService } from "@modules/domain/lead-freezes"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ReadLeadFreezeQuery } from "./read-lead-freeze.query"
 import type { OptionalLeadFreezeView } from "./lead-freeze.contracts"
 
@@ -17,6 +16,6 @@ export class ReadLeadFreezeHandler extends ICQRSHandler<ReadLeadFreezeQuery, Opt
     }
 
     protected override process(query: ReadLeadFreezeQuery): Promise<OptionalLeadFreezeView> {
-        return this.door.read(query.params.principal.id, query.params.request)
+        return this.door.readFor(query.params.principal.id, query.params.request)
     }
 }

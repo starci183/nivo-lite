@@ -24,6 +24,7 @@ export const sentOf = (step: AgentRunStepWire): ReadonlyArray<string> =>
 
 /** The facts the back end adds to a step the AI core took over: the kind of trouble, and its code. They are not what the step made. */
 export const RECOVERED_KEY = "recovered"
+/** The key of the recovery code the AI core adds to a step it took over. */
 export const RECOVERED_CODE_KEY = "recoveredCode"
 
 /** The kind of trouble the AI core took the step over from ("threw", "refused", "failed", "confused"), or null on a step that ran as written. */

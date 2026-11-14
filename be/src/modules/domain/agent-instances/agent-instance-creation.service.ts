@@ -1,17 +1,15 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import { AgentWorkflowInstallService } from "@modules/domain/agent-graphs"
 import { ChannelOwnersService } from "@modules/domain/agent-connections"
 import { AgentIdentityService } from "@modules/domain/agents"
 import { AvatarsService } from "@modules/domain/avatars"
 import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-grants"
 import { ConnectionsService } from "@modules/domain/connections"
-import { McpGatewayError, McpGatewayErrorCode, ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import { ToolsError, ToolsErrorCode, AgentAccountsService } from "@modules/domain/tools"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import { AgentRemovalService, ModuleInstallService, ModulesService } from "@modules/domain/modules"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { WorkspaceMembersService, type WorkspaceMember } from "@modules/domain/workspace-members"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentInstancesLogEvent } from "./agent-instances.log-events"
 import { channelChoicesOf, channelProblemOf, copySourceIdOf, judgeRequest } from "./agent-instances.policy"
 import type {
@@ -21,9 +19,22 @@ import type {
     CreateAgentInstanceRequest,
     CreatedAgent,
 } from "./agent-instances.contracts"
-import { AgentSetupCopyService } from "./agent-setup-copy.service"
-import type { CopyOutcome, CopyTarget } from "./agent-setup-copy.service"
+import { AgentSetupCopyService, type CopyOutcome, type CopyTarget } from "./agent-setup-copy.service"
 import { AgentInstancesError, AgentInstancesErrorCode } from "./errors/agent-instances.error"
+
+/** The installation a creation made and the agent behind it, when it has one. */
+type MadeInstallation = { readonly installationId: string; readonly agentId: string | null }
+
+/** The installation a creation made and whether this call created it. */
+type CreatedInstallation = { readonly installationId: string; readonly created: boolean }
+
+/** What the copy of a sibling setup is asked to give the new agent. */
+type CopyAsk = {
+    readonly avatar: AvatarChoice
+    readonly channels: ReadonlyArray<string>
+    readonly rights: CreateAgentInstanceRequest["providerRights"] | null
+    readonly moduleKey: string
+}
 
 const GOVERNORS = ["owner", "manager"] as const
 
@@ -32,11 +43,11 @@ const GOVERNORS = ["owner", "manager"] as const
  * One role, many agents: creates one more agent of a role (the create dialog of the agents page) with the name its customers see, a
  * @handle, a picture, the channels it answers and, on request, the setup of a sibling of the same role. Each channel is answered by
  * exactly one agent of a role, so a channel another agent of the role answers is refused before anything is written. Managers create
- * agents; only the owner gives an agent connections. The new agent is attached to the connected providers its module names, with the
- * abilities of the module's proposal or of the owner's edit of it (checked before anything is written); these rights are then the
- * workspace's. A creation is all or nothing as far as anyone can see: when a step after the installation fails (the copy, a channel,
- * the rights), the installation is removed again through the removal door and the failure is thrown. Only the owner lets an agent act on a provider by itself: a manager's proposal ticks its write abilities `ask`, and a
- * manager's edit that asks for `auto` is refused.
+ * agents; only the owner gives an agent connections. The new agent is attached to the working accounts of the providers its module's
+ * template lists, or to the accounts of the owner's edit of that proposal (checked before anything is written); these attachments are
+ * then the workspace's (nivo-frame `rights`: an attachment carries no mode). A creation is all or nothing as far as anyone can see: when
+ * a step after the installation fails (the copy, a channel, the attachments), the installation is removed again through the removal door
+ * and the failure is thrown.
  */
 export class AgentInstanceCreationService {
     constructor(
@@ -50,9 +61,10 @@ export class AgentInstanceCreationService {
         private readonly grants: ConnectionGrantsService,
         private readonly owners: ChannelOwnersService,
         private readonly setupCopy: AgentSetupCopyService,
-        private readonly abilities: ProviderAbilitiesService,
+        private readonly accounts: AgentAccountsService,
         private readonly removal: AgentRemovalService,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() private readonly workflows?: AgentWorkflowInstallService,
     ) {}
 
     /** The channels a new agent of the role could answer, each with the agent of the role that answers it already; any member may look. */
@@ -77,10 +89,9 @@ export class AgentInstanceCreationService {
             throw new AgentInstancesError({ code: AgentInstancesErrorCode.ChannelsNeedOwner })
         }
         const rights = request.providerRights ?? null
-        const giver = member.role === "owner" ? "owner" : "manager"
-        const problem = rights === null ? null : await this.abilities.wishProblem(request.workspaceId, rights, giver)
+        const problem = rights === null ? null : await this.accounts.wishProblem(request.workspaceId, rights)
         if (problem !== null)
-            throw new McpGatewayError({ code: McpGatewayErrorCode.AttachmentRefused, params: { reason: problem } })
+            throw new ToolsError({ code: ToolsErrorCode.AttachmentRefused, params: { reason: problem } })
         const source = await this.sourceOf(request, module.key)
         await this.requireChannelsFree(request.workspaceId, module.key, wanted)
         const present = await this.installations.firstOfModule(request.workspaceId, module.key)
@@ -99,7 +110,6 @@ export class AgentInstanceCreationService {
             avatar: judged.value.avatar,
             channels: wanted,
             rights,
-            giver,
             moduleKey: module.key,
         }).catch(async (cause: unknown) => {
             await this.undone(principalId, request.workspaceId, made)
@@ -124,21 +134,15 @@ export class AgentInstanceCreationService {
 
     /**
      * Gives the installation just made everything the request asks for: the picture, the sibling's setup, the channels and shared
-     * connections, and the rights on the connected providers. Any failure is thrown for `create` to take the installation back.
+     * connections, the rights on the connected providers, and a workflow from each template its plugin ships. Any failure is thrown for `create` to take the installation back.
      */
     private async furnished(
         principalId: string,
         member: WorkspaceMember,
         request: CreateAgentInstanceRequest,
         source: InstallationRecord | null,
-        made: { readonly installationId: string; readonly agentId: string | null },
-        asked: {
-            readonly avatar: AvatarChoice
-            readonly channels: ReadonlyArray<string>
-            readonly rights: CreateAgentInstanceRequest["providerRights"] | null
-            readonly giver: "owner" | "manager"
-            readonly moduleKey: string
-        },
+        made: MadeInstallation,
+        asked: CopyAsk,
     ): Promise<CopyOutcome | null> {
         const { agentId } = made
         if (agentId === null) throw new AgentInstancesError({ code: AgentInstancesErrorCode.CopySourceInvalid })
@@ -148,12 +152,18 @@ export class AgentInstanceCreationService {
         const shared = member.role === "owner" ? (outcome?.grants ?? []) : []
         await this.grantAll(principalId, request.workspaceId, agentId, asked.channels, shared)
         // The rights of the new agent on the connected providers: the owner's edit of the proposal, else the module's proposal as it is.
-        await this.abilities.attachDefaults(
+        await this.accounts.attachDefaults(
             { workspaceId: request.workspaceId, agentId, moduleKey: asked.moduleKey },
             asked.rights ?? null,
             principalId,
-            asked.giver,
         )
+        // After the rights: the workflows the module's plugin ships, made the way the stack seed makes a seeded shop's.
+        await this.workflows?.install({
+            workspaceId: request.workspaceId,
+            agentId,
+            installationId: made.installationId,
+            moduleKey: asked.moduleKey,
+        })
         return outcome
     }
 
@@ -166,12 +176,15 @@ export class AgentInstanceCreationService {
     private async undone(
         principalId: string,
         workspaceId: string,
-        made: { readonly installationId: string; readonly created: boolean },
+        made: CreatedInstallation,
     ): Promise<void> {
         if (!made.created) return
         try {
             await this.removal.remove(principalId, workspaceId, made.installationId)
-            this.logger.warn(AgentInstancesLogEvent.CreationUndone, { workspaceId, installationId: made.installationId })
+            this.logger.warn(AgentInstancesLogEvent.CreationUndone, {
+                workspaceId,
+                installationId: made.installationId,
+            })
         } catch (cause) {
             this.logger.error(AgentInstancesLogEvent.CreationUndoFailed, cause, {
                 workspaceId,

@@ -1,6 +1,5 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { IsBoolean, IsIn, IsOptional, IsUUID, MaxLength } from "class-validator"
-import { NullAsAbsent } from "@modules/platform/graphql"
+import { IsBoolean, IsUUID, MaxLength } from "class-validator"
 
 @InputType()
 /** Which customer's care opt-out to read. */
@@ -28,19 +27,11 @@ export class SetCareOptOutInput {
 }
 
 @InputType()
-/** Which held conversation to hand back, and which hold. */
+/** Which conversation to hand back to the agents. The conversation is named by its route (the `routeId` of the chat the workbench reads). */
 export class ReleaseConversationInput {
-    /** The conversation. */
+    /** The route of the conversation: the engine's id of the person on the entrance, the `routeId` of the chat. */
     @Field(() => ID)
     @IsUUID("4")
     @MaxLength(36)
     conversationId!: string
-
-    /** person (a person's take-over), agent (an agent's consult hold) or both; absent is both. */
-    @Field(() => String, { nullable: true })
-    @NullAsAbsent()
-    @IsOptional()
-    @IsIn(["person", "agent", "both"])
-    @MaxLength(10)
-    hold?: string
 }

@@ -1,2 +1,2 @@
-/** The memory of customers needs no options: it reads and writes the `agent.lead-memory` entity through the entity engine. */
+/** The memory of customers needs no options: it reads and writes the contacts' memory table through its store. */
 export type LeadMemoryOptions = Record<never, never>

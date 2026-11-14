@@ -13,8 +13,7 @@ import {
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 import { mutate } from "@/modules/viewer-cache"
-import { daysUntil } from "./lobby.shared"
-import type { LobbyWorkspace } from "./lobby.shared"
+import { daysUntil, type LobbyWorkspace } from "./lobby.shared"
 
 /** The lobby's commands on one workspace. Each toasts its outcome (a failure with the back end words) and answers whether it worked. */
 export interface LobbyCommands {

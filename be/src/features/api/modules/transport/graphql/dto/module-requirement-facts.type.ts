@@ -7,7 +7,7 @@ export class ModuleRequirementFactsType {
     @Field(() => [String])
     providers!: ReadonlyArray<string>
 
-    /** How many active chat agents (chatbot, booking) the workspace has. */
+    /** How many active chat agents the workspace has. */
     @Field(() => Int)
     chatAgents!: number
 

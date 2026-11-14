@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { ChatConversationsService } from "@modules/domain/chat-records"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    connectionAttentionOf,
+    type ConnectionActor,
+    type ConnectionRecord,
+} from "@modules/domain/connections"
 import { zaloFailureOf } from "@modules/integrations/zalo"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import { InjectZaloInboxReads } from "./channels.decorators"
 import type { ZaloInboxReads } from "./channels.port"
@@ -18,9 +21,6 @@ import { checksOf, maskTail, recipientsOf, sendBlockOf, tokenUsable, tokenViewOf
 import { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { znsRenewalOf } from "./zns-renewal.policy"
-
-/** The channel of the conversations this page lists. */
-const ZALO_CHANNEL = "zalo"
 
 /** The most recipients the page lists. */
 const RECIPIENTS_MAX = 40
@@ -46,7 +46,6 @@ export class ZaloPageService {
         private readonly credentials: ZaloCredentialsService,
         private readonly delivery: ChannelDeliveryService,
         @InjectZaloInboxReads() private readonly inboxReads: ZaloInboxReads,
-        private readonly conversations: ChatConversationsService,
     ) {}
 
     /** The page of a Zalo connection (owner or manager). */
@@ -80,7 +79,7 @@ export class ZaloPageService {
         const connection = await this.zaloOf(actor, connectionId)
         const body = text.trim()
         if (body.length === 0 || body.length > TEXT_MAX) invalid("text")
-        const recipients = await this.recipientsOf(actor.workspaceId, connection.id)
+        const recipients = await this.recipientsOf(connection.id)
         if (!recipients.some((one) => one.userId === recipientId)) invalid("recipientId")
         return this.delivery
             .sendToPerson({
@@ -109,7 +108,7 @@ export class ZaloPageService {
         const loaded = await this.tokenOf(connection)
         const secret = loaded.secret
         const [recipients, inbox, agentIds] = await Promise.all([
-            this.recipientsOf(actor.workspaceId, connection.id),
+            this.recipientsOf(connection.id),
             this.inboxReads.factsOf(connection.id),
             this.connections.agentIds(actor.workspaceId, connection.id),
         ])
@@ -121,6 +120,7 @@ export class ZaloPageService {
             name: connection.name,
             status: connection.status,
             healthy: connection.status === "connected" && tokenUsable(token),
+            attention: connectionAttentionOf(connection),
             oaId: connection.meta.oa_id ?? "",
             appId: secret?.appId ?? connection.meta.app_id ?? "",
             appSecretMask: maskTail(secret?.appSecret ?? ""),
@@ -136,16 +136,9 @@ export class ZaloPageService {
         }
     }
 
-    private async recipientsOf(workspaceId: string, connectionId: string) {
+    private async recipientsOf(connectionId: string) {
         const since = new Date(this.clock.now().getTime() - ZALO_FREE_WINDOW_MS)
-        return recipientsOf(
-            await this.conversations.followersOn(workspaceId, {
-                channel: ZALO_CHANNEL,
-                connectionId,
-                since,
-                limit: RECIPIENTS_MAX,
-            }),
-        )
+        return recipientsOf(await this.inboxReads.writersSince(connectionId, since, RECIPIENTS_MAX))
     }
 
     private async tokenOf(connection: ConnectionRecord) {

@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition, type ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
@@ -11,7 +10,7 @@ import { rightsPort } from "../../platform/ports"
 import { AGENT_NAME, SALES_APPROVE, SALES_MANAGE } from "../constants"
 import { salesLeads, salesOrders, salesSettings } from "../ports"
 import { CONFLICT, refusedWith, waitsForOwnerResult, writeRefusal } from "../refusals"
-import { leadRowOf, orderRowOf } from "../sales-records"
+import { LEAD_FIELDS, leadOfContact, leadRowOf, orderRowOf } from "../sales-records"
 import type { OrderIdInput } from "../sales.types"
 import { settingsOf } from "../settings-store"
 
@@ -54,7 +53,7 @@ export const confirmOrderRun = async (
         confirmedAt: context.now.toISOString(),
     })
     if (!written.ok) return writeRefusal(written)
-    const record = order.leadId === null ? null : await leads.get(order.leadId)
+    const record = await leadOfContact(leads, order.contactId, LEAD_FIELDS)
     const lead = record === null ? null : leadRowOf(record)
     if (lead !== null) {
         const stage = stageAfterConfirm(lead.stage)
@@ -85,15 +84,15 @@ export const confirmOrderAction: ActionDefinition = defineAction({
     transactional: true,
     run: (ports, given, context) => confirmOrderRun(ports, given, context),
     refreshes: [
-        "sales.orders",
-        "sales.order-counts",
-        "sales.order",
-        "sales.orders-waiting",
-        "sales.attention",
-        "sales.decisions",
-        "sales.figures",
-        "sales.leads",
-        "sales.lead-counts",
-        "sales.lead",
+        "blocks-core.sales.api.order.list",
+        "blocks-core.sales.api.order.counts",
+        "blocks-core.sales.api.order.get",
+        "blocks-core.sales.api.order.waiting",
+        "blocks-core.sales.api.lead.attention",
+        "blocks-core.sales.api.order.decisions",
+        "blocks-core.sales.api.order.figures",
+        "blocks-core.sales.api.lead.list",
+        "blocks-core.sales.api.lead.counts",
+        "blocks-core.sales.api.lead.get",
     ],
 })

@@ -1,6 +1,5 @@
 import { mock } from "@starci/jest-preset"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
 import type { ListPage, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 
 /** The scope every spec of the graph store runs in. */
@@ -14,17 +13,18 @@ export const wireScope = (engine: ReturnType<typeof mock<EntityEngineService>>):
 
 const STAMP = "2026-11-01T01:00:00.000Z"
 
-const rowOf = (id: string, data: RecordRow["data"]): RecordRow => ({
+/** A stored row of one of the graph tables: its members at the top, as a TypeORM entity holds them; `over` may set any value. */
+const rowOf = (id: string, members: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> => ({
     id,
     workspaceId: "ws-1",
-    version: "4",
+    version: 4,
     createdAt: STAMP,
     updatedAt: STAMP,
-    data,
+    ...members,
 })
 
-/** The engine's row of a graph. */
-export const graphEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
+/** The stored row of a graph (public.agent_graphs). */
+export const graphRow = (over: Readonly<Record<string, unknown>> = {}): Readonly<Record<string, unknown>> =>
     rowOf("graph-1", {
         agentId: "agent-1",
         installationId: "inst-1",
@@ -34,11 +34,11 @@ export const graphEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
         mode: "enforced",
         modeSetBy: null,
         modeSetAt: null,
-        ...data,
+        ...over,
     })
 
-/** The engine's row of a version. */
-export const versionEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
+/** The stored row of a version (public.agent_graph_versions). */
+export const versionRow = (over: Readonly<Record<string, unknown>> = {}): Readonly<Record<string, unknown>> =>
     rowOf("version-1", {
         agentId: "agent-1",
         number: 2,
@@ -49,11 +49,11 @@ export const versionEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
         note: "",
         publishedBy: "member-1",
         publishedAt: STAMP,
-        ...data,
+        ...over,
     })
 
-/** The engine's row of a source. */
-export const sourceEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
+/** The stored row of a source (public.agent_graph_sources). */
+export const sourceRow = (over: Readonly<Record<string, unknown>> = {}): Readonly<Record<string, unknown>> =>
     rowOf("source-1", {
         versionId: "version-1",
         agentId: "agent-1",
@@ -62,11 +62,11 @@ export const sourceEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
         kind: "brain",
         ref: "fact-1",
         valueHash: "hash",
-        ...data,
+        ...over,
     })
 
-/** The engine's row of a proposal. */
-export const proposalEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
+/** The stored row of a proposal (public.agent_graph_proposals). */
+export const proposalRow = (over: Readonly<Record<string, unknown>> = {}): Readonly<Record<string, unknown>> =>
     rowOf("p1", {
         agentId: "agent-1",
         kind: "learned",
@@ -77,32 +77,7 @@ export const proposalEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
         patch: { signal: "trust", amounts: [1] },
         widens: false,
         evidence: { ids: ["d0"] },
-        ...data,
-    })
-
-/** The engine's row of a decision. */
-export const decisionEngineRow = (data: RecordRow["data"] = {}): RecordRow =>
-    rowOf("decision-1", {
-        agentId: "agent-1",
-        workItemId: "item-9",
-        road: "work",
-        mode: "enforced",
-        gateVerdict: "ask",
-        unread: { keys: [] },
-        unjudged: null,
-        subjectType: null,
-        subjectId: null,
-        versionId: "version-1",
-        wakeId: null,
-        action: "pay_supplier",
-        path: { keys: ["decide", "middle"] },
-        facts: { "supplier_payment.amount_vnd": 7_200_000 },
-        branchKey: "middle",
-        outcome: "ask",
-        approvalRequestId: "request-1",
-        closedAs: null,
-        shadowDiff: false,
-        ...data,
+        ...over,
     })
 
 /** A page of the engine's list answer. */

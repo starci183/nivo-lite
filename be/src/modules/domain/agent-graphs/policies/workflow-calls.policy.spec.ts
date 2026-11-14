@@ -22,7 +22,7 @@ const graphOf = (extra: Partial<GraphSpec> = {}): GraphSpec => ({
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["agent"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [],
     ...extra,
 })
@@ -89,15 +89,17 @@ describe("callContractProblems: the target", () => {
         const old = graphOf({ contract: contractOf({ name: "leadId", type: "string", required: true }) })
         const target = callable({ versions: new Map([[1, old]]) })
 
-        expect(subject.callContractProblems(SAVER, graphOf({ nodes: [callNode(COVERING, { version: 9 })] }), [target])).toEqual([
-            { code: "CALL_VERSION_UNKNOWN", at: "hand" },
-        ])
         expect(
-            subject.callContractProblems(SAVER, graphOf({ nodes: [callNode({ leadId: "l-1" }, { version: 1 })] }), [target]),
+            subject.callContractProblems(SAVER, graphOf({ nodes: [callNode(COVERING, { version: 9 })] }), [target]),
+        ).toEqual([{ code: "CALL_VERSION_UNKNOWN", at: "hand" }])
+        expect(
+            subject.callContractProblems(SAVER, graphOf({ nodes: [callNode({ leadId: "l-1" }, { version: 1 })] }), [
+                target,
+            ]),
         ).toEqual([])
-        expect(subject.callContractProblems(SAVER, graphOf({ nodes: [callNode(COVERING, { version: 1 })] }), [target])).toEqual([
-            { code: "CALL_INPUT_UNKNOWN", at: "hand.text" },
-        ])
+        expect(
+            subject.callContractProblems(SAVER, graphOf({ nodes: [callNode(COVERING, { version: 1 })] }), [target]),
+        ).toEqual([{ code: "CALL_INPUT_UNKNOWN", at: "hand.text" }])
     })
 
     it("treats a version that is not a number as latest", async () => {
@@ -112,7 +114,9 @@ describe("callContractProblems: the target", () => {
         const closed = callable({ running: graphOf({ contract: CONSULT_CONTRACT, entry: { openTo: "agent" } }) })
         const graph = graphOf({ nodes: [callNode(COVERING)] })
 
-        expect(subject.callContractProblems(SAVER, graph, [closed])).toEqual([{ code: "CALL_ENTRY_CLOSED", at: "hand" }])
+        expect(subject.callContractProblems(SAVER, graph, [closed])).toEqual([
+            { code: "CALL_ENTRY_CLOSED", at: "hand" },
+        ])
         expect(subject.callContractProblems({ ...SAVER, agentId: "agent-sales" }, graph, [closed])).toEqual([])
     })
 
@@ -128,7 +132,6 @@ describe("callContractProblems: the target", () => {
             { code: "CALL_INPUT_UNKNOWN", at: "hand.text" },
         ])
     })
-
 })
 
 describe("callContractProblems: the inputs", () => {
@@ -215,12 +218,12 @@ describe("brokenCallersOf", () => {
             ),
         })
 
-        expect(subject.brokenCallersOf(target, dropped, [caller("Front desk", [callNode({ leadId: "l-1", text: "hi" })])])).toEqual([
-            { name: "Front desk", problems: [{ code: "CALL_INPUT_UNKNOWN", at: "hand.text" }] },
-        ])
-        expect(subject.brokenCallersOf(target, retyped, [caller("Front desk", [callNode({ leadId: 7, text: 5 })])])).toEqual([
-            { name: "Front desk", problems: [{ code: "CALL_INPUT_TYPE", at: "hand.text" }] },
-        ])
+        expect(
+            subject.brokenCallersOf(target, dropped, [caller("Front desk", [callNode({ leadId: "l-1", text: "hi" })])]),
+        ).toEqual([{ name: "Front desk", problems: [{ code: "CALL_INPUT_UNKNOWN", at: "hand.text" }] }])
+        expect(
+            subject.brokenCallersOf(target, retyped, [caller("Front desk", [callNode({ leadId: 7, text: 5 })])]),
+        ).toEqual([{ name: "Front desk", problems: [{ code: "CALL_INPUT_TYPE", at: "hand.text" }] }])
     })
 
     it("does not break a caller pinned to a number, nor one that calls another workflow", async () => {
@@ -240,7 +243,9 @@ describe("brokenCallersOf", () => {
         expect(subject.brokenCallersOf(target, next, [caller("Front desk", [callNode(COVERING)])])).toEqual([
             { name: "Front desk", problems: [{ code: "CALL_ENTRY_CLOSED", at: "hand" }] },
         ])
-        expect(subject.brokenCallersOf(target, next, [caller("After sale", [callNode(COVERING)], "agent-sales")])).toEqual([])
+        expect(
+            subject.brokenCallersOf(target, next, [caller("After sale", [callNode(COVERING)], "agent-sales")]),
+        ).toEqual([])
     })
 
     it("judges only the latest hand-offs of a caller that also pins a number", async () => {

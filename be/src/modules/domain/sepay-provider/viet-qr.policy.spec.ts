@@ -19,7 +19,7 @@ describe("viet-qr policy > vietQrUrl", () => {
         const subject = await buildSubject()
 
         expect(subject.vietQrUrl(account, 1500000, "HD2026001")).toBe(
-            "https://qr.sepay.vn/img?acc=0123456789&bank=VCB&amount=1500000&des=HD2026001&template=compact",
+            "https://vietqr.app/img?acc=0123456789&bank=VCB&amount=1500000&des=HD2026001&template=compact",
         )
     })
 
@@ -28,7 +28,7 @@ describe("viet-qr policy > vietQrUrl", () => {
 
         const url = subject.vietQrUrl({ accountNumber: "0123456789", bankCode: "MB" }, null, "HD1")
 
-        expect(url).toBe("https://qr.sepay.vn/img?acc=0123456789&bank=MB&des=HD1&template=compact")
+        expect(url).toBe("https://vietqr.app/img?acc=0123456789&bank=MB&des=HD1&template=compact")
         expect(new URL(url).searchParams.has("amount")).toBe(false)
     })
 
@@ -41,14 +41,14 @@ describe("viet-qr policy > vietQrUrl", () => {
         expect(url.search).not.toContain("NGUYEN")
     })
 
-    it("encodes the content so spaces, ampersands, accents and equals signs survive the round trip", async () => {
+    it("encodes the content so spaces (%20 as the docs' own examples write them), ampersands, accents and equals signs survive the round trip", async () => {
         const subject = await buildSubject()
         const content = "Gia h\u1EA1n H\u0110 #12 & ph\u00ED=50%"
 
         const url = subject.vietQrUrl(account, 100, content)
 
         expect(url).not.toContain(" ")
-        expect(url).toContain("des=Gia+h%E1%BA%A1n+H%C4%90+%2312+%26+ph%C3%AD%3D50%25&template=compact")
+        expect(url).toContain("des=Gia%20h%E1%BA%A1n%20H%C4%90%20%2312%20%26%20ph%C3%AD%3D50%25&template=compact")
         expect(new URL(url).searchParams.get("des")).toBe(content)
         expect([...new URL(url).searchParams.keys()]).toEqual(["acc", "bank", "amount", "des", "template"])
     })
@@ -57,7 +57,7 @@ describe("viet-qr policy > vietQrUrl", () => {
         const subject = await buildSubject()
 
         expect(subject.vietQrUrl({ accountNumber: "0123", bankCode: "MB" }, 990000, "NIVO8F3K2")).toBe(
-            "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=990000&des=NIVO8F3K2&template=compact",
+            "https://vietqr.app/img?acc=0123&bank=MB&amount=990000&des=NIVO8F3K2&template=compact",
         )
     })
 })

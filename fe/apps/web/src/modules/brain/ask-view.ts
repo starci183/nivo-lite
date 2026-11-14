@@ -1,10 +1,8 @@
 import type { useTranslations } from "next-intl"
-import { isAgentModule } from "@/modules/documents"
-import type { RetrievedPassage } from "@/modules/documents"
+import { isAgentModule, type RetrievedPassage } from "@/modules/documents"
 import { knowledgeSourceHref, workspaceHref } from "@/modules/routes"
 import type { AskAgentOption, AskPassageView, AskSeesView, PaneGridLayout } from "@/modules/types"
-import { LENS_LANES } from "./lenses"
-import type { AgentLens } from "./lenses"
+import { LENS_LANES, type AgentLens } from "./lenses"
 
 type KnowledgeTranslate = ReturnType<typeof useTranslations<"knowledge">>
 type BrainTranslate = ReturnType<typeof useTranslations<"secondBrain">>

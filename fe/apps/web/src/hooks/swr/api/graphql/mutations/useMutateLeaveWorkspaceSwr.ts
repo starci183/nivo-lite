@@ -1,11 +1,9 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateLeaveWorkspace } from "@/modules/api/graphql/mutations/mutation-leave-workspace"
 import { answeredData } from "@/hooks/workspaceread"
-import { GraphQLHeadersKey } from "@/modules/api"
-import type { LeaveWorkspaceMutation } from "@/modules/api"
+import { GraphQLHeadersKey, type LeaveWorkspaceMutation } from "@/modules/api"
 
 /** The SWR key of the leaveWorkspace mutation. */
 export const MUTATE_LEAVE_WORKSPACE_SWR_KEY = "MUTATE_LEAVE_WORKSPACE_SWR"

@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentTriggersService, AgentWakeService } from "@modules/domain/agent-work"
+import { AgentTriggersService } from "@modules/domain/agent-work"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectQueueSchedules } from "@modules/platform/queue"
-import type { QueueSchedules } from "@modules/platform/queue"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectQueueSchedules, type QueueSchedules } from "@modules/platform/queue"
 import {
     AGENT_SCHEDULE_FIRE_QUEUE,
     agentTriggerSchedulerId,
@@ -14,11 +12,12 @@ import {
 import { AgentSchedulesError, AgentSchedulesErrorCode } from "./errors/agent-schedules.error"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
+import { ClockTickDeliveryService } from "./clock-tick-delivery.service"
 
 @Injectable()
 /**
- * What one slot of a trigger does: it enters the one road as a `schedule` wake keyed by `<triggerId>:<slot>`, so the dedupe holds even
- * when the sweep and Redis both name the same slot. A trigger that is gone or off removes its own scheduler, and one whose work is
+ * What one slot of a trigger does: it is delivered through the one event pipeline (the clock's declared trigger, once-key
+ * `<triggerId>:<slot>`), so the dedupe holds even when the sweep and Redis both name the same slot. A trigger that is gone or off removes its own scheduler, and one whose work is
  * switched off is made to agree with that, so a quiet agent keeps nothing in Redis.
  */
 export class AgentScheduleFireService {
@@ -27,7 +26,7 @@ export class AgentScheduleFireService {
         @InjectQueueSchedules() private readonly schedules: QueueSchedules,
         @InjectLogger() private readonly logger: Logger,
         private readonly triggers: AgentTriggersService,
-        private readonly wakes: AgentWakeService,
+        private readonly clockTicks: ClockTickDeliveryService,
         private readonly sync: AgentTriggerSyncService,
     ) {}
 
@@ -56,18 +55,7 @@ export class AgentScheduleFireService {
         }
         const next = await this.schedules.nextOf(AGENT_SCHEDULE_FIRE_QUEUE, agentTriggerSchedulerId(trigger.id))
         await this.entityManager.transaction(async (tx) => {
-            await this.wakes.wake(tx, {
-                workspaceId: payload.workspaceId,
-                agentId: trigger.agentId,
-                source: "schedule",
-                eventKey: `${trigger.id}:${slot}`,
-                context: {
-                    triggerId: trigger.id,
-                    slot,
-                    ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
-                },
-                actorMemberId: null,
-            })
+            await this.clockTicks.deliverSlot(tx, payload.workspaceId, trigger, slot, null)
             await this.triggers.recordFire(tx, trigger.id, new Date(Number(slot)), next)
         })
         return true
@@ -85,21 +73,9 @@ export class AgentScheduleFireService {
         if (trigger.nextRunAt?.getTime() !== slot.getTime()) return "not_scheduled"
         if (!(await this.sync.workIsOn(workspaceId, trigger.agentId))) return "not_scheduled"
         const key = String(slot.getTime())
-        const written = await this.entityManager.transaction((tx) =>
-            this.wakes.wake(tx, {
-                workspaceId,
-                agentId: trigger.agentId,
-                source: "schedule",
-                eventKey: `${trigger.id}:${key}`,
-                context: {
-                    triggerId: trigger.id,
-                    slot: key,
-                    ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
-                },
-                actorMemberId: memberId,
-            }),
-        )
-        return written ? "woken" : "already_ran"
+        const delivered = await this.entityManager.transaction((tx) => this.clockTicks.deliverSlot(tx, workspaceId, trigger, key, memberId))
+        if (delivered === "untaken") return "not_scheduled"
+        return delivered
     }
 }
 

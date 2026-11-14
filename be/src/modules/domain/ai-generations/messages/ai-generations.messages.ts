@@ -49,7 +49,7 @@ export const AI_GENERATIONS_MESSAGES: MessageBundle = {
         "guide.page.brain.how":
             "Mở Bộ não > Xem tab Cần duyệt: áp dụng hoặc từ chối theo gợi ý của NIVO > Tab Sự thật: Thêm sự thật hoặc Giá trị mới",
         "guide.page.modules.title": "Agent",
-        "guide.page.modules.what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…",
+        "guide.page.modules.what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Đặt lịch, Tuyển dụng…",
         "guide.page.modules.how": "Mở Agent > Chọn agent cần dùng và bấm Cài > Làm theo các bước thiết lập",
         "guide.page.team.title": "Đội ngũ",
         "guide.page.team.what": "Mời người vào workspace và chọn vai trò: Chủ sở hữu, Quản lý, Nhân viên.",
@@ -59,7 +59,7 @@ export const AI_GENERATIONS_MESSAGES: MessageBundle = {
         "guide.page.connections.what": "Nối NIVO với ngân hàng, Telegram, Zalo OA, email, Google Sheets, n8n.",
         "guide.page.connections.how": "Mở Kết nối > Chọn dịch vụ và bấm Thêm kết nối > Làm theo hướng dẫn từng bước",
         "guide.page.connections.sepay.title": "Kết nối SePay (tiền về)",
-        "guide.page.connections.sepay.what": "Tiền vào tài khoản ngân hàng được báo cho agent Kế toán để đối soát.",
+        "guide.page.connections.sepay.what": "Tiền vào tài khoản ngân hàng được báo cho agent Bán hàng để đối soát.",
         "guide.page.connections.sepay.how":
             "Mở Kết nối › Nguồn tiền về (SePay) › Thêm kết nối > Chọn Thử nghiệm trước, nhập ngân hàng và số tài khoản > Dán URL nhận webhook và API Key sang trang Webhook của SePay > Gửi một giao dịch thử 2.000đ từ SePay để kiểm tra kết nối (môi trường thử — không ghi sổ)",
         "guide.page.connections.telegram.title": "Kết nối bot Telegram",
@@ -156,7 +156,7 @@ export const AI_GENERATIONS_MESSAGES: MessageBundle = {
         "guide.page.brain.how":
             "Open Brain > Check To review: apply or reject as NIVO suggests > Facts tab: Add fact or New value",
         "guide.page.modules.title": "Agents",
-        "guide.page.modules.what": "Install and set up agents: Chatbot, Sales, Accounting, Booking, Inventory, Hiring…",
+        "guide.page.modules.what": "Install and set up agents: Chatbot, Sales, Booking, Hiring…",
         "guide.page.modules.how": "Open Agents > Pick an agent and install it > Follow the setup steps",
         "guide.page.team.title": "Team",
         "guide.page.team.what": "Invite people to the workspace and choose their role: Owner, Manager, Staff.",
@@ -167,7 +167,7 @@ export const AI_GENERATIONS_MESSAGES: MessageBundle = {
         "guide.page.connections.how": "Open Connections > Pick a service and press Add connection > Follow the steps",
         "guide.page.connections.sepay.title": "SePay bank feed",
         "guide.page.connections.sepay.what":
-            "Money arriving in your bank account reaches the Accounting agent for matching.",
+            "Money arriving in your bank account reaches the Sales agent for matching.",
         "guide.page.connections.sepay.how":
             "Open Connections › SePay › Add connection > Start in Test mode, enter the bank and account > Paste the webhook URL and API key into SePay's Webhook page > Send a 2,000 VND test transfer from SePay to check the connection (test mode — nothing is booked)",
         "guide.page.connections.telegram.title": "Telegram bot",

@@ -1,17 +1,62 @@
+import { builder } from "@starci/jest-preset"
+import { Test } from "@nestjs/testing"
+import {
+    ANSWER_PENDING_ORDER_VI,
+    ANSWER_RECORD_VI,
+    ANSWER_REFUND_VI,
+    CONTACTS_MASKED_VI,
+    CONTACTS_RAW_VI,
+    DONG_VI,
+    LINE_IGNORE_INSTRUCTIONS_VI,
+    NAMES_NO_CUSTOMER_VI,
+    NAMES_ORDER_CODE_VI,
+    PRICE_30K_VI,
+    REASON_CONTRADICTION_PART_VI,
+    REASON_LEARNED_VI,
+    RULE_DELIVERY_FEE_VI,
+    RULE_PAID_TWICE_VI,
+    RULE_VAT_FEE_VI,
+    TEXT_SNAKE_KEY_VI,
+    TEXT_TOOL_ID_VI,
+    TOPIC_WRONG_CODE_VI,
+    WORDS_RECORD_VI,
+} from "@tests/fixtures/i18n/brain-lessons-spec.messages"
 import type { LessonCandidate } from "./lesson-candidates.contracts"
 import {
     contradictionReasonOf,
-    groupOf,
     learnedReasonOf,
-    lessonWordsOf,
+    lessonTextOk,
+    lessonValueOf,
     maskedOf,
     namesCustomerData,
-    sameAnswer,
-    sameGap,
-    withinWords,
+    namesInternalIds,
+    onlyIdentifiers,
 } from "./lesson-candidates.policy"
 
-const candidateOf = (over: Partial<LessonCandidate>): LessonCandidate => ({
+const SUBJECT = Symbol("lesson-candidates.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: {
+                    contradictionReasonOf,
+                    learnedReasonOf,
+                    lessonTextOk,
+                    lessonValueOf,
+                    maskedOf,
+                    namesCustomerData,
+                    namesInternalIds,
+                    onlyIdentifiers,
+                },
+            },
+        ],
+    }).compile()
+    return moduleRef.get<typeof import("./lesson-candidates.policy")>(SUBJECT)
+}
+
+const candidateOf = builder<LessonCandidate>({
     id: "c1",
     stopId: "s1",
     runId: "r1",
@@ -19,8 +64,7 @@ const candidateOf = (over: Partial<LessonCandidate>): LessonCandidate => ({
     workflowId: "w1",
     stepKey: "match",
     question: "",
-    keywords: [],
-    answer: "Ghi nhận cho đơn đang chờ",
+    answer: ANSWER_PENDING_ORDER_VI,
     answeredBy: "m1",
     answeredAt: "2026-11-10T09:00:00.000Z",
     thenDid: "completed",
@@ -30,53 +74,76 @@ const candidateOf = (over: Partial<LessonCandidate>): LessonCandidate => ({
     changeId: null,
     factKey: null,
     factId: null,
-    ...over,
 })
 
 describe("lesson candidates policy", () => {
-    it("words of a question leave out codes and amounts, so two wrong-code stops are the same gap", () => {
-        const first = lessonWordsOf("Chuyển khoản 3.000 với mã DH202611109999 không khớp đơn nào, có ghi nhận không?")
-        const second = lessonWordsOf("Chuyển khoản 5.000 với mã DH202611118888 không khớp đơn nào, có ghi nhận không?")
+    it("exports no reading of words: grouping, agreement and the draft check are the draft call's (lesson-groups.policy)", async () => {
+        const subject = await build()
 
-        expect(first.some((word) => /\d/.test(word))).toBe(false)
-        expect(sameGap(first, second)).toBe(true)
-        expect(sameGap(first, lessonWordsOf("Khách hỏi giao hàng ra Phú Quốc mất mấy ngày?"))).toBe(false)
-        expect(sameGap([], [])).toBe(true)
+        expect(Object.keys(subject).toSorted()).toEqual([
+            "contradictionReasonOf",
+            "learnedReasonOf",
+            "lessonTextOk",
+            "lessonValueOf",
+            "maskedOf",
+            "namesCustomerData",
+            "namesInternalIds",
+            "onlyIdentifiers",
+        ])
     })
 
-    it("joins the nearest recent candidate's group, or none", () => {
-        const words = lessonWordsOf("chuyển khoản sai mã ghi nhận")
-        const recent = [candidateOf({ groupId: "g9", keywords: lessonWordsOf("giao hàng Phú Quốc") }), candidateOf({ keywords: words })]
+    describe("masking and drafted words", () => {
+        it("masks phones and e-mails and spots customer data in a drafted truth", async () => {
+            const subject = await build()
 
-        expect(groupOf(recent, words)).toBe("g1")
-        expect(groupOf([], words)).toBeNull()
+            expect(subject.maskedOf(CONTACTS_RAW_VI, 200)).toBe(CONTACTS_MASKED_VI)
+            expect(subject.namesCustomerData(NAMES_ORDER_CODE_VI)).toBe(true)
+            expect(subject.namesCustomerData(NAMES_NO_CUSTOMER_VI)).toBe(false)
+        })
+
+        it("writes the reasons in plain Vietnamese", async () => {
+            const subject = await build()
+            const older = candidateOf({ answer: ANSWER_RECORD_VI })
+            const newer = candidateOf({ answer: ANSWER_REFUND_VI, answeredAt: "2026-11-11T09:00:00.000Z" })
+
+            expect(subject.learnedReasonOf(TOPIC_WRONG_CODE_VI, [older, older])).toBe(REASON_LEARNED_VI)
+            expect(subject.contradictionReasonOf(TOPIC_WRONG_CODE_VI, [older, newer], older, newer)).toContain(
+                REASON_CONTRADICTION_PART_VI,
+            )
+        })
     })
+})
 
-    it("masks phones and e-mails and spots customer data in a drafted truth", () => {
-        expect(maskedOf("Gọi 0912.345.678 hoặc +84 912 345 678, mail an@shop.vn", 200)).toBe("Gọi … hoặc …, mail …")
-        expect(namesCustomerData("đơn DH202611109999")).toBe(true)
-        expect(namesCustomerData("ghi nhận cho đơn đang chờ, tối đa 3.000 ₫")).toBe(false)
-    })
+describe("lesson candidates policy: what a lesson may say", () => {
+    describe("D-MX-8: what a lesson may say", () => {
+        it("(b): engine identifiers are no shop words; a text of identifiers only is refused", async () => {
+            const subject = await build()
 
-    it("tells answers that say the same from answers that differ", () => {
-        expect(sameAnswer("Ghi nhận cho đơn đang chờ nhé", "Cứ ghi nhận cho đơn đang chờ")).toBe(true)
-        expect(sameAnswer("Ghi nhận cho đơn đang chờ", "Hoàn tiền cho khách")).toBe(false)
-    })
+            expect(subject.namesInternalIds(TEXT_TOOL_ID_VI)).toBe(true)
+            expect(subject.namesInternalIds(TEXT_SNAKE_KEY_VI)).toBe(true)
+            expect(subject.namesInternalIds("run 1aaedeaf-0000-4000-8000-000000000000")).toBe(true)
+            expect(subject.namesInternalIds("xem brain-change:96380be6")).toBe(true)
+            expect(subject.namesInternalIds(RULE_PAID_TWICE_VI)).toBe(false)
+            expect(subject.lessonTextOk("nivo.tool.payment.transfer.create")).toBe(false)
+            expect(subject.lessonTextOk(RULE_DELIVERY_FEE_VI)).toBe(true)
+            // No code decides that a text addresses an AI: such a line is words like any other here.
+            expect(subject.lessonTextOk(LINE_IGNORE_INSTRUCTIONS_VI)).toBe(true)
+        })
 
-    it("a drafted value stays within the person's words", () => {
-        expect(withinWords("ghi nhận cho đơn đang chờ", ["Cứ ghi nhận cho đơn đang chờ đi"])).toBe(true)
-        expect(withinWords("hoàn tiền gấp đôi", ["Cứ ghi nhận cho đơn đang chờ đi"])).toBe(false)
-    })
+        it("(c): a drafted value goes through the store's one value + unit form", async () => {
+            const subject = await build()
 
-    it("writes the reasons in plain Vietnamese", () => {
-        const older = candidateOf({ answer: "Ghi nhận" })
-        const newer = candidateOf({ answer: "Hoàn tiền", answeredAt: "2026-11-11T09:00:00.000Z" })
-
-        expect(learnedReasonOf("chuyển khoản sai mã", [older, older])).toBe(
-            "Đã hỏi chủ tiệm 2 lần về chuyển khoản sai mã; chủ tiệm trả lời: 'Ghi nhận'; đề nghị ghi thành quy định để lần sau tự xử lý.",
-        )
-        expect(contradictionReasonOf("chuyển khoản sai mã", [older, newer], older, newer)).toContain(
-            "hai câu trả lời khác nhau: 'Ghi nhận' (10/11) và 'Hoàn tiền' (11/11)",
-        )
+            expect(subject.lessonValueOf({ value: RULE_PAID_TWICE_VI, unit: DONG_VI })).toEqual({
+                value: RULE_PAID_TWICE_VI,
+                unit: null,
+            })
+            expect(subject.lessonValueOf({ value: RULE_VAT_FEE_VI, unit: "%" })).toEqual({
+                value: `${RULE_VAT_FEE_VI} %`,
+                unit: null,
+            })
+            expect(subject.lessonValueOf({ value: "30.000", unit: DONG_VI })).toEqual({ value: "30.000", unit: DONG_VI })
+            expect(subject.lessonValueOf({ value: PRICE_30K_VI, unit: DONG_VI })).toEqual({ value: PRICE_30K_VI, unit: DONG_VI })
+            expect(subject.lessonValueOf({ value: WORDS_RECORD_VI, unit: null })).toEqual({ value: WORDS_RECORD_VI, unit: null })
+        })
     })
 })

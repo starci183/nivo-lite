@@ -5,10 +5,11 @@ import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AiService } from "./ai.service"
-import type { AiChatRequest, AiRunner } from "./ai.contracts"
+import type { AiChatModel, AiChatRequest, AiRunner } from "./ai.contracts"
 import { AI_OPTIONS, AI_RUNNER } from "./ai.decorators"
 import { AiLogEvent } from "./ai.log-events"
 import type { AiOptions } from "./ai.options"
+import { SHORT_REPLY_VI } from "@tests/fixtures/i18n/ai-spec.messages"
 
 const defaults: AiOptions = {
     gatewayUrl: "http://localhost:3212/v1",
@@ -100,7 +101,12 @@ describe("AiService chat", () => {
         const { client, runner } = await build(true)
         runner.chat.mockResolvedValue(
             reply("  hello  ", {
-                usageMetadata: { input_tokens: 12, output_tokens: 5, total_tokens: 17, input_token_details: { cache_read: 8 } },
+                usageMetadata: {
+                    input_tokens: 12,
+                    output_tokens: 5,
+                    total_tokens: 17,
+                    input_token_details: { cache_read: 8 },
+                },
                 responseMetadata: { model_name: MODEL, usage: { cost: 0.0002 } },
                 retrieved: 2,
             }),
@@ -110,7 +116,14 @@ describe("AiService chat", () => {
             text: "hello",
             parsed: null,
             model: MODEL,
-            usage: { promptTokens: 12, completionTokens: 5, totalTokens: 17, costUsd: 0.0002, cachedTokens: 8, reasoningTokens: null },
+            usage: {
+                promptTokens: 12,
+                completionTokens: 5,
+                totalTokens: 17,
+                costUsd: 0.0002,
+                cachedTokens: 8,
+                reasoningTokens: null,
+            },
             retrieved: 2,
             served: { upstream: null, finishReason: null, durationMs: 0 },
         })
@@ -122,7 +135,12 @@ describe("AiService chat", () => {
         runner.chat.mockResolvedValue(
             reply("ok", {
                 provider: "DeepInfra",
-                usageMetadata: { input_tokens: 50, output_tokens: 5, total_tokens: 55, input_token_details: { cache_read: 40 } },
+                usageMetadata: {
+                    input_tokens: 50,
+                    output_tokens: 5,
+                    total_tokens: 55,
+                    input_token_details: { cache_read: 40 },
+                },
             }),
         )
         const head = { role: "system" as const, content: "CRAFT AND TOOLS" }
@@ -138,7 +156,10 @@ describe("AiService chat", () => {
             messages: 2,
             headChars: 15,
         })
-        expect(second?.[1]).toMatchObject({ headDigest: first?.[1]?.headDigest, openingDigest: first?.[1]?.openingDigest })
+        expect(second?.[1]).toMatchObject({
+            headDigest: first?.[1]?.headDigest,
+            openingDigest: first?.[1]?.openingDigest,
+        })
         expect(JSON.stringify(logger.info.mock.calls)).not.toContain("thread")
         expect(JSON.stringify(logger.info.mock.calls)).not.toContain("CRAFT")
     })
@@ -151,6 +172,9 @@ describe("AiService chat", () => {
         await expect(client.chat({ ...ASK, json: true })).resolves.toMatchObject({ parsed: null })
     })
 
+})
+
+describe("AiService chat, the usage and the reasoning of an answer", () => {
     it("reads the token usage of the response metadata and the text blocks of a list content", async () => {
         const { client, runner } = await build(true)
         runner.chat.mockResolvedValue(
@@ -163,7 +187,14 @@ describe("AiService chat", () => {
             expect.objectContaining({
                 text: "ab",
                 model: "work",
-                usage: { promptTokens: 3, completionTokens: 1, totalTokens: 4, costUsd: null, cachedTokens: null, reasoningTokens: null },
+                usage: {
+                    promptTokens: 3,
+                    completionTokens: 1,
+                    totalTokens: 4,
+                    costUsd: null,
+                    cachedTokens: null,
+                    reasoningTokens: null,
+                },
             }),
         )
     })
@@ -188,7 +219,12 @@ describe("AiService chat", () => {
         runner.chat
             .mockResolvedValueOnce(
                 reply("ok", {
-                    usageMetadata: { input_tokens: 50, output_tokens: 900, total_tokens: 950, output_token_details: { reasoning: 870 } },
+                    usageMetadata: {
+                        input_tokens: 50,
+                        output_tokens: 900,
+                        total_tokens: 950,
+                        output_token_details: { reasoning: 870 },
+                    },
                 }),
             )
             .mockResolvedValueOnce(
@@ -208,12 +244,15 @@ describe("AiService chat", () => {
         )
     })
 
+})
+
+describe("AiService chat, the agent turn", () => {
     it("reads the message of an agent turn: what it used and how many tools it called, or the failure it is", async () => {
         const { client, logger } = await build(true)
         const request = { timeoutMs: 90_000, budget: { effort: "low" as const, maxTokens: 4000 } }
         const turn = {
             content: "",
-            tool_calls: [{ name: "nivo.payment.order.settle", args: { orderId: "o-1" }, id: "call_1" }],
+            tool_calls: [{ name: "nivo.tool.payment.order.settle", args: { orderId: "o-1" }, id: "call_1" }],
             usage_metadata: {
                 input_tokens: 8000,
                 output_tokens: 60,
@@ -242,7 +281,14 @@ describe("AiService chat", () => {
         })
         expect(logger.info).toHaveBeenCalledWith(
             "ai.chat.answered",
-            expect.objectContaining({ provider: "Relace", prompt: 8000, cached: 7424, reasoning: 18, toolCalls: 1, agentTurn: true }),
+            expect.objectContaining({
+                provider: "Relace",
+                prompt: 8000,
+                cached: 7424,
+                reasoning: 18,
+                toolCalls: 1,
+                agentTurn: true,
+            }),
         )
         expect(JSON.stringify(logger.info.mock.calls)).not.toContain("o-1")
         // The routing the try asked for is logged beside the upstream that served it; null when it asked for none.
@@ -254,7 +300,9 @@ describe("AiService chat", () => {
         })
         // A turn cut at the token limit, and a turn with neither words nor a tool call, are failures of the AI.
         // FX5: the cut turn still says what it spent (the provider bills the output it produced up to the cap).
-        expect(client.readTurn({ ...turn, response_metadata: { finish_reason: "length" } }, request, 72_000)).toMatchObject({
+        expect(
+            client.readTurn({ ...turn, response_metadata: { finish_reason: "length" } }, request, 72_000),
+        ).toMatchObject({
             ok: false,
             failure: "length",
             spent: {
@@ -264,9 +312,16 @@ describe("AiService chat", () => {
             },
         })
         expect(client.readTurn({ content: "  ", tool_calls: [] }, request)).toEqual({ ok: false, failure: "empty" })
-        expect(client.readTurn({ content: "Dạ", tool_calls: [] }, request)).toMatchObject({ ok: true, textChars: 2, toolCalls: 0 })
+        expect(client.readTurn({ content: SHORT_REPLY_VI, tool_calls: [] }, request)).toMatchObject({
+            ok: true,
+            textChars: 2,
+            toolCalls: 0,
+        })
     })
 
+})
+
+describe("AiService chat, the metering and the failures of a try", () => {
     it("metering: says which upstream served a call, why the model stopped and how long the try took", async () => {
         const { client, runner, logger, clock } = await build(true)
         runner.chat.mockImplementation(() => {
@@ -302,8 +357,8 @@ describe("AiService chat", () => {
 
     it("gives the loop a client per try only when the endpoint is configured, and names what a call that threw failed as", async () => {
         const { client, runner } = await build(true)
-        const model = { made: true }
-        runner.turnModel.mockResolvedValue(model as never)
+        const model = mock<AiChatModel>()
+        runner.turnModel.mockResolvedValue(model)
         const request = { timeoutMs: 45_000, affinity: "ws-1" }
 
         await expect(client.turnModel(request)).resolves.toBe(model)
@@ -314,6 +369,9 @@ describe("AiService chat", () => {
         expect(client.failureOfThrow(Object.assign(new Error("x"), { status: 502 }))).toBe("provider")
     })
 
+})
+
+describe("AiService chat, the answers that give nothing", () => {
     it("says why a try gave no answer: the deadline, a cut answer, an empty one, the provider, no endpoint", async () => {
         const { client, runner, logger } = await build(true)
         const timeout = Object.assign(new Error("deadline"), { name: "TimeoutError" })
@@ -330,7 +388,8 @@ describe("AiService chat", () => {
             failure: "length",
             spent: { served: { finishReason: "length" } },
         })
-        await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "empty" })
+        // An empty answer is a failure that still carries what it spent, so its caller books it (concept.tokens-and-credits).
+        await expect(client.attempt(ASK)).resolves.toMatchObject({ ok: false, failure: "empty", spent: { cap: null } })
         await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "provider" })
         await expect(client.attempt(ASK)).resolves.toMatchObject({ ok: true, answer: { text: "ok" } })
         expect(logger.warn).toHaveBeenCalledWith("ai.chat.cut", expect.objectContaining({ answerChars: 16 }))

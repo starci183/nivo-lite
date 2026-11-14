@@ -190,6 +190,10 @@ export class BrainCritiqueReviewType {
     /** When. */
     @Field(() => String, { nullable: true })
     releasedAt!: string | null
+
+    /** Passages no finished critique has reviewed yet: withheld from customers for that reason until one does (0 = all reviewed). */
+    @Field(() => Int, { defaultValue: 0 })
+    waitingPassages!: number
 }
 
 @ObjectType()
@@ -206,6 +210,18 @@ export class BrainCritiqueServingType {
     /** All passages. */
     @Field(() => Int)
     totalPassages!: number
+
+    /** Of the withheld: passages an open high or medium point quotes; only an answer or a skip frees them, a release does not. */
+    @Field(() => Int, { defaultValue: 0 })
+    heldPassages!: number
+
+    /** Of the withheld: passages no finished critique has read and the founder has not released. */
+    @Field(() => Int, { defaultValue: 0 })
+    unreviewedPassages!: number
+
+    /** Why passages are withheld, as codes: `open_points`, `unreviewed`; empty when everything is served. */
+    @Field(() => [String], { defaultValue: [] })
+    reasons!: ReadonlyArray<string>
 }
 
 @ObjectType()

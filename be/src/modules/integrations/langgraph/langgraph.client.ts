@@ -1,28 +1,27 @@
 import { Command, INTERRUPT, isInterrupted } from "@langchain/langgraph"
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint"
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { LanggraphError, LanggraphErrorCode } from "./errors/langgraph.error"
 import { InjectGraphCheckpoints, InjectLanggraphOptions } from "./langgraph.decorators"
 import { LanggraphLogEvent } from "./langgraph.log-events"
 import type { LanggraphOptions } from "./langgraph.options"
-import { THREAD_CONFIG, THREAD_END } from "./langgraph.port"
-import type {
-    GraphThreads,
-    OptionalThreadView,
-    ReplayPortsOf,
-    ThreadGraph,
-    ThreadLease,
-    ThreadOutcome,
-    ThreadRef,
-    ThreadStart,
-    ThreadView,
+import {
+    THREAD_CONFIG,
+    THREAD_END,
+    type GraphThreads,
+    type OptionalThreadView,
+    type ReplayPortsOf,
+    type ThreadGraph,
+    type ThreadLease,
+    type ThreadOutcome,
+    type ThreadRef,
+    type ThreadStart,
+    type ThreadView,
 } from "./langgraph.port"
 import { requirePlain } from "./plain.policy"
 import { replayPortsOf } from "./replay-ports.adapter"
-import { compiledOf } from "./thread-graph.adapter"
-import type { CompiledThreadGraph } from "./thread-graph.adapter"
+import { compiledOf, type CompiledThreadGraph } from "./thread-graph.adapter"
 import { heldOf, openingOf, stopOf } from "./thread-state.policy"
 
 /** The channel under which the library keeps a decision handed to a stopped thread until the node that asked has finished. */
@@ -31,6 +30,7 @@ const RESUME_CHANNEL = "__resume__"
 /** What one run of the library is fed: the opening values, a decision, or nothing (continue). */
 type ThreadFeed = Readonly<Record<string, unknown>> | Command | null
 
+@Injectable()
 /**
  * The threads of the engine on LangGraph, and the only place that drives the library. What the library does not do, this client
  * does, because each was seen to go wrong without it:
@@ -47,7 +47,6 @@ type ThreadFeed = Readonly<Record<string, unknown>> | Command | null
  * threads being driven right now. Every run asks the library for its strictest durability; that still leaves a window in which a
  * finished call is not stored yet, which is why the effect ledger stays under the ports.
  */
-@Injectable()
 export class LanggraphClient implements GraphThreads {
     private readonly compiled = new Map<string, CompiledThreadGraph>()
 
@@ -71,7 +70,7 @@ export class LanggraphClient implements GraphThreads {
             if ((await this.viewOf(thread)) !== null)
                 throw new LanggraphError({ code: LanggraphErrorCode.ThreadExists, params: { thread: thread.runId } })
             const compiled = this.compiledFor(graph)
-            return this.run(thread, compiled, openingOf(input, { pin: graph.version, cursor: graph.entry }), lease)
+            return this.run(thread, compiled, openingOf(input, { pin: graph.version, cursor: graph.entry }), lease, graph.stepLimit)
         })
     }
 
@@ -84,7 +83,7 @@ export class LanggraphClient implements GraphThreads {
             if (view.status !== "stopped")
                 throw new LanggraphError({ code: LanggraphErrorCode.ThreadNotStopped, params: { thread: thread.runId } })
             requirePlain(decision, "resume.decision")
-            return this.run(thread, this.compiledFor(graph), new Command({ resume: decision }), lease)
+            return this.run(thread, this.compiledFor(graph), new Command({ resume: decision }), lease, graph.stepLimit)
         })
     }
 
@@ -96,7 +95,7 @@ export class LanggraphClient implements GraphThreads {
             this.requirePinned(view, graph)
             if (view.stop !== null) return { status: "stopped", state: view.state, stop: view.stop }
             if (view.status === "ended") return { status: "ended", state: view.state }
-            return this.run(thread, this.compiledFor(graph), null, lease)
+            return this.run(thread, this.compiledFor(graph), null, lease, graph.stepLimit)
         })
     }
 
@@ -184,11 +183,13 @@ export class LanggraphClient implements GraphThreads {
         compiled: CompiledThreadGraph,
         feed: ThreadFeed,
         lease?: ThreadLease,
+        graphSteps?: number,
     ): Promise<ThreadOutcome> {
         const result: unknown = await compiled.invoke(feed, {
             configurable: this.configurableOf(thread, lease),
             durability: "sync",
-            recursionLimit: this.options.stepLimit,
+            // The graph's own need (a loop's rounds) when it is larger than the app's bound: a legal loop is never cut by the library.
+            recursionLimit: Math.max(this.options.stepLimit, graphSteps ?? 0),
             callbacks: [],
             ...(lease?.signal === undefined ? {} : { signal: lease.signal }),
         })

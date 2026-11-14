@@ -1,16 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { BrainCommandsService } from "@modules/domain/brain-commands"
-import type { BrainCommandResult } from "@modules/domain/brain-commands"
+import { BrainCommandsService, type BrainCommandResult } from "@modules/domain/brain-commands"
 import { KnowledgeDriveService, KnowledgeReembedService, KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { isDomainError } from "@modules/platform/errors"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BrainLearningService } from "./brain-learning.service"
 import { BrainService } from "./brain.service"
-import { commandPayloadOf } from "./command-job.policy"
-import { commandOf } from "./command-payload.policy"
-import type { BrainCommand } from "./command-payload.policy"
+import { DocumentAreaService } from "./document-area.service"
+import { commandPayloadOf, isUpkeepTick } from "./command-job.policy"
+import { commandOf, type BrainCommand } from "./command-payload.policy"
 import { BrainLogEvent } from "./brain.log-events"
 import type { CommandOutcome } from "./brain.contracts"
 
@@ -33,10 +31,16 @@ export class BrainCommandRunnerService {
         private readonly search: KnowledgeSearchService,
         private readonly drive: KnowledgeDriveService,
         private readonly reembed: KnowledgeReembedService,
+        private readonly areas: DocumentAreaService,
     ) {}
 
     /** Runs the command a job names. A refusal of the services is a normal end (the row says why); any other failure is thrown for the queue to retry. */
     async run(payload: object): Promise<CommandOutcome> {
+        // The timed upkeep tick (BR1): scheduled facts come in force, ended ones expire, in every workspace where it is due.
+        if (isUpkeepTick(payload)) {
+            await this.brain.upkeep()
+            return "done"
+        }
         const ref = commandPayloadOf(payload)
         if (ref === null) {
             this.logger.warn(BrainLogEvent.PayloadRefused, { job: "command" })
@@ -105,7 +109,8 @@ export class BrainCommandRunnerService {
             case "source.reindex":
                 return this.sources.reindexSource(userId, workspaceId, command.reindex)
             case "source.update":
-                await this.sources.updateSource(userId, workspaceId, command.update)
+                // One door for a change of metadata: a change of area moves the document's truths too (`DocumentAreaService`).
+                await this.areas.update(userId, workspaceId, command.update)
                 return null
             case "knowledge.reembed":
                 await this.reembed.request(userId, workspaceId)

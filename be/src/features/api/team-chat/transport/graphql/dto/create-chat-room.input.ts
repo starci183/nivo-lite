@@ -33,6 +33,7 @@ export class CreateChatRoomInput {
     @Field(() => ChatGroupPurpose, { nullable: true })
     @IsOptional()
     @IsIn(["group", "common", "module"])
+    @MaxLength(6)
     purpose: string | null = null
 
     /** The module whose team room it is, for the purpose module. */

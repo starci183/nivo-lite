@@ -1,33 +1,27 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AutomationTemplatesService } from "@modules/domain/automation-templates"
 import { baseGraphOf } from "@modules/domain/agent-graphs"
-import type { SeedRule } from "@modules/domain/agent-graphs"
 import {
     AgentTemplatesError,
     AgentTemplatesErrorCode,
     AgentTemplateVersionsService,
     TemplateRecordsService,
 } from "@modules/domain/agent-templates"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModulesService } from "@modules/domain/modules"
-import type { ModuleDefinition } from "@modules/domain/modules"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { ModulesService, type ModuleDefinition } from "@modules/domain/modules"
 import { AdminAccessService } from "@modules/domain/platform-admin"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { Principal } from "@modules/platform/cqrs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { hashOfPackage, previewPackage, TEMPLATE_KEY_PATTERN } from "@nivo-lite/agent-sdk/template"
-import type {
-    AgentTemplatePackage,
-    GraphDocument,
-    PackageDraft,
-    ParameterBinding,
-    TemplateParameter,
-    TemplateVersionView,
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import {
+    hashOfPackage,
+    previewPackage,
+    TEMPLATE_KEY_PATTERN,
+    type AgentTemplatePackage,
+    type PackageDraft,
+    type TemplateVersionView,
 } from "@nivo-lite/agent-sdk/template"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
@@ -64,60 +58,6 @@ export interface ForkRequest {
 /** The most installations one sync adopts in a page. */
 const PAGE = 200
 
-/** The most parameters a first-party package derives from its graph. */
-const MAX_DERIVED = 20
-
-/** The rule a module gives its action before any workspace sets its own: what the catalogue says, asking the owner. */
-const defaultRuleOf = (action: ModuleDefinition["authorityActions"][number]): SeedRule => ({
-    action: action.action,
-    mode: action.mode,
-    unit: "vnd",
-    limit_vnd: action.limitVnd,
-    auto_max: null,
-    ask_max: null,
-    approver_roles: ["owner"],
-    approver_rooms: [],
-    approver_members: [],
-    approval_policy: "any",
-    timeout_minutes: 240,
-})
-
-/** The settings a built-in module offers its buyer and where each lands in the graph. */
-interface DerivedParameters {
-    /** The settings. */
-    readonly parameters: ReadonlyArray<TemplateParameter>
-    /** Where they land. */
-    readonly bindings: ReadonlyArray<ParameterBinding>
-}
-
-/** The settings a built-in module offers its buyer: the wait of every approver its seed names, with today's wait as the default. */
-const parametersOf = (graph: GraphDocument): DerivedParameters => {
-    const waits = graph.nodes
-        .flatMap((node) => (node.decide?.branches ?? []).map((branch) => ({ node: node.key, branch })))
-        .flatMap(({ node, branch }) =>
-            branch.approver === null ? [] : [{ node, key: branch.key, minutes: branch.approver.timeoutMinutes }],
-        )
-        .slice(0, MAX_DERIVED)
-    return {
-        bindings: waits.map((wait): ParameterBinding => ({
-            parameter: `${wait.node}_${wait.key}_wait`,
-            target: "branch_timeout",
-            nodeKey: wait.node,
-            branchKey: wait.key,
-        })),
-        parameters: waits.map((wait): TemplateParameter => ({
-            key: `${wait.node}_${wait.key}_wait`,
-            kind: "number",
-            label: { vi: `${wait.node} / ${wait.key}`, en: `${wait.node} / ${wait.key}` },
-            hint: null,
-            min: 1,
-            max: 10_080,
-            required: false,
-            default: wait.minutes,
-        })),
-    }
-}
-
 @Injectable()
 /**
  * The built-in modules of the catalogue as first-party packages of the one mechanism: each is built from the seed graph of the module
@@ -130,7 +70,6 @@ export class FirstPartyTemplatesService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly modules: ModulesService,
-        private readonly automation: AutomationTemplatesService,
         private readonly versions: AgentTemplateVersionsService,
         private readonly records: TemplateRecordsService,
         private readonly listings: TemplateListingsService,
@@ -143,26 +82,23 @@ export class FirstPartyTemplatesService {
     async sync(principal: Principal): Promise<FirstPartySyncReport> {
         this.access.requireAdmin(principal)
         const catalog = await this.modules.catalog()
-        const templates = await this.automation.listTemplates()
         const packaged: Array<string> = []
         const unchanged: Array<string> = []
         const refused: Array<string> = []
         await eachInOrder(catalog.modules, async (module) => {
             const key = firstPartyKeyOf(module.key)
-            const graph = baseGraphOf(
-                module,
-                templates.filter((template) => template.moduleKey === module.key),
-                module.authorityActions.map((action) => defaultRuleOf(action)),
-                { locale: "vi", say: (word, params) => this.catalog.get(word, params ?? {}, "vi") },
-            )
+            const graph = baseGraphOf(module, {
+                locale: "vi",
+                say: (word, params) => this.catalog.get(word, params ?? {}, "vi"),
+            })
             const latest = await this.versions.latestNumber(key)
-            const same = latest > 0 ? previewPackage(graph, this.draftOf(module, graph, latest)).package : null
+            const same = latest > 0 ? previewPackage(graph, this.draftOf(module, latest)).package : null
             const stored = latest > 0 ? await this.versions.find(key, latest) : null
             if (same !== null && stored?.hash === same.hash) {
                 unchanged.push(key)
                 return
             }
-            const made = previewPackage(graph, this.draftOf(module, graph, latest + 1))
+            const made = previewPackage(graph, this.draftOf(module, latest + 1))
             if (made.package === null) {
                 refused.push(key)
                 return
@@ -214,7 +150,6 @@ export class FirstPartyTemplatesService {
             listing: origin.listing,
             parameters: origin.parameters,
             bindings: origin.bindings,
-            proposedRights: origin.proposedRights,
             requiredProviders: origin.requiredProviders,
             requiredAuthorityActions: origin.requiredAuthorityActions,
             starterKnowledge: origin.starterKnowledge,
@@ -285,8 +220,8 @@ export class FirstPartyTemplatesService {
         return this.records.adopt(installation, firstPartyKeyOf(installation.moduleKey))
     }
 
-    private draftOf(module: ModuleDefinition, graph: GraphDocument, version: number): PackageDraft {
-        const derived = parametersOf(graph)
+    /** The draft of a module's package: no setting is offered, since its seed names no approver wait (no rule-derived branch, 2026-11-13). */
+    private draftOf(module: ModuleDefinition, version: number): PackageDraft {
         return {
             key: firstPartyKeyOf(module.key),
             version,
@@ -299,8 +234,8 @@ export class FirstPartyTemplatesService {
                 points: module.points.vi.map((vi, index) => ({ vi, en: module.points.en[index] ?? vi })),
                 category: module.category,
             },
-            parameters: derived.parameters,
-            bindings: derived.bindings,
+            parameters: [],
+            bindings: [],
             starterKnowledge: [],
             persona: { soul: "", likeness: null },
             forbidden: [],

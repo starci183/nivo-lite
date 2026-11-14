@@ -17,6 +17,8 @@ const PLACEHOLDER_ROWS: ReadonlyArray<TeamChatRoomRow> = ["a", "b", "c", "d"].ma
     id,
     kind: "group",
     title: "",
+    isNivo: false,
+    mark: { kind: "group", id, name: "", picture: null },
     other: null,
     preview: "",
     when: "",

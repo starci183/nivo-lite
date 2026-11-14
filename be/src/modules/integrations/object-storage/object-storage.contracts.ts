@@ -26,6 +26,34 @@ export interface SignedObjectUrl {
     readonly signedUrl: string
 }
 
+/** An address a browser PUTs one record file to: the content type and the exact size are part of the signature. */
+export interface SignedFileUpload {
+    /** The object key the upload lands at. */
+    readonly key: string
+    /** The presigned address. */
+    readonly url: string
+    /** The headers the browser must send unchanged (the signed `Content-Type` and `Content-Length`). */
+    readonly headers: Readonly<Record<string, string>>
+    /** When the address stops working, ISO-8601. */
+    readonly expiresAt: string
+}
+
+/** What the store records about one record file, read without its bytes. */
+export interface StoredFileHead {
+    /** The size in bytes. */
+    readonly size: number
+    /** The content type the store recorded. */
+    readonly mime: string
+}
+
+/** A short-lived read link of one record file. */
+export interface SignedFileLink {
+    /** The presigned address. */
+    readonly url: string
+    /** When it stops working, ISO-8601. */
+    readonly expiresAt: string
+}
+
 /** Why storage refused: the object is not there, or the store could not be reached. */
 export type StorageFailureCode =
     typeof OBJECT_STORAGE_ERROR_CODES.ObjectNotFound | typeof OBJECT_STORAGE_ERROR_CODES.Unavailable

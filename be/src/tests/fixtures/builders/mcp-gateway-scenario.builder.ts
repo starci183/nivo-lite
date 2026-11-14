@@ -1,68 +1,55 @@
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import type {
     MissingWriteIdentitiesShape,
-    ReplaySchemaChangesShape,
     TimedOutWritesShape,
     GatewayScenarioExpectedShape,
-    GatewayDescriptionsShape2,
-    GatewayDescriptionsShape,
-    GatewayRoleResolutionsShape,
-    GatewayReadinessShape,
     InvalidGatewayToolsShape,
     InvalidGatewayArgumentsShape,
 } from "./mcp-gateway-scenario-shapes.builder"
 import type { MockOf } from "@starci/jest-preset"
-import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
-import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
-import type {
-    CapabilityRole,
-    GatewayCaller,
-    GatewayCallResult,
-    GatewayJson,
-    McpGatewayService,
-    NativeConnectorManifest,
-} from "@modules/domain/mcp-gateway"
-import { McpGatewayError, McpGatewayErrorCode, SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
-import type { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
-import type { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { McpErrorCode } from "@modules/integrations/mcp"
-import type { McpRemote, McpRemoteResult } from "@modules/integrations/mcp"
+import type { CallLogLine, ToolCallLogService } from "@modules/domain/tool-call-log"
+import {
+    type ToolCaller,
+    type ToolCallResult,
+    type ToolJson,
+    type ToolRegistryService,
+    type ToolManifest,
+    type NativeToolFamily,
+    ToolsError,
+    ToolsErrorCode,
+    SEPAY_MANIFEST,
+} from "@modules/domain/tools"
+import type { ToolReceiptsService } from "@modules/domain/tool-receipts"
+import type { ToolGrantsService } from "@modules/domain/tool-grants"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { QueueTimeout } from "@modules/platform/queue"
 import {
-    catalogToolOf,
-    GATEWAY_BEARER,
     GATEWAY_CALLER,
-    GATEWAY_CATALOG,
-    remoteConnectorRowOf,
+    HAKUEN_MANIFEST,
+    hakuenToolOf,
     roleProvidersOf,
     toolGrantRowOf,
+    type GatewaySpecSetup,
 } from "./mcp-gateway.builder"
-import type { GatewaySpecSetup } from "./mcp-gateway.builder"
 
 /** The typed constructor doubles whose deterministic defaults one gateway scenario arranges. */
 interface GatewayScenarioDoubles {
-    /** The remote connector transport. */
-    readonly remote: MockOf<McpRemote>
     /** The deadline scheduler. */
     readonly timeout: MockOf<QueueTimeout>
     /** The cancellation function created by the spec's scheduler double. */
     readonly cancel: () => void
-    /** The workspace's connector rows. */
-    readonly connectors: MockOf<McpConnectorsService>
     /** The agent's tool grants. */
-    readonly grants: MockOf<McpToolGrantsService>
+    readonly grants: MockOf<ToolGrantsService>
     /** The stored outcomes of side-effect calls. */
-    readonly receipts: MockOf<GatewayReceiptsService>
+    readonly receipts: MockOf<ToolReceiptsService>
 }
 
 /** Configures constructor doubles while the spec keeps the actual Nest module and every token binding. */
 export const arrangeGatewayScenario = (setup: GatewaySpecSetup, doubles: GatewayScenarioDoubles): void => {
-    doubles.remote.call.mockResolvedValue({ isError: false, value: { holdId: "h1", code: "777" } })
     doubles.timeout.schedule.mockReturnValue(doubles.cancel)
-    doubles.connectors.list.mockResolvedValue(setup.rows ?? [remoteConnectorRowOf()])
     doubles.grants.listOfAgent.mockResolvedValue(setup.grants ?? [toolGrantRowOf()])
     doubles.grants.agentsGranted.mockResolvedValue(["a1", "a2"])
-    const results = new Map<string, Promise<GatewayCallResult>>()
+    const results = new Map<string, Promise<ToolCallResult>>()
     doubles.receipts.run.mockImplementation((workspaceId, key, operation) => {
         const identity = JSON.stringify([workspaceId, key])
         const previous = results.get(identity)
@@ -74,50 +61,19 @@ export const arrangeGatewayScenario = (setup: GatewaySpecSetup, doubles: Gateway
 }
 
 /** The audit lines written, in order. */
-export const gatewayLinesOf = (callLog: MockOf<McpCallLogService>): ReadonlyArray<CallLogLine> =>
+export const gatewayLinesOf = (callLog: MockOf<ToolCallLogService>): ReadonlyArray<CallLogLine> =>
     callLog.append.mock.calls.map(([line]) => line)
 
-/** A disabled connector advertises a receivable role without being a usable provider. */
-export const disabledReceivableConnectorOf = (): McpConnectorRow =>
-    remoteConnectorRowOf({
-        key: "pay",
-        name: "Pay Gateway",
-        status: "disabled",
-        tool_catalog: [
-            catalogToolOf("receivable.lookup", "Find a receivable.", true, {
-                meta: { "nivo/role": "receivable.find" },
-            }),
-        ],
-    })
-
-/** A connector whose named tool no longer has its approved live schema. */
-export const changedToolConnectorOf = (name: string): McpConnectorRow =>
-    remoteConnectorRowOf({
-        tool_catalog: GATEWAY_CATALOG.map((tool) => (tool.name === name ? { ...tool, hash: "hash-new" } : tool)),
-    })
-
-/** A live catalog that has never had the spa slot search approved. */
-export const unapprovedSpaConnectorOf = (): McpConnectorRow =>
-    remoteConnectorRowOf({
-        approved_catalog: GATEWAY_CATALOG.filter((tool) => tool.name !== "spa.findSlots").map(({ name, hash }) => ({
-            name,
-            hash,
-        })),
-    })
-
-/** A granted receivable role whose absent read hint makes it a write under the remote catalog contract. */
-export const defaultWriteRoleConnectorOf = (): McpConnectorRow => {
-    const tool = catalogToolOf("receivable.lookup", "Find a receivable.", false, {
-        annotations: {},
-        meta: { "nivo/role": "receivable.find" },
-    })
-    return remoteConnectorRowOf({
-        key: "pay",
-        name: "Pay Gateway",
-        tool_catalog: [tool],
-        approved_catalog: [{ name: tool.name, hash: tool.hash }],
-    })
+/** A partner family whose receivable lookup is a write that plays `receivable.find`, to exercise the operation identity guard. */
+export const WRITE_ROLE_MANIFEST: ToolManifest = {
+    key: "pay",
+    name: "Pay Gateway",
+    contractVersion: "pay-native@1",
+    tools: [hakuenToolOf("receivable.lookup", "Find a receivable.", false, { role: "receivable.find" })],
 }
+
+/** The partner family of the registry scenario: HAKUEN declaring a per-call limit below the engine's floor. */
+const FAST_HAKUEN_MANIFEST: ToolManifest = { ...HAKUEN_MANIFEST, timeoutMs: 10 }
 
 /** Missing or blank operation identities, including an explicit blank that must not fall back to a work item. */
 export const MISSING_WRITE_IDENTITIES: ReadonlyArray<MissingWriteIdentitiesShape> = [
@@ -141,38 +97,10 @@ export const MISSING_WRITE_IDENTITIES: ReadonlyArray<MissingWriteIdentitiesShape
 ]
 
 /** A work-item fallback and an explicit operation key both provide the stable identity for a claimed write. */
-export const VALID_WRITE_IDENTITIES: ReadonlyArray<GatewayCaller> = [
+export const VALID_WRITE_IDENTITIES: ReadonlyArray<ToolCaller> = [
     { ...GATEWAY_CALLER, opKey: undefined, workItemId: "item-1" },
     { ...GATEWAY_CALLER, opKey: "message-1", workItemId: " " },
 ]
-
-/** A live schema whose replay-field declaration and matching approval change together. */
-const replaySchemaRowOf = (hasReplayArgument: boolean) => {
-    const tool = catalogToolOf("booking.confirm", "Confirm a held booking.", false, {
-        inputSchema: {
-            type: "object",
-            properties: hasReplayArgument ? { idempotencyKey: { type: "string" } } : {},
-        },
-        hash: hasReplayArgument ? "hash-with-replay" : "hash-without-replay",
-    })
-    return remoteConnectorRowOf({
-        catalog_hash: tool.hash,
-        tool_catalog: [tool],
-        approved_catalog: [{ name: tool.name, hash: tool.hash }],
-    })
-}
-
-/** The same client operation retried after an approved replay field is added or removed. */
-export const REPLAY_SCHEMA_CHANGES: ReadonlyArray<ReplaySchemaChangesShape> = [false, true].map(
-    (firstHasReplayKey) => ({
-        label: firstHasReplayKey ? "removes a replay argument" : "adds a replay argument",
-        caller: { ...GATEWAY_CALLER, opKey: "schema-change:confirm" },
-        args: { holdId: "schema-hold", discountPct: 0 },
-        before: replaySchemaRowOf(firstHasReplayKey),
-        after: replaySchemaRowOf(!firstHasReplayKey),
-        firstHasReplayKey,
-    }),
-)
 
 /** Provider-call counts for one timed-out write, before its client retries the stored outcome. */
 export const TIMED_OUT_WRITES: ReadonlyArray<TimedOutWritesShape> = [
@@ -200,66 +128,17 @@ export const TIMED_OUT_WRITES: ReadonlyArray<TimedOutWritesShape> = [
     })),
 ]
 
-type GatewayScenario =
-    | "registry"
-    | "invalid-tools"
-    | "discovery"
-    | "description"
-    | "roles"
-    | "unavailable-roles"
-    | "readiness"
-    | "schema-refusal"
-    | "approval"
-    | "missing-identity"
+type GatewayScenario = "registry" | "discovery" | "description" | "approval" | "missing-identity"
 
 /** Fresh connector and grant data for the gateway's registry, role and admission scenarios. */
 export const gatewayScenarioOf = (scenario: GatewayScenario): GatewaySpecSetup => {
     switch (scenario) {
-        case "invalid-tools":
-            return {
-                rows: [
-                    remoteConnectorRowOf(),
-                    remoteConnectorRowOf({ key: "sepay", kind: "native", status: "disabled" }),
-                ],
-            }
         case "registry":
-            return {
-                rows: [
-                    remoteConnectorRowOf({ timeout_ms: 10 }),
-                    remoteConnectorRowOf({ key: "sepay", kind: "native", status: "disabled", timeout_ms: 99_999 }),
-                ],
-            }
+            return { families: [FAST_HAKUEN_MANIFEST] }
         case "discovery":
-            return {
-                rows: [
-                    unapprovedSpaConnectorOf(),
-                    remoteConnectorRowOf({ key: "sepay", kind: "native", status: "disabled" }),
-                ],
-                grants: [toolGrantRowOf(), toolGrantRowOf({ tool: "sepay.*" })],
-            }
+            return { grants: [toolGrantRowOf(), toolGrantRowOf({ tool: "nivo.tool.payment.*" })] }
         case "description":
-            return {
-                rows: [changedToolConnectorOf("stay.current")],
-                grants: [toolGrantRowOf(), toolGrantRowOf({ tool: "hakuen.keycode.reveal", mode: "never" })],
-            }
-        case "roles":
-            return { rows: [remoteConnectorRowOf(), remoteConnectorRowOf({ key: "shop", approved_catalog: [] })] }
-        case "unavailable-roles":
-            return {
-                rows: [
-                    remoteConnectorRowOf({ approved_catalog: [] }),
-                    remoteConnectorRowOf({ key: "sepay", kind: "native", status: "disabled" }),
-                ],
-            }
-        case "readiness":
-            return { rows: [remoteConnectorRowOf(), disabledReceivableConnectorOf()] }
-        case "schema-refusal":
-            return {
-                rows: [
-                    changedToolConnectorOf("booking.hold"),
-                    remoteConnectorRowOf({ key: "shop", approved_catalog: [] }),
-                ],
-            }
+            return { grants: [toolGrantRowOf(), toolGrantRowOf({ tool: "hakuen.keycode.reveal", mode: "never" })] }
         case "approval":
             return {
                 grants: [
@@ -269,17 +148,17 @@ export const gatewayScenarioOf = (scenario: GatewayScenario): GatewaySpecSetup =
             }
         case "missing-identity":
             return {
-                rows: [defaultWriteRoleConnectorOf()],
+                families: [WRITE_ROLE_MANIFEST],
                 grants: [
                     toolGrantRowOf({ tool: "pay.*", constraints: [] }),
-                    toolGrantRowOf({ tool: "sepay.*", constraints: [] }),
+                    toolGrantRowOf({ tool: "nivo.tool.payment.*", constraints: [] }),
                 ],
             }
     }
 }
 
 /** A replacement speaker serves the same operation without inheriting its former conversation routing. */
-export const reroutedCallerOf = (caller: GatewayCaller): GatewayCaller => ({
+export const reroutedCallerOf = (caller: ToolCaller): ToolCaller => ({
     ...caller,
     agentId: "replacement-agent",
     conversationId: null,
@@ -287,20 +166,25 @@ export const reroutedCallerOf = (caller: GatewayCaller): GatewayCaller => ({
 
 /** Fixed public values expected by the gateway scenarios, independent of the subject's implementation. */
 export const GATEWAY_SCENARIO_EXPECTED: GatewayScenarioExpectedShape = {
-    nativeUnknownTool: new McpGatewayError({
-        code: McpGatewayErrorCode.UnknownTool,
+    nativeUnknownTool: new ToolsError({
+        code: ToolsErrorCode.UnknownTool,
         params: { tool: "transactions.list" },
     }),
     invalidArguments: { ok: false, code: "invalid_arguments", detail: "Invalid tool arguments" },
     connectorStates: [
-        ["sepay", "disabled", 15_000],
-        ["hakuen", "active", 500],
+        ["sepay", 4000],
+        ["hakuen", 500],
     ],
     reply: { ok: true, value: { holdId: "h1", code: "777" } },
     held: { ok: true, value: { holdId: "h1" } },
     native: { ok: true, value: { transactions: [] } },
-    toolRefusal: { ok: false, code: "tool_error", detail: '{"error":{"code":"***"}}' },
-    readTimeout: { ok: false, code: "unavailable", detail: McpErrorCode.Timeout },
+    toolRefusal: {
+        ok: false,
+        code: "tool_error",
+        detail: '{"error":"NO_AVAILABILITY"}',
+        nativeRefusal: "NO_AVAILABILITY",
+    },
+    readTimeout: { ok: false, code: "unavailable", detail: ToolsErrorCode.Timeout },
     readFailure: { ok: false, code: "unavailable", detail: "internal" },
     circuitOpen: { ok: false, code: "unavailable", detail: "circuit_open" },
     readyRoles: {
@@ -308,7 +192,6 @@ export const GATEWAY_SCENARIO_EXPECTED: GatewayScenarioExpectedShape = {
         missing: [],
         providers: roleProvidersOf({
             "identity.find": ["HAKUEN"],
-            "receivable.find": ["Pay Gateway"],
             "payment.credits.list": ["SePay"],
             "payment.debits.list": ["SePay"],
         }),
@@ -323,17 +206,17 @@ export const GATEWAY_SCENARIO_EXPECTED: GatewayScenarioExpectedShape = {
         { ok: true, value: { holdId: "h1", code: "777" } },
     ],
     failedReadOutcomes: [
-        ["timeout", McpErrorCode.Timeout],
+        ["timeout", ToolsErrorCode.Timeout],
         ["error", "internal"],
     ],
     unknownWriteOutcomes: [["timeout", "unknown_outcome"]],
-    unknownWriteOutcome: { ok: false, code: "unknown_outcome", detail: McpErrorCode.Timeout },
+    unknownWriteOutcome: { ok: false, code: "unknown_outcome", detail: ToolsErrorCode.Timeout },
     grants: [{ tool: "hakuen.*", mode: "auto", limitVnd: null, constraints: [{ arg: "discountPct", max: 10 }] }],
     creditsRole: {
         ok: true,
         tool: {
             role: "payment.credits.list",
-            name: "sepay.transaction.list",
+            name: TOOL.paymentCreditList,
             connector: "sepay",
             connectorName: "SePay",
         },
@@ -357,94 +240,50 @@ export const GATEWAY_SCENARIO_EXPECTED: GatewayScenarioExpectedShape = {
         constraints: [{ arg: "discountPct", max: 10 }],
         limitVnd: null,
     },
-    revealRequest: {
-        endpoint: { url: "https://hakuen.test/mcp", bearer: GATEWAY_BEARER },
-        name: "keycode.reveal",
-        args: { stayId: "s1" },
-        timeoutMs: 4000,
-    },
+    revealRequest: { name: "keycode.reveal", args: { stayId: "s1" } },
     revealedAudit: { outcome: "ok", errorCode: null, resultSummary: '{"holdId":"h1","code":"***"}' },
     failedReadContext: { workspaceId: "ws-1", connector: "hakuen", tool: "stay.current" },
-    schemaRefusals: [
-        ["hakuen.booking.hold", "refused", "schema_unapproved"],
-        ["shop.stay.current", "refused", "schema_unapproved"],
-    ],
 }
 
 /** A native read connector treated as a write to exercise the operation identity guard. */
-export const WRITE_NATIVE_MANIFEST: NativeConnectorManifest = {
+export const WRITE_NATIVE_MANIFEST: ToolManifest = {
     ...SEPAY_MANIFEST,
     tools: SEPAY_MANIFEST.tools.map((tool) => ({ ...tool, scope: "write" as const, internalOnly: false })),
 }
 
-/** Five failed reads open the shared remote connector breaker. */
-export const openRemoteGatewayBreaker = async (
-    gateway: McpGatewayService,
-    remote: MockOf<McpRemote>,
+/** Five failed reads open the HAKUEN family's breaker. */
+export const openPartnerBreaker = async (
+    gateway: ToolRegistryService,
+    partner: MockOf<NativeToolFamily>,
 ): Promise<void> => {
-    remote.call.mockRejectedValue(new Error("down"))
+    partner.invoke.mockRejectedValue(new Error("down"))
     await eachInOrder([1, 2, 3, 4, 5], () => gateway.call(GATEWAY_CALLER, "hakuen.stay.current", {}))
 }
 
-/** Keeps one remote reply pending until the spec resolves its half-open probe. */
-export const pendingRemoteReplyOf = (remote: MockOf<McpRemote>) => {
-    const answers: Array<(result: McpRemoteResult) => void> = []
-    remote.call.mockReturnValueOnce(
-        new Promise((resolve) => {
+/** Keeps one HAKUEN answer pending until the spec resolves its half-open probe. */
+export const pendingPartnerReplyOf = (partner: MockOf<NativeToolFamily>): ((value: ToolJson) => void) => {
+    const answers: Array<(value: ToolJson) => void> = []
+    partner.invoke.mockReturnValueOnce(
+        new Promise<ToolJson>((resolve) => {
             answers.push(resolve)
         }),
     )
-    return (result: McpRemoteResult): void => {
-        for (const answer of answers) answer(result)
+    return (value: ToolJson): void => {
+        for (const answer of answers) answer(value)
     }
 }
-
-/** Tool descriptions that differ by current catalog approval and caller grant. */
-export const GATEWAY_DESCRIPTIONS: Array<GatewayDescriptionsShape | GatewayDescriptionsShape2> = [
-    { name: "hakuen.booking.confirm", answer: GATEWAY_SCENARIO_EXPECTED.confirmation },
-    ...["hakuen.stay.current", "hakuen.keycode.reveal", "sepay.transaction.list", "nope"].map((name) => ({
-        name,
-        answer: null,
-    })),
-]
-
-/** Native priority, remote capability discovery, and the missing capability result. */
-export const GATEWAY_ROLE_RESOLUTIONS: ReadonlyArray<GatewayRoleResolutionsShape> = [
-    { role: "payment.credits.list", answer: GATEWAY_SCENARIO_EXPECTED.creditsRole },
-    { role: "identity.find", answer: GATEWAY_SCENARIO_EXPECTED.identityRole },
-    { role: "receivable.find", answer: GATEWAY_SCENARIO_EXPECTED.missingReceivableRole },
-]
-
-/** Readiness includes the installed providers for complete, missing and empty role requests. */
-export const GATEWAY_READINESS: ReadonlyArray<GatewayReadinessShape> = [
-    {
-        label: "available roles",
-        roles: ["payment.credits.list", "identity.find"],
-        answer: GATEWAY_SCENARIO_EXPECTED.readyRoles,
-    },
-    {
-        label: "a missing receivable provider",
-        roles: ["payment.credits.list", "receivable.find"],
-        answer: { ...GATEWAY_SCENARIO_EXPECTED.readyRoles, ready: false, missing: ["receivable.find"] },
-    },
-    { label: "no required roles", roles: [], answer: GATEWAY_SCENARIO_EXPECTED.readyRoles },
-]
-
-/** Disabled native tools and unapproved remote tools cannot fulfill a role. */
-export const UNAVAILABLE_GATEWAY_ROLES: ReadonlyArray<CapabilityRole> = ["identity.find", "payment.credits.list"]
 
 /** Names refused before grants or an audit entry are consulted. */
 export const INVALID_GATEWAY_TOOLS: Array<InvalidGatewayToolsShape> = [
     { name: "nope", answer: { ok: false, code: "invalid_name", detail: "nope" } },
     { name: "zalo.send", answer: { ok: false, code: "unknown_tool", detail: "zalo.send" } },
     { name: "hakuen.nope", answer: { ok: false, code: "unknown_tool", detail: "hakuen.nope" } },
-    { name: "sepay.transaction.list", answer: { ok: false, code: "connector_disabled", detail: "sepay" } },
 ]
 
 /** Global budget failures stop before resolution; native shape failures stop before ask-mode grants. */
 /** A record carrying an own `__proto__` key, as a JSON body read from the wire can. */
-const prototypeKeyed = (): GatewayJson => {
-    const record: GatewayJson = {}
+const prototypeKeyed = (): ToolJson => {
+    const record: ToolJson = {}
     return Object.defineProperty(record, "__proto__", { value: { polluted: true }, enumerable: true })
 }
 
@@ -453,33 +292,29 @@ export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<InvalidGatewayArgumentsSha
     {
         label: "unbounded payloads",
         setup: {},
-        tool: "sepay.transaction.list",
+        tool: TOOL.paymentCreditList,
         args: { text: "x".repeat(8193) },
-        connectorReads: 1,
         audit: [["refused", "invalid_arguments", "{}"]],
     },
     {
         label: "a prototype key",
         setup: {},
-        tool: "sepay.transaction.list",
+        tool: TOOL.paymentCreditList,
         args: { filter: prototypeKeyed() },
-        connectorReads: 1,
         audit: [["refused", "invalid_arguments", "{}"]],
     },
     {
         label: "unbounded payloads to an unknown tool",
         setup: {},
-        tool: "sepay.nothing",
+        tool: "nivo.tool.payment.nothing",
         args: { text: "x".repeat(8193) },
-        connectorReads: 1,
         audit: [],
     },
     {
         label: "invalid native limits",
-        setup: { grants: [toolGrantRowOf({ tool: "sepay.*", mode: "ask" })] },
-        tool: "sepay.transaction.list",
+        setup: { grants: [toolGrantRowOf({ tool: "nivo.tool.payment.*", mode: "ask" })] },
+        tool: TOOL.paymentCreditList,
         args: { limit: 51 },
-        connectorReads: 1,
         audit: [["refused", "invalid_arguments", '{"limit":51}']],
     },
 ]

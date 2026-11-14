@@ -27,3 +27,8 @@ export const AgentConnectionsPage = (props: AgentConnectionsPageProps): ReactEle
         />
     )
 }
+
+/** The same Connections tab while the route loads: the block reads the agent from the address and draws its own skeletons. */
+export const AgentConnectionsLoadingPage = (): ReactElement => (
+    <AgentConnectionsPageBase props={{ workspaceId: undefined, module: undefined, installationId: undefined }} />
+)

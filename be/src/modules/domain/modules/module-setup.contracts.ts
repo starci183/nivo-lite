@@ -1,4 +1,3 @@
-import type { RuleMode } from "@modules/domain/authority-rules"
 import type { Scope } from "@modules/domain/brain-facts"
 import type { ContextVersionRecord } from "@modules/domain/module-context-versions"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
@@ -18,22 +17,12 @@ export interface CurrentFact {
     readonly modules: ReadonlyArray<string>
 }
 
-/** The rule in force for the action of a waiting rule card. */
-export interface CurrentRule {
-    /** Discriminator. */
-    readonly kind: "rule"
-    /** The mode in force. */
-    readonly mode: RuleMode
-    /** The limit in force, VND; null for none. */
-    readonly limitVnd: number | null
-}
-
 /** A confirm card with the value it would replace. */
 export interface SetupCardView {
     /** The card. */
     readonly card: CardRecord
     /** The value in force; null when the card is decided or nothing is in force. */
-    readonly current: CurrentFact | CurrentRule | null
+    readonly current: CurrentFact | null
 }
 
 /** Everything the Setup tab of one instance needs. */
@@ -81,18 +70,10 @@ export interface CardDecision {
     readonly subjectLabel?: string
     /** Fact edit: the attribute. */
     readonly attributeLabel?: string
-    /** Rule edit: the mode. */
-    readonly mode?: RuleMode
-    /** Rule edit: the limit, VND; null for none. */
-    readonly limitVnd?: number | null
     /** What to do with a value already in force. */
     readonly resolution?: CardResolution
     /** The situation the new value is for, when both values are kept. */
     readonly situation?: string
     /** The fact is for THIS instance only instead of every instance of the type. */
     readonly onlyThisAgent?: boolean
-    /** Branch edit: the band the exact boundary amount belongs to. */
-    readonly belongsTo?: "lower" | "higher"
-    /** Branch edit: the seat asked above the line. */
-    readonly approverMemberId?: string
 }

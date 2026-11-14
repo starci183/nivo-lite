@@ -1,26 +1,27 @@
-import type { RightScope, RightsGrant } from "../rights/rights.types"
 import type { Namespaced } from "../schema/schema.types"
 import type { EffectDefinition, ToolDefinition } from "./effect.types"
 import type {
     EffectPayload,
     NodeConfusion,
     NodeDefinition,
+    NodeGrant,
     NodeHostModel,
     NodeQuery,
+    ReadScope,
     SubjectRef,
     TurnRef,
 } from "./node.types"
 
 /**
- * What a host gives the node runner, bound to one turn. The runner has already checked rights, declarations and payloads; a port only
+ * What a host gives the node runner, bound to one turn. The runner has already checked declarations and payloads; a port only
  * reads, writes or acts, narrowing a `turn` read to the records the turn's subject is linked to.
  */
 export interface NodeHostPorts {
-    /** Reads records of a kind within the scope the right allows; resolves to the asked fields only. */
+    /** Reads records of a kind within the scope the node's query states; resolves to the asked fields only. */
     readonly read: (
         kind: string,
         query: NodeQuery,
-        scope: RightScope,
+        scope: ReadScope,
     ) => Promise<ReadonlyArray<Readonly<Record<string, unknown>>>>
     /** Writes one record of a kind and resolves to a reference to the stored subject. */
     readonly write: (kind: string, record: Readonly<Record<string, unknown>>) => Promise<SubjectRef>
@@ -42,7 +43,7 @@ export interface NodeHostPorts {
 
 /** A tool as the agent is shown it: one of the agent's whole set, the same for every step. */
 export interface NodeAgentLoopTool {
-    /** The id of the effect or tool (`nivo.lead.message.send`). */
+    /** The id of the effect or tool (`nivo.tool.customer.message.send`). */
     readonly name: string
     /** What it does, in words the model can read. */
     readonly does: unknown
@@ -86,7 +87,7 @@ export type NodeAgentEndAnswer = { readonly ok: true } | { readonly ok: false; r
 export interface NodeAgentLoop {
     /** What the calls are metered under: the node id and the agent's tag. */
     readonly purpose: string
-    /** The agent's craft and the shop's policy values (L1 + L2): the same text for every step of the agent. Never the tool set. */
+    /** The agent's craft (L1): the same text for every step of the agent. Never the tool set. */
     readonly instructions: string
     /** The step (L3): its goal, then as JSON the tools it may call, the ones that must have succeeded, and the schema of its output. */
     readonly step: string
@@ -134,8 +135,8 @@ export interface NodeRunRequest {
     readonly input: unknown
     /** The turn the run belongs to; it narrows `turn` scoped reads. */
     readonly turn: TurnRef
-    /** What the agent holds: default deny. */
-    readonly grant: RightsGrant
+    /** The NIVO MCP tools the run may call, by name: default deny. */
+    readonly grant: NodeGrant
     /** The installed effects by id. */
     readonly effects: ReadonlyMap<string, EffectDefinition>
     /** The installed tools by id. */

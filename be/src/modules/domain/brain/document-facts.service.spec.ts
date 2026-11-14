@@ -1,628 +1,401 @@
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { Test } from "@nestjs/testing"
-import { workInScope } from "@modules/platform/logging"
-import { builder, mock } from "@starci/jest-preset"
-import { DOC_AT, DOC_CONTENT, DOC_SOURCE, DOC_WS, docSourceOf } from "@tests/fixtures/builders/document-facts.builder"
-import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
-import { BrainFactsService, foldedText } from "@modules/domain/brain-facts"
-import type { FactRecord } from "@modules/domain/brain-facts"
-import { passageTextHashOf } from "@modules/domain/knowledge-chunks"
-import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { DOC_SOURCE, DOC_WS, docSourceOf } from "@tests/fixtures/builders/document-facts.builder"
+import { BrainExtractionsService } from "@modules/domain/brain-extractions"
+import { BrainFactsReadService, BrainFactsService } from "@modules/domain/brain-facts"
+import { KnowledgeChunksService, passageTextHashOf } from "@modules/domain/knowledge-chunks"
+import type { TruthPassage } from "@modules/domain/knowledge-chunks"
+import { DocumentCriticService } from "@modules/domain/dossier-review"
+import { PublicDocumentsService } from "@modules/domain/public-documents"
+import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
-import { KnowledgeSourcesService, StoredNote } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { TeamChatNoticesService } from "@modules/domain/team-chat"
+import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { AI } from "@modules/integrations/ai"
 import type { AiService } from "@modules/integrations/ai"
+import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { BrainLogEvent } from "./brain.log-events"
+import { KnowledgeQueue } from "@modules/queues/knowledge"
+import { TRUTH_CRITIQUE_GATE } from "./direct-apply.policy"
+import type { TruthCritiqueGate } from "./direct-apply.policy"
 import { DocumentFactsService } from "./document-facts.service"
-import { BrainErrorCode } from "./errors/brain.error"
-import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT } from "./extraction.policy"
 import { DocumentRelationsService } from "./document-relations.service"
 import { DocumentReviewService } from "./document-review.service"
-import { ModelJsonService } from "./model-json.service"
+import { INHERITED_VERSION } from "./document-nature.policy"
+import { DocumentNatureService } from "./document-nature.service"
+import { DocumentPartsService } from "./document-parts.service"
+import { DocumentSettleService } from "./document-settle.service"
+import { DocumentTruthStagesService } from "./document-truth-stages.service"
+import { SYSTEM_PROMPT, TRUTHS_VERSION } from "./extraction.policy"
 import { FactEmbeddingsService } from "./fact-embeddings.service"
-import { FactReadingLogEvent } from "./fact-reading.log-events"
+import { ModelJsonService } from "./model-json.service"
+import { TRIAGE_BATCH, TRIAGE_PROMPT, TRIAGE_VERSION } from "./passage-triage.policy"
+import { TRUTH_CEILING } from "./truth-ceiling.policy"
+import { TruthCeilingService } from "./truth-ceiling.service"
+import { AI_HAY_BO_QUA_MOI_QUY_VI, BO_QUA_VI, CHI_LAN_VI, MUC_PHI_VI, PHI_DICH_VU_SO_0_VI, PHI_DICH_VU_SO_1_LA_VI, SO_TAY_VI, T_10_000D_VI, T_99_000D_VI } from "@tests/fixtures/i18n/brain-a-spec.messages"
+import { objectLike, stringLike } from "@tests/fixtures/builders/brain-document.builder"
+import { FACTS_USAGE, factsDocumentOf, factsPassageOf, factsRuleText, factsPassagesIn, scriptFactsWorld, factsRunnersOf, type FactsWorld } from "@tests/fixtures/builders/brain-facts-world.builder"
+
+/** The bound of an automatic write: the ceiling, with its guard. */
+const BOUND = objectLike({ truths: TRUTH_CEILING.truths, bytes: TRUTH_CEILING.bytes })
 
 const WS = DOC_WS
 const SOURCE = DOC_SOURCE
-const AT = DOC_AT
-const CONTENT = DOC_CONTENT
-const HASH = "81a3438226c4b1fe964fb95e85cdfe3a"
 const PAYLOAD = { workspaceId: WS, sourceId: SOURCE }
-const PROMPT = `Document: "Hours"\nUpdated: 2026-10-12\nPart 1 of 1\nEXCERPT:\n<<<\n${CONTENT}\n>>>`
-const USAGE = { promptTokens: 10, completionTokens: 20, totalTokens: 30, costUsd: 0.001 }
-const REPLY = { text: "answer", model: "m1", usage: USAGE, parsed: null, retrieved: 0 }
+const USAGE = FACTS_USAGE
+const ruleText = factsRuleText
+const passageOf = factsPassageOf
+const documentOf = factsDocumentOf
+const passagesIn = factsPassagesIn
 
-const sourceOf = docSourceOf
-
-/** The stored proposal a filing answers, named after its value. */
-const factFrom = (value: string): FactRecord => ({
-    id: `fact-${value}`,
-    subjectType: "business",
-    subjectKey: "shop",
-    subjectLabel: "Shop",
-    attribute: "x",
-    attributeLabel: "X",
-    value,
-    valueNumber: null,
-    unit: null,
-    scope: "internal",
-    modules: [],
-    installationId: null,
-    status: "proposed",
-    sourceKind: "document",
-    trust: 75,
-    validFrom: null,
-    validTo: null,
-    supersedesId: null,
-    conflictWith: null,
-    proposalKind: "set",
-    evidence: [],
-    proposedBy: "Hours",
-    proposedAt: AT,
-    decidedBy: null,
-    decidedAt: null,
-    decisionNote: null,
-})
-type ExtractionRecord = NonNullable<Awaited<ReturnType<BrainExtractionsService["get"]>>>
-
-const extractionOf = builder<ExtractionRecord>({
-    sourceId: SOURCE,
-    status: "running",
-    factsProposed: 0,
-    promptVersion: PROMPT_VERSION,
-    contentHash: HASH,
-    windowsTotal: 1,
-    windowsDone: 0,
-    attempts: 0,
-    orphanFactIds: [],
-    passageHashes: [],
-    factsChanged: false,
-})
-
-type Progress = Parameters<BrainExtractionsService["save"]>[2]
-
-const startOf = builder<Parameters<BrainExtractionsService["start"]>[0]>({
-    workspaceId: WS,
-    sourceId: SOURCE,
-    promptVersion: PROMPT_VERSION,
-    contentHash: HASH,
-    windowsTotal: 1,
-    orphanFactIds: [],
-    factsChanged: false,
-})
-
-const progressOf = builder<Progress>({
-    status: "running",
-    windowsDone: 0,
-    factsProposed: 0,
-    windowsTotal: 1,
-    error: null,
-    attempts: 0,
-})
-
-const build = async (source = sourceOf()) => {
+const build = async (
+    passages: Array<TruthPassage>,
+    source = docSourceOf({ status: "ready", visibility: "internal", title: SO_TAY_VI, createdBy: "founder" }),
+) => {
+    const world: FactsWorld = { passages, row: null, waiting: [], critique: { state: "none", reviewed: new Set(), held: new Set(), confirmedBy: new Map() } }
     const ai = mock<AiService>()
     const logger = mock<Logger>()
     const facts = mock<BrainFactsService>()
+    const reads = mock<BrainFactsReadService>()
     const gaps = mock<KnowledgeGapsService>()
     const extractions = mock<BrainExtractionsService>()
     const indexing = mock<KnowledgeIndexingService>()
     const sources = mock<KnowledgeSourcesService>()
+    const chunks = mock<KnowledgeChunksService>()
     const usage = mock<UsageMeterService>()
-    const json = mock<ModelJsonService>()
     const reviews = mock<DocumentReviewService>()
     const links = mock<DocumentRelationsService>()
     const vectors = mock<FactEmbeddingsService>()
-    vectors.checkSameMeaning.mockResolvedValue({ judged: 0, flagged: 0 })
-    facts.propose.mockImplementation((_workspaceId, input) =>
-        Promise.resolve({ fact: factFrom(input.value), outcome: "proposed", created: true }),
-    )
-    indexing.sourceForFacts.mockResolvedValue(source)
-    extractions.get.mockResolvedValue(extractionOf())
-    usage.blockedBy.mockResolvedValue(false)
-    ai.chat.mockResolvedValue(REPLY)
-    json.jsonOf.mockReturnValue({ facts: [] })
+    const nature = mock<DocumentNatureService>()
+    const members = mock<WorkspaceMembersService>()
+    const ceiling = mock<TruthCeilingService>()
+    const notices = mock<TeamChatNoticesService>()
+    const critic = mock<TruthCritiqueGate>()
+    const criticService = mock<DocumentCriticService>()
+    const parts = mock<DocumentPartsService>()
+    const queue = mock<KnowledgeQueue>()
+    const tx = fakeTransaction(mockEntityManager())
+    scriptFactsWorld({ ai, facts, reads, extractions, indexing, sources, chunks, usage, vectors, nature, members, ceiling, notices, critic, parts, queue }, world, source)
     const moduleRef = await Test.createTestingModule({
         providers: [
-            DocumentFactsService,
-            { provide: AI, useValue: ai },
-            { provide: LOGGER, useValue: logger },
-            { provide: BrainFactsService, useValue: facts },
-            { provide: KnowledgeGapsService, useValue: gaps },
-            { provide: BrainExtractionsService, useValue: extractions },
-            { provide: KnowledgeIndexingService, useValue: indexing },
-            { provide: KnowledgeSourcesService, useValue: sources },
-            { provide: UsageMeterService, useValue: usage },
-            { provide: ModelJsonService, useValue: json },
-            { provide: DocumentReviewService, useValue: reviews },
-            { provide: DocumentRelationsService, useValue: links },
-            { provide: FactEmbeddingsService, useValue: vectors },
+            DocumentFactsService, DocumentTruthStagesService, DocumentSettleService, ModelJsonService,
+            { provide: CLOCK, useValue: new FakeClock(new Date("2026-11-11T04:00:00.000Z")) },
+            { provide: AI, useValue: ai }, { provide: LOGGER, useValue: logger }, { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: KnowledgeQueue, useValue: queue }, { provide: BrainFactsService, useValue: facts }, { provide: BrainFactsReadService, useValue: reads },
+            { provide: KnowledgeGapsService, useValue: gaps }, { provide: BrainExtractionsService, useValue: extractions },
+            { provide: KnowledgeIndexingService, useValue: indexing }, { provide: KnowledgeSourcesService, useValue: sources },
+            { provide: KnowledgeChunksService, useValue: chunks }, { provide: UsageMeterService, useValue: usage },
+            { provide: DocumentReviewService, useValue: reviews }, { provide: DocumentRelationsService, useValue: links },
+            { provide: FactEmbeddingsService, useValue: vectors }, { provide: DocumentNatureService, useValue: nature },
+            { provide: WorkspaceTimeZoneService, useValue: mock<WorkspaceTimeZoneService>({ timeZoneOf: () => Promise.resolve("Asia/Ho_Chi_Minh") }) },
+            { provide: WorkspaceMembersService, useValue: members }, { provide: TruthCeilingService, useValue: ceiling },
+            { provide: TeamChatNoticesService, useValue: notices }, { provide: TRUTH_CRITIQUE_GATE, useValue: critic },
+            { provide: DocumentCriticService, useValue: criticService },
+            // A document of one part: no other part to wait for.
+            { provide: DocumentPartsService, useValue: parts },
+            { provide: PublicDocumentsService, useValue: mock<PublicDocumentsService>({ approverOf: jest.fn().mockResolvedValue(null) }) },
         ],
     }).compile()
     const service = moduleRef.get(DocumentFactsService)
-    return { service, ai, logger, facts, gaps, extractions, indexing, sources, usage, json, reviews, links, vectors }
+    return { service, world, source, ai, indexing, gaps, facts, reads, extractions, sources, chunks, usage, reviews, links, vectors, ceiling, notices, critic, criticService, parts, queue, logger, ...factsRunnersOf(service, ai, world) }
 }
 
-describe("DocumentFactsService", () => {
-    it("drops a malformed job payload and skips a source no longer waiting for facts", async () => {
-        const { service, logger, indexing, extractions } = await build()
+describe("DocumentFactsService: the pipeline", () => {
+    it("triages every passage, reads truths only from the rule passages, files them as proposals and settles them AT ONCE: the critic is asked, never waited for", async () => {
+        const t = await build(documentOf(3, 21))
 
-        await expect(service.run({ sourceId: SOURCE })).resolves.toBe("skipped")
-        expect(logger.warn).toHaveBeenCalledWith(BrainLogEvent.PayloadRefused, { job: "facts" })
-        expect(indexing.sourceForFacts).not.toHaveBeenCalled()
-        indexing.sourceForFacts.mockResolvedValue(null)
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
 
-        await expect(service.run(PAYLOAD)).resolves.toBe("skipped")
-        expect(indexing.sourceForFacts).toHaveBeenCalledWith(WS, SOURCE)
-        expect(extractions.get).not.toHaveBeenCalled()
-    })
-
-    it("marks an exhausted valid job ready with an unread-facts note", async () => {
-        const { service, sources, extractions, reviews } = await build()
-
-        await service.giveUp({})
-        expect(sources.ready).not.toHaveBeenCalled()
-        expect(extractions.fail).not.toHaveBeenCalled()
-        expect(reviews.requestForSource).not.toHaveBeenCalled()
-        await service.giveUp(PAYLOAD)
-        expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
-        expect(extractions.fail).toHaveBeenCalledWith(WS, SOURCE, ExtractionNote.Aborted)
-        expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
-    })
-
-    it("withdraws a deleted source and finalizes its unsupported facts with the deletion evidence", async () => {
-        const { service, facts, reviews } = await build()
-        facts.withdrawSource.mockResolvedValue(["f1"])
-
-        await service.withdraw(WS, SOURCE, "Menu")
-
-        expect(reviews.requestForGoneSource).toHaveBeenCalledWith(WS, SOURCE, "Menu")
-        expect(facts.withdrawSource).toHaveBeenCalledWith(WS, SOURCE, "source changed")
-        expect(facts.finalizeOrphans).toHaveBeenCalledWith(WS, ["f1"], {
-            kind: "note",
-            ref: `gone:${SOURCE}`,
-            label: 'The document "Menu" was deleted: no source supports this value any more',
+        // 24 passages: two triage calls of twelve; three rule passages: ONE reading call of up to four.
+        expect(t.callsTo(TRIAGE_PROMPT)).toBe(2)
+        expect(t.callsTo(SYSTEM_PROMPT)).toBe(1)
+        expect(t.world.passages.filter((passage) => passage.triage === "rule")).toHaveLength(3)
+        expect(t.world.passages.every((passage) => passage.triageVersion === TRIAGE_VERSION)).toBe(true)
+        expect(t.world.passages.filter((passage) => passage.truthsVersion === TRUTHS_VERSION)).toHaveLength(3)
+        expect(t.facts.propose).toHaveBeenCalledTimes(3)
+        expect(
+            t.facts.propose.mock.calls.every(
+                ([, input]) => input.autoApply === false && input.sourceKind === "document",
+            ),
+        ).toBe(true)
+        expect(t.facts.applyUnannounced).toHaveBeenCalledTimes(3)
+        expect(t.reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
+        // The critique is asked BEFORE the settle, and the settle does not wait for it (the critique is still `none`).
+        const [asked = 0] = t.reviews.requestForSource.mock.invocationCallOrder
+        const [wrote = 0] = t.facts.applyUnannounced.mock.invocationCallOrder
+        expect(asked).toBeLessThan(wrote)
+        expect(t.world.row).toMatchObject({
+            status: "done",
+            stage: "settle",
+            factsProposed: 3,
+            counts: { passagesTotal: 24, passagesTriaged: 24, passagesKept: 3, factsApplied: 3 },
         })
+        // The document was ready (searchable) before this job and stays so: the job never moves its status.
+        expect(t.sources.enterStage).not.toHaveBeenCalled()
+        expect(t.sources.advance).not.toHaveBeenCalled()
     })
 
-    it("logs a failed withdrawal while allowing deletion to complete", async () => {
-        const { service, facts, logger } = await build()
-        const cause = new Error("withdraw failed")
-        facts.withdrawSource.mockRejectedValue(cause)
+    it("each truth names the passage it was read from and carries a quote cut by the code", async () => {
+        const t = await build(documentOf(1, 0))
 
-        await expect(service.withdraw(WS, SOURCE, "Menu")).resolves.toBeUndefined()
+        await t.service.run(PAYLOAD)
 
-        expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.WithdrawFailed, cause, { sourceId: SOURCE })
-        expect(facts.finalizeOrphans).not.toHaveBeenCalled()
-    })
-
-    it("does not read a document already completed with this text and prompt", async () => {
-        const { service, extractions, sources, ai, reviews } = await build()
-        extractions.get.mockResolvedValue(extractionOf({ status: "done" }))
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("skipped")
-
-        expect(reviews.requestForSource).not.toHaveBeenCalled()
-        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
-        expect(extractions.start).not.toHaveBeenCalled()
-        expect(ai.chat).not.toHaveBeenCalled()
-    })
-})
-describe("DocumentFactsService", () => {
-    it("starts a new extraction without withdrawing and defaults a missing resumed record", async () => {
-        const { service, extractions, facts, usage, sources, ai } = await build()
-        extractions.get.mockResolvedValue(null)
-        usage.blockedBy.mockResolvedValue(true)
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("blocked")
-
-        expect(extractions.start).toHaveBeenCalledWith(startOf({ orphanFactIds: [], factsChanged: false }))
-        expect(facts.withdrawSource).not.toHaveBeenCalled()
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ status: "blocked_credits" }))
-        expect(usage.blockedBy).toHaveBeenCalledWith(WS, "brain", false)
-        expect(sources.blockFacts).toHaveBeenCalledWith(WS, SOURCE, StoredNote.NoCreditsForFacts)
-        expect(ai.chat).not.toHaveBeenCalled()
-    })
-
-    it("restarts changed text, merging old and newly orphaned facts once", async () => {
-        const { service, extractions, facts, usage } = await build()
-        extractions.get.mockResolvedValueOnce(extractionOf({ contentHash: "old", orphanFactIds: ["f1", "f2"] }))
-        extractions.get.mockResolvedValueOnce(
-            extractionOf({ attempts: 2, factsProposed: 3, orphanFactIds: ["f1", "f2", "f3"] }),
-        )
-        facts.withdrawChanged.mockResolvedValue({ orphans: ["f2", "f3"], withdrawn: 2 })
-        usage.blockedBy.mockResolvedValue(true)
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("blocked")
-
-        expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", { hashes: [], folded: "" })
-        expect(extractions.start).toHaveBeenCalledWith(
-            startOf({ orphanFactIds: ["f1", "f2", "f3"], factsChanged: true }),
-        )
-        expect(extractions.save).toHaveBeenCalledWith(
+        expect(t.facts.propose).toHaveBeenCalledWith(
             WS,
-            SOURCE,
-            progressOf({ status: "blocked_credits", factsProposed: 3, attempts: 2 }),
+            objectLike({
+                subjectLabel: PHI_DICH_VU_SO_0_VI,
+                attributeLabel: MUC_PHI_VI,
+                value: T_10_000D_VI,
+                scope: undefined,
+                evidence: [
+                    objectLike({
+                        kind: "document",
+                        sourceId: SOURCE,
+                        chunkHash: passageTextHashOf(ruleText(0)),
+                        quote: ruleText(0),
+                    }),
+                ],
+            }),
+        )
+    })
+
+    it("every model call is checked against the credit pool first and booked to the document as brain work", async () => {
+        const t = await build(documentOf(1, 11))
+
+        await t.service.run(PAYLOAD)
+
+        expect(t.usage.blockedBy).toHaveBeenCalledTimes(2)
+        expect(t.usage.blockedBy).toHaveBeenCalledWith(WS, "brain", false)
+        expect(t.usage.record).toHaveBeenCalledTimes(2)
+        expect(t.usage.record).toHaveBeenCalledWith(
+            objectLike({ workspaceId: WS, kind: "brain", model: "haiku", usage: USAGE }),
         )
     })
 })
-describe("DocumentFactsService", () => {
-    it("restarts the same text when the prompt version changed", async () => {
-        const { service, extractions, facts, reviews } = await build()
-        extractions.get.mockResolvedValueOnce(extractionOf({ promptVersion: 0 }))
-        extractions.get.mockResolvedValueOnce(extractionOf({ windowsDone: 1, orphanFactIds: ["f1"] }))
-        facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn: 0 })
 
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
+describe("DocumentFactsService: the size of the work", () => {
+    it("a part of N passages costs N/12 triage calls and kept/4 reading calls: twice the passages, twice the calls, nothing squared", async () => {
+        const count = async (rules: number, prose: number) => {
+            const t = await build(documentOf(rules, prose))
+            await t.runAll()
+            return {
+                triage: t.callsTo(TRIAGE_PROMPT),
+                reading: t.callsTo(SYSTEM_PROMPT),
+                passageReads: t.chunks.truthPassagesOf.mock.calls.length,
+                verdictWrites: t.chunks.setTriage.mock.calls.length,
+                readWrites: t.chunks.markTruthsRead.mock.calls.length,
+                filed: t.facts.propose.mock.calls.length,
+                reviews: t.reviews.requestForSource.mock.calls.length,
+            }
+        }
 
-        expect(extractions.start).toHaveBeenCalledWith(startOf({ orphanFactIds: [], factsChanged: false }))
-        expect(facts.finalizeOrphans).toHaveBeenCalledWith(WS, ["f1"], {
-            kind: "note",
-            ref: `gone:${SOURCE}`,
-            label: 'The document "Hours" changed: no source supports this value any more',
+        // 150 passages is one whole part (120,000 characters); 15 of them (10 %) state a rule.
+        const part = await count(15, 135)
+        expect(part).toEqual({
+            triage: Math.ceil(150 / TRIAGE_BATCH),
+            reading: 4,
+            passageReads: 1,
+            verdictWrites: Math.ceil(150 / TRIAGE_BATCH),
+            readWrites: 4,
+            filed: 15,
+            reviews: 1,
         })
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "", expect.anything())
-        expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
+        const half = await count(8, 67)
+        expect(half).toEqual({
+            triage: Math.ceil(75 / TRIAGE_BATCH),
+            reading: 2,
+            passageReads: 1,
+            verdictWrites: Math.ceil(75 / TRIAGE_BATCH),
+            readWrites: 2,
+            filed: 8,
+            reviews: 1,
+        })
+
+        // 10 MB (the documents limit) is about 9,750 passages = 65 such parts, each a job chain of its own: about 65 x 8 = 520 triage
+        // calls and, at 10 % rule density, 260 reading calls. Every count above is per part and linear in its passages.
+        const parts = Math.ceil(9_750 / 150)
+        expect([parts, parts * part.triage, parts * part.reading]).toEqual([65, 65 * Math.ceil(150 / TRIAGE_BATCH), 260])
     })
 
-    it("finishes an internal document already at its fact limit without resolving customer gaps", async () => {
-        const { service, extractions, gaps, sources, usage } = await build(sourceOf({ visibility: "internal" }))
-        extractions.get.mockResolvedValue(extractionOf({ factsProposed: MAX_FACTS_PER_DOC }))
+    it("a job makes at most its budget of calls and hands over to a follow-up job that goes on from the passages not yet done", async () => {
+        // 44 rule passages: eleven reading calls, one more than a job's ten.
+        const t = await build(documentOf(44, 0))
 
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("continued")
+        expect(t.callsTo(SYSTEM_PROMPT)).toBe(10)
+        expect(t.queue.enqueueFactsNext).toHaveBeenCalledTimes(1)
 
-        expect(gaps.resolve).not.toHaveBeenCalled()
-        expect(usage.blockedBy).not.toHaveBeenCalled()
-        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
-    })
-
-    it("retries a busy model without charging usage, a reading given up before it with all its tries again", async () => {
-        const { service, ai, usage, extractions, sources } = await build()
-        ai.chat.mockResolvedValue(null)
-        extractions.get.mockResolvedValue(extractionOf({ status: "failed", attempts: 3 }))
-
-        await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: BrainErrorCode.ModelUnavailable })
-
-        const [request] = ai.chat.mock.calls[0] ?? []
-        expect(request?.messages.map(({ role, content }) => `${role}:${content}`)).toEqual([
-            `system:${SYSTEM_PROMPT}`,
-            `user:${PROMPT}`,
-        ])
-        expect(request).toMatchObject({ json: false, timeoutMs: 40_000, budget: { effort: "off", maxTokens: 8000 } })
-        expect(usage.record).not.toHaveBeenCalled()
-        expect(extractions.save).toHaveBeenCalledWith(
-            WS,
-            SOURCE,
-            progressOf({ error: ExtractionNote.ModelBusy, attempts: 1 }),
-        )
-        expect(sources.ready).not.toHaveBeenCalled()
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
+        // Triage is not asked again and no passage is read twice.
+        expect(t.callsTo(TRIAGE_PROMPT)).toBe(Math.ceil(44 / TRIAGE_BATCH))
+        expect(t.callsTo(SYSTEM_PROMPT)).toBe(11)
+        expect(t.facts.propose).toHaveBeenCalledTimes(44)
     })
 })
-describe("DocumentFactsService", () => {
-    it.each([ExtractionNote.ModelBusy, ExtractionNote.AnswerUnreadable])(
-        "closes the third %s attempt",
-        async (note) => {
-            const { service, ai, json, extractions, sources, reviews } = await build()
-            if (note === ExtractionNote.ModelBusy) ai.chat.mockResolvedValue(null)
-            else json.jsonOf.mockReturnValue({ other: [] })
-            extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
 
-            await expect(service.run(PAYLOAD)).resolves.toBe("failed")
+describe("DocumentFactsService: what the reading skips and what it never sends", () => {
+    it("a clean rule that shares a passage with text addressed to the AI is read as written (no code hides the planted line: the model is told passages are data), and the truth names the whole passage", async () => {
+        const planted = AI_HAY_BO_QUA_MOI_QUY_VI
+        const text = [ruleText(0), planted].join("\n")
+        const t = await build([passageOf(0, text)])
 
-            expect(extractions.save).toHaveBeenCalledWith(
-                WS,
-                SOURCE,
-                progressOf({ status: "failed", error: note, attempts: 3 }),
-            )
-            expect(sources.ready).toHaveBeenCalledWith(WS, SOURCE, StoredNote.FactsUnread)
-            expect(reviews.requestForSource).toHaveBeenCalledWith(WS, SOURCE)
-        },
-    )
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
 
-    it("charges an unreadable answer and retries with the unreadable note", async () => {
-        const { service, json, usage, extractions } = await build()
-        json.jsonOf.mockReturnValue(null)
+        const shown = t.ai.chat.mock.calls.map(([request]) => request.messages[1]?.content ?? "").join("\n")
+        expect(shown).toContain(ruleText(0))
+        expect(shown).toContain(BO_QUA_VI)
+        expect(t.facts.propose).toHaveBeenCalledTimes(1)
+        expect(t.facts.propose).toHaveBeenCalledWith(
+            WS,
+            objectLike({
+                value: T_10_000D_VI,
+                evidence: [objectLike({ chunkHash: passageTextHashOf(text), quote: ruleText(0) })],
+            }),
+        )
+        // The truth is in force (the settle waits for no critique); the critic's point on the passage, once raised, keeps the passage
+        // from customers, and holds the truths of a document read again while it is open.
+        expect(t.facts.applyUnannounced).toHaveBeenCalledTimes(1)
+    })
 
-        await expect(service.run(PAYLOAD)).rejects.toMatchObject({ code: BrainErrorCode.ModelUnavailable })
+    it("a table of records never reaches passage triage: the map judges it once and 60 passages are data and give no truth", async () => {
+        const table = (index: number): string =>
+            [
+                "order | items | total | days",
+                ...Array.from(
+                    { length: 7 },
+                    (_, row) => `LD-${String(index)}-${String(row)} | ${String(row + 1)} shirts | ${String(100 + row)}.000 | ${String(row)}`,
+                ),
+            ].join("\n")
+        const t = await build(Array.from({ length: 60 }, (_, index) => passageOf(index, table(index))))
 
-        expect(json.jsonOf).toHaveBeenCalledWith("answer")
-        expect(usage.record).toHaveBeenCalledWith({
-            workspaceId: WS,
-            kind: "brain",
-            module: "knowledge",
-            model: "m1",
-            usage: USAGE,
-            promptChars: SYSTEM_PROMPT.length + PROMPT.length,
-            completionChars: 6,
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
+
+        expect(t.ai.chat).not.toHaveBeenCalled()
+        expect(
+            t.world.passages.every((passage) => passage.triage === "data" && passage.triageVersion === INHERITED_VERSION),
+        ).toBe(true)
+        expect(t.facts.propose).not.toHaveBeenCalled()
+        expect(t.world.row).toMatchObject({ status: "done", factsProposed: 0, counts: { passagesKept: 0 } })
+    })
+})
+
+describe("DocumentFactsService: a document uploaded again", () => {
+    it("judges and reads only the passages that changed", async () => {
+        const first = documentOf(3, 9)
+        const t = await build(first)
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
+        expect(t.world.row?.status).toBe("done")
+        const before = {
+            triage: t.callsTo(TRIAGE_PROMPT),
+            reading: t.callsTo(SYSTEM_PROMPT),
+            filed: t.facts.propose.mock.calls.length,
+        }
+
+        // Version 2: one rule passage is rewritten (a new row with no verdict); the eleven others keep their rows and verdicts.
+        const changed = passageOf(1, PHI_DICH_VU_SO_1_LA_VI)
+        t.world.passages = t.world.passages.map((passage) => (passage.order === 1 ? changed : passage))
+        const v2 = docSourceOf({
+            status: "ready",
+            visibility: "internal",
+            title: SO_TAY_VI,
+            createdBy: "founder",
+            content: "version two",
         })
-        expect(extractions.save).toHaveBeenCalledWith(
+        const again = await build(t.world.passages, v2)
+        again.world.row = t.world.row
+
+        await expect(again.service.run(PAYLOAD)).resolves.toBe("done")
+
+        expect(again.callsTo(TRIAGE_PROMPT)).toBe(1)
+        expect(passagesIn(again.ai.chat.mock.calls[0]?.[0].messages[1]?.content ?? "")).toEqual([changed.text])
+        expect(again.callsTo(SYSTEM_PROMPT)).toBe(1)
+        expect(again.facts.propose).toHaveBeenCalledTimes(1)
+        expect(again.facts.propose).toHaveBeenCalledWith(WS, objectLike({ value: T_99_000D_VI }))
+        // What the gone passage said is withdrawn: only the unchanged passages still stand behind their truths.
+        expect(again.facts.withdrawChanged).toHaveBeenCalledWith(
             WS,
             SOURCE,
-            progressOf({ error: ExtractionNote.AnswerUnreadable, attempts: 1 }),
+            "source changed",
+            objectLike({
+                hashes: first.filter((passage) => passage.order !== 1).map((passage) => passage.hash),
+            }),
         )
+        expect(before).toEqual({ triage: 1, reading: 1, filed: 3 })
+    })
+
+    it("does no work for a text whose reading is done and whose passages are all of the current versions", async () => {
+        const t = await build(documentOf(2, 2))
+        await t.service.run(PAYLOAD)
+        t.ai.chat.mockClear()
+
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("skipped")
+        expect(t.ai.chat).not.toHaveBeenCalled()
+    })
+})
+
+describe("DocumentFactsService: what goes in force", () => {
+    it("the founder's document: its truths go in force as soon as its reading ends, announced ONCE", async () => {
+        const t = await build(documentOf(3, 1))
+
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
+
+        expect(t.facts.applyUnannounced).toHaveBeenCalledTimes(3)
+        expect(t.facts.applyUnannounced).toHaveBeenCalledWith(
+            WS,
+            stringLike("f-"),
+            CHI_LAN_VI,
+            stringLike(`direct:${SOURCE}`),
+            // Bounded by the ceiling inside the write (D-U-1), guarded against a rival written meanwhile.
+            BOUND,
+        )
+        // One announcement for the document: one vector batch and one policy derive request, never one per truth.
+        expect(t.facts.announceChanged).toHaveBeenCalledTimes(1)
+        expect(t.facts.announceChanged.mock.calls[0]?.[1]).toHaveLength(3)
+        expect(t.world.row).toMatchObject({
+            status: "done",
+            counts: { factsApplied: 3, factsAsked: 0, factsWaiting: 0 },
+        })
+        expect(t.sources.settle).toHaveBeenCalledWith(WS, SOURCE, t.source.content)
     })
 
     it.each([
-        ["a first reading (no extraction yet)", null, "document_read"],
-        ["a reading resumed after a failure", "failed", "document_read"],
-        ["a changed document read before", "done", "document_reread"],
-    ] as const)(
-        "U1: books the model calls of %s to the document (stored status %s) as %s",
-        async (_case, status, kind) => {
-            const { service, ai, extractions, facts } = await build(sourceOf({ content: "Open 8 to 21." }))
-            facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn: 0 })
-            const scopes: Array<unknown> = []
-            extractions.get.mockResolvedValue(status === null ? null : extractionOf({ status, contentHash: "old" }))
-            ai.chat.mockImplementation(() => {
-                scopes.push(workInScope())
-                return Promise.resolve(REPLY)
-            })
+        ["manager", "Minh Manager"],
+        ["staff", "Sau Staff"],
+    ])("D3: a %s's document goes in force directly, decided by that member; the critic is still asked", async (createdBy, name) => {
+        const t = await build(documentOf(3, 1), docSourceOf({ status: "ready", visibility: "internal", createdBy }))
 
-            await service.run(PAYLOAD).catch(() => undefined)
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
 
-            expect(scopes.length).toBeGreaterThan(0)
-            expect(scopes).toContainEqual(expect.objectContaining({ kind, ref: `source:${SOURCE}` }))
-        },
-    )
-
-    it.each([null, undefined, ""])("keeps the original result for a provider model %s", async (model) => {
-        const { service, ai, extractions, sources } = await build(sourceOf({ content: `${"a".repeat(3500)}b` }))
-        extractions.get.mockResolvedValue(null)
-        const answer = Object.defineProperty({ ...REPLY }, "model", { value: model })
-        ai.chat.mockResolvedValueOnce(REPLY).mockResolvedValueOnce(answer)
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-        expect(ai.chat).toHaveBeenCalledTimes(2)
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, model === "" ? "" : "m1", expect.anything())
-        expect(sources.advance).toHaveBeenCalledWith(WS, SOURCE, { stage: "facts", done: 1, total: 2, progress: 92 })
-        expect(sources.advance).toHaveBeenCalledWith(WS, SOURCE, { stage: "facts", done: 2, total: 2, progress: 99 })
-    })
-})
-describe("DocumentFactsService", () => {
-    it("files public facts with document evidence and preserves owner review and instance scope", async () => {
-        const { service, json, facts, extractions, gaps, sources, links } = await build()
-        extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
-        json.jsonOf.mockReturnValue({
-            facts: [
-                {
-                    subjectType: "business",
-                    subjectLabel: "Shop",
-                    attributeLabel: "Hours",
-                    value: "8am-9pm",
-                    unit: "hours",
-                    validFrom: "2026-10-12",
-                    scope: "public",
-                    quote: "Hours 8am-9pm",
-                },
-            ],
-        })
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(facts.propose).toHaveBeenCalledWith(WS, {
-            subjectType: "business",
-            subjectLabel: "Shop",
-            attributeLabel: "Hours",
-            value: "8am-9pm",
-            unit: "hours",
-            scope: "public",
-            sourceKind: "document",
-            validFrom: "2026-10-11T17:00:00.000Z",
-            validTo: null,
-            autoApply: false,
-            installationId: "i1",
-            proposedBy: "Hours",
-            evidence: [
-                {
-                    kind: "document",
-                    ref: SOURCE,
-                    label: "Hours",
-                    quote: "Hours 8am-9pm",
-                    at: AT,
-                    sourceId: SOURCE,
-                    title: "Hours",
-                    chunkHash: passageTextHashOf(CONTENT),
-                },
-            ],
-        })
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 1 }))
-        expect(extractions.finish).toHaveBeenCalledWith(WS, SOURCE, "m1", expect.anything())
-        expect(gaps.resolve).toHaveBeenCalledWith(WS, {
-            text: `Hours Open ${CONTENT}`,
-            minimum: DOC_ANSWERS,
-            module: "chatbot",
-            by: `document:${SOURCE}`,
-        })
-        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
-        expect(links.link).toHaveBeenCalledTimes(1)
-    })
-})
-describe("DocumentFactsService", () => {
-    it.each([
-        { visibility: "public", scope: "internal", filed: "public" },
-        { visibility: "public", scope: "public", filed: "public" },
-        { visibility: "internal", scope: "public", filed: undefined },
-    ])("files a $scope fact from a $visibility document as $filed", async ({ visibility, scope, filed }) => {
-        const { service, json, facts } = await build(sourceOf({ visibility, installationId: null }))
-        json.jsonOf.mockReturnValue({
-            facts: [{ subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", scope, quote: "Price 20 USD" }],
-        })
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(facts.propose).toHaveBeenCalledWith(WS, {
-            subjectType: "other",
-            subjectLabel: "Shop",
-            attributeLabel: "Price",
-            value: "20 USD",
-            unit: null,
-            scope: filed,
-            sourceKind: "document",
-            validFrom: null,
-            validTo: null,
-            autoApply: false,
-            installationId: null,
-            proposedBy: "Hours",
-            evidence: [
-                {
-                    kind: "document",
-                    ref: SOURCE,
-                    label: "Hours",
-                    quote: "Price 20 USD",
-                    at: AT,
-                    sourceId: SOURCE,
-                    title: "Hours",
-                    chunkHash: passageTextHashOf(CONTENT),
-                },
-            ],
-        })
+        expect(t.facts.applyUnannounced).toHaveBeenCalledTimes(3)
+        expect(t.facts.applyUnannounced).toHaveBeenCalledWith(WS, stringLike("f-"), name, stringLike(`put in by ${createdBy} ${name}`), BOUND)
+        expect(t.world.row).toMatchObject({ status: "done", counts: { factsApplied: 3, factsWaiting: 0 } })
+        // The critic is still asked: it decides what customers may be served.
+        expect(t.reviews.requestForSource).toHaveBeenCalledTimes(1)
     })
 
-    it("continues filing after a rejected fact and counts only successful proposals", async () => {
-        const { service, json, facts, extractions, logger } = await build()
-        const cause = new Error("first fact")
-        facts.propose.mockRejectedValueOnce(cause)
-        json.jsonOf.mockReturnValue({
-            facts: [
-                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
-                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", quote: "Price 20 USD" },
-            ],
-        })
+    it("a document no member stands behind (a sync, a person who left) is nobody's word: its truths wait, the critic's word is never read", async () => {
+        for (const createdBy of [null, "left-the-team"]) {
+            const t = await build(documentOf(1, 0), docSourceOf({ status: "ready", createdBy }))
 
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(facts.propose).toHaveBeenCalledTimes(2)
-        expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.FilingFailed, cause, { sourceId: SOURCE })
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 1 }))
-    })
-})
-describe("DocumentFactsService", () => {
-    it("files only the room left under the document limit", async () => {
-        const { service, json, facts, extractions } = await build()
-        extractions.get.mockResolvedValue(extractionOf({ factsProposed: 199 }))
-        json.jsonOf.mockReturnValue({
-            facts: [
-                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
-                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", quote: "Price 20 USD" },
-            ],
-        })
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(facts.propose).toHaveBeenCalledTimes(1)
-        expect(extractions.save).toHaveBeenCalledWith(WS, SOURCE, progressOf({ windowsDone: 1, factsProposed: 200 }))
+            await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
+            expect(t.facts.applyUnannounced).not.toHaveBeenCalled()
+            expect(t.critic.truthGateOf).not.toHaveBeenCalled()
+            expect(t.world.row).toMatchObject({ status: "done", counts: { factsApplied: 0, factsWaiting: 1 } })
+        }
     })
 
-    it("finishes public text without a topic even when answering its gaps fails", async () => {
-        const { service, gaps, logger, sources, extractions } = await build(sourceOf({ topic: null, module: null }))
-        const cause = new Error("gaps")
-        gaps.resolve.mockRejectedValue(cause)
+    it("a critique that never ran holds nothing; a later change of the critic's word settles the document again, and what is in force stays", async () => {
+        const t = await build(documentOf(2, 0))
+        await expect(t.service.run(PAYLOAD)).resolves.toBe("done")
+        expect(t.facts.applyUnannounced).toHaveBeenCalledTimes(2)
 
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(gaps.resolve).toHaveBeenCalledWith(WS, {
-            text: `Hours  ${CONTENT}`,
-            minimum: DOC_ANSWERS,
-            module: null,
-            by: `document:${SOURCE}`,
-        })
-        expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.GapsFailed, cause, { sourceId: SOURCE })
-        expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
-        extractions.get.mockResolvedValue(extractionOf({ windowsDone: -1 }))
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-    })
-})
-
-describe("DocumentFactsService an edited document", () => {
-    const read = [passageTextHashOf("## Hours\nOpen 8.")]
-    it.each<["done" | "failed", boolean, number, number, boolean]>([
-        // Every finished reading asks for the review (BG3: the critic and the trust gate run from it), even with nothing filed.
-        ["done", false, 0, 0, true],
-        ["done", false, 1, 0, true],
-        ["done", true, 0, 1, true],
-        ["failed", true, 0, 0, true],
-    ])(
-        "from a %s reading (changed %s, withdrew %i, filed %i): review %s",
-        async (status, was, withdrawn, filed, reviewed) => {
-            const { service, ai, extractions, facts, reviews } = await build(
-                sourceOf({ content: "## Hours\nOpen 8.\n## Fees\nNew." }),
-            )
-            extractions.get.mockResolvedValueOnce(
-                extractionOf({ contentHash: "old", status, factsChanged: was, passageHashes: read }),
-            )
-            extractions.get.mockResolvedValueOnce(
-                extractionOf({ factsChanged: withdrawn > 0 || was, factsProposed: filed, passageHashes: read }),
-            )
-            facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn })
-            await expect(service.run(PAYLOAD)).resolves.toBe("done")
-            expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", {
-                hashes: [passageTextHashOf("## Hours\nOpen 8.")],
-                folded: foldedText("## Hours\nOpen 8."),
-            })
-            expect(ai.chat.mock.calls[0]?.[0].messages[1]?.content).not.toContain("Open 8.")
-            expect(reviews.requestForSource).toHaveBeenCalledTimes(reviewed ? 1 : 0)
-        },
-    )
-})
-
-describe("DocumentFactsService: accuracy and conflicts (BG2)", () => {
-    it("drops the facts its text does not support and says how many, per window", async () => {
-        const { service, json, facts, logger } = await build()
-        json.jsonOf.mockReturnValue({
-            facts: [
-                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
-                { subjectLabel: "Shop", attributeLabel: "Price", value: "25 USD", quote: "Price 20 USD" },
-                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD" },
-            ],
-        })
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(facts.propose).toHaveBeenCalledTimes(1)
-        expect(logger.info).toHaveBeenCalledWith(FactReadingLogEvent.FactsUngrounded, {
-            sourceId: SOURCE,
-            window: 0,
-            kept: 1,
-            ungrounded: 2,
-        })
-    })
-
-    it("files a stated end with the fact (the facts store flags an end already past as stale)", async () => {
-        const { service, json, facts } = await build()
-        json.jsonOf.mockReturnValue({
-            facts: [
-                {
-                    subjectLabel: "Shop",
-                    attributeLabel: "Price",
-                    value: "20 USD",
-                    quote: "Price 20 USD",
-                    validTo: "2026-06-30",
-                },
-            ],
-        })
-
-        await service.run(PAYLOAD)
-
-        expect(facts.propose.mock.calls[0]?.[1]).toMatchObject({
-            validTo: "2026-06-30T17:00:00.000Z",
-            autoApply: false,
-        })
-    })
-
-    it("checks the window's NEW proposals for the same fact in other words, never the ones that only grew", async () => {
-        const { service, json, facts, vectors } = await build()
-        facts.propose
-            .mockResolvedValueOnce({ fact: factFrom("8am-9pm"), outcome: "proposed", created: true })
-            .mockResolvedValueOnce({ fact: factFrom("20 USD"), outcome: "reinforced" })
-        json.jsonOf.mockReturnValue({
-            facts: [
-                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
-                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", quote: "Price 20 USD" },
-            ],
-        })
-
-        await expect(service.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(vectors.checkSameMeaning).toHaveBeenCalledWith(WS, [factFrom("8am-9pm")])
+        // The critique ends later with a point: the document settles again; nothing waits any more, nothing more is written.
+        await expect(t.critiqueThenSettle()).resolves.toBe("done")
+        expect(t.facts.applyUnannounced).toHaveBeenCalledTimes(2)
+        expect(t.world.row).toMatchObject({ status: "done", counts: { factsApplied: 2 } })
     })
 })

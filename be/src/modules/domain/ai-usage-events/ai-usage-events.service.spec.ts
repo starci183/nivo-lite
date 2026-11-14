@@ -3,16 +3,19 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER, withRunScope, withWorkScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { QuotaRecord, QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contracts"
+import { USAGE_NOTICE_DOOR } from "./ai-usage-events.decorators"
+import type { UsageNoticeDoor } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { CREDIT_USD_VALUE } from "./usage-cost.policy"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageEventEntity } from "./persistence/entities"
 
 const SELECT_QUOTA_STATUS = 'SELECT * FROM "public"."ai_quota_status"($1)'
-const POST_USAGE_NOTICE = 'SELECT * FROM "public"."usage_notice_post"($1, $2, $3, $4)'
 /** The row as the driver answers it: bigint and numeric columns as text. */
 const ROW: QuotaRecord = {
     period_start: "2026-10-01",
@@ -54,26 +57,22 @@ const INPUT: UsageInput = {
     promptChars: 300,
     completionChars: 60,
 }
-const WARN_BODY =
-    "M\u1ee9c d\u00f9ng AI th\u00e1ng n\u00e0y \u0111\u00e3 \u0111\u1ea1t 80% h\u1ea1n m\u1ee9c (100/200 credit, 50 credit n\u1ea1p th\u00eam c\u00f2n l\u1ea1i, 80/100 tin nh\u1eafn, " +
-    "1.000/10.000 token). Khi h\u1ebft h\u1ea1n m\u1ee9c, chatbot s\u1ebd chuy\u1ec3n c\u00e2u h\u1ecfi c\u1ee7a kh\u00e1ch cho nh\u00e2n vi\u00ean thay v\u00ec t\u1ef1 tr\u1ea3 " +
-    "l\u1eddi. N\u1ea1p th\u00eam credit ho\u1eb7c n\u00e2ng c\u1ea5p g\u00f3i t\u1ea1i Credit & g\u00f3i (/billing)."
-const EXCEEDED_BODY =
-    "Workspace \u0111\u00e3 d\u00f9ng h\u1ebft h\u1ea1n m\u1ee9c AI c\u1ee7a th\u00e1ng n\u00e0y (100/200 credit, 50 credit n\u1ea1p th\u00eam c\u00f2n l\u1ea1i, 100/100 tin " +
-    "nh\u1eafn, 1.000/10.000 token). Chatbot t\u1ea1m d\u1eebng t\u1ef1 tr\u1ea3 l\u1eddi: kh\u00e1ch nh\u1eadn l\u1eddi x\u00e1c nh\u1eadn l\u1ecbch s\u1ef1 v\u00e0 c\u00e2u h\u1ecfi \u0111\u01b0\u1ee3c " +
-    "chuy\u1ec3n cho nh\u00e2n vi\u00ean. N\u1ea1p th\u00eam credit ho\u1eb7c n\u00e2ng c\u1ea5p g\u00f3i t\u1ea1i Credit & g\u00f3i (/billing) \u0111\u1ec3 chatbot ho\u1ea1t " +
-    "\u0111\u1ed9ng l\u1ea1i."
-
 const build = async (entityManager: MockEntityManager) => {
     const logger = mock<Logger>()
+    const notices = mock<UsageNoticeDoor>()
+    notices.postNotice.mockResolvedValue("posted")
+    const catalog = mock<MessageCatalog>()
+    catalog.get.mockReturnValue("notice text")
     const moduleRef = await Test.createTestingModule({
         providers: [
             AiUsageEventsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: LOGGER, useValue: logger },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: USAGE_NOTICE_DOOR, useValue: notices },
         ],
     }).compile()
-    return { usage: moduleRef.get(AiUsageEventsService), logger }
+    return { usage: moduleRef.get(AiUsageEventsService), logger, notices, catalog }
 }
 
 describe("AiUsageEventsService", () => {
@@ -128,16 +127,16 @@ describe("AiUsageEventsService", () => {
 })
 
 describe("AiUsageEventsService > creditsUsedBy", () => {
-    it("sums the whole credits a module used, at the value of one credit", async () => {
+    it("sums the exact credits a module used (no rounding per call), at the value of one credit", async () => {
         const em = mockEntityManager()
-        const sums = fakeQueryBuilder({ getRawOne: { credits: 7 } })
+        const sums = fakeQueryBuilder({ getRawOne: { credits: "7.250000" } })
         em.createQueryBuilder.mockReturnValue(sums.builder)
         const { usage } = await build(em)
 
-        await expect(usage.creditsUsedBy("ws-1", "video", 30)).resolves.toBe(7)
+        await expect(usage.creditsUsedBy("ws-1", "video", 30)).resolves.toBe(7.25)
 
         expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")
-        expect(sums.callsOf("select")).toEqual([["COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits"]])
+        expect(sums.callsOf("select")).toEqual([["COALESCE(round(sum(u.cost_usd / CAST(:creditUsd AS numeric)), 6), 0)::text", "credits"]])
         expect(sums.callsOf("where")).toEqual([
             [
                 "u.workspace_id = :workspaceId AND u.module = :module AND u.failure IS NULL",
@@ -159,7 +158,7 @@ describe("AiUsageEventsService > creditsUsedBy", () => {
 })
 
 describe("AiUsageEventsService > creditsByModule", () => {
-    it("groups the whole credits of a period by module, the guide left out", async () => {
+    it("groups the exact credits of a period by module, the guide left out", async () => {
         const em = mockEntityManager()
         const sums = fakeQueryBuilder({
             getRawMany: [
@@ -217,19 +216,24 @@ describe("AiUsageEventsService > record", () => {
     it("books provider figures, truncates the model name and posts the monthly warning", async () => {
         const em = mockEntityManager({
             insert: [AiUsageEventEntity, {}],
-            query: [
-                [SELECT_QUOTA_STATUS, [ROW]],
-                [POST_USAGE_NOTICE, [{ posted: true }]],
-            ],
+            query: [SELECT_QUOTA_STATUS, [ROW]],
         })
-        const { usage, logger } = await build(em)
+        const { usage, logger, notices, catalog } = await build(em)
 
         await expect(usage.record({ ...INPUT, model: "x".repeat(121) })).resolves.toBeUndefined()
 
         expect(em.insert.mock.calls).toEqual([[AiUsageEventEntity, BOOKED({ model: "x".repeat(120) })]])
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_QUOTA_STATUS, ["ws-1"]],
-            [POST_USAGE_NOTICE, ["ws-1", "2026-10-01", "warn", WARN_BODY]],
+        expect(em.query.mock.calls).toEqual([[SELECT_QUOTA_STATUS, ["ws-1"]]])
+        expect(catalog.get).toHaveBeenCalledWith(
+            "usage.notice.warn",
+            {
+                percent: 80,
+                use: "100/200 credit, 50 credit n\u1ea1p th\u00eam c\u00f2n l\u1ea1i, 80/100 tin nh\u1eafn, 1.000/10.000 token",
+            },
+            "vi",
+        )
+        expect(notices.postNotice.mock.calls).toEqual([
+            ["ws-1", { key: "usage-notice:warn:2026-10-01", body: "notice text" }],
         ])
         expect(logger.error).not.toHaveBeenCalled()
     })
@@ -431,13 +435,8 @@ describe("AiUsageEventsService > blockedBy", () => {
     it.each<UsageKind>(["chat_reply", "relay"])(
         "blocks %s when the message allowance is spent and tells the owner",
         async (kind) => {
-            const em = mockEntityManager({
-                query: [
-                    [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: "100" }]],
-                    [POST_USAGE_NOTICE, [{ posted: true }]],
-                ],
-            })
-            const { usage, logger } = await build(em)
+            const em = mockEntityManager({ query: [SELECT_QUOTA_STATUS, [{ ...ROW, messages_used: "100" }]] })
+            const { usage, logger, notices } = await build(em)
 
             await expect(usage.blockedBy("ws-1", kind, false)).resolves.toEqual({
                 ...STATUS,
@@ -447,9 +446,9 @@ describe("AiUsageEventsService > blockedBy", () => {
                 level: "exceeded",
             })
 
-            expect(em.query.mock.calls).toEqual([
-                [SELECT_QUOTA_STATUS, ["ws-1"]],
-                [POST_USAGE_NOTICE, ["ws-1", "2026-10-01", "exceeded", EXCEEDED_BODY]],
+            expect(em.query.mock.calls).toEqual([[SELECT_QUOTA_STATUS, ["ws-1"]]])
+            expect(notices.postNotice.mock.calls).toEqual([
+                ["ws-1", { key: "usage-notice:exceeded:2026-10-01", body: "notice text" }],
             ])
             expect(logger.error).not.toHaveBeenCalled()
         },
@@ -467,10 +466,10 @@ describe("AiUsageEventsService > blockedBy", () => {
 
 describe("AiUsageEventsService > blockedBy", () => {
     it("blocks bulk embeddings at the credit limit even when posting the owner notice fails", async () => {
-        const em = mockEntityManager()
+        const em = mockEntityManager({ query: [SELECT_QUOTA_STATUS, [{ ...ROW, credits_used: 200, topup_balance: 0 }]] })
         const failure = new Error("notice unavailable")
-        em.query.mockResolvedValueOnce([{ ...ROW, credits_used: 200, topup_balance: 0 }]).mockRejectedValueOnce(failure)
-        const { usage, logger } = await build(em)
+        const { usage, logger, notices } = await build(em)
+        notices.postNotice.mockRejectedValue(failure)
 
         await expect(usage.blockedBy("ws-1", "embedding", true)).resolves.toEqual({
             ...STATUS,
@@ -481,21 +480,7 @@ describe("AiUsageEventsService > blockedBy", () => {
             level: "exceeded",
         })
 
-        expect(em.query.mock.calls).toEqual([
-            [SELECT_QUOTA_STATUS, ["ws-1"]],
-            [
-                POST_USAGE_NOTICE,
-                [
-                    "ws-1",
-                    "2026-10-01",
-                    "exceeded",
-                    "Workspace \u0111\u00e3 d\u00f9ng h\u1ebft h\u1ea1n m\u1ee9c AI c\u1ee7a th\u00e1ng n\u00e0y (200/200 credit, 80/100 tin nh\u1eafn, " +
-                        "1.000/10.000 token). Chatbot t\u1ea1m d\u1eebng t\u1ef1 tr\u1ea3 l\u1eddi: kh\u00e1ch nh\u1eadn l\u1eddi x\u00e1c nh\u1eadn l\u1ecbch s\u1ef1 v\u00e0 " +
-                        "c\u00e2u h\u1ecfi \u0111\u01b0\u1ee3c chuy\u1ec3n cho nh\u00e2n vi\u00ean. N\u1ea1p th\u00eam credit ho\u1eb7c n\u00e2ng c\u1ea5p g\u00f3i t\u1ea1i Credit & g\u00f3i " +
-                        "(/billing) \u0111\u1ec3 chatbot ho\u1ea1t \u0111\u1ed9ng l\u1ea1i.",
-                ],
-            ],
-        ])
+        expect(notices.postNotice).toHaveBeenCalledTimes(1)
         expect(logger.error.mock.calls).toEqual([
             [AiUsageEventsLogEvent.NoticeFailed, failure, { workspaceId: "ws-1" }],
         ])
@@ -522,7 +507,7 @@ describe("AiUsageEventsService > a call made for a run", () => {
 })
 
 describe("AiUsageEventsService > creditsByRun", () => {
-    it("groups the whole credits of the runs given, the guide left out", async () => {
+    it("groups the exact credits of the runs given, the guide left out", async () => {
         const em = mockEntityManager()
         const sums = fakeQueryBuilder({
             getRawMany: [

@@ -60,15 +60,25 @@ interface GuideDrawerBaseProps {
     }
 }
 
+/** The words the head description draws. */
+interface HeadDescriptionProps {
+    readonly props: Pick<GuideDrawerBaseProps["props"], "subtitle" | "shortcutKeys">
+}
+
 /** The head's line under the title: the subtitle, and the small chord that opens the guide, on the same line. */
-const HeadDescription = (props: GuideDrawerBaseProps) => (
+const HeadDescription = (props: HeadDescriptionProps) => (
     <>
         <span>{props.props.subtitle}</span> <Kbd keys={[...props.props.shortcutKeys]} />
     </>
 )
 
+/** The drawer props with the avatar the runs share. */
+interface GuideRunProps extends GuideDrawerBaseProps {
+    readonly avatar: ReactNode
+}
+
 /** What NIVO says first: where you are, and the things to do there as a card of rows. */
-const HereRun = (props: GuideDrawerBaseProps & { readonly avatar: ReactNode }) => {
+const HereRun = (props: GuideRunProps) => {
     const { here } = props.props
     const hasTodos = here.todos.length > 0
     return (
@@ -76,7 +86,7 @@ const HereRun = (props: GuideDrawerBaseProps & { readonly avatar: ReactNode }) =
             <ChatMessageBubble
                 side="incoming"
                 avatar={props.avatar}
-                                body={<Text size="sm">{here.text}</Text>}
+                body={<Text size="sm">{here.text}</Text>}
             />
             {hasTodos ? (
                 <GuideRowsCard
@@ -89,7 +99,7 @@ const HereRun = (props: GuideDrawerBaseProps & { readonly avatar: ReactNode }) =
 }
 
 /** The query echoed as the reader's own bubble, then NIVO's cards of results, or the one way on when it found nothing. */
-const FoundRun = (props: GuideDrawerBaseProps & { readonly avatar: ReactNode }) => (
+const FoundRun = (props: GuideRunProps) => (
     <>
         <ChatMessageBubble side="outgoing" body={<Text size="sm">{props.props.query.trim()}</Text>} />
         {props.props.noResults === null ? (
@@ -195,7 +205,7 @@ export const GuideDrawerBase = (props: GuideDrawerBaseProps) => (
             if (open !== props.props.isOpen) props.on.toggle()
         }}
         title={props.props.title}
-        description={<HeadDescription {...props} />}
+        description={<HeadDescription props={props.props} />}
         leading={<Avatar name={props.props.title} src={props.props.imageSrc} size="md" isDecorative />}
         closeLabel={props.props.closeLabel}
         placement="right"

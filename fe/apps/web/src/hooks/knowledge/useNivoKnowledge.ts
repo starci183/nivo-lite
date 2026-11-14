@@ -21,7 +21,7 @@ export const useNivoKnowledge = (): NivoKnowledgeView => {
     const swrRead = useQueryNivoKnowledgeSwr()
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
-    const items = useMemo(() => (data === undefined ? undefined : data.map(toNivoEntry)), [data])
+    const items = useMemo(() => (data === undefined ? undefined : data.map((entry) => toNivoEntry(entry))), [data])
     const slot = slotOfSwr({ data: items, error: swrRead.error, isLoading })
     const reload = () => void swrRead.mutate()
     return { items, error, isLoading, slot, reload }

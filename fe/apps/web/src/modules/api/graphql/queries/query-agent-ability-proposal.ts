@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { AgentAbilityProposalQuery, AgentAbilityProposalQueryVariables } from "../__generated__/graphql"
 
 /** Generated input of the agentAbilityProposal query. */
@@ -18,10 +18,6 @@ const query1: Document = gql`
             connectionId
             accountLabel
             connected
-            abilities {
-                id
-                mode
-            }
         }
     }
 `
@@ -39,12 +35,12 @@ type QueryAgentAbilityProposalParams = QueryParams<
     QueryAgentAbilityProposalRequest
 > & { request: QueryAgentAbilityProposalRequest }
 
-/** One line per connected account of the providers a template names, with the abilities it pre-ticks, and a line per named provider not connected. Rejects with the back end failure. */
+/** One line per connected account of the providers a template names, and a line per named provider not connected. Rejects with the back end failure. */
 export const queryAgentAbilityProposal = async ({
     query = QueryAgentAbilityProposalDocument.Query1,
     request,
     signal,
 }: QueryAgentAbilityProposalParams): Promise<ApolloClient.QueryResult<QueryAgentAbilityProposalResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

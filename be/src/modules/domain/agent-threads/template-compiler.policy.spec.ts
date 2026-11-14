@@ -1,7 +1,9 @@
 import { Test } from "@nestjs/testing"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
-import { coreNodes } from "@nivo-lite/blocks-core"
-import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
+import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
+import { INSTALLED as INSTALLATION } from "@modules/domain/installed-plugins"
+import { coreTemplates } from "@modules/domain/installed-plugins/installed-plugins.testing"
+import { templateStepIds } from "./template-steps.policy"
 import { THREAD_END } from "@modules/integrations/langgraph/langgraph.port"
 import { FREEZE_NODE, compileTemplate, stepExitOf } from "./template-compiler.policy"
 import type { CompiledTemplate, CompiledStep, TemplatePin, TemplateProblem } from "./template-compiler.policy"
@@ -26,26 +28,40 @@ const build = async () => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-/** Every installed node id, as the node registry holds them. */
-const INSTALLED: ReadonlySet<string> = new Set(coreNodes.map((node) => node.id))
+/** Every step id a version may run, as the thread engine hands them to the compiler (the control nodes and every template step). */
+// Built exactly as `ThreadGraphsService.routed` builds it (the `defineNode` nodes and `templateStepIds()`), so it cannot drift from the
+// engine: the spec helper `runnableStepIds` it replaces had drifted (it lacked `core.hand-back`, so every graph with a hand-back step was
+// reported TEMPLATE_STEP_UNKNOWN here while the engine runs it).
+const INSTALLED: ReadonlySet<string> = new Set([...INSTALLATION.nodeInstall().nodes.map((node) => node.id), ...templateStepIds()])
+
+/** The core package's workflow templates: since the flip, one per graph of its template agents (`WORKFLOW_TEMPLATES` before). */
+const WORKFLOW_TEMPLATES = coreTemplates()
 
 /**
  * What each blocks-core template still cannot run on threads, by template id. Every template compiles today: none uses a for-each
  * (phase 2) and every step id is installed. A template that gains one must be listed here with its phase, never dropped in silence.
+ * (`accounting.reconcile` and `accounting.reports` left with the money, owner decision wave 4; the booking, content, hiring, video and
+ * `sales.payment` templates joined the catalogue; `sales.payment`, `content.plan` and `video.produce` draw a for-each, a gap of phase 2 listed
+ * below, the others compile with none. `sales.payment-reminder` left: its reminders are the pay loop of the one sale graph, R47.)
  */
 const NOT_YET_SUPPORTED: Readonly<Record<string, ReadonlyArray<TemplateProblem>>> = {
-    "accounting.reconcile": [],
-    "accounting.reports": [],
     "chatbot.front-desk": [],
     "sales.after-sale": [],
     "sales.consult": [],
     "sales.delivery-check": [],
     "sales.occasion": [],
-    "sales.payment-reminder": [],
     "sales.web-order": [],
-    "accounting.team-chat": [],
     "chatbot.team-chat": [],
     "sales.team-chat": [],
+    "sales.payment": [{ code: "TEMPLATE_LOOP_PHASE_2", at: "match" }],
+    "booking.book": [],
+    "booking.remind": [],
+    "content.draft": [],
+    "content.plan": [{ code: "TEMPLATE_LOOP_PHASE_2", at: "posts" }],
+    "content.report": [],
+    "hiring.digest": [],
+    "hiring.screen": [],
+    "video.produce": [{ code: "TEMPLATE_LOOP_PHASE_2", at: "scenes" }],
 }
 
 const pinOf = (templateId: string, templateVersion: number): TemplatePin => ({
@@ -60,6 +76,9 @@ const pinOf = (templateId: string, templateVersion: number): TemplatePin => ({
 const VERSIONS = WORKFLOW_TEMPLATES.flatMap((template) =>
     template.versions.map((version) => [`${template.id} v${version.version}`, template.id, version] as const),
 )
+
+/** The versions that draw no for-each: the ones that compile whole (a for-each is the listed phase-2 gap). */
+const WHOLE_VERSIONS = VERSIONS.filter(([, , version]) => version.graph.nodes.every((node) => node.step !== "core.for-each"))
 
 /** The newest chatbot.front-desk, the workflow phase 0 runs (one sample, so `it.each` over it never needs a null check). */
 const FRONT_DESK: ReadonlyArray<Sample> = WORKFLOW_TEMPLATES.filter((template) => template.id === "chatbot.front-desk").map(
@@ -98,7 +117,7 @@ describe("compileTemplate on every blocks-core template", () => {
         )
     })
 
-    it.each(VERSIONS)("compiles %s the same with for-each cycles on: no template draws a for-each", async (_label, templateId, version) => {
+    it.each(WHOLE_VERSIONS)("compiles %s the same with for-each cycles on: it draws no for-each", async (_label, templateId, version) => {
         const subject = await build()
         const source = { pin: pinOf(templateId, version.version), spec: version.graph }
 
@@ -106,7 +125,7 @@ describe("compileTemplate on every blocks-core template", () => {
         expect(subject.compileTemplate(source, INSTALLED, { loops: true })).toEqual(subject.compileTemplate(source, INSTALLED))
     })
 
-    it.each(VERSIONS)("keeps every route of %s inside the graph and pins the version", async (_label, templateId, version) => {
+    it.each(WHOLE_VERSIONS)("keeps every route of %s inside the graph and pins the version", async (_label, templateId, version) => {
         const subject = await build()
         const pin = pinOf(templateId, version.version)
 
@@ -126,15 +145,31 @@ describe("compileTemplate on every blocks-core template", () => {
 
         const graph = compiled(subject, sample)
 
-        expect(graph?.entry).toBe("understand")
+        // The first step is the chatbot's own `hear` (one trigger pipeline: what a package wants beyond the delivered event it does in its
+        // graph's first node): it goes on to `understand`, or ends with `nothing` for an event with nothing to answer.
+        expect(graph?.entry).toBe("hear")
+        expect(nodeNamed(graph, "hear")?.exit).toMatchObject({
+            kind: "branch",
+            routes: { go: "understand", nothing: "nothing-to-answer" },
+            otherwise: THREAD_END,
+        })
         expect(nodeNamed(graph, "understand")?.exit).toEqual({
             kind: "branch",
             field: "branch",
-            routes: { buy: "to-consult", paid: "to-reconcile", complaint: "complaint", question: "answer" },
+            // The flip split the complaint step in two (reply to the customer, then tell the team): the route reaches the reply.
+            routes: { buy: "to-consult", paid: "to-payment", book: "to-booking", complaint: "complaint-reply", question: "answer" },
             otherwise: THREAD_END,
         })
         expect(nodeNamed(graph, "to-consult")?.exit).toEqual({ kind: "next", to: THREAD_END })
-        expect(nodeNamed(graph, "complaint")?.ends).toEqual(["to-owner", FREEZE_NODE])
+        // A declined send is a decision (the owner's rule of 2026-11-12): the reply goes through the `complaint-declined` check first.
+        expect(nodeNamed(graph, "complaint-reply")?.ends).toEqual(["complaint-declined", FREEZE_NODE])
+        expect(nodeNamed(graph, "complaint-declined")?.exit).toEqual({
+            kind: "branch",
+            field: "branch",
+            routes: { yes: "complaint-declined-notice", no: "complaint-notify" },
+            otherwise: THREAD_END,
+        })
+        expect(nodeNamed(graph, "complaint-notify")?.ends).toEqual(["to-owner", FREEZE_NODE])
         expect(nodeNamed(graph, "to-owner")?.step).toBe("core.outcome")
     })
 
@@ -146,7 +181,7 @@ describe("compileTemplate on every blocks-core template", () => {
         const problems =
             version === null ? "no template" : problemsOf(subject, { pin: pinOf(name, version.version), spec: version.graph })
 
-        expect(problems).toEqual([])
+        expect(problems).toEqual(NOT_YET_SUPPORTED[name])
     })
 
     it.each(FRONT_DESK)("gives the same description for the same version", async (sample) => {
@@ -224,10 +259,16 @@ describe("stepExitOf", () => {
             return node === undefined ? `missing ${name}` : subject.stepExitOf(node, output)
         }
 
-        expect(exitOf("understand", { branch: "paid", summary: "x" })).toBe("to-reconcile")
+        expect(exitOf("understand", { branch: "paid", summary: "x" })).toBe("to-payment")
         expect(exitOf("understand", { branch: "elsewhere" })).toBe(THREAD_END)
         expect(exitOf("understand", null)).toBe(THREAD_END)
-        expect(exitOf("complaint", { summary: "x" })).toBe("to-owner")
-        expect(exitOf("answer", {})).toBe(THREAD_END)
+        // The reply and the answer go to their `*-declined` check (the owner's rule of 2026-11-12); the check's branch picks the way on.
+        expect(exitOf("complaint-reply", { summary: "x" })).toBe("complaint-declined")
+        expect(exitOf("complaint-declined", { branch: "no" })).toBe("complaint-notify")
+        expect(exitOf("complaint-declined", { branch: "yes" })).toBe("complaint-declined-notice")
+        expect(exitOf("complaint-notify", { summary: "x" })).toBe("to-owner")
+        expect(exitOf("answer", {})).toBe("answer-declined")
+        expect(exitOf("answer-declined", { branch: "no" })).toBe(THREAD_END)
+        expect(exitOf("answer-declined", { branch: "yes" })).toBe("answer-declined-notice")
     })
 })

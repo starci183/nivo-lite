@@ -43,6 +43,7 @@ interface PayloadParams {
     readonly record: AgentMessageRecord
     readonly payload: unknown
     readonly view: AgentMessageView | undefined
+    readonly views: ReadonlyArray<AgentMessageView>
     readonly words: AgentMessageWords
     readonly maxLength: number
     readonly isRunning: boolean
@@ -51,31 +52,32 @@ interface PayloadParams {
     readonly onClose: () => void
 }
 
+/** The summary of a record whose kind has no view. */
+const summaryOf = (record: PayloadParams["record"], openDetail: PayloadParams["words"]["openDetail"]): ReactNode => (
+    <Summary record={record} openDetail={openDetail} />
+)
+
 /** The payload as its kind draws it: the editor while it is edited in place, else the preview, else the summary for an unknown kind. */
 const PayloadView = (params: PayloadParams): ReactNode => {
     const { view } = params
-    if (view === undefined) return <Summary record={params.record} openDetail={params.words.openDetail} />
+    if (view === undefined) return summaryOf(params.record, params.words.openDetail)
     const editor = params.isEditing ? view.editor : undefined
     if (editor === undefined) {
-        return <>{view.preview(params.payload, { record: params.record, words: params.words })}</>
+        return view.preview(params.payload, { record: params.record, words: params.words, views: params.views })
     }
-    return (
-        <>
-            {editor({
-                payload: params.payload,
-                label: params.words.editLabel,
-                submitLabel: params.words.sendEdited,
-                cancelLabel: params.words.cancel,
-                maxLength: params.maxLength,
-                isPending: params.isRunning,
-                onSubmit: (values) => {
-                    params.onApprove(values)
-                    params.onClose()
-                },
-                onCancel: params.onClose,
-            })}
-        </>
-    )
+    return editor({
+        payload: params.payload,
+        label: params.words.editLabel,
+        submitLabel: params.words.sendEdited,
+        cancelLabel: params.words.cancel,
+        maxLength: params.maxLength,
+        isPending: params.isRunning,
+        onSubmit: (values) => {
+            params.onApprove(values)
+            params.onClose()
+        },
+        onCancel: params.onClose,
+    })
 }
 
 /**
@@ -100,6 +102,7 @@ export const AgentMessageCard = (props: AgentMessageCardProps): ReactNode => {
                 record={record}
                 payload={props.item.payload}
                 view={view}
+                views={props.views}
                 words={props.words}
                 maxLength={props.maxLength}
                 isRunning={props.isRunning}

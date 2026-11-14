@@ -34,7 +34,7 @@ export const typeOfSchema = (schema: Json): RefType => {
     }
     const options = schema["anyOf"] ?? schema["oneOf"]
     if (Array.isArray(options)) {
-        const kinds = [...new Set(options.filter(isRecord).map(typeOfSchema).filter((kind) => kind !== "null"))]
+        const kinds = [...new Set(options.filter(isRecord).map((entry) => typeOfSchema(entry)).filter((kind) => kind !== "null"))]
         const [only] = kinds
         return kinds.length === 1 && only !== undefined ? only : "unknown"
     }

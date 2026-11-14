@@ -1,6 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { useSWRConfig } from "swr"
 import { matchesSwrKey } from "@/modules/utils"
 import { QUERY_CHAT_ROOMS_SWR_KEY } from "../queries/useQueryChatRoomsSwr"
@@ -9,7 +9,6 @@ import {
     mutateSetChatRoomMuted,
     type mutateSetChatRoomMuted as SetChatRoomMutedOperation,
 } from "@/modules/api/graphql/mutations/mutation-set-chat-room-muted"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetChatRoomMutedMutation } from "@/modules/api"
 
 /** What the SetChatRoomMuted mutation is triggered with. */

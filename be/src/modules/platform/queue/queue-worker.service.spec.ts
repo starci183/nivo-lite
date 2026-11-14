@@ -212,6 +212,18 @@ describe("routing", () => {
         expect(whole.handle).toHaveBeenCalledTimes(1)
     })
 
+    it("names to the admission the workspace headroom of each job of the queue, by the handler the job goes to", async () => {
+        const { workers, transport } = await build()
+        workers.add({ ...handlerOf("knowledge", "knowledge.index"), workspaceHeadroom: 2 })
+        workers.add(handlerOf("knowledge"))
+        await workers.onApplicationBootstrap()
+        const router = routerOf(transport, "knowledge")
+
+        expect(router.headroomOf?.("knowledge.index")).toBe(2)
+        expect(router.headroomOf?.("knowledge.facts")).toBe(0)
+        await expect(router.fairGroupOf?.("knowledge.facts", {})).resolves.toBeNull()
+    })
+
     it("rejects a job no handler names with the error that ends it at once", async () => {
         const { workers, transport } = await build()
         workers.add(handlerOf("knowledge", "knowledge.index"))

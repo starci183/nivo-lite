@@ -10,9 +10,11 @@ import {
 } from "@modules/domain/entity-engine"
 import type { Clock } from "@modules/platform/clock"
 import { DomainError } from "@modules/platform/errors"
+import { CORE_TABLE_KEYS, keyTaken } from "@tests/fixtures/builders/engine-core-tables.builder"
 
-// The records engine of the phase-0 wave-C world (package 0-9), in memory: the entities the thread engine writes (agent.run,
-// agent.run-step, agent.run-stop, agent.node-effect) with their unique keys, versions that move on every write, and a crash hook.
+// The database of the phase-0 wave-C world (package 0-9), in memory: the records the thread engine reads and writes, and the engine's
+// own core tables under their table names (`thread-world-tables.ts`: stops, freezes, holds; `engine-core-tables.builder.ts`: graphs,
+// workflows, runs, steps, the effect ledger), with their unique keys, versions that move on every write, and a crash hook.
 
 /** The workspace of every run. A uuid: the entity engine refuses any other scope. */
 export const WS = "11111111-1111-4111-8111-111111111111"
@@ -20,11 +22,11 @@ export const WS = "11111111-1111-4111-8111-111111111111"
 /** What the world itself refuses: a script that ran dry, a record it cannot find, a filter it does not read, a crash it was told to make. */
 export class WorldError extends DomainError<string> {}
 
-/** The unique keys of the entities the engine writes, as their declarations name them. */
+/** The unique keys of the core tables the engine writes, as their migrations declare them. */
 const UNIQUE: Readonly<Record<string, ReadonlyArray<ReadonlyArray<string>>>> = {
-    "agent.node-effect": [["effectKey"]],
-    "agent.run-step": [["runId", "stepKey"]],
-    "agent.run-stop": [["runId", "stepKey"]],
+    ...CORE_TABLE_KEYS,
+    run_stops: [["runId", "stepKey"]],
+    contact_freezes: [["key"]],
 }
 
 /** Which write the process dies at. */
@@ -82,6 +84,16 @@ export class MemoryRecords {
         this.mutations = mock<EntityMutationService>({
             mutate: (_tx: ScopedTx, mutation: Mutation) => Promise.resolve(this.mutate(mutation)),
         })
+    }
+
+    /** Writes one mutation at once, as the mutation service does (crash hook, unique keys, versions): the core tables' doubles. */
+    write(mutation: Mutation): EngineResult {
+        return this.mutate(mutation)
+    }
+
+    /** Removes one row of an entity or table. */
+    remove(entity: string, id: string): void {
+        if (this.rows.get(id)?.entity === entity) this.rows.delete(id)
     }
 
     /** The next write `when` matches throws instead of writing: the process died there. */
@@ -153,11 +165,7 @@ export class MemoryRecords {
 
     private taken(entity: string, values: MutationValues): RecordRow | null {
         const keys = UNIQUE[entity] ?? []
-        return (
-            this.of(entity).find((row) =>
-                keys.some((key) => key.every((field) => row.data[field] === values[field])),
-            ) ?? null
-        )
+        return this.of(entity).find((row) => keys.some((key) => keyTaken(row.data, values, key))) ?? null
     }
 
     private insert(entity: string, values: MutationValues): EngineResult {

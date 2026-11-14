@@ -10,12 +10,12 @@ export const toSendMessageRequest = (
 ): SendMessageRequest => ({
     authorization,
     text: input.text,
-    conversationId: input.conversation_id,
+    conversationId: input.route_id,
     requireApproval: input.require_approval,
     idempotencyKey,
 })
 
 /** Maps the command result to the HTTP response. */
 export const toSendMessageResponse = (result: SendMessageResult): SendMessageResponse => ({
-    data: { conversation_id: result.conversationId, status: result.status },
+    data: { route_id: result.conversationId, status: result.status },
 })

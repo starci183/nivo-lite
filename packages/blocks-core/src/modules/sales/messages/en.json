@@ -146,7 +146,6 @@
   "failed_reason_delivery": "The message could not be sent",
   "failed_reason_invoice": "The invoice service could not be reached",
   "failed_reason_timeout": "The channel did not answer",
-  "action_resume_run": "Run again",
   "refusal_order_paid": "The order is paid, so it cannot be cancelled",
   "refusal_order_invoiced": "An invoice was issued for the order, so it cannot be cancelled",
   "refusal_order_has_payment": "A payment is allocated to the order, so it cannot be cancelled",

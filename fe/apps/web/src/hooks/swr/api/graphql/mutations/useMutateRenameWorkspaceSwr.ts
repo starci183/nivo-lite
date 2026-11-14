@@ -1,14 +1,12 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRenameWorkspace,
     type mutateRenameWorkspace as MutateRenameWorkspaceOperation,
 } from "@/modules/api/graphql/mutations/mutation-rename-workspace"
 import { answeredData } from "@/hooks/workspaceread"
-import { GraphQLHeadersKey } from "@/modules/api"
-import type { RenameWorkspaceMutation } from "@/modules/api"
+import { GraphQLHeadersKey, type RenameWorkspaceMutation } from "@/modules/api"
 
 /** The SWR key of the renameWorkspace mutation. */
 export const MUTATE_RENAME_WORKSPACE_SWR_KEY = "MUTATE_RENAME_WORKSPACE_SWR"

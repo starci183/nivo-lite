@@ -1,5 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { ContactMemoryEntryEntity } from "@modules/domain/contacts/persistence/entities"
+import { ContactFreezeEntity } from "@modules/domain/lead-freezes/persistence/entities"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { GraphSeedService } from "./graph-seed.service"
@@ -20,56 +22,35 @@ const TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/sales.json", d
 const WORKSPACE_SQL = "SELECT id::text AS id FROM public.workspaces WHERE name = $1"
 const AGENTS_SQL = `SELECT agent_id::text AS agent_id FROM public.module_installations
               WHERE workspace_id = $1 AND module_key = ANY($2) AND removed_at IS NULL`
-const LINKS_SQL = `DELETE FROM public.record_links l USING public.records r
-              WHERE l.workspace_id = $1 AND r.workspace_id = $1
-                AND ((l.from_entity = r.entity AND l.from_id = r.id) OR (l.to_entity = r.entity AND l.to_id = r.id))
-                AND ((r.entity = ANY($2) AND r.data->>'agentId' = ANY($3))
-                  OR (r.entity = $4 AND r.data->>'runId' IN (SELECT id::text FROM public.records WHERE workspace_id = $1 AND entity = $5 AND data->>'agentId' = ANY($3)))
-                  OR r.entity = ANY($6)
-                  OR (r.entity = $7 AND r.data->>'agentId' = ANY($3) AND jsonb_exists(r.data->'document', 'flow')))`
-const RUN_IDS_SQL =
-    "SELECT id::text AS id FROM public.records WHERE workspace_id = $1 AND entity = $2 AND data->>'agentId' = ANY($3)"
+const RUN_IDS_SQL = "SELECT id::text AS id FROM public.agent_runs WHERE workspace_id = $1 AND agent_id::text = ANY($2)"
 const TABLE_SQL = "SELECT to_regclass($1) IS NOT NULL AS present"
-const STEPS_SQL = `DELETE FROM public.records WHERE workspace_id = $1 AND entity = $2
-               AND data->>'runId' IN (SELECT id::text FROM public.records WHERE workspace_id = $1 AND entity = $3 AND data->>'agentId' = ANY($4))`
-const RUNS_SQL = "DELETE FROM public.records WHERE workspace_id = $1 AND entity = $2 AND data->>'agentId' = ANY($3)"
-const WORKFLOWS_SQL =
-    "DELETE FROM public.records WHERE workspace_id = $1 AND entity = ANY($2) AND data->>'agentId' = ANY($3)"
-const LEADS_SQL = "DELETE FROM public.records WHERE workspace_id = $1 AND entity = ANY($2)"
-const GRAPHS_SQL = `UPDATE public.records g
-                SET data = jsonb_set(g.data, '{activeVersionId}', COALESCE((
-                        SELECT to_jsonb(v.id::text) FROM public.records v
-                         WHERE v.workspace_id = $1 AND v.entity = $3 AND v.data->>'agentId' = g.data->>'agentId'
-                           AND NOT jsonb_exists(v.data->'document', 'flow')
-                         ORDER BY (v.data->>'number')::int DESC LIMIT 1), 'null'::jsonb)),
+const STEPS_SQL = `DELETE FROM public.agent_run_steps s WHERE s.workspace_id = $1
+               AND s.run_id IN (SELECT r.id FROM public.agent_runs r WHERE r.workspace_id = $1 AND r.agent_id::text = ANY($2))`
+const RUNS_SQL = "DELETE FROM public.agent_runs WHERE workspace_id = $1 AND agent_id::text = ANY($2)"
+const WORKFLOW_VERSIONS_SQL = "DELETE FROM public.agent_workflow_versions WHERE workspace_id = $1 AND agent_id::text = ANY($2)"
+const WORKFLOWS_SQL = "DELETE FROM public.agent_workflows WHERE workspace_id = $1 AND agent_id::text = ANY($2)"
+const GRAPHS_SQL = `UPDATE public.agent_graphs g
+                SET active_version_id = (
+                        SELECT v.id FROM public.agent_graph_versions v
+                         WHERE v.workspace_id = $1 AND v.agent_id = g.agent_id AND NOT jsonb_exists(v.document, 'flow')
+                         ORDER BY v.number DESC LIMIT 1),
                     version = g.version + 1
-              WHERE g.workspace_id = $1 AND g.entity = $2 AND g.data->>'agentId' = ANY($4)`
-const FLOWS_SQL = `DELETE FROM public.records WHERE workspace_id = $1 AND entity = $2 AND data->>'agentId' = ANY($3)
-               AND jsonb_exists(data->'document', 'flow')`
+              WHERE g.workspace_id = $1 AND g.agent_id::text = ANY($2)`
+const FLOWS_SQL = `DELETE FROM public.agent_graph_versions WHERE workspace_id = $1 AND agent_id::text = ANY($2)
+               AND jsonb_exists(document, 'flow')`
 
-/** The dry run's counts of the record kinds, in the order it sends them (links, steps, workflows, lead rows, flow versions). */
+/** The dry run's counts of the core tables, in the order it sends them (steps, workflow versions, workflows, flow versions). */
 const COUNTS = [
-    `SELECT count(*)::int AS count FROM public.record_links l
-              WHERE l.workspace_id = $1 AND EXISTS (SELECT 1 FROM public.records r
-                WHERE r.workspace_id = $1
-                  AND ((l.from_entity = r.entity AND l.from_id = r.id) OR (l.to_entity = r.entity AND l.to_id = r.id))
-                  AND ((r.entity = ANY($2) AND r.data->>'agentId' = ANY($3))
-                    OR (r.entity = $4 AND r.data->>'runId' IN (SELECT id::text FROM public.records WHERE workspace_id = $1 AND entity = $5 AND data->>'agentId' = ANY($3)))
-                    OR r.entity = ANY($6)
-                    OR (r.entity = $7 AND r.data->>'agentId' = ANY($3) AND jsonb_exists(r.data->'document', 'flow'))))`,
-    `SELECT count(*)::int AS count FROM public.records WHERE workspace_id = $1 AND entity = $2
-               AND data->>'runId' IN (SELECT id::text FROM public.records WHERE workspace_id = $1 AND entity = $3 AND data->>'agentId' = ANY($4))`,
-    "SELECT count(*)::int AS count FROM public.records WHERE workspace_id = $1 AND entity = ANY($2) AND data->>'agentId' = ANY($3)",
-    "SELECT count(*)::int AS count FROM public.records WHERE workspace_id = $1 AND entity = ANY($2)",
-    `SELECT count(*)::int AS count FROM public.records WHERE workspace_id = $1 AND entity = $2 AND data->>'agentId' = ANY($3)
-               AND jsonb_exists(data->'document', 'flow')`,
+    `SELECT count(*)::int AS count FROM public.agent_run_steps s WHERE s.workspace_id = $1
+               AND s.run_id IN (SELECT r.id FROM public.agent_runs r WHERE r.workspace_id = $1 AND r.agent_id::text = ANY($2))`,
+    "SELECT count(*)::int AS count FROM public.agent_workflow_versions WHERE workspace_id = $1 AND agent_id::text = ANY($2)",
+    "SELECT count(*)::int AS count FROM public.agent_workflows WHERE workspace_id = $1 AND agent_id::text = ANY($2)",
+    `SELECT count(*)::int AS count FROM public.agent_graph_versions WHERE workspace_id = $1 AND agent_id::text = ANY($2)
+               AND jsonb_exists(document, 'flow')`,
 ]
 
 /** The run-state kinds' clears, in order. */
 const STATE_CLEARS = RESET_RUN_STATE.map((kind) => kind.clear)
-
-/** The entities the reset clears by agent: the workflows, their versions, the run pins and the conversation holds. */
-const CLEARED = ["agent.workflow", "agent.workflow-version", "agent.run-workflow", "agent.conversation-hold"]
 
 /** What a DELETE answers on Postgres through typeorm: the returned rows, then how many were removed. */
 const removed = (count: number): readonly [ReadonlyArray<unknown>, number] => [[], count]
@@ -78,7 +59,7 @@ const removed = (count: number): readonly [ReadonlyArray<unknown>, number] => [[
 const lost = { then: (_resolve: unknown, reject: (cause: unknown) => void) => reject(unreachable()) }
 
 function unreachable(): WorkspaceSeedError {
-    return new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.ConnectorUnreachable })
+    return new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.VerificationFailed })
 }
 
 interface Answers {
@@ -99,11 +80,10 @@ const build = async (answers: Answers = {}) => {
         query: [
             [WORKSPACE_SQL, answers.workspaces ?? [{ id: "ws-1" }]],
             [AGENTS_SQL, answers.agents ?? [{ agent_id: "agent-c" }, { agent_id: "agent-s" }]],
-            [LINKS_SQL, removed(9)],
             [STEPS_SQL, removed(11)],
             [RUNS_SQL, answers.runs ?? removed(5)],
-            [WORKFLOWS_SQL, answers.workflows ?? removed(7)],
-            [LEADS_SQL, removed(3)],
+            [WORKFLOW_VERSIONS_SQL, removed(3)],
+            [WORKFLOWS_SQL, answers.workflows ?? removed(4)],
             [GRAPHS_SQL, removed(2)],
             [FLOWS_SQL, removed(4)],
             [RUN_IDS_SQL, [{ id: "run-1" }, { id: "run-2" }]],
@@ -111,6 +91,16 @@ const build = async (answers: Answers = {}) => {
             ...RESET_RUN_STATE.map((kind, index): [string, unknown] => [kind.clear, removed(index + 1)]),
             ...RESET_RUN_STATE.map((kind, index): [string, unknown] => [kind.count, [{ count: 10 + index }]]),
             ...COUNTS.map((sql, index): [string, unknown] => [sql, [{ count: 20 + index }]]),
+        ],
+        // The engine's own tables the reset clears beside the runs and workflows: the memory and freezes. Ledger (ROAD Opus-1d,
+        // 2026-11-14): the conversation holds went with the agent conversation hold (ruling R35), so their counts left the totals below.
+        delete: [
+            [ContactMemoryEntryEntity, { affected: 1 }],
+            [ContactFreezeEntity, { affected: 2 }],
+        ],
+        count: [
+            [ContactMemoryEntryEntity, 1],
+            [ContactFreezeEntity, 2],
         ],
     })
     const transaction = fakeTransaction(em)
@@ -132,78 +122,62 @@ const AGENTS = ["agent-c", "agent-s"]
 const RUNS = ["run-1", "run-2"]
 
 describe("WorkflowResetService: what it deletes", () => {
-    it("reads the workspace by its name, the agents of the chatbot, sales and accounting installations, then their runs", async () => {
+    it("reads the workspace by its name, the agents of the chatbot and sales installations, then their runs", async () => {
         const { subject, em } = await build()
 
         await subject.run(TEXT, "NIVO")
 
         expect(em.query.mock.calls.slice(0, 3)).toEqual([
             [WORKSPACE_SQL, ["NIVO"]],
-            [AGENTS_SQL, ["ws-1", ["chatbot", "sales", "accounting"]]],
-            [RUN_IDS_SQL, ["ws-1", "agent.run", AGENTS]],
+            [AGENTS_SQL, ["ws-1", ["chatbot", "sales"]]],
+            [RUN_IDS_SQL, ["ws-1", AGENTS]],
         ])
     })
 
-    it("deletes the record links of the rows it clears first, before the rows they point at", async () => {
+    it("deletes the steps of the agents' runs, the runs (with their pins), the workflows with their versions and holds, the memory and freezes, then the graph versions that held a flow", async () => {
         const { subject, em } = await build()
 
         await subject.run(TEXT, "NIVO")
 
-        expect(em.query.mock.calls[3]).toEqual([
-            LINKS_SQL,
-            [
-                "ws-1",
-                ["agent.run", ...CLEARED],
-                AGENTS,
-                "agent.run-step",
-                "agent.run",
-                ["agent.lead-memory", "agent.lead-freeze"],
-                "agent.graph-version",
-            ],
+        expect(em.query.mock.calls.slice(3, 9)).toEqual([
+            [STEPS_SQL, ["ws-1", AGENTS]],
+            [RUNS_SQL, ["ws-1", AGENTS]],
+            [WORKFLOW_VERSIONS_SQL, ["ws-1", AGENTS]],
+            [WORKFLOWS_SQL, ["ws-1", AGENTS]],
+            [GRAPHS_SQL, ["ws-1", AGENTS]],
+            [FLOWS_SQL, ["ws-1", AGENTS]],
+        ])
+        expect(em.delete.mock.calls).toEqual([
+            [ContactMemoryEntryEntity, { workspaceId: "ws-1" }],
+            [ContactFreezeEntity, { workspaceId: "ws-1" }],
         ])
     })
 
-    it("deletes the steps of the agents' runs, the runs, the workflows with their versions, pins and holds, the lead rows, then the graph versions that held a flow", async () => {
+    it("then clears the run state of every gone run, each kind keyed by the deleted runs and the runs table", async () => {
         const { subject, em } = await build()
 
         await subject.run(TEXT, "NIVO")
 
-        expect(em.query.mock.calls.slice(4, 10)).toEqual([
-            [STEPS_SQL, ["ws-1", "agent.run-step", "agent.run", AGENTS]],
-            [RUNS_SQL, ["ws-1", "agent.run", AGENTS]],
-            [WORKFLOWS_SQL, ["ws-1", CLEARED, AGENTS]],
-            [LEADS_SQL, ["ws-1", ["agent.lead-memory", "agent.lead-freeze"]]],
-            [GRAPHS_SQL, ["ws-1", "agent.graph", "agent.graph-version", AGENTS]],
-            [FLOWS_SQL, ["ws-1", "agent.graph-version", AGENTS]],
-        ])
-    })
-
-    it("then clears the run state of every gone run, each kind keyed by the deleted runs and the run entity", async () => {
-        const { subject, em } = await build()
-
-        await subject.run(TEXT, "NIVO")
-
-        const calls = em.query.mock.calls.slice(10)
+        const calls = em.query.mock.calls.slice(9)
         expect(calls[0]).toEqual([TABLE_SQL, ["public.brain_lesson_candidates"]])
         expect(calls.slice(1).map((call) => call[0])).toEqual(STATE_CLEARS)
         expect(calls.slice(1).map((call) => call[1])).toEqual([
-            ["ws-1", RUNS, "agent.run", "agent.run-stop"],
-            ["ws-1", RUNS, "agent.run", "agent.run-stop"],
-            ["ws-1", RUNS, "agent.run"],
-            ["ws-1", RUNS, "agent.run"],
-            ["ws-1", RUNS, "agent.run"],
-            ["ws-1", RUNS, "agent.run", ["agent_step", "thread_deadline"], ["queued", "running"]],
-            ["ws-1", RUNS, "agent.run", "thread", ["pending", "held", "running", "failed"], "workflow_reset"],
-            ["ws-1", RUNS, "agent.run", ["queued", "waiting_decision"], "lead_frozen", "workflow_reset"],
+            ["ws-1", RUNS],
+            ["ws-1", RUNS],
+            ["ws-1", RUNS],
+            ["ws-1", RUNS],
+            ["ws-1", RUNS, ["agent_step", "thread_deadline"], ["queued", "running"]],
+            ["ws-1", RUNS, "thread", ["pending", "held", "running", "failed"], "workflow_reset"],
+            ["ws-1", RUNS, ["queued", "waiting_decision"], "lead_frozen", "workflow_reset"],
             ["ws-1", AGENTS, ["open", "waiting"]],
-            ["ws-1", RUNS, "agent.run", ["candidate", "proposing"]],
+            ["ws-1", RUNS, ["candidate", "proposing"]],
         ])
     })
 
     it("names in every statement exactly the values it uses ($1..$n, none left over)", () => {
         for (const kind of RESET_RUN_STATE) {
             const used = (sql: string) => Math.max(0, ...[...sql.matchAll(/\$(\d+)/g)].map((match) => Number(match[1])))
-            const base = kind.key === "runs" ? 3 : 2
+            const base = 2
             expect(used(kind.count)).toBe(base + kind.extra.length)
             expect(used(kind.clear)).toBe(base + kind.extra.length + (kind.setExtra?.length ?? 0))
         }
@@ -212,7 +186,7 @@ describe("WorkflowResetService: what it deletes", () => {
     it("keys a run's state by a gone run only when it names one: a null name is never gone", () => {
         for (const kind of RESET_RUN_STATE.filter((one) => one.key === "runs")) {
             expect(kind.count).toContain("IS NOT NULL AND (")
-            expect(kind.count).toContain("NOT EXISTS (SELECT 1 FROM public.records run WHERE run.workspace_id = $1 AND run.entity = $3")
+            expect(kind.count).toContain("NOT EXISTS (SELECT 1 FROM public.agent_runs run WHERE run.workspace_id = $1 AND run.id::text = ")
         }
     })
 
@@ -233,11 +207,12 @@ describe("WorkflowResetService: what it deletes", () => {
 
         expect(transaction.outcomes).toEqual(["commit"])
         expect(transaction.committedWrites.map((write) => write.args[0])).toEqual([
-            LINKS_SQL,
             STEPS_SQL,
             RUNS_SQL,
+            WORKFLOW_VERSIONS_SQL,
             WORKFLOWS_SQL,
-            LEADS_SQL,
+            ContactMemoryEntryEntity,
+            ContactFreezeEntity,
             GRAPHS_SQL,
             FLOWS_SQL,
             ...STATE_CLEARS,
@@ -249,7 +224,7 @@ describe("WorkflowResetService: what it deletes", () => {
 
         await subject.run(TEXT, "NIVO")
 
-        expect(em.query.mock.calls[4]?.[1]).toEqual(["ws-1", "agent.run-step", "agent.run", ["agent-s"]])
+        expect(em.query.mock.calls[3]?.[1]).toEqual(["ws-1", ["agent-s"]])
     })
 })
 
@@ -257,7 +232,7 @@ describe("WorkflowResetService: the seed and the report", () => {
     it("runs the graph seed with the same text and workspace once everything is deleted", async () => {
         const { subject, em, seed } = await build()
         seed.run.mockImplementation(() => {
-            expect(em.query).toHaveBeenCalledTimes(11 + RESET_RUN_STATE.length)
+            expect(em.query).toHaveBeenCalledTimes(10 + RESET_RUN_STATE.length)
             return Promise.resolve()
         })
 
@@ -273,22 +248,20 @@ describe("WorkflowResetService: the seed and the report", () => {
 
         expect(print.mock.calls.map((call) => call[0])).toEqual([
             "reset agents: 2 removed",
-            "reset record links: 9 removed",
             "reset run steps: 11 removed",
             "reset runs: 5 removed",
-            "reset workflows, versions, run pins and conversation holds: 7 removed",
+            "reset workflows and versions: 7 removed",
             "reset graph versions that held a flow: 4 removed",
             "reset lead memory and freezes: 3 removed",
-            "reset run stop links: 1 removed",
-            "reset run stops: 2 removed",
-            "reset LangGraph checkpoint writes: 3 removed",
-            "reset LangGraph checkpoint values: 4 removed",
-            "reset LangGraph checkpoints: 5 removed",
-            "reset open step and deadline jobs: 6 removed",
-            "reset open thread wakes (closed dead): 7 removed",
-            "reset open work items of gone runs and lead freezes (closed rejected): 8 removed",
-            "reset open care timers of the reset agents (dropped): 9 removed",
-            "reset open lesson candidates of gone runs (declined): 10 removed",
+            "reset run stops: 1 removed",
+            "reset LangGraph checkpoint writes: 2 removed",
+            "reset LangGraph checkpoint values: 3 removed",
+            "reset LangGraph checkpoints: 4 removed",
+            "reset open step and deadline jobs: 5 removed",
+            "reset open thread wakes (closed dead): 6 removed",
+            "reset open work items of gone runs and lead freezes (closed rejected): 7 removed",
+            "reset open care timers of the reset agents (dropped): 8 removed",
+            "reset open lesson candidates of gone runs (declined): 9 removed",
         ])
     })
 
@@ -326,12 +299,11 @@ describe("WorkflowResetService: the dry run", () => {
         expect(sent).toEqual(expect.arrayContaining(RESET_RUN_STATE.map((kind) => kind.count)))
         expect(print.mock.calls.map((call) => call[0])).toEqual([
             "reset (dry run) agents: 2 to remove",
-            "reset (dry run) record links: 20 to remove",
-            "reset (dry run) run steps: 21 to remove",
+            "reset (dry run) run steps: 20 to remove",
             "reset (dry run) runs: 2 to remove",
-            "reset (dry run) workflows, versions, run pins and conversation holds (the seed writes these again): 22 to remove",
-            "reset (dry run) graph versions that held a flow (the seed writes these again): 24 to remove",
-            "reset (dry run) lead memory and freezes: 23 to remove",
+            "reset (dry run) workflows and versions (the seed writes these again): 43 to remove",
+            "reset (dry run) graph versions that held a flow (the seed writes these again): 23 to remove",
+            "reset (dry run) lead memory and freezes: 3 to remove",
             ...RESET_RUN_STATE.map((kind, index) => `reset (dry run) ${kind.what}: ${String(10 + index)} to remove`),
         ])
     })
@@ -343,7 +315,7 @@ describe("WorkflowResetService: the dry run", () => {
 
         const wakes = RESET_RUN_STATE.find((kind) => kind.what.startsWith("open thread wakes"))
         const call = em.query.mock.calls.find((one) => one[0] === wakes?.count)
-        expect(call?.[1]).toEqual(["ws-1", RUNS, "agent.run", "thread", ["pending", "held", "running", "failed"]])
+        expect(call?.[1]).toEqual(["ws-1", RUNS, "thread", ["pending", "held", "running", "failed"]])
     })
 })
 
@@ -362,7 +334,7 @@ describe("WorkflowResetService: what it refuses", () => {
     it("refuses a name that matches no workspace, deleting nothing", async () => {
         const { subject, em, seed } = await build({ workspaces: [] })
 
-        await expect(subject.run(TEXT, "NIVO")).rejects.toThrow('workspace "NIVO" is not exactly one workspace')
+        await expect(subject.run(TEXT, "NIVO")).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.InputInvalid, params: { workspace: "NIVO" } })
 
         expect(em.query).toHaveBeenCalledTimes(1)
         expect(seed.run).not.toHaveBeenCalled()
@@ -371,7 +343,7 @@ describe("WorkflowResetService: what it refuses", () => {
     it("refuses a name that matches two workspaces, deleting nothing", async () => {
         const { subject, em, seed } = await build({ workspaces: [{ id: "ws-1" }, { id: "ws-2" }] })
 
-        await expect(subject.run(TEXT, "NIVO")).rejects.toThrow('workspace "NIVO" is not exactly one workspace')
+        await expect(subject.run(TEXT, "NIVO")).rejects.toMatchObject({ code: WorkspaceSeedErrorCode.InputInvalid, params: { workspace: "NIVO" } })
 
         expect(em.query).toHaveBeenCalledTimes(1)
         expect(seed.run).not.toHaveBeenCalled()
@@ -381,7 +353,7 @@ describe("WorkflowResetService: what it refuses", () => {
         const { subject, transaction, seed, print } = await build({ workflows: lost })
 
         await expect(subject.run(TEXT, "NIVO")).rejects.toMatchObject({
-            code: WorkspaceSeedErrorCode.ConnectorUnreachable,
+            code: WorkspaceSeedErrorCode.VerificationFailed,
         })
 
         expect(transaction.outcomes).toEqual(["rollback"])
@@ -394,7 +366,7 @@ describe("WorkflowResetService: what it refuses", () => {
         seed.run.mockRejectedValue(unreachable())
 
         await expect(subject.run(TEXT, "NIVO")).rejects.toMatchObject({
-            code: WorkspaceSeedErrorCode.ConnectorUnreachable,
+            code: WorkspaceSeedErrorCode.VerificationFailed,
         })
 
         expect(transaction.outcomes).toEqual(["commit"])

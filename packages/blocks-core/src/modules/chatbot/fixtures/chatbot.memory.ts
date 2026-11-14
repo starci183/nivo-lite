@@ -3,7 +3,6 @@ import type {
     EngineResult,
     EntityApi,
     EntityQuery,
-    JoinedRecord,
     ListPage as EnginePage,
     PageRow,
     RecordRow,
@@ -11,7 +10,15 @@ import type {
     WriteValues,
 } from "@nivo-lite/agent-sdk/entity/port"
 import { doorPort, outboxPort } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, DoorCallResult, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorApi, DoorCallOptions, DoorCallResult, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import {
+    customerMessagesPort,
+    routeHoldsPort,
+    type CustomerLine,
+    type CustomerMessages,
+    type RouteHolds,
+    type RouteHoldView,
+} from "@nivo-lite/agent-sdk/platform"
 import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
@@ -22,9 +29,15 @@ import type { MemberDirectory, MemberFacts } from "../../platform/platform.types
 import { membersPort } from "../../platform/ports"
 import { threadRowOf } from "../chatbot-records"
 import type { ThreadRow } from "../chatbot.types"
-import { CONVERSATIONS, MESSAGES, SETTINGS, THREADS_LIST } from "../ports"
+import { CONVERSATIONS, NOTES, REPLIES, SETTINGS, THREADS_LIST } from "../ports"
 import type { ThreadsList } from "../ports"
-import { THREAD_ROWS } from "./chatbot.fixtures"
+import { HANDLED_ROW, THREAD_ROWS } from "./chatbot.fixtures"
+import {
+    CHATBOT_CHAT_ENTITY,
+    CHATBOT_NOTE_ENTITY,
+    CHATBOT_REPLY_ENTITY,
+    CHATBOT_SETTINGS_ENTITY,
+} from "../../../entities/chat/chatbot-entity-names"
 
 /** The member of the fake workspace who is staff. */
 export const STAFF_ID = "member-staff"
@@ -65,6 +78,8 @@ export interface MemorySend {
     readonly tool: string
     /** The input of the call. */
     readonly input: Readonly<Record<string, JsonValue>>
+    /** What the job said about the call beside its input (the business key, the route), when it said anything. */
+    readonly options?: DoorCallOptions | undefined
 }
 
 /** One job the fake outbox was asked to enqueue. */
@@ -77,13 +92,9 @@ export interface MemoryJob {
 
 /** Everything the fake ports read and record, so a spec can set it up and look at it. */
 export interface MemoryWorld {
-    /** The `chat.conversation` records. */
+    /** The `blocks-core.chatbot.chat` records. */
     readonly conversations: Array<RecordRow>
-    /** The `chat.message` records, oldest first. */
-    readonly lines: Array<RecordRow>
-    /** The declared fields of the `sales.lead` records, by id. */
-    readonly leads: Map<string, Readonly<Record<string, unknown>>>
-    /** The `chat.settings` records. */
+    /** The `blocks-core.chatbot.settings` records. */
     readonly settings: Array<RecordRow>
     /** The links between records. */
     readonly links: Array<MemoryLink>
@@ -95,6 +106,14 @@ export interface MemoryWorld {
     readonly sends: Array<MemorySend>
     /** The queries the list source was asked a page for. */
     readonly queries: Array<ListQuery>
+    /** The engine's lines of the conversations (`platform.customer-messages`, both directions); empty by default. */
+    readonly said: Array<CustomerLine>
+    /** The chatbot's notes (`blocks-core.chatbot.note`). */
+    readonly notes: Array<RecordRow>
+    /** The replies members typed, until handed to the engine (`blocks-core.chatbot.reply`). */
+    readonly replies: Array<RecordRow>
+    /** The engine's staff holds by route id (`platform.route-holds`, ruling R43): the one place that says who holds a thread. */
+    readonly holds: Map<string, RouteHoldView>
     /** What the door answers. */
     door: DoorCallResult
 }
@@ -117,25 +136,11 @@ export const putConversation = (world: MemoryWorld, row: ThreadRow): void => {
     world.conversations.splice(index < 0 ? world.conversations.length : index, index < 0 ? 0 : 1, recordOfThread(row))
 }
 
-/** A world holding the fixture conversations, a staff member and a manager, one customer linked to the first conversation and no lines. */
+/** A world holding the fixture conversations, a staff member and a manager, the staff member's hold on the held chat's route, and no engine lines. */
 export const memoryWorld = (): MemoryWorld => ({
     conversations: THREAD_ROWS.map(recordOfThread),
-    lines: [],
     settings: [],
-    leads: new Map([
-        [
-            "l1",
-            {
-                contactName: "Minh Anh Nguyen",
-                company: "Lotus Studio",
-                stage: "qualified",
-                need: "Two flower pots",
-                phone: "0901234567",
-                email: "minh@example.com",
-            },
-        ],
-    ]),
-    links: [{ entity: "chat.conversation", id: "c1", relation: "lead", to: "l1" }],
+    links: [],
     members: new Map([
         [STAFF_ID, { displayName: "Thu Ha Le", isManager: false }],
         [MANAGER_ID, { displayName: "Lan Pham", isManager: true }],
@@ -143,6 +148,10 @@ export const memoryWorld = (): MemoryWorld => ({
     jobs: [],
     sends: [],
     queries: [],
+    said: [],
+    notes: [],
+    replies: [],
+    holds: new Map([[HANDLED_ROW.routeId ?? "", { memberId: STAFF_ID, at: "2026-11-04T00:30:00.000Z" }]]),
     door: { ok: true, output: null },
 })
 
@@ -152,10 +161,14 @@ const nextVersion = (version: string): string => String(Number(version) + 1)
 /** The value of a field of a record: a system field, else a declared one. */
 const valueOf = (row: RecordRow, field: string): unknown => (field === "id" ? row.id : row.data[field])
 
-/** Whether a record matches a condition; the fake knows `eq` and `and` only, the conditions the module writes. */
+/** Whether a record matches a condition; the fake knows `eq`, `gte`, `lte` (ISO text compares in time order) and `and`, the conditions the module writes. */
 const matches = (row: RecordRow, where: FilterExpr | undefined): boolean => {
     if (where === undefined) return true
     if (where.op === "and") return where.of.every((part) => matches(row, part))
+    if (where.op === "gte" || where.op === "lte") {
+        const value = valueOf(row, where.field)
+        return typeof value === "string" && typeof where.value === "string" && (where.op === "gte" ? value >= where.value : value <= where.value)
+    }
     return where.op === "eq" && valueOf(row, where.field) === where.value
 }
 
@@ -205,22 +218,8 @@ interface Table {
     readonly prefix: string
     /** The records. */
     readonly rows: Array<RecordRow>
-    /** The world, for links and joined records. */
+    /** The world, for the links. */
     readonly world: MemoryWorld
-}
-
-/** The record a toOne relation of a row links to, with the selected fields; null when it links to none. */
-const joinedOf = (
-    table: Table,
-    row: RecordRow,
-    relation: string,
-    select: ReadonlyArray<string>,
-): JoinedRecord | null => {
-    const link = table.world.links.find(
-        (candidate) => candidate.entity === table.entity && candidate.id === row.id && candidate.relation === relation,
-    )
-    const data = link === undefined ? undefined : table.world.leads.get(link.to)
-    return link === undefined || data === undefined ? null : { id: link.to, data: pick(data, select) }
 }
 
 /** The codes of what the planner refuses in a query over a table: the fake refuses what the engine would. */
@@ -233,12 +232,7 @@ const listed = (table: Table, query: EntityQuery): EnginePage => {
     const page = slicePage(found, query.page.after ?? null, query.page.size)
     const rows = page.rows.map((row): PageRow => ({
         row: { ...row, data: pick(row.data, query.select) },
-        joined: Object.fromEntries(
-            Object.entries(query.join ?? {}).map(([relation, select]) => [
-                relation,
-                joinedOf(table, row, relation, select),
-            ]),
-        ),
+        joined: {},
         position: [],
         included: {},
     }))
@@ -253,7 +247,7 @@ const inserted = (table: Table, values: WriteValues, links: WriteLinks = {}): En
         version: "1",
         createdAt: CREATED,
         updatedAt: CREATED,
-        data: table.entity === "chat.message" ? { status: "posted", ...values } : values,
+        data: values,
     }
     table.rows.push(row)
     for (const [relation, to] of Object.entries(links))
@@ -297,17 +291,21 @@ const entityApi = (table: Table): EntityApi => ({
     unlink: unsupported,
 })
 
-/** The `chat.conversation` port over a world. */
+/** The `blocks-core.chatbot.chat` port over a world. */
 export const conversationApi = (world: MemoryWorld): EntityApi =>
-    entityApi({ entity: "chat.conversation", prefix: "c", rows: world.conversations, world })
+    entityApi({ entity: CHATBOT_CHAT_ENTITY, prefix: "c", rows: world.conversations, world })
 
-/** The `chat.message` port over a world. */
-export const messageApi = (world: MemoryWorld): EntityApi =>
-    entityApi({ entity: "chat.message", prefix: "m", rows: world.lines, world })
+/** The `blocks-core.chatbot.note` port over a world. */
+export const noteApi = (world: MemoryWorld): EntityApi =>
+    entityApi({ entity: CHATBOT_NOTE_ENTITY, prefix: "n", rows: world.notes, world })
 
-/** The `chat.settings` port over a world. */
+/** The `blocks-core.chatbot.reply` port over a world. */
+export const replyApi = (world: MemoryWorld): EntityApi =>
+    entityApi({ entity: CHATBOT_REPLY_ENTITY, prefix: "r", rows: world.replies, world })
+
+/** The `blocks-core.chatbot.settings` port over a world. */
 export const settingsApi = (world: MemoryWorld): EntityApi =>
-    entityApi({ entity: "chat.settings", prefix: "s", rows: world.settings, world })
+    entityApi({ entity: CHATBOT_SETTINGS_ENTITY, prefix: "s", rows: world.settings, world })
 
 /** The inbox rows of the conversations of a world. */
 const threadRowsOf = (world: MemoryWorld, query?: ListQuery): Array<ThreadRow> =>
@@ -347,18 +345,67 @@ const outbox = (world: MemoryWorld): OutboxApi => ({
 
 /** The door over a world: records what it was asked and answers what the world says. */
 export const doorApi = (world: MemoryWorld): DoorApi => ({
-    call: (tool, input) => {
-        world.sends.push({ tool, input })
+    call: (tool, input, options) => {
+        world.sends.push({ tool, input, ...(options === undefined ? {} : { options }) })
         return Promise.resolve(world.door)
     },
 })
 
-/** The implementation of each port of the module over a world; a port outside the module is unprovided. */
-export const memoryProvider = (world: MemoryWorld): PortProvider => ({
+/** The engine's conversation port over a world: the lines of a route or a person from `since` on, newest first, `limit` at a time. */
+const linesOf = (world: MemoryWorld): CustomerMessages => {
+    const page = (lines: ReadonlyArray<CustomerLine>, ask?: { readonly limit?: number | undefined; readonly after?: string | null | undefined; readonly since?: string | null | undefined }) => {
+        const since = ask?.since ?? null
+        const newest = lines
+            .filter((line) => since === null || line.saidAt >= since)
+            .toSorted((left, right) => right.saidAt.localeCompare(left.saidAt) || right.id.localeCompare(left.id))
+        const start = ask?.after === undefined || ask.after === null ? 0 : Number(ask.after)
+        const limit = ask?.limit ?? 50
+        const end = start + limit
+        return { lines: newest.slice(start, end), next: end < newest.length ? String(end) : null }
+    }
+    return {
+        byRoute: (routeId, ask) => Promise.resolve(page(world.said.filter((line) => line.routeId === routeId), ask)),
+        byContact: (contactId, ask) => Promise.resolve(page(world.said.filter((line) => line.contactId === contactId), ask)),
+    }
+}
+
+/**
+ * The engine's staff hold over a world, acting as `actor` (the door run's member): `take` on a route no chat of the world names is
+ * `not_found`; a hand-back clears the hold (a resume event is the engine's, not faked here).
+ */
+export const routeHoldsOf = (world: MemoryWorld, actor: string): RouteHolds => {
+    const known = (routeId: string): boolean => world.conversations.some((row) => row.data["routeId"] === routeId)
+    return {
+        take: (routeId) => {
+            if (!known(routeId)) return Promise.resolve("not_found")
+            if (world.holds.get(routeId)?.memberId !== actor) world.holds.set(routeId, { memberId: actor, at: CREATED })
+            return Promise.resolve("held")
+        },
+        holderOf: (routeId) => Promise.resolve(world.holds.get(routeId) ?? null),
+        handBack: (routeId) => {
+            if (!known(routeId)) return Promise.resolve({ outcome: "not_found", answered: 0 })
+            const held = world.holds.delete(routeId)
+            return Promise.resolve({ outcome: held ? "released" : "nothing_held", answered: 0 })
+        },
+        held: (limit) => {
+            const routes = [...world.holds.entries()]
+                .filter(([routeId]) => known(routeId))
+                .map(([routeId, hold]) => ({ routeId, ...hold }))
+                .toSorted((left, right) => right.at.localeCompare(left.at))
+            return Promise.resolve({ count: routes.length, routes: routes.slice(0, limit) })
+        },
+    }
+}
+
+/** The implementation of each port of the module over a world, the engine ports acting as `actor`; a port outside the module is unprovided. */
+export const memoryProvider = (world: MemoryWorld, actor: string = STAFF_ID): PortProvider => ({
     implementationOf: (port: PortDefinition<unknown>): unknown => {
         if (port.id === THREADS_LIST.id) return threadsList(world)
         if (port.id === CONVERSATIONS.id) return conversationApi(world)
-        if (port.id === MESSAGES.id) return messageApi(world)
+        if (port.id === NOTES.id) return noteApi(world)
+        if (port.id === REPLIES.id) return replyApi(world)
+        if (port.id === customerMessagesPort.id) return linesOf(world)
+        if (port.id === routeHoldsPort.id) return routeHoldsOf(world, actor)
         if (port.id === SETTINGS.id) return settingsApi(world)
         if (port.id === membersPort.id) return memberDirectory(world)
         if (port.id === outboxPort.id) return outbox(world)

@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { AgentRunsService } from "@modules/domain/agent-runs"
-import type { RunView } from "@modules/domain/agent-runs"
-import { tagPayloadOf } from "@modules/domain/agent-work"
-import type { AgentTurnView } from "@modules/domain/agent-work"
+import { AgentRunsService, type RunView } from "@modules/domain/agent-runs"
+import { tagPayloadOf, type AgentTurnView } from "@modules/domain/agent-work"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
@@ -12,13 +10,15 @@ import type { WorkflowRoute } from "./agent-workflows.contracts"
 import {
     CALL_DEPTH_MAX,
     STANDING_RUN,
-    callLeadOf,
+    callContactOf,
     callOf,
     chainRefusalOf,
     duplicates,
     paramHashOf,
+    type CallLink,
+    type CallRefusal,
+    type WorkflowCallFacts,
 } from "./policies/workflow-call-guard.policy"
-import type { CallLink, CallRefusal, WorkflowCallFacts } from "./policies/workflow-call-guard.policy"
 
 /** The most standing runs of the target one duplicate check reads. */
 const STANDING_LOOKUP = 20
@@ -37,11 +37,17 @@ export type OptionalCallRefusal = CallRefusal | null
 /** The name a run with no workflow pin is compared under: the agent's own graph. */
 const OWN_GRAPH = "agent-graph"
 
-/** The call that made a run, read back from the plain data of its wake, or null for a run no call made. */
-const callOfRun = (run: RunView): WorkflowCallFacts | null => {
-    const text = run.context.tagContext
+/** The call that made a run, read back from the plain data of its wake (the run's context), or null for a run no call made. */
+const callOfContext = (context: { readonly tagContext?: unknown }): WorkflowCallFacts | null => {
+    const text = context.tagContext
     return typeof text === "string" ? callOf(tagPayloadOf({ tagContext: text })) : null
 }
+
+/** The call that made a run, or null for a run no call made. */
+const callOfRun = (run: RunView): WorkflowCallFacts | null => callOfContext(run.context)
+
+/** The run that called the run of this context (its parent), or null for a run no call made: the waits ask a child before its parent. */
+export const callerRunIdOf = (context: { readonly tagContext?: unknown }): string | null => callOfContext(context)?.callerRunId ?? null
 
 @Injectable()
 /**
@@ -61,7 +67,8 @@ export class AgentGraphCallGuardService {
 
     /** Why the call that woke `turn` may not start `active`, or null when it may (and for a wake no call made). */
     async refusalOf(turn: AgentTurnView, trigger: FlowTriggerScope, active: GuardedFlow): Promise<OptionalCallRefusal> {
-        const call = callOf(trigger.context)
+        // A call of the one pipeline carries the call on its wake (`tagContext`, written by `deliver`), never in the trigger scope.
+        const call = callOfContext(turn.context)
         if (call === null) return null
         const caller = await this.runs.runOf(turn.workspaceId, call.callerRunId)
         if (caller?.workspaceId !== turn.workspaceId) return "call_caller_unknown"
@@ -69,7 +76,7 @@ export class AgentGraphCallGuardService {
         const target: CallLink = {
             agentId: turn.agentId,
             workflow: active.route?.workflowId ?? OWN_GRAPH,
-            leadId: callLeadOf(trigger, call),
+            contactId: callContactOf(trigger, call),
             paramHash: paramHashOf(call.params),
         }
         const chained = chainRefusalOf(target, await this.chainOf(turn.workspaceId, caller))
@@ -90,19 +97,19 @@ export class AgentGraphCallGuardService {
         return caller === null ? chain : this.chainOf(workspaceId, caller, chain)
     }
 
-    /** One run as a link of a chain: its agent, its workflow pin, its lead and the params it was called with. */
+    /** One run as a link of a chain: its agent, its workflow pin, its contact and the params it was called with. */
     private async linkOf(workspaceId: string, run: RunView): Promise<CallLink> {
         const [pin] = await this.workflows.pinsOf(workspaceId, [run.id])
         const call = callOfRun(run)
         return {
             agentId: run.agentId,
             workflow: pin?.workflowId ?? OWN_GRAPH,
-            leadId: call === null ? textOf(run.context.leadId) : callLeadOf(run.context, call),
+            contactId: call === null ? textOf(run.context.contactId) : callContactOf(run.context, call),
             paramHash: paramHashOf(call?.params ?? {}),
         }
     }
 
-    /** Whether a run of the target still stands for the same lead with the same params; a replay of this very wake is not one. */
+    /** Whether a run of the target still stands for the same contact with the same params; a replay of this very wake is not one. */
     private async standing(turn: AgentTurnView, target: CallLink): Promise<boolean> {
         if (target.workflow === OWN_GRAPH) return false
         const pins = await this.engine.scoped(turn.workspaceId, (tx) =>
@@ -116,7 +123,7 @@ export class AgentGraphCallGuardService {
             const link = {
                 agentId: run.agentId,
                 workflow: target.workflow,
-                leadId: callLeadOf(run.context, call),
+                contactId: callContactOf(run.context, call),
                 paramHash: paramHashOf(call.params),
             }
             return duplicates(target, link)

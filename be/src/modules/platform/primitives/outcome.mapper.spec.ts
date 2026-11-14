@@ -60,6 +60,26 @@ describe("outcome mappers", () => {
         })
     })
 
+    describe("a refusal with a cause", () => {
+        it("keeps the failure that caused it, and the thrown error carries it as its cause", async () => {
+            const subject = await build()
+            const failure = new RangeError("bad bytes")
+
+            const outcome = subject.refused<CapabilityErrorCode>("CAPABILITY_REFUSED", undefined, failure)
+
+            expect(outcome).toEqual({ kind: "refused", code: "CAPABILITY_REFUSED", params: undefined, cause: failure })
+            expect(thrownBy(() => subject.unwrapOutcome(outcome, CapabilityError))).toEqual(
+                objectLike({ name: "CapabilityError", cause: failure }),
+            )
+        })
+
+        it("has no cause key when no failure is given", async () => {
+            const subject = await build()
+
+            expect(Object.keys(subject.refused("CAPABILITY_REFUSED"))).not.toContain("cause")
+        })
+    })
+
     describe("unwrapOutcome", () => {
         it("returns the value of a successful outcome", async () => {
             const subject = await build()

@@ -6,7 +6,7 @@ export interface AppCommand {
     readonly workspaceId: string | null
     /** The signed-in person who asked; the job acts as them. */
     readonly requestedBy: string
-    /** What was asked: `invite.create`, `invite.resend`, `invite.link`, `admin.invite.resend` or `video.render`. */
+    /** What was asked: `invite.create`, `invite.resend`, `invite.link` or `admin.invite.resend`. */
     readonly kind: string
     /** What the asker typed, as the request function stored it. */
     readonly input: Readonly<Record<string, unknown>>

@@ -26,4 +26,8 @@ export interface SepayTransaction {
     readonly code: string | null
     /** The bank's brand name, or null. */
     readonly bank: string | null
+    /** The bank's own reference of the transaction (`reference_number`), when SePay lists one. */
+    readonly reference?: string
+    /** The bank account number the row itself names (`account_number`), when it names one. */
+    readonly account?: string
 }

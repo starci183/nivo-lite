@@ -2,8 +2,14 @@ import { isSetupPending } from "@/modules/installations"
 import type { AgentWorkStatusView, AgentWorkView } from "@/modules/types"
 import { toGoalView, toTaskView, toTriggerView } from "./agentWork.rows"
 import { toTurnsView } from "./agentWork.turns"
-import { DEFAULT_TIME_ZONE, dateOf, relative } from "./agentWork.wire"
-import type { AgentWorkContext, AgentWorkWire, TriggerWire } from "./agentWork.wire"
+import {
+    DEFAULT_TIME_ZONE,
+    dateOf,
+    relative,
+    type AgentWorkContext,
+    type AgentWorkWire,
+    type TriggerWire,
+} from "./agentWork.wire"
 
 /** The earliest next run among the triggers that are on. */
 const nextRunOf = (triggers: ReadonlyArray<TriggerWire>): string | null => {
@@ -31,7 +37,8 @@ export const toStatusView = (wire: AgentWorkWire, context: AgentWorkContext): Ag
             kind: "notSetUp",
             label: context.lifecycleLabel,
             tone: "warning",
-            stopNotice: t("noticeNotSetUp"),
+            // The agent's page frame already says it plainly, once, with the action (AgentSetupPendingNotice): no second notice here.
+            stopNotice: "",
         }
     }
     if (context.isWorkspaceOff) {

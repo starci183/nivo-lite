@@ -18,4 +18,12 @@ export class BrainGraphTotalsType {
     /** Change requests waiting (the badge of "De nghi sua"). */
     @Field(() => Int)
     pending!: number
+
+    /** Truths in force or scheduled NOT in this read (the graph reads at most 2,000): 0 when the graph is whole. */
+    @Field(() => Int, { defaultValue: 0 })
+    nodesNotShown!: number
+
+    /** Waiting change requests NOT in this read (at most 2,000 are listed): 0 when all are. */
+    @Field(() => Int, { defaultValue: 0 })
+    pendingNotShown!: number
 }

@@ -17,3 +17,6 @@ export const agentProfileMetadata = async (): Promise<Metadata> => {
 export const AgentProfilePage = (props: AgentProfilePageProps) => (
     <AgentProfilePageBase props={{ agentId: props.agentId }} />
 )
+
+/** The same profile while the route loads: the regions keep their titles and draw their own skeletons; the agent is the one the address names. */
+export const AgentProfileLoadingPage = () => <AgentProfilePageBase props={{ agentId: "" }} />

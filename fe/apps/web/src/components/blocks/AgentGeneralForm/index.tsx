@@ -1,18 +1,18 @@
 "use client"
 
+import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
 import { useAgentGeneralDraft, useAgentInstallation, useHoursEditor } from "@/hooks/agentSettings"
-import { AgentGeneralFormBase } from "./component"
-import type { AgentGeneralFormBaseProps } from "./component"
+import { AgentGeneralFormBase, type AgentGeneralFormBaseProps } from "./component"
 
 /** The instance the form sets and what its type is. */
 type AgentGeneralFormProps = {
-    readonly installationId: string
-    readonly module: string
+    readonly installationId?: string | undefined
+    readonly module?: string | undefined
     /** The type has the reply limits (the chatbot). */
-    readonly hasReplyLimits: boolean
+    readonly hasReplyLimits?: boolean | undefined
     /** The type never talks to customers: the after-hours note says so. */
-    readonly isInternal: boolean
+    readonly isInternal?: boolean | undefined
 }
 
 type Translate = ReturnType<typeof useTranslations<"agentGeneral">>
@@ -38,11 +38,14 @@ const wordsOf = (t: Translate): HoursWords => ({
 
 /** The connected general form: one draft for the name, the working hours and the reply limits, and one save for all of it. */
 export const AgentGeneralForm = (props: AgentGeneralFormProps) => {
+    const route = useAgentRoute(props)
+    const hasReplyLimits = props.hasReplyLimits ?? route.hasReplyLimits
+    const isInternal = props.isInternal ?? !route.answersCustomers
     const t = useTranslations("agentGeneral")
     const tm = useTranslations("modulesCore")
-    const { slot } = useAgentInstallation(props.installationId, props.module)
+    const { slot } = useAgentInstallation(route.installationId, route.module)
     const agent = "items" in slot ? slot.items : undefined
-    const draft = useAgentGeneralDraft(props.installationId, agent, props.hasReplyLimits)
+    const draft = useAgentGeneralDraft(route.installationId, agent, hasReplyLimits)
     const editor = useHoursEditor(draft.week, draft.setWeek)
     return (
         <AgentGeneralFormBase
@@ -54,7 +57,7 @@ export const AgentGeneralForm = (props: AgentGeneralFormProps) => {
                 alias: agent === undefined ? "" : `@${agent.agentHandle}`,
                 afterHoursTitle: t("afterHoursLabel"),
                 afterHours: draft.afterHours,
-                afterHoursDescription: props.isInternal ? t("afterHoursInternal") : t("afterHoursNote"),
+                afterHoursDescription: isInternal ? t("afterHoursInternal") : t("afterHoursNote"),
                 hours: { words: wordsOf(t), rows: editor.rows, startOptions: editor.startOptions, endOptions: editor.endOptions },
                 reply: draft.hasReply
                     ? {

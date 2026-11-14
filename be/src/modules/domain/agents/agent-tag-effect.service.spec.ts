@@ -1,13 +1,19 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import { AgentTagService } from "@modules/domain/agent-work"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { WORKFLOW_CALL_TRIGGER } from "@modules/domain/agent-schedules/workflow-call.trigger"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { ProviderTriggersService } from "@modules/domain/provider-triggers"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { agentInstallationOf } from "@tests/fixtures/builders/agents.builder"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { AGENTS_CHANNEL_OWNERS, AGENTS_INSTALLATIONS } from "./agents.decorators"
 import type { ConversationChannelOwners, InstallationDirectory } from "./agents.port"
+
+// Ledger (ROAD Opus-1d, 2026-11-14): ruling R34 deleted the plain (unpinned) tag road and the tag door (`AgentTagService`); every case
+// that tagged through that door now hands a WORKFLOW CALL (the only tag a package node still writes: `core.call-workflow` always pins)
+// to the one delivery function, and a plain tag is refused. The target resolution cases (one role, many agents) keep their meaning.
 
 const TURN: NodeTurn = {
     turnId: "run-1",
@@ -20,115 +26,131 @@ const TURN: NodeTurn = {
 
 const CALL = { key: "run-1:handoff:0", dedupeKey: "agent-tag:run-1:sales" }
 
+/** The context `core.call-workflow` writes: the pin, the mapped params and the calling run. */
+const CALLED = { workflowCall: { workflow: "consult", version: "latest" }, params: { leadId: "l-1" }, caller: { runId: "run-1" } }
+
 const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
-    const tags = mock<AgentTagService>({ tagAgent: jest.fn().mockResolvedValue({ tagged: true, wakeId: "wake-9" }) })
     const installations = mock<InstallationDirectory>()
     installations.firstOfModule.mockResolvedValue(agentInstallationOf({ agentId: "sales-1" }))
     const channelOwners = mock<ConversationChannelOwners>()
     channelOwners.ownerAgentOf.mockResolvedValue(null)
-    channelOwners.ownerAgentOfLead.mockResolvedValue(null)
+    const triggers = mock<ProviderTriggersService>()
+    triggers.deliver.mockResolvedValue({
+        status: "delivered",
+        events: 1,
+        dropped: 0,
+        woken: [{ agentId: "sales-1", workflowId: "wf-consult", eventId: "e", wakeId: "wake-9" }],
+        repeats: 0,
+        untaken: 0,
+        held: 0,
+    })
+    const manager = mockEntityManager()
+    const tx = mockEntityManager()
+    manager.transaction.mockImplementation(((work: (inner: typeof tx) => Promise<unknown>) => work(tx)) as never)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentTagEffectService,
             { provide: GraphNodeRegistryService, useValue: registry },
-            { provide: AgentTagService, useValue: tags },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: AGENTS_CHANNEL_OWNERS, useValue: channelOwners },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: manager },
+            { provide: ProviderTriggersService, useValue: triggers },
         ],
     }).compile()
-    return { executor: moduleRef.get(AgentTagEffectService), registry, tags, installations, channelOwners }
+    return { executor: moduleRef.get(AgentTagEffectService), registry, installations, channelOwners, triggers, tx }
 }
 
+/** The target agent the one delivery of the call was for. */
+const deliveredTo = (triggers: ReturnType<typeof mock<ProviderTriggersService>>): unknown => triggers.deliver.mock.calls[0]?.[0].agentId
+
+const refusal = (code: AgentsErrorCode) => ({
+    name: AgentsError.name,
+    code,
+    params: { refusal: "EFFECT_PAYLOAD_INVALID", effect: "nivo.tool.agent.tag" },
+})
+
 describe("AgentTagEffectService", () => {
-    it("registers as the executor of nivo.agent.tag", async () => {
+    it("registers as the executor of nivo.tool.agent.tag", async () => {
         const { executor, registry } = await build()
         executor.onModuleInit()
         expect(registry.addExecutor).toHaveBeenCalledWith(executor)
-        expect(executor.effect).toBe("nivo.agent.tag")
+        expect(executor.effect).toBe("nivo.tool.agent.tag")
     })
 
-    it("tags the agent a module runs through the tag door, with everything the tag carries and the ledger key as event key", async () => {
-        const { executor, tags, installations } = await build()
-        const payload = {
-            toModuleKey: "sales",
-            text: "Order 2 pots",
-            subject: { kind: "order", id: "o-1" },
-            leadId: "l-1",
-            channel: "zalo",
-            context: { items: [{ name: "Lan" }] },
-            visibility: "redirect" as const,
-        }
+    it("delivers a workflow call to the agent a module runs: pinned, its params as the event's data, the caller beside it, keyed once", async () => {
+        const { executor, installations, triggers, tx } = await build()
 
-        await expect(executor.execute(TURN, payload, CALL)).resolves.toEqual({ kind: "wake", id: "wake-9" })
+        await expect(executor.execute(TURN, { toModuleKey: "sales", text: "consult", context: CALLED }, CALL)).resolves.toEqual({
+            kind: "wake",
+            id: "wake-9",
+        })
 
         expect(installations.firstOfModule).toHaveBeenCalledWith("ws-1", "sales")
-        expect(tags.tagAgent).toHaveBeenCalledWith({
-            fromAgentId: "chatbot-1",
-            workspaceId: "ws-1",
-            toAgentId: "sales-1",
-            text: "Order 2 pots",
-            conversationId: "c-1",
-            locale: "vi",
-            eventKey: "dedupe:agent-tag:run-1:sales",
-            subject: "order:o-1",
-            leadId: "l-1",
-            channel: "zalo",
-            context: { items: [{ name: "Lan" }] },
-            visibility: "redirect",
-        })
+        expect(triggers.deliver).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                declaration: WORKFLOW_CALL_TRIGGER,
+                connectionId: null,
+                agentId: "sales-1",
+                events: [
+                    {
+                        event: { id: "dedupe:agent-tag:run-1:sales", data: { leadId: "l-1" } },
+                        pin: { workflow: "consult", version: "latest" },
+                        caller: { agentId: "chatbot-1", runId: "run-1" },
+                        contactId: null,
+                        routeId: "c-1",
+                    },
+                ],
+            },
+            tx,
+        )
     })
 
-    it("tags an agent by id in the conversation the payload names, and answers a duplicate with its event key", async () => {
-        const { executor, tags } = await build()
-        tags.tagAgent.mockResolvedValue({ tagged: false, reason: "duplicate" })
+    it("answers a repeat of the same call with its event key", async () => {
+        const { executor, triggers } = await build()
+        triggers.deliver.mockResolvedValue({ status: "delivered", events: 1, dropped: 0, woken: [], repeats: 1, untaken: 0, held: 0 })
 
         await expect(
             executor.execute(
                 TURN,
-                { toAgentId: "care-1", text: "hi", conversationId: "c-2" },
+                { toAgentId: "care-1", text: "consult", conversationId: "c-2", context: CALLED },
                 { key: "k", dedupeKey: null },
             ),
         ).resolves.toEqual({ kind: "wake", id: "call:k" })
-        expect(tags.tagAgent).toHaveBeenCalledWith(
-            expect.objectContaining({ toAgentId: "care-1", conversationId: "c-2" }),
+        expect(triggers.deliver).toHaveBeenCalledWith(
+            expect.objectContaining({ agentId: "care-1", events: [expect.objectContaining({ routeId: "c-2" })] }),
+            expect.anything(),
         )
     })
 
-    it("refuses a tag the rights refuse, one too large, and one whose module runs no agent", async () => {
-        const { executor, tags, installations } = await build()
-        const payload = { toModuleKey: "sales", text: "hi" }
+    it("refuses a plain tag (no call), a call no registration takes, and one whose module runs no agent; a plain tag delivers nothing", async () => {
+        const { executor, installations, triggers } = await build()
 
-        const refusal = (code: AgentsErrorCode, reported: string) => ({
-            name: AgentsError.name,
-            code,
-            params: { refusal: reported, effect: "nivo.agent.tag" },
-        })
-
-        tags.tagAgent.mockResolvedValueOnce({ tagged: false, reason: "not_allowed" })
-        await expect(executor.execute(TURN, payload, CALL)).rejects.toMatchObject(
-            refusal(AgentsErrorCode.TagRefused, "RIGHTS_DENIED"),
+        await expect(executor.execute(TURN, { toModuleKey: "sales", text: "hi" }, CALL)).rejects.toMatchObject(
+            refusal(AgentsErrorCode.TagRefused),
         )
-        tags.tagAgent.mockResolvedValueOnce({ tagged: false, reason: "too_large" })
-        await expect(executor.execute(TURN, payload, CALL)).rejects.toMatchObject(
-            refusal(AgentsErrorCode.TagRefused, "EFFECT_PAYLOAD_INVALID"),
+        expect(triggers.deliver).not.toHaveBeenCalled()
+        triggers.deliver.mockResolvedValueOnce({ status: "delivered", events: 1, dropped: 0, woken: [], repeats: 0, untaken: 1, held: 0 })
+        await expect(executor.execute(TURN, { toModuleKey: "sales", text: "consult", context: CALLED }, CALL)).rejects.toMatchObject(
+            refusal(AgentsErrorCode.TagRefused),
         )
         installations.firstOfModule.mockResolvedValueOnce(null)
-        await expect(executor.execute(TURN, payload, CALL)).rejects.toMatchObject(
-            refusal(AgentsErrorCode.TagTargetMissing, "EFFECT_PAYLOAD_INVALID"),
+        await expect(executor.execute(TURN, { toModuleKey: "sales", text: "consult", context: CALLED }, CALL)).rejects.toMatchObject(
+            refusal(AgentsErrorCode.TagTargetMissing),
         )
     })
 })
 
 describe("AgentTagEffectService > one role, many agents", () => {
-    it("hands the conversation to the agent of the module that answers its channel", async () => {
-        const { executor, tags, installations, channelOwners } = await build()
+    it("hands the call to the agent of the module that answers the conversation's channel", async () => {
+        const { executor, triggers, installations, channelOwners } = await build()
         channelOwners.ownerAgentOf.mockResolvedValue("sales-lan")
 
-        await executor.execute(TURN, { toModuleKey: "sales", text: "Order 2 pots" }, CALL)
+        await executor.execute(TURN, { toModuleKey: "sales", text: "consult", context: CALLED }, CALL)
 
         expect(channelOwners.ownerAgentOf).toHaveBeenCalledWith("ws-1", "c-1", "sales")
-        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-lan" }))
+        expect(deliveredTo(triggers)).toBe("sales-lan")
         expect(installations.firstOfModule).not.toHaveBeenCalled()
     })
 
@@ -136,54 +158,26 @@ describe("AgentTagEffectService > one role, many agents", () => {
         const { executor, channelOwners } = await build()
         channelOwners.ownerAgentOf.mockResolvedValue("sales-lan")
 
-        await executor.execute(TURN, { toModuleKey: "sales", text: "Order", conversationId: "c-9" }, CALL)
+        await executor.execute(TURN, { toModuleKey: "sales", text: "consult", conversationId: "c-9", context: CALLED }, CALL)
 
         expect(channelOwners.ownerAgentOf).toHaveBeenCalledWith("ws-1", "c-9", "sales")
     })
 
     it("falls back to the oldest agent of the module when no agent of it answers the channel", async () => {
-        const { executor, tags, installations } = await build()
+        const { executor, triggers, installations } = await build()
 
-        await executor.execute(TURN, { toModuleKey: "sales", text: "Order" }, CALL)
+        await executor.execute(TURN, { toModuleKey: "sales", text: "consult", context: CALLED }, CALL)
 
         expect(installations.firstOfModule).toHaveBeenCalledWith("ws-1", "sales")
-        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-1" }))
+        expect(deliveredTo(triggers)).toBe("sales-1")
     })
 
     it("asks no channel for a turn with no conversation", async () => {
-        const { executor, tags, channelOwners } = await build()
+        const { executor, triggers, channelOwners } = await build()
 
-        await executor.execute({ ...TURN, conversationId: null }, { toModuleKey: "sales", text: "Order" }, CALL)
+        await executor.execute({ ...TURN, conversationId: null }, { toModuleKey: "sales", text: "consult", context: CALLED }, CALL)
 
         expect(channelOwners.ownerAgentOf).not.toHaveBeenCalled()
-        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-1" }))
-    })
-
-    it("hands a tag that names a customer and no conversation to the agent that answers the customer's channel, outside any conversation", async () => {
-        const { executor, tags, channelOwners } = await build()
-        channelOwners.ownerAgentOfLead.mockResolvedValue("sales-lan")
-
-        await executor.execute(
-            { ...TURN, conversationId: null },
-            { toModuleKey: "sales", text: "Paid", leadId: "l-1" },
-            CALL,
-        )
-
-        expect(channelOwners.ownerAgentOfLead).toHaveBeenCalledWith("ws-1", "l-1", "sales")
-        const [request] = tags.tagAgent.mock.calls[0] ?? []
-        expect(request).toMatchObject({ toAgentId: "sales-lan", leadId: "l-1" })
-        expect(request?.conversationId ?? null).toBeNull()
-    })
-
-    it("falls back to the oldest agent of the module when the customer's channel has no agent of it", async () => {
-        const { executor, tags } = await build()
-
-        await executor.execute(
-            { ...TURN, conversationId: null },
-            { toModuleKey: "sales", text: "Paid", leadId: "l-1" },
-            CALL,
-        )
-
-        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-1" }))
+        expect(deliveredTo(triggers)).toBe("sales-1")
     })
 })

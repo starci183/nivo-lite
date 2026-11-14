@@ -15,7 +15,7 @@ import type { AiService } from "@modules/integrations/ai"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { SourceDocument } from "@modules/domain/knowledge-sources"
 import type { Passage } from "@modules/domain/knowledge"
-import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { ToolsErrorCode } from "@modules/domain/tools"
 import { CLOCK } from "@modules/platform/clock"
 import { BRAIN_NOTICE, BrainNativeService } from "./brain-native.service"
 import { nativeRefusal } from "./native-refusal.policy"
@@ -98,6 +98,7 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
     facts.searchHybrid.mockResolvedValue([fact()])
     facts.forView.mockResolvedValue([fact()])
     facts.get.mockResolvedValue(fact())
+    facts.kinOf.mockResolvedValue([])
     views.internalOf.mockImplementation((workspaceId, caller) => {
         const view = viewOfCall(workspaceId, scope, caller.conversationId)
         if (caller.conversationId !== null || view.audience === "customer") {
@@ -117,6 +118,11 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
     ai.available.mockReturnValue(false)
     ai.embeddingModel.mockReturnValue("embed")
     const vectors = mock<BrainFactEmbeddingsService>()
+    // The service reads `nearestRead` (does the index answer?); the scripted hits stay on `nearest`, an index that answers.
+    vectors.nearestRead.mockImplementation(async (...args) => ({
+        facts: await vectors.nearest(...args),
+        indexDown: false,
+    }))
     vectors.nearest.mockResolvedValue([])
     const usage = mock<UsageMeterService>()
     const moduleRef = await Test.createTestingModule({
@@ -134,7 +140,18 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
             { provide: UsageMeterService, useValue: usage },
         ],
     }).compile()
-    return { brain: moduleRef.get(BrainNativeService), views, facts, knowledge, documents, relations, changes, ai, vectors, usage }
+    return {
+        brain: moduleRef.get(BrainNativeService),
+        views,
+        facts,
+        knowledge,
+        documents,
+        relations,
+        changes,
+        ai,
+        vectors,
+        usage,
+    }
 }
 
 const OTHER = "22222222-2222-4222-8222-222222222222"
@@ -168,7 +185,7 @@ describe("BrainNativeService fact.related", () => {
                     relation: "part_of",
                     direction: "out",
                     label: "giao bang",
-                    fact: { id: OTHER, subject: "Delivery", version: 2 },
+                    fact: { id: OTHER, subject: "Delivery", v: 2, src: { kind: "owner", label: "Price list" } },
                 },
             ],
         })
@@ -210,7 +227,10 @@ describe("BrainNativeService change.propose", () => {
 
     it("files a change request from a private chat for the founder, in the caller's lane", async () => {
         const { brain, changes } = await build({ module: "sales", installationId: "i1" })
-        changes.propose.mockResolvedValue({ outcome: "filed", fact: fact({ id: "p1", status: "proposed", value: "30.000 d" }) })
+        changes.propose.mockResolvedValue({
+            outcome: "filed",
+            fact: fact({ id: "p1", status: "proposed", value: "30.000 d" }),
+        })
 
         const answer = await brain.invoke(WS, "change.propose", ARGS, AGENT)
 
@@ -228,8 +248,12 @@ describe("BrainNativeService change.propose", () => {
             proposedBy: "sales",
             agentId: "a1",
             installationId: "i1",
+            replaces: null,
         })
-        expect(answer).toMatchObject({ outcome: "filed", changeRequest: { id: "p1", status: "proposed", waitsFor: "founder" } })
+        expect(answer).toMatchObject({
+            outcome: "filed",
+            changeRequest: { id: "p1", status: "proposed", waitsFor: "founder" },
+        })
     })
 
     it("refuses a customer conversation before anything is filed", async () => {
@@ -250,7 +274,7 @@ describe("BrainNativeService change.propose", () => {
         const { brain, changes } = await build()
 
         await expect(brain.invoke(WS, "change.propose", args, AGENT)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.InvalidArguments,
+            code: ToolsErrorCode.InvalidArguments,
         })
         expect(changes.propose).not.toHaveBeenCalled()
     })

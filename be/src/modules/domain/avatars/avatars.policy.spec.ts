@@ -42,6 +42,7 @@ describe("avatars policy", () => {
 
         expect(subject.avatarPathOf("people", ID, "png")).toBe(`people/${ID}.png`)
         expect(subject.avatarPathOf("agents", ID, "webp")).toBe(`agents/${ID}.webp`)
+        expect(subject.avatarPathOf("workspaces", ID, "png")).toBe(`workspaces/${ID}.png`)
     })
 
     it("recognises only the paths it issues for the owner's folder", async () => {
@@ -49,6 +50,8 @@ describe("avatars policy", () => {
 
         expect(subject.isAvatarPath("people", `people/${ID}.jpg`)).toBe(true)
         expect(subject.isAvatarPath("agents", `people/${ID}.jpg`)).toBe(false)
+        expect(subject.isAvatarPath("workspaces", `workspaces/${ID}.png`)).toBe(true)
+        expect(subject.isAvatarPath("workspaces", `agents/${ID}.png`)).toBe(false)
         expect(subject.isAvatarPath("people", `people/${ID}.gif`)).toBe(false)
         expect(subject.isAvatarPath("people", `people/../${ID}.png`)).toBe(false)
         expect(subject.isAvatarPath("people", `people/x/${ID}.png`)).toBe(false)

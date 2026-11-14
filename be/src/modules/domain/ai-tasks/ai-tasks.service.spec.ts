@@ -1,25 +1,20 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { THIS_MODEL_MESSAGE_VI } from "@tests/fixtures/i18n/ai-tasks-spec.messages"
 import { AI } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
+import { DomainError } from "@modules/platform/errors"
+import type { AiChatModel, AiService } from "@modules/integrations/ai"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import {
     ANSWER,
-    BOT,
     COMBO_ORDER,
-    DESIGN_A_JSON,
-    DESIGN_JSON,
-    RESPONSIBILITY,
+    ITEMS_A_JSON,
+    ITEMS_SCHEMA,
     USAGE,
-    agent,
     dataUrls,
-    lead,
-    leadTurnInput,
 } from "@tests/fixtures/builders/ai-tasks-service.builder"
 import { AiTasksService } from "./ai-tasks.service"
 import { NodeImagesService } from "./node-images.service"
@@ -28,11 +23,18 @@ import type { AiTaskScope } from "./ai-tasks.contracts"
 import { AI_TASKS_METER, AI_TASKS_OPTIONS } from "./ai-tasks.decorators"
 import type { AiTasksOptions } from "./ai-tasks.options"
 import type { AiTaskMeter } from "./ai-tasks.port"
-import { AiTasksErrorCode } from "./errors/ai-tasks.error"
-import { leadTurnPrompt } from "./lead-turn-prompt.policy"
-import { ORDER_SCHEMA } from "./ai-tasks.schema"
+import { AiTasksError, AiTasksErrorCode } from "./errors/ai-tasks.error"
 
+
+/** A spec-local stand-in for `@starci/ai-router`'s `RoutedModelsError`: a coded error of the shared `DomainError` base. */
+class RouterCatalogError extends DomainError<"ROUTED_CATALOG_UNAVAILABLE"> {}
 const scope: AiTaskScope = { workspaceId: "ws-1", locale: "vi" }
+
+/** A chat-model double: the client a try is handed is only passed on to the loop, never called. */
+const modelOf = (): AiChatModel => mock<AiChatModel>()
+
+/** A try that failed at the provider: the loop reads it as a failed try of its own. */
+const failedTry = (): AiTasksError => new AiTasksError({ code: AiTasksErrorCode.Unavailable })
 
 /** What a spec scripts and reads back: the prompt the endpoint was sent, with the identity the call was metered under once it answered. */
 interface Sent extends Pick<Parameters<AiService["chat"]>[0], "messages" | "json"> {
@@ -73,7 +75,6 @@ const build = async (_unused = 1, available = true, limits: Partial<AiTasksOptio
         }),
     })
     const images = mock<NodeImagesService>({ inline: jest.fn(dataUrls) })
-    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AiTasksService,
@@ -82,197 +83,27 @@ const build = async (_unused = 1, available = true, limits: Partial<AiTasksOptio
             { provide: AI_TASKS_METER, useValue: meter },
             { provide: NotesService, useValue: notes },
             { provide: NodeImagesService, useValue: images },
-            { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
             { provide: TIMER, useValue: timer },
         ],
     }).compile()
-    return { client: moduleRef.get(AiTasksService), generator, ai, meter, notes, logger, catalog, images, timer }
+    return { client: moduleRef.get(AiTasksService), generator, ai, meter, notes, logger, images, timer }
 }
 
-describe("AiTasksService text prompts", () => {
-    it("summarises a context for the sales module in the reader's language", async () => {
-        const { client, generator, catalog } = await build()
-        generator.generate.mockResolvedValue("- who")
+/** A node's call as the specs make it: the order node reads the items of a message. */
+const ORDER_ASK = { purpose: "order.record:extract", instructions: "Read the order", input: { text: "2 combo" } }
 
-        await expect(client.summarizeContext(scope, lead, ["said hi"])).resolves.toBe("- who")
-
-        const request = generator.generate.mock.calls[0]?.[0]
-        expect(request).toMatchObject({
-            workspaceId: "ws-1",
-            json: false,
-            kind: "engine",
-            module: "sales",
-        })
-        expect(request?.messages[0]?.content).toContain("[prompts.urgencyLabels]")
-        expect(request?.messages[0]?.content).toContain("Write in Vietnamese")
-        expect(request?.messages[1]?.content).toContain("said hi")
-        expect(catalog.get).toHaveBeenCalledWith("prompts.urgencyLabels", {}, "vi")
-    })
-
-    it("marks an empty history", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue("x")
-
-        await client.summarizeContext({ ...scope, locale: "en" }, lead, [])
-
-        const request = generator.generate.mock.calls[0]?.[0]
-        expect(request?.messages[1]?.content).toContain("(none)")
-        expect(request?.messages[0]?.content).toContain("Write in English")
-    })
-
-    it("lets the scope override the usage kind and module", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue("x")
-
-        await client.draftFollowUp({ ...scope, kind: "followup", module: "crm" }, lead, "ctx", "call", agent, "")
-
-        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
-            kind: "followup",
-            module: "crm",
-        })
-    })
-
-    it("drafts a follow-up with or without an agent persona", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue("hello")
-
-        await client.draftFollowUp(scope, lead, "ctx", "call", agent, " BRIEF")
-        await client.draftFollowUp(scope, lead, "ctx", "call", null, "")
-
-        const withAgent = generator.generate.mock.calls[0]?.[0].messages[0]?.content
-        const without = generator.generate.mock.calls[1]?.[0].messages[0]?.content
-        expect(withAgent).toContain("You are Mai (Chatbot). Instructions: Be kind BRIEF")
-        expect(without).not.toContain("You are Mai")
-    })
-
-    it("lets an agent reply in the team chat as the owner module", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue("ok")
-
-        await client.agentReply(scope, agent, ["a", "b"], "state", "BRIEF")
-        await client.agentReply(scope, agent, ["a"], "state", "")
-
-        const request = generator.generate.mock.calls[0]?.[0]
-        expect(request).toMatchObject({ kind: "owner_chat", module: "office" })
-        expect(request?.messages[0]?.content).toContain("Workspace state:\nstate")
-        expect(request?.messages[1]?.content).toBe("a\nb")
-    })
-})
-
-describe("AiTasksService text prompts, care and tests", () => {
-    it("tests an agent with the chat so far", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue("ok")
-
-        await client.testChat(scope, agent, [{ role: "user", body: "Hi" }], "BRIEF")
-        await client.testChat(
-            scope,
-            agent,
-            [
-                { role: "user", body: "Hi" },
-                { role: "agent", body: "Hello" },
-            ],
-            "",
-        )
-
-        const messages = generator.generate.mock.calls[1]?.[0].messages
-        expect(messages?.map((message) => message.role)).toEqual(["system", "user", "assistant"])
-        expect(messages?.[0]?.content).toContain("The business owner is testing you")
-    })
-
-    it("drafts a care message with the Vietnamese phrases from the catalog", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue("thanks")
-
-        await client.draftCare(scope, lead, "Combo - 1.000.000", "BRIEF")
-
-        const request = generator.generate.mock.calls[0]?.[0]
-        expect(request?.messages[0]?.content).toContain("[prompts.careExample]")
-        expect(request?.messages[0]?.content).toContain("[prompts.careAddress]")
-        expect(request?.messages[1]?.content).toContain("Payment: Combo - 1.000.000")
-    })
-})
-
-describe("AiTasksService json prompts", () => {
-    it("reads a lead turn as raw JSON with the catalog voice and lead generation metering", async () => {
-        const { client, generator, catalog } = await build()
-        const input = leadTurnInput()
-        const reading = { reply: "Bookings open at nine.", signals: { wants_meeting: true }, confidence: 0.9 }
-        generator.generate.mockResolvedValue(JSON.stringify(reading))
-
-        await expect(client.readLeadTurn(scope, input)).resolves.toEqual(reading)
-
-        expect(catalog.get).toHaveBeenCalledWith("prompts.leadVoice", {}, "vi")
-        expect(generator.generate).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            messages: leadTurnPrompt(input, "[prompts.leadVoice]"),
-            json: true,
-            kind: "chat_reply",
-            module: "lead_gen",
-        })
-    })
-
-    it("proposes a responsibility", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue(JSON.stringify(RESPONSIBILITY))
-
-        await expect(client.proposeResponsibility(scope, lead, "ctx", [agent], "Owner")).resolves.toEqual(
-            RESPONSIBILITY,
-        )
-        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ json: true })
-        expect(generator.generate.mock.calls[0]?.[0].messages[1]?.content).toContain('"handle":"mai"')
-    })
-
-    it("designs a module from a description", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue(JSON.stringify(BOT))
-
-        await expect(client.designModule(scope, "a helper")).resolves.toEqual(BOT)
-        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ module: "setup" })
-    })
-})
-
-describe("AiTasksService json prompts, classification", () => {
-    it("classifies a lead", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue(
-            '{"stage":"qualified","confidence":0.8,"next_action":"Call","missing":[],"context":"- who"}',
-        )
-
-        await expect(client.classifyLead(scope, lead, ["h"], " BRIEF")).resolves.toMatchObject({
-            stage: "qualified",
-            confidence: 0.8,
-        })
-        expect(generator.generate.mock.calls[0]?.[0].messages[0]?.content).toContain("BRIEF")
-
-        await client.classifyLead(scope, lead, [], "")
-        expect(generator.generate.mock.calls[1]?.[0].messages[1]?.content).toContain("(none)")
-    })
-
-    it("extracts an order with the money phrase from the catalog", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue(JSON.stringify(COMBO_ORDER))
-
-        await expect(client.extractOrder(scope, "1,5 trieu combo")).resolves.toEqual(COMBO_ORDER)
-        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
-            module: "accounting",
-        })
-        expect(generator.generate.mock.calls[0]?.[0].messages[0]?.content).toContain("[prompts.orderMoney]")
-    })
-})
-
-describe("AiTasksService node calls and authority", () => {
+describe("AiTasksService node calls", () => {
     it("runs a graph node's text and JSON calls, metered under the node's namespace", async () => {
         const { client, generator } = await build()
         generator.generate.mockResolvedValueOnce("Hello").mockResolvedValueOnce('{"items":"2 combo"}')
-        const ask = { purpose: "order.record:extract", instructions: "Read the order", input: { text: "2 combo" } }
 
-        await expect(client.nodeText(scope, ask)).resolves.toBe("Hello")
-        await expect(client.nodeJson(scope, { ...ask, input: undefined }, ORDER_SCHEMA)).resolves.toEqual({
+        await expect(client.nodeText(scope, ORDER_ASK)).resolves.toBe("Hello")
+        await expect(client.nodeJson(scope, { ...ORDER_ASK, input: undefined }, ITEMS_SCHEMA)).resolves.toEqual({
             items: "2 combo",
         })
         expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
+            kind: "engine",
             module: "order",
             messages: [
                 { role: "system", content: "Read the order" },
@@ -282,19 +113,25 @@ describe("AiTasksService node calls and authority", () => {
         expect(generator.generate.mock.calls[1]?.[0].messages[1]?.content).toBe("null")
     })
 
-    it("gives a node's call its own deadline and a bounded reasoning, and leaves a task with the library's", async () => {
+    it("lets the scope override the usage kind and module", async () => {
+        const { client, generator } = await build()
+        generator.generate.mockResolvedValue("x")
+
+        await client.nodeText({ ...scope, kind: "followup", module: "crm" }, ORDER_ASK)
+
+        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ kind: "followup", module: "crm" })
+    })
+
+    it("gives a node's call its own deadline and a bounded reasoning", async () => {
         const { client, ai } = await build(1, true, { nodeTimeoutMs: 90_000, nodeReasoning: "low" })
         ai.chat.mockResolvedValue({ ...ANSWER, text: '{"items":"x"}', usage: USAGE, model: "m" })
         const ask = { purpose: "sales.consult-turn:consult", instructions: "i", input: {} }
 
-        await client.nodeJson(scope, ask, ORDER_SCHEMA)
+        await client.nodeJson(scope, ask, ITEMS_SCHEMA)
         await client.nodeText(scope, ask)
-        await client.summarizeContext(scope, lead, [])
 
         expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ timeoutMs: 90_000, budget: { effort: "low" } })
         expect(ai.chat.mock.calls[1]?.[0]).toMatchObject({ timeoutMs: 90_000, budget: { effort: "low" } })
-        expect(ai.chat.mock.calls[2]?.[0]).toMatchObject({ timeoutMs: 30_000 })
-        expect(ai.chat.mock.calls[2]?.[0]).not.toHaveProperty("budget")
     })
 
     it("carries a node's pictures as bytes to the AI endpoint", async () => {
@@ -303,43 +140,20 @@ describe("AiTasksService node calls and authority", () => {
 
         await client.nodeText(scope, { purpose: "intent.classify:x", instructions: "i", input: {}, images: ["u1"] })
 
-        expect(images.inline).toHaveBeenCalledWith(["u1"])
+        expect(images.inline).toHaveBeenCalledWith(["u1"], "ws-1")
         expect(ai.chat.mock.calls[0]?.[0].messages[1]).toMatchObject({ images: ["data:image/png;base64,u1"] })
     })
 
-    it("reads the owner's authority chat", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue('{"policies_add":["Deposit"],"understood":true}')
+    it("LIVE IMG (D-MX-4): a picture it could not carry is told to the model as a fact of the input, never sent as seen", async () => {
+        const { client, ai, images } = await build(1, true)
+        ai.chat.mockResolvedValue({ ...ANSWER, text: "ok", usage: USAGE, model: "m" })
+        images.inline.mockResolvedValueOnce({ images: [], dropped: 1 })
 
-        await expect(client.parseAuthorityChat(scope, "ask me first", "confirm_order=ask")).resolves.toMatchObject({
-            policies_add: ["Deposit"],
-            understood: true,
-        })
-        const content = generator.generate.mock.calls[0]?.[0].messages[0]?.content
-        expect(content).toContain("[prompts.authorityMoney]")
-        expect(content).toContain("[prompts.authorityHints]")
-        expect(content).toContain("Current rules: confirm_order=ask")
-    })
-})
+        await client.nodeText(scope, { purpose: "understand:x", instructions: "i", input: { message: THIS_MODEL_MESSAGE_VI }, images: [""] })
 
-describe("AiTasksService command proposal", () => {
-    it("reads an owner message into a command under its own usage kind", async () => {
-        const { client, generator } = await build()
-        generator.generate.mockResolvedValue('{"intent":"command","command":"issue_receipt","subject_id":"o-1"}')
-
-        const input = { agentName: "Accounting", options: [], customers: [], orders: [], text: "go" }
-        await expect(client.proposeCommands(scope, input)).resolves.toMatchObject({
-            intent: "command",
-            command: "issue_receipt",
-            subject_id: "o-1",
-            fields: {},
-        })
-
-        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
-            json: true,
-            kind: "office_command",
-            module: "office",
-        })
+        const sent = JSON.stringify(ai.chat.mock.calls[0]?.[0].messages)
+        expect(sent).toContain("picturesNotSeen")
+        expect(sent).toContain("you have NOT seen them")
     })
 })
 
@@ -347,18 +161,18 @@ describe("AiTasksService json parsing", () => {
     it("reads a fenced answer and an object inside prose", async () => {
         const { client, generator } = await build()
         generator.generate
-            .mockResolvedValueOnce('```json\n{"name":"A","handle":"a","role":"r","instructions":"i"}\n```')
-            .mockResolvedValueOnce('Here you go: {"name":"B","handle":"b","role":"r","instructions":"i"} enjoy')
+            .mockResolvedValueOnce('```json\n{"items":"A"}\n```')
+            .mockResolvedValueOnce('Here you go: {"items":"B"} enjoy')
 
-        await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "A" })
-        await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "B" })
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "A" })
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "B" })
     })
 
     it("asks again once when the model answered in prose, then reads the object", async () => {
         const { client, generator, logger } = await build()
-        generator.generate.mockResolvedValueOnce("I think the name is A").mockResolvedValueOnce(DESIGN_A_JSON)
+        generator.generate.mockResolvedValueOnce("I think the items are A").mockResolvedValueOnce(ITEMS_A_JSON)
 
-        await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "A" })
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "A" })
 
         expect(generator.generate).toHaveBeenCalledTimes(2)
         expect(generator.generate.mock.calls[1]?.[0].messages.at(-1)).toEqual({
@@ -370,16 +184,16 @@ describe("AiTasksService json parsing", () => {
 
     it("treats a JSON value that is not an object as prose", async () => {
         const { client, generator } = await build()
-        generator.generate.mockResolvedValueOnce("[1,2]").mockResolvedValueOnce(DESIGN_A_JSON)
+        generator.generate.mockResolvedValueOnce("[1,2]").mockResolvedValueOnce(ITEMS_A_JSON)
 
-        await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "A" })
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "A" })
     })
 
     it("fails with a typed error when the model never answers with JSON: three tries in all, each named", async () => {
         const { client, generator } = await build()
         generator.generate.mockResolvedValue("no json here")
 
-        await expect(client.designModule(scope, "x")).rejects.toMatchObject({
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).rejects.toMatchObject({
             code: AiTasksErrorCode.JsonNotReturned,
             params: { tries: 3, failures: "not_json, not_json, not_json" },
         })
@@ -391,7 +205,7 @@ describe("AiTasksService on the AI endpoint", () => {
     it("fails as unavailable without the AI endpoint: no other door, no quota read, no model call", async () => {
         const { client, ai, meter } = await build(1, false)
 
-        await expect(client.summarizeContext(scope, lead, [])).rejects.toMatchObject({
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
         })
         await expect(
@@ -406,16 +220,16 @@ describe("AiTasksService on the AI endpoint", () => {
         const { client, generator, ai, meter } = await build(1, true)
         ai.chat.mockResolvedValue({ ...ANSWER, text: "- who", model: "work", usage: USAGE })
 
-        await expect(client.summarizeContext(scope, lead, ["said hi"])).resolves.toBe("- who")
+        await expect(client.nodeText(scope, ORDER_ASK)).resolves.toBe("- who")
 
         expect(generator.generate).not.toHaveBeenCalled()
         expect(meter.blockedBy).toHaveBeenCalledWith("ws-1", "engine", "vi")
         expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ json: false, timeoutMs: 30_000 })
-        expect(ai.chat.mock.calls[0]?.[0].messages[1]?.content).toContain("said hi")
+        expect(ai.chat.mock.calls[0]?.[0].messages[1]?.content).toContain("2 combo")
         expect(meter.record).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             kind: "engine",
-            module: "sales",
+            module: "order",
             usage: {
                 prompt_tokens: 12,
                 completion_tokens: 5,
@@ -426,7 +240,7 @@ describe("AiTasksService on the AI endpoint", () => {
             },
             completionChars: 5,
             call: {
-                purpose: null,
+                purpose: "order.record:extract",
                 reasoningTokens: null,
                 durationMs: null,
                 tryNumber: 1,
@@ -437,18 +251,19 @@ describe("AiTasksService on the AI endpoint", () => {
     })
 })
 
+
 describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
     it("asks LangChain for JSON on a JSON prompt and books unreported usage as zero", async () => {
         const { client, ai, meter } = await build(1, true)
         const none = { promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null }
         ai.chat.mockResolvedValue({
             ...ANSWER,
-            text: DESIGN_A_JSON,
+            text: ITEMS_A_JSON,
             model: "work",
             usage: none,
         })
 
-        await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "A" })
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "A" })
 
         expect(ai.chat.mock.calls[0]?.[0].json).toBe(true)
         expect(meter.record.mock.calls[0]?.[0].usage).toEqual({
@@ -468,7 +283,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
             .mockResolvedValueOnce({ ok: false, failure: "length" })
             .mockResolvedValueOnce({ ok: true, answer: { ...ANSWER, text: "thanks", model: "work", usage: USAGE } })
 
-        await expect(client.draftCare(scope, lead, "note", "")).resolves.toBe("thanks")
+        await expect(client.nodeText(scope, ORDER_ASK)).resolves.toBe("thanks")
 
         expect(ai.attempt).toHaveBeenCalledTimes(3)
         // The retry after a timeout may take the name's next protocol (`fallback`); the retry after a cut answer keeps the first.
@@ -478,7 +293,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         expect(ai.attempt.mock.calls[0]?.[0]).not.toHaveProperty("fallback")
         expect(logger.warn).toHaveBeenCalledWith("ai_tasks.retried", {
             workspaceId: "ws-1",
-            module: "sales",
+            module: "order",
             tried: 1,
             failure: "timeout",
             again: true,
@@ -496,11 +311,13 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
             completionChars: 0,
             model: "work",
             kind: "engine",
-            module: "sales",
+            module: "order",
         })
         expect(meter.record.mock.calls[0]?.[0].promptChars).toBeGreaterThan(0)
     })
+})
 
+describe("AiTasksService on the AI endpoint, JSON and refusals: the tries", () => {
     it("AI failure: fails three times and stops, naming the tries made and what each failed as; never a fourth try, each failed try booked", async () => {
         const { client, ai, meter } = await build(1, true)
         ai.attempt
@@ -508,7 +325,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
             .mockResolvedValueOnce({ ok: false, failure: "provider" })
             .mockResolvedValueOnce({ ok: false, failure: "empty" })
 
-        await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({
+        await expect(client.nodeText(scope, ORDER_ASK)).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
             params: { tries: 3, failures: "timeout, provider, empty" },
         })
@@ -516,7 +333,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         expect(meter.record.mock.calls.map(([entry]) => entry.failure)).toEqual(["timeout", "provider", "empty"])
     })
 
-    it("gives a node call 90 s on its first try and 45 s on each retry (three minutes at worst), and a task 45 s on every try", async () => {
+    it("gives a node call 90 s on its first try and 45 s on each retry (three minutes at worst)", async () => {
         const limits = {
             timeoutMs: 45_000,
             nodeTimeoutMs: 90_000,
@@ -527,14 +344,13 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         ai.attempt.mockResolvedValue({ ok: false, failure: "timeout" })
         const ask = { purpose: "sales.consult-turn:consult", instructions: "i", input: {} }
 
-        await expect(client.nodeJson(scope, ask, ORDER_SCHEMA)).rejects.toMatchObject({ params: { tries: 3 } })
-        await expect(client.summarizeContext(scope, lead, [])).rejects.toMatchObject({ params: { tries: 3 } })
+        await expect(client.nodeJson(scope, ask, ITEMS_SCHEMA)).rejects.toMatchObject({ params: { tries: 3 } })
 
         const deadlines = ai.attempt.mock.calls.map(([call]) => call.timeoutMs)
-        expect(deadlines).toEqual([90_000, 45_000, 45_000, 45_000, 45_000, 45_000])
-        expect(deadlines.slice(0, 3).reduce((sum, ms) => sum + ms, 0)).toBe(180_000)
+        expect(deadlines).toEqual([90_000, 45_000, 45_000])
+        expect(deadlines.reduce((sum, ms) => sum + ms, 0)).toBe(180_000)
         // Every try of the node call keeps its bounded reasoning.
-        expect(ai.attempt.mock.calls.slice(0, 3).every(([call]) => call.budget?.effort === "low")).toBe(true)
+        expect(ai.attempt.mock.calls.every(([call]) => call.budget?.effort === "low")).toBe(true)
     })
 
     it("metering: books a node call under its purpose, with the try that answered, its hidden reasoning, upstream, finish and time", async () => {
@@ -552,7 +368,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         })
         const ask = { purpose: "accounting.match-payment:agent", instructions: "i", input: {} }
 
-        await client.nodeJson(scope, ask, ORDER_SCHEMA)
+        await client.nodeJson(scope, ask, ITEMS_SCHEMA)
 
         expect(meter.record).toHaveBeenCalledTimes(2)
         expect(meter.record.mock.calls[0]?.[0]).toMatchObject({
@@ -565,7 +381,9 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
             call: { purpose: "accounting.match-payment:agent", reasoningTokens: 2_475, tryNumber: 2, ...served },
         })
     })
+})
 
+describe("AiTasksService on the AI endpoint, JSON and refusals: pause and allowance", () => {
     it("waits two seconds before it retries a provider error, and not at all after a timeout or once no try is left", async () => {
         const { client, ai, timer } = await build(1, true)
         ai.attempt
@@ -573,7 +391,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
             .mockResolvedValueOnce({ ok: false, failure: "timeout" })
             .mockResolvedValueOnce({ ok: false, failure: "provider" })
 
-        await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({ params: { tries: 3 } })
+        await expect(client.nodeText(scope, ORDER_ASK)).rejects.toMatchObject({ params: { tries: 3 } })
 
         expect(timer.schedule.mock.calls.map(([, ms]) => ms)).toEqual([2000])
     })
@@ -587,7 +405,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
             .mockResolvedValueOnce(prose)
 
         await expect(
-            client.nodeJson(scope, { purpose: "sales.consult:x", instructions: "i", input: {} }, ORDER_SCHEMA),
+            client.nodeJson(scope, { purpose: "sales.consult:x", instructions: "i", input: {} }, ITEMS_SCHEMA),
         ).rejects.toMatchObject({
             code: AiTasksErrorCode.JsonNotReturned,
             params: { tries: 3, failures: "timeout, not_json, not_json" },
@@ -599,7 +417,7 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         const { client, ai, meter } = await build(1, true)
         meter.blockedBy.mockResolvedValue({ message: "Over the allowance" })
 
-        await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({
+        await expect(client.nodeText(scope, ORDER_ASK)).rejects.toMatchObject({
             code: AiTasksErrorCode.QuotaBlocked,
             params: { message: "Over the allowance" },
         })
@@ -607,16 +425,14 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
     })
 })
 
-describe("AiTasksService structured output and notes", () => {
-    const lane = { module: "sales", installationId: "i1", audience: "customer" as const }
-    const context = { question: "q", limit: 4, search: jest.fn() }
+describe("AiTasksService structured output", () => {
     const reply = { ...ANSWER, text: "Hello", model: "work", usage: USAGE }
 
-    it("hands a JSON task its schema and uses the structured output without parsing the text again", async () => {
+    it("hands a JSON call its schema and uses the structured output without parsing the text again", async () => {
         const { client, ai } = await build(1, true)
-        ai.chat.mockResolvedValue({ ...reply, text: "not json", parsed: { name: "B" } })
+        ai.chat.mockResolvedValue({ ...reply, text: "not json", parsed: { items: "B" } })
 
-        await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "B" })
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "B" })
 
         expect(ai.chat.mock.calls[0]?.[0].schema).not.toBeNull()
         expect(ai.chat).toHaveBeenCalledTimes(1)
@@ -624,82 +440,68 @@ describe("AiTasksService structured output and notes", () => {
 
     it("falls back to the loose parse of the text when the answer did not fit the schema", async () => {
         const { client, ai } = await build(1, true)
-        ai.chat.mockResolvedValue({ ...reply, text: `Sure: ${DESIGN_JSON}` })
+        ai.chat.mockResolvedValue({ ...reply, text: 'Sure: {"items":"C"}' })
 
-        await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "C" })
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "C" })
     })
 
-    it("asks for notes by the next action and the need of a follow-up, and by the need of a thank-you", async () => {
-        const { client, ai, notes } = await build(1, true)
-        ai.chat.mockResolvedValue(reply)
-        notes.contextOf.mockReturnValue(context)
-
-        const followUp = client.draftFollowUp({ ...scope, lane }, lead, "ctx", "call back", null, "")
-        await expect(followUp).resolves.toBe("Hello")
-        await client.draftCare({ ...scope, lane }, lead, "paid", "")
-
-        expect(notes.contextOf).toHaveBeenNthCalledWith(1, { ...scope, lane }, "call back A quote")
-        expect(notes.contextOf).toHaveBeenNthCalledWith(2, { ...scope, lane }, "A quote")
-        expect(ai.chat.mock.calls[0]?.[0].context).toBe(context)
-    })
-
-    it("sends no schema and no notes with a text prompt", async () => {
+    it("sends no schema and no notes with a text call", async () => {
         const { client, ai, notes } = await build(1, true)
         ai.chat.mockResolvedValue(reply)
         notes.contextOf.mockReturnValue(null)
 
-        await client.summarizeContext(scope, lead, [])
+        await client.nodeText(scope, ORDER_ASK)
 
         expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ schema: null, context: null })
         expect(notes.contextOf).toHaveBeenCalledWith(scope, null)
     })
 })
 
+const LOOP_ASK = { purpose: "accounting.match-payment:agent" }
+const LOOP_LIMITS = {
+    nodeTimeoutMs: 90_000,
+    nodeRetryTimeoutMs: 45_000,
+    nodeReasoning: "low" as const,
+    nodeMaxTokens: 4000,
+}
+const LOOP_READ = {
+    ok: true as const,
+    model: "work",
+    usage: { ...USAGE, cachedTokens: 8, reasoningTokens: 3 },
+    textChars: 0,
+    toolCalls: 1,
+    served: { upstream: "Wafer", finishReason: "tool_calls", durationMs: 1_200 },
+}
+
+/** The loop's side of a turn: it makes the model call with the client it is given and answers the message. */
+const loopOf = (outcomes: ReadonlyArray<unknown>) => {
+    const left = [...outcomes]
+    return jest.fn((_model: unknown, _tryNumber: number): Promise<unknown> => {
+        const next = left.shift()
+        return next instanceof DomainError ? Promise.reject(next) : Promise.resolve(next)
+    })
+}
+
 describe("AiTasksService the turns of a node's agent loop", () => {
-    const ASK = { purpose: "accounting.match-payment:agent" }
-    const LIMITS = {
-        nodeTimeoutMs: 90_000,
-        nodeRetryTimeoutMs: 45_000,
-        nodeReasoning: "low" as const,
-        nodeMaxTokens: 4000,
-    }
-    const READ = {
-        ok: true as const,
-        model: "work",
-        usage: { ...USAGE, cachedTokens: 8, reasoningTokens: 3 },
-        textChars: 0,
-        toolCalls: 1,
-        served: { upstream: "Wafer", finishReason: "tool_calls", durationMs: 1_200 },
-    }
-
-    /** The loop's side of a turn: it makes the model call with the client it is given and answers the message. */
-    const loopOf = (outcomes: ReadonlyArray<unknown>) => {
-        const left = [...outcomes]
-        return jest.fn((_model: unknown, _tryNumber: number): Promise<unknown> => {
-            const next = left.shift()
-            return next instanceof Error ? Promise.reject(next) : Promise.resolve(next)
-        })
-    }
-
     it("hands the loop a fresh client per try and answers the message of the first try that is an answer: one metered answer", async () => {
-        const { client, ai, meter } = await build(1, true, LIMITS)
-        const clients = [{ n: 1 }, { n: 2 }, { n: 3 }]
+        const { client, ai, meter } = await build(1, true, LOOP_LIMITS)
+        const [first, second, third] = [modelOf(), modelOf(), modelOf()] as const
         ai.turnModel
-            .mockResolvedValueOnce(clients[0] as never)
-            .mockResolvedValueOnce(clients[1] as never)
-            .mockResolvedValueOnce(clients[2] as never)
+            .mockResolvedValueOnce(first)
+            .mockResolvedValueOnce(second)
+            .mockResolvedValueOnce(third)
         ai.failureOfThrow.mockReturnValue("timeout")
-        ai.readTurn.mockReturnValueOnce({ ok: false, failure: "length" }).mockReturnValueOnce(READ)
-        const attempt = loopOf([new Error("deadline"), { cut: true }, { message: "third" }])
+        ai.readTurn.mockReturnValueOnce({ ok: false, failure: "length" }).mockReturnValueOnce(LOOP_READ)
+        const attempt = loopOf([failedTry(), { cut: true }, { message: "third" }])
 
-        const turns = client.nodeAgentTurns(scope, ASK)
+        const turns = client.nodeAgentTurns(scope, LOOP_ASK)
         await expect(turns.turn(attempt)).resolves.toEqual({ message: "third" })
 
         expect(turns.toolChoice).toBe("auto")
         expect(attempt.mock.calls).toEqual([
-            [clients[0], 1],
-            [clients[1], 2],
-            [clients[2], 3],
+            [first, 1],
+            [second, 2],
+            [third, 3],
         ])
         // The first try has the node call's deadline, each retry the shorter one; every try the same reasoning, cap and affinity.
         expect(ai.turnModel.mock.calls.map(([request]) => request)).toEqual([
@@ -712,8 +514,8 @@ describe("AiTasksService the turns of a node's agent loop", () => {
         expect(meter.blockedBy).toHaveBeenCalledWith("ws-1", "engine", "vi")
         // The two failed tries before the answer are booked first (estimated, no answer yet: no prompt known, so none counted).
         expect(meter.record.mock.calls.map(([entry]) => entry.failure)).toEqual([
-            expect.any(String),
-            expect.any(String),
+            "timeout",
+            "length",
             undefined,
         ])
         expect(meter.record).toHaveBeenLastCalledWith({
@@ -743,14 +545,17 @@ describe("AiTasksService the turns of a node's agent loop", () => {
         expect(ai.readTurn.mock.calls.map(([, , ms]) => ms)).toEqual([1_200, 1_200])
     })
 
+})
+
+describe("AiTasksService the turns of a node's agent loop: the tries", () => {
     it("stops after three tries in all and throws unavailable with the failure of each; each failed try is booked", async () => {
-        const { client, ai, meter, timer } = await build(1, true, LIMITS)
-        ai.turnModel.mockResolvedValue({} as never)
+        const { client, ai, meter, timer } = await build(1, true, LOOP_LIMITS)
+        ai.turnModel.mockResolvedValue(modelOf())
         ai.failureOfThrow.mockReturnValueOnce("provider").mockReturnValueOnce("timeout")
         ai.readTurn.mockReturnValue({ ok: false, failure: "empty" })
-        const attempt = loopOf([new Error("502"), new Error("deadline"), { empty: true }, { never: true }])
+        const attempt = loopOf([failedTry(), failedTry(), { empty: true }, { never: true }])
 
-        await expect(client.nodeAgentTurns(scope, ASK).turn(attempt)).rejects.toMatchObject({
+        await expect(client.nodeAgentTurns(scope, LOOP_ASK).turn(attempt)).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
             params: { tries: 3, failures: "provider, timeout, empty" },
         })
@@ -761,22 +566,51 @@ describe("AiTasksService the turns of a node's agent loop", () => {
         expect(timer.schedule.mock.calls.map(([, ms]) => ms)).toEqual([2000])
     })
 
+    it("takes a router failure to build the client as a failed try of its own and ends as unavailable, never carrying the router's error", async () => {
+        const { client, ai } = await build(1, true, LOOP_LIMITS)
+        // The router's own coded error (a DomainError of the shared base, as `@starci/ai-router` throws when its catalog cannot be read).
+        const catalogDown = new RouterCatalogError({ code: "ROUTED_CATALOG_UNAVAILABLE" })
+        ai.turnModel.mockRejectedValue(catalogDown)
+        ai.failureOfThrow.mockReturnValue("provider")
+        const attempt = loopOf([{ never: true }])
+
+        const failed: unknown = await client
+            .nodeAgentTurns(scope, LOOP_ASK)
+            .turn(attempt)
+            .then(
+                () => null,
+                (cause: unknown) => cause,
+            )
+
+        expect(failed).toMatchObject({ code: AiTasksErrorCode.Unavailable, params: { tries: 3, failures: "provider, provider, provider" } })
+        // An infrastructure failure, never a business refusal: the lane's own error, with no router error under it.
+        expect(failed).toBeInstanceOf(Error)
+        expect(failed instanceof Error ? failed.cause : catalogDown).toBeUndefined()
+        expect(ai.failureOfThrow.mock.calls.map(([cause]) => cause)).toEqual([catalogDown, catalogDown, catalogDown])
+        expect(attempt).not.toHaveBeenCalled()
+    })
+
+})
+
+describe("AiTasksService the turns of a node's agent loop: allowance", () => {
     it("refuses a workspace over its allowance before any model call, and fails as unavailable without the endpoint", async () => {
-        const over = await build(1, true, LIMITS)
+        const over = await build(1, true, LOOP_LIMITS)
         over.meter.blockedBy.mockResolvedValue({ message: "Over the plan" })
         const attempt = loopOf([{ message: "x" }])
 
-        await expect(over.client.nodeAgentTurns(scope, ASK).turn(attempt)).rejects.toMatchObject({
+        await expect(over.client.nodeAgentTurns(scope, LOOP_ASK).turn(attempt)).rejects.toMatchObject({
             code: AiTasksErrorCode.QuotaBlocked,
         })
-        const off = await build(1, false, LIMITS)
-        await expect(off.client.nodeAgentTurns(scope, ASK).turn(attempt)).rejects.toMatchObject({
+        const off = await build(1, false, LOOP_LIMITS)
+        await expect(off.client.nodeAgentTurns(scope, LOOP_ASK).turn(attempt)).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
         })
         expect(attempt).not.toHaveBeenCalled()
         expect(over.ai.turnModel).not.toHaveBeenCalled()
     })
+})
 
+describe("AiTasksService the turns of a node's agent loop: pictures, client and tool choice", () => {
     it("inlines the pictures of a node's agent as the JSON call does, in order, and reads nothing for no pictures", async () => {
         const { client, images } = await build(1, true)
 
@@ -784,7 +618,7 @@ describe("AiTasksService the turns of a node's agent loop", () => {
             "data:image/png;base64,u1",
             "data:image/png;base64,u2",
         ])
-        expect(images.inline).toHaveBeenCalledWith(["u1", "u2"])
+        expect(images.inline).toHaveBeenCalledWith(["u1", "u2"], "ws-1")
         // What the inliner leaves out (unreadable, too large) is left out here too.
         images.inline.mockResolvedValueOnce({ images: ["data:image/png;base64,u2"], dropped: 1 })
         await expect(client.nodeImages(scope, ["bad", "u2"])).resolves.toEqual(["data:image/png;base64,u2"])
@@ -794,12 +628,12 @@ describe("AiTasksService the turns of a node's agent loop", () => {
     })
 
     it("hands the loop the client of a first try to build its agent over, built once and only when read, with the routing of node calls", async () => {
-        const routed = { ...LIMITS, nodeRouting: { order: ["together", "wafer"], allowFallbacks: true } }
+        const routed = { ...LOOP_LIMITS, nodeRouting: { order: ["together", "wafer"], allowFallbacks: true } }
         const { client, ai } = await build(1, true, routed)
-        const first = { first: true }
-        ai.turnModel.mockResolvedValue(first as never)
+        const first = modelOf()
+        ai.turnModel.mockResolvedValue(first)
 
-        const turns = client.nodeAgentTurns(scope, ASK)
+        const turns = client.nodeAgentTurns(scope, LOOP_ASK)
         expect(ai.turnModel).not.toHaveBeenCalled()
 
         await expect(turns.model).resolves.toBe(first)
@@ -812,86 +646,86 @@ describe("AiTasksService the turns of a node's agent loop", () => {
             routing: { order: ["together", "wafer"], allowFallbacks: true },
         })
         // No routing set: the client carries none, so no `provider` field is sent.
-        const plain = await build(1, true, LIMITS)
-        plain.ai.turnModel.mockResolvedValue(first as never)
-        void plain.client.nodeAgentTurns(scope, ASK).model
+        const plain = await build(1, true, LOOP_LIMITS)
+        plain.ai.turnModel.mockResolvedValue(first)
+        void plain.client.nodeAgentTurns(scope, LOOP_ASK).model
         expect(plain.ai.turnModel.mock.calls[0]?.[0]).not.toHaveProperty("routing")
         // No endpoint configured: no client to build over.
-        const off = await build(1, false, LIMITS)
+        const off = await build(1, false, LOOP_LIMITS)
         off.ai.turnModel.mockResolvedValue(null)
-        await expect(off.client.nodeAgentTurns(scope, ASK).model).resolves.toBeUndefined()
+        await expect(off.client.nodeAgentTurns(scope, LOOP_ASK).model).resolves.toBeUndefined()
     })
 
     it("never forces a tool call on the endpoint's profile (Claude only), and sends the step's own reasoning", async () => {
-        const { client, ai } = await build(1, true, LIMITS)
-        ai.turnModel.mockResolvedValue({} as never)
-        ai.readTurn.mockReturnValue(READ)
+        const { client, ai } = await build(1, true, LOOP_LIMITS)
+        ai.turnModel.mockResolvedValue(modelOf())
+        ai.readTurn.mockReturnValue(LOOP_READ)
 
-        const off = client.nodeAgentTurns(scope, { ...ASK, reasoning: "off" })
+        const off = client.nodeAgentTurns(scope, { ...LOOP_ASK, reasoning: "off" })
         await off.turn(loopOf([{ message: "x" }]))
 
         expect(off.toolChoice).toBe("auto")
         expect(ai.turnModel.mock.calls[0]?.[0]).toMatchObject({ budget: { effort: "off", maxTokens: 4000 } })
-        expect(client.nodeAgentTurns(scope, { ...ASK, reasoning: "medium" }).toolChoice).toBe("auto")
+        expect(client.nodeAgentTurns(scope, { ...LOOP_ASK, reasoning: "medium" }).toolChoice).toBe("auto")
     })
 })
 
-describe("AiTasksService the model of a node's call (model per node, Auto by rule)", () => {
-    const ASK = { purpose: "accounting.match-payment:agent", instructions: "i", input: {} }
-    const BOTH = { providers: { anthropic: true, openrouter: false } }
-    const NO_KEY = { providers: { anthropic: false, openrouter: false } }
-    const SONNET = "claude-sonnet-5-5"
-    const HAIKU = "claude-haiku-5-5"
-    const DEEPSEEK = "deepseek/deepseek-v4.1-flash"
-    const answered = (model: string) => ({
-        ok: true as const,
-        answer: { ...ANSWER, text: JSON.stringify(COMBO_ORDER), model, usage: USAGE },
-    })
-    const targetsOf = (ai: Awaited<ReturnType<typeof build>>["ai"]) =>
-        ai.attempt.mock.calls.map(([request]) => request.target?.name ?? null)
+const MODEL_ASK = { purpose: "accounting.match-payment:agent", instructions: "i", input: {} }
+const MODEL_BOTH = { providers: { anthropic: true, openrouter: false } }
+const MODEL_NO_KEY = { providers: { anthropic: false, openrouter: false } }
+const MODEL_SONNET = "claude-sonnet-5-5"
+const MODEL_HAIKU = "claude-haiku-5-5"
+const MODEL_DEEPSEEK = "deepseek/deepseek-v4.1-flash"
+const modelAnswered = (model: string) => ({
+    ok: true as const,
+    answer: { ...ANSWER, text: JSON.stringify(COMBO_ORDER), model, usage: USAGE },
+})
+const modelTargetsOf = (ai: Awaited<ReturnType<typeof build>>["ai"]) =>
+    ai.attempt.mock.calls.map(([request]) => request.target?.name ?? null)
 
+describe("AiTasksService the model of a node's call (model per node, Auto by rule)", () => {
     it("key absent: the default fails loudly before any call (it no longer becomes DeepSeek: no other vendor)", async () => {
-        const { client, ai } = await build(1, true, NO_KEY)
+        const { client, ai } = await build(1, true, MODEL_NO_KEY)
 
         await expect(
             client.nodeJson(
-                { ...scope, model: { model: SONNET, weight: "heavy", source: "default" } },
-                ASK,
-                ORDER_SCHEMA,
+                { ...scope, model: { model: MODEL_SONNET, weight: "heavy", source: "default" } },
+                MODEL_ASK,
+                ITEMS_SCHEMA,
             ),
         ).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
-            params: { tries: 0, failures: `model_not_configured:${SONNET}` },
+            params: { tries: 0, failures: `model_not_configured:${MODEL_SONNET}` },
         })
         expect(ai.attempt).not.toHaveBeenCalled()
     })
 
     it("a stored node naming the retired DeepSeek runs on Haiku's tier and the metering says retired-model", async () => {
-        const { client, ai, meter } = await build(1, true, BOTH)
-        ai.attempt.mockResolvedValueOnce(answered(HAIKU))
+        const { client, ai, meter } = await build(1, true, MODEL_BOTH)
+        ai.attempt.mockResolvedValueOnce(modelAnswered(MODEL_HAIKU))
 
         await client.nodeJson(
-            { ...scope, model: { model: DEEPSEEK, weight: "heavy", source: "node" } },
-            ASK,
-            ORDER_SCHEMA,
+            { ...scope, model: { model: MODEL_DEEPSEEK, weight: "heavy", source: "node" } },
+            MODEL_ASK,
+            ITEMS_SCHEMA,
         )
 
-        expect(targetsOf(ai)).toEqual(["auto-light"])
+        expect(modelTargetsOf(ai)).toEqual(["auto-light"])
         expect(meter.record.mock.calls[0]?.[0].call).toMatchObject({
-            declaredModel: DEEPSEEK,
+            declaredModel: MODEL_DEEPSEEK,
             modelProvider: "anthropic",
             modelReason: "retired-model",
         })
     })
 
     it("key present: the default is Sonnet, sent without a temperature or the upstream's own fields", async () => {
-        const { client, ai, meter } = await build(1, true, BOTH)
-        ai.attempt.mockResolvedValueOnce(answered(SONNET))
+        const { client, ai, meter } = await build(1, true, MODEL_BOTH)
+        ai.attempt.mockResolvedValueOnce(modelAnswered(MODEL_SONNET))
 
         await client.nodeJson(
-            { ...scope, model: { model: SONNET, weight: "light", source: "default" } },
-            ASK,
-            ORDER_SCHEMA,
+            { ...scope, model: { model: MODEL_SONNET, weight: "light", source: "default" } },
+            MODEL_ASK,
+            ITEMS_SCHEMA,
         )
 
         expect(ai.attempt.mock.calls[0]?.[0].target).toEqual({
@@ -901,72 +735,77 @@ describe("AiTasksService the model of a node's call (model per node, Auto by rul
             upstreamFields: false,
         })
         expect(meter.record.mock.calls[0]?.[0]).toMatchObject({
-            usage: { model: SONNET },
-            call: { declaredModel: SONNET, modelProvider: "anthropic", modelReason: "default" },
+            usage: { model: MODEL_SONNET },
+            call: { declaredModel: MODEL_SONNET, modelProvider: "anthropic", modelReason: "default" },
         })
     })
+})
 
+describe("AiTasksService the model of a node's call: explicit models and Auto", () => {
     it("an explicit model whose provider is down fails loudly after three tries, every try on that model, never switching", async () => {
-        const { client, ai, meter } = await build(1, true, BOTH)
+        const { client, ai, meter } = await build(1, true, MODEL_BOTH)
         ai.attempt.mockResolvedValue({ ok: false, failure: "provider" })
 
         await expect(
-            client.nodeJson({ ...scope, model: { model: SONNET, weight: "light", source: "node" } }, ASK, ORDER_SCHEMA),
+            client.nodeJson({ ...scope, model: { model: MODEL_SONNET, weight: "light", source: "node" } }, MODEL_ASK, ITEMS_SCHEMA),
         ).rejects.toMatchObject({ code: AiTasksErrorCode.Unavailable, params: { tries: 3 } })
 
-        expect(targetsOf(ai)).toEqual(["sonnet", "sonnet", "sonnet"])
+        expect(modelTargetsOf(ai)).toEqual(["sonnet", "sonnet", "sonnet"])
         // Each failed try is booked on the model it asked for, estimated, never billed.
         expect(
             meter.record.mock.calls.map(([entry]) => [entry.failure, entry.model, entry.call?.declaredModel]),
         ).toEqual([
-            ["provider", SONNET, SONNET],
-            ["provider", SONNET, SONNET],
-            ["provider", SONNET, SONNET],
+            ["provider", MODEL_SONNET, MODEL_SONNET],
+            ["provider", MODEL_SONNET, MODEL_SONNET],
+            ["provider", MODEL_SONNET, MODEL_SONNET],
         ])
     })
 
     it("an explicit model with no key fails loudly before any call", async () => {
-        const { client, ai } = await build(1, true, NO_KEY)
+        const { client, ai } = await build(1, true, MODEL_NO_KEY)
 
         await expect(
-            client.nodeText({ ...scope, model: { model: SONNET, weight: "light", source: "node" } }, ASK),
+            client.nodeText({ ...scope, model: { model: MODEL_SONNET, weight: "light", source: "node" } }, MODEL_ASK),
         ).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
-            params: { tries: 0, failures: `model_not_configured:${SONNET}` },
+            params: { tries: 0, failures: `model_not_configured:${MODEL_SONNET}` },
         })
 
         expect(ai.attempt).not.toHaveBeenCalled()
     })
 
+})
+
+describe("AiTasksService the model of a node's call: Auto", () => {
     it("Auto: a light step asks Haiku and steps up to Sonnet after a failed try; a heavy step asks Sonnet first", async () => {
-        const light = await build(1, true, BOTH)
+        const light = await build(1, true, MODEL_BOTH)
         light.ai.attempt
             .mockResolvedValueOnce({ ok: false, failure: "timeout" })
-            .mockResolvedValueOnce(answered(SONNET))
+            .mockResolvedValueOnce(modelAnswered(MODEL_SONNET))
 
         await light.client.nodeJson(
             { ...scope, model: { model: "auto", weight: "light", source: "declared" } },
-            ASK,
-            ORDER_SCHEMA,
+            MODEL_ASK,
+            ITEMS_SCHEMA,
         )
 
-        expect(targetsOf(light.ai)).toEqual(["auto-light", "auto-heavy"])
+        expect(modelTargetsOf(light.ai)).toEqual(["auto-light", "auto-heavy"])
         expect(light.meter.record.mock.calls[0]?.[0]).toMatchObject({
             failure: "timeout",
             call: { tryNumber: 1, modelReason: "auto-light" },
         })
         expect(light.meter.record.mock.calls[1]?.[0].call).toMatchObject({ tryNumber: 2, modelReason: "auto-step-up" })
 
-        const heavy = await build(1, true, BOTH)
-        heavy.ai.attempt.mockResolvedValueOnce(answered(HAIKU))
+        const heavy = await build(1, true, MODEL_BOTH)
+        heavy.ai.attempt.mockResolvedValueOnce(modelAnswered(MODEL_HAIKU))
 
         await heavy.client.nodeJson(
             { ...scope, model: { model: "auto", weight: "heavy", source: "declared" } },
-            ASK,
-            ORDER_SCHEMA,
+            MODEL_ASK,
+            ITEMS_SCHEMA,
         )
 
-        expect(targetsOf(heavy.ai)).toEqual(["auto-heavy"])
+        expect(modelTargetsOf(heavy.ai)).toEqual(["auto-heavy"])
         // The router served Haiku on Auto's heavy profile: Sonnet had no usable lane (Claude only, never another vendor).
         expect(heavy.meter.record.mock.calls[0]?.[0].call).toMatchObject({
             modelProvider: "anthropic",
@@ -974,35 +813,37 @@ describe("AiTasksService the model of a node's call (model per node, Auto by rul
         })
     })
 
-    it("a fixed task of the app names no model: the endpoint's chat profile, as before", async () => {
-        const { client, ai, meter } = await build(1, true, BOTH)
+    it("a call that names no model goes to the endpoint's chat profile", async () => {
+        const { client, ai, meter } = await build(1, true, MODEL_BOTH)
         ai.attempt.mockResolvedValueOnce({
             ok: true,
             answer: { ...ANSWER, text: "- who", model: "work", usage: USAGE },
         })
 
-        await client.summarizeContext(scope, lead, [])
+        await client.nodeText(scope, MODEL_ASK)
 
         expect(ai.attempt.mock.calls[0]?.[0]).not.toHaveProperty("target")
         expect(meter.record.mock.calls[0]?.[0].call).not.toHaveProperty("modelReason")
     })
+})
 
+describe("AiTasksService the model of a node's call: one loop and Claude", () => {
     it("level 2: every turn of one step's agent loop gets the model of its first answer (the cache is per model)", async () => {
-        const { client, ai, meter } = await build(1, true, { ...BOTH, nodeReasoning: "off" })
-        ai.turnModel.mockResolvedValue({} as never)
+        const { client, ai, meter } = await build(1, true, { ...MODEL_BOTH, nodeReasoning: "off" })
+        ai.turnModel.mockResolvedValue(modelOf())
         ai.failureOfThrow.mockReturnValue("timeout")
         const read = (model: string) => ({ ok: true as const, model, usage: USAGE, textChars: 0, toolCalls: 1 })
         ai.readTurn
-            .mockReturnValueOnce(read(SONNET))
-            .mockReturnValueOnce(read(SONNET))
-            .mockReturnValueOnce(read(SONNET))
+            .mockReturnValueOnce(read(MODEL_SONNET))
+            .mockReturnValueOnce(read(MODEL_SONNET))
+            .mockReturnValueOnce(read(MODEL_SONNET))
         const attempt = jest
             .fn<Promise<unknown>, [unknown, number]>()
             .mockRejectedValueOnce(new Error("deadline"))
             .mockResolvedValue({ message: "turn" })
         const turns = client.nodeAgentTurns(
             { ...scope, model: { model: "auto", weight: "light", source: "declared" } },
-            { purpose: ASK.purpose },
+            { purpose: MODEL_ASK.purpose },
         )
 
         // An Auto step may land on Sonnet, which refuses a forced tool call: the step's tool choice stays free.
@@ -1027,12 +868,12 @@ describe("AiTasksService the model of a node's call (model per node, Auto by rul
     })
 
     it("level 2: every step is on Claude now, so no step forces a tool call (Claude 5.5 refuses it), even without reasoning", async () => {
-        const { client } = await build(1, true, { ...BOTH, nodeReasoning: "off" })
+        const { client } = await build(1, true, { ...MODEL_BOTH, nodeReasoning: "off" })
 
-        for (const model of [HAIKU, DEEPSEEK]) {
+        for (const model of [MODEL_HAIKU, MODEL_DEEPSEEK]) {
             const turns = client.nodeAgentTurns(
                 { ...scope, model: { model, weight: "light", source: "declared" } },
-                { purpose: ASK.purpose },
+                { purpose: MODEL_ASK.purpose },
             )
             expect(turns.toolChoice).toBe("auto")
         }

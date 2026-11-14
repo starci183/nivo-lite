@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { waitingCardCount } from "./fact-cards.policy"
 import type { WaitingProposal } from "./fact-cards.policy"
+import { PRICE_5K_PER_POT_VI, PRICE_5K_VI } from "@tests/fixtures/i18n/brain-facts-spec.messages"
 
 const SUBJECT = Symbol("fact-cards.policy")
 type Subject = { waitingCardCount: typeof waitingCardCount }
@@ -33,7 +34,9 @@ describe("waitingCardCount", () => {
     it("makes one card of several proposals of the same value for one key", async () => {
         const subject = await build()
 
-        expect(subject.waitingCardCount([proposal("a|price", "5.000 đ một chậu"), proposal("a|price", "5.000 đ")])).toBe(1)
+        expect(
+            subject.waitingCardCount([proposal("a|price", PRICE_5K_PER_POT_VI), proposal("a|price", PRICE_5K_VI)]),
+        ).toBe(1)
     })
 
     it("makes one card of competing values for one key", async () => {

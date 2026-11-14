@@ -1,5 +1,4 @@
-import { Avatar, Button, Drawer, IconButton, ListBox, Stack, Text } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import { Avatar, Button, Drawer, IconButton, ListBox, Stack, Text, type ListBoxItem } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { WorkspaceMenuCommand, WorkspaceRowSheetView } from "@/modules/types"
 

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { ParkedRuns } from "@nivo-lite/blocks-core/modules"
+import type { ParkedRuns } from "@nivo-lite/agent-sdk/platform"
 import type { Locale } from "@modules/platform/i18n"
 
 /** Who asks and in which language. */

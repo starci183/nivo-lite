@@ -10,7 +10,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { Logger } from "@modules/platform/logging"
 import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
 import type { Timer } from "@modules/platform/retry"
-import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
+import { CONNECTION_HEALTH_QUEUE } from "@modules/queues/connection-health"
 import type { EntityManager } from "typeorm"
 const LEASE_MS = 100
 /** Cancels a timer that never runs. */
@@ -31,8 +31,8 @@ type JobsBuilderResultShape = {
 export const jobsBuilder = (manager: EntityManager, key: string): JobsBuilderResultShape => {
     const delivery: QueueDelivery = {
         id: key,
-        queue: CONTENT_TICK_QUEUE,
-        job: CONTENT_TICK_QUEUE,
+        queue: CONNECTION_HEALTH_QUEUE,
+        job: CONNECTION_HEALTH_QUEUE,
         payload: { id: "order-1" },
         attempt: 1,
         signal: new AbortController().signal,

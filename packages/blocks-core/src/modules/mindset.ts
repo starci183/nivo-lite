@@ -1,9 +1,14 @@
-import accounting from "./accounting/mindset/vi.json"
+import ledger from "./sales/ledger/mindset/vi.json"
+import booking from "./booking/mindset/vi.json"
 import chatbot from "./chatbot/mindset/vi.json"
+import content from "./content/mindset/vi.json"
+import hiring from "./hiring/mindset/vi.json"
+import leadGen from "./lead-gen/mindset/vi.json"
 import sales from "./sales/mindset/vi.json"
+import video from "./video/mindset/vi.json"
 
 /** The agent modules that carry a base mindset. */
-export type MindsetModule = "sales" | "accounting" | "chatbot"
+export type MindsetModule = "sales" | "chatbot" | "lead_gen" | "hiring" | "booking" | "video" | "content"
 
 /** One rule-like document of a base mindset: a stable id, a short title and the markdown body an agent follows. */
 export interface MindsetDocument {
@@ -19,7 +24,7 @@ export interface MindsetDocument {
 export const MINDSET_HEADER =
     "NIVO BASE MINDSET (general practice for this role; the shop's own Second Brain facts and documents outrank it wherever they disagree; never invent a price, policy, date or promise):"
 
-const MINDSETS: Readonly<Record<MindsetModule, ReadonlyArray<MindsetDocument>>> = { sales, accounting, chatbot }
+const MINDSETS: Readonly<Record<MindsetModule, ReadonlyArray<MindsetDocument>>> = { sales: [...sales, ...ledger], chatbot, lead_gen: leadGen, hiring, booking, video, content }
 
 /** Whether a module key carries a base mindset. */
 export const hasMindset = (module: string): module is MindsetModule => Object.hasOwn(MINDSETS, module)

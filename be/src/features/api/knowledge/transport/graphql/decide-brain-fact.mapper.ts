@@ -2,7 +2,7 @@ import type { DecideBrainFactRequest } from "../../application/decide-brain-fact
 import type { FactRecord } from "@modules/domain/brain-facts"
 import type { DecideBrainFactInput } from "./dto/decide-brain-fact.input"
 import type { BrainFactType } from "./dto/brain-fact.type"
-import { toBrainFactType } from "./brain-records.mapper"
+import { toBrainFactType } from "./brain-fact.mapper"
 
 /** Maps the GraphQL input to the request. */
 export const toDecideBrainFactRequest = (workspaceId: string, input: DecideBrainFactInput): DecideBrainFactRequest => ({

@@ -139,6 +139,29 @@ describe("storedWakeContextOf", () => {
     })
 })
 
+describe("storedWakeContextOf for a channel wake that names its entrance", () => {
+    it("keeps the route, the person, the entrance, the front door, the key of the line and the flags of a wake with no new words", async () => {
+        const { storedWakeContextOf } = await buildSubject()
+        const written = {
+            conversationId: "route-1",
+            contactId: "contact-1",
+            channel: "telegram",
+            connectionId: "conn-1",
+            externalId: "555",
+            agentId: "agent-front",
+            visitor: "Minh",
+            channelEventId: "tg:conn-1:555:9",
+            messageId: "row-1",
+            messageKey: "tg:conn-1:555:9",
+            filesJson: '[{"id":"k-0"}]',
+            resume: "held",
+            isStart: true,
+        }
+        expect(storedWakeContextOf(written)).toEqual(written)
+        expect(storedWakeContextOf({ isStart: "yes", connectionId: 3 })).toEqual({})
+    })
+})
+
 describe("storedWakeContextOf for a tag and a burst", () => {
     it("keeps what the tag door and the burst window wrote: the words, the data, the tagger, the lead and the merged messages", async () => {
         const { storedWakeContextOf } = await buildSubject()
@@ -152,7 +175,6 @@ describe("storedWakeContextOf for a tag and a burst", () => {
             authorAgentId: "a-1",
             conversationId: "c-1",
             messageId: "m-1",
-            mergedMessageIds: "m-2,m-3,m-4",
             locale: "vi",
         }
         expect(storedWakeContextOf(written)).toEqual(written)

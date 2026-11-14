@@ -1,5 +1,5 @@
 import type { JobDefinition } from "@nivo-lite/agent-sdk/mutation"
-import { ACCOUNTING_JOBS } from "./accounting"
+import { ACCOUNTING_JOBS } from "./sales/ledger"
 import { DELIVER_REPLY } from "./chatbot/jobs/deliver-reply.job"
 import { PLATFORM_JOBS } from "./platform/jobs/team-chat.jobs"
 

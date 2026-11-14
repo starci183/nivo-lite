@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./webhook-proofs.module-definition"
 import { ScopedWebhookVerifier } from "./scoped-webhook-verifier.service"
 

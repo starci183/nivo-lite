@@ -148,26 +148,3 @@ export type PendingAction =
     | { readonly type: "discard"; readonly key: string }
     | { readonly type: "settle"; readonly lastId: string | null }
 
-/** The reply an agent proposes and waits for a person to approve, change or refuse. */
-export interface ProposalRow {
-    /** The key the proposal's commands act on. */
-    readonly id: string
-    /** What the customer asked; empty draws no line. */
-    readonly asked: string
-    /** The words proposed to send. */
-    readonly text: string
-    /** A line of guidance under the words; empty draws none. */
-    readonly note: string
-}
-
-/** The dotted paths of a record that name the parts of a proposed reply. */
-export interface ProposalPaths {
-    /** The path of the text that identifies the proposal. */
-    readonly idPath: string
-    /** The path of the words proposed. */
-    readonly textPath: string
-    /** The path of what the customer asked. */
-    readonly askedPath?: string | undefined
-    /** The path of the line of guidance. */
-    readonly notePath?: string | undefined
-}

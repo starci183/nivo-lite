@@ -25,8 +25,7 @@ export class ApiKeyEntity extends UuidAbstractEntity {
         name: "scopes",
         type: "text",
         array: true,
-        default: () =>
-            "'{leads:read,leads:write,messages:write,knowledge:write,events:read,loyalty:read,loyalty:write}'::text[]",
+        default: () => "'{leads:read,leads:write,messages:write,knowledge:write,events:read}'::text[]",
     })
     scopes!: Array<string>
 

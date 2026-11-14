@@ -1,3 +1,4 @@
+import type { JsonObject, JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type {
     FreezeState,
     FreezeSubject,
@@ -8,16 +9,13 @@ import type {
 } from "./lead-freezes.contracts"
 
 /** The prefix of the key of a freeze about a lead. */
-export const LEAD_KEY = "lead:"
+export const CONTACT_KEY = "contact:"
 
 /** The prefix of the key of a freeze about the conversation of a customer who is not a lead yet. */
 export const CONVERSATION_KEY = "conversation:"
 
 /** The subject kind of a wake about a bank transaction (`bank-transaction:<id>`). */
 const TRANSACTION_SUBJECT = "bank-transaction"
-
-/** The tag source of the bank feed. */
-const BANK_FEED = "bank_feed"
 
 /** The most events one hold keeps; past it the oldest folded ones (history) go first, then nothing new is lost but the count. */
 export const PENDING_MAX = 500
@@ -47,7 +45,7 @@ const subjectOf = (value: unknown): { readonly kind: string; readonly id: string
 }
 
 /**
- * What ties a freeze to ONE workflow of its customer inside the key (`lead:<id>|wf:<workflowId>`). A freeze holds the workflow whose
+ * What ties a freeze to ONE workflow of its customer inside the key (`contact:<id>|wf:<workflowId>`). A freeze holds the workflow whose
  * run stopped, never the customer as a whole: their other workflows, and so their other messages, are still served. A key without
  * the mark is a freeze written before workflows were told apart (or of an agent's own graph) and holds the customer as a whole.
  */
@@ -67,24 +65,24 @@ const keyed = (base: string, workflowId: string | null): string =>
 
 /** Who a trigger is about, by what it names itself: the lead, else the conversation, in the workflow it names; null when it names neither. */
 export const subjectOfTrigger = (trigger: Readonly<Record<string, unknown>>): FreezeSubject | null => {
-    const leadId = textOf(trigger.leadId)
+    const contactId = textOf(trigger.contactId)
     const conversationId = textOf(trigger.conversationId)
     const workflowId = workflowOfTrigger(trigger)
-    if (leadId !== null) return { key: keyed(`${LEAD_KEY}${leadId}`, workflowId), leadId, conversationId }
+    if (contactId !== null) return { key: keyed(`${CONTACT_KEY}${contactId}`, workflowId), contactId, conversationId }
     if (conversationId !== null) {
-        return { key: keyed(`${CONVERSATION_KEY}${conversationId}`, workflowId), leadId: null, conversationId }
+        return { key: keyed(`${CONVERSATION_KEY}${conversationId}`, workflowId), contactId: null, conversationId }
     }
     return null
 }
 
 /** The subject of a lead in one workflow, with the conversation it came from when known. */
-export const leadSubjectOf = (
-    leadId: string,
+export const contactSubjectOf = (
+    contactId: string,
     conversationId: string | null,
     workflowId: string | null = null,
 ): FreezeSubject => ({
-    key: keyed(`${LEAD_KEY}${leadId}`, workflowId),
-    leadId,
+    key: keyed(`${CONTACT_KEY}${contactId}`, workflowId),
+    contactId,
     conversationId,
 })
 
@@ -93,20 +91,14 @@ export const leadSubjectOf = (
  * two without a workflow (a freeze that holds the customer as a whole).
  */
 export const keysOf = (trigger: Readonly<Record<string, unknown>>): ReadonlyArray<string> => {
-    const leadId = textOf(trigger.leadId)
+    const contactId = textOf(trigger.contactId)
     const conversationId = textOf(trigger.conversationId)
     const workflowId = workflowOfTrigger(trigger)
     const bases = [
-        ...(leadId === null ? [] : [`${LEAD_KEY}${leadId}`]),
+        ...(contactId === null ? [] : [`${CONTACT_KEY}${contactId}`]),
         ...(conversationId === null ? [] : [`${CONVERSATION_KEY}${conversationId}`]),
     ]
     return workflowId === null ? bases : [...bases.map((base) => keyed(base, workflowId)), ...bases]
-}
-
-/** Whether a freeze holds a wake of the workflow named: its own workflow, or every workflow when it holds the customer as a whole. */
-export const holdsWorkflow = (freeze: LeadFreeze, workflowId: string | null): boolean => {
-    const own = workflowOfKey(freeze.key)
-    return own === null || own === workflowId
 }
 
 /** The bank transaction a wake is about (the bank feed's tag), or null. */
@@ -115,11 +107,23 @@ export const transactionOf = (trigger: Readonly<Record<string, unknown>>): strin
     return subject?.kind === TRANSACTION_SUBJECT ? subject.id : null
 }
 
+/**
+ * The credit a wake is about, whoever started it: the bank feed's subject (`bank-transaction:<id>`), else the `transactionId` the start
+ * of the workflow carries (the rematch job's `engine.workflow` start names nothing else), else null.
+ */
+export const creditOf = (trigger: Readonly<Record<string, unknown>>): string | null =>
+    transactionOf(trigger) ?? textOf(trigger.transactionId)
+
+/** Whether a scope member is the channel identity of a person (`EventSubject`: the channel and the channel's id of them). */
+const isSubjectOf = (value: unknown): boolean =>
+    typeof value === "object" && value !== null && typeof Reflect.get(value, "channel") === "string" && typeof Reflect.get(value, "id") === "string"
+
 /** What kind of event a held wake is, from where it came and what it names. */
 export const pendingKindOf = (source: string, trigger: Readonly<Record<string, unknown>>): PendingKind => {
-    if (transactionOf(trigger) !== null || trigger.tagSource === BANK_FEED || trigger.source === BANK_FEED)
-        return "payment"
-    if (source === "customer") return "message"
+    if (creditOf(trigger) !== null) return "payment"
+    // A person's message: an event of the one pipeline about a channel identity (its `subject`, the shape ENRICH met a person by; the
+    // source is `trigger` for every pipeline event, so the source alone does not tell).
+    if (isSubjectOf(trigger.subject)) return "message"
     if (source === "schedule" || textOf(trigger.triggerId) !== null || textOf(trigger.taskId) !== null) return "timer"
     if (source === "tag" || source === "agent") return "handoff"
     return "event"
@@ -139,8 +143,7 @@ export const messageIdsOf = (trigger: Readonly<Record<string, unknown>>): Readon
     const ids = trigger.messageIds
     if (Array.isArray(ids)) return ids.filter((id): id is string => typeof id === "string")
     const first = textOf(trigger.messageId)
-    const merged = textOf(trigger.mergedMessageIds)
-    return [...(first === null ? [] : [first]), ...(merged === null ? [] : merged.split(","))]
+    return first === null ? [] : [first]
 }
 
 /** The held wake as the freeze keeps it. */
@@ -181,8 +184,42 @@ export const pendingEventOf = (
         conversationId: kind === "message" ? textOf(trigger.conversationId) : null,
         messageIds: kind === "message" ? messageIdsOf(trigger) : [],
         folded: false,
+        trigger: jsonObjectOf(trigger),
     }
 }
+
+/** A value as plain JSON, or undefined for one JSON cannot carry (a function, a symbol, a number that is not finite). */
+const jsonValueOf = (value: unknown): JsonValue | undefined => {
+    if (value === null || typeof value === "string" || typeof value === "boolean") return value
+    if (typeof value === "number") return Number.isFinite(value) ? value : undefined
+    if (Array.isArray(value)) return value.flatMap((one: unknown) => jsonValueOf(one) ?? [])
+    if (typeof value === "object") return jsonObjectOf(value)
+    return undefined
+}
+
+/** An object as plain JSON: every member JSON can carry, as written. */
+export const jsonObjectOf = (value: object): JsonObject =>
+    Object.fromEntries(
+        Object.entries(value).flatMap(([name, member]: [string, unknown]) => {
+            const json = jsonValueOf(member)
+            return json === undefined ? [] : [[name, json]]
+        }),
+    )
+
+/**
+ * The events of a released hold a run TOOK into a step's queue snapshot (ROAD-API section 4): they are that run's work and are never
+ * replayed. Recorded on each event when the step took it, never inferred from the decision that closed the stop.
+ */
+export const takenByRun = (pending: ReadonlyArray<PendingEvent>): ReadonlyArray<PendingEvent> =>
+    pending.filter((event) => event.taken !== undefined)
+
+/** The events with `taken` set on the ones whose wakes a step visit took (`<run>:<step>:<visit>`); the others as they are. */
+export const withTaken = (
+    pending: ReadonlyArray<PendingEvent>,
+    wakeIds: ReadonlySet<string>,
+    visit: string,
+): ReadonlyArray<PendingEvent> =>
+    pending.map((event) => (event.taken === undefined && wakeIds.has(event.wakeId) ? { ...event, taken: visit } : event))
 
 /** The events with one more at the end; a wake already recorded is not recorded twice. */
 export const withPending = (pending: ReadonlyArray<PendingEvent>, event: PendingEvent): ReadonlyArray<PendingEvent> => {
@@ -211,7 +248,7 @@ export const stateOf = (freeze: LeadFreeze | null): FreezeState | null => {
         id: freeze.id,
         status: freeze.status,
         workflowId: workflowOfKey(freeze.key),
-        leadId: freeze.leadId,
+        contactId: freeze.contactId,
         conversationId: freeze.conversationId,
         runId: freeze.frozenRunId,
         stepTitle: freeze.stepTitle,
@@ -222,17 +259,4 @@ export const stateOf = (freeze: LeadFreeze | null): FreezeState | null => {
         frozenAt: freeze.frozenAt,
         onStop: freeze.frozenReason === THREAD_STOP_REASON,
     }
-}
-
-/** The transfer code of an order number, as the payment request writes it: letters and digits, upper case. */
-export const transferCodeOf = (orderNo: string): string => orderNo.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
-
-/** Whether the content of a transfer names one of the orders, by its transfer code. */
-export const namesAnOrder = (reference: string | null, orderNos: ReadonlyArray<string>): boolean => {
-    if (reference === null) return false
-    const content = reference.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
-    return orderNos.some((orderNo) => {
-        const code = transferCodeOf(orderNo)
-        return code !== "" && content.includes(code)
-    })
 }

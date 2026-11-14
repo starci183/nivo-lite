@@ -100,6 +100,35 @@ describe("SepayFeedWebhookService", () => {
     })
 })
 
+describe("SepayFeedWebhookService, the bank's facts", () => {
+    it("keeps the bank's reference, account and time of a real delivery under the unchanged event id", async () => {
+        const { service } = await build()
+
+        expect(service.read({ ...REAL, subAccount: null, referenceCode: "FT95958515" })).toEqual({
+            kind: "transaction",
+            credit: {
+                amount: 5000,
+                content: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
+                eventId: "sepay:95958515",
+                fallbackBankName: "MBBank",
+                account: "0123456789",
+                occurredAt: "2026-11-03T11:06:00.000Z",
+                bankRef: "FT95958515",
+            },
+        })
+    })
+
+    it("reads a delivery without the bank's facts as before, with no member for them", async () => {
+        const { service } = await build()
+
+        const reading = service.read({ id: 95958515, transferType: "in", transferAmount: 5000, referenceCode: "" })
+        expect(reading).toEqual({
+            kind: "transaction",
+            credit: { amount: 5000, content: "", eventId: "sepay:95958515", fallbackBankName: "SePay" },
+        })
+    })
+})
+
 describe("SepayFeedWebhookService, the connection page", () => {
     it("hands the connection page the intake to trace and the refusal to remember", async () => {
         const { service, page } = await build()

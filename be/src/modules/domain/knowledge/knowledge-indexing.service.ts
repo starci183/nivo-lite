@@ -1,23 +1,31 @@
-import { Injectable } from "@nestjs/common"
-import { KnowledgeChunksService, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
-import type { ChunkDraft, LocatedText, MissingPassage, PassagePlace } from "@modules/domain/knowledge-chunks"
+import { Injectable, Optional } from "@nestjs/common"
 import {
+    KnowledgeChunksService,
+    reusePlanOf,
+    toVector,
+    type ChunkDraft,
+    type LocatedText,
+    type MissingPassage,
+    type PassagePlace,
+    type StoredAt,
+} from "@modules/domain/knowledge-chunks"
+import {
+    BlockedSourcesService,
     KnowledgeSourcesService,
     MAX_SOURCE_CHARS,
     SourcePartsService,
     StoredNote,
     embedPercent,
     partsOf,
+    type MaybeSource,
+    type SourceRecord,
 } from "@modules/domain/knowledge-sources"
-import type { MaybeSource, SourceRecord } from "@modules/domain/knowledge-sources"
-import { InjectLogger, withWorkScope } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { VectorSyncService } from "@modules/domain/vector-sync"
+import { InjectLogger, withWorkScope, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectTimer } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
+import { InjectTimer, type Timer } from "@modules/platform/retry"
 import { EmbeddingService } from "./embedding.service"
-import { BULK_CHUNKS, EMBED_BATCH } from "./knowledge.contracts"
-import type { IndexOutcome, IndexRun } from "./knowledge.contracts"
+import { EMBED_BATCH, type IndexOutcome, type IndexRun } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
 import { InjectKnowledgeFullOptions } from "./knowledge.decorators"
 import type { KnowledgeFullOptions } from "./knowledge.options"
@@ -33,6 +41,9 @@ const CLOSED: ReadonlySet<string> = new Set(["ready", "extracting_facts", "faile
 
 /** How long one embeddings batch may take while a document is indexed. */
 const EMBED_TIMEOUT_MS = 20_000
+
+/** The most credit-blocked documents one upkeep tick looks at; the rest are looked at by the next tick. */
+const RESUME_MAX = 50
 
 /** One passage with its vector, or without one when the provider gave none, and the place it sits at in its document. */
 const draftOf = (text: string, vector: ReadonlyArray<number> | undefined, place: PassagePlace | null): ChunkDraft => ({
@@ -52,11 +63,12 @@ interface PassageLayout {
 }
 
 @Injectable()
-/** Reads a document, cuts it into passages, embeds them and stores them, then hands the source on to the reading of its facts. */
+/** Reads a document, cuts it into passages, embeds them and stores them: the document is then ready (searchable), and its truths are worked out of it by a job of their own. */
 export class KnowledgeIndexingService {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         private readonly sources: KnowledgeSourcesService,
+        private readonly blocked: BlockedSourcesService,
         private readonly parts: SourcePartsService,
         private readonly chunks: KnowledgeChunksService,
         private readonly reader: SourceReaderService,
@@ -65,6 +77,7 @@ export class KnowledgeIndexingService {
         private readonly usage: UsageMeterService,
         @InjectKnowledgeFullOptions() private readonly options: KnowledgeFullOptions,
         @InjectTimer() private readonly timer: Timer,
+        @Optional() private readonly vectorSync?: VectorSyncService,
     ) {}
 
     /**
@@ -76,7 +89,7 @@ export class KnowledgeIndexingService {
      * finished document of the workspace already holds for the same readers is not worked on at all: it is closed as a duplicate, so the
      * same text is never embedded, read for facts or reviewed twice.
      */
-    async index(run: IndexRun): Promise<IndexOutcome> {
+    index(run: IndexRun): Promise<IndexOutcome> {
         // Every model call of the reading (transcription, embeddings) is booked to the document (U1: credits per document).
         return withWorkScope({ kind: "document_read", ref: `source:${run.sourceId}` }, () => this.indexed(run))
     }
@@ -91,6 +104,9 @@ export class KnowledgeIndexingService {
             }
             await this.sources.begin(source.workspaceId, source.id)
             const read = await this.reader.read(source)
+            // A file whose text needs a model call that the empty pool refused is not failed: it waits, and is read again by itself
+            // once the pool has credits (`resumeBlocked`); it has no passage yet, so there is nothing to search meanwhile.
+            if (read.kind === "refused" && read.code === StoredNote.NoCreditsForTranscription) return await this.park(source, read.code)
             if (read.kind === "refused") return await this.close(source, read.code)
             const content = read.value.text.trim()
             if (content === "") return await this.close(source, StoredNote.Empty)
@@ -120,10 +136,13 @@ export class KnowledgeIndexingService {
         await this.sources.fail(workspaceId, sourceId, failureOf(cause).note)
     }
 
-    /** The source when it waits for its facts to be read, else null (it is gone, done already, or queued again). */
+    /**
+     * The source when its truths can be worked on, else null: its passages are stored (`ready`; `extracting_facts` is what a source
+     * indexed by an earlier build still wears). A source that is gone, failed, or being indexed again is left: its next index queues the work.
+     */
     async sourceForFacts(workspaceId: string, sourceId: string): Promise<MaybeSource> {
         const source = await this.sources.sourceOf(workspaceId, sourceId)
-        return source !== null && source.status === "extracting_facts" ? source : null
+        return source !== null && (source.status === "ready" || source.status === "extracting_facts") ? source : null
     }
 
     /** Closes a source as failed with a stored code. */
@@ -132,12 +151,20 @@ export class KnowledgeIndexingService {
         return "failed"
     }
 
+    /** The source waits for credits (`blocked_credits`) with the stored code of what it waits for. */
+    private async park(source: SourceRecord, note: StoredNote): Promise<IndexOutcome> {
+        await this.sources.blockIndexing(source.workspaceId, source.id, note, 0)
+        return "blocked"
+    }
+
     /**
      * Stores the passages of the source, stage by stage: a passage already stored with a vector of the model in use is kept wherever it
      * sits in the text, found by hash, and only the others are embedded, and every batch is stored as soon as it has its vectors, so a retry after a failure resumes where the
      * failed one stopped. A provider that fails a batch throws, so the queue retries and the retry resumes. Then the facts job is
-     * queued and the source moves to its facts stage. A large document with no credits left keeps the vectors it already paid for,
-     * stores only the missing passages without vectors, and waits.
+     * queued and the source moves to its facts stage. A document of ANY size with no credits left (D-U-4: the pool is the only limit,
+     * and it is asked before the first call) keeps the vectors it already paid for, stores only the missing passages without vectors
+     * (searchable by words at once) and waits as `blocked_credits`; the upkeep tick queues it again once the pool has credits
+     * (`resumeBlocked`). The same holds when the pool runs out between two batches. Running out of credits never fails a document.
      */
     private async store(source: SourceRecord, parts: ReadonlyArray<LocatedText> | undefined): Promise<IndexOutcome> {
         const { located, places } = layoutOf(source.content, parts)
@@ -153,9 +180,9 @@ export class KnowledgeIndexingService {
         const { moves, missing } = reusePlanOf(pieces, stored, this.embeddings.model())
         await this.chunks.arrange({ workspaceId, sourceId: id, moves, count: pieces.length })
         if (places.length > 0) await this.chunks.place({ workspaceId, sourceId: id, places })
-        const noCredits = missing.length > BULK_CHUNKS && (await this.usage.blockedBy(workspaceId, "embedding", true))
+        const noCredits = missing.length > 0 && (await this.usage.blockedBy(workspaceId, "embedding", true))
         // A document that already had passages is being read again: its embeddings are booked as the re-read.
-        await withWorkScope({ kind: stored.length > 0 ? "document_reread" : "document_read" }, () =>
+        const wordOnly = await withWorkScope({ kind: stored.length > 0 ? "document_reread" : "document_read" }, () =>
             this.embedMissing(
                 source,
                 { total: pieces.length, places: located.map((piece) => piece.place) },
@@ -163,8 +190,9 @@ export class KnowledgeIndexingService {
                 noCredits,
             ),
         )
-        if (!noCredits) return this.finish(source, null, pieces.length)
+        if (!wordOnly) return this.finish(source, null, pieces.length)
         await this.sources.blockIndexing(workspaceId, id, StoredNote.NoCreditsForIndex, pieces.length)
+        await this.vectorSync?.changedSource(workspaceId, id)
         return "blocked"
     }
 
@@ -177,22 +205,52 @@ export class KnowledgeIndexingService {
             progress: 80,
         })
         await this.sources.finishIndexing(source.workspaceId, source.id, note, count)
+        await this.vectorSync?.changedSource(source.workspaceId, source.id)
         return "indexed"
     }
 
-    /** Embeds the passages that have no vector of the model in use, one batch at a time, and stores each batch at once. With `withoutVectors` (no credits left) it only stores them as keyword passages. A batch the provider fails throws, so nothing is stored keyword-only by accident. */
+    /**
+     * Vectors in the vector index (`VectorSyncService.bound`): the vectors of a stored batch are handed over under the ids their
+     * passages were stored with. Postgres first: the rows are committed (word-searchable at once, no vector in the row), then the
+     * index takes the vectors and Postgres records `indexed_at`: the passage is found by meaning from then on. An index that does not
+     * answer never fails the document: the queued sync brings its passages in step.
+     */
+    private async handOver(
+        source: SourceRecord,
+        batch: ReadonlyArray<MissingPassage>,
+        vectors: ReadonlyArray<ReadonlyArray<number>> | null,
+        stored: ReadonlyArray<StoredAt>,
+    ): Promise<void> {
+        if (vectors === null || this.vectorSync?.bound() !== true) return
+        const idAt = new Map(stored.map((one) => [one.order, one.id]))
+        const handed = new Map<string, ReadonlyArray<number>>()
+        batch.forEach((entry, offset) => {
+            const id = idAt.get(entry.order)
+            const vector = vectors[offset]
+            if (id !== undefined && vector !== undefined) handed.set(id, vector)
+        })
+        await this.vectorSync.accept("passage", source.workspaceId, handed)
+    }
+
+    /**
+     * Embeds the passages that have no vector of the model in use, one batch at a time, and stores each batch at once. With
+     * `withoutVectors` (no credits left) it only stores them as keyword passages. A batch that comes back with no vectors is asked
+     * about once: the pool ran out since the document started (this batch and the rest are stored as keyword passages), or the
+     * provider failed (thrown, so the queue retries and nothing is stored keyword-only by accident). Answers whether passages were
+     * stored without vectors for want of credits.
+     */
     private async embedMissing(
         source: SourceRecord,
         layout: PassageLayout,
         todo: ReadonlyArray<MissingPassage>,
         withoutVectors: boolean,
-    ): Promise<void> {
+    ): Promise<boolean> {
         const { total } = layout
         const size = this.options.indexChunkDelayMs > 0 ? 1 : EMBED_BATCH
         const batches = Array.from({ length: Math.ceil(todo.length / size) }, (_, index) =>
             todo.slice(index * size, index * size + size),
         )
-        const state = { done: total - todo.length }
+        const state = { done: total - todo.length, wordOnly: withoutVectors }
         await this.sources.enterStage(source.workspaceId, source.id, {
             stage: "embed",
             done: state.done,
@@ -201,16 +259,20 @@ export class KnowledgeIndexingService {
         })
         await eachInOrder(batches, async (batch, index) => {
             if (index > 0) await this.pause()
-            const vectors = withoutVectors ? null : await this.embeddings.embed(this.requestOf(source, batch))
-            if (vectors === null && !withoutVectors)
-                throw new KnowledgeError({ code: KnowledgeErrorCode.EmbeddingUnavailable })
-            await this.chunks.keep({
+            const vectors = state.wordOnly ? null : await this.embeddings.embed(this.requestOf(source, batch))
+            if (vectors === null && !state.wordOnly) {
+                if (!(await this.usage.blockedBy(source.workspaceId, "embedding", true)))
+                    throw new KnowledgeError({ code: KnowledgeErrorCode.EmbeddingUnavailable })
+                state.wordOnly = true
+            }
+            const stored = await this.chunks.keep({
                 ...this.writeOf(source),
                 drafts: batch.map((entry, offset) => ({
                     ...draftOf(entry.text, vectors?.[offset], layout.places[entry.order] ?? null),
                     order: entry.order,
                 })),
             })
+            await this.handOver(source, batch, vectors, stored)
             state.done += batch.length
             await this.sources.advance(source.workspaceId, source.id, {
                 stage: "embed",
@@ -219,6 +281,33 @@ export class KnowledgeIndexingService {
                 progress: embedPercent(state.done, total),
             })
         })
+        return state.wordOnly
+    }
+
+    /**
+     * The upkeep tick: every document that waits for credits with its passages stored word-only (at most `RESUME_MAX`, the
+     * longest-waiting first) is queued for indexing again once its workspace's pool allows an embeddings call; the index job then
+     * embeds only the passages that have no vector and the document goes on to its truths. One pool read per workspace. Nothing waits
+     * for a button (the founder's "retry" stays, and does the same). Never throws. Answers how many were queued.
+     */
+    async resumeBlocked(): Promise<number> {
+        try {
+            const waiting = await this.blocked.waiting(RESUME_MAX)
+            const open = new Map<string, boolean>()
+            const count = { resumed: 0 }
+            await eachInOrder(waiting, async (row) => {
+                if (!open.has(row.workspaceId))
+                    open.set(row.workspaceId, !(await this.usage.blockedBy(row.workspaceId, "embedding", true)))
+                if (open.get(row.workspaceId) !== true) return
+                if (!(await this.blocked.resume(row.workspaceId, row.id))) return
+                this.logger.info(KnowledgeLogEvent.SourceResumed, { sourceId: row.id })
+                count.resumed += 1
+            })
+            return count.resumed
+        } catch (cause) {
+            this.logger.error(KnowledgeLogEvent.SourceResumeFailed, cause, {})
+            return 0
+        }
     }
 
     /** The demo pause between two passages (`KNOWLEDGE_INDEX_CHUNK_DELAY_MS`); no wait at all when it is 0. */
@@ -249,6 +338,7 @@ export class KnowledgeIndexingService {
             visibility: source.visibility,
             installationId: source.installationId,
             model: this.embeddings.model(),
+            ...(this.vectorSync?.bound() === true ? { vectorsInIndex: true } : {}),
         }
     }
 }

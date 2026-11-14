@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { WebhookEventsService } from "@modules/domain/webhook-connections"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the signed delivery of one business event to one webhook connection. */

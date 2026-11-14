@@ -1,4 +1,5 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import type { QueueStatusService } from "@modules/platform/queue"
 import { jobRecordingOutbox } from "@tests/fixtures/builders/queue-job-outbox.builder"
 import { isThreadDeadlinePayload, threadDeadlineKey } from "./thread-deadline.contracts"
 import type { ThreadDeadlinePayload } from "./thread-deadline.contracts"
@@ -11,7 +12,7 @@ describe("ThreadDeadlineQueue.arm", () => {
         const outbox = jobRecordingOutbox()
         const queue = new ThreadDeadlineQueue(outbox)
 
-        await expect(queue.arm(PAYLOAD, 86_400_000, mockEntityManager())).resolves.toBe(true)
+        await expect(queue.arm(PAYLOAD, 86_400_000, mockEntityManager())).resolves.toBe("written")
 
         expect(outbox.written).toEqual([
             {
@@ -28,9 +29,23 @@ describe("ThreadDeadlineQueue.arm", () => {
         const outbox = jobRecordingOutbox()
 
         await new ThreadDeadlineQueue(outbox).arm(PAYLOAD, -5, mockEntityManager())
-        await expect(new ThreadDeadlineQueue().arm(PAYLOAD, 10, mockEntityManager())).resolves.toBe(false)
+        await expect(new ThreadDeadlineQueue().arm(PAYLOAD, 10, mockEntityManager())).resolves.toBe("unqueued")
 
         expect(outbox.written.map((job) => job.delayMs)).toEqual([undefined])
+    })
+
+    it("writes nothing when the job of the stop as it stood already stands (the minute sweep's re-arm), and says so", async () => {
+        const outbox = jobRecordingOutbox()
+        const status = mock<QueueStatusService>()
+        status.stands.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+        const queue = new ThreadDeadlineQueue(outbox, status)
+        const tx = mockEntityManager()
+
+        await expect(queue.arm(PAYLOAD, 60_000, tx)).resolves.toBe("written")
+        await expect(queue.arm(PAYLOAD, 60_000, tx)).resolves.toBe("standing")
+
+        expect(outbox.written).toHaveLength(1)
+        expect(status.stands).toHaveBeenCalledWith(tx, "ws-1", "thread_deadline", "thread-deadline.fire", "thread-deadline:run-1:match:1.0")
     })
 })
 

@@ -1,5 +1,6 @@
 export { parseWebhookConnectionsConfig } from "./webhook-connections.config"
 export type { CreatedWebhook, WebhookTestResult } from "./webhook-connections.contracts"
+export type { WebhookEventOption } from "./webhook-events.catalogue"
 export { WebhookConnectionsModule } from "./webhook-connections.module"
 export { WebhookConnectionsService } from "./webhook-connections.service"
 export { WebhookEventsService } from "./webhook-events.service"

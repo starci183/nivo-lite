@@ -17,6 +17,7 @@ export const ENTITY_ENGINE_MESSAGES: MessageBundle = {
         "errors.ENTITY_ENGINE_JOB_UNKNOWN": "Công việc nền này chưa được khai báo.",
         "errors.ENTITY_ENGINE_JOB_INPUT_INVALID": "Dữ liệu đầu vào của công việc nền không hợp lệ.",
         "errors.ENTITY_ENGINE_PORT_UNPROVIDED": "Công việc yêu cầu một cổng mà hệ thống chưa cung cấp.",
+        "errors.ENTITY_ENGINE_AGENT_MISSING": "Workspace chưa cài agent của mô-đun này nên chưa ghi được dữ liệu.",
     },
     en: {
         "errors.ENTITY_ENGINE_SCOPE_INVALID": "The workspace could not be determined.",
@@ -34,5 +35,6 @@ export const ENTITY_ENGINE_MESSAGES: MessageBundle = {
         "errors.ENTITY_ENGINE_JOB_UNKNOWN": "That background job is not declared.",
         "errors.ENTITY_ENGINE_JOB_INPUT_INVALID": "The input of the background job is invalid.",
         "errors.ENTITY_ENGINE_PORT_UNPROVIDED": "The job asks for a port the system does not provide.",
+        "errors.ENTITY_ENGINE_AGENT_MISSING": "The workspace has no installed agent of this module, so the data was not written.",
     },
 }

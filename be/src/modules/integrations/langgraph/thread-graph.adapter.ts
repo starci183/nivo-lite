@@ -1,28 +1,63 @@
-import { Annotation, Command, END, interrupt, START, StateGraph } from "@langchain/langgraph"
-import type { LangGraphRunnableConfig } from "@langchain/langgraph"
+import {
+    Annotation,
+    Command,
+    END,
+    interrupt,
+    Send,
+    START,
+    StateGraph,
+    type LangGraphRunnableConfig,
+} from "@langchain/langgraph"
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint"
 import { LanggraphError, LanggraphErrorCode } from "./errors/langgraph.error"
-import { THREAD_CONFIG, THREAD_END } from "./langgraph.port"
-import type { ThreadGraph, ThreadGraphNode, ThreadNodeScope, ThreadRef } from "./langgraph.port"
+import {
+    THREAD_CONFIG,
+    THREAD_END,
+    type ThreadGraph,
+    type ThreadGraphNode,
+    type ThreadNodeAnswer,
+    type ThreadNodeScope,
+    type ThreadRef,
+} from "./langgraph.port"
 import { requirePlain } from "./plain.policy"
-import { heldOf, mergeSteps, writesOf } from "./thread-state.policy"
+import { branchInputOf, branchWriteRefusedOf, heldOf, mergeBranches, mergeSteps, writesOf } from "./thread-state.policy"
 
 /** The key the library starts every graph from; no node may take it. */
 const LIBRARY_START: string = START
 
-/** The channels of every thread: the five keys of the state, then the engine's pin and cursor. Only `steps` merges. */
+/**
+ * The channels of every thread: the keys of the shared state, then the engine's pin and cursor. `steps` and `branches` merge by key
+ * (a reducer), so the branches of a fan-out, which run in one superstep, each write their own keys; every other channel takes one
+ * value per superstep, and only a node of the shared state writes it. A branch's own value (`state.branch`) is no channel: it travels
+ * in the input of its `Send`.
+ */
 const ThreadChannels = Annotation.Root({
     trigger: Annotation<unknown>(),
     steps: Annotation<Readonly<Record<string, unknown>>>({ reducer: mergeSteps, default: () => ({}) }),
     trouble: Annotation<unknown>(),
     founderAnswers: Annotation<ReadonlyArray<unknown>>(),
     loop: Annotation<unknown>(),
+    branches: Annotation<Readonly<Record<string, unknown>>, Readonly<Record<string, unknown>> | null>({
+        reducer: mergeBranches,
+        default: () => ({}),
+    }),
     pin: Annotation<string>(),
     cursor: Annotation<string>(),
 })
 
+/** The options the library takes for one node: where it may end and how often it is retried. */
+interface NodeOptions {
+    ends: Array<string>
+    retryPolicy: NodeRetryPolicy
+}
+
+/** How often the library runs a failed node again. */
+interface NodeRetryPolicy {
+    maxAttempts: number
+}
+
 /** What the library takes for one node: its key, its action and its options. */
-type NodeEntry = [string, ReturnType<typeof actionOf>, { ends: string[]; retryPolicy: { maxAttempts: number } }]
+type NodeEntry = [string, ReturnType<typeof actionOf>, NodeOptions]
 
 const unsound = (node: string): never => {
     throw new LanggraphError({ code: LanggraphErrorCode.GraphUnsound, params: { node } })
@@ -70,9 +105,62 @@ const threadOf = (config: LangGraphRunnableConfig): ThreadRef => ({
     runId: String(config.configurable?.[THREAD_CONFIG.thread] ?? ""),
 })
 
+const routeChecked = (node: ThreadGraphNode, goto: string): string => {
+    if (!routesOf(node).has(goto))
+        throw new LanggraphError({ code: LanggraphErrorCode.RouteUndeclared, params: { node: node.key, goto } })
+    return goto
+}
+
+const branchRefused = (node: ThreadGraphNode, what: string): never => {
+    throw new LanggraphError({ code: LanggraphErrorCode.BranchInvalid, params: { node: node.key, what } })
+}
+
+/**
+ * The one write-and-go of a node of the SHARED state: its writes and the cursor, then the route, or a fan-out (one `Send` per branch,
+ * the input of each the state as this node leaves it, with the branch's value; the cursor stays on this node while branches run).
+ */
+const sharedCommandOf = (
+    node: ThreadGraphNode,
+    values: Readonly<Record<string, unknown>>,
+    answer: ThreadNodeAnswer,
+    writes: Readonly<Record<string, unknown>>,
+): Command => {
+    if (answer.sends !== undefined) {
+        const sends = answer.sends.map((one) => {
+            requirePlain(one.branch, "send.branch")
+            return new Send(routeChecked(node, one.node), branchInputOf(values, writes, one.branch))
+        })
+        return new Command({ update: { ...writes, cursor: node.key }, goto: sends })
+    }
+    const goto = routeChecked(node, answer.goto ?? node.next ?? THREAD_END)
+    return new Command({ update: { ...writes, cursor: goto }, goto: goto === THREAD_END ? END : goto })
+}
+
+/**
+ * The one write-and-go of a node of a BRANCH: only `steps` and `branches` (the channels that merge), never the cursor; the route
+ * continues the branch (a `Send` carrying the branch's state with this node's steps added) or, with `join`, leaves it (a plain route:
+ * the node it names runs once per superstep on the shared state). A branch never fans out again and never ends the thread.
+ */
+const branchCommandOf = (
+    node: ThreadGraphNode,
+    values: Readonly<Record<string, unknown>>,
+    answer: ThreadNodeAnswer,
+    writes: Readonly<Record<string, unknown>>,
+    branch: unknown,
+): Command => {
+    const refused = branchWriteRefusedOf(writes)
+    if (refused !== null) branchRefused(node, refused)
+    if (answer.sends !== undefined) branchRefused(node, "sends")
+    const goto = routeChecked(node, answer.goto ?? node.next ?? THREAD_END)
+    if (goto === THREAD_END) branchRefused(node, THREAD_END)
+    if (answer.join === true) return new Command({ update: writes, goto })
+    return new Command({ update: writes, goto: new Send(goto, branchInputOf(values, writes, branch)) })
+}
+
 /**
  * One node as the library runs it: the NIVO node's run, its answer checked (a declared route, plain JSON) and turned into the one
- * write-and-go the library takes. The cursor is written with the route, so a checkpoint always says which node runs next.
+ * write-and-go the library takes. Outside a branch the cursor is written with the route, so a checkpoint always says which node runs
+ * next (the sending node while a fan-out runs). A run the library started from a `Send` reads the branch's input, not the channels.
  */
 const actionOf =
     (node: ThreadGraphNode) =>
@@ -90,10 +178,10 @@ const actionOf =
             },
         }
         const answer = await node.run(held.state, scope)
-        const goto = answer.goto ?? node.next ?? THREAD_END
-        if (!routesOf(node).has(goto))
-            throw new LanggraphError({ code: LanggraphErrorCode.RouteUndeclared, params: { node: node.key, goto } })
-        return new Command({ update: { ...writesOf(answer.update), cursor: goto }, goto: goto === THREAD_END ? END : goto })
+        const writes = writesOf(answer.update)
+        const given: Readonly<Record<string, unknown>> = values
+        const branch = held.state.branch ?? null
+        return branch === null ? sharedCommandOf(node, given, answer, writes) : branchCommandOf(node, given, answer, writes, branch)
     }
 
 /**
@@ -125,5 +213,5 @@ export const compiledOf = (graph: ThreadGraph, saver: BaseCheckpointSaver) => {
         .compile({ checkpointer: saver })
 }
 
-/** A compiled thread graph. */
+/** The graph the client compiles once per workflow version and runs its threads on. */
 export type CompiledThreadGraph = ReturnType<typeof compiledOf>

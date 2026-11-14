@@ -1,4 +1,5 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
+import { AgentWorkflowReadinessType } from "./agent-workflow-readiness.type"
 
 @ObjectType()
 /** One workflow of an agent: a named graph with its own version history. */
@@ -58,4 +59,8 @@ export class AgentWorkflowType {
     /** When it last changed, ISO 8601. */
     @Field(() => String)
     updatedAt!: string
+
+    /** Whether its graph shows for the agent, read by the agentWorkflows list; null where it is not read (a single write's answer). */
+    @Field(() => AgentWorkflowReadinessType, { nullable: true })
+    readiness?: AgentWorkflowReadinessType | null
 }

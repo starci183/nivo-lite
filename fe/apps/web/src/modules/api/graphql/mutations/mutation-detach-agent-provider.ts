@@ -1,6 +1,6 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { DetachAgentProviderMutation, DetachAgentProviderMutationVariables } from "../__generated__/graphql"
 
 /** The input of the `detachAgentProvider` mutation. */
@@ -33,6 +33,6 @@ export const mutateDetachAgentProvider = async ({
     request,
     signal,
 }: MutateDetachAgentProviderParams): Promise<ApolloClient.MutateResult<MutateDetachAgentProviderResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

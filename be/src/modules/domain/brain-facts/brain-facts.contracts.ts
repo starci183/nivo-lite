@@ -35,11 +35,17 @@ export type FactProposalKind = "set" | "retire"
  * - `same_meaning`: the model judged it the SAME fact as another one written in other words (another subject or attribute label);
  *   `conflictWith` names that fact. Approving it MERGES: it takes the other fact's place (the other value in force is superseded, or the
  *   other waiting proposal is rejected); "split" keeps both apart; reject drops it.
+ * - `period_unclear` ("chua ro ngay", D2 of the loosen plan): the document states a period for the value whose dates could not be read
+ *   or computed, even after the reading's one told follow-up (a day the calendar lacks or words in a date field, an end before its
+ *   start, a period relative to the document's own date in a document that states none, a relative form that cannot be computed). The
+ *   truth is filed WITHOUT a period (the store's default validity: from its approval, or its start, for one year) and its document
+ *   evidence label says what was written and why it could not be computed. A NOTE for the founder, never a question: it holds nothing
+ *   and asks nothing; the truth goes in force like any other. Code never guesses the dates.
  */
-export type FactFlag = "stale" | "same_meaning"
+export type FactFlag = "stale" | "same_meaning" | "period_unclear"
 
 /** The flags a proposal may carry, in the order the store checks them. */
-export const FACT_FLAGS: ReadonlyArray<FactFlag> = ["stale", "same_meaning"]
+export const FACT_FLAGS: ReadonlyArray<FactFlag> = ["stale", "same_meaning", "period_unclear"]
 
 /** Who the answer is for; `customer` only ever sees public facts. */
 export type FactAudience = "customer" | "internal"
@@ -197,6 +203,11 @@ export interface FactInput {
     readonly installationId?: string | null
     /** Forces the review path (false) or the direct path (true); by default only a trusted source applies directly. */
     readonly autoApply?: boolean
+    /**
+     * What the door that files it noticed on the line (`period_unclear` from a document's reading); the store adds its own (`stale`,
+     * `same_meaning`). Absent: nothing.
+     */
+    readonly flags?: ReadonlyArray<FactFlag>
 }
 
 /** What recording a fact did. */
@@ -305,10 +316,14 @@ export interface ChangeRequest {
     readonly proposedBy: string
     /** The agent that relays it. */
     readonly agentId: string
-    /** The agent instance the change is kept for; null = every instance. */
+    /**
+     * The instance of the agent that relays it, null for a single-instance agent. It only FINDS the fact a change replaces (that
+     * instance's own value of the key first, then the workspace-wide one); the change is filed in that fact's scope, and a NEW truth is
+     * always filed workspace-wide (owner, 2026-11-11: a truth an agent proposes is the whole shop's; reading stays per agent: FX6).
+     */
     readonly installationId: string | null
     /**
-     * The fact in force this change replaces, by id, as the agent read it (`nivo.brain.search` / `nivo.brain.fact.get`) before filing
+     * The fact in force this change replaces, by id, as the agent read it (`nivo.tool.brain.search` / `nivo.tool.brain.fact.get`) before filing
      * (FX5, D-P11-8). It must be a fact in force the caller may read; the proposal is then filed as the next version of THAT fact (its
      * subject, attribute and instance scope), whatever labels the agent chose. Omitted: the exact key decides, then a near-meaning
      * candidate the founder confirms on the card.

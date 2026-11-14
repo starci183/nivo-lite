@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ContextNotesService } from "@modules/domain/module-context-notes"
-import type { ContextNote } from "@modules/domain/module-context-notes"
+import { ContextNotesService, type ContextNote } from "@modules/domain/module-context-notes"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ContextNotesQuery } from "./context-notes.query"
 
 @QueryHandler(ContextNotesQuery)

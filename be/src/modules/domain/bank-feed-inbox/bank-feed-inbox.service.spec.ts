@@ -1,102 +1,115 @@
-import { IsNull } from "typeorm"
-import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { Test } from "@nestjs/testing"
-import { fakeInbox, mockEntityManager } from "@starci/jest-preset"
-import { INBOX } from "@modules/platform/inbox"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { AccountDataIntakeService } from "@modules/domain/account-data"
+import type { PendingRow } from "@modules/domain/account-data"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { BankFeedReceiptService } from "./bank-feed-inbox.service"
 import type { FeedReceiptPayload } from "./bank-feed-inbox.contracts"
-import { BankFeedInboxEntity } from "./persistence/entities"
+import { BankFeedInboxLogEvent } from "./bank-feed-inbox.log-events"
 
-/** Stands for the `() => "now()"` expression a write hands the database. */
-const SQL_EXPRESSION: unknown = expect.any(Function)
-
-const payload: FeedReceiptPayload = {
-    connection: "conn-1",
-    credits: [{ amount: 1000, content: "payment", eventId: "bank-1", fallbackBankName: "Bank" }],
+const CONNECTION = "0b8e6f4a-6c1e-4d47-9a51-1f3c2b7d9e10"
+const DELIVERY = `${CONNECTION}:sepay:42`
+const owner = { provider: "sepay", connectionId: CONNECTION, workspaceId: "ws-1" }
+const credit = { amount: 1000, content: "payment", eventId: "sepay:42", fallbackBankName: "Bank" }
+const payload: FeedReceiptPayload = { connection: CONNECTION, credits: [credit] }
+const row: PendingRow = {
+    id: "row-1",
+    type: "sepay.delivery",
+    key: "sepay:42",
+    owner,
+    value: { deliveryId: "sepay:42", credits: [credit] },
 }
-const pending = Object.assign(new BankFeedInboxEntity(), {
-    id: "receipt-1",
-    provider: "payos",
-    deliveryId: "delivery-1",
-    receivedAt: new Date("2026-10-12T10:00:00Z"),
-    payload,
-    processedAt: null,
+const written = (isNew: boolean, type = "sepay.delivery") => ({
+    owner,
+    rows: [{ type, key: "sepay:42", id: "row-1", isNew }],
 })
 
-const build = async (row: BankFeedInboxEntity | null = pending) => {
-    const manager = mockEntityManager({
-        findOne: [BankFeedInboxEntity, row],
-        update: [BankFeedInboxEntity, {}],
-    })
-    const inbox = fakeInbox()
+const build = async () => {
+    const manager = mockEntityManager()
+    const intake = mock<AccountDataIntakeService>()
+    intake.write.mockResolvedValue(written(true))
+    intake.lockPending.mockResolvedValue(null)
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
-        providers: [BankFeedReceiptService, { provide: INBOX, useValue: inbox }],
+        providers: [
+            BankFeedReceiptService,
+            { provide: AccountDataIntakeService, useValue: intake },
+            { provide: LOGGER, useValue: logger },
+        ],
     }).compile()
-    return { service: moduleRef.get(BankFeedReceiptService), inbox, manager }
+    return { service: moduleRef.get(BankFeedReceiptService), intake, logger, manager }
 }
 
-describe("BankFeedReceiptService", () => {
-    it.each([true, false])("returns the claim result %s in the caller's transaction", async (claimed) => {
-        const { service, inbox, manager } = await build()
-        if (!claimed) inbox.seen("payos", "delivery-1")
-        await expect(service.claim(manager, "payos", "delivery-1", payload)).resolves.toBe(claimed)
-        expect(inbox.claims).toEqual([{ source: "payos", eventId: "delivery-1" }])
-        expect(inbox.receipts.map(({ entity, row }) => ({ entity, row }))).toEqual(
-            claimed
-                ? [{ entity: BankFeedInboxEntity, row: { provider: "payos", deliveryId: "delivery-1", payload } }]
-                : [],
-        )
-        expect(manager.findOne).not.toHaveBeenCalled()
-        expect(manager.update).not.toHaveBeenCalled()
+describe("BankFeedReceiptService claim", () => {
+    it.each([
+        ["sepay-feed", "sepay.delivery"],
+        ["casso", "casso.delivery"],
+        ["payos", "payos.delivery"],
+    ] as const)("writes the first %s receipt as a %s row of the account", async (door, type) => {
+        const { service, intake, manager } = await build()
+        intake.write.mockResolvedValue(written(true, type))
+        await expect(service.claim(manager, door, DELIVERY, { ...payload, source: "poll" })).resolves.toBe(true)
+        expect(intake.write).toHaveBeenCalledWith(manager, CONNECTION, [
+            { type, value: { deliveryId: "sepay:42", credits: [credit], source: "poll" } },
+        ])
     })
 
-    it("returns the receipt locked by the supplied manager", async () => {
-        const { service, manager } = await build()
-        await expect(service.lock(manager, "payos", "delivery-1")).resolves.toEqual({ id: "receipt-1", payload })
-        expect(manager.findOne).toHaveBeenCalledWith(BankFeedInboxEntity, {
-            where: { provider: "payos", deliveryId: "delivery-1", processedAt: IsNull() },
-            lock: { mode: "pessimistic_write" },
+    it("writes nothing new for a redelivery", async () => {
+        const { service, intake, manager } = await build()
+        intake.write.mockResolvedValue(written(false))
+        await expect(service.claim(manager, "sepay-feed", DELIVERY, payload)).resolves.toBe(false)
+    })
+
+    it("keeps nothing and logs a connection nobody holds", async () => {
+        const { service, intake, logger, manager } = await build()
+        intake.write.mockResolvedValue({ owner: null, rows: [] })
+        await expect(service.claim(manager, "casso", DELIVERY, payload)).resolves.toBe(false)
+        expect(logger.warn).toHaveBeenCalledWith(BankFeedInboxLogEvent.UnknownConnection, {
+            provider: "casso",
+            connection: CONNECTION,
         })
     })
 
-    it("returns undefined for a missing or completed receipt", async () => {
-        const { service, manager } = await build(null)
+    it("keeps nothing for a delivery id with no connection", async () => {
+        const { service, intake, logger, manager } = await build()
+        await expect(service.claim(manager, "payos", "delivery-1", payload)).resolves.toBe(false)
+        expect(intake.write).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledTimes(1)
+    })
+
+    it("propagates a refused write to the transaction owner", async () => {
+        const { service, intake, manager } = await build()
+        const failure = new Error("write failed")
+        intake.write.mockRejectedValue(failure)
+        await expect(service.claim(manager, "payos", DELIVERY, payload)).rejects.toBe(failure)
+    })
+})
+
+describe("BankFeedReceiptService lock and complete", () => {
+    it("locks the account's pending delivery and answers it in the consumer's shape", async () => {
+        const { service, intake, manager } = await build()
+        intake.lockPending.mockResolvedValue(row)
+        await expect(service.lock(manager, "sepay-feed", DELIVERY)).resolves.toEqual({ payload, owner, row })
+        expect(intake.lockPending).toHaveBeenCalledWith(manager, "sepay.delivery", CONNECTION, "sepay:42")
+    })
+
+    it("returns undefined when no delivery is pending", async () => {
+        const { service, manager } = await build()
+        await expect(service.lock(manager, "payos", DELIVERY)).resolves.toBeUndefined()
         await expect(service.lock(manager, "payos", "delivery-1")).resolves.toBeUndefined()
-        expect(manager.findOne).toHaveBeenCalledTimes(1)
     })
 
-    it("completes the receipt with the supplied manager", async () => {
-        const { service, manager } = await build()
-        await expect(service.complete(manager, "receipt-1")).resolves.toBeUndefined()
-        expect(manager.update).toHaveBeenCalledWith(
-            BankFeedInboxEntity,
-            { id: "receipt-1" },
-            { processedAt: SQL_EXPRESSION },
-        )
+    it("completes the locked delivery row", async () => {
+        const { service, intake, manager } = await build()
+        await service.complete(manager, { payload, owner, row })
+        expect(intake.complete).toHaveBeenCalledWith(manager, row)
     })
 
-    it("stamps the completed receipt with the database time", async () => {
-        const { service, manager } = await build()
-
-        await service.complete(manager, "receipt-1")
-
-        expect(evaluatedValues(manager.update.mock.calls[0]?.[2]).processedAt).toBe("now()")
-    })
-
-    it("propagates a refused claim to the transaction owner", async () => {
-        const { service, inbox, manager } = await build()
-        const failure = new Error("claim failed")
-        inbox.failNext("claimRow", failure)
-        await expect(service.claim(manager, "payos", "delivery-1", payload)).rejects.toBe(failure)
-    })
-
-    it.each(["lock", "complete"])("propagates a failed %s to the transaction owner", async (operation) => {
-        const { service, manager } = await build()
+    it("propagates a failed lock to the transaction owner", async () => {
+        const { service, intake, manager } = await build()
         const failure = new Error("database failed")
-        manager.findOne.mockRejectedValue(failure)
-        manager.update.mockRejectedValue(failure)
-        const result =
-            operation === "lock" ? service.lock(manager, "payos", "delivery-1") : service.complete(manager, "receipt-1")
-        await expect(result).rejects.toBe(failure)
+        intake.lockPending.mockRejectedValue(failure)
+        await expect(service.lock(manager, "payos", DELIVERY)).rejects.toBe(failure)
     })
 })

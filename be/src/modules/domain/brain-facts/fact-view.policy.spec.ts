@@ -1,7 +1,17 @@
 import { Test } from "@nestjs/testing"
 import type { FactRecord } from "./brain-facts.contracts"
-import { FACT_VECTOR_HIT, factLine, hybridFacts, inForce, searchFacts, visibleTo } from "./fact-view.policy"
+import {
+    FACT_VECTOR_HIT,
+    factLine,
+    hybridFacts,
+    inForce,
+    searchFacts,
+    truthKeyOf,
+    unshadowed,
+    visibleTo,
+} from "./fact-view.policy"
 import * as facts from "@tests/fixtures/builders/brain-facts.builder"
+import { DONG_VI, PRICE_30K_VI, PRICE_32K_PER_ORDER_VI } from "@tests/fixtures/i18n/brain-facts-spec.messages"
 const SUBJECT = Symbol("fact-view.policy")
 
 const build = async () => {
@@ -88,6 +98,13 @@ describe("fact views", () => {
         expect(subject.factLine(fact())).toBe("Combo - Price: 650000 VND")
     })
 
+    it("renders the value with its unit once, whichever form it was stored in (D-T5-1)", async () => {
+        const subject = await build()
+
+        expect(subject.factLine(fact({ value: "30.000", unit: DONG_VI }))).toBe(`Combo - Price: ${PRICE_30K_VI}`)
+        expect(subject.factLine(fact({ value: PRICE_32K_PER_ORDER_VI, unit: DONG_VI }))).toBe(`Combo - Price: ${PRICE_32K_PER_ORDER_VI}`)
+    })
+
     it("ranks whole-word matches by weighted score, then by trust, and honors the limit", async () => {
         const subject = await build()
 
@@ -109,12 +126,38 @@ describe("fact views", () => {
 })
 
 describe("fact-view.policy hybridFacts: fact search by words AND meaning (BG2)", () => {
-    const fee = facts.factOf({ id: "fee", subjectKey: "giao-hang", subjectLabel: "Giao hang", attribute: "phi-ship-noi-thanh", attributeLabel: "Phi ship noi thanh", value: "30.000 d" })
-    const hours = facts.factOf({ id: "hours", subjectKey: "tiem", subjectLabel: "Tiem", attribute: "gio-mo-cua", attributeLabel: "Gio mo cua", value: "8:00-20:00", trust: 95 })
-    const roses = facts.factOf({ id: "roses", subjectKey: "bo-hoa-hong-do", subjectLabel: "Bo hoa hong do", attribute: "gia", attributeLabel: "Gia", value: "350.000 d" })
+    const fee = facts.factOf({
+        id: "fee",
+        subjectKey: "giao-hang",
+        subjectLabel: "Giao hang",
+        attribute: "phi-ship-noi-thanh",
+        attributeLabel: "Phi ship noi thanh",
+        value: "30.000 d",
+    })
+    const hours = facts.factOf({
+        id: "hours",
+        subjectKey: "tiem",
+        subjectLabel: "Tiem",
+        attribute: "gio-mo-cua",
+        attributeLabel: "Gio mo cua",
+        value: "8:00-20:00",
+        trust: 95,
+    })
+    const roses = facts.factOf({
+        id: "roses",
+        subjectKey: "bo-hoa-hong-do",
+        subjectLabel: "Bo hoa hong do",
+        attribute: "gia",
+        attributeLabel: "Gia",
+        value: "350.000 d",
+    })
 
     it("finds a fact by meaning when no word of the question is in it", () => {
-        expect(hybridFacts([fee, hours, roses], [{ fact: fee, distance: 0.3 }], "tien van chuyen bao nhieu", 5).map((f) => f.id)).toEqual(["fee"])
+        expect(
+            hybridFacts([fee, hours, roses], [{ fact: fee, distance: 0.3 }], "tien van chuyen bao nhieu", 5).map(
+                (f) => f.id,
+            ),
+        ).toEqual(["fee"])
     })
 
     it("joins both halves: a near AND worded fact outranks a worded-only one", () => {
@@ -133,6 +176,38 @@ describe("fact-view.policy hybridFacts: fact search by words AND meaning (BG2)",
 
     it("is the word search when there is no vector, cut at the limit", () => {
         expect(hybridFacts([fee, hours, roses], [], "phi ship", 5).map((f) => f.id)).toEqual(["fee"])
-        expect(hybridFacts([fee, hours, roses], [{ fact: fee, distance: 0.1 }, { fact: roses, distance: 0.2 }], "", 1).map((f) => f.id)).toEqual(["fee"])
+        expect(
+            hybridFacts(
+                [fee, hours, roses],
+                [
+                    { fact: fee, distance: 0.1 },
+                    { fact: roses, distance: 0.2 },
+                ],
+                "",
+                1,
+            ).map((f) => f.id),
+        ).toEqual(["fee"])
+    })
+})
+
+describe("unshadowed: one value per truth for one reader", () => {
+    const at = (iso: string, overrides: Partial<FactRecord>): FactRecord =>
+        fact({ status: "scheduled", validFrom: iso, ...overrides })
+
+    it("keeps the later start of two started scheduled values of one key and scope, and the active value of another scope", () => {
+        const active = fact({ id: "a", status: "active" })
+        const first = at("2026-10-01T00:00:00.000Z", { id: "s1" })
+        const second = at("2026-10-05T00:00:00.000Z", { id: "s2" })
+        const elsewhere = fact({ id: "own", status: "active", installationId: "inst-2" })
+
+        expect(unshadowed([active, first, second, elsewhere], null).map((f) => f.id)).toEqual(["s2", "own"])
+    })
+
+    it("changes nothing when every truth has one value, and keys a truth by subject and attribute", () => {
+        const one = fact({ id: "a", status: "active" })
+        const two = fact({ id: "b", status: "active", attribute: "other" })
+
+        expect(unshadowed([one, two], "inst-1")).toEqual([one, two])
+        expect(truthKeyOf(one)).not.toBe(truthKeyOf(two))
     })
 })

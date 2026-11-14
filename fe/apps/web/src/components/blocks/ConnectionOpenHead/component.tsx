@@ -1,15 +1,15 @@
 import { Page } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
-import { connectionBandOf, connectionTabsOf } from "@/components/frames/ConnectionBand"
-import type {
-    ConnectionPageAction,
-    ConnectionPageChip,
-    ConnectionBandHeader,
+import {
+    connectionBandOf,
+    connectionTabsOf,
+    type ConnectionPageAction,
+    type ConnectionPageChip,
+    type ConnectionBandHeader,
 } from "@/components/frames/ConnectionBand"
-import { ConnectionRowQuestions, rowMenuEntriesOf } from "@/components/frames/ConnectionRowBody"
-import type { RowCommandSet } from "@/components/frames/ConnectionRowBody"
-import type { ConnectionPageTabsView, ConnectionRefusalView, RowView } from "@/modules/types"
+import { ConnectionRowQuestions, rowMenuEntriesOf, type RowCommandSet } from "@/components/frames/ConnectionRowBody"
+import type { ConnectionRefusalView, ProviderPageTabsView, RowView } from "@/modules/types"
 
 /** The words and the state of the band of a connection without a page of its own. */
 export interface ConnectionOpenHeadBaseProps {
@@ -23,10 +23,15 @@ export interface ConnectionOpenHeadBaseProps {
         readonly glyph: "email" | "apps"
         readonly crumbsLabel: string
         readonly crumbs: ConnectionBandHeader["crumbs"]
-        readonly tabs: ConnectionPageTabsView
+        readonly tabs: ProviderPageTabsView
         readonly moreLabel: string
         /** The notice drawn in place of the page for a member who may not read it. */
         readonly refusal?: ConnectionRefusalView
+        /** The account form's two commands, when the page has the form: check the connection (neutral), save (the page's one red command). */
+        readonly form?: {
+            readonly check?: ConnectionPageAction
+            readonly save?: ConnectionPageAction
+        }
     }
     readonly on: RowCommandSet
 }
@@ -52,7 +57,10 @@ export const ConnectionOpenHeadBase = (props: ConnectionOpenHeadBaseProps) => {
     const { view, chip, refusal } = props.props
     const isRefused = refusal !== undefined
     const env = view?.envLabel ?? null
-    const action = view === undefined || isRefused ? undefined : actionOf(view, props.on)
+    const checkIsForm = props.props.form?.check !== undefined
+    const action =
+        view === undefined || isRefused || (checkIsForm && view.primary?.id === "check") ? undefined : actionOf(view, props.on)
+    const form = isRefused ? undefined : props.props.form
     const header: ConnectionBandHeader = {
         crumbsLabel: props.props.crumbsLabel,
         crumbs: props.props.crumbs,
@@ -64,12 +72,13 @@ export const ConnectionOpenHeadBase = (props: ConnectionOpenHeadBaseProps) => {
         ],
         facts: view === undefined || isRefused ? "" : [view.facts, view.usedBy].filter(Boolean).join(" · "),
         ...(action === undefined ? {} : { action }),
+        ...(form === undefined ? {} : { extras: [form.check, form.save].filter((a): a is ConnectionPageAction => a !== undefined) }),
         ...(view === undefined || isRefused
             ? {}
             : { menu: { label: props.props.moreLabel, entries: rowMenuEntriesOf(view, props.on.menu) } }),
         tabs: {
             label: props.props.tabs.label,
-            selectedKey: props.props.tabs.selected,
+            selectedKey: props.props.tabs.selectedKey,
             items: props.props.tabs.items,
         },
         ...(view === undefined ? {} : { question: <ConnectionRowQuestions view={view} on={props.on} /> }),

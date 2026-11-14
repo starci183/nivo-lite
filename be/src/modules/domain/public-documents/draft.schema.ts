@@ -1,13 +1,19 @@
 import { z } from "zod"
 import { MAX_BODY_CHARS } from "./public-documents.contracts"
 
-/** The JSON a draft answers: the text for customers. */
-export const DRAFT_SCHEMA: z.ZodObject<
-    {
-        body: z.ZodString
-    },
-    z.core.$strip
-> = z.object({ body: z.string().min(1).max(MAX_BODY_CHARS) })
+/** The model's answer to one draft call. */
+export interface DraftAnswer {
+    /** False when the documents do not hold what the text is asked for (with a customer question: they do not answer it). */
+    readonly answers: boolean
+    /** The text for customers; empty when `answers` is false. */
+    readonly body: string
+}
 
-/** The draft answer as parsed. */
-export type DraftAnswer = z.infer<typeof DRAFT_SCHEMA>
+/**
+ * The JSON a draft answers. A body longer than a public document may be does not fit, and an answer that does not parse is
+ * unreadable as a whole (the structured output is `DRAFT_OUTPUT_SCHEMA`).
+ */
+export const DRAFT_READ_SCHEMA: z.ZodType<DraftAnswer> = z.object({
+    answers: z.boolean(),
+    body: z.string().max(MAX_BODY_CHARS),
+})

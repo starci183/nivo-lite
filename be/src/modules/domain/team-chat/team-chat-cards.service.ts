@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { AgentDirectoryService } from "@modules/domain/agents"
-import type { OptionalId } from "@modules/domain/agents"
-import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
+import { AgentDirectoryService, type OptionalId } from "@modules/domain/agents"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import type { AgentPostInput, ApprovalPostInput, ChatMemberRef, LineInput, ReportInput } from "./team-chat.contracts"
+import type { AgentPostInput, ChatMemberRef, LineInput, ReportInput } from "./team-chat.contracts"
 import { cardBodyOf, directKeyOf, isUuid } from "./team-chat.policy"
 import { TeamChatAccessService } from "./team-chat-access.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
@@ -19,7 +17,6 @@ export class TeamChatCardsService {
     constructor(
         private readonly store: TeamChatStoreService,
         private readonly access: TeamChatAccessService,
-        private readonly seats: WorkspaceMemberSeatsService,
         private readonly agents: AgentDirectoryService,
         private readonly workspaces: WorkspacesService,
     ) {}
@@ -41,34 +38,6 @@ export class TeamChatCardsService {
             body: cardBodyOf(report.body),
         })
         return written === null ? null : { roomId, ...written }
-    }
-
-    /**
-     * Posts the approval card of one decision to every room the rule names and to the direct room of every named approver (opened here
-     * between the asking agent and that person). One card per decision per room: a repeat posts nothing new. Answers how many cards exist.
-     */
-    async postApproval(workspaceId: string, approval: ApprovalPostInput): Promise<number> {
-        const named = approval.roomIds.length === 0 ? [] : await this.store.roomsByIds(workspaceId, approval.roomIds)
-        const direct = await this.approverRooms(workspaceId, approval)
-        const rooms = [...new Set([...named.map((room) => room.id), ...direct])]
-        await Promise.all(
-            rooms.map((roomId) =>
-                this.store.insertCard({
-                    workspaceId,
-                    roomId,
-                    authorId: approval.agentId,
-                    kind: "approval",
-                    refId: approval.decisionId,
-                    body: cardBodyOf(approval.body),
-                }),
-            ),
-        )
-        return rooms.length
-    }
-
-    /** In how many rooms the approval card of a decision stands; 0 when none was posted (no request opened, or nobody to show it to). */
-    cardRooms(workspaceId: string, decisionId: string): Promise<number> {
-        return this.store.cardCount(workspaceId, decisionId)
     }
 
     /**
@@ -123,23 +92,6 @@ export class TeamChatCardsService {
         }
         const [first] = await this.agents.idsOfModule(workspaceId, named, 1)
         return first ?? null
-    }
-
-    /** The direct room of every named approver with the asking agent; none when the system asks. */
-    private async approverRooms(workspaceId: string, approval: ApprovalPostInput): Promise<Array<string>> {
-        const agentId = approval.agentId
-        if (agentId === null || approval.approverSeatIds.length === 0) return []
-        const seats = await this.seats.seatsByIds(
-            workspaceId,
-            approval.approverSeatIds,
-            approval.approverSeatIds.length,
-        )
-        const rooms = await Promise.all(
-            seats.map((seat) =>
-                this.directRoomOf(workspaceId, seat.userId, { memberKind: "agent", memberId: agentId }),
-            ),
-        )
-        return rooms.flatMap((id) => (id === null ? [] : [id]))
     }
 
     /** The room a line goes to: the named room of the workspace, or the direct room between the person and the agent. */

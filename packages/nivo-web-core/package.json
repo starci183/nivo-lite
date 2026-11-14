@@ -1,0 +1,31 @@
+{
+  "name": "@nivo-lite/nivo-web-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NIVO Web, the company, running its own business on the platform: a plugin package beside @nivo-lite/blocks-core, picked up by scripts/build-plugin-registry.mjs. It holds the business half that is NIVO Web's alone (its agents once the plugin contract carries them; its CRM contracts, policy values, steps and workflow graphs in later phases) and no engine, provider HTTP code, table or seed data (the enterprise workspace is seeded by the platform's seed-enterprise command). React-free; no ./client entry.",
+  "nivo": {
+    "plugin": true
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit --pretty false",
+    "crm:codegen": "node scripts/crm-codegen.mjs"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "@nivo-lite/agent-sdk": "*"
+  },
+  "devDependencies": {
+    "@nivo-lite/agent-sdk": "*",
+    "@nivo-lite/blocks-core": "*",
+    "typescript": "5.9.3"
+  }
+}

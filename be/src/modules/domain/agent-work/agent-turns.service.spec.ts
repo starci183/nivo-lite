@@ -1,5 +1,3 @@
-import { AGENT_WORK_OPTIONS } from "./agent-work.decorators"
-import type { AgentWorkOptions } from "./agent-work.options"
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
@@ -31,14 +29,9 @@ const ending = (over: Partial<AgentTurnEnding> = {}): AgentTurnEnding => ({
     ...over,
 })
 
-const build = async (em: MockEntityManager, options?: AgentWorkOptions) => {
-    const settings = { debounceMs: options?.debounceMs, debounceMaxMs: options?.debounceMaxMs }
+const build = async (em: MockEntityManager) => {
     const container = await Test.createTestingModule({
-        providers: [
-            AgentTurnsService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: AGENT_WORK_OPTIONS, useValue: settings },
-        ],
+        providers: [AgentTurnsService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
     }).compile()
     return container.get(AgentTurnsService)
 }
@@ -46,49 +39,16 @@ const build = async (em: MockEntityManager, options?: AgentWorkOptions) => {
 describe("AgentTurnsService.begin", () => {
     it("asks the database for the next turn of the scope with the worker and the lease", async () => {
         const em = mockEntityManager({
-            query: [call("agent_turn_begin", 6), [{ agent_turn_begin: { result: "idle" } }]],
+            query: [call("agent_turn_begin", 4), [{ agent_turn_begin: { result: "idle" } }]],
         })
         const service = await build(em)
 
         await expect(service.begin("agent-1", "agent", "worker-1")).resolves.toEqual({ result: "idle", ended: [] })
-        expect(em.query).toHaveBeenCalledWith(call("agent_turn_begin", 6), [
+        expect(em.query).toHaveBeenCalledWith(call("agent_turn_begin", 4), [
             "agent-1",
             "agent",
             "worker-1",
             90,
-            6000,
-            20000,
-        ])
-    })
-
-    it("asks for the burst window the app root named, and for none when it named zero", async () => {
-        const named = mockEntityManager({
-            query: [call("agent_turn_begin", 6), [{ agent_turn_begin: { result: "idle" } }]],
-        })
-        const off = mockEntityManager({
-            query: [call("agent_turn_begin", 6), [{ agent_turn_begin: { result: "idle" } }]],
-        })
-
-        await (
-            await build(named, { debounceMs: 5000, debounceMaxMs: 12000 })
-        ).begin("agent-1", "conversation:c1", "worker-1")
-        await (await build(off, { debounceMs: 0 })).begin("agent-1", "conversation:c1", "worker-1")
-
-        expect(named.query).toHaveBeenCalledWith(call("agent_turn_begin", 6), [
-            "agent-1",
-            "conversation:c1",
-            "worker-1",
-            90,
-            5000,
-            12000,
-        ])
-        expect(off.query).toHaveBeenCalledWith(call("agent_turn_begin", 6), [
-            "agent-1",
-            "conversation:c1",
-            "worker-1",
-            90,
-            0,
-            20000,
         ])
     })
 })
@@ -101,7 +61,7 @@ describe("AgentTurnsService.begin, the answer it reads", () => {
             fence: 3,
             turnId: "turn-1",
             wakeId: "wake-1",
-            source: "customer",
+            source: "trigger",
             eventKey: "msg-1",
             context: {},
             actorMemberId: null,
@@ -111,7 +71,7 @@ describe("AgentTurnsService.begin, the answer it reads", () => {
             proposal: null,
         }
         const service = await build(
-            mockEntityManager({ query: [call("agent_turn_begin", 6), [{ agent_turn_begin: answer }]] }),
+            mockEntityManager({ query: [call("agent_turn_begin", 4), [{ agent_turn_begin: answer }]] }),
         )
 
         await expect(service.begin("agent-1", "conversation:conv-1", "worker-1")).resolves.toEqual({
@@ -123,7 +83,7 @@ describe("AgentTurnsService.begin, the answer it reads", () => {
 
     it("refuses an answer it cannot read", async () => {
         const service = await build(
-            mockEntityManager({ query: [call("agent_turn_begin", 6), [{ agent_turn_begin: 5 }]] }),
+            mockEntityManager({ query: [call("agent_turn_begin", 4), [{ agent_turn_begin: 5 }]] }),
         )
 
         await expect(service.begin("agent-1", "agent", "worker-1")).rejects.toMatchObject({
@@ -132,7 +92,7 @@ describe("AgentTurnsService.begin, the answer it reads", () => {
     })
 
     it("refuses an answer with no row", async () => {
-        const service = await build(mockEntityManager({ query: [call("agent_turn_begin", 6), []] }))
+        const service = await build(mockEntityManager({ query: [call("agent_turn_begin", 4), []] }))
 
         await expect(service.begin("agent-1", "agent", "worker-1")).rejects.toMatchObject({
             code: AgentWorkErrorCode.ResultRejected,
@@ -317,7 +277,7 @@ describe("AgentTurnsService.runningOn", () => {
                 workspaceId: "ws-1",
                 agentId: "agent-1",
                 wakeId: "wake-1",
-                source: "customer",
+                source: "trigger",
                 threadKey: "agent:runtime-1:conv-1",
                 context: { conversationId: "conv-1", messageId: "msg-1" },
             },

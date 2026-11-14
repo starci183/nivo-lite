@@ -5,8 +5,7 @@ import {
     type mutateDisconnectConnection as MutateDisconnectConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-disconnect-connection"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { DisconnectConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the disconnectConnection mutation. */

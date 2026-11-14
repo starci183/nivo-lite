@@ -5,12 +5,36 @@ import type { ActionDefinition, ActionResult, ReadDefinition } from "@nivo-lite/
 export interface DoorCall {
     /** The workspace selected in the request header; membership is proved before it is used. */
     readonly workspaceId: string
-    /** The id of the read or action, `<module>.<name>`. */
+    /** The id of the read or action, `<package>.<agent>.api.<domain>.<query>` (a read), `<package>.<agent>.<action>` (an action) or `<module>.<name>`. */
     readonly name: string
     /** The variables of a read or the input of an action, as JSON text. */
     readonly payload: string
     /** The language of the viewer; the run context carries it to the providers of words. */
     readonly locale: Locale
+    /**
+     * The installation of the module the screen is opened for (the workbench of one agent). An action's records are stamped for that
+     * installation's agent, which must belong to the workspace and to the action's module; absent, for the module's oldest installation.
+     */
+    readonly installationId?: string | undefined
+}
+
+/**
+ * One file call to the door: for which workspace, the read or action it is made for (`via`, whose permission and entity ports grant
+ * it), and the declared `file` field of one record. The caller travels beside it.
+ */
+export interface DoorFileCall {
+    /** The workspace selected in the request header; membership is proved before it is used. */
+    readonly workspaceId: string
+    /** The id of the read or action the call is made for, `<package>.<agent>.api.<domain>.<query>` (a read), `<package>.<agent>.<action>` (an action) or `<module>.<name>`. */
+    readonly via: string
+    /** The record type, as its package declares it. */
+    readonly type: string
+    /** The record id. */
+    readonly recordId: string
+    /** The declared `file` field. */
+    readonly field: string
+    /** The object key of one file of a list field (`url` and `delete` only; required for a list field, and for a single field it must be the held file's). */
+    readonly key?: string | undefined
 }
 
 /** What the door answers: the JSON text of the data of a read or of the result of an action. */

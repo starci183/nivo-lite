@@ -1,6 +1,10 @@
 import type { FindingKind, FindingSeverity } from "./dossier-review.contracts"
 
-/** What the critic of a shop document finds wrong; each kind belongs to one group the founder reads. */
+/**
+ * Every kind a STORED point of the critic of a shop document may carry; each kind belongs to one group the founder reads. Old rows
+ * keep their kinds and are still read and shown, but only `PRODUCED_RULE_KINDS` and `PRODUCED_MODEL_KINDS` are raised now (owner
+ * 2026-11-12: documents are trusted; only contradictions between data and text addressed to an AI are asked about).
+ */
 export const CRITIC_KINDS = [
     "inside_contradiction",
     "shop_contradiction",
@@ -11,12 +15,39 @@ export const CRITIC_KINDS = [
     "missing",
     "template",
     "stale_date",
+    "addressed_to_ai",
+    "hearsay",
+    "undated",
 ] as const
 /** One critic kind. */
 export type CriticKind = (typeof CRITIC_KINDS)[number]
 
-/** The groups the founder reads (four drawn by the owner, two more where no drawn label is true). */
-export const CRITIC_GROUPS = ["inside", "shop", "typo", "other_document", "unclear", "stale"] as const
+/**
+ * The kinds the deterministic rules still raise: CONTRADICTIONS between data (ids and normal-form values only): one document giving
+ * one key two values, a value against the one in force, a value against one waiting from another document.
+ */
+export const PRODUCED_RULE_KINDS = ["shop_contradiction", "other_document", "inside_contradiction"] as const
+
+/** The one kind the passage critic model still raises: text addressed to an AI (a security flag, never a judgement of accuracy). */
+export const PRODUCED_MODEL_KINDS = ["addressed_to_ai"] as const
+
+const PRODUCED_RULE: ReadonlySet<CriticKind> = new Set<CriticKind>(PRODUCED_RULE_KINDS)
+const PRODUCED_MODEL: ReadonlySet<CriticKind> = new Set<CriticKind>(PRODUCED_MODEL_KINDS)
+
+/**
+ * THE ONE PREDICATE of what a point may hold: true only for a kind that is still produced, raised by the side that produces it (a
+ * contradiction by the rules, text addressed to an AI by the model). An open point of any other kind or origin (an old typo, vague,
+ * template, hearsay ... point, or a contradiction the old model critic read) holds nothing and is closed at its document's next
+ * critique. By kind and origin only.
+ */
+export const isProducedKind = (kind: CriticKind | null, origin: string): boolean =>
+    kind !== null && (origin === "rule" ? PRODUCED_RULE.has(kind) : origin === "ai" && PRODUCED_MODEL.has(kind))
+
+/**
+ * The groups the founder reads (four drawn by the owner, two more where no drawn label is true, and `not_shop_word`: text addressed to
+ * the AI instead of stating a rule of the shop, D-BR-7; the web words it as `brainCritique.group.not_shop_word`).
+ */
+export const CRITIC_GROUPS = ["inside", "shop", "typo", "other_document", "unclear", "stale", "not_shop_word"] as const
 /** One group. */
 export type CriticGroup = (typeof CRITIC_GROUPS)[number]
 
@@ -31,6 +62,9 @@ export const GROUP_OF: Readonly<Record<CriticKind, CriticGroup>> = {
     missing: "unclear",
     template: "unclear",
     stale_date: "stale",
+    addressed_to_ai: "not_shop_word",
+    hearsay: "unclear",
+    undated: "unclear",
 }
 
 /** The kind each critic kind is stored under in `dossier_findings.kind` (the table's six kinds). */
@@ -44,6 +78,9 @@ export const STORED_KIND_OF: Readonly<Record<CriticKind, FindingKind>> = {
     missing: "missing",
     template: "missing",
     stale_date: "expired",
+    addressed_to_ai: "unreasonable",
+    hearsay: "missing",
+    undated: "missing",
 }
 
 const KIND_SET: ReadonlySet<string> = new Set(CRITIC_KINDS)
@@ -64,6 +101,12 @@ export const criticKindOfRule = (ruleKey: string): CriticKind | null => {
     return isCriticKind(kind) ? kind : null
 }
 
+/** The identity of a pair of truths a contradiction point asks about, whichever side it is read from: the two ids, sorted. */
+export const contradictionPairOf = (a: string, b: string): string => [a, b].sort((x, y) => x.localeCompare(y)).join("|")
+
+/** A text that may be absent: the text, null or undefined. */
+export type OptionalModelText = string | null | undefined
+
 /** How the founder may answer a point; none of them puts a truth in force. */
 export const ANSWER_KINDS = ["pick", "value", "keep_document", "keep_shop", "split", "remove"] as const
 /** One answer kind. */
@@ -80,6 +123,9 @@ export interface CriticAnswer {
     /** The condition a split value holds under. */
     readonly situation?: string | null
 }
+
+/** What a critique reads about a document, or null when the document is gone. */
+export type OptionalCritiqueInput = CritiqueInput | null
 
 /** One of the (at most two) buttons of a point. */
 export interface CriticChoice {
@@ -143,6 +189,12 @@ export interface CriticFact {
     readonly chunkHash: string | null
     /** The agent instance it is scoped to. */
     readonly installationId: string | null
+    /** From when it holds, when a start was stated. */
+    readonly validFrom?: string | null
+    /** Until when it holds, when an end was stated. */
+    readonly validTo?: string | null
+    /** Who may read it (`public`, `internal` ...). */
+    readonly scope?: string
 }
 
 /** A fact of the shop that speaks of the same thing as a fact of the document. */
@@ -151,8 +203,8 @@ export interface CriticCandidate {
     readonly fact: CriticFact
     /** Its distance by meaning, null for an exact key match. */
     readonly distance: number | null
-    /** How it was found. */
-    readonly match: "key" | "vector"
+    /** How it was found: the same key, a near meaning, or `named` (the truth the same-meaning judgement linked the fact to). */
+    readonly match: "key" | "vector" | "named"
     /** The title of the document it comes from, when any. */
     readonly sourceTitle: string | null
 }
@@ -180,6 +232,11 @@ export interface CritiqueInput {
     readonly facts: ReadonlyArray<CriticFact>
     /** Per fact id, the facts of the shop that speak of the same thing. */
     readonly candidates: ReadonlyMap<string, ReadonlyArray<CriticCandidate>>
+    /**
+     * The pairs of truths an open contradiction point of ANOTHER document already asks about (`contradictionPairOf`): the rules raise
+     * no twin of it here. Absent: none.
+     */
+    readonly asked?: ReadonlySet<string>
 }
 
 /** One quoted place of a point. */
@@ -224,6 +281,18 @@ export interface CriticPoint {
     readonly choices: ReadonlyArray<CriticChoice>
     /** What a typed value is filed under when the point cites no fact (a vague rule, a blank): the thing and what of it. */
     readonly target?: CriticTarget | null
+    /**
+     * Every truth of the document the point is about: the truths read from the lines it quotes (`namedTruths`), beside the one each
+     * quote is tied to. A line may state two truths ("Don tu 3.000.000 d dat coc 500%": the threshold and the rate); the point
+     * names both. Absent until the critique names them, just before it is stored.
+     */
+    readonly names?: ReadonlyArray<string>
+    /**
+     * True when EVERY quote the point takes from this document is a line a truth was read from (D-R-3): the point then holds exactly
+     * the truths it names. False (or absent): one of its lines gave no truth, so what it holds cannot be told by name and it holds
+     * its passages whole.
+     */
+    readonly namesAll?: boolean
 }
 
 /** The key a typed answer is filed under when no fact of the document stands for the point. */
@@ -251,24 +320,85 @@ export type PointState = "open" | "answered" | "skipped" | "gone"
 export const CRITIC_CAPS = {
     /** Tries of the model per critique, in total (owner rule: 3). */
     tries: 3,
-    /** Passages one critique reads; a longer document is read up to here and the rest is reviewed next time. */
+    /**
+     * RUNS of one critique in a row that ended not done WITHOUT progress (D-V-1): stored in `brain_source_critiques.attempts`, which
+     * survives a resume, a claim, a restart and the upkeep tick. At this count the critique is GIVEN UP: nothing asks for it again by
+     * itself (only a new request: a reading ended, a founder's answer, a person's "read again"); its passages not reviewed stay
+     * withheld from customers (no truth waits for it), and the team is told. A bound of runs, never a quota of calls. The table checks `attempts BETWEEN 0 AND 3`.
+     */
+    runs: 3,
+    /**
+     * Passages one model CALL reads. A document with more (or with more than `changedChars` of changed text) is reviewed in successive
+     * calls of the same critique until every changed passage has been reviewed: never a partly reviewed document that looks reviewed.
+     */
     passages: 120,
+    /**
+     * A technical bound on the calls of ONE critique (never a quota): 40 calls of 16,000 characters is 640,000 characters, five times a
+     * part. A critique that reached it ends `not_done` / `budget` with its waiting passages counted, and goes on when asked again.
+     */
+    callsPerCritique: 40,
     /** Characters of changed passages one model call reads. */
     changedChars: 16_000,
-    /** Characters of unchanged context one model call reads. */
-    contextChars: 8_000,
-    /** Facts one model call reads. */
-    facts: 80,
-    /** Shop candidates per fact. */
-    perFact: 3,
-    /** Findings one model answer may give. */
-    findingsPerCall: 12,
-    /** Model calls per workspace per day for critiques. */
-    dailyCalls: 60,
-    /** Waiting critiques one review run carries out. */
+    /** Shop candidates per fact, by key and by meaning each. */
+    perFact: 12,
+    /**
+     * Findings one model answer may give: a bound that keeps an answer finite, well above what 16,000 characters hold (brain walk 4:
+     * at 12, a dense document's answer stopped at its bound and the lines beyond it were never raised).
+     */
+    findingsPerCall: 40,
+    /**
+     * Rule points of ONE kind listed one by one per document (D-N-4): the founder's list is bounded by design. The points beyond it
+     * are rolled up into "N more of this kind" points (`rollUpPassages` passages each), which quote the passages of the points they
+     * stand for, so a rolled-up point of a holding severity still holds every one of its passages: nothing is let through.
+     */
+    rulePointsPerKind: 12,
+    /** Passages one roll-up point quotes (the evidence a stored point keeps). */
+    rollUpPassages: 8,
+    /**
+     * Waiting critiques one review run carries out (a per-job batch, not a quota): when more wait, the run queues a follow-up run. There
+     * is NO per-day count (owner 2026-11-11: no daily limit, only the plan's credit pool; every call is checked against it first).
+     */
     perRun: 10,
     /** The longest quote stored. */
     quoteMax: 300,
-    /** The ratio from which two amounts of one thing look like a typing slip (a power of ten apart). */
-    typoRatio: 9.5,
 } as const
+
+/** How one run of a critique ended, as its count of runs reads it (`runsAfter`). */
+export interface CritiqueRunEnd {
+    /** Where the run left the critique. */
+    readonly state: "done" | "not_done"
+    /** Why it is not done; null when done. */
+    readonly reason: NotDoneReason | null
+    /** True when the run moved the critique on: a passage newly reviewed. */
+    readonly progressed: boolean
+    /** True when no later run could do more: every passage reviewed. */
+    readonly exhausted: boolean
+}
+
+/**
+ * The count of runs in a row without progress (`brain_source_critiques.attempts`) after a run that ended this way, from the count
+ * before it: done is 0; a model failure with nothing left to read is `CRITIC_CAPS.runs` at once; progress is 0; a run the model or the
+ * bound of calls stopped without progress counts one more (at most `CRITIC_CAPS.runs`); a run the empty credit pool stopped (no call
+ * made) or whose truths were not read leaves the count as it was. Counts only, never what a text means.
+ */
+export const runsAfter = (before: number, end: CritiqueRunEnd): number => {
+    const kept = Math.min(Math.max(before, 0), CRITIC_CAPS.runs)
+    if (end.state === "done") return 0
+    if (end.reason === "model" && end.exhausted) return CRITIC_CAPS.runs
+    if (end.progressed) return 0
+    return end.reason === "model" || end.reason === "budget" ? Math.min(kept + 1, CRITIC_CAPS.runs) : kept
+}
+
+/** True when a run ended a slice of work with progress and more to do: the critique waits again at once, behind the others. */
+export const takesAnotherTurn = (end: CritiqueRunEnd): boolean => end.state === "not_done" && end.reason === "budget" && end.progressed
+
+/** Where a critique stands, as `isGivenUp` reads it. */
+export interface CritiqueRunCount {
+    /** Its state. */
+    readonly state: CritiqueState
+    /** Its runs in a row without progress. */
+    readonly attempts: number
+}
+
+/** True when a critique is GIVEN UP: not done after `CRITIC_CAPS.runs` runs in a row without progress; nothing asks for it by itself. */
+export const isGivenUp = (row: CritiqueRunCount): boolean => row.state === "not_done" && row.attempts >= CRITIC_CAPS.runs

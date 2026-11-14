@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateSetAgentWorkflowStatus, type MutateSetAgentWorkflowStatusRequest } from "@/modules/api/graphql/mutations/mutation-set-agent-workflow-status"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetAgentWorkflowStatusMutation } from "@/modules/api"
 
 /** What the SetAgentWorkflowStatus mutation is triggered with. */

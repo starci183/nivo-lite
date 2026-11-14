@@ -1,6 +1,7 @@
+import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentWakeService } from "@modules/domain/agent-work"
+import { DeliveredWakesService } from "@modules/domain/provider-triggers/delivered-wakes.service"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -21,16 +22,16 @@ const HOURS = JSON.stringify({
 const NIGHT = "2026-11-09T14:00:00.000Z"
 
 const TURN = agentTurnViewOf({
-    source: "customer",
+    source: "trigger",
     eventKey: "msg-7",
-    context: { conversationId: "c-1", messageId: "m-7" },
+    context: { verb: "nivo.trigger.zalo.message.received", conversationId: "c-1", connectionId: "conn-1", messageId: "m-7" },
 })
 
-const build = async (settings: Readonly<Record<string, unknown>> | null, at = NIGHT) => {
+const build = async (settings: Readonly<Record<string, unknown>> | null, at = NIGHT, timeZone = "Asia/Ho_Chi_Minh") => {
     const installations = mock<InstallationRecordsService>({
         ofAgent: jest.fn().mockResolvedValue(settings === null ? null : { settings }),
     })
-    const wakes = mock<AgentWakeService>({ write: jest.fn().mockResolvedValue("wake-later") })
+    const wakes = mock<DeliveredWakesService>({ rewrite: jest.fn().mockResolvedValue("wake-later") })
     const logger = mock<Logger>()
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
@@ -40,7 +41,8 @@ const build = async (settings: Readonly<Record<string, unknown>> | null, at = NI
             { provide: CLOCK, useValue: new FakeClock(at) },
             { provide: LOGGER, useValue: logger },
             { provide: InstallationRecordsService, useValue: installations },
-            { provide: AgentWakeService, useValue: wakes },
+            { provide: DeliveredWakesService, useValue: wakes },
+            { provide: WorkspaceTimeZoneService, useValue: { timeZoneOf: jest.fn().mockResolvedValue(timeZone) } },
         ],
     }).compile()
     return { gate: moduleRef.get(AgentGraphHoursGateService), wakes, logger }
@@ -52,10 +54,10 @@ describe("AgentGraphHoursGateService", () => {
 
         await expect(gate.deferred(TURN)).resolves.toBe(true)
 
-        expect(wakes.write).toHaveBeenCalledWith(expect.anything(), {
+        expect(wakes.rewrite).toHaveBeenCalledWith(expect.anything(), {
             workspaceId: "ws-1",
             agentId: "agent-1",
-            source: "customer",
+            source: "trigger",
             eventKey: "msg-7~open-1",
             context: TURN.context,
             actorMemberId: null,
@@ -71,7 +73,7 @@ describe("AgentGraphHoursGateService", () => {
     it("holds a wake that came due early again under the next count, so it is never lost", async () => {
         const { gate, wakes } = await build({ workingHours: HOURS })
         await gate.deferred({ ...TURN, eventKey: "msg-7~open-1" })
-        expect(wakes.write.mock.calls[0]?.[1].eventKey).toBe("msg-7~open-2")
+        expect(wakes.rewrite.mock.calls[0]?.[1].eventKey).toBe("msg-7~open-2")
     })
 
     it("lets the wake through on duty, when answering after hours, with no hours kept, or for a wake that is not a customer's", async () => {
@@ -87,7 +89,13 @@ describe("AgentGraphHoursGateService", () => {
         await expect(gone.gate.deferred(TURN)).resolves.toBe(false)
 
         const tag = await build({ workingHours: HOURS })
-        await expect(tag.gate.deferred({ ...TURN, source: "tag" })).resolves.toBe(false)
-        expect(tag.wakes.write).not.toHaveBeenCalled()
+        await expect(tag.gate.deferred({ ...TURN, source: "tag", context: { conversationId: "c-1" } })).resolves.toBe(false)
+        expect(tag.wakes.rewrite).not.toHaveBeenCalled()
+    })
+
+    it("reads the hours on the clock of the workspace's time zone", async () => {
+        // 14:00Z on a Monday is 14:00 in London: on duty there (it is 21:00 in Vietnam, off duty).
+        const london = await build({ workingHours: HOURS }, NIGHT, "Europe/London")
+        await expect(london.gate.deferred(TURN)).resolves.toBe(false)
     })
 })

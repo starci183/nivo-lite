@@ -1,469 +1,405 @@
-import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import {
-    replayReceiptBody,
-    expectedSurfaceLookups,
-    expectedMessageRecords,
-    expectedCommentRecords,
-    expectedUnownedLookups,
-    surfaceEventCalls,
-    directMessageCalls,
-    expectedMessageJobs,
-    expectedCommentJobs,
-    expectedThreadWindows,
-    expectedCommentWindows,
-    dm,
-    postback,
-    comment,
-    mention,
-    missingWindowEvents,
-    unownedSurfaceEvents,
-    BODY,
-    RAW_BODY,
-    DELIVERY_ID,
-    SIGNATURE,
     AT,
     OWNER,
-    event,
-    unreadableReceipts,
+    RAW_BODY,
+    SIGNATURE,
+    comment,
     directMessages,
+    dm,
+    event,
     ignoredMessages,
+    mention,
+    postback,
+    unreadableReceipts,
 } from "@tests/fixtures/builders/meta-inbox.builder"
-import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
-import type { FakeTransaction } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
-import { IsNull } from "typeorm"
 import { Test } from "@nestjs/testing"
+import { AccountDataIntakeService, AccountDataReadService, type AccountWrite, type PendingRow } from "@modules/domain/account-data"
 import { ConnectionsService } from "@modules/domain/connections"
-import { ConversationsService } from "@modules/domain/conversations"
+import { InboundEventsService } from "@modules/domain/inbound-events"
+import { ProviderTriggersService, type DeliverResult } from "@modules/domain/provider-triggers"
+import { MESSAGE_CATALOG, type MessageCatalog } from "@modules/platform/i18n"
+import { LOGGER, type Logger } from "@modules/platform/logging"
+import { FACEBOOK_MESSAGE_WEBHOOK, INSTAGRAM_MESSAGE_WEBHOOK } from "./meta-message.trigger"
 import { MetaCommentsService } from "@modules/domain/meta-comments"
 import { MetaThreadsService } from "@modules/domain/meta-threads"
 import { MetaReceiptPolicy } from "./meta-receipt.policy"
-import { parseWebhook } from "@modules/integrations/meta"
 import type { MetaClient, MetaEvent } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { INBOX } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
+import { MetaInboxErrorCode } from "./errors/meta-inbox.error"
 import { META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
 import { MetaInboxService } from "./meta-inbox.service"
-import { MetaInboxEntity } from "./persistence/entities"
+import { MetaInboxLogEvent } from "./meta-inbox.log-events"
 
-const FIND_CALL = [
-    MetaInboxEntity,
-    {
-        select: { id: true, payload: true },
-        where: { provider: "meta", deliveryId: DELIVERY_ID, processedAt: IsNull() },
-        lock: { mode: "pessimistic_write" },
-    },
-]
-const RECEIPT_CLAIM = {
-    source: "meta",
-    eventId: DELIVERY_ID,
-    entity: MetaInboxEntity,
-    row: { provider: "meta", deliveryId: DELIVERY_ID, payload: BODY },
-}
-const COMPLETE_CALL = ["MetaInboxEntity", { id: "inbox-1" }, { processedAt: "now()" }]
+/** The connection a queued delivery id names (a uuid), and the account its pending rows belong to. */
+const CONNECTION = "0b9a3c1e-5d7f-4a2b-9c8d-1e2f3a4b5c6d"
+const ACCOUNT = { provider: "meta", connectionId: OWNER.id, workspaceId: OWNER.workspaceId }
 
-const pendingReceipt = (payload: object) => Object.assign(new MetaInboxEntity(), { id: "inbox-1", payload })
+/** The queued delivery id of an event. */
+const deliveryIdOf = (inbound: MetaEvent): string => `${CONNECTION}:${inbound.event_key}`
 
-/** The consumer locked the pending receipt and then completed it. */
-const expectConsumed = (tx: FakeTransaction): void => {
-    expect(tx.em.findOne.mock.calls).toEqual([FIND_CALL])
-    expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual([COMPLETE_CALL])
-}
+/** The pending `meta.event` row that holds one stored value as its event. */
+const pendingOf = (stored: unknown = event(), key = "dm:message-1"): PendingRow => ({
+    id: "row-1",
+    type: "meta.event",
+    key,
+    owner: ACCOUNT,
+    value: { eventKey: key, raw: stored },
+})
 
-/** The consumer locked the pending receipt and wrote no completion. */
-const expectLockedOnly = (tx: FakeTransaction): void => {
-    expect(tx.em.findOne.mock.calls).toEqual([FIND_CALL])
-    expect(tx.em.update).not.toHaveBeenCalled()
-}
+/** What the intake answers for one event row. */
+const writtenOf = (key: string, isNew = true): AccountWrite => ({
+    owner: ACCOUNT,
+    rows: [{ type: "meta.event", key, id: isNew ? "row-1" : "", isNew }],
+})
 
 /** A partial-object matcher, typed `unknown` so it flows into any slot. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 
-const build = async (
-    events: ReadonlyArray<MetaEvent> = [],
-    claimed = true,
-    pending: MetaInboxEntity | null = pendingReceipt(BODY),
-    realParsing = false,
-) => {
-    const tx = fakeTransaction(
-        mockEntityManager({
-            findOne: [MetaInboxEntity, pending],
-            update: [MetaInboxEntity, {}],
-        }),
-    )
+/** What the ONE delivery answers: the event delivered, and taken by a registered graph unless `untaken`. */
+const deliveredOf = (untaken = 0): DeliverResult => ({ status: "delivered", events: 1, dropped: 0, woken: [], repeats: 0, untaken, held: 0 })
+
+const build = async (events: ReadonlyArray<MetaEvent> = [], pending: PendingRow | null = pendingOf()) => {
+    const tx = fakeTransaction(mockEntityManager({}))
     const connections = mock<ConnectionsService>()
     connections.findLiveByMeta.mockResolvedValue(OWNER)
     const meta = mock<MetaClient>()
-    meta.verifyDelivery.mockReturnValue(true)
     meta.parse.mockReturnValue([...events])
-    if (realParsing) meta.parse.mockImplementation((body) => parseWebhook(body, Date.parse(AT)))
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
-    const conversations = mock<ConversationsService>()
+    connections.intakeOf.mockResolvedValue({ kind: "ok", value: { workspaceId: "workspace-1" } } as Awaited<ReturnType<ConnectionsService["intakeOf"]>>)
+    const triggers = mock<ProviderTriggersService>()
+    triggers.deliver.mockResolvedValue(deliveredOf())
+    const reads = mock<AccountDataReadService>()
+    reads.get.mockResolvedValue({ id: "row-9", type: "meta.event", typeVersion: 1, key: "dm:message-1", value: {}, occurredAt: new Date("2026-11-12T00:00:00.000Z"), processedAt: null })
+    const inboundEvents = mock<InboundEventsService>()
+    const catalog = mock<MessageCatalog>()
+    catalog.get.mockImplementation((key: string) => key)
     const threads = mock<MetaThreadsService>()
     threads.touch.mockResolvedValue(undefined)
     const comments = mock<MetaCommentsService>()
     comments.note.mockResolvedValue(undefined)
-    const inbox = fakeInbox()
-    if (!claimed) inbox.seen("meta", DELIVERY_ID)
+    const intake = mock<AccountDataIntakeService>()
+    intake.write.mockResolvedValue(writtenOf("dm:message-1"))
+    intake.lockPending.mockResolvedValue(pending)
+    intake.complete.mockResolvedValue(undefined)
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaInboxService,
             { provide: MetaReceiptPolicy, useValue: meta },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
-            { provide: INBOX, useValue: inbox },
+            { provide: AccountDataIntakeService, useValue: intake },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ConnectionsService, useValue: connections },
-            { provide: ConversationsService, useValue: conversations },
+            { provide: ProviderTriggersService, useValue: triggers },
+            { provide: AccountDataReadService, useValue: reads },
+            { provide: InboundEventsService, useValue: inboundEvents },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: MetaThreadsService, useValue: threads },
             { provide: MetaCommentsService, useValue: comments },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
     return {
-        inbox,
+        intake,
         service: moduleRef.get(MetaInboxService),
         tx,
         meta,
         connections,
         outbox,
         write,
-        conversations,
+        triggers,
+        reads,
+        inboundEvents,
         threads,
         comments,
+        logger,
     }
 }
 
-describe("MetaInboxService receipt intake", () => {
-    it("records a receipt and publishes only its reference before any business effect", async () => {
-        const { service, tx, meta, connections, write, inbox } = await build([event()])
-
+describe("MetaInboxService receipt", () => {
+    it("writes each event of a live surface once as a meta.event row of its account and queues its reference", async () => {
+        const second = event({ mid: "message-2", event_key: "dm:message-2" })
+        const unowned = event({ page_id: "page-2", event_key: "dm:message-3" })
+        const events = [event(), unowned, second, event({ page_id: null })]
+        const { service, connections, write, intake } = await build(events)
+        connections.findLiveByMeta.mockImplementation((_p, _k, id) => Promise.resolve(id === "page-1" ? OWNER : null))
+        intake.write.mockResolvedValueOnce(writtenOf("dm:message-1")).mockResolvedValueOnce(writtenOf("dm:message-2"))
         await service.accept(RAW_BODY, SIGNATURE)
-
         const manager = write.mock.calls[0]?.[0]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(inbox.receipts.map(({ source, eventId, entity, row }) => ({ source, eventId, entity, row }))).toEqual([
-            RECEIPT_CLAIM,
+        expect(connections.findLiveByMeta.mock.calls.map((call) => call[2])).toEqual(["page-1", "page-2"])
+        expect(intake.write.mock.calls).toEqual([
+            [manager, OWNER.id, [{ type: "meta.event", value: { eventKey: "dm:message-1", raw: event() } }]],
+            [manager, OWNER.id, [{ type: "meta.event", value: { eventKey: "dm:message-2", raw: second } }]],
         ])
-        expect(write).toHaveBeenCalledWith(
-            manager,
-            META_DELIVERY_QUEUE,
-            { deliveryId: DELIVERY_ID },
-            { dedupeKey: `meta-delivery:${DELIVERY_ID}` },
+        expect(write.mock.calls.map((call) => call.slice(1))).toEqual(
+            ["dm:message-1", "dm:message-2"].map((key) => [
+                META_DELIVERY_QUEUE,
+                { deliveryId: `${OWNER.id}:${key}` },
+                { dedupeKey: `meta-delivery:${OWNER.id}:${key}` },
+            ]),
         )
-        expect(meta.parse).not.toHaveBeenCalled()
         expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(tx.commits).toBe(1)
     })
 
-    it.each(unreadableReceipts)(
-        "refuses an unreadable receipt, which has no delivery id to claim: $rawBody / $signature",
-        async ({ rawBody, signature }) => {
-            const { service, outbox, meta, tx } = await build()
-            await expect(service.accept(rawBody, signature)).rejects.toThrow("DATABASE_WEBHOOK_DELIVERY_ID_REQUIRED")
-            expect(outbox.jobs).toEqual([])
-            expect(meta.verifyDelivery).not.toHaveBeenCalled()
-            expect(meta.parse).not.toHaveBeenCalled()
-            expect(tx.em.query).not.toHaveBeenCalled()
-            expect(tx.outcomes).toEqual(["rollback"])
-        },
-    )
-
-    it("acknowledges a duplicate without another outbox message", async () => {
-        const { service, outbox, connections, meta, tx, inbox } = await build([event()], false)
-        await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
-        expect(outbox.jobs).toEqual([])
-        expect(meta.parse).not.toHaveBeenCalled()
-        expect(connections.findLiveByMeta).not.toHaveBeenCalled()
-        expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(tx.commits).toBe(1)
-        expect(inbox.claims).toEqual([{ source: "meta", eventId: DELIVERY_ID }])
-        expect(inbox.receipts).toEqual([])
+    it.each(unreadableReceipts)("refuses an unreadable receipt: $rawBody", async ({ rawBody, signature }) => {
+        const { service, outbox, intake, tx } = await build([event()])
+        const refusal = objectLike({ code: MetaInboxErrorCode.DeliveryInvalid })
+        await expect(service.accept(rawBody, signature)).rejects.toEqual(refusal)
+        expect([intake.write.mock.calls, outbox.jobs, tx.outcomes]).toEqual([[], [], ["rollback"]])
     })
 
-    it("rolls back a receipt when publication fails", async () => {
-        const { service, tx, outbox } = await build()
-        const failure = new Error("queue unavailable")
-        outbox.failNext("write", failure)
-        await expect(service.accept(RAW_BODY, SIGNATURE)).rejects.toBe(failure)
-        expect(tx.rollbacks).toBe(1)
-        expect(tx.commits).toBe(0)
+    it("queues nothing for a redelivery or a connection nobody holds any more", async () => {
+        const { service, intake, outbox, tx } = await build([event()])
+        intake.write.mockResolvedValueOnce(writtenOf("dm:message-1", false)).mockResolvedValueOnce({ owner: null, rows: [] })
+        await service.accept(RAW_BODY, SIGNATURE)
+        await service.accept(RAW_BODY, SIGNATURE)
+        expect([outbox.jobs, tx.commits]).toEqual([[], 2])
     })
 })
 
-describe("MetaInboxService empty receipts", () => {
-    it("defers parsing a signed body without events and completes it without downstream effects", async () => {
-        const { service, tx, meta, connections, outbox, inbox } = await build()
-
-        await expect(service.accept(RAW_BODY, SIGNATURE)).resolves.toBeUndefined()
-        expect(meta.parse).not.toHaveBeenCalled()
-
-        await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
-        expect(meta.parse).toHaveBeenCalledWith(BODY)
-        expect(inbox.receipts.map(({ source, eventId, entity, row }) => ({ source, eventId, entity, row }))).toEqual([
-            RECEIPT_CLAIM,
+describe("MetaInboxService consumer", () => {
+    it("processes the one event for the row's own connection, keeps the message and the person and completes it", async () => {
+        const pending = pendingOf(structuredClone(event()))
+        const { service, tx, connections, write, intake } = await build([], pending)
+        await service.processRecordedDelivery({ deliveryId: deliveryIdOf(event()) })
+        const manager = intake.lockPending.mock.calls[0]?.[0]
+        expect(isTransactionManager(manager)).toBe(true)
+        expect(intake.lockPending.mock.calls).toEqual([[manager, "meta.event", CONNECTION, "dm:message-1"]])
+        expect(connections.findLiveByMeta).not.toHaveBeenCalled()
+        expect(connections.recordEvent.mock.calls).toEqual([
+            [OWNER.id, { amount: 0, content: "Lan", at: AT, text: "Hello" }, manager],
         ])
-        expectConsumed(tx)
-        expect(connections.findLiveByMeta).not.toHaveBeenCalled()
-        expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(outbox.jobsOf(META_INBOUND_QUEUE)).toEqual([])
-        expect(tx.commits).toBe(2)
-    })
-})
-
-describe("MetaInboxService", () => {
-    it("opens Facebook and Instagram message windows and queues each event in the claiming transaction", async () => {
-        const { service, tx, connections, write, threads } = await build([dm, postback])
-
-        await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
-
-        const manager = connections.findLiveByMeta.mock.calls[0]?.[3]
-        expect(manager).toBeDefined()
-        expect(manager).not.toBe(tx.em)
-        expect(tx.commits).toBe(1)
-        expect(connections.findLiveByMeta.mock.calls).toEqual(expectedSurfaceLookups(manager))
-        expectConsumed(tx)
-        expect(threads.touch.mock.calls).toEqual(expectedThreadWindows(manager))
-        expect(connections.recordEvent.mock.calls).toEqual(expectedMessageRecords(manager))
-        expect(write.mock.calls).toEqual(expectedMessageJobs(manager, META_INBOUND_QUEUE))
-    })
-})
-
-describe("MetaInboxService", () => {
-    it("records comment and mention windows when the event carries a comment id", async () => {
-        const { service, tx, connections, write, comments } = await build([comment, mention])
-
-        await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
-
-        const manager = connections.findLiveByMeta.mock.calls[0]?.[3]
-        expect(manager).toBeDefined()
-        expect(manager).not.toBe(tx.em)
-        expectConsumed(tx)
-        expect(comments.note.mock.calls).toEqual(expectedCommentWindows(manager))
-        expect(connections.recordEvent.mock.calls).toEqual(expectedCommentRecords(manager))
-        expect(write.mock.calls).toEqual(expectedCommentJobs(manager, META_INBOUND_QUEUE))
-    })
-})
-
-describe("MetaInboxService", () => {
-    it("queues owned events without window ids and lead events without opening either window", async () => {
-        const events = missingWindowEvents
-        const { service, tx, connections, write } = await build(events)
-
-        await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
-
-        const manager = connections.findLiveByMeta.mock.calls[0]?.[3]
-        expect(manager).toBeDefined()
-        expect(manager).not.toBe(tx.em)
-        expectConsumed(tx)
-        expect(connections.recordEvent.mock.calls).toEqual(
-            events.map(() => ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }, manager]),
-        )
-        expect(write.mock.calls).toEqual(surfaceEventCalls(events, manager, META_INBOUND_QUEUE))
-    })
-
-    it("drops events with no surface identity or whose surface has no live connection", async () => {
-        const events = unownedSurfaceEvents
-        const { service, tx, connections, outbox } = await build(events)
-        connections.findLiveByMeta.mockResolvedValue(null)
-
-        await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
-
-        const manager = connections.findLiveByMeta.mock.calls[0]?.[3]
-        expect(manager).toBeDefined()
-        expect(manager).not.toBe(tx.em)
-        expect(connections.findLiveByMeta.mock.calls).toEqual(expectedUnownedLookups(manager))
-        expectConsumed(tx)
-        expect(connections.recordEvent).not.toHaveBeenCalled()
-        expect(outbox.jobs).toEqual([])
+        const job: MetaInboundJob = { connectionId: OWNER.id, workspaceId: OWNER.workspaceId, event: event() }
+        expect(write.mock.calls).toEqual([
+            [manager, META_INBOUND_QUEUE, job, { dedupeKey: `meta_inbound:${OWNER.id}:dm:message-1` }],
+        ])
+        expect(intake.write.mock.calls).toEqual([
+            [
+                manager,
+                OWNER.id,
+                [
+                    {
+                        type: "meta.message",
+                        value: {
+                            eventKey: "dm:message-1",
+                            mid: "message-1",
+                            platform: "facebook",
+                            userId: "person-1",
+                            direction: "in",
+                            text: "Hello",
+                            at: AT,
+                        },
+                    },
+                    { type: "meta.user", value: { userId: "person-1", platform: "facebook", name: "Lan" } },
+                ],
+            ],
+        ])
+        expect(intake.complete.mock.calls).toEqual([[manager, pending]])
         expect(tx.commits).toBe(1)
     })
 
-    it("rolls back the claimed delivery when a queued write fails", async () => {
-        const { service, tx, outbox } = await build([event()])
-        const failure = new Error("queue unavailable")
-        outbox.failNext("write", failure)
+})
 
-        await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).rejects.toBe(failure)
+describe("MetaInboxService consumer windows", () => {
+    it("opens the messaging window of a message and a postback, the comment window of a comment and a mention", async () => {
+        const run = async (inbound: MetaEvent) => {
+            const built = await build([], pendingOf(inbound, inbound.event_key))
+            await built.service.processRecordedDelivery({ deliveryId: deliveryIdOf(inbound) })
+            return built
+        }
+        const message = await run(dm)
+        expect(message.threads.touch.mock.calls[0]?.[0]).toEqual({ connectionId: OWNER.id, platform: "facebook", userId: "person-1", at: AT })
+        expect(message.connections.recordEvent.mock.calls[0]?.[1]).toEqual({ amount: 0, content: "Lan", at: AT, text: "x".repeat(160) })
+        const button = await run(postback)
+        expect(button.threads.touch.mock.calls[0]?.[0]).toEqual({
+            connectionId: OWNER.id,
+            platform: "instagram",
+            userId: "ig-person-1",
+            at: AT,
+        })
+        expect(button.intake.write.mock.calls[0]?.[2]).toEqual([
+            { type: "meta.user", value: { userId: "ig-person-1", platform: "instagram" } },
+        ])
+        const commented = await run(comment)
+        expect(commented.comments.note.mock.calls[0]?.[0]).toEqual({ connectionId: OWNER.id, commentId: "comment-1", platform: "facebook", at: AT })
+        expect(commented.intake.write.mock.calls[0]?.[2]).toEqual([])
+        const mentioned = await run(mention)
+        expect(mentioned.comments.note.mock.calls[0]?.[0]).toEqual({
+            connectionId: OWNER.id,
+            commentId: "comment-2",
+            platform: "instagram",
+            at: AT,
+        })
+    })
 
-        expect(tx.rollbacks).toBe(1)
-        expect(tx.commits).toBe(0)
-        expectLockedOnly(tx)
+})
+
+describe("MetaInboxService consumer edges", () => {
+    it("completes a stored row that is no event without any effect", async () => {
+        const { service, intake, outbox, connections } = await build([], pendingOf({ kind: "dm" }))
+        await service.processRecordedDelivery({ deliveryId: deliveryIdOf(event()) })
+        expect([intake.write.mock.calls, outbox.jobs, connections.recordEvent.mock.calls, intake.complete.mock.calls.length]).toEqual([
+            [],
+            [],
+            [],
+            1,
+        ])
+    })
+
+    it("does nothing for an event that is absent or completed, or a delivery id that names no connection", async () => {
+        const { service, intake, outbox, connections } = await build([], null)
+        await service.processRecordedDelivery({ deliveryId: deliveryIdOf(event()) })
+        await service.processRecordedDelivery({ deliveryId: "cf4757fb1d998bf973749a593b19bf7e" })
+        expect(intake.lockPending).toHaveBeenCalledTimes(1)
+        expect([outbox.jobs, connections.recordEvent.mock.calls, intake.complete.mock.calls]).toEqual([[], [], []])
+    })
+
+    it("leaves the row pending and rethrows when an effect fails", async () => {
+        const { service, tx, intake, connections, outbox } = await build()
+        const failure = new Error("connection event failed")
+        connections.recordEvent.mockRejectedValue(failure)
+        await expect(service.processRecordedDelivery({ deliveryId: deliveryIdOf(event()) })).rejects.toBe(failure)
+        expect([intake.complete.mock.calls, tx.rollbacks, tx.commits, outbox.jobs]).toEqual([[], 1, 0, []])
+    })
+
+    it("leaves the row pending when keeping the message fails", async () => {
+        const { service, tx, intake } = await build()
+        intake.write.mockRejectedValue(new Error("keep failed"))
+        await expect(service.processRecordedDelivery({ deliveryId: deliveryIdOf(event()) })).rejects.toThrow("keep failed")
+        expect([intake.complete.mock.calls, tx.rollbacks]).toEqual([[], 1])
     })
 })
 
 describe("MetaInboxService deliver", () => {
-    it.each(directMessages)("delivers $name in one transaction", async ({ inbound, personId, visitor }) => {
-        const { service, tx, conversations, connections, outbox } = await build()
+    it.each(directMessages)("hands $name to the ONE delivery as its platform's trigger translates it, in one transaction", async ({ inbound, personId }) => {
+        const { service, tx, triggers, connections, outbox, reads } = await build()
         const job: MetaInboundJob = { connectionId: "connection-1", workspaceId: "workspace-1", event: inbound }
 
-        await expect(service.deliver(job)).resolves.toBeUndefined()
+        // Ledger (ROAD Opus-1f, 2026-11-14): `deliver` answers a typed outcome (an unhandled case is never silent); was `undefined`.
+        await expect(service.deliver(job)).resolves.toBe("delivered")
 
-        const manager = conversations.acceptMeta.mock.calls[0]?.[2]
+        const manager = triggers.deliver.mock.calls[0]?.[1]
         expect(isTransactionManager(manager)).toBe(true)
-        expect(manager).not.toBe(tx.em)
-        expect(conversations.acceptMeta.mock.calls).toEqual(directMessageCalls(manager, inbound, personId, visitor))
+        expect(reads.get).toHaveBeenCalledWith("connection-1", "meta.event", inbound.event_key, manager)
+        expect(triggers.deliver).toHaveBeenCalledWith(
+            {
+                workspaceId: "workspace-1",
+                declaration: inbound.platform === "instagram" ? INSTAGRAM_MESSAGE_WEBHOOK : FACEBOOK_MESSAGE_WEBHOOK,
+                connectionId: "connection-1",
+                agentId: null,
+                events: [
+                    {
+                        event: {
+                            id: inbound.event_key,
+                            subject: { channel: inbound.platform, id: personId, ...(inbound.sender_name === null ? {} : { name: inbound.sender_name }) },
+                            data: { messageKey: `meta:${inbound.event_key}`, text: inbound.text, at: new Date(inbound.timestamp).toISOString() },
+                        },
+                        raw: { type: "meta.event", id: "row-9" },
+                        occurredAt: new Date(inbound.timestamp).toISOString(),
+                    },
+                ],
+            },
+            manager,
+        )
         expect(tx.commits).toBe(1)
-        expect(tx.rollbacks).toBe(0)
-        expect(tx.em.transaction).toHaveBeenCalledTimes(1)
-        expect(tx.em.query).not.toHaveBeenCalled()
         expect(connections.findLiveByMeta).not.toHaveBeenCalled()
         expect(outbox.jobs).toEqual([])
     })
 
     it.each(ignoredMessages)("leaves $name alone", async ({ inbound }) => {
-        const { service, tx, conversations } = await build()
+        const { service, tx, triggers } = await build()
 
         await expect(
             service.deliver({ connectionId: "connection-1", workspaceId: "workspace-1", event: inbound }),
-        ).resolves.toBeUndefined()
+        ).resolves.toBe("not_a_message")
 
-        expect(conversations.acceptMeta).not.toHaveBeenCalled()
+        expect(triggers.deliver).not.toHaveBeenCalled()
         expect(tx.em.transaction).not.toHaveBeenCalled()
-        expect(tx.outcomes).toEqual([])
-    })
-})
-
-describe("MetaInboxService consumer transaction", () => {
-    it("retries a real parsed receipt after rollback and ignores a completed replay", async () => {
-        const payload = replayReceiptBody
-        const { service, tx, connections, outbox } = await build([], true, pendingReceipt(payload), true)
-        const failure = new Error("connection failed")
-        connections.recordEvent.mockRejectedValueOnce(failure)
-        await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).rejects.toBe(failure)
-        expect(tx.rollbacks).toBe(1)
-        expect(tx.em.update).not.toHaveBeenCalled()
-        await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
-        expect(outbox.jobsOf(META_INBOUND_QUEUE)).toEqual([
-            objectLike({
-                payload: objectLike({
-                    event: objectLike({ text: "Hello", timestamp: Date.parse(AT) }),
-                }),
-            }),
-        ])
-        expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual([COMPLETE_CALL])
-        const committed = outbox.jobs.length
-        tx.em.findOne.mockResolvedValueOnce(null)
-        await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
-        expect(outbox.jobs).toHaveLength(committed)
-        expect(connections.recordEvent).toHaveBeenCalledTimes(2)
     })
 
-    it("uses the receipt manager for connection status and completes only after it succeeds", async () => {
-        const { service, tx, connections } = await build([event()])
-        connections.recordEvent.mockImplementation((_id, _event, manager) => {
-            expect(isTransactionManager(manager)).toBe(true)
-            expectLockedOnly(tx)
-            return Promise.resolve(null)
-        })
-
-        await service.processRecordedDelivery({ deliveryId: DELIVERY_ID })
-
-        expect(connections.recordEvent.mock.calls[0]?.[2]).toBe(connections.findLiveByMeta.mock.calls[0]?.[3])
-        expectConsumed(tx)
-    })
-
-    it("rolls back the consumer and leaves completion unwritten when connection status fails", async () => {
-        const { service, tx, connections, outbox } = await build([event()])
-        const failure = new Error("connection event failed")
-        connections.recordEvent.mockRejectedValue(failure)
-
-        await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).rejects.toBe(failure)
-
-        expect(tx.rollbacks).toBe(1)
-        expect(tx.commits).toBe(0)
-        expectLockedOnly(tx)
-        expect(outbox.jobs).toEqual([])
-    })
-})
-
-describe("MetaInboxService deliver", () => {
-    it("normalizes omitted runtime text before handing the DM to conversations", async () => {
-        const { service, tx, conversations } = await build()
-        const incompleteEvent = event()
-        Reflect.deleteProperty(incompleteEvent, "text")
-
-        await service.deliver({
-            connectionId: "connection-1",
-            workspaceId: "workspace-1",
-            event: incompleteEvent,
-        })
-
-        const manager = conversations.acceptMeta.mock.calls[0]?.[2]
-        expect(isTransactionManager(manager)).toBe(true)
-        expect(manager).not.toBe(tx.em)
-        expect(conversations.acceptMeta.mock.calls).toEqual([
-            [
-                "connection-1",
-                { platform: "facebook", personId: "person-1", visitor: "Lan", text: "", eventId: "dm:message-1" },
-                manager,
-            ],
-        ])
-        expect(tx.commits).toBe(1)
-    })
-
-    it("delivers the event a claimed job payload carries", async () => {
-        const { service, conversations } = await build()
+    it("delivers the event a claimed job payload carries, and leaves any other payload alone", async () => {
+        const { service, triggers } = await build()
 
         await service.deliverPayload({ connectionId: "connection-1", workspaceId: "workspace-1", event: event() })
+        await service.deliverPayload({ connectionId: "connection-1" })
 
-        expect(conversations.acceptMeta.mock.calls[0]?.slice(0, 2)).toEqual([
-            "connection-1",
-            { platform: "facebook", personId: "person-1", visitor: "Lan", text: "Hello", eventId: "dm:message-1" },
-        ])
+        expect(triggers.deliver).toHaveBeenCalledTimes(1)
+        expect(triggers.deliver.mock.calls[0]?.[0].events[0]?.event).toMatchObject({
+            id: "dm:message-1",
+            subject: { channel: "facebook", id: "person-1", name: "Lan" },
+            data: { messageKey: "meta:dm:message-1", text: "Hello" },
+        })
     })
 
-    it("leaves a claimed job payload that is not a queued Meta event alone", async () => {
-        const { service, tx, conversations } = await build()
+    it("delivers the same event id for a replay of the same job", async () => {
+        const { service, triggers } = await build()
+        const job: MetaInboundJob = { connectionId: "connection-1", workspaceId: "workspace-1", event: event() }
 
-        await expect(service.deliverPayload({ connectionId: "connection-1" })).resolves.toBeUndefined()
+        await service.deliver(job)
+        await service.deliver(job)
 
-        expect(conversations.acceptMeta).not.toHaveBeenCalled()
-        expect(tx.em.transaction).not.toHaveBeenCalled()
+        expect(triggers.deliver.mock.calls.map((call) => call[0].events[0]?.event.id)).toEqual(["dm:message-1", "dm:message-1"])
     })
 
-    it("rolls back and propagates a failure from the conversation", async () => {
-        const { service, tx, conversations } = await build()
-        const failure = new Error("conversation failed")
-        conversations.acceptMeta.mockRejectedValue(failure)
+    it("keeps a message no registered graph took for the owner, named by Meta or by the platform's guest label", async () => {
+        const { service, triggers, inboundEvents } = await build()
+        triggers.deliver.mockResolvedValue(deliveredOf(1))
+
+        await service.deliver({ connectionId: "connection-1", workspaceId: "workspace-1", event: event({ sender_name: null }) })
+
+        expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(expect.anything(), {
+            workspaceId: "workspace-1",
+            channel: "facebook",
+            sender: "conversations.facebookGuest",
+            body: "Hello",
+            eventId: "meta:dm:message-1:connection-1",
+        })
+    })
+
+    it("delivers nothing for a connection that is no live Meta one, and says so: typed `account_removed` and one log line", async () => {
+        const { service, triggers, connections, logger } = await build()
+        connections.intakeOf.mockResolvedValue({ kind: "refused", code: "x" } as unknown as Awaited<ReturnType<ConnectionsService["intakeOf"]>>)
+
+        await expect(service.deliver({ connectionId: "connection-1", workspaceId: "workspace-1", event: event() })).resolves.toBe(
+            "account_removed",
+        )
+
+        expect(triggers.deliver).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledWith(MetaInboxLogEvent.AccountRemoved, {
+            connectionId: "connection-1",
+            eventKey: "dm:message-1",
+            refusal: "refused",
+        })
+    })
+
+    it("answers `account_removed` (logged) when the delivery's own gate finds the account disconnected, `switched_off` when off", async () => {
+        const { service, triggers, logger, inboundEvents } = await build()
+        const job = { connectionId: "connection-1", workspaceId: "workspace-1", event: event() }
+        triggers.deliver.mockResolvedValueOnce({ status: "disconnected" }).mockResolvedValueOnce({ status: "off" })
+
+        await expect(service.deliver(job)).resolves.toBe("account_removed")
+        await expect(service.deliver(job)).resolves.toBe("switched_off")
+
+        expect(logger.warn).toHaveBeenCalledTimes(1)
+        expect(logger.warn).toHaveBeenCalledWith(MetaInboxLogEvent.AccountRemoved, expect.objectContaining({ refusal: "disconnected" }))
+        expect(inboundEvents.keepUnrouted).not.toHaveBeenCalled()
+    })
+
+    it("rolls back and propagates a failure of the delivery", async () => {
+        const { service, tx, triggers } = await build()
+        const failure = new Error("delivery failed")
+        triggers.deliver.mockRejectedValue(failure)
 
         await expect(
             service.deliver({ connectionId: "connection-1", workspaceId: "workspace-1", event: event() }),
         ).rejects.toBe(failure)
 
-        expect(conversations.acceptMeta).toHaveBeenCalledTimes(1)
         expect(tx.rollbacks).toBe(1)
-        expect(tx.commits).toBe(0)
-    })
-})
-
-describe("MetaInboxService deferred delivery", () => {
-    it("leaves an already processed receipt alone", async () => {
-        const { service, tx, meta, outbox } = await build([], true, null)
-        await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
-        expectLockedOnly(tx)
-        expect(meta.parse).not.toHaveBeenCalled()
-        expect(outbox.jobs).toEqual([])
-        expect(tx.commits).toBe(1)
-    })
-
-    it("marks a receipt with no parsed events complete", async () => {
-        const { service, tx, meta, outbox } = await build()
-        await expect(service.processRecordedDelivery({ deliveryId: DELIVERY_ID })).resolves.toBeUndefined()
-        expect(meta.parse.mock.calls).toEqual([[BODY]])
-        expectConsumed(tx)
-        expect(outbox.jobs).toEqual([])
-        expect(tx.commits).toBe(1)
-    })
-
-    it("propagates a failed receipt claim and rolls back its transaction", async () => {
-        const { service, tx, inbox, outbox } = await build()
-        const failure = new Error("inbox unavailable")
-        inbox.failNext("claimRow", failure)
-        await expect(service.accept(RAW_BODY, SIGNATURE)).rejects.toBe(failure)
-        expect(tx.rollbacks).toBe(1)
-        expect(tx.commits).toBe(0)
-        expect(outbox.jobs).toEqual([])
     })
 })

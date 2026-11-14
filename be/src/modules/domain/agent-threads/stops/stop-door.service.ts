@@ -1,13 +1,15 @@
 import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import { AgentRunCancelService, AgentRunsService, AgentRunsViewService, type OwnerCancelAnswer } from "@modules/domain/agent-runs"
 import { AgentWorkAccessService } from "@modules/domain/agent-work"
-import { ChatConversationsService } from "@modules/domain/chat-records"
+import { CustomerRoutesService } from "@modules/domain/customer-routes/customer-routes.service"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock, type Clock } from "@modules/platform/clock"
-import { ThreadRunsService, type ThreadWakeRefusal } from "../thread-runs.service"
+import { ThreadResumeRequestsService } from "../thread-resume-requests.service"
+import type { ThreadWakeRefusal } from "../thread-runs.service"
 import { RunStopRecordsService } from "./run-stop-records.service"
 import { RunStopsService } from "./run-stops.service"
 import type { OptionalRunStop, RunStop, StopDecision } from "./run-stop.contracts"
+import { approvalItemWaitingOf } from "./stop-approval.policy"
 import { stopDecisionOf } from "./stop-gate.policy"
 
 /** What a person may do with a stop: give their words, or press one of the card's three buttons. */
@@ -32,7 +34,7 @@ export interface StopAsk {
     readonly at?: string | null | undefined
 }
 
-/** Who decided: their member id (kept on the stop and the wake) and their name (who holds the conversation after a take-over). */
+/** Who decided: their member id (kept on the stop and the wake) and their name (the take-over's person). */
 export interface StopActor {
     /** The member id. */
     readonly memberId: string
@@ -47,6 +49,8 @@ export interface StopActor {
  * resolved; nothing moved and nothing will. `step_running`: the stop is open but its step runs again right now (after an earlier
  * answer); a decision is taken once the thread waits again. `not_stopped`: the run waits for no person. `not_thread`: a run of the old
  * engine (its own doors answer it). `not_found`: no such run. `invalid`: no such action, or an answer with no words.
+ * `approval_pending`: a `retry` or the founder's words (`answer`) on a stop that waits for the owner's verdict on a permission request;
+ * nothing moved, the request still waits, and the answer names the door that takes the verdict (`refusal`).
  */
 export type StopDoorOutcome =
     | "admitted"
@@ -58,6 +62,22 @@ export type StopDoorOutcome =
     | "not_thread"
     | "not_found"
     | "invalid"
+    | "approval_pending"
+
+/** The door that takes the owner's verdict on a permission request: the mutation `decideAgentRunStep`, verdict `approve` or `reject`. */
+export const APPROVAL_DOOR = "decideAgentRunStep"
+
+/** Why a decision was refused although the stop is open, and where the person's decision belongs. */
+export interface StopDoorRefusal {
+    /** The stop that waits. */
+    readonly stopId: string
+    /** The owner's item whose verdict the stop waits for. */
+    readonly workItemId: string
+    /** The door to use instead. */
+    readonly door: typeof APPROVAL_DOOR
+    /** The verdicts that door takes for a permission request: approve it, or decline it (the one lawful way to withdraw it). */
+    readonly verdicts: readonly ["approve", "reject"]
+}
 
 /** What the door answers: how it ended and the step whose stop it was, when one was found. */
 export interface StopDoorAnswer {
@@ -65,6 +85,8 @@ export interface StopDoorAnswer {
     readonly outcome: StopDoorOutcome
     /** The step of the stop, or null when none was found. */
     readonly stepKey: string | null
+    /** For `approval_pending`: the stop, its item and the door that takes the verdict; absent for every other outcome. */
+    readonly refusal?: StopDoorRefusal | undefined
 }
 
 const actionOf = (value: string): StopAction | null => STOP_ACTIONS.find((one) => one === value) ?? null
@@ -107,10 +129,17 @@ const refusedOutcomeOf = (code: ThreadWakeRefusal, after: OptionalRunStop): Stop
 @Injectable()
 /**
  * The people's door to the stop of a thread run: the founder's words (a reply to the card on /chat, the card's box) and the card's three
- * buttons become the typed decision of the stop and go to `ThreadRunsService.resume`, which writes a wake of the run's own scope; nothing
- * runs here. Only an owner or a manager of the workspace may decide, as for the freezes. A stop is one record per run and step: a
- * decision for a stop already resolved is refused with `stop_closed` and never resumes anything. A take-over also hands the run's
- * conversation to the person by name, so the AI stays quiet in it while they hold it. The door carries; the step decides what the words
+ * buttons become the typed decision of the stop and go to the resume request (`ThreadResumeRequestsService.resume`), which admits it from
+ * the stores and records it as a wake of the run's own scope the api's drain applies; nothing runs here, so any app that serves people
+ * (the api, the mcp app) runs this same door. Only an owner or a manager of the workspace may decide, as for the freezes. A stop is one record per run and step: a
+ * decision for a stop already resolved is refused with `stop_closed` and never resumes anything. After a take-over the run stays waiting with its stop open, so the customer's next lines join that stopped run and the person
+ * becomes the holder of the run's route (the staff hold, ruling R43): the customer-send door refuses every AI send to it until "hand back to
+ * the agent" or any other decision closes the taken-over stop (the resume door clears the hold then). The engine writes no chat record and asks no plugin. A `retry` or the founder's words on a stop that
+ * waits for the owner's verdict on a permission request are REFUSED here, before anything is written (`approval_pending`): either would
+ * withdraw the request without a word and run the step into its own refusal; the verdict has one door (approve / decline). A
+ * `take_over` of such a stop has ONE meaning: it declines the request, by the person, through the work engine (the card's decline path,
+ * noted `declined_by_takeover`), and then takes the stop as on any other; the step is not run again, so the engine sends
+ * the customer no line and opens no report stop. The door carries; the step decides what the words
  * mean. It registers with the runs' cancel door at start, so the run page's Cancel of a thread run is its stop's `skip`. A decision on a
  * stop already resolved still withdraws the approval item that stop left open (a stop closed before items were withdrawn).
  */
@@ -122,10 +151,10 @@ export class StopDoorService implements OnModuleInit {
         private readonly runs: AgentRunsService,
         private readonly view: AgentRunsViewService,
         private readonly records: RunStopRecordsService,
-        private readonly threads: ThreadRunsService,
-        @Optional() private readonly conversations?: ChatConversationsService,
+        private readonly threads: ThreadResumeRequestsService,
         @Optional() private readonly cancels?: AgentRunCancelService,
         @Optional() private readonly stops?: RunStopsService,
+        @Optional() private readonly routes?: CustomerRoutesService,
     ) {}
 
     /** A person's decision: refused (typed) for anyone but an owner or a manager of the workspace, else applied as theirs. */
@@ -171,18 +200,36 @@ export class StopDoorService implements OnModuleInit {
             await this.stops?.leftoverWithdrawn({ workspaceId: ask.workspaceId, runId: ask.runId }, stop.stepKey, { locale: "vi" })
             return answer("stop_closed")
         }
+        // A permission request that still waits for its verdict takes neither a retry nor words: nothing is withdrawn, no wake is
+        // written, no line is sent, no stop is opened. The person is told which door takes the verdict.
+        const waitingItem = approvalItemWaitingOf(stop)
+        if (waitingItem !== null && (action === "retry" || action === "answer")) {
+            return {
+                outcome: "approval_pending",
+                stepKey: stop.stepKey,
+                refusal: { stopId: stop.id, workItemId: waitingItem, door: APPROVAL_DOOR, verdicts: ["approve", "reject"] },
+            }
+        }
         const at = ask.at ?? this.clock.now().toISOString()
         const decision = stopDecisionOfAsk(action, actor.memberId, at, ask.text ?? null)
         if (decision === null) return answer("invalid")
         const ref = { workspaceId: ask.workspaceId, runId: ask.runId }
-        const admission = await this.threads.resume(ref, decision)
+        // Taking over a waiting permission request declines it first, by this person: the take-over below then finds no request to
+        // withdraw and keeps the thread at the gate.
+        if (waitingItem !== null && action === "take_over")
+            await this.stops?.declinedByTakeOver(ref, stop.stepKey, actor, { locale: "vi" })
+        const admission = await this.threads.resume({ ...ref, stepKey: stop.stepKey }, decision)
         if (admission.kind === "refused") {
             const after = await this.records.byRunStep(ask.workspaceId, ask.runId, stop.stepKey)
             return answer(refusedOutcomeOf(admission.code, after))
         }
-        if (!admission.fresh) return answer("already_admitted")
+        // The staff hold (ruling R43): a take-over the thread admitted makes the person the holder of the run's route, so the send door
+        // refuses every AI send to it until "hand back to the agent" clears it. A run about no route (a bank-fed run) holds nothing.
         if (action === "take_over" && stop.conversationId !== null)
-            await this.conversations?.setHolder(ask.workspaceId, stop.conversationId, actor.name)
+            await this.routes?.hold(ask.workspaceId, stop.conversationId, actor.memberId)
+        // Any other decision on a stop a person took over (retry, words, skip) ends that hold: the resume door clears it with the wake
+        // (`heldRouteEndedBy`, rulings R51, R52), one rule for every caller.
+        if (!admission.fresh) return answer("already_admitted")
         return answer("admitted")
     }
 

@@ -1,5 +1,7 @@
 import { Field, InputType } from "@nestjs/graphql"
-import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
+import type { ApiKeyKind as ApiKeyKindValue } from "@modules/domain/api-keys"
+import { ApiKeyKind } from "./api-key-kind.type"
 
 @InputType()
 /** The bounded arguments that create an API key. */
@@ -11,7 +13,13 @@ export class CreateApiKeyInput {
     @MaxLength(200)
     name!: string
 
-    /** The agent of the workspace the key acts as on the MCP endpoint (only `tools:call`); omitted for a public API key. */
+    /** What the key is for; omitted for a public API key. */
+    @Field(() => ApiKeyKind, { nullable: true })
+    @IsOptional()
+    @IsIn(Object.values(ApiKeyKind))
+    kind?: ApiKeyKindValue
+
+    /** The agent of the workspace the key is scoped to (an MCP key: it sees only that agent and its workflows; a public API key: it owns the conversations the key opens); omitted for an unscoped key. */
     @Field(() => String, { nullable: true })
     @IsOptional()
     @IsUUID()

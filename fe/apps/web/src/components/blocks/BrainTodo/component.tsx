@@ -1,6 +1,15 @@
-import { EmptyNotice, Grid, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { FooterZone, HeaderZone } from "@starci/grammar/common"
+import {
+    EmptyNotice,
+    Grid,
+    Page,
+    Stack,
+    SurfaceCard,
+    Text,
+    type FooterZone,
+    type HeaderZone,
+} from "@starci/grammar/common"
 import { BrainHeaderActions, brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
+import { CritiqueTodoCard } from "@/components/composites/CritiqueTodoCard"
 import { ConflictDrawer } from "@/components/composites/ConflictDrawer"
 import { FactDetailDrawer } from "@/components/composites/FactDetailDrawer"
 import { BrainInboxRail } from "@/components/composites/BrainInboxRail"
@@ -8,7 +17,7 @@ import { FactPickTable } from "@/components/composites/FactPickTable"
 import { PickSelectionBar } from "@/components/composites/PickSelectionBar"
 import { FactFormDrawer } from "@/components/frames/FactFormDrawer"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { BrainPageHeaderView, InboxCopy, InboxView } from "@/modules/types"
+import type { BrainPageHeaderView, CritiqueTodoView, InboxCopy, InboxView } from "@/modules/types"
 
 /** Props for {@link BrainTodoBase}. */
 export interface BrainTodoBaseProps {
@@ -16,9 +25,10 @@ export interface BrainTodoBaseProps {
         readonly header: BrainPageHeaderView
         readonly copy: InboxCopy
         readonly inbox: InboxView
+        /** The documents with questions of the critic waiting for the owner. */
+        readonly critique: CritiqueTodoView
     }
     readonly on: {
-        readonly reviewAll: () => void
         readonly selectTab: (id: string) => void
         readonly setTrust: (id: string) => void
         readonly setGrouping: (id: string) => void
@@ -142,7 +152,8 @@ const Conflicts = (props: BrainTodoBaseProps) => {
 const Main = (props: BrainTodoBaseProps) => {
     const { copy, inbox } = props.props
     const isWaiting = inbox.isWaiting
-    if (!isWaiting && inbox.conflicts.length === 0 && inbox.total === 0) {
+    const hasQuestions = "items" in props.props.critique.slot || "isLoading" in props.props.critique.slot
+    if (!isWaiting && !hasQuestions && inbox.conflicts.length === 0 && inbox.total === 0) {
         return (
             <EmptyNotice
                 message={copy.inboxEmptyTitle}
@@ -157,6 +168,7 @@ const Main = (props: BrainTodoBaseProps) => {
     }
     return (
         <Stack gap="section">
+            <CritiqueTodoCard props={{ critique: props.props.critique }} on={{ retry: props.on.retry }} />
             <Conflicts {...props} />
             {inbox.total === 0 && !isWaiting ? null : (
                 <FactPickTable
@@ -211,13 +223,7 @@ export const BrainTodoBase = (props: BrainTodoBaseProps) => {
         <Page
             header={{
                 ...header.heading,
-                actions: (
-                    <BrainHeaderActions
-                        review={header.actions.review}
-                        add={header.actions.add}
-                        onReview={props.on.reviewAll}
-                    />
-                ),
+                actions: <BrainHeaderActions add={header.actions.add} />,
                 tabs: brainHeaderTabs({ tabs: header.tabs, onSelect: props.on.selectTab }),
             }}
             measure="product"

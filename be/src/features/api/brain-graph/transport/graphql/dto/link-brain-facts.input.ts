@@ -1,7 +1,6 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator"
-import type { RelationKind } from "@modules/domain/brain-facts"
-import { RELATION_KINDS } from "@modules/domain/brain-facts"
+import { type RelationKind, RELATION_KINDS } from "@modules/domain/brain-facts"
 import { NullAsAbsent } from "@modules/platform/graphql"
 
 @InputType()

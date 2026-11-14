@@ -4,58 +4,87 @@
     "contract": {
         "inputs": [
             {
-                "name": "conversationId",
+                "name": "eventId",
                 "type": "string",
                 "required": true
             },
             {
-                "name": "text",
+                "name": "routeId",
                 "type": "string",
                 "required": true
             },
             {
-                "name": "channel",
-                "type": "string",
-                "required": true
-            },
-            {
-                "name": "leadId",
+                "name": "contactId",
                 "type": "string",
                 "required": false
             },
             {
-                "name": "messages",
-                "type": "array",
+                "name": "accountId",
+                "type": "string",
                 "required": false
+            },
+            {
+                "name": "subject",
+                "type": "object",
+                "required": false
+            },
+            {
+                "name": "data",
+                "type": "object",
+                "required": true
             }
         ]
     },
     "triggers": [
         {
-            "key": "zalo",
+            "key": "t1",
             "source": {
                 "kind": "zalo",
                 "connectionId": null
             }
         },
         {
-            "key": "telegram",
+            "key": "t2",
             "source": {
                 "kind": "telegram",
+                "connectionId": null
+            }
+        },
+        {
+            "key": "t3",
+            "source": {
+                "kind": "facebook",
+                "connectionId": null
+            }
+        },
+        {
+            "key": "t4",
+            "source": {
+                "kind": "instagram",
                 "connectionId": null
             }
         }
     ],
     "outcomes": [
         {
+            "key": "nothing",
+            "label": "nothing",
+            "outputs": []
+        },
+        {
             "key": "owner",
-            "label": "Chuyển chủ tiệm",
+            "label": "owner",
             "outputs": [
                 {
                     "name": "summary",
                     "type": "string"
                 }
             ]
+        },
+        {
+            "key": "declined",
+            "label": "declined",
+            "outputs": []
         }
     ],
     "entry": {
@@ -65,74 +94,81 @@
         "kind": "tag",
         "sources": [
             "channel"
-        ],
-        "burst": {
-            "channel": {
-                "window": "6s",
-                "maxWait": "20s"
-            }
-        }
+        ]
     },
     "grant": {
-        "rights": [
-            {
-                "kind": "message",
-                "access": "read",
-                "scope": "turn",
-                "fields": [
-                    "conversationId",
-                    "role",
-                    "text",
-                    "sentAt",
-                    "status"
-                ]
-            },
-            {
-                "kind": "message",
-                "access": "write",
-                "scope": "turn",
-                "fields": [
-                    "body"
-                ]
-            }
-        ],
         "tools": [
-            "nivo.brain.search"
+            "nivo.tool.conversation.message.list",
+            "nivo.tool.customer.message.send",
+            "nivo.tool.lead.order.list",
+            "nivo.tool.team.message.post"
         ],
         "effects": [
-            "nivo.agent.tag",
-            "nivo.lead.message.send",
-            "nivo.team.message.post"
+            "nivo.tool.agent.tag"
         ]
     },
     "nodes": [
+        {
+            "key": "hear",
+            "kind": "condition",
+            "step": "chatbot.hear",
+            "params": {
+                "routeId": {
+                    "$ref": "trigger.routeId"
+                },
+                "contactId": {
+                    "$ref": "trigger.contactId",
+                    "default": null
+                },
+                "subject": {
+                    "$ref": "trigger.subject",
+                    "default": null
+                },
+                "data": {
+                    "$ref": "trigger.data"
+                }
+            },
+            "routes": {
+                "go": "understand",
+                "nothing": "nothing-to-answer"
+            },
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "nothing-to-answer",
+            "kind": "output",
+            "step": "core.outcome",
+            "params": {
+                "outcome": "nothing",
+                "outputs": {}
+            }
+        },
         {
             "key": "understand",
             "kind": "condition",
             "step": "chatbot.understand",
             "params": {
-                "conversationId": {
-                    "$ref": "trigger.conversationId"
-                },
                 "text": {
-                    "$ref": "trigger.text"
+                    "$ref": "steps.hear.output.text"
                 },
                 "messages": {
-                    "$ref": "trigger.messages",
-                    "default": []
+                    "$ref": "steps.hear.output.messages"
                 },
-                "lastOrderCode": {
-                    "$ref": "lead.lastOrderCode",
-                    "default": null
+                "since": {
+                    "$ref": "steps.hear.output.startedAt"
                 }
             },
+            "model": "claude-sonnet-5-5",
             "routes": {
                 "buy": "to-consult",
-                "paid": "to-reconcile",
-                "complaint": "complaint",
+                "book": "to-booking",
+                "paid": "to-payment",
+                "complaint": "complaint-reply",
                 "question": "answer"
             },
-            "model": "claude-sonnet-5-5"
+            "mode": "auto",
+            "accounts": []
         },
         {
             "key": "to-consult",
@@ -144,67 +180,167 @@
                 "version": "latest",
                 "inputs": {
                     "conversationId": {
-                        "$ref": "trigger.conversationId"
+                        "$ref": "trigger.routeId"
                     },
                     "text": {
-                        "$ref": "trigger.text"
+                        "$ref": "steps.hear.output.text"
                     },
                     "channel": {
-                        "$ref": "trigger.channel"
+                        "$ref": "steps.hear.output.channel"
                     },
-                    "leadId": {
-                        "$ref": "trigger.leadId",
+                    "contactId": {
+                        "$ref": "trigger.contactId",
                         "default": null
+                    },
+                    "since": {
+                        "$ref": "steps.hear.output.startedAt"
                     }
                 }
             }
         },
         {
-            "key": "to-reconcile",
+            "key": "to-booking",
             "kind": "output",
             "step": "core.call-workflow",
             "params": {
-                "agent": "accounting",
-                "workflow": "reconcile",
+                "agent": "booking",
+                "workflow": "book",
                 "version": "latest",
                 "inputs": {
                     "conversationId": {
-                        "$ref": "trigger.conversationId"
+                        "$ref": "trigger.routeId"
                     },
                     "text": {
-                        "$ref": "trigger.text"
+                        "$ref": "steps.hear.output.text"
                     },
                     "channel": {
-                        "$ref": "trigger.channel"
+                        "$ref": "steps.hear.output.channel"
                     },
-                    "leadId": {
-                        "$ref": "trigger.leadId",
+                    "contactId": {
+                        "$ref": "trigger.contactId",
+                        "default": null
+                    },
+                    "recentLines": {
+                        "$ref": "steps.understand.output.recentLines"
+                    }
+                }
+            }
+        },
+        {
+            "key": "to-payment",
+            "kind": "output",
+            "step": "core.call-workflow",
+            "params": {
+                "agent": "sales",
+                "workflow": "payment",
+                "version": "latest",
+                "inputs": {
+                    "conversationId": {
+                        "$ref": "trigger.routeId"
+                    },
+                    "text": {
+                        "$ref": "steps.hear.output.text"
+                    },
+                    "contactId": {
+                        "$ref": "trigger.contactId",
                         "default": null
                     }
                 }
             }
         },
         {
-            "key": "complaint",
-            "kind": "output",
-            "step": "chatbot.complaint",
+            "key": "complaint-reply",
+            "kind": "execute",
+            "step": "chatbot.complaint-reply",
             "params": {
                 "conversationId": {
-                    "$ref": "trigger.conversationId"
+                    "$ref": "steps.hear.output.conversationId"
                 },
                 "text": {
-                    "$ref": "trigger.text"
+                    "$ref": "steps.hear.output.text"
                 },
                 "summary": {
                     "$ref": "steps.understand.output.summary"
                 },
-                "lastOrderCode": {
-                    "$ref": "lead.lastOrderCode",
-                    "default": null
+                "since": {
+                    "$ref": "steps.hear.output.startedAt"
                 }
             },
+            "model": "claude-sonnet-5-5",
+            "next": "complaint-declined",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "complaint-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.complaint-reply.output.declined",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "complaint-declined-notice",
+                "no": "complaint-notify"
+            }
+        },
+        {
+            "key": "complaint-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Trả lời khiếu nại",
+                "ref": {
+                    "$ref": "steps.complaint-reply.output.orderCode"
+                }
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "complaint-notify",
+            "kind": "execute",
+            "step": "chatbot.complaint-notify",
+            "params": {
+                "text": {
+                    "$ref": "steps.hear.output.text"
+                },
+                "summary": {
+                    "$ref": "steps.complaint-reply.output.summary"
+                },
+                "orderCode": {
+                    "$ref": "steps.complaint-reply.output.orderCode"
+                }
+            },
+            "model": "claude-sonnet-5-5",
+            "blocking": false,
             "next": "to-owner",
-            "model": "claude-sonnet-5-5"
+            "mode": "auto",
+            "accounts": []
         },
         {
             "key": "to-owner",
@@ -214,24 +350,86 @@
                 "outcome": "owner",
                 "outputs": {
                     "summary": {
-                        "$ref": "steps.complaint.output.summary"
+                        "$ref": "steps.complaint-reply.output.summary"
                     }
                 }
             }
         },
         {
             "key": "answer",
-            "kind": "output",
+            "kind": "execute",
             "step": "chatbot.answer",
             "params": {
                 "conversationId": {
-                    "$ref": "trigger.conversationId"
+                    "$ref": "steps.hear.output.conversationId"
                 },
                 "text": {
-                    "$ref": "trigger.text"
+                    "$ref": "steps.hear.output.text"
+                },
+                "since": {
+                    "$ref": "steps.hear.output.startedAt"
                 }
             },
-            "model": "claude-sonnet-5-5"
+            "model": "claude-sonnet-5-5",
+            "next": "answer-declined",
+            "mode": "auto",
+            "accounts": [
+                {
+                    "kind": "messaging",
+                    "provider": "zalo_oa",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "telegram",
+                    "connectionId": null
+                },
+                {
+                    "kind": "messaging",
+                    "provider": "meta",
+                    "connectionId": null
+                }
+            ]
+        },
+        {
+            "key": "answer-declined",
+            "kind": "condition",
+            "step": "core.when",
+            "params": {
+                "when": {
+                    "ref": {
+                        "$ref": "steps.answer.output.declined",
+                        "default": null
+                    },
+                    "op": "eq",
+                    "value": true
+                }
+            },
+            "routes": {
+                "yes": "answer-declined-notice"
+            }
+        },
+        {
+            "key": "answer-declined-notice",
+            "kind": "execute",
+            "step": "team.declined-notice",
+            "params": {
+                "step": "Trả lời câu hỏi",
+                "ref": null
+            },
+            "blocking": false,
+            "next": "declined",
+            "mode": "auto",
+            "accounts": []
+        },
+        {
+            "key": "declined",
+            "kind": "output",
+            "step": "core.outcome",
+            "params": {
+                "outcome": "declined",
+                "outputs": {}
+            }
         }
     ]
 }

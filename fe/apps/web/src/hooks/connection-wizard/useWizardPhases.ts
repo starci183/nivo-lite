@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { CONNECTION_PHASES, WIZARD_PHASES } from "@/modules/connection-lifecycle"
-import type { WizardPhaseKind } from "@/modules/connection-lifecycle"
+import { CONNECTION_PHASES, WIZARD_PHASES, type WizardPhaseKind } from "@/modules/connection-lifecycle"
 import type { WizardPhases } from "@/modules/types"
 
 /**

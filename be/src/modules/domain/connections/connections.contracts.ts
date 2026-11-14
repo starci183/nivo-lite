@@ -15,6 +15,16 @@ export type Provider =
     | "imap"
     | "telegram_user"
     | "meta"
+    | "inet"
+    | "tino"
+    | "elevenlabs"
+    | "veo"
+    | "tiktok"
+    | "shotstack"
+    | "creatomate"
+    | "json2video"
+    | "misa_amis"
+    | "misa_meinvoice"
 
 /** `test` is the provider test mode: its money is not real, so the bank feed books none of its credits. */
 export type Environment = "test" | "live"
@@ -81,6 +91,11 @@ export interface ConnectionRecord {
     readonly createdBy: string | null
     /** When it was created, ISO 8601. */
     readonly createdAt: string
+    /**
+     * The health state recorded in its public facts, when one is: `ok`, `silent`, `failing`, `degraded` (the poll breaker is open for a
+     * reason that is no refused credential) or `needs_reauth` (the provider refused the credential: only the owner connecting again fixes it).
+     */
+    readonly health?: string | undefined
 }
 
 /** The secret to store with a new connection. */
@@ -197,13 +212,13 @@ export interface HealthCandidate {
     readonly lastEventAt: string
     /** When the connection was created, as text. */
     readonly createdAt: string
-    /** The health state already recorded: ok, silent, failing, or empty when none. */
+    /** The health state already recorded: ok, silent, degraded, failing, or empty when none. */
     readonly health: string
 }
 
 /** The health verdict recorded on a connection. */
 export interface HealthMark {
-    /** ok, silent or failing. */
+    /** ok, silent, degraded, needs_reauth or failing. */
     readonly state: string
     /** Why, in a short sentence; empty for ok. */
     readonly reason: string

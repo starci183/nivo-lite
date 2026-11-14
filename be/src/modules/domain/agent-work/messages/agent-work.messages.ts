@@ -14,6 +14,11 @@ export const AGENT_WORK_MESSAGES: MessageBundle = {
         "errors.AGENT_WORK_HANDLER_DUPLICATE": "Nguồn {{source}} đã có bộ xử lý.",
         "errors.AGENT_WORK_SOURCE_UNKNOWN": "Nguồn {{source}} chưa được đăng ký.",
         "errors.AGENT_WORK_SOURCE_INVALID": "Nguồn {{source}} không hợp lệ hoặc đã đăng ký với đặc tính khác.",
+        "errors.AGENT_WORK_APPROVAL_PAYLOAD_INVALID": "Thiếu hoặc sai dữ liệu: {{field}}.",
+        "errors.AGENT_WORK_APPROVAL_NOT_FOUND": "Không tìm thấy yêu cầu cấp quyền này.",
+        "errors.AGENT_WORK_APPROVAL_NOT_WAITING": "Mục này không còn chờ quyết định.",
+        "errors.AGENT_WORK_APPROVAL_NOT_OWNER": "Chỉ chủ workspace mới duyệt được thao tác này.",
+        "errors.AGENT_WORK_APPROVAL_NOT_ALLOWED": "Bạn không có quyền quyết định mục này.",
     },
     en: {
         "errors.AGENT_WORK_RESULT_REJECTED": "The result of the work turn could not be read.",
@@ -27,5 +32,10 @@ export const AGENT_WORK_MESSAGES: MessageBundle = {
         "errors.AGENT_WORK_HANDLER_DUPLICATE": "The source {{source}} already has a handler.",
         "errors.AGENT_WORK_SOURCE_UNKNOWN": "The source {{source}} is not registered.",
         "errors.AGENT_WORK_SOURCE_INVALID": "The source {{source}} is not valid or is registered with other traits.",
+        "errors.AGENT_WORK_APPROVAL_PAYLOAD_INVALID": "Missing or invalid input: {{field}}.",
+        "errors.AGENT_WORK_APPROVAL_NOT_FOUND": "This permission request was not found.",
+        "errors.AGENT_WORK_APPROVAL_NOT_WAITING": "This item is no longer waiting for a decision.",
+        "errors.AGENT_WORK_APPROVAL_NOT_OWNER": "Only the workspace owner can approve this action.",
+        "errors.AGENT_WORK_APPROVAL_NOT_ALLOWED": "You may not decide this item.",
     },
 }

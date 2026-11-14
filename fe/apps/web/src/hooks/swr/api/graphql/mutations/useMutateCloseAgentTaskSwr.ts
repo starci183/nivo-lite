@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateCloseAgentTask,
     type MutateCloseAgentTaskRequest,
 } from "@/modules/api/graphql/mutations/mutation-close-agent-task"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { CloseAgentTaskMutation } from "@/modules/api"
 
 /** What the CloseAgentTask mutation is triggered with. */

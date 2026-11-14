@@ -9,6 +9,8 @@ import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.de
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityPortsService } from "./entity-ports.service"
+import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
+import { ModuleAgentService } from "./module-agent.service"
 import { ModuleJobRunnerService } from "./module-job-runner.service"
 import { mintScopedTx } from "./policies/scoped-tx.policy"
 
@@ -24,6 +26,8 @@ const claimed = (payload: object): ClaimedJob => ({
     currentStep: null,
     payload,
 })
+
+const AGENT = { id: "agent-1", sees: "all" } as const
 
 const payloadOf = (job: string) => ({ workspaceId: WS, job, input: { orderId: "o-1" } })
 
@@ -42,6 +46,30 @@ const build = async (buildId?: string, withDoor = true) => {
         input: callingInput,
         ports: { door: { entry: "port", id: "engine.door" } },
     })
+    const recordingInput = mock<JobDefinition["input"]>()
+    const recording = mock<JobDefinition>({
+        name: "sales.recordAndSend",
+        input: recordingInput,
+        ports: { orders: { entry: "port", id: "engine.entities" }, door: { entry: "port", id: "engine.door" } },
+    })
+    const bookingInput = mock<JobDefinition["input"]>()
+    const booking = mock<JobDefinition>({
+        name: "blocks-core.booking.remind",
+        input: bookingInput,
+        ports: { orders: { entry: "port", id: "engine.entities" } },
+    })
+    bookingInput.safeParse.mockReturnValue({ success: true, data: { orderId: "o-1" } })
+    booking.run.mockResolvedValue(undefined)
+    const loyaltyInput = mock<JobDefinition["input"]>()
+    const loyalty = mock<JobDefinition>({
+        name: "loyalty.expire",
+        input: loyaltyInput,
+        ports: { orders: { entry: "port", id: "engine.entities" } },
+    })
+    loyaltyInput.safeParse.mockReturnValue({ success: true, data: { orderId: "o-1" } })
+    loyalty.run.mockResolvedValue(undefined)
+    recordingInput.safeParse.mockReturnValue({ success: true, data: { orderId: "o-1" } })
+    recording.run.mockResolvedValue(undefined)
     const startingInput = mock<JobDefinition["input"]>()
     const starting = mock<JobDefinition>({
         name: "sales.startFlow",
@@ -56,6 +84,8 @@ const build = async (buildId?: string, withDoor = true) => {
     calling.run.mockResolvedValue(undefined)
     engine.scoped.mockImplementation((_workspaceId, run) => run(TX))
     ports.portsFor.mockReturnValue({ handle: "ports" })
+    const agents = mock<ModuleAgentService>()
+    agents.scopeOf.mockResolvedValue(AGENT)
     const claims = mock<JobClaims>()
     const alerts = mock<EngineFailureAlerts>()
     const handle = mock<DoorApi>()
@@ -66,11 +96,12 @@ const build = async (buildId?: string, withDoor = true) => {
             ModuleJobRunnerService,
             { provide: EntityEngineService, useValue: engine },
             { provide: EntityPortsService, useValue: ports },
+            { provide: ModuleAgentService, useValue: agents },
             {
                 provide: ENTITY_ENGINE_OPTIONS,
                 useValue: builder<EntityEngineOptions>({
                     entities: [],
-                    jobs: [plain, calling, starting],
+                    jobs: [plain, calling, starting, recording, booking, loyalty],
                     cursorKey: new Secret("a2V5"),
                 })(buildId === undefined ? {} : { buildId }),
             },
@@ -88,6 +119,8 @@ const build = async (buildId?: string, withDoor = true) => {
         plainInput,
         calling,
         starting,
+        recording,
+        agents,
         claims,
         alerts,
         door,
@@ -111,6 +144,61 @@ describe("ModuleJobRunnerService", () => {
         expect([context?.workspaceId, context?.attempt, context?.effectKey("notify")]).toEqual([WS, 2, "j-1:notify"])
     })
 
+    it("runs a job that reaches records for the installed agent of its module, so what it writes is that agent's", async () => {
+        const { runner, engine, agents } = await build()
+
+        await runner.run(claimed(payloadOf("sales.confirmNotice")))
+
+        expect(agents.scopeOf).toHaveBeenCalledWith(WS, "sales")
+        expect(engine.scoped.mock.calls[0]?.[2]).toEqual(AGENT)
+    })
+
+    it("reads the module of a package-qualified job as its agent part and of an old-form job as its first part", async () => {
+        const { runner, agents } = await build()
+
+        await runner.run(claimed(payloadOf("blocks-core.booking.remind")))
+        await runner.run(claimed(payloadOf("loyalty.expire")))
+
+        expect(agents.scopeOf.mock.calls).toEqual([
+            [WS, "booking"],
+            [WS, "loyalty"],
+        ])
+    })
+
+    it("opens every scope of a job that reaches records and calls the door for the module's agent", async () => {
+        const { runner, engine, ports, agents } = await build()
+
+        await runner.run(claimed(payloadOf("sales.recordAndSend")))
+
+        expect(agents.scopeOf).toHaveBeenCalledTimes(1)
+        const runIn = ports.portsFor.mock.calls[0]?.[0]
+        await runIn?.((tx) => Promise.resolve(tx))
+        await runIn?.((tx) => Promise.resolve(tx))
+        expect(engine.scoped.mock.calls.map((call) => call[2])).toEqual([AGENT, AGENT])
+    })
+
+    it("asks for no agent and stamps nothing for a job that reaches no records", async () => {
+        const { runner, engine, ports, agents } = await build()
+
+        await runner.run(claimed(payloadOf("sales.sendNotice")))
+        await ports.portsFor.mock.calls[0]?.[0]?.((tx) => Promise.resolve(tx))
+
+        expect(agents.scopeOf).not.toHaveBeenCalled()
+        expect(engine.scoped.mock.calls[0]?.[2]).toBeUndefined()
+    })
+
+    it("parks a job that reaches records when its module has no installed agent, writing nothing", async () => {
+        const { runner, engine, plain, agents, claims } = await build("build-1")
+        claims.park.mockResolvedValue(false)
+        agents.scopeOf.mockRejectedValue(new EntityEngineError({ code: EntityEngineErrorCode.AgentMissing }))
+
+        await runner.run(claimed(payloadOf("sales.confirmNotice")))
+
+        expect(claims.park).toHaveBeenCalledWith(expect.objectContaining({ reason: "ENTITY_ENGINE_AGENT_MISSING" }))
+        expect(engine.scoped).not.toHaveBeenCalled()
+        expect(plain.run).not.toHaveBeenCalled()
+    })
+
     it("gives every call of a job that calls the door a scoped transaction of its own", async () => {
         const { runner, engine, ports, calling, handle } = await build()
 
@@ -132,6 +220,17 @@ describe("ModuleJobRunnerService", () => {
         const binding = door.doorApi.mock.calls[0]?.[0]
         expect([binding?.workspaceId, binding?.effectKey("send")]).toEqual([WS, "j-1:send"])
         expect(calling.run).toHaveBeenCalledTimes(1)
+    })
+
+    it("tells the door the job run and, for a job that reaches records, the installed agent of its module (the speaker of a voice tool)", async () => {
+        const { runner, door } = await build()
+
+        await runner.run(claimed(payloadOf("sales.sendNotice")))
+        await runner.run(claimed(payloadOf("sales.recordAndSend")))
+
+        const [plain, recording] = door.doorApi.mock.calls.map((call) => call[0])
+        expect([plain?.jobId, plain?.agentId]).toEqual(["j-1", undefined])
+        expect([recording?.jobId, recording?.agentId]).toEqual(["j-1", AGENT.id])
     })
 
     it("hands a job that starts a workflow the handle of the workflow provider, bound to the workspace, outside any transaction", async () => {
@@ -162,7 +261,7 @@ describe("ModuleJobRunnerService", () => {
         expect(binding?.scopeOpen()).toBe(false)
         expect(await runIn?.(() => Promise.resolve(binding?.scopeOpen()))).toBe(true)
         expect(binding?.scopeOpen()).toBe(false)
-        await expect(runIn?.(() => Promise.reject(new Error("boom")))).rejects.toThrow("boom")
+        await expect(runIn?.(jest.fn().mockRejectedValue(new Error("boom")))).rejects.toThrow("boom")
         expect(binding?.scopeOpen()).toBe(false)
     })
 

@@ -1,19 +1,19 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
-import type {
-    DataConnection,
-    DataConnectionChange,
-    DataConnectionDraft,
-    ProviderFilter,
-    StoredCredential,
-    SyncMinutes,
+import { ConnectionsService, type ConnectionActor, type ConnectionMember } from "@modules/domain/connections"
+import {
+    type DataConnection,
+    type DataConnectionChange,
+    type DataConnectionDraft,
+    type ProviderFilter,
+    type StoredCredential,
+    type SyncMinutes,
+    isDataProvider,
 } from "./data-hub.contracts"
-import { isDataProvider } from "./data-hub.contracts"
 import { toDataConnection } from "./data-hub.mapper"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 
 const OWNER = ["owner"] as const
+const OWNER_OR_MANAGER = ["owner", "manager"] as const
 const MIN_EVERY_MINUTES = 5
 const MAX_EVERY_MINUTES = 10_080
 
@@ -25,6 +25,11 @@ export class DataHubService {
     /** Requires the owner of the workspace. */
     owner(actor: ConnectionActor): Promise<ConnectionMember> {
         return this.connections.authorize(actor, OWNER)
+    }
+
+    /** Requires the owner or a manager of the workspace (a CRM connection, owner decision 2026-11-13). */
+    ownerOrManager(actor: ConnectionActor): Promise<ConnectionMember> {
+        return this.connections.authorize(actor, OWNER_OR_MANAGER)
     }
 
     /** One live data connection of the workspace (of the given provider when one is named); a missing, disconnected or foreign one is a typed not-found. */

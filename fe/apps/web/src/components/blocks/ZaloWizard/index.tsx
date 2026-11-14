@@ -1,9 +1,8 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import {
@@ -127,7 +126,7 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
                 agentStep: {
                     title: tw("agentTitleChannel"),
                     notice: firstEvent === null ? tw("zaloSkipNote") : null,
-                    agents: agentChoicesOf(props.agents, "zalo_oa", tw),
+                    agents: agentChoicesOf(props.agents, tw),
                     value: wizard.agentIds,
                     hint: tw("agentHint"),
                     none: tw("agentNone"),

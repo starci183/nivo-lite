@@ -1,37 +1,24 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
+import { PROVIDER, TOOL } from "@nivo-lite/agent-sdk/names"
+import { defineTemplateNode, type TemplateNode } from "@nivo-lite/agent-sdk/template"
 import { z } from "zod"
 import { MAX_ID, MAX_LINE } from "../../bounds"
 import { bilingualOf } from "../../messages/catalog"
-import { TOOL } from "../../vocabulary/tool-ids"
-import { itemsTextOf, orderLinesOf } from "../payment/payment-request.policy"
-import { nodeGoalOf } from "../node-ui"
 import type { NodeLocale, NodeSchema } from "../node-schema.types"
-import { CARE_RIGHTS, careFactsOfLead, careLeadOf, careMemoryRowOf, careOrderOf, shippedAtOf } from "./care.data"
-import type { CareOrder } from "./care.data"
-import {
-    SHIP_WAITS_MAX,
-    afterMinutes,
-    dayAfter,
-    isDue,
-    paymentStateOf,
-    shipAttemptOf,
-    shipSuffixOf,
-} from "./care.policy"
-import { CARE_VOICE, agentAnswer, arm } from "./care.steps"
+import { nodeGoalOf } from "../node-ui"
+import type { DeliveryDue } from "./care-delivery-wait.node"
+import { PROFILE_AN, SENT_VIA_ZALO } from "./care.examples"
+import { customerNameOf } from "./care.reads"
+import { CARE_VOICE, careMessageSchema, refusalSchema, sendToContact } from "./care.steps"
+import { refused } from "../tool-answers"
 
 const ID = "sales.care-delivery-check"
-const DAY_MINUTES = 24 * 60
 
-/** What the check-in is given: the timer that woke it and the language. */
+/** What the check-in is given: what the wait found due, and the language. */
 export interface CareDeliveryCheckInput {
-    /** The order that was delivered (`= trigger.ref`). */
+    /** The order, echoed (`= steps.wait.output.orderId`). */
     readonly orderId: string
-    /** `ship0`, `ship1`... while the delivery day is not known and the check-in waits for the shipment (`= trigger.suffix`), or null. */
-    readonly suffix: string | null
-    /** The moment the check-in is really due (`= trigger.dueAt`), or null. */
-    readonly dueAt: string | null
+    /** What to ask about (`= steps.wait.output.due`); null only when wired wrongly. */
+    readonly due: DeliveryDue | null
     /** The language of the message. */
     readonly locale: NodeLocale
 }
@@ -40,190 +27,98 @@ export interface CareDeliveryCheckInput {
 export interface CareDeliveryCheckOutput {
     /** The order, echoed. */
     readonly orderId: string
-    /** `asked` the question went out; `later` not time yet (the timer moved); `closed` nothing to ask (order not paid, customer opted out, never shipped). */
-    readonly result: "asked" | "later" | "closed"
+    /** True when the question reached the customer. */
+    readonly sent: boolean
+    /** The send tool's refusal when it did not, else null. */
+    readonly refusal: string | null
 }
-
-const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<CareDeliveryCheckInput> = z.object({
     orderId: z.string().max(MAX_ID).min(1),
-    suffix: z.string().max(MAX_LINE).nullable(),
-    dueAt: z.string().max(MAX_LINE).nullable(),
+    due: z
+        .object({
+            contactId: z.string().max(MAX_ID).min(1),
+            orderNo: z.string().max(MAX_LINE),
+            items: z.string().max(MAX_LINE),
+            recipient: z.string().max(MAX_LINE).nullable(),
+        })
+        .nullable(),
     locale: z.enum(["vi", "en"]),
 })
 
 const output: NodeSchema<CareDeliveryCheckOutput> = z.object({
     orderId: z.string().max(MAX_ID).describe("The id of the order, as given."),
-    result: z
-        .enum(["asked", "later", "closed"])
-        .describe("`asked` when the question was sent to the customer (the agent answers only this)."),
+    sent: z.boolean().describe("True when the question reached the customer."),
+    refusal: refusalSchema,
 })
 
 const GUIDANCE =
     "Ask the customer, in one short message, whether the order reached them well and whether they are happy with it; name what they " +
-    "bought. Do not offer anything. Send it with `customer.leadId` (the tool finds their conversation)."
+    "bought. Do not offer anything."
 
-/** What a check-in whose delivery day was not known waits for: nothing, the shipment (a day more), the morning after it, or nothing more. */
-type ShipWait =
-    | { readonly kind: "none" }
-    | { readonly kind: "gone" }
-    | { readonly kind: "again" }
-    | { readonly kind: "until"; readonly at: string }
-
-const shipWaitOf = (order: CareOrder, attempt: number | null): ShipWait => {
-    if (attempt === null) return { kind: "none" }
-    const shipped = shippedAtOf(order)
-    if (shipped === null) return { kind: attempt + 1 >= SHIP_WAITS_MAX ? "gone" : "again" }
-    return { kind: "until", at: dayAfter(shipped) }
-}
-
-const EXAMPLE_GRANT: RightsGrant = {
-    rights: [...CARE_RIGHTS, { kind: "message", access: "write", scope: "turn", fields: ["body"] }],
-}
-
-const ORDER = {
-    id: "o1",
-    orderNo: "DH-1",
-    amountVnd: 300_000,
-    status: "paid",
-    items: { lines: [{ name: "tea boxes", qty: 2, unitVnd: 150_000, amountVnd: 300_000 }] },
-    leadId: "l1",
-    shippedAt: null,
-}
-
-const STORE = {
-    order: [ORDER],
-    "sales-lead": [{ id: "l1", contactName: "An" }],
-}
-
-const DUE = { orderId: "o1", suffix: null, dueAt: "1970-01-01T00:00:00.000Z", locale: "en" } as const
+/** What the wait handed on, in the examples. */
+const DUE: DeliveryDue = { contactId: "c1", orderNo: "DH-1", items: "2 x tea boxes", recipient: null }
 
 const QUESTION = "Did the tea boxes reach you well, and are you happy with them?"
 
 /**
- * `sales.care-delivery-check` (Hỏi thăm khách): the morning after delivery the agent asks the customer, in one message, how the order
- * went (`nivo.lead.message.send`). Timing is code before it: a timer that woke early moves to its real moment, and a check-in whose delivery day was not
- * known waits a day at a time, at most three, for the order to ship. Nothing is asked about an order that is not paid or of a customer who
- * asked to be left alone. A complaint in the reply reaches the front desk, which reads every customer message.
+ * `sales.care-delivery-check` (Hoi tham khach): the morning after delivery, the agent writes ONE question on how the order went and the
+ * node sends it (`nivo.tool.customer.message.send`). The timing and the guards are `sales.care-delivery-wait`'s, before it. A complaint in the
+ * reply reaches the front desk, which reads every customer message.
  */
-export const salesCareDeliveryCheckNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
+export const salesCareDeliveryCheckNode: TemplateNode<typeof input, typeof output> = defineTemplateNode({
     id: ID,
-    role: "output",
     title: bilingualOf("nodeSalesCareDeliveryCheckTitle"),
-    params,
+    description: { vi: "S\u00e1ng h\u00f4m sau khi giao, g\u1eedi kh\u00e1ch m\u1ed9t c\u00e2u h\u1ecfi th\u0103m \u0111\u01a1n h\u00e0ng th\u1ebf n\u00e0o.", en: "The morning after delivery, sends the customer one question on how the order went." },
+    tools: [TOOL.contactGet, TOOL.customerMessageSend],
+    mode: "auto",
+    accounts: [PROVIDER.zaloOa, PROVIDER.telegram, PROVIDER.meta],
     input,
     output,
-    rights: CARE_RIGHTS,
-    effects: [TOOL.customerMessageSend, TOOL.careSchedule],
-    requires: [TOOL.customerMessageSend],
+    model: "claude-sonnet-5-5",
     run: async (given, context) => {
-        const closed: CareDeliveryCheckOutput = { orderId: given.orderId, result: "closed" }
-        const later: CareDeliveryCheckOutput = { orderId: given.orderId, result: "later" }
-        const suffix = given.suffix ?? ""
-        const now = context.now()
-        const order = await careOrderOf(context, given.orderId)
-        if (order === undefined || paymentStateOf(order.status) !== "paid") return closed
-        const lead = await careLeadOf(context, order.leadId)
-        const facts = await careFactsOfLead(context, order.leadId)
-        if (facts.optedOut) return closed
-        const attempt = shipAttemptOf(suffix)
-        const waiting = shipWaitOf(order, attempt)
-        if (waiting.kind === "gone") return closed
-        if (waiting.kind === "again") {
-            const next = shipSuffixOf((attempt ?? 0) + 1)
-            await arm(context, { kind: "delivery-check", ref: order.id, suffix: next, dueAt: afterMinutes(now, DAY_MINUTES) })
-            return later
-        }
-        const target = waiting.kind === "until" ? waiting.at : given.dueAt
-        if (!isDue(target, now)) {
-            await arm(context, {
-                kind: "delivery-check",
-                ref: order.id,
-                suffix: waiting.kind === "until" ? "" : suffix,
-                dueAt: target ?? afterMinutes(now, DAY_MINUTES),
-            })
-            return later
-        }
-        return agentAnswer(context, {
+        const due = given.due
+        if (due === null) return context.fail({ kind: "cannot", why: "the check-in was reached with nothing due" })
+        const name = await customerNameOf(context)
+        const message = await context.agent.run({
             goal: `${nodeGoalOf(ID, "en")} ${GUIDANCE} ${CARE_VOICE}`,
             input: {
                 locale: given.locale,
-                order: { orderId: order.id, orderNo: order.orderNo, items: itemsTextOf(orderLinesOf(order.items)) },
-                customer:
-                    lead === undefined
-                        ? null
-                        : { leadId: lead.id, name: lead.contactName, recipient: facts.recipient },
-                careKind: "delivery-check",
+                order: { orderNo: due.orderNo, items: due.items },
+                customer: { name, recipient: due.recipient },
             },
-            output,
-            maxTurns: 3,
-            purpose: "delivery-check",
+            output: careMessageSchema,
+            tools: [],
+            maxTurns: 1,
         })
+        return { orderId: given.orderId, ...(await sendToContact(context, due.contactId, message.text)) }
     },
     examples: [
         {
             name: "the morning after delivery the agent asks how the order went",
             params: {},
-            input: DUE,
-            output: { orderId: "o1", result: "asked" },
-            grant: EXAMPLE_GRANT,
-            model: [
-                {
-                    call: {
-                        tool: TOOL.customerMessageSend,
-                        args: { leadId: "l1", text: QUESTION },
-                    },
-                },
-                { done: { orderId: "o1", result: "asked" } },
+            input: { orderId: "o1", due: DUE, locale: "en" },
+            tools: [
+                { id: TOOL.contactGet, args: {}, answer: PROFILE_AN },
+                { id: TOOL.customerMessageSend, args: { contactId: "c1", text: QUESTION }, answer: SENT_VIA_ZALO },
             ],
-            effects: [
-                { kind: TOOL.customerMessageSend, payload: { leadId: "l1", text: QUESTION } },
-            ],
-            store: STORE,
+            agent: [{ answer: { text: QUESTION } }],
+            output: { orderId: "o1", sent: true, refusal: null },
         },
         {
-            name: "a timer that woke early is moved to its real moment and nothing is asked",
+            name: "a send the tool refuses is reported in the output, never tried another way",
             params: {},
-            input: { ...DUE, dueAt: "1970-01-20T00:00:00.000Z" },
-            output: { orderId: "o1", result: "later" },
-            grant: EXAMPLE_GRANT,
-            effects: [
-                { kind: TOOL.careSchedule, payload: { kind: "delivery-check", ref: "o1", dueAt: "1970-01-20T00:00:00.000Z" } },
-            ],
-            store: STORE,
-        },
-        {
-            name: "an order that has not shipped yet waits one more day, when the delivery day was not known",
-            params: {},
-            input: { ...DUE, suffix: "ship0", dueAt: null },
-            output: { orderId: "o1", result: "later" },
-            grant: EXAMPLE_GRANT,
-            effects: [
+            input: { orderId: "o1", due: DUE, locale: "en" },
+            tools: [
+                { id: TOOL.contactGet, args: {}, answer: PROFILE_AN },
                 {
-                    kind: TOOL.careSchedule,
-                    payload: { kind: "delivery-check", ref: "o1", dueAt: "1970-01-02T00:00:00.000Z", suffix: "ship1" },
+                    id: TOOL.customerMessageSend,
+                    args: { contactId: "c1", text: QUESTION },
+                    answer: refused("no_channel_identity"),
                 },
             ],
-            store: STORE,
-        },
-        {
-            name: "after three days of waiting for the shipment it stops quietly",
-            params: {},
-            input: { ...DUE, suffix: "ship2", dueAt: null },
-            output: { orderId: "o1", result: "closed" },
-            grant: EXAMPLE_GRANT,
-            effects: [],
-            store: STORE,
-        },
-        {
-            name: "a customer who asked to be left alone is not asked",
-            params: {},
-            input: DUE,
-            output: { orderId: "o1", result: "closed" },
-            grant: EXAMPLE_GRANT,
-            effects: [],
-            store: { ...STORE, "agent-lead-memory": [careMemoryRowOf("l1", { careOptOut: true })] },
+            agent: [{ answer: { text: QUESTION } }],
+            output: { orderId: "o1", sent: false, refusal: "no_channel_identity" },
         },
     ],
 })

@@ -1,3 +1,4 @@
+import { brainChangeKind } from "@nivo-lite/agent-sdk/team-chat"
 import type {
     BrainChangeCardView,
     BrainChangeCost,
@@ -12,7 +13,7 @@ import type { TeamCardMessage } from "./team-chat-audience.contracts"
 import { lineClientIdOf } from "./team-chat.policy"
 
 /** The kind of a truth-graph change card. */
-export const BRAIN_CHANGE_MESSAGE_KIND = "brain.change"
+export const BRAIN_CHANGE_MESSAGE_KIND: typeof brainChangeKind.id = brainChangeKind.id
 
 /** What a value reads as on the card's one line when there is none. */
 const NONE = "-"
@@ -28,7 +29,7 @@ export const mergedEvidenceOf = (
     before: ReadonlyArray<BrainChangeEvidence>,
     now: ReadonlyArray<BrainChangeEvidence>,
 ): ReadonlyArray<BrainChangeEvidence> => {
-    const seen = new Set(before.map(evidenceKeyOf))
+    const seen = new Set(before.map((item) => evidenceKeyOf(item)))
     const added = now.filter((one) => !seen.has(evidenceKeyOf(one)))
     return [...before, ...added].slice(-BRAIN_CHANGE_EVIDENCE_MAX)
 }
@@ -81,7 +82,8 @@ export const brainChangeMessageOf = (payload: BrainChangePayload): TeamCardMessa
 /** A stored line read as JSON, or undefined when it is none. */
 const parsedOf = (agentMessage: string): unknown => {
     try {
-        return JSON.parse(agentMessage) as unknown
+        const parsed: unknown = JSON.parse(agentMessage)
+        return parsed
     } catch {
         return undefined
     }
@@ -105,8 +107,8 @@ export const brainChangeOfMessage = (message: TeamCardMessage | null): BrainChan
 }
 
 /**
- * A `brain.change` card as one viewer sees it, or null when the line is no such card. Only the workspace owner is offered "Đồng ý"
- * (founder-only apply); the owner and a manager are offered "Không"; anyone else reads it. Nothing is offered once it is not open.
+ * A `brain.change` card as one viewer sees it, or null when the line is no such card. Only the workspace owner is offered "Dong y"
+ * (founder-only apply); the owner and a manager are offered "Khong"; anyone else reads it. Nothing is offered once it is not open.
  */
 export const brainChangeCardViewOf = (
     agentMessage: string | null,

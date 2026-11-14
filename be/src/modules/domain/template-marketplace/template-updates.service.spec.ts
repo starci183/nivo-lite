@@ -1,15 +1,21 @@
 import { Test } from "@nestjs/testing"
 import * as sdk from "@nivo-lite/agent-sdk/template"
-import type { GraphDocument as SdkGraph } from "@nivo-lite/agent-sdk/template"
+import { instantiate, type GraphDocument as SdkGraph } from "@nivo-lite/agent-sdk/template"
 import { builder, mock } from "@starci/jest-preset"
-import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
-import type { GraphDocument } from "@modules/domain/agent-graphs"
-import { AgentTemplateVersionsService, TemplateRecordsService } from "@modules/domain/agent-templates"
-import type { TemplateInstallView, TemplateLicenseView } from "@modules/domain/agent-templates"
-import { instantiate } from "@nivo-lite/agent-sdk/template"
-import type { StoredVersion } from "@modules/domain/agent-templates"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import {
+    AgentGraphPublishService,
+    AgentGraphsService,
+    graphDocumentSchema,
+    type GraphDocument,
+} from "@modules/domain/agent-graphs"
+import {
+    AgentTemplateVersionsService,
+    TemplateRecordsService,
+    type TemplateInstallView,
+    type TemplateLicenseView,
+    type StoredVersion,
+} from "@modules/domain/agent-templates"
+import { WorkspaceMembersService, type WorkspaceMember } from "@modules/domain/workspace-members"
 import { amountIs, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import {
     CREATOR,
@@ -370,5 +376,46 @@ describe("TemplateUpdatesService.accept refusals", () => {
             TemplateMarketplaceErrorCode.UpdateUnavailable,
         )
         expect(publish.publishTemplate).not.toHaveBeenCalled()
+    })
+})
+
+describe("TemplateUpdatesService.accept and the rights the updated flow asks for", () => {
+    const AGREED = [{ nodeKey: "ledger", connectionId: "c-books", operation: "op", mode: "ask" }]
+
+    it("publishes exactly as before when the call agrees nothing: no fifth argument, with or without an empty list", async () => {
+        const { service, publish } = await build()
+
+        await service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"])
+        await service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"], [])
+        await service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"], null)
+
+        expect(publish.publishTemplate.mock.calls.map((call) => call.length)).toEqual([4, 4, 4])
+    })
+
+    it("hands the entries the owner agreed to the publish, read as modes: one that is neither auto nor ask agrees nothing", async () => {
+        const { service, publish } = await build()
+        const sent = [...AGREED, { nodeKey: "ledger", connectionId: "c-books", operation: "other", mode: "always" }]
+
+        await service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"], sent)
+
+        expect(publish.publishTemplate.mock.calls[0]?.[4]).toEqual(AGREED)
+    })
+
+    it("lets the refusal that lists the rights reach the caller as it is, and leaves the install on its version", async () => {
+        const { service, publish, records } = await build()
+        const offer = await service.offer(BUYER, "ws-buyer", "inst-1")
+        const every = offer?.units.map((unit) => unit.id) ?? []
+        const refusal = new TemplateMarketplaceError({
+            // The gate's own refusal passes through unchanged; this capability's error stands in for it here.
+            code: TemplateMarketplaceErrorCode.UpdateUnavailable,
+            params: { rights: "[the list]" },
+        })
+        publish.publishTemplate.mockRejectedValueOnce(refusal)
+
+        await expect(service.accept(BUYER, "ws-buyer", "inst-1", every)).rejects.toBe(refusal)
+        expect(records.moveInstall).not.toHaveBeenCalled()
+        await service.accept(BUYER, "ws-buyer", "inst-1", every, AGREED)
+
+        expect(records.moveInstall).toHaveBeenCalledTimes(1)
     })
 })

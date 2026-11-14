@@ -73,9 +73,7 @@ export const BrainAskBase = (props: BrainAskBaseProps) => {
         <Page
             header={{
                 ...view.header.heading,
-                actions: (
-                    <BrainHeaderActions review={view.header.actions.review} add={null} onReview={props.on.reviewAll} />
-                ),
+                actions: <BrainHeaderActions add={null} />,
                 tabs: brainHeaderTabs({ tabs: view.header.tabs, onSelect: props.on.selectTab }),
             }}
             measure="product"

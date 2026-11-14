@@ -63,7 +63,7 @@ const ALIASES: Readonly<Record<string, string>> = {
 }
 
 /** The lookup key of a bank spelling: upper case, without spaces, dashes, dots or underscores. */
-const keyOf = (spelling: string): string => spelling.toUpperCase().replace(/[\s._-]+/gu, "")
+const keyOf = (spelling: string): string => spelling.toUpperCase().replaceAll(/[\s._-]+/gu, "")
 
 /**
  * The human bank name of a bank code or of a provider's spelling of it (`MBBANK`, `MBBank` and `MB` all read "MB Bank"); an unlisted
@@ -74,3 +74,8 @@ export const bankDisplayNameOf = (bankCode: string): string => {
     const key = keyOf(code)
     return BANK_NAMES[key] ?? BANK_NAMES[ALIASES[key] ?? ""] ?? code
 }
+
+/** The banks a shop owner can pick, by code with their display name, in the order NIVO lists them (the picker's options). */
+export const LISTED_BANKS: ReadonlyArray<{ readonly code: string; readonly name: string }> = Object.entries(BANK_NAMES).map(
+    ([code, name]) => ({ code, name }),
+)

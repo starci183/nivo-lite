@@ -1,6 +1,5 @@
 import { SurfaceCard } from "@starci/grammar/common"
-import { WaitingLines } from "@/components/composites/WaitingLines"
-import type { WaitingLine } from "@/components/composites/WaitingLines"
+import { WaitingLines, type WaitingLine } from "@/components/composites/WaitingLines"
 
 /** The words and the skeleton lines of the landing. */
 export interface AgentLandingBaseProps {

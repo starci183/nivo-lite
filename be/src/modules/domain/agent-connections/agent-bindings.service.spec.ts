@@ -102,7 +102,7 @@ describe("AgentBindingsService > agentsFor", () => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, []] })
         const { service, agents } = await build(em)
 
-        await expect(service.agentsFor("c1", "inbound_chat", {})).resolves.toEqual([])
+        await expect(service.agentsFor("c1", "inbound_chat")).resolves.toEqual([])
         expect(agents.activeCreatedAmong).not.toHaveBeenCalled()
     })
 
@@ -113,6 +113,32 @@ describe("AgentBindingsService > agentsFor", () => {
         const bound = await service.agentsFor("c1", "inbound_chat")
 
         expect(bound.map((agent) => agent.id)).toEqual(["a1"])
+    })
+})
+
+describe("AgentBindingsService > owningAgentOf", () => {
+    it("answers the one front door of the connection of the workspace (the oldest bound inbound agent)", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
+        const { service, agents } = await build(em, { agents: [...INBOUND_AGENTS].reverse() })
+
+        await expect(service.owningAgentOf("w1", "c1")).resolves.toBe("a1")
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, {
+            where: { workspaceId: "w1", connectionId: "c1", purpose: "inbound_chat" },
+            take: 200,
+        })
+        expect(agents.activeCreatedAmong).toHaveBeenCalledWith("w1", ["a1", "a2", "a3"], 200)
+    })
+
+    it("answers the next bound agent when the first is not active, and null when nobody answers the connection", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
+        const second = INBOUND_AGENTS[1] ?? agentOf("a2", "booking", "Booker", 2)
+        const { service } = await build(em, { agents: [second] })
+        await expect(service.owningAgentOf("w1", "c1")).resolves.toBe("a2")
+
+        const none = mockEntityManager({ find: [AgentConnectionEntity, []] })
+        const empty = await build(none)
+        await expect(empty.service.owningAgentOf("w1", "c1")).resolves.toBeNull()
+        expect(empty.agents.activeCreatedAmong).not.toHaveBeenCalled()
     })
 })
 
@@ -188,31 +214,14 @@ describe("AgentBindingsService > connectionsOfAgent", () => {
 })
 
 describe("AgentBindingsService > routing", () => {
-    it("makes the chatbot the front door and hands over to the booking and sales agents", async () => {
+    it("makes the oldest bound inbound agent the one front door of the connection", async () => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
         const { service } = await build(em, { agents: INBOUND_AGENTS })
 
         const route = await service.routeInbound("c1")
 
         expect(route.front?.id).toBe("a1")
-        expect(route.handovers.map((agent) => agent.id)).toEqual(["a2", "a3"])
-    })
-
-    it("lists the bound agents of other modules a conversation can hand over to", async () => {
-        const em = mockEntityManager({ find: [AgentConnectionEntity, INBOUND_LINKS] })
-        const { service } = await build(em, { agents: INBOUND_AGENTS })
-
-        const handovers = await service.handoversOf("c1", { module: "chatbot" })
-
-        expect(handovers.map((agent) => agent.id)).toEqual(["a2", "a3"])
-    })
-
-    it("hands over to nobody for a conversation without a connection", async () => {
-        const em = mockEntityManager()
-        const { service } = await build(em)
-
-        await expect(service.handoversOf(null, { module: "chatbot" })).resolves.toEqual([])
-        expect(em.find).not.toHaveBeenCalled()
+        expect(route.handovers).toEqual([])
     })
 })
 
@@ -239,12 +248,7 @@ describe("AgentBindingsService > grant", () => {
         expect(write?.callsOf("values")).toEqual([
             [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "inbound_chat" }],
         ])
-        expect(write?.callsOf("orUpdate")).toEqual([
-            [
-                ["purpose"],
-                ["agent_id", "connection_id"],
-            ],
-        ])
+        expect(write?.callsOf("orUpdate")).toEqual([[["purpose"], ["agent_id", "connection_id"]]])
     })
 
     it.each([
@@ -459,5 +463,55 @@ describe("AgentBindingsService > grantsWithAgents", () => {
 
         await expect(service.grantsWithAgents("u1", "w1")).resolves.toEqual([])
         expect(agents.activeCreatedAmong).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentBindingsService > channelsWithoutOtherFrontDoor", () => {
+    const inbound = (agentId: string, connectionId: string) =>
+        linkOf({ agentId, connectionId, purpose: "inbound_chat" })
+
+    it("lists the connections the agent is the inbound front door of that no other active agent answers, in the connections' order", async () => {
+        const em = mockEntityManager({
+            find: [
+                AgentConnectionEntity,
+                [
+                    inbound("a1", "c1"),
+                    inbound("a1", "c2"),
+                    inbound("a1", "c3"),
+                    inbound("a2", "c2"),
+                    inbound("a3", "c3"),
+                ],
+            ],
+        })
+        // a2 is active and also answers c2; a3 is paused (not among the active agents), so c3 has no other front door.
+        const { service, connections } = await build(em, {
+            agents: [agentOf("a2", "sales", "Seller", 2)],
+            connections: [connectionOf("c1", "connected", 1), connectionOf("c3", "connected", 3)],
+        })
+
+        const lone = await service.channelsWithoutOtherFrontDoor("w1", "a1")
+
+        expect(lone.map((connection) => connection.id)).toEqual(["c1", "c3"])
+        expect(lone.map((connection) => connection.purpose)).toEqual(["inbound_chat", "inbound_chat"])
+        expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, {
+            where: { workspaceId: "w1", purpose: "inbound_chat" },
+            take: 200,
+        })
+        expect(connections.factsOf).toHaveBeenCalledWith(["c1", "c3"], 200)
+    })
+
+    it("lists nothing for an agent that is the front door of no channel, and never reads a connection for it", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [inbound("a2", "c2")]] })
+        const { service, connections } = await build(em)
+
+        await expect(service.channelsWithoutOtherFrontDoor("w1", "a1")).resolves.toEqual([])
+        expect(connections.factsOf).not.toHaveBeenCalled()
+    })
+
+    it("leaves out a disconnected connection: it answers nobody already", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [inbound("a1", "c1")]] })
+        const { service } = await build(em, { connections: [connectionOf("c1", "disconnected", 1)] })
+
+        await expect(service.channelsWithoutOtherFrontDoor("w1", "a1")).resolves.toEqual([])
     })
 })

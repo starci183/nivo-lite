@@ -323,9 +323,6 @@ export type OptionalId = string | null
 /** The HTTPS address of an agent picture, or null for the generated avatar. */
 export type OptionalAvatarUrl = string | null
 
-/** A text, or null when there is none. */
-export type OptionalAgentText = string | null
-
 /** The settings of an installation: a free-form bag the modules lane owns. */
 export interface AgentSettingsBag {
     /** Any setting. */
@@ -378,7 +375,7 @@ export interface AgentOwners {
     readonly fallbackMemberId: string | null
 }
 
-/** What a manager sets about the ownership of one agent: a full replacement of the five settings. */
+/** What a manager sets about the ownership of one agent: a full replacement of the four settings. */
 export interface OwnershipChange {
     /** The member in charge of the agent. */
     readonly ownerMemberId: string
@@ -388,8 +385,6 @@ export interface OwnershipChange {
     readonly assignableRoles: ReadonlyArray<string>
     /** The department rooms (keys) whose members may hand the agent work. */
     readonly assignableRooms: ReadonlyArray<string>
-    /** The other agents it may pass work to. */
-    readonly canTagAgentIds: ReadonlyArray<string>
 }
 
 /** A department room as the ownership page names it. */
@@ -400,25 +395,13 @@ export interface RoomLabel {
     readonly name: string
 }
 
-/** An agent another agent may pass work to. */
-export interface TagTarget {
-    /** The agent. */
-    readonly id: string
-    /** The display name. */
-    readonly name: string
-    /** The module it belongs to. */
-    readonly module: string
-    /** active or paused. */
-    readonly status: string
-}
-
 /** A person in charge of an agent, with whether they can answer today. */
 export interface OwnerCard extends MemberRef {
     /** False when the member was removed or disabled. */
     readonly active: boolean
 }
 
-/** Everything the profile page says about who answers for an agent, who may give it work and who it may pass work to. */
+/** Everything the profile page says about who answers for an agent and who may give it work. */
 export interface AgentOwnership {
     /** The agent. */
     readonly agentId: string
@@ -432,6 +415,22 @@ export interface AgentOwnership {
     readonly assignableRoles: ReadonlyArray<WorkspaceRole>
     /** The rooms whose members may hand the agent work. */
     readonly assignableRooms: ReadonlyArray<RoomLabel>
-    /** The agents it may pass work to. */
-    readonly canTag: ReadonlyArray<TagTarget>
+}
+
+/** The workflow a call names: its id and the version it is pinned to. */
+export interface TagWorkflowPin {
+    /** The id of the workflow called. */
+    readonly workflow: string
+    /** The version pinned, or `latest`. */
+    readonly version: number | "latest"
+}
+
+/** What a tag's context names of a workflow call: the pin, the mapped params and the calling run (null for none). */
+export interface TagWorkflowCall {
+    /** The workflow and version the call is pinned to. */
+    readonly pin: TagWorkflowPin
+    /** The params mapped for the call. */
+    readonly params: Readonly<Record<string, unknown>>
+    /** The run that makes the call, or null. */
+    readonly runId: string | null
 }

@@ -10,14 +10,19 @@ type AgentWorkflowsPageProps = {
     readonly installationId: string
 }
 
-/** The document title of the workflows section of setup. */
+/** The document title of the Workflows tab. */
 export const agentWorkflowsMetadata = async (): Promise<Metadata> => {
     const t = await getTranslations("agentWorkflows")
     return { title: t("tabWorkflows") }
 }
 
-/** The Workflows section of Setup for one instance: the connected block reads the workflows in the browser. */
+/** The Workflows tab of one instance: the connected block reads the workflows in the browser. */
 export const AgentWorkflowsPage = (props: AgentWorkflowsPageProps) => {
     if (!isModuleKey(props.module)) notFound()
     return <AgentWorkflowsPageBase props={{ module: props.module, installationId: props.installationId }} />
 }
+
+/** The same Workflows tab while the route loads: the block reads the agent from the address and draws its own skeletons. */
+export const AgentWorkflowsLoadingPage = () => (
+    <AgentWorkflowsPageBase props={{ module: undefined, installationId: undefined }} />
+)

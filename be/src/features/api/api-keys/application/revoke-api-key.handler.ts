@@ -1,14 +1,12 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ApiKeysService } from "@modules/domain/api-keys"
+import { ApiKeysService, type ApiKeyView } from "@modules/domain/api-keys"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { RevokeApiKeyResult } from "./revoke-api-key.contracts"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RevokeApiKeyCommand } from "./revoke-api-key.command"
 
 @CommandHandler(RevokeApiKeyCommand)
 /** Revokes a workspace API key through one domain-service call that checks the caller manages the workspace. */
-export class RevokeApiKeyHandler extends ICQRSHandler<RevokeApiKeyCommand, RevokeApiKeyResult> {
+export class RevokeApiKeyHandler extends ICQRSHandler<RevokeApiKeyCommand, ApiKeyView> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly apiKeys: ApiKeysService,
@@ -16,7 +14,7 @@ export class RevokeApiKeyHandler extends ICQRSHandler<RevokeApiKeyCommand, Revok
         super(logger)
     }
 
-    protected override process(command: RevokeApiKeyCommand): Promise<RevokeApiKeyResult> {
+    protected override process(command: RevokeApiKeyCommand): Promise<ApiKeyView> {
         return this.apiKeys.revokeKey(
             command.params.principal.id,
             command.params.request.workspaceId,

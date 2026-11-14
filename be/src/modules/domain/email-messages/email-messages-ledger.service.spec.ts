@@ -7,7 +7,7 @@ import { EmailMessageEntity } from "./persistence/entities"
 
 describe("EmailMessagesLedgerService", () => {
     describe("remindedInvoiceIds", () => {
-        it("lists the distinct invoice ids of the reminders sent or waiting since the instant, bounded", async () => {
+        it("lists the distinct invoice ids of the reminders sent since the instant, bounded", async () => {
             const em = mockEntityManager()
             const fakes = queueQueryBuilders(em, [{ getRawMany: [{ invoiceId: "i-1" }, { invoiceId: null }] }])
             const moduleRef = await Test.createTestingModule({

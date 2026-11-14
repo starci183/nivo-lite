@@ -8,7 +8,6 @@ import type {
     LensLanes,
     OptionalId,
     OptionalOpenGaps,
-    OptionalAgentText,
 } from "./agents.contracts"
 
 /** A module installation (an agent instance) as the agents capability needs it. Owned by the modules lane (module_installations). */
@@ -146,21 +145,6 @@ export interface KnowledgeLens {
     waitingFactsOf(workspaceId: string, module: string, installationId: OptionalId): Promise<number>
 }
 
-/**
- * What the module definitions give the bundle. The modules lane (L13) implements it from the typed catalog and the reply contract
- * constants of the booking, loyalty and hiring lanes; the app root binds it to the token `AGENTS_MODULES`.
- */
-export interface ModuleProfiles {
-    /** The knowledge folder of a module key, or null when the key is not a module. */
-    knowledgeFolderOf(module: string): OptionalAgentText
-    /** The reply contract of the module given the base customer contract: the base itself (chatbot), the base with the module addendum (booking, loyalty), its own contract (hiring) or null. */
-    replyContractOf(module: string, base: string): OptionalAgentText
-    /** The chat-intake clause of the hiring application that the base contract embeds ("" when none). */
-    applicationClause(): string
-    /** The JSON member of the hiring application that the base contract embeds ("" when none). */
-    applicationShape(): string
-}
-
 /** A connection an agent is bound to, as the dashboard of the agents capability reads it. */
 export interface BoundConnectionView {
     /** The connection. */
@@ -254,9 +238,4 @@ export type OptionalOwnerAgentId = string | null
 export interface ConversationChannelOwners {
     /** The agent of `module` that answers the channel the conversation came in on; null when it came in on none or no agent of the role answers it. */
     ownerAgentOf(workspaceId: string, conversationId: string, module: string): Promise<OptionalOwnerAgentId>
-    /**
-     * The agent of `module` that answers the channel of the customer's newest conversation that came in on a connection; null when the
-     * customer has none or no agent of the role answers it. For a tag that names a customer but no conversation (a payment event).
-     */
-    ownerAgentOfLead(workspaceId: string, leadId: string, module: string): Promise<OptionalOwnerAgentId>
 }

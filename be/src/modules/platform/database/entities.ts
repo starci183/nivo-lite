@@ -2,76 +2,50 @@ import { appErrorsEntities } from "@modules/domain/app-errors"
 import { agentAccessLogEntities } from "@modules/domain/agent-access-log"
 import { agentConnectionsEntities } from "@modules/domain/agent-connections"
 import { agentsEntities } from "@modules/domain/agents"
+import { agentGraphsEntities } from "@modules/domain/agent-graphs"
+import { agentRunsEntities } from "@modules/domain/agent-runs"
+import { graphNodesEntities } from "@modules/domain/graph-nodes"
+import { agentThreadsEntities } from "@modules/domain/agent-threads"
 import { aiGenerationsEntities } from "@modules/domain/ai-generations"
 import { aiQuotaOverridesEntities } from "@modules/domain/ai-quota-overrides"
 import { aiUsageEventsEntities } from "@modules/domain/ai-usage-events"
 import { apiKeysEntities } from "@modules/domain/api-keys"
 import { appCommandsEntities } from "@modules/domain/app-commands"
-import { approvalRequestsEntities } from "@modules/domain/approval-requests"
-import { authorityEntities } from "@modules/domain/authority"
-import { authorityActionsEntities } from "@modules/domain/authority-actions"
-import { authorityRulesEntities } from "@modules/domain/authority-rules"
-import { automationPipelinesEntities } from "@modules/domain/automation-pipelines"
-import { automationTemplatesEntities } from "@modules/domain/automation-templates"
-import { bankFeedInboxEntities } from "@modules/domain/bank-feed-inbox"
 import { connectionPollEntities } from "@modules/domain/connection-poll"
 import { billingEntities } from "@modules/domain/billing"
-import { bookingExceptionsEntities } from "@modules/domain/booking-exceptions"
-import { bookingHoursEntities } from "@modules/domain/booking-hours"
-import { bookingRemindersEntities } from "@modules/domain/booking-reminders"
-import { bookingResourcesEntities } from "@modules/domain/booking-resources"
-import { bookingServicesEntities } from "@modules/domain/booking-services"
-import { bookingSettingsEntities } from "@modules/domain/booking-settings"
-import { bookingWaitlistEntities } from "@modules/domain/booking-waitlist"
-import { bookingsEntities } from "@modules/domain/bookings"
 import { brainEntities } from "@modules/domain/brain"
 import { brainCommandsEntities } from "@modules/domain/brain-commands"
-import { brainDossiersEntities } from "@modules/domain/brain-dossiers"
 import { brainEvalCasesEntities } from "@modules/domain/brain-eval-cases"
 import { brainExtractionsEntities } from "@modules/domain/brain-extractions"
 import { brainFactsEntities } from "@modules/domain/brain-facts"
 import { brainLessonsEntities } from "@modules/domain/brain-lessons"
 import { channelConnectionsEntities } from "@modules/domain/channel-connections"
-import { channelReceiptsEntities } from "@modules/domain/channel-receipts"
-import { chatFilesEntities } from "@modules/domain/chat-files"
 import { teamChatEntities } from "@modules/domain/team-chat"
 import { connectionCommandsEntities } from "@modules/domain/connection-commands"
 import { connectionSecretsEntities } from "@modules/domain/connection-secrets"
 import { connectionsEntities } from "@modules/domain/connections"
 import { connectorInterestEntities } from "@modules/domain/connector-interest"
-import { contentBrandProposalsEntities } from "@modules/domain/content-brand-proposals"
-import { contentCadenceEntities } from "@modules/domain/content-cadence"
-import { contentEngagementDailyEntities } from "@modules/domain/content-engagement-daily"
-import { contentItemsEntities } from "@modules/domain/content-items"
-import { contentPillarsEntities } from "@modules/domain/content-pillars"
-import { contentPlansEntities } from "@modules/domain/content-plans"
-import { contentSettingsEntities } from "@modules/domain/content-settings"
-import { contentWeeklyReportsEntities } from "@modules/domain/content-weekly-reports"
 import { creditsEntities } from "@modules/domain/credits"
+import { contactsEntities } from "@modules/domain/contacts"
+import { accountDataEntities } from "@modules/domain/account-data"
 import { dataRecordsEntities } from "@modules/domain/data-records"
 import { dataSyncRunsEntities } from "@modules/domain/data-sync-runs"
-import { decisionsEntities } from "@modules/domain/decisions"
 import { dossierReviewEntities } from "@modules/domain/dossier-review"
 import { emailMessagesEntities } from "@modules/domain/email-messages"
 import { eventsEntities } from "@modules/domain/events"
-import { hiringEntities } from "@modules/domain/hiring"
 import { identityEntities } from "@modules/domain/identity"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
-import { inboxLeadsEntities } from "@modules/domain/inbox-leads"
-import { inventoryEntities } from "@modules/domain/inventory"
-import { invoicesEntities } from "@modules/domain/invoices"
+import { websiteIntakeEntities } from "@modules/domain/inbox-leads"
 import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
 import { knowledgeGapsEntities } from "@modules/domain/knowledge-gaps"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { knowledgeSuggestionStateEntities } from "@modules/domain/knowledge-suggestion-state"
-import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
-import { mcpConnectorsEntities } from "@modules/domain/mcp-connectors"
-import { mcpGatewayReceiptsEntities } from "@modules/domain/mcp-gateway-receipts"
-import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
-import { memberGrantsEntities } from "@modules/domain/member-grants"
-import { messagesEntities } from "@modules/domain/messages"
+import { customerRoutesEntities } from "@modules/domain/customer-routes"
+import { leadFreezesEntities } from "@modules/domain/lead-freezes"
+import { toolCallLogEntities } from "@modules/domain/tool-call-log"
+import { toolReceiptsEntities } from "@modules/domain/tool-receipts"
+import { toolGrantsEntities } from "@modules/domain/tool-grants"
 import { metaCommentsEntities } from "@modules/domain/meta-comments"
-import { metaInboxEntities } from "@modules/domain/meta-inbox"
 import { metaThreadsEntities } from "@modules/domain/meta-threads"
 import { moduleContextNotesEntities } from "@modules/domain/module-context-notes"
 import { moduleContextVersionsEntities } from "@modules/domain/module-context-versions"
@@ -81,33 +55,25 @@ import { moduleSetupSessionsEntities } from "@modules/domain/module-setup-sessio
 import { moduleSetupWritesEntities } from "@modules/domain/module-setup-writes"
 import { modulesEntities } from "@modules/domain/modules"
 import { nivoKnowledgeEntities } from "@modules/domain/nivo-knowledge"
-import { officeRoomsEntities } from "@modules/domain/office-rooms"
 import { paymentOrderRequestsEntities } from "@modules/domain/payment-order-requests"
 import { paymentOrdersEntities } from "@modules/domain/payment-orders"
 import { platformAdminEntities } from "@modules/domain/platform-admin"
 import { platformAuditEntities } from "@modules/domain/platform-audit"
+import { providerTriggersEntities } from "@modules/domain/provider-triggers"
 import { publicApiEntities } from "@modules/domain/public-api"
 import { publicDocumentsEntities } from "@modules/domain/public-documents"
 import { sepayTransactionsEntities } from "@modules/domain/sepay-transactions"
-import { shiftsEntities } from "@modules/domain/shifts"
 import { staffEntities } from "@modules/domain/staff"
-import { supplierPayablesEntities } from "@modules/domain/supplier-payables"
-import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
 import { agentTemplatesEntities } from "@modules/domain/agent-templates"
 import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { agentWorkEntities } from "@modules/domain/agent-work"
 import { agentCheckpointsEntities } from "@modules/domain/agent-checkpoints"
-import { videoBrandKitsEntities } from "@modules/domain/video-brand-kits"
-import { videoDelegationsEntities } from "@modules/domain/video-delegations"
-import { videoProjectVersionsEntities } from "@modules/domain/video-project-versions"
-import { videoProjectsEntities } from "@modules/domain/video-projects"
-import { videoRendersEntities } from "@modules/domain/video-renders"
 import { workItemsEntities } from "@modules/domain/work-items"
 import { workspaceInvitesEntities } from "@modules/domain/workspace-invites"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+import { vectorSyncEntities } from "@modules/domain/vector-sync"
 import { workspacesEntities } from "@modules/domain/workspaces"
-import { zaloInboxEntities } from "@modules/domain/zalo-inbox"
 import { zaloWizardDraftsEntities } from "@modules/domain/zalo-wizard-drafts"
 import type { DatabaseOptions } from "./database.options"
 import { databaseEntities } from "./persistence/entities"
@@ -125,76 +91,50 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...agentAccessLogEntities,
     ...agentConnectionsEntities,
     ...agentsEntities,
+    ...agentGraphsEntities,
+    ...agentRunsEntities,
+    ...graphNodesEntities,
+    ...agentThreadsEntities,
     ...aiGenerationsEntities,
     ...aiQuotaOverridesEntities,
     ...aiUsageEventsEntities,
     ...apiKeysEntities,
     ...appCommandsEntities,
-    ...approvalRequestsEntities,
-    ...authorityEntities,
-    ...authorityActionsEntities,
-    ...authorityRulesEntities,
-    ...automationPipelinesEntities,
-    ...automationTemplatesEntities,
-    ...bankFeedInboxEntities,
     ...connectionPollEntities,
     ...billingEntities,
-    ...bookingExceptionsEntities,
-    ...bookingHoursEntities,
-    ...bookingRemindersEntities,
-    ...bookingResourcesEntities,
-    ...bookingServicesEntities,
-    ...bookingSettingsEntities,
-    ...bookingWaitlistEntities,
-    ...bookingsEntities,
     ...brainEntities,
     ...brainCommandsEntities,
-    ...brainDossiersEntities,
     ...dossierReviewEntities,
     ...brainEvalCasesEntities,
     ...brainExtractionsEntities,
     ...brainFactsEntities,
     ...brainLessonsEntities,
     ...channelConnectionsEntities,
-    ...channelReceiptsEntities,
-    ...chatFilesEntities,
     ...teamChatEntities,
     ...connectionCommandsEntities,
     ...connectionSecretsEntities,
     ...connectionsEntities,
     ...connectorInterestEntities,
-    ...contentBrandProposalsEntities,
-    ...contentCadenceEntities,
-    ...contentEngagementDailyEntities,
-    ...contentItemsEntities,
-    ...contentPillarsEntities,
-    ...contentPlansEntities,
-    ...contentSettingsEntities,
-    ...contentWeeklyReportsEntities,
     ...creditsEntities,
+    ...contactsEntities,
+    ...accountDataEntities,
     ...dataRecordsEntities,
     ...dataSyncRunsEntities,
-    ...decisionsEntities,
     ...emailMessagesEntities,
     ...eventsEntities,
-    ...hiringEntities,
     ...identityEntities,
     ...inboundEventsEntities,
-    ...inboxLeadsEntities,
-    ...inventoryEntities,
-    ...invoicesEntities,
+    ...websiteIntakeEntities,
     ...knowledgeChunksEntities,
     ...knowledgeGapsEntities,
     ...knowledgeSourcesEntities,
     ...knowledgeSuggestionStateEntities,
-    ...mcpCallLogEntities,
-    ...mcpConnectorsEntities,
-    ...mcpGatewayReceiptsEntities,
-    ...mcpToolGrantsEntities,
-    ...memberGrantsEntities,
-    ...messagesEntities,
+    ...leadFreezesEntities,
+    ...customerRoutesEntities,
+    ...toolCallLogEntities,
+    ...toolReceiptsEntities,
+    ...toolGrantsEntities,
     ...metaCommentsEntities,
-    ...metaInboxEntities,
     ...metaThreadsEntities,
     ...moduleContextNotesEntities,
     ...moduleContextVersionsEntities,
@@ -204,33 +144,25 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...moduleSetupWritesEntities,
     ...modulesEntities,
     ...nivoKnowledgeEntities,
-    ...officeRoomsEntities,
     ...paymentOrderRequestsEntities,
     ...paymentOrdersEntities,
     ...platformAdminEntities,
     ...platformAuditEntities,
+    ...providerTriggersEntities,
     ...publicApiEntities,
     ...publicDocumentsEntities,
     ...sepayTransactionsEntities,
-    ...shiftsEntities,
     ...staffEntities,
-    ...supplierPayablesEntities,
-    ...telegramInboxEntities,
     ...agentTemplatesEntities,
     ...templateMarketplaceEntities,
     ...entityEngineEntities,
     ...agentWorkEntities,
     ...agentCheckpointsEntities,
-    ...videoBrandKitsEntities,
-    ...videoDelegationsEntities,
-    ...videoProjectVersionsEntities,
-    ...videoProjectsEntities,
-    ...videoRendersEntities,
     ...workItemsEntities,
     ...workspaceInvitesEntities,
     ...workspaceMembersEntities,
+    ...vectorSyncEntities,
     ...workspacesEntities,
-    ...zaloInboxEntities,
     ...zaloWizardDraftsEntities,
     ...databaseEntities,
     ...inboxEntities,

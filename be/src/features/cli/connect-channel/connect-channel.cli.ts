@@ -1,6 +1,5 @@
 import { Command, CommandRunner, Option } from "nest-commander"
-import { ChannelProvisioningService } from "@modules/domain/channel-provisioning"
-import type { ProvisionFlags } from "@modules/domain/channel-provisioning"
+import { ChannelProvisioningService, type ProvisionFlags } from "@modules/domain/channel-provisioning"
 
 @Command({
     name: "connect-channel",

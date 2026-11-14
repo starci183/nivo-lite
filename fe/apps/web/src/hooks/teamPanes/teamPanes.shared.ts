@@ -1,6 +1,13 @@
 import type { useFormatter, useTranslations } from "next-intl"
-import { ROLE_KEYS, canManageMember, roleChoices } from "@/hooks/team"
-import type { TeamDeclinedView, TeamInviteView, TeamMemberView, TeamRole } from "@/hooks/team"
+import {
+    ROLE_KEYS,
+    canManageMember,
+    roleChoices,
+    type TeamDeclinedView,
+    type TeamInviteView,
+    type TeamMemberView,
+    type TeamRole,
+} from "@/hooks/team"
 import type { InviteAction, InviteRowView, TeamPanesBaseProps } from "@/modules/types"
 
 /** Derived from the panes contract. */

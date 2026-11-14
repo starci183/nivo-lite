@@ -1,7 +1,7 @@
 "use client"
 
 import { useMoneyWizardActions } from "./useMoneyWizardActions"
-import { viewOf } from "./money-wizard.shared"
+import { viewOf, type MoneyFlags, type FollowDraft, type AccountForm } from "./money-wizard.shared"
 import { PROVIDERS } from "@/hooks/connection-providers"
 import { useSetConnectionAgents } from "@/hooks/connections"
 import type {
@@ -19,7 +19,6 @@ import { useTranslations } from "next-intl"
 import { useMoneyCommands } from "./useMoneyCommands"
 import { useMoneyWizardState } from "./useMoneyWizardState"
 
-import type { MoneyFlags, FollowDraft, AccountForm } from "./money-wizard.shared"
 import type { Dispatch, SetStateAction } from "react"
 import type { GuideContext } from "../connection-guides"
 

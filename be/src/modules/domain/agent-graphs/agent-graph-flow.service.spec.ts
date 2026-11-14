@@ -13,7 +13,7 @@ const FLOW: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["channel"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [{ key: "end", kind: "output", step: "stop" }],
 }
 const INPUT = { workspaceId: "ws-1", agentId: "agent-1", installationId: "inst-1", flow: FLOW, installed: INSTALLED }
@@ -44,9 +44,9 @@ describe("AgentGraphFlowService > publish", () => {
 
         await expect(service.publish(INPUT)).resolves.toBe("created")
 
-        expect(graphs.ensure).toHaveBeenCalledWith("ws-1", "agent-1", "inst-1", { nodes: [], rights: [] })
+        expect(graphs.ensure).toHaveBeenCalledWith("ws-1", "agent-1", "inst-1", { nodes: [] })
         expect(graphs.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ kind: "spec", document: { nodes: [], rights: [], flow: FLOW } }),
+            expect.objectContaining({ kind: "spec", document: { nodes: [], flow: FLOW } }),
         )
     })
 
@@ -98,7 +98,7 @@ describe("AgentGraphFlowService > publish", () => {
         await expect(service.publish(INPUT)).resolves.toBe("replaced")
 
         expect(graphs.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ document: { nodes: [], rights: [], flow: FLOW } }),
+            expect.objectContaining({ document: { nodes: [], flow: FLOW } }),
         )
     })
 

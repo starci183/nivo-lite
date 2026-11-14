@@ -7,13 +7,11 @@ import {
     refTextOf,
     resolveRef,
     valueAt,
-} from "@nivo-lite/agent-sdk/node"
-import type {
-    LeadMemorySnapshot,
-    ParamRef,
-    RefScope,
-    Sensitivity,
-    StepMemory,
+    type LeadMemorySnapshot,
+    type ParamRef,
+    type RefScope,
+    type Sensitivity,
+    type StepMemory,
 } from "@nivo-lite/agent-sdk/node"
 import type { RunParamView } from "@/modules/types"
 import { madeFactsOf } from "./agentRuns.facts"
@@ -201,7 +199,7 @@ const rowOf = (
 /** The refs a binding holds, as the text the editor writes them in ("= trigger.leadId"), once each. */
 const sourceOf = (field: string, binding: unknown): string => {
     const refs: ReadonlyArray<ParamRef> = paramRefsOf({ [field]: toJson(binding) }).map((entry) => entry.ref)
-    return [...new Set(refs.map(refTextOf))].join(", ")
+    return [...new Set(refs.map((entry) => refTextOf(entry)))].join(", ")
 }
 
 /** A binding with its legacy refs (`<nodeKey>.<path>`) written as the refs of memory, so one reader resolves them all. */
@@ -226,7 +224,7 @@ const resolvedOf = (binding: unknown, memory: RunMemorySource): unknown => {
     if (isParamRef(binding)) {
         const parsed = parsedOf(binding.$ref, memory)
         const value = parsed === null ? undefined : resolveRef(parsed, scopeOf(memory))
-        return value === undefined || value === null ? binding.default : value
+        return value ?? binding.default
     }
     if (Array.isArray(binding)) return binding.map((member: unknown) => resolvedOf(member, memory))
     if (typeof binding === "object" && binding !== null)

@@ -9,5 +9,9 @@ import type { RenderOf } from "../render-props"
 export const LinkBlock = (props: RenderOf<typeof linkBlock>): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
-    return <Link href={host.navigation.href(props.props.path)}>{words(props.props.label)}</Link>
+    return (
+        <Link href={host.navigation.href(props.props.path)} variant="plain">
+            {words(props.props.label)}
+        </Link>
+    )
 }

@@ -11,6 +11,8 @@ const isNotice = (row: TeamChatMessageRow): boolean =>
     row.side === "incoming" &&
     row.card === null &&
     row.stop == null &&
+    row.backgroundStopped == null &&
+    row.brainChange == null &&
     row.files.length === 0 &&
     row.replyTo === null &&
     row.forwardedFrom === null &&

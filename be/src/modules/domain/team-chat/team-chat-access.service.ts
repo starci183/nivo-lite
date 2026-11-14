@@ -3,9 +3,8 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import type { ChatRoomEntity } from "./persistence/entities"
 import type { ChatMemberRef } from "./team-chat.contracts"
-import { TeamChatStoreService } from "./team-chat-store.service"
-import type { OptionalMessage, OptionalRoom } from "./team-chat-store.service"
-import type {} from "./team-chat-store.contracts"
+import { TeamChatStoreService, type OptionalMessage, type OptionalRoom } from "./team-chat-store.service"
+
 
 /** The most active seats one workspace holds that a membership check reads. */
 const SEATS_MAX = 5000

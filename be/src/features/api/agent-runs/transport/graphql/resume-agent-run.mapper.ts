@@ -1,4 +1,5 @@
-import type { ResumeAgentRunAnswer, ResumeAgentRunRequest } from "../../application/resume-agent-run.contracts"
+import type { AgentRunResumeAnswer } from "@modules/domain/agent-pages"
+import type { ResumeAgentRunRequest } from "../../application/resume-agent-run.contracts"
 import type { AgentRunResumeType } from "./dto/agent-run-resume.type"
 import type { ResumeAgentRunInput } from "./dto/resume-agent-run.input"
 
@@ -10,4 +11,4 @@ export const toResumeAgentRunRequest = (workspaceId: string, input: ResumeAgentR
 })
 
 /** Maps the answer of resumeAgentRun to the GraphQL type. */
-export const toAgentRunResumeType = (result: ResumeAgentRunAnswer): AgentRunResumeType => result
+export const toAgentRunResumeType = (result: AgentRunResumeAnswer): AgentRunResumeType => result

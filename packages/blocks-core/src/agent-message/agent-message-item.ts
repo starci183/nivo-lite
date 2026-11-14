@@ -1,6 +1,10 @@
 import { z } from "zod"
-import { AGENT_MESSAGE_STATES, agentMessageKindOf } from "./agent-message-kinds"
-import type { AgentMessageKind, AgentMessageState } from "./agent-message-kinds"
+import {
+    AGENT_MESSAGE_STATES,
+    agentMessageKindOf,
+    type AgentMessageKind,
+    type AgentMessageState,
+} from "@nivo-lite/agent-sdk/team-chat"
 
 /** The intents a message may have. They are apart from the kind: one agent can send any kind with any intent, and only `ask` and `approve` wait for a person. */
 export const AGENT_MESSAGE_INTENTS = ["notify", "ask", "approve", "report"] as const

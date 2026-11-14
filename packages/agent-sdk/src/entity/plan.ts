@@ -11,11 +11,13 @@ import type {
 import type { EntityDefinition } from "./entity.types"
 import {
     type ExpectedCheck,
+    type ExpectedForeignKey,
     type ExpectedIndex,
     type ExpectedPolicy,
     type ExpectedView,
     expectedChecks,
     expectedExcludes,
+    expectedForeignKey,
     expectedIndexes,
     expectedPolicies,
     expectedPrivileges,
@@ -37,7 +39,7 @@ const sameStrings = (left: ReadonlyArray<string>, right: ReadonlyArray<string>):
     left.length === right.length && left.every((item, index) => item === right[index])
 
 const indexMatches = (have: CatalogIndex, want: ExpectedIndex): boolean =>
-    sameStrings(have.columns.map(normalizeSql), want.parts) &&
+    sameStrings(have.columns.map((entry) => normalizeSql(entry)), want.parts) &&
     have.unique === want.unique &&
     have.method === want.method &&
     (have.predicate !== null) === want.partial
@@ -117,6 +119,17 @@ const checkOps = (partition: CatalogPartition | null, name: string, want: Expect
         ...strictness(id, narrows, widens),
         ...(have.validated ? [] : [op("validate_constraint", id, true, "added NOT VALID, not yet validated")]),
     ]
+}
+
+/** The agent foreign key against the partition's constraints: missing, another rule or target (refused), or not yet validated. */
+const foreignKeyOps = (partition: CatalogPartition | null, name: string, want: ExpectedForeignKey): ReadonlyArray<PlanOp> => {
+    const id = partId(name, "constraint", want.name)
+    const have = partition?.constraints.find((constraint) => constraint.name === want.name && constraint.kind === "foreign")
+    if (have === undefined) return [op("add_foreign_key", id, true, "added NOT VALID, then validated")]
+    if (normalizeSql(have.definition) !== want.definition) {
+        return [op("alter_foreign_key", id, false, "the foreign key exists with another rule or target")]
+    }
+    return have.validated ? [] : [op("validate_constraint", id, true, "added NOT VALID, not yet validated")]
 }
 
 /** One expected index against the partition's indexes: created, altered, or satisfied by name or by structure. */
@@ -241,6 +254,7 @@ const entityOps = (entity: EntityDefinition, snapshot: CatalogSnapshot): Readonl
                       ),
                   ],
         ),
+        ...foreignKeyOps(partition, name, expectedForeignKey(entity)),
         ...indexes.flatMap((want) => indexOps(partition, name, want)),
         ...(partition === null ? [] : orphanOps(partition, checks, excludes, indexes)),
         ...viewPlan,
@@ -255,7 +269,7 @@ export const planOf = (entities: ReadonlyArray<EntityDefinition>, snapshot: Cata
     const declared = new Set<string>(entities.map((entity) => entity.name))
     const views = new Set(entities.flatMap((entity) => expectedView(entity)?.name ?? []))
     return [
-        ...(entities.some(needsTrigram) && !snapshot.extensions.includes("pg_trgm")
+        ...(entities.some((entry) => needsTrigram(entry)) && !snapshot.extensions.includes("pg_trgm")
             ? [
                   op(
                       "create_extension",
@@ -265,7 +279,7 @@ export const planOf = (entities: ReadonlyArray<EntityDefinition>, snapshot: Cata
                   ),
               ]
             : []),
-        ...(entities.some(needsGist) && !snapshot.extensions.includes("btree_gist")
+        ...(entities.some((entry) => needsGist(entry)) && !snapshot.extensions.includes("btree_gist")
             ? [op("create_extension", "extension:btree_gist", true, "EXCLUDE constraints (allowlisted, R259)")]
             : []),
         ...BASE_TABLES.flatMap((table) =>

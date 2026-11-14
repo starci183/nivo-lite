@@ -7,8 +7,11 @@ import type {
 } from "@/modules/api"
 import type { StepsLocale } from "@/modules/workflowSteps"
 
-/** One workflow of the agent as the list answers it. */
-export type WorkflowWire = AgentWorkflowsQuery["agentWorkflows"][number]
+/** One workflow of the agent as the list answers it, with whether its graph shows. */
+export type WorkflowListWire = AgentWorkflowsQuery["agentWorkflows"][number]
+
+/** One workflow of the agent without its readiness: what the detail answers too. */
+export type WorkflowWire = Omit<WorkflowListWire, "readiness">
 
 /** One workflow with its graph, its history and its template diff as the back end answers it. */
 export type WorkflowDetailWire = AgentWorkflowQuery["agentWorkflow"]

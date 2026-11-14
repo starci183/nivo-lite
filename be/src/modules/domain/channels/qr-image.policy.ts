@@ -1,7 +1,7 @@
 import type { ChannelImage } from "./channel-image.contracts"
 
 /** The start of a SePay VietQR image link as the renewal tail writes it (vietQrUrl of channel-connections). */
-const SEPAY_QR_PREFIX = "https://qr.sepay.vn/img?"
+const SEPAY_QR_PREFIX = "https://vietqr.app/img?"
 
 /** A character that ends a link inside a text. */
 const LINK_END = /[\s<>"'`]/u
@@ -36,4 +36,14 @@ export const sepayQrUrlOf = (text: string): OptionalQrUrl => {
 export const picturesAfterQr = (text: string, images: ReadonlyArray<ChannelImage>): ReadonlyArray<ChannelImage> => {
     const qr = sepayQrUrlOf(text)
     return qr === null ? images : images.filter((image) => image.url !== qr)
+}
+
+/**
+ * The pictures that follow a Telegram text: the SePay QR the words link to goes first, as a picture of its own, unless a picture of the send
+ * already is that QR (a payment request carries it in `images[]`), so a customer on Telegram scans the QR as one on Zalo does.
+ */
+export const withQrPicture = (text: string, images: ReadonlyArray<ChannelImage>): ReadonlyArray<ChannelImage> => {
+    const qr = sepayQrUrlOf(text)
+    if (qr === null || images.some((image) => image.url === qr)) return images
+    return [{ url: qr, caption: "" }, ...images]
 }

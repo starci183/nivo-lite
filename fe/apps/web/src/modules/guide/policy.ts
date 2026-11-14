@@ -1,4 +1,4 @@
-import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
+import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
 
 /**
  * The per-route rules of "what to do here": plain code over the figures the app already loads, no AI. A rule reads the signals and
@@ -21,29 +21,14 @@ export interface GuideSignals {
     readonly failedConnections: ReadonlyArray<GuideSignalItem>
     /** Facts the agents proposed and no one has approved. */
     readonly pendingFacts: number
-    /** Findings and customer questions waiting in the Second Brain. */
-    readonly openFindings: number
+    /** Customer questions waiting in the Second Brain. */
     readonly openQuestions: number
-    /** Customers waiting for the owner, and new ones. */
-    readonly leadsWaiting: number
-    readonly leadsNew: number
-    /** Payments that matched no customer. */
-    readonly unmatchedPayments: number
     /** Documents that failed to be read. */
     readonly failedDocuments: number
 }
 
 /** The kinds of line a todo can be, each a key of the `guide.todo` catalog. */
-export type GuideTodoKey =
-    | "grantConnection"
-    | "fixConnection"
-    | "approveFacts"
-    | "reviewFindings"
-    | "answerQuestions"
-    | "answerLeads"
-    | "greetLeads"
-    | "matchPayments"
-    | "retryDocuments"
+export type GuideTodoKey = "grantConnection" | "fixConnection" | "approveFacts" | "answerQuestions" | "retryDocuments"
 
 /** One thing to do on the page. */
 export interface GuideTodo {
@@ -83,32 +68,19 @@ const fixConnection: Rule = (s) =>
 const approveFacts: Rule = (s) =>
     counted(s.pendingFacts, { id: "facts", key: "approveFacts", href: brainTabHref("facts"), target: "brain.review" })
 
-const reviewFindings: Rule = (s) =>
-    counted(s.openFindings, { id: "findings", key: "reviewFindings", href: brainTabHref("todo") })
-
 const answerQuestions: Rule = (s) =>
     counted(s.openQuestions, { id: "questions", key: "answerQuestions", href: brainTabHref("todo") })
-
-const answerLeads: Rule = (s) =>
-    counted(s.leadsWaiting, { id: "leads", key: "answerLeads", href: CONSOLE_ROUTES.inbox })
-
-const greetLeads: Rule = (s) => counted(s.leadsNew, { id: "new", key: "greetLeads", href: CONSOLE_ROUTES.inbox })
-
-const matchPayments: Rule = (s) =>
-    counted(s.unmatchedPayments, { id: "unmatched", key: "matchPayments", href: CONSOLE_ROUTES.inbox })
 
 const retryDocuments: Rule = (s) =>
     counted(s.failedDocuments, { id: "documents", key: "retryDocuments", href: KNOWLEDGE_ROUTES.library })
 
 /** The rules of each page, by the first segment of its path; a page that is not listed has none. */
 export const RULES: Readonly<Record<string, ReadonlyArray<Rule>>> = {
-    overview: [grantConnection, fixConnection, approveFacts, answerLeads, matchPayments],
-    inbox: [answerLeads, matchPayments, greetLeads],
-    brain: [approveFacts, reviewFindings, answerQuestions, retryDocuments],
+    overview: [grantConnection, fixConnection, approveFacts],
+    brain: [approveFacts, answerQuestions, retryDocuments],
     knowledge: [retryDocuments, approveFacts],
     agents: [grantConnection],
     connections: [fixConnection, grantConnection],
-    authority: [approveFacts, answerLeads],
 }
 
 /** The first segment of a path inside the workspace: `/brain?tab=facts` is `brain`, the workspace root is `overview`. */
@@ -126,10 +98,6 @@ export const NO_SIGNALS: GuideSignals = {
     agentsWithoutConnection: [],
     failedConnections: [],
     pendingFacts: 0,
-    openFindings: 0,
     openQuestions: 0,
-    leadsWaiting: 0,
-    leadsNew: 0,
-    unmatchedPayments: 0,
     failedDocuments: 0,
 }

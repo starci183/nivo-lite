@@ -1,35 +1,26 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { parseJsonText } from "@modules/platform/primitives"
 import { GoogleLogEvent } from "./google.log-events"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 import { InjectGoogleOptions } from "./google.decorators"
 import type { GoogleOptions } from "./google.options"
-import { GOOGLE_SCOPE, RENEWAL_GRANT_FIELD } from "./google.contracts"
-import type {
-    CreatedSpreadsheet,
-    GoogleIdentityTokens,
-    GoogleTokenSet,
-    OAuthStateInput,
-    OptionalAccountEmail,
-    OptionalConsentUrl,
-    OptionalOAuthState,
-    ReceivedText,
-    SheetCell,
-    SheetConfig,
-    SheetEventIn,
-    SheetEventResult,
-    SheetRowRef,
-    SheetsApi,
+import {
+    GOOGLE_SCOPE,
+    RENEWAL_GRANT_FIELD,
+    type GoogleIdentityTokens,
+    type GoogleTokenSet,
+    type OAuthStateInput,
+    type OptionalAccountEmail,
+    type OptionalConsentUrl,
+    type OptionalOAuthState,
+    type ReceivedText,
+    type SheetCell,
 } from "./google.contracts"
-import { applySheetEvent, buildCreateBody, buildFormatBody, ordersTab } from "./google-sheet.policy"
 import { signState, stateKey, verifyState } from "./google-state.policy"
-import { buildAuthUrl, redirectUri, sheetUrlOf, sheetsBase, tokenEndpoint, userinfoEndpoint } from "./google-url.policy"
+import { buildAuthUrl, redirectUri, sheetsBase, tokenEndpoint, userinfoEndpoint } from "./google-url.policy"
 
 type Json = Readonly<Record<string, unknown>>
 
@@ -37,31 +28,16 @@ const isJson = (value: unknown): value is Json => typeof value === "object" && v
 
 const textOf = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined)
 
+/** The email a userinfo answer names, or null when it names none (an empty text names none). */
+const emailOf = (value: unknown): string | null => {
+    const text = textOf(value)
+    return text === undefined || text === "" ? null : text
+}
+
 const a1 = (tab: string, range: string): string => encodeURIComponent(`'${tab}'!${range}`)
 
-/** The columns a ledger fills, on the first tab of the sheet the owner named. */
 /** The columns of the ledger tab: date, document, description, in, out, counterpart, category, balance. */
 const LEDGER_COLUMNS = "A:H"
-
-const columnLetter = (width: number): string => String.fromCodePoint(64 + width)
-
-/** Reads a cell reference ending at an offset without retrying an unanchored pattern at every letter. */
-const endingCell = (range: string, end: number): { readonly start: number; readonly row: number } | null => {
-    let digits = end
-    while (digits > 0 && /\d/u.test(range.charAt(digits - 1))) digits -= 1
-    if (digits === end) return null
-    let start = digits
-    while (start > 0 && /[A-Z]/u.test(range.charAt(start - 1))) start -= 1
-    return start === digits ? null : { start, row: Number(range.slice(digits, end)) }
-}
-
-/** The first row of the final cell or cell range reported by Sheets; zero when no reference ends it. */
-const appendedRow = (range: string): number => {
-    const final = endingCell(range, range.length)
-    if (final === null) return 0
-    const first = range[final.start - 1] === ":" ? endingCell(range, final.start - 1) : null
-    return first?.row ?? final.row
-}
 
 @Injectable()
 /** Talks to Google OAuth and the Sheets API for the connections capability: consent urls, tokens, spreadsheets and rows. */
@@ -131,45 +107,11 @@ export class GoogleClient {
                 url: userinfoEndpoint(this.options),
                 headers: { authorization: `Bearer ${tokens.accessToken}` },
             })
-            return textOf(body.email) || null
+            return emailOf(body.email)
         } catch (cause) {
             this.logger.error(GoogleLogEvent.EmailUnavailable, cause)
             return null
         }
-    }
-
-    /** Creates the orders spreadsheet (two tabs, header rows, a sample row) and formats the money column. */
-    async createOrdersSpreadsheet(token: string, title: string): Promise<CreatedSpreadsheet> {
-        const base = sheetsBase(this.options)
-        const created = await this.call({
-            method: "POST",
-            url: `${base}/v4/spreadsheets`,
-            headers: this.bearer(token),
-            body: buildCreateBody(title, this.clock.now()),
-        })
-        const spreadsheetId = textOf(created.spreadsheetId)
-        if (!spreadsheetId) throw new GoogleError({ code: GoogleErrorCode.ContractMismatch })
-        await this.call({
-            method: "POST",
-            url: `${base}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`,
-            headers: this.bearer(token),
-            body: buildFormatBody(),
-        })
-        return { spreadsheetId, spreadsheetUrl: textOf(created.spreadsheetUrl) ?? sheetUrlOf(spreadsheetId) }
-    }
-
-    /** The sheet operations bound to one access token. */
-    sheets(token: string): SheetsApi {
-        return {
-            findRow: (spreadsheetId, codes) => this.findRow(token, spreadsheetId, codes),
-            appendRow: (spreadsheetId, tab, width, row) => this.appendRow(token, spreadsheetId, tab, width, row),
-            updateCells: (spreadsheetId, row, cells) => this.updateCells(token, spreadsheetId, row, cells),
-        }
-    }
-
-    /** Applies one NIVO event to the shop's sheet with an access token; throws on any API failure so the caller retries. */
-    applyEvent(token: string, config: SheetConfig, event: SheetEventIn): Promise<SheetEventResult> {
-        return applySheetEvent(this.sheets(token), config, event, this.clock.now())
     }
 
     /**
@@ -249,68 +191,10 @@ export class GoogleClient {
         return rows.map((row) => (Array.isArray(row) ? row.map(String) : []))
     }
 
-    private async findRow(
-        token: string,
-        spreadsheetId: string,
-        codes: ReadonlyArray<string>,
-    ): Promise<SheetRowRef | null> {
-        const wanted = codes.map((code) => code.trim()).filter(Boolean)
-        if (wanted.length === 0) return null
-        const body = await this.call({
-            method: "GET",
-            url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${a1(ordersTab(), "B:B")}`,
-            headers: this.bearer(token),
-        })
-        const rows: ReadonlyArray<unknown> = Array.isArray(body.values) ? body.values : []
-        const cells = rows.map((row) => (Array.isArray(row) ? String(row[0] ?? "").trim() : ""))
-        for (const code of wanted) {
-            const at = cells.findIndex((cell, index) => index > 0 && cell === code)
-            if (at >= 0) return { row: at + 1, code }
-        }
-        return null
-    }
-
-    private async appendRow(
-        token: string,
-        spreadsheetId: string,
-        tab: string,
-        width: number,
-        row: ReadonlyArray<SheetCell>,
-    ): Promise<number> {
-        const range = a1(tab, `A:${columnLetter(width)}`)
-        const body = await this.call({
-            method: "POST",
-            url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
-            headers: this.bearer(token),
-            body: { majorDimension: "ROWS", values: [row] },
-        })
-        const updates = isJson(body.updates) ? body.updates : {}
-        return appendedRow(textOf(updates.updatedRange) ?? "")
-    }
-
-    private async updateCells(
-        token: string,
-        spreadsheetId: string,
-        row: number,
-        cells: Readonly<Record<string, SheetCell>>,
-    ): Promise<void> {
-        const data = Object.entries(cells).map(([column, value]) => ({
-            range: `'${ordersTab()}'!${column}${row}`,
-            majorDimension: "ROWS",
-            values: [[value]],
-        }))
-        await this.call({
-            method: "POST",
-            url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values:batchUpdate`,
-            headers: this.bearer(token),
-            body: { valueInputOption: "RAW", data },
-        })
-    }
-
     private emailOfIdToken(idToken: string | null): string | null {
         if (idToken === null) return null
         const read = parseJsonText(Buffer.from(idToken.split(".")[1] ?? "", "base64url").toString("utf8"))
-        return read.ok && isJson(read.value) ? textOf(read.value.email) || null : null
+        return read.ok && isJson(read.value) ? emailOf(read.value.email) : null
     }
 
     private bearer(token: string): Record<string, string> {

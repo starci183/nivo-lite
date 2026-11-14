@@ -3,10 +3,8 @@
 import type { FactDrawerWords, FactKey } from "@/modules/brain"
 import type { BrainTab } from "@/modules/routes"
 import type { BrainBoard } from "./useBrainBoard"
-import { useConflictDrawer } from "./useConflictDrawer"
-import type { ConflictDrawerState } from "./useConflictDrawer"
-import { useFactDetailDrawer } from "./useFactDetailDrawer"
-import type { FactDetailDrawerState } from "./useFactDetailDrawer"
+import { useConflictDrawer, type ConflictDrawerState } from "./useConflictDrawer"
+import { useFactDetailDrawer, type FactDetailDrawerState } from "./useFactDetailDrawer"
 
 /** What the two drawers of a table of facts are read against. */
 export interface FactDrawersInput {

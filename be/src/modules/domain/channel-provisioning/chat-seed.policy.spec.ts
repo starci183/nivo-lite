@@ -65,16 +65,25 @@ describe("instantsOf", () => {
         { ...LINE, key: "a-2", from: { role: "owner" as const }, day: "today" as const, time: "23:00" },
     ]
 
-    it("places a line on its day and time in the shop's own zone, which is seven hours ahead of UTC", async () => {
+    it("places a line on its day and time in the workspace's own zone", async () => {
         const { instantsOf } = await build()
         const now = new Date("2026-11-09T12:00:00Z")
-        expect(instantsOf(messages, now)[0]?.toISOString()).toBe("2026-11-08T01:30:00.000Z")
+        expect(instantsOf(messages, now, "Europe/London")[0]?.toISOString()).toBe("2026-11-08T08:30:00.000Z")
+        expect(instantsOf(messages, new Date("2026-11-09T03:00:00Z"), "America/New_York")[0]?.toISOString()).toBe(
+            "2026-11-07T13:30:00.000Z",
+        )
+    })
+
+    it("places a line on its day and time in Asia/Ho_Chi_Minh, which is seven hours ahead of UTC", async () => {
+        const { instantsOf } = await build()
+        const now = new Date("2026-11-09T12:00:00Z")
+        expect(instantsOf(messages, now, "Asia/Ho_Chi_Minh")[0]?.toISOString()).toBe("2026-11-08T01:30:00.000Z")
     })
 
     it("moves a line that would fall after now back to just before it, keeping the order", async () => {
         const { instantsOf } = await build()
         const now = new Date("2026-11-09T01:00:00Z")
-        const [first, second] = instantsOf(messages, now)
+        const [first, second] = instantsOf(messages, now, "Asia/Ho_Chi_Minh")
         expect(second?.toISOString()).toBe("2026-11-09T00:59:00.000Z")
         expect(first?.getTime()).toBeLessThan(second?.getTime() ?? 0)
     })

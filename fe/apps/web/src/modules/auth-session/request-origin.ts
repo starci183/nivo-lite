@@ -7,6 +7,10 @@ const isBindAddress = (host: string): boolean => host.startsWith("0.0.0.0") || h
 const isLocalHost = (host: string): boolean =>
     host.startsWith("localhost") || host.startsWith("127.") || host.startsWith("[::1]")
 
+/** A header value that says something: an absent or empty one is none. */
+const presentOf = (value: string | null | undefined): string | undefined =>
+    value === null || value === undefined || value === "" ? undefined : value
+
 /**
  * The public origin the browser used for this request. Behind the Traefik edge the standalone Next server reports its own bind address
  * (http://0.0.0.0:3000) in `request.nextUrl`, so redirects built from it are unreachable. The forwarded host/proto from the edge win,
@@ -14,10 +18,10 @@ const isLocalHost = (host: string): boolean =>
  */
 export const requestOrigin = (request: NextRequest): string => {
     const forwarded = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim()
-    const host = forwarded || request.headers.get("host")
+    const host = presentOf(forwarded) ?? request.headers.get("host")
     if (host && !isBindAddress(host)) {
         const proto =
-            request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || (isLocalHost(host) ? "http" : "https")
+            presentOf(request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim()) ?? (isLocalHost(host) ? "http" : "https")
         return `${proto}://${host}`
     }
     try {

@@ -176,22 +176,5 @@ export interface ConnectionCheck {
     readonly lastError: string | null
 }
 
-/** The bank account a workspace is paid into, read from its own bank feed: enough to draw a VietQR for it. */
-export interface WorkspacePaymentAccount {
-    /** The full account number, digits only. */
-    readonly accountNumber: string
-    /** The short bank code as VietQR lists it. */
-    readonly bankCode: string
-    /** The account holder, or null when the feed has none. */
-    readonly holder: string | null
-    /** The feed the account comes from (sepay or casso). */
-    readonly provider: string
-    /** The connection of that feed. */
-    readonly connectionId: string
-}
-
-/** A workspace payment account, or null when no bank feed of the workspace stores a full account number. */
-export type OptionalWorkspacePaymentAccount = WorkspacePaymentAccount | null
-
 /** The Zalo credential read from a sealed secret, or null when the text is not one. */
 export type OptionalZaloSecret = ZaloSetupSecret | null

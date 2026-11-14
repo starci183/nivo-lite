@@ -5,7 +5,6 @@ import { GetSepayConnectionResolver } from "./get-sepay-connection.resolver"
 import { ListSepayEventsResolver } from "./list-sepay-events.resolver"
 import { RevealSepayKeyResolver } from "./reveal-sepay-key.resolver"
 import { RotateSepayKeyResolver } from "./rotate-sepay-key.resolver"
-import { SetSepayEnvironmentResolver } from "./set-sepay-environment.resolver"
 
 @Module({
     imports: [SepayConnectionApiModule.register({})],
@@ -14,7 +13,6 @@ import { SetSepayEnvironmentResolver } from "./set-sepay-environment.resolver"
         ListSepayEventsResolver,
         RevealSepayKeyResolver,
         RotateSepayKeyResolver,
-        SetSepayEnvironmentResolver,
     ],
 })
 /** The GraphQL transport of the sepay-connection feature. */

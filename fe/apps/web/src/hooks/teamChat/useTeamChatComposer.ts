@@ -5,8 +5,7 @@ import { useMutateSendChatMessageSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { mentionsOfDraft } from "@/modules/teamChat"
 import type { ChatParty } from "@/modules/types"
-import { useTeamChatFile } from "./useTeamChatFile"
-import type { TeamChatFilePicker } from "./useTeamChatFile"
+import { useTeamChatFile, type TeamChatFilePicker } from "./useTeamChatFile"
 import { useTeamChatTypingHint } from "./useTeamChatTypingHint"
 
 /** Where a message goes: the open room, or (the panel of an agent with no room yet) the agent, which opens the room on the write. */
@@ -44,15 +43,15 @@ export const useTeamChatComposer = (target: TeamChatTarget): TeamChatComposerVie
     const send = useMutateSendChatMessageSwr(workspaceId)
     const file = useTeamChatFile(workspaceId)
     const typingHint = useTeamChatTypingHint(workspaceId, target.roomId)
-    const [draft, setDraftState] = useState("")
+    const [draft, setDraft] = useState("")
     const [error, setError] = useState<string | null>(null)
     const mentions = useMemo(
         () => mentionsOfDraft(draft, target.parties).map((party) => ({ memberKind: party.kind, memberId: party.id })),
         [draft, target.parties],
     )
-    const setDraft = useCallback(
+    const changeDraft = useCallback(
         (value: string): void => {
-            setDraftState(value)
+            setDraft(value)
             setError(null)
             typingHint(value.trim() !== "")
         },
@@ -77,7 +76,7 @@ export const useTeamChatComposer = (target: TeamChatTarget): TeamChatComposerVie
                 setError(sent.refusal ?? "failed")
                 return
             }
-            setDraftState("")
+            setDraft("")
             file.clear()
             typingHint(false)
             target.onSent(sent.message.roomId)
@@ -90,7 +89,7 @@ export const useTeamChatComposer = (target: TeamChatTarget): TeamChatComposerVie
         file,
         error: error ?? file.problem,
         isSending: send.isMutating || file.isUploading,
-        setDraft,
+        setDraft: changeDraft,
         send: sendDraft,
     }
 }

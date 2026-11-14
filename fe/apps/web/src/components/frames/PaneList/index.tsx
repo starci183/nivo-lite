@@ -1,7 +1,15 @@
-import { Button, EmptyNotice, ListBox, Stack, Text } from "@starci/grammar/common"
-import type { ErrorData, IconSource, ListBoxItem, ListBoxSection } from "@starci/grammar/common"
-import { FilterGroup } from "@/components/composites/FilterGroup"
-import type { FilterGroupChoice, FilterGroupSearch } from "@/components/composites/FilterGroup"
+import {
+    Button,
+    EmptyNotice,
+    ListBox,
+    Stack,
+    Text,
+    type ErrorData,
+    type IconSource,
+    type ListBoxItem,
+    type ListBoxSection,
+} from "@starci/grammar/common"
+import { FilterGroup, type FilterGroupChoice, type FilterGroupSearch } from "@/components/composites/FilterGroup"
 
 /** What an empty list says, and the one action that invites the next step. */
 interface PaneListEmpty {
@@ -54,6 +62,15 @@ const emptyNoticeOf = (empty: PaneListEmpty) => (
     />
 )
 
+/** The filter group of a list pane: its search and its choice, whichever the pane brings. */
+const filterOf = (search: FilterGroupSearch | undefined, choice: FilterGroupChoice | undefined, isLoading: boolean) => (
+    <FilterGroup
+        {...(search === undefined ? {} : { search })}
+        {...(choice === undefined ? {} : { choice })}
+        isLoading={isLoading}
+    />
+)
+
 /**
  * The content of a list pane: the filter group, the summary line, the rows and a closing line, in one column that the pane
  * scrolls under its head. While the read waits, the controls and each row draw their own skeleton in the shape of the ready ones;
@@ -63,13 +80,7 @@ export const PaneList = (props: PaneListProps) => {
     const isLoading = props.isLoading === true
     return (
         <Stack gap="row">
-            {props.search === undefined && props.choice === undefined ? null : (
-                <FilterGroup
-                    {...(props.search === undefined ? {} : { search: props.search })}
-                    {...(props.choice === undefined ? {} : { choice: props.choice })}
-                    isLoading={isLoading}
-                />
-            )}
+            {props.search === undefined && props.choice === undefined ? null : filterOf(props.search, props.choice, isLoading)}
             {props.summary === undefined ? null : (
                 <Text size="xs" tone="muted" isLoading={isLoading}>
                     {props.summary}

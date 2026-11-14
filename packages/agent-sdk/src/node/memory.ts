@@ -1,22 +1,25 @@
+import { DomainError } from "@starci/common"
 import { z } from "../schema/zod-entry"
 import { isRecord } from "../schema/is-record"
 import type { JsonValue } from "../schema/schema.types"
-import { SdkError } from "../sdk-error"
 import type { NodeConfusion } from "./node.types"
-import { LEAD_FACTS, LOOP_INDEX_MEMBER, PII_FACTS, REF_TEXT_PREFIX } from "./memory.contracts"
-import type {
-    FileRef,
-    LeadFact,
-    LeadMemorySnapshot,
-    NodeOutcomeDeclaration,
-    ParamBinding,
-    ParamBindings,
-    ParamRef,
-    ParsedRef,
-    RefScope,
-    Sensitivity,
-    StepFailure,
-    StepMemory,
+import {
+    LEAD_FACTS,
+    LOOP_INDEX_MEMBER,
+    PII_FACTS,
+    REF_TEXT_PREFIX,
+    type FileRef,
+    type LeadFact,
+    type LeadMemorySnapshot,
+    type NodeOutcomeDeclaration,
+    type ParamBinding,
+    type ParamBindings,
+    type ParamRef,
+    type ParsedRef,
+    type RefScope,
+    type Sensitivity,
+    type StepFailure,
+    type StepMemory,
 } from "./memory.contracts"
 
 /** The roots a ref may start with. */
@@ -48,7 +51,7 @@ const isJsonObject = (value: unknown): value is JsonObject => isObject(value)
 export const isParamRef = (binding: unknown): binding is ParamRef =>
     isObject(binding) &&
     typeof binding["$ref"] === "string" &&
-    Object.keys(binding).every((name) => name === "$ref" || name === "default")
+    Object.keys(binding).every((name) => name === "$ref" || name === "default" || (name === "round" && binding["round"] === "previous"))
 
 /** The editor's text of a ref: `= steps.order.output.address`. */
 export const refTextOf = (ref: ParamRef): string => `${REF_TEXT_PREFIX} ${ref.$ref}`
@@ -109,8 +112,13 @@ const partOf = (memory: StepMemory | undefined, part: "output" | "error" | null)
     return memory.status === "done" ? memory.output : undefined
 }
 
-/** The value a parsed ref reads from the scope; undefined when its source has not run or holds nothing there. */
-export const resolveRef = (ref: ParsedRef, scope: RefScope): unknown => {
+/**
+ * The value a parsed ref reads from the scope; undefined when its source has not run or holds nothing there. `round: "previous"` reads a
+ * `steps.<key>` ref from the round before (`scope.previous`), never from this round.
+ */
+export const resolveRef = (ref: ParsedRef, scope: RefScope, round?: "previous"): unknown => {
+    if (round === "previous")
+        return ref.root === "steps" ? valueAt(partOf(scope.previous?.[ref.nodeKey ?? ""], ref.part), ref.path) : undefined
     switch (ref.root) {
         case "trigger":
             return valueAt(scope.trigger, ref.path)
@@ -138,7 +146,7 @@ const ABSENT: unique symbol = Symbol("absent")
 const resolvedBinding = (binding: ParamBinding, scope: RefScope): unknown => {
     if (isParamRef(binding)) {
         const parsed = parseRef(binding.$ref)
-        const value = parsed === null ? undefined : resolveRef(parsed, scope)
+        const value = parsed === null ? undefined : resolveRef(parsed, scope, binding.round)
         if (value !== undefined && value !== null) return value
         return binding.default === undefined ? ABSENT : binding.default
     }
@@ -172,8 +180,8 @@ export const paramRefsOf = (
 ): ReadonlyArray<{ readonly field: string; readonly ref: ParamRef }> => {
     const inside = (binding: unknown): ReadonlyArray<ParamRef> => {
         if (isParamRef(binding)) return [binding]
-        if (Array.isArray(binding)) return binding.flatMap(inside)
-        return isObject(binding) ? Object.values(binding).flatMap(inside) : []
+        if (Array.isArray(binding)) return binding.flatMap((entry) => inside(entry))
+        return isObject(binding) ? Object.values(binding).flatMap((entry) => inside(entry)) : []
     }
     return Object.entries(bindings).flatMap(([field, binding]) => inside(binding).map((ref) => ({ field, ref })))
 }
@@ -208,12 +216,12 @@ export const fixedParamsOf = (bindings: ParamBindings): Readonly<Record<string, 
  * step is recorded as failed with this typed outcome, and the run takes the node's `failed` route when it has one, else ends there.
  * Never for a technical failure: those are thrown as they are and the engine retries them.
  */
-export class NodeBusinessFailure extends SdkError<"NODE_BUSINESS_FAILURE"> {
+export class NodeBusinessFailure extends DomainError<"NODE_BUSINESS_FAILURE"> {
     /** The failure as memory keeps it. */
     readonly failure: StepFailure
 
     constructor(failure: StepFailure) {
-        super("NODE_BUSINESS_FAILURE", failure.code)
+        super({ code: "NODE_BUSINESS_FAILURE", params: { at: failure.code } })
         this.failure = failure
     }
 }
@@ -225,12 +233,12 @@ export const isBusinessFailure = (cause: unknown): cause is NodeBusinessFailure 
  * What a node throws (through `context.confused`) when its AI cannot decide: the confusion in the AI's own words. Never a business
  * failure and never a technical one: the engine hands it to its AI core like every step that could not complete.
  */
-export class NodeConfused extends SdkError<"NODE_CONFUSED"> {
+export class NodeConfused extends DomainError<"NODE_CONFUSED"> {
     /** What the AI said: why it cannot decide and what it needs answered. */
     readonly confusion: NodeConfusion
 
     constructor(confusion: NodeConfusion) {
-        super("NODE_CONFUSED", confusion.reason)
+        super({ code: "NODE_CONFUSED", params: { at: confusion.reason } })
         this.confusion = confusion
     }
 }
@@ -262,7 +270,7 @@ export const isFileRef = (value: unknown): value is FileRef =>
     isObject(value) && (value["$file"] === "image" || value["$file"] === "file") && typeof value["id"] === "string"
 
 /** The mask of a secret. */
-export const SECRET_MASK = "••••"
+export const SECRET_MASK = "\u2022\u2022\u2022\u2022"
 
 /** Member names that hold a secret wherever they are, whatever the node declared. */
 const SECRET_NAMES = /(secret|token|password|passcode|apikey|api_key|otp|pin)$/i
@@ -272,8 +280,8 @@ const PII_NAMES = /(phone|email|address|recipient|contactname|fullname|idnumber|
 
 /** A text masked for display, keeping only its first and last two characters. */
 const maskText = (value: string): string => {
-    if (value.length <= 4) return "•".repeat(value.length)
-    return `${value.slice(0, 2)}${"•".repeat(Math.min(value.length - 4, 8))}${value.slice(-2)}`
+    if (value.length <= 4) return "\u2022".repeat(value.length)
+    return `${value.slice(0, 2)}${"\u2022".repeat(Math.min(value.length - 4, 8))}${value.slice(-2)}`
 }
 
 /** A value masked for display: a secret entirely, personal data keeping only its first and last two characters. */

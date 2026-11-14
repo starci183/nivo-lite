@@ -1,8 +1,15 @@
-import { workflowStoppedPayload, type WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
+import {
+    workflowStoppedPayload,
+    type AgentMessagePreview,
+    type ApprovalDecisionCard,
+    type WorkflowStoppedPayload,
+} from "@nivo-lite/agent-sdk/team-chat"
 import {
     STOP_CARD_DEADLINE,
     type OptionalAgentMessage,
+    type StopCardDecisionCard,
     type StopCardNeeds,
+    type StopCardPreview,
     type StopCardSection,
     type StopCardSectionGiven,
     type StopCardView,
@@ -143,6 +150,20 @@ export const stopReplyUsersOf = (agentMessage: OptionalAgentMessage): ReadonlyAr
     return [...new Set(card.section.replies.map((reply) => reply.by).filter((by) => by !== STOP_CARD_DEADLINE))]
 }
 
+/** A stored package preview as a screen reads it, or null. */
+const previewViewOf = (preview: AgentMessagePreview | undefined): StopCardPreview | null =>
+    preview === undefined ? null : { kind: preview.kind, payloadJson: JSON.stringify(preview.payload) ?? "null" }
+
+/** A stored approval card as a screen reads it. */
+const decisionViewOf = (card: ApprovalDecisionCard): StopCardDecisionCard => ({
+    step: card.step,
+    call: { tool: card.call.tool, account: card.call.account, label: card.call.label ?? null },
+    facts: card.facts.map((fact) => ({ name: fact.name, value: fact.value, technical: fact.technical === true })),
+    text: card.text,
+    preview: previewViewOf(card.preview),
+    content: (card.content ?? []).map((item) => ({ name: item.name, kind: item.kind, value: item.value })),
+})
+
 /** The stop of a stored line as a screen shows it, or null when the line is no stop card. `nameOf` names a user (empty when unknown). */
 export const stopCardViewOf = (agentMessage: OptionalAgentMessage, nameOf: StopReplierName): StopCardView | null => {
     const card = storedStopCardOf(agentMessage)
@@ -175,6 +196,8 @@ export const stopCardViewOf = (agentMessage: OptionalAgentMessage, nameOf: StopR
         stoppedAt: section.stoppedAt,
         resolvedAt: section.resolvedAt,
         approval: section.approval ?? null,
+        decision: base.decision === undefined ? null : decisionViewOf(base.decision),
+        preview: previewViewOf(base.preview),
         revision: section.revision,
     }
 }

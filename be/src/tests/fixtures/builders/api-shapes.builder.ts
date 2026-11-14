@@ -1,5 +1,19 @@
 import type { InjectionToken } from "@nestjs/common"
 import type { Secret } from "@modules/platform/config"
+import type { parseInetConfig } from "@modules/integrations/inet"
+import type { parsePayosConfig } from "@modules/integrations/payos"
+import type { parseTinoConfig } from "@modules/integrations/tino"
+import type { parseElevenLabsConfig } from "@modules/integrations/elevenlabs"
+import type { parseVeoConfig } from "@modules/integrations/veo"
+import type { parseShotstackConfig } from "@modules/integrations/shotstack"
+import type { parseCreatomateConfig } from "@modules/integrations/creatomate"
+import type { parseJson2VideoConfig } from "@modules/integrations/json2video"
+import type { parseGoogleCalendarConfig } from "@modules/integrations/google-calendar"
+import type { parseMetaPublishingConfig } from "@modules/integrations/meta-publishing"
+import type { parseYoutubeConfig } from "@modules/integrations/youtube"
+import type { parseTiktokConfig } from "@modules/integrations/tiktok"
+import type { parseMisaAmisConfig } from "@modules/integrations/misa-amis"
+import type { parseMisaMeinvoiceConfig } from "@modules/integrations/misa-meinvoice"
 
 /** The build wiring proof result overrides record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOverridesShape = { token: InjectionToken; value: unknown }
@@ -38,34 +52,20 @@ export type BuildWiringProofResultOptionsRemoteFilesShape = {
 /** The build wiring proof result options entity engine record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsEntityEngineShape = { cursorKey: Secret; buildId: undefined }
 /** The build wiring proof result options agent work record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsAgentWorkShape = { debounceMs: number }
 /** The build wiring proof result options zalo provider record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsZaloProviderShape = { replyWindowMs: number; staleAfterMs: number }
 /** The build wiring proof result options knowledge record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsKnowledgeShape = { indexChunkDelayMs: number }
-/** The build wiring proof result options mcp gateway remote record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsMcpGatewayRemoteShape = { clientName: string }
+/** The settings of the vector store a wiring proof builds with. */
+export type BuildWiringProofResultOptionsQdrantShape = {
+    url: string | null
+    apiKey: null
+    timeoutMs: number
+}
 /** The build wiring proof result options mcp gateway record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsMcpGatewayShape = {
-    remote: BuildWiringProofResultOptionsMcpGatewayRemoteShape
+export type BuildWiringProofResultOptionsToolsConfigShape = {
     defaultTimeoutMs: number
 }
-/** The build wiring proof result options video record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsVideoShape = {
-    fontsDir: string
-    workDir: string
-    maxSeconds: number
-    ffmpegThreads: number
-}
-/** The build wiring proof result options tts record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsTtsShape = {
-    provider: "none"
-    cacheDir: string
-    workDir: string
-    minGapMs: number
-}
-/** The build wiring proof result options ffmpeg record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsFfmpegShape = { nice: boolean }
 /** The build wiring proof result options webhook delivery record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsWebhookDeliveryShape = { timeoutMs: number }
 /** The build wiring proof result options channel setup record the builders hand out and the specs expect. */
@@ -198,6 +198,8 @@ export type BuildWiringProofResultOptionsBillingShape = {
 export type BuildWiringProofResultOptionsWorkspaceInvitesShape = { siteUrl: string; inviteDays: number }
 /** The build wiring proof result options workspaces record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsWorkspacesShape = { allowFreeWorkspace: boolean }
+/** The build wiring proof result options api-keys record (no public MCP route) the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsApiKeysShape = { mcpPublicUrl?: string | undefined }
 /** The build wiring proof result options documents readers record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsDocumentsReadersShape = {
     docx: () => never
@@ -291,6 +293,7 @@ export type BuildWiringProofResultOptionsShape = {
     identityAuth: BuildWiringProofResultOptionsIdentityAuthShape
     documents: BuildWiringProofResultOptionsDocumentsShape
     workspaces: BuildWiringProofResultOptionsWorkspacesShape
+    apiKeys: BuildWiringProofResultOptionsApiKeysShape
     workspaceInvites: BuildWiringProofResultOptionsWorkspaceInvitesShape
     billing: BuildWiringProofResultOptionsBillingShape
     connectionPoll: BuildWiringProofResultOptionsConnectionPollShape
@@ -311,7 +314,6 @@ export type BuildWiringProofResultOptionsShape = {
     platformAdmin: BuildWiringProofResultOptionsPlatformAdminShape
     realtime: BuildWiringProofResultOptionsRealtimeShape
     queue: BuildWiringProofResultOptionsQueueShape
-    agentWork: BuildWiringProofResultOptionsAgentWorkShape
     jobs: BuildWiringProofResultOptionsJobsShape
     jobsAlert: BuildWiringProofResultOptionsJobsAlertShape
     connections: BuildWiringProofResultOptionsConnectionsShape
@@ -320,11 +322,23 @@ export type BuildWiringProofResultOptionsShape = {
     meta: BuildWiringProofResultOptionsMetaShape
     channelSetup: BuildWiringProofResultOptionsChannelSetupShape
     webhookDelivery: BuildWiringProofResultOptionsWebhookDeliveryShape
-    ffmpeg: BuildWiringProofResultOptionsFfmpegShape
-    tts: BuildWiringProofResultOptionsTtsShape
-    video: BuildWiringProofResultOptionsVideoShape
-    mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
+    inet: ReturnType<typeof parseInetConfig>
+    tino: ReturnType<typeof parseTinoConfig>
+    payos: ReturnType<typeof parsePayosConfig>
+    elevenlabs: ReturnType<typeof parseElevenLabsConfig>
+    veo: ReturnType<typeof parseVeoConfig>
+    shotstack: ReturnType<typeof parseShotstackConfig>
+    creatomate: ReturnType<typeof parseCreatomateConfig>
+    json2video: ReturnType<typeof parseJson2VideoConfig>
+    googleCalendar: ReturnType<typeof parseGoogleCalendarConfig>
+    metaPublishing: ReturnType<typeof parseMetaPublishingConfig>
+    youtube: ReturnType<typeof parseYoutubeConfig>
+    tiktok: ReturnType<typeof parseTiktokConfig>
+    misaAmis: ReturnType<typeof parseMisaAmisConfig>
+    misaMeinvoice: ReturnType<typeof parseMisaMeinvoiceConfig>
+    toolsConfig: BuildWiringProofResultOptionsToolsConfigShape
     knowledge: BuildWiringProofResultOptionsKnowledgeShape
+    qdrant: BuildWiringProofResultOptionsQdrantShape
 }
 /** The build wiring proof result record the builders hand out and the specs expect. */
 export type BuildWiringProofResultShape = {

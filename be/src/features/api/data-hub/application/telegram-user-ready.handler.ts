@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { TelegramUserWizardService } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { TelegramUserReadyQuery } from "./telegram-user-ready.query"
 
 @QueryHandler(TelegramUserReadyQuery)

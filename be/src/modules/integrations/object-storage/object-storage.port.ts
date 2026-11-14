@@ -1,6 +1,14 @@
 import type { StoredObject } from "@starci/object-storage"
 import type { Outcome } from "@modules/platform/primitives"
-import type { ListedObject, SignedObjectUrl, SignedUpload, StorageFailureCode } from "./object-storage.contracts"
+import type {
+    ListedObject,
+    SignedFileLink,
+    SignedFileUpload,
+    SignedObjectUrl,
+    SignedUpload,
+    StorageFailureCode,
+    StoredFileHead,
+} from "./object-storage.contracts"
 
 /** The outcome of asking storage for an upload address. */
 export type SignedUploadOutcome = Outcome<SignedUpload, StorageFailureCode>
@@ -36,6 +44,25 @@ export interface StorageObjectsPort {
     remove(bucket: string, paths: ReadonlyArray<string>): Promise<RemovedObjectsOutcome>
     /** The address anyone reads the object at `path` of a public bucket at; no request is made. */
     publicUrl(bucket: string, path: string): string
+}
+
+/**
+ * The ONE file store of the records: every call works on the one records bucket, keys follow the key law of
+ * `object-storage-files.policy.ts`, and the caller (the engine's record files) has proved the workspace, the record and the field.
+ */
+export interface StorageFilesPort {
+    /** A short-lived address a browser PUTs exactly `size` bytes of `mime` to at `key`; another type or size is refused by the store. */
+    signedUpload(key: string, mime: string, size: number): Promise<Outcome<SignedFileUpload, StorageFailureCode>>
+    /** The size and content type of the object at `key`, without reading it; NOT_FOUND when it is not there. */
+    head(key: string): Promise<Outcome<StoredFileHead, StorageFailureCode>>
+    /** A read link of the object at `key` for `seconds`, saved under `downloadName`; the object is not looked up. */
+    signedLink(key: string, seconds: number, downloadName: string): Promise<Outcome<SignedFileLink, StorageFailureCode>>
+    /** The bytes and content type of the object at `key`. */
+    read(key: string): Promise<StoredObjectOutcome>
+    /** Writes `bytes` of `mime` at `key`, replacing an earlier object. */
+    write(key: string, bytes: Uint8Array, mime: string): Promise<Outcome<null, StorageFailureCode>>
+    /** Removes the object at `key`; a missing one is not an error. */
+    remove(key: string): Promise<Outcome<null, StorageFailureCode>>
 }
 
 /** The answer of reading a file for the render jobs: its bytes as a Blob, or why they could not be read. */

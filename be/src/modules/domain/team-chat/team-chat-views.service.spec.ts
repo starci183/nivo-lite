@@ -5,7 +5,6 @@ import { mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
-import { TeamChatApprovalsService } from "./team-chat-approvals.service"
 import { TeamChatFilesService } from "./team-chat-files.service"
 import { TeamChatReactionStoreService } from "./team-chat-reaction-store.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
@@ -55,22 +54,13 @@ const build = async () => {
     const people = mock<WorkspaceMembersReadService>()
     const agents = mock<AgentDirectoryService>()
     const files = mock<TeamChatFilesService>()
-    const approvals = mock<TeamChatApprovalsService>()
     const reactions = mock<TeamChatReactionStoreService>()
     store.messagesByIds.mockResolvedValue([])
     reactions.rowsAmong.mockResolvedValue([])
     people.namesOf.mockResolvedValue([{ userId: ANA, displayName: "Ana" }])
-    agents.activeInOrder.mockResolvedValue([{ id: BOT, name: "Bot", module: "sales", canTagAgentIds: [] }])
+    agents.activeInOrder.mockResolvedValue([{ id: BOT, name: "Bot", module: "sales" }])
     store.pinnedAmong.mockResolvedValue(new Set([MSG]))
     files.urlsOf.mockResolvedValue(new Map([["k1", "https://get/k1"]]))
-    approvals.statesOf.mockResolvedValue(
-        new Map([
-            [
-                DECISION,
-                { decisionId: DECISION, status: "pending", decidedByName: null, decidedAt: null, canDecide: true },
-            ],
-        ]),
-    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             TeamChatViewsService,
@@ -78,11 +68,10 @@ const build = async () => {
             { provide: WorkspaceMembersReadService, useValue: people },
             { provide: AgentDirectoryService, useValue: agents },
             { provide: TeamChatFilesService, useValue: files },
-            { provide: TeamChatApprovalsService, useValue: approvals },
             { provide: TeamChatReactionStoreService, useValue: reactions },
         ],
     }).compile()
-    return { views: moduleRef.get(TeamChatViewsService), store, people, agents, files, approvals, reactions }
+    return { views: moduleRef.get(TeamChatViewsService), store, people, agents, files, reactions }
 }
 
 describe("TeamChatViewsService names and messages", () => {
@@ -103,20 +92,19 @@ describe("TeamChatViewsService names and messages", () => {
         expect(agents.activeInOrder).toHaveBeenCalledWith(WS, [BOT], 1)
     })
 
-    it("shows messages with the names, pins, file addresses and decision states of their cards", async () => {
-        const { views, store, approvals } = await build()
+    it("shows messages with the names, pins and file addresses; an old approval card shows no decision state", async () => {
+        const { views, store } = await build()
         const [view] = await views.messageViews(WS, [card], ANA)
         expect(view).toMatchObject({
             id: MSG,
             authorName: "Bot",
             pinned: true,
             decisionId: DECISION,
-            approval: { canDecide: true },
+            approval: null,
             mentions: [{ memberId: ANA, name: "Ana" }],
             attachments: [{ fileKey: "k1", url: "https://get/k1" }],
         })
         expect(store.pinnedAmong).toHaveBeenCalledWith([MSG])
-        expect(approvals.statesOf).toHaveBeenCalledWith(WS, ANA, [DECISION])
     })
 
     it("shows nothing for no message, and one message on its own", async () => {
@@ -373,7 +361,6 @@ describe("TeamChatViewsService brain.change cards", () => {
             people,
             deps.agents,
             deps.files,
-            deps.approvals,
             deps.reactions,
             lessons,
             usage,

@@ -1,15 +1,9 @@
 import type { AgentLocale } from "./agent-work.contracts"
 
-/** How a hand-off shows to the people in the conversation. */
-export type AgentTagVisibility = "chat" | "redirect"
-
 /** The plain data a tag hands to its target's graph: a JSON object of any shape the tagger chooses. */
 export interface AgentTagPayload {
     readonly [key: string]: unknown
 }
-
-/** The payload of a tag kept as JSON text: undefined when the tag has none, null when it is larger than a wake keeps. */
-export type AgentTagPayloadText = string | null | undefined
 
 /** What a tag is about, whoever tags: the words, and the record or conversation it concerns. */
 export interface AgentTagBody {
@@ -31,11 +25,6 @@ export interface AgentTagBody {
     readonly locale?: AgentLocale | undefined
     /** Plain data for the target's graph (objects and arrays allowed): it becomes trigger.context there. Kept as JSON text, at most 8000 characters. */
     readonly context?: AgentTagPayload | undefined
-    /**
-     * How the hand-off shows: `chat` posts a visible tag line in the conversation so people see it (the default); `redirect` posts nothing and
-     * moves the conversation to the target silently. Both write the same wake, so the run records the same origin.
-     */
-    readonly visibility?: AgentTagVisibility | undefined
     /** Stable for one fact, so the same tag written twice wakes once; a fresh key per call when absent. */
     readonly eventKey?: string | undefined
 }
@@ -58,24 +47,5 @@ export interface AgentTaggedBySource extends AgentTagBody {
     readonly source: string
 }
 
-/** The one shape every door hands to `tagAgent`, so the service tells who tagged by which field is present and not by the door. */
+/** Who or what a tag wake names as its writer, told by which field is present: what `tagContextOf` reads into a wake's context. */
 export type AgentTagRequest = AgentTaggedByAgent | AgentTaggedByPerson | AgentTaggedBySource
-
-/** What a tag came to. */
-export type AgentTagResult =
-    | { readonly tagged: true; readonly wakeId: string }
-    | { readonly tagged: false; readonly reason: "not_allowed" | "duplicate" | "too_large" | "queued" }
-
-/** What the visibility port is told about a hand-off that has a conversation. */
-export interface AgentTagNotice {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The conversation the hand-off belongs to. */
-    readonly conversationId: string
-    /** The agent that hands off, when an agent does. */
-    readonly fromAgentId: string | null
-    /** The agent that takes over. */
-    readonly toAgentId: string
-    /** What the tagger said. */
-    readonly text: string
-}

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ConnectionOwner,
@@ -51,7 +50,7 @@ export class ConnectionsUpkeepService {
             .createQueryBuilder(ConnectionEntity, "co")
             .update()
             .set({ publicMeta: () => "jsonb_set(public_meta, '{health}', :verdict::jsonb)" })
-            .where({ id: connectionId })
+            .where({ id: connectionId, deletedAt: IsNull() })
             .setParameter(
                 "verdict",
                 JSON.stringify({ state: mark.state, reason: mark.reason, checked_at: mark.checkedAt }),
@@ -84,7 +83,7 @@ export class ConnectionsUpkeepService {
                 syncEveryMinutes: () => ":minutes::int",
                 nextSyncAt: () => "CASE WHEN :minutes::int IS NULL THEN NULL ELSE now() END",
             })
-            .where({ workspaceId, id })
+            .where({ workspaceId, id, deletedAt: IsNull() })
             .setParameter("minutes", everyMinutes)
             .returning("id")
             .execute()
@@ -109,7 +108,7 @@ export class ConnectionsUpkeepService {
                     "CASE WHEN sync_every_minutes IS NULL THEN NULL ELSE now() + make_interval(mins => sync_every_minutes) END",
                 publicMeta: () => "jsonb_concat(public_meta, CAST(:facts AS jsonb))",
             })
-            .where({ id: connectionId })
+            .where({ id: connectionId, deletedAt: IsNull() })
             .setParameter("facts", JSON.stringify(facts))
             .execute()
     }
@@ -118,7 +117,7 @@ export class ConnectionsUpkeepService {
     async markSyncFailed(connectionId: string, reason: string): Promise<void> {
         await this.entityManager.update(
             ConnectionEntity,
-            { id: connectionId },
+            { id: connectionId, deletedAt: IsNull() },
             {
                 status: "error",
                 lastError: reason,
@@ -164,7 +163,7 @@ export class ConnectionsUpkeepService {
             .createQueryBuilder(ConnectionEntity, "co")
             .update()
             .set({ isDefault: () => "(id = :id)" })
-            .where("workspace_id = :workspaceId AND provider = 'smtp' AND (is_default OR id = :id)", {
+            .where("workspace_id = :workspaceId AND provider = 'smtp' AND deleted_at IS NULL AND (is_default OR id = :id)", {
                 workspaceId,
                 id,
             })

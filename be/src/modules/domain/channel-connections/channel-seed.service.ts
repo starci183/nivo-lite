@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionApiTokenService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
-import { ConnectionsService, sha256 } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import { ConnectionsService, sha256, type ConnectionActor, type ConnectionRecord } from "@modules/domain/connections"
 import { ConnectionReadyEvent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectEventBus } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
+import { InjectEventBus, type EventBus } from "@modules/platform/event-bus"
 import type {
     ChannelSeed,
     SeedGoogle,
@@ -21,6 +19,7 @@ import {
     filled,
     googleClientOf,
     invalidSeed,
+    isTelegramSecretToken,
     issuedOf,
     payosKeysOf,
     sepayKeyOf,
@@ -126,6 +125,8 @@ export class ChannelSeedService {
     private async telegram(actor: ConnectionActor, seed: SeedTelegram): Promise<SeededConnection> {
         const token = filled(seed.token)
         if (token !== undefined && !isTelegramToken(token)) invalidSeed("telegram.token")
+        const hook = filled(seed.webhookSecret)
+        if (hook !== undefined && !isTelegramSecretToken(hook)) invalidSeed("telegram.webhookSecret")
         const found = await this.connections.find(actor.workspaceId, seed.id)
         if (found === null) {
             await this.create(actor, {
@@ -134,12 +135,23 @@ export class ChannelSeedService {
                 name: "Telegram",
                 meta: {},
                 plain: token ?? EMPTY_CREDENTIAL,
-                webhookSecret: randomSecret(),
+                webhookSecret: hook ?? randomSecret(),
             })
-        } else if (token !== undefined && !safeEqual(token, (await this.storedOf(seed.id)) ?? "")) {
-            await this.connections.writeSecret(seed.id, token)
+        } else if (token !== undefined || hook !== undefined) {
+            await this.renewTelegram(seed.id, token, hook)
         }
         return outcomeOf("telegram", seed.id, found, token !== undefined)
+    }
+
+    /** Writes the seeded token and webhook secret into the row when either differs from what it holds; an absent one keeps the stored one. */
+    private async renewTelegram(id: string, token: string | undefined, hook: string | undefined): Promise<void> {
+        const stored = await this.connections.readSecret(id)
+        const plain = token ?? stored?.plain ?? EMPTY_CREDENTIAL
+        const tokenChanged = token !== undefined && !safeEqual(token, stored?.plain ?? "")
+        const hookChanged = hook !== undefined && !safeEqual(hook, stored?.webhookSecret ?? "")
+        if (!tokenChanged && !hookChanged) return
+        if (hook === undefined) await this.connections.writeSecret(id, plain)
+        else await this.connections.writeSecret(id, plain, hook)
     }
 
     private async zaloOa(actor: ConnectionActor, seed: SeedZaloOa): Promise<SeededConnection> {

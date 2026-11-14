@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { DatabaseError, DatabaseErrorCode } from "@modules/platform/database"
 import { RealtimeSubscriptionsPolicy } from "./realtime-subscriptions.policy"
 import type { Entry, Replay } from "./realtime-subscriptions.policy"
 import type { RealtimeTopic } from "./realtime.port"
@@ -6,6 +7,9 @@ import type { RealtimeTopic } from "./realtime.port"
 interface Frame {
     readonly value: number
 }
+
+/** What the store rejects with when the replay cannot be read. */
+const STORE_DOWN = new DatabaseError({ code: DatabaseErrorCode.MigrationFailed })
 
 const isFrame = (value: unknown): value is Frame => typeof value === "object" && value !== null && "value" in value
 
@@ -156,11 +160,11 @@ describe("RealtimeSubscriptionsPolicy replay", () => {
 
     it("fails the read of a stream whose replay could not be loaded, with the cause the store gave", async () => {
         const subscriptions = await build()
-        const reader = subscriptions.join(topicOf("t:broken"), Promise.reject(new Error("db down")))
+        const reader = subscriptions.join(topicOf("t:broken"), Promise.reject(STORE_DOWN))
 
         await expect(reader.next()).rejects.toMatchObject({
             code: "REALTIME_REPLAY_FAILED",
-            cause: new Error("db down"),
+            cause: STORE_DOWN,
         })
         expect(subscriptions.count("t:broken")).toBe(0)
         expect(subscriptions.topics()).toEqual([])

@@ -10,7 +10,7 @@ export class SetOperatingModeInput {
     @MaxLength(36)
     installationId!: string
 
-    /** Assist asks for everything, autopilot follows the authority rules. */
+    /** The mode the web sends; nothing reads it (the switch is gone). */
     @Field()
     @IsIn(["assist", "autopilot"])
     mode!: "assist" | "autopilot"

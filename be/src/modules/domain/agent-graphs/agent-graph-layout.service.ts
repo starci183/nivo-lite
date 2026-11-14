@@ -1,10 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import { AgentWorkflowsService } from "./agent-workflows.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import { checkedLayout, layoutOfSettings, settingsWithLayout } from "./policies/graph-layout.policy"
-import type { GraphLayoutPosition } from "./policies/graph-layout.policy"
+import {
+    checkedLayout,
+    layoutOfSettings,
+    settingsWithLayout,
+    type GraphLayoutPosition,
+} from "./policies/graph-layout.policy"
 
 @Injectable()
 /**

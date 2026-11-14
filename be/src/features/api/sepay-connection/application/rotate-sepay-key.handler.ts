@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { SepayConnectionService } from "@modules/domain/channel-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { RotateSepayKeyResult } from "./rotate-sepay-key.contracts"
 import { RotateSepayKeyCommand } from "./rotate-sepay-key.command"
 

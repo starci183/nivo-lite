@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import type { ReactNode } from "react"
-import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { catalogKey, entryById } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import {
@@ -18,8 +17,7 @@ import {
 import { webSiteOrigin } from "@/modules/config"
 import { slotOfReads } from "@/hooks/slot"
 import type { Connection } from "@/modules/types"
-import { ConnectorDetailOverlayBase, OverlayHost, detailRowsOf } from "./component"
-import type { DetailEntry } from "./component"
+import { ConnectorDetailOverlayBase, OverlayHost, detailRowsOf, type DetailEntry } from "./component"
 
 /** Workspace inputs supplied by a caller, or read by the drawer when its server page registers it without inputs. */
 type ConnectorDetailOverlayProps = {
@@ -27,7 +25,6 @@ type ConnectorDetailOverlayProps = {
     /** Agent id -> name, for the "used by" line of each row. */
     readonly agentNames?: Readonly<Record<string, string>>
     readonly localOnly?: boolean
-    readonly ownerEmail?: string
     /** The workspace owner adds, changes and removes connections; others read. */
     readonly canManage?: boolean
 }
@@ -54,7 +51,6 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
     const params = useSearchParams()
     const overlays = useConnectionOverlays()
     const data = useConnectionsData()
-    const user = useQueryAuthUserSwr()
     const { role } = useConnectionsRole()
     const items = props.items ?? data.items
     const agentNames = props.agentNames ?? data.agentNames
@@ -98,7 +94,6 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
                 },
                 rows: detailRowsOf(rows, agentNames),
                 localOnly: props.localOnly ?? isLocalOnly(webSiteOrigin()),
-                ownerEmail: props.ownerEmail ?? user.data?.email ?? "",
                 canManage: props.canManage ?? role === "owner",
                 canConnect: provider !== undefined && mayConnect(role, provider),
             }}

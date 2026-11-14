@@ -8,7 +8,7 @@
     },
     "status": {
       "type": "enum",
-      "of": "chatbot.threads.status",
+      "of": "blocks-core.chatbot.api.chat.list.status",
       "url": "status",
       "default": "all"
     },
@@ -74,7 +74,7 @@
                   "term": {
                     "key": "fig_handled"
                   },
-                  "path": "handledCount",
+                  "path": "heldCount",
                   "format": "count"
                 }
               ],
@@ -82,7 +82,7 @@
             },
             "bind": {
               "data": {
-                "read": "chatbot.figures"
+                "read": "blocks-core.chatbot.api.chat.figures"
               }
             }
           },
@@ -172,7 +172,7 @@
             },
             "bind": {
               "rows": {
-                "read": "chatbot.threads",
+                "read": "blocks-core.chatbot.api.chat.list",
                 "variables": {
                   "q": "$q",
                   "status": "$status"
@@ -273,7 +273,7 @@
         },
         "bind": {
           "rows": {
-            "read": "chatbot.threads",
+            "read": "blocks-core.chatbot.api.chat.list",
             "variables": {
               "q": "$q",
               "status": "needs"
@@ -282,7 +282,7 @@
         }
       },
       "count": {
-        "read": "chatbot.thread-counts",
+        "read": "blocks-core.chatbot.api.chat.status-counts",
         "path": "counts.needs",
         "isAttention": true
       }
@@ -303,7 +303,7 @@
         },
         "bind": {
           "threads": {
-            "read": "chatbot.threads",
+            "read": "blocks-core.chatbot.api.chat.list",
             "variables": {
               "q": "$q",
               "status": "$status",
@@ -311,55 +311,34 @@
             }
           },
           "counts": {
-            "read": "chatbot.thread-counts",
+            "read": "blocks-core.chatbot.api.chat.status-counts",
             "variables": {
               "q": "$q"
             }
           },
           "messages": {
-            "read": "chatbot.messages",
+            "read": "blocks-core.chatbot.api.message.list",
             "path": "rows",
             "variables": {
               "threadId": "$selected"
             }
           },
           "thread": {
-            "read": "chatbot.thread",
+            "read": "blocks-core.chatbot.api.chat.get",
             "variables": {
               "id": "$selected"
             }
           },
           "send": {
-            "action": "chatbot.reply"
+            "action": "blocks-core.chatbot.chat-reply"
           },
           "handoff": {
-            "action": "chatbot.handoff"
+            "action": "blocks-core.chatbot.chat-handoff"
           },
           "release": {
-            "action": "chatbot.release"
+            "action": "blocks-core.chatbot.chat-release"
           }
-        },
-        "children": [
-          {
-            "id": "approval",
-            "block": "chatbot.approval-card",
-            "props": {},
-            "bind": {
-              "proposal": {
-                "read": "chatbot.proposals",
-                "variables": {
-                  "threadId": "$selected"
-                }
-              },
-              "approve": {
-                "action": "chatbot.approve-and-send"
-              },
-              "dismiss": {
-                "action": "chatbot.reject-proposal"
-              }
-            }
-          }
-        ]
+        }
       }
     },
     {
@@ -373,10 +352,10 @@
         "props": {},
         "bind": {
           "settings": {
-            "read": "chatbot.settings"
+            "read": "blocks-core.chatbot.api.settings.get"
           },
           "save": {
-            "action": "chatbot.save-settings"
+            "action": "blocks-core.chatbot.settings-save"
           }
         }
       }
@@ -414,15 +393,15 @@
     },
     "bind": {
       "queue": {
-        "read": "chatbot.decisions"
+        "read": "blocks-core.chatbot.api.chat.waiting"
       },
       "command": {
-        "action": "chatbot.decide"
+        "action": "blocks-core.chatbot.chat-decide"
       }
     }
   },
   "asideSummary": {
-    "read": "chatbot.decisions",
+    "read": "blocks-core.chatbot.api.chat.waiting",
     "path": "count",
     "previewPath": "rows.0.title",
     "label": {

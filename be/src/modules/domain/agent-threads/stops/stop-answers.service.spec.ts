@@ -1,9 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import { agentRunStopEntity } from "@nivo-lite/blocks-core/entities"
-import { EntityEngineService } from "@modules/domain/entity-engine"
 import { TeamChatRoomsService, lineKeyOf } from "@modules/domain/team-chat"
 import { LOGGER, type Logger } from "@modules/platform/logging"
 import { DomainError } from "@modules/platform/errors"
@@ -11,35 +7,32 @@ import { stopCardKeyOf } from "./stop-cards.service"
 import { StopAnswersService, stopOfLine } from "./stop-answers.service"
 import type { StopReply } from "./stop-answers.service"
 import { StopDoorService } from "./stop-door.service"
+import { RunStopRecordsService } from "./run-stop-records.service"
 import type { RunStop } from "./run-stop.contracts"
 
-/** A stored stop row as the entity engine lists it. */
-const rowOf = (runId: string, stepKey: string, state: "open" | "resolved"): RecordRow =>
-    ({
-        id: `stop-${runId}-${stepKey}`,
-        version: "1",
-        createdAt: "2026-11-10T09:00:00.000Z",
-        data: {
-            runId,
-            stepKey,
-            agentId: "agent-1",
-            workflowId: "wf-1",
-            leadId: null,
-            conversationId: null,
-            kind: "ai_report",
-            state,
-            reason: "The transfer names no order",
-            question: "Which order?",
-            detail: { suggestions: [], facts: [] },
-            cardMessageId: "msg-1",
-            customerLines: { lines: [] },
-            answers: { answers: [] },
-            decision: null,
-            repeats: 1,
-            stoppedAt: "2026-11-10T09:00:00.000Z",
-            resolvedAt: state === "resolved" ? "2026-11-10T09:10:00.000Z" : null,
-        },
-    }) as unknown as RecordRow
+/** A stored stop as the stops' door reads it. */
+const rowOf = (runId: string, stepKey: string, state: "open" | "resolved"): RunStop => ({
+    id: `stop-${runId}-${stepKey}`,
+    version: "1",
+    runId,
+    stepKey,
+    agentId: "agent-1",
+    workflowId: "wf-1",
+    contactId: null,
+    conversationId: null,
+    kind: "ai_report",
+    state,
+    reason: "The transfer names no order",
+    question: "Which order?",
+    detail: { suggestions: [], facts: [] },
+    cardMessageId: "msg-1",
+    customerLines: [],
+    answers: [],
+    decision: null,
+    repeats: 1,
+    stoppedAt: "2026-11-10T09:00:00.000Z",
+    resolvedAt: state === "resolved" ? "2026-11-10T09:10:00.000Z" : null,
+})
 
 const replyTo = (runId: string, stepKey: string, over: Partial<StopReply> = {}): StopReply => ({
     workspaceId: "ws-1",
@@ -53,26 +46,23 @@ const replyTo = (runId: string, stepKey: string, over: Partial<StopReply> = {}):
 
 class RoleForbidden extends DomainError<"WORKSPACE_MEMBERS_ROLE_FORBIDDEN"> {}
 
-const build = async (rows: ReadonlyArray<RecordRow>, withChat = true) => {
-    const engine = mock<EntityEngineService>()
-    engine.scoped.mockImplementation(((_ws: string, work: (tx: unknown) => unknown) => work({})) as never)
-    engine.list.mockImplementation(((_tx: unknown, query: { where: { value: string } }) =>
-        Promise.resolve({
-            rows: rows.filter((row) => row.data.state === query.where.value).map((row) => ({ row })),
-        })) as never)
+const build = async (rows: ReadonlyArray<RunStop>, withChat = true) => {
+    const stops = mock<RunStopRecordsService>({
+        newest: jest.fn((_ws: string, state: string) => Promise.resolve(rows.filter((row) => row.state === state))),
+    })
     const door = mock<StopDoorService>({ decide: jest.fn().mockResolvedValue({ outcome: "admitted", stepKey: "match" }) })
     const chat = mock<TeamChatRoomsService>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             StopAnswersService,
-            { provide: EntityEngineService, useValue: engine },
+            { provide: RunStopRecordsService, useValue: stops },
             { provide: StopDoorService, useValue: door },
             { provide: LOGGER, useValue: logger },
             ...(withChat ? [{ provide: TeamChatRoomsService, useValue: chat }] : []),
         ],
     }).compile()
-    return { service: moduleRef.get(StopAnswersService), door, engine, chat, logger }
+    return { service: moduleRef.get(StopAnswersService), door, stops, chat, logger }
 }
 
 describe("StopAnswersService: the team chat's listener of replies", () => {
@@ -130,14 +120,15 @@ describe("StopAnswersService.replied: the founder's words in the team chat resum
         })
     })
 
-    it("reads only lists an index serves (state_stopped), checked by the real validator", async () => {
-        const { service, engine } = await build([rowOf("run-1", "match", "resolved")])
+    it("reads the newest open stops, then the newest resolved ones, one bounded page each (by state and moment)", async () => {
+        const { service, stops } = await build([rowOf("run-1", "match", "resolved")])
 
         await service.replied(replyTo("run-1", "match"))
 
-        const catalog = new Map([[agentRunStopEntity.name, agentRunStopEntity]])
-        expect(engine.list).toHaveBeenCalledTimes(2)
-        expect(engine.list.mock.calls.flatMap(([, query]) => queryProblems(query, catalog))).toEqual([])
+        expect(stops.newest.mock.calls).toEqual([
+            ["ws-1", "open", 50],
+            ["ws-1", "resolved", 50],
+        ])
     })
 
     it("tells a reply to the card of a resolved stop that it is closed, and resumes nothing", async () => {

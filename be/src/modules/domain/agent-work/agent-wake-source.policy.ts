@@ -1,18 +1,9 @@
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentWakeSource } from "./agent-work.contracts"
-import { WAKE_SOURCE_KEY } from "@modules/domain/agent-wake-rules"
-import type { AgentWakeTraits, OptionalAgentWakeTraits } from "@modules/domain/agent-wake-rules"
+import { WAKE_SOURCE_KEY, type AgentWakeTraits, type OptionalAgentWakeTraits } from "@modules/domain/agent-wake-rules"
 
-/** The keys of the four sources that existed before adapters, and the traits the work core always gave them. */
+/** The keys of the sources the work core knows by itself, and their traits. */
 const BUILT_IN: Readonly<Record<string, AgentWakeTraits>> = {
-    customer: {
-        priority: 10,
-        maxAttempts: 2,
-        scopedToConversation: true,
-        background: false,
-        restoresHeld: true,
-        awaitsAnswer: true,
-    },
     tag: {
         priority: 20,
         maxAttempts: 3,
@@ -27,6 +18,16 @@ const BUILT_IN: Readonly<Record<string, AgentWakeTraits>> = {
         scopedToConversation: false,
         background: true,
         restoresHeld: false,
+        awaitsAnswer: false,
+    },
+    // An event of the one event pipeline (lane concept triggers rule 13): the producer names its verb in the wake; its lock scope is the
+    // event's correlation key, never the source's.
+    trigger: {
+        priority: 10,
+        maxAttempts: 3,
+        scopedToConversation: false,
+        background: false,
+        restoresHeld: true,
         awaitsAnswer: false,
     },
     schedule: {
@@ -68,7 +69,7 @@ const sameTraits = (a: AgentWakeTraits, b: AgentWakeTraits): boolean =>
     a.restoresHeld === b.restoresHeld &&
     a.awaitsAnswer === b.awaitsAnswer
 
-/** The sources the work core knows, each with its traits. The four built-in ones are always there; an inbound adapter adds its own. */
+/** The sources the work core knows, each with its traits. The built-in ones are always there; an inbound adapter adds its own. */
 export class WakeSourcesPolicy {
     private readonly known = new Map<string, AgentWakeTraits>([...Object.entries(BUILT_IN), ...Object.entries(ENGINE)])
 

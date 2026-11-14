@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { WebhookConnectionsOptions } from "./webhook-connections.options"
 
 /** Token of the webhook-connections options, exported so a spec can provide it. */

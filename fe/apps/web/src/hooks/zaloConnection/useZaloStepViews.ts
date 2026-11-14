@@ -8,42 +8,27 @@ import type {
     DataSlot,
     SlotLabels,
     ZaloCheckLineView,
-    ZaloFactView,
     ZaloPasteView,
     ZaloSendView,
 } from "@/modules/types"
 import { useZaloChecks } from "./useZaloChecks"
-import { useZaloHead } from "./useZaloHead"
-import { useZaloOaSecret } from "./useZaloOaSecret"
 import { useZaloPage } from "./useZaloPage"
 import { useZaloPaste } from "./useZaloPaste"
-import { useZaloSetupFacts } from "./useZaloSetupFacts"
 import { useZaloSetupSteps } from "./useZaloSetupSteps"
 import { useZaloTestSend } from "./useZaloTestSend"
 
-/** What the five steps of a Zalo OA connection draw, in the words of the reader, and the commands behind them. */
+/** What the four steps of a Zalo OA connection that the form does not cover draw, in the words of the reader, and the commands behind them. */
 interface ZaloStepViews {
     readonly steps: ReturnType<typeof useZaloSetupSteps>["steps"]
     readonly stepsLabel: string
-    readonly app: { readonly facts: DataSlot<ReadonlyArray<ZaloFactView>>; readonly slotLabels: SlotLabels }
     readonly paste: {
         readonly openZalo: { readonly label: string; readonly href: string }
         readonly callbackLabel: string
-        readonly webhookLabel: string
         readonly paste: DataSlot<ZaloPasteView>
         readonly slotLabels: SlotLabels
         readonly copyLabel: string
         readonly copiedLabel: string
         readonly copyErrorLabel: string
-        readonly secret: {
-            readonly label: string
-            readonly description: string
-            readonly value: string
-            readonly error: string
-            readonly saveLabel: string
-            readonly isSaving: boolean
-            readonly canEdit: boolean
-        }
     }
     readonly authorize: {
         readonly notice: string
@@ -74,8 +59,6 @@ interface ZaloStepViews {
     readonly on: {
         readonly toggle: (id: string, isOpen: boolean) => void
         readonly retry: () => void
-        readonly changeSecret: (value: string) => void
-        readonly saveSecret: () => void
         readonly authorize: () => void
         readonly pickRecipient: (id: string) => void
         readonly changeText: (text: string) => void
@@ -83,43 +66,28 @@ interface ZaloStepViews {
     }
 }
 
-/** The five setup steps of a Zalo OA connection: the words and data of each step body, read together so the steps draw as one list. */
+/** The setup steps of a Zalo OA connection the form does not cover: the words and data of each step body, read together so the steps draw as one list. */
 export const useZaloStepViews = (connectionId: string): ZaloStepViews => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
     const copyLabels = useCopyLabels()
     const setup = useZaloSetupSteps(connectionId)
-    const facts = useZaloSetupFacts(connectionId)
     const paste = useZaloPaste(connectionId)
-    const { slot, reload } = useZaloPage(connectionId)
-    const { isOwner } = useZaloHead(connectionId)
-    const secret = useZaloOaSecret(connectionId)
+    const { reload } = useZaloPage(connectionId)
     const { lines } = useZaloChecks(connectionId)
     const sender = useZaloTestSend(connectionId)
     const grants = useConnectionGrantsBand(connectionId)
-    const mask = ("items" in slot ? slot.items : undefined)?.oaSecretMask ?? null
     return {
-        steps: setup.steps,
+        steps: setup.steps.filter((step) => step.id !== "app"),
         stepsLabel: setup.stepsLabel,
-        app: { facts, slotLabels: slotLabels(t("factsEmpty")) },
         paste: {
             openZalo: setup.openZalo,
             callbackLabel: t("pasteCallback"),
-            webhookLabel: t("pasteWebhook"),
             paste,
             slotLabels: slotLabels(t("pasteEmpty")),
             copyLabel: copyLabels.copy,
             copiedLabel: copyLabels.copied,
             copyErrorLabel: t("copyFailed"),
-            secret: {
-                label: t("factOaSecret"),
-                description: mask === null ? t("oaSecretMissing") : t("oaSecretStored", { mask }),
-                value: secret.value,
-                error: secret.error,
-                saveLabel: t("oaSecretSave"),
-                isSaving: secret.isSaving,
-                canEdit: isOwner,
-            },
         },
         authorize: { notice: setup.authorizeNotice, action: setup.authorize },
         checks: {
@@ -150,8 +118,6 @@ export const useZaloStepViews = (connectionId: string): ZaloStepViews => {
                 if (step !== undefined) setup.toggle(step.id, isOpen)
             },
             retry: reload,
-            changeSecret: secret.change,
-            saveSecret: () => void secret.save(),
             authorize: setup.runAuthorize,
             pickRecipient: sender.setRecipient,
             changeText: sender.setText,

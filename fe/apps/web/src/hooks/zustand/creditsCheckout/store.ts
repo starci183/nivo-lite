@@ -1,8 +1,7 @@
 "use client"
 
-import { create } from "zustand"
+import { create, type UseBoundStore, type StoreApi } from "zustand"
 import type { PayTarget } from "@/modules/types"
-import type { UseBoundStore, StoreApi } from "zustand"
 
 interface CreditsCheckoutState {
     readonly target: PayTarget | null

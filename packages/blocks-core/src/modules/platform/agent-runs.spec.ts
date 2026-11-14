@@ -1,4 +1,5 @@
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import { coreRun, coreStep } from "./fixtures/agent-runs.ports"
+import type { CoreRunStep } from "./platform.types"
 import {
     callsOf,
     clockOf,
@@ -16,15 +17,6 @@ import type { RunLocale } from "./agent-runs"
 
 const NOW = new Date("2026-11-05T08:10:00.000Z")
 const WHERE: RunLocale = { locale: "en", timeZone: "UTC", now: NOW }
-
-const record = (id: string, data: Record<string, unknown>): RecordRow => ({
-    id,
-    workspaceId: "w1",
-    version: "1",
-    createdAt: "2026-11-05T08:00:00.000Z",
-    updatedAt: "2026-11-05T08:00:00.000Z",
-    data,
-})
 
 describe("the filters of the runs list", () => {
     it("stand each for the engine statuses a person tells as one", () => {
@@ -82,7 +74,7 @@ describe("the times of a run", () => {
 describe("a row of the runs list", () => {
     it("carries the id the resume takes, the filter, the trigger, the start and the length", () => {
         const row = runRowOf(
-            record("run-1", {
+            coreRun("run-1", {
                 trigger: "zalo.message",
                 status: "waiting",
                 startedAt: "2026-11-05T08:00:00.000Z",
@@ -100,11 +92,9 @@ describe("a row of the runs list", () => {
     })
 
     it("has an empty trigger when the engine kept none", () => {
-        expect(runRowOf(record("run-2", { status: "dead" }), WHERE)).toMatchObject({
+        expect(runRowOf(coreRun("run-2", { status: "dead", trigger: "" }), WHERE)).toMatchObject({
             status: "failed",
             trigger: "",
-            when: "",
-            duration: "",
         })
     })
 })
@@ -113,16 +103,15 @@ describe("the counts of the filter tabs", () => {
     it("add the statuses of one filter up, name every filter and sum them", () => {
         expect(
             countsOf([
-                { groups: { status: "running" }, measures: { count: 2 } },
-                { groups: { status: "waiting" }, measures: { count: 1 } },
-                { groups: { status: "done" }, measures: { count: 5 } },
-                { groups: { status: "dead" }, measures: { count: 1 } },
+                { status: "running", count: 2 },
+                { status: "waiting", count: 1 },
+                { status: "done", count: 5 },
+                { status: "dead", count: 1 },
             ]),
         ).toEqual({ counts: { running: 3, parked: 0, done: 5, failed: 1 }, total: 9 })
     })
 
-    it("skip a group that holds no number, and count nothing for no group", () => {
-        expect(countsOf([{ groups: { status: "done" }, measures: { count: "many" } }]).total).toBe(0)
+    it("count nothing for no group", () => {
         expect(countsOf([])).toEqual({ counts: { running: 0, parked: 0, done: 0, failed: 0 }, total: 0 })
     })
 })
@@ -133,7 +122,7 @@ describe("the lines of a step", () => {
             "order: A-1, total: 4800000, paid: false",
         )
         expect(summaryOf({ text: "x".repeat(400) })).toHaveLength(160)
-        expect(summaryOf({ text: "x".repeat(400) }).endsWith("…")).toBe(true)
+        expect(summaryOf({ text: "x".repeat(400) }).endsWith("\u2026")).toBe(true)
         expect(summaryOf(null)).toBe("")
         expect(summaryOf(["a"])).toBe("")
         expect(summaryOf("text")).toBe("")
@@ -143,7 +132,7 @@ describe("the lines of a step", () => {
         expect(
             callsOf({
                 calls: [
-                    { tool: "nivo.chat.send", ok: false, failure: "refused", effectKey: "k" },
+                    { tool: "nivo.tool.customer.message.send", ok: false, failure: "refused", effectKey: "k" },
                     { tool: "catalogue.search", ok: true, effectKey: "k2" },
                     { tool: "no-ok" },
                     { ok: true },
@@ -152,7 +141,7 @@ describe("the lines of a step", () => {
                 ],
             }),
         ).toEqual([
-            { tool: "nivo.chat.send", ok: false, summary: "refused" },
+            { tool: "nivo.tool.customer.message.send", ok: false, summary: "refused" },
             { tool: "catalogue.search", ok: true, summary: null },
         ])
         expect(callsOf({ calls: "none" })).toEqual([])
@@ -161,8 +150,8 @@ describe("the lines of a step", () => {
     })
 })
 
-const STEPS: ReadonlyArray<RecordRow> = [
-    record("s1", {
+const STEPS: ReadonlyArray<CoreRunStep> = [
+    coreStep("s1", {
         stepKey: "inbound",
         nodeKey: "inbound",
         status: "done",
@@ -173,19 +162,19 @@ const STEPS: ReadonlyArray<RecordRow> = [
         doorCalls: { calls: [{ tool: "chat.read", ok: true, effectKey: "k" }] },
         effectKey: "chat.read:1",
     }),
-    record("s2", {
+    coreStep("s2", {
         stepKey: "send",
         nodeKey: "send-quote",
         status: "failed",
         errorCode: "DELIVERY_FAILED",
         waitItemId: null,
     }),
-    record("s3", { stepKey: "after", nodeKey: "after", status: "pending", waitItemId: "w-1" }),
+    coreStep("s3", { stepKey: "after", nodeKey: "after", status: "pending", waitItemId: "w-1" }),
 ]
 
 describe("the timeline of a run", () => {
     it("tells the step a parked run stopped at as parked, with the reason the engine parked it, and the others as they went", () => {
-        const view = runViewOf(record("run-3", { status: "parked", parkReason: "The send was refused" }), STEPS)
+        const view = runViewOf(coreRun("run-3", { status: "parked", parkReason: "The send was refused" }), STEPS)
         expect(view.id).toBe("run-3")
         expect(view.status).toBe("parked")
         expect(view.steps.map((step) => step.state)).toEqual(["done", "parked", "running"])
@@ -206,33 +195,33 @@ describe("the timeline of a run", () => {
     })
 
     it("keeps the error code of a parked step when the engine left no reason", () => {
-        const view = runViewOf(record("run-3", { status: "parked" }), STEPS)
+        const view = runViewOf(coreRun("run-3", { status: "parked" }), STEPS)
         expect(view.steps[1]?.reason).toBe("DELIVERY_FAILED")
     })
 
     it("tells a failed step failed, and a step that waits on an item of a waiting run waiting", () => {
-        const failed = runViewOf(record("run-4", { status: "failed" }), STEPS)
+        const failed = runViewOf(coreRun("run-4", { status: "failed" }), STEPS)
         expect(failed.status).toBe("failed")
         expect(failed.steps.map((step) => step.state)).toEqual(["done", "failed", "running"])
-        const waiting = runViewOf(record("run-5", { status: "waiting" }), STEPS)
+        const waiting = runViewOf(coreRun("run-5", { status: "waiting" }), STEPS)
         expect(waiting.steps.map((step) => step.state)).toEqual(["done", "failed", "waiting"])
     })
 
     it.each(["failed", "dead"])("offers to run a %s run again from its first failed step only", (status) => {
-        const view = runViewOf(record("run-7", { status }), STEPS)
+        const view = runViewOf(coreRun("run-7", { status }), STEPS)
         expect(view.steps.map((step) => step.canResume)).toEqual([undefined, true, undefined])
         expect(view.steps[1]?.state).toBe("failed")
     })
 
     it("offers nothing on a failed run when one of its steps was undone, or when it has no failed step", () => {
-        const undone = [record("s1", { status: "compensated" }), ...STEPS.slice(1)]
-        expect(runViewOf(record("run-8", { status: "dead" }), undone).steps.some((step) => step.canResume)).toBe(false)
-        expect(runViewOf(record("run-9", { status: "failed" }), STEPS.slice(0, 1)).steps[0]?.canResume).toBeUndefined()
-        expect(runViewOf(record("run-3", { status: "parked" }), STEPS).steps.some((step) => step.canResume)).toBe(false)
+        const undone = [coreStep("s1", { status: "compensated" }), ...STEPS.slice(1)]
+        expect(runViewOf(coreRun("run-8", { status: "dead" }), undone).steps.some((step) => step.canResume)).toBe(false)
+        expect(runViewOf(coreRun("run-9", { status: "failed" }), STEPS.slice(0, 1)).steps[0]?.canResume).toBeUndefined()
+        expect(runViewOf(coreRun("run-3", { status: "parked" }), STEPS).steps.some((step) => step.canResume)).toBe(false)
     })
 
     it("has no parked step when a parked run has finished every step, and falls back to the record id for a step with no keys", () => {
-        const view = runViewOf(record("run-6", { status: "parked" }), [record("s9", { status: "compensated" })])
+        const view = runViewOf(coreRun("run-6", { status: "parked" }), [coreStep("s9", { status: "compensated" })])
         expect(view.steps).toEqual([
             {
                 id: "s9",

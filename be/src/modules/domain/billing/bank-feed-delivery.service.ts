@@ -1,11 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims } from "@modules/platform/jobs"
 import { isBankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
 import { BankFeedService } from "./bank-feed.service"
 
 @Injectable()
-/** Validates a receipt reference before fencing its deferred domain effect. */
+/** Validates a receipt reference before fencing its processing (the raw rows and the trigger). */
 export class BankFeedDeliveryService {
     constructor(
         private readonly inbox: BankFeedService,

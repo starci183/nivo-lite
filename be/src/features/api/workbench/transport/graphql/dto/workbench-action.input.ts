@@ -1,5 +1,5 @@
 import { Field, InputType } from "@nestjs/graphql"
-import { IsString, Matches, MaxLength } from "class-validator"
+import { IsOptional, IsString, IsUUID, Matches, MaxLength } from "class-validator"
 
 @InputType()
 /** Bounded arguments for the workbench action mutation. */
@@ -16,4 +16,11 @@ export class WorkbenchActionInput {
     @IsString()
     @MaxLength(16_384)
     input!: string
+
+    /** The installation of the module the screen is opened for (the workbench of one agent); absent, the module's oldest installation. */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @IsUUID()
+    @MaxLength(36)
+    installationId?: string
 }

@@ -1,6 +1,5 @@
 import type { OrderStatus } from "./order-status"
-import { needsOwner } from "./settings"
-import type { SalesSettings } from "./settings"
+import { needsOwner, type SalesSettings } from "./settings"
 
 /** What deciding to confirm an order looks at. */
 export interface ConfirmInput {

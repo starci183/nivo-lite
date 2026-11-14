@@ -16,7 +16,7 @@ describe("polledRawBody", () => {
     it("builds the body the webhook posts for a customer text, which gets the webhook delivery id", async () => {
         const build = await buildSubject()
 
-        const body = build({ messageId: "m-1", userId: "user-1", text: "Alo", sentAt: 1_762_192_200_000 })
+        const body = build({ messageId: "m-1", userId: "user-1", userName: "", text: "Alo", sentAt: 1_762_192_200_000 })
 
         expect(parseJsonText(body.toString("utf8"))).toEqual({
             ok: true,
@@ -27,6 +27,15 @@ describe("polledRawBody", () => {
                 message: { msg_id: "m-1", text: "Alo" },
             },
         })
+        expect(zaloDeliveryIdOf("c-1", body)).toBe("c-1:m-1")
+    })
+
+    it("carries the name the listing shows as the sender's display name, under the same delivery id", async () => {
+        const build = await buildSubject()
+
+        const body = build({ messageId: "m-1", userId: "user-1", userName: " Lan ", text: "Alo", sentAt: 1_762_192_200_000 })
+
+        expect(parseJsonText(body.toString("utf8"))).toMatchObject({ value: { sender: { id: "user-1", display_name: "Lan" } } })
         expect(zaloDeliveryIdOf("c-1", body)).toBe("c-1:m-1")
     })
 })

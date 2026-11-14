@@ -6,6 +6,7 @@ describe("conversationLayoutOf", () => {
         expect(none.base.areas).toEqual(["list"])
         const chosen = conversationLayoutOf({ hasList: true, hasThread: true, hasContact: true })
         expect(chosen.base.areas).toEqual(["thread"])
+        expect(none.base.columns).toEqual(["fill"])
     })
 
     it("puts the list beside the thread from a medium width and the contact from a wide one", () => {

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 import type {
@@ -137,7 +136,7 @@ export class WorkspaceMemberDirectoryService {
             .addOrderBy("m.displayName", "ASC")
             .limit(limit)
             .getMany()
-        return rows.map(toDirectoryMember)
+        return rows.map((item) => toDirectoryMember(item))
     }
 
     /** The active members of the workspace among the given membership ids, owners first, then managers, then staff, bounded. */
@@ -158,7 +157,7 @@ export class WorkspaceMemberDirectoryService {
             .addOrderBy("m.displayName", "ASC")
             .limit(limit)
             .getMany()
-        return rows.map(toDirectoryMember)
+        return rows.map((item) => toDirectoryMember(item))
     }
 
     /** The members of the workspace among the given membership ids, whatever their status; one that does not exist is missing. */
@@ -173,7 +172,7 @@ export class WorkspaceMemberDirectoryService {
             where: { workspaceId, id: In([...memberIds]) },
             take: memberIds.length,
         })
-        return rows.map(toDirectoryMember)
+        return rows.map((item) => toDirectoryMember(item))
     }
 
     /** The membership id of an account in the workspace, whatever its status; null when the account holds no seat. */

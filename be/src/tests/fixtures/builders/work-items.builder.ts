@@ -1,19 +1,26 @@
-import type {
-    NewWorkItem,
-    Proposal,
-    WorkItemRecord,
-    EvidenceState,
-    DecidedPath,
-    SubjectType,
-    ReasonCode,
-    WorkStatus,
-    WorkResult,
+import {
+    type NewWorkItem,
+    type Proposal,
+    type WorkItemRecord,
+    type EvidenceState,
+    type DecidedPath,
+    type SubjectType,
+    type ReasonCode,
+    type WorkStatus,
+    type WorkResult,
+    toProposal,
+    workItemsEntities,
 } from "@modules/domain/work-items"
 import { ANY_FUNCTION } from "./any-function.builder"
 import { builderOf } from "./entity-query-builder-fake.builder"
-import { builder, mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
-import type { MockEntityManager, FakeQueryBuilder, QueryBuilderAnswers } from "@starci/jest-preset"
-import { toProposal, workItemsEntities } from "@modules/domain/work-items"
+import {
+    builder,
+    mockEntityManager,
+    fakeQueryBuilder,
+    type MockEntityManager,
+    type FakeQueryBuilder,
+    type QueryBuilderAnswers,
+} from "@starci/jest-preset"
 
 const WorkItemEntity: (typeof workItemsEntities)[0] = workItemsEntities[0]
 type WorkItemEntity = InstanceType<typeof WorkItemEntity>

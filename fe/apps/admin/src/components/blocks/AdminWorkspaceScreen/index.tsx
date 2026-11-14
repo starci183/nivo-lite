@@ -13,8 +13,7 @@ import {
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { ADMIN_ROUTES } from "@/modules/routes"
 import type { ReactNode } from "react"
-import { AdminWorkspaceScreenBase } from "./component"
-import type { AdminWorkspaceScreenData, AdminWorkspaceScreenHead } from "./component"
+import { AdminWorkspaceScreenBase, type AdminWorkspaceScreenData, type AdminWorkspaceScreenHead } from "./component"
 
 /** What the workspace page tells the block: the workspace of the address. */
 interface AdminWorkspaceScreenProps {
@@ -80,7 +79,8 @@ export const AdminWorkspaceScreen = (props: AdminWorkspaceScreenProps) => {
                 errorHint: t("loadFailedHint"),
             }}
             on={{ retry: reload, openSupport: () => drawer.setOpen(true) }}
-            children={props.children}
-        />
+        >
+            {props.children}
+        </AdminWorkspaceScreenBase>
     )
 }

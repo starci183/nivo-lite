@@ -1,11 +1,13 @@
-/** What answering one message of the gateway endpoint takes. */
+import type { McpHttpRequest } from "@modules/integrations/mcp"
+
+/** What answering one HTTP request of the outbound MCP endpoint takes. */
 export interface AnswerMcpRequestRequest {
-    /** The workspace the endpoint path names. */
-    readonly workspaceId: string
-    /** The agent the credential names. */
-    readonly agentId: string
-    /** The only workspace the credential acts for. */
-    readonly credentialWorkspaceId: string
-    /** The JSON-RPC message as the transport received it. */
-    readonly message: unknown
+    /** The workspace the endpoint path names, or null on the canonical `/mcp`. */
+    readonly pathWorkspaceId: string | null
+    /** The key the credential proved. */
+    readonly keyId: string
+    /** The only workspace the key acts for. */
+    readonly keyWorkspaceId: string
+    /** The HTTP request. */
+    readonly http: McpHttpRequest
 }

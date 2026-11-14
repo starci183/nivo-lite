@@ -1,7 +1,6 @@
 "use client"
 
-import { create } from "zustand"
-import type { UseBoundStore, StoreApi } from "zustand"
+import { create, type UseBoundStore, type StoreApi } from "zustand"
 
 /** Feature-local state of the workspace list: which card is being opened right now. */
 interface WorkspaceOpenState {

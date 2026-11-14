@@ -1,3 +1,4 @@
+export { BRANCH_MODE_MEMBER, LEGACY_BRANCH_MODE_MEMBER, branchModeRead } from "./branch-mode"
 export { canonicalJson, hashOfPackage } from "./canonical"
 export { leavesOf, withLeafValue } from "./condition"
 export { TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN, MAX_PARAMETERS } from "./format"
@@ -27,7 +28,7 @@ export type {
 export type {
     ApproverGroup,
     BranchApprover,
-    Condition,
+    Condition as DocumentCondition,
     ContractLimit,
     ContractSource,
     DecidePoint,
@@ -36,7 +37,6 @@ export type {
     GraphContract,
     GraphDocument,
     GraphNode,
-    GraphRight,
     GraphSource,
     NodeAnswerKey,
     NodeDataUse,
@@ -53,3 +53,8 @@ export type { MergeInput } from "./merge"
 export { instantiate, resolveValues } from "./parameters"
 export type { ParameterValues, ResolvedValues } from "./parameters"
 export { leakProblems, previewPackage, suggestionsOf } from "./packager"
+export { latestTemplateVersion, parseWorkflowTemplate, templateVersionOf, templateVersionsAfter } from "./workflow-template"
+export type { WorkflowTemplate, WorkflowTemplateConnection, WorkflowTemplateVersion } from "./workflow-template"
+export { templateGraphHash, templateVersionProblems } from "./template-version-hashes"
+export type { RawTemplateVersions, RecordedTemplateHashes, TemplateVersionProblems } from "./template-version-hashes"
+export * from "./builder"

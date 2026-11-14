@@ -1,22 +1,10 @@
-import type { RuleMode } from "@modules/domain/authority-rules"
-import { SUBJECT_TYPES, factSlugOf } from "@modules/domain/brain-facts"
-import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
-import type { BranchCardPayload, FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
-import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate, GateWrite } from "../modules.contracts"
+import { SUBJECT_TYPES, factSlugOf, type BrainSubjectType, type Scope } from "@modules/domain/brain-facts"
+import type { FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
+import type { ModuleDefinition, ModuleGate, FactWrite } from "../modules.contracts"
 
 /** The gate key of a write that answers a customer question (a knowledge gap) rather than a checklist item. */
 export const GAP_GATE = "gap"
 
-const MODES: ReadonlyArray<RuleMode> = ["auto", "ask", "never"]
-const UNIT_MULTIPLIER: Readonly<Record<string, number>> = {
-    ty: 1e9,
-    trieu: 1e6,
-    tr: 1e6,
-    m: 1e6,
-    k: 1e3,
-    nghin: 1e3,
-    ngan: 1e3,
-}
 const WRITES_PER_TURN = 8
 
 /** An open customer question the owner can answer in the setup chat. */
@@ -43,41 +31,6 @@ export interface ProposedFact {
     readonly payload: FactCardPayload
 }
 
-/** The change of a rule the model proposed: the half it did not touch stays unset until the rule in force is read. */
-export interface ProposedRulePayload {
-    /** The authority action. */
-    readonly action: string
-    /** Which field the answer set. */
-    readonly field: "mode" | "limit_vnd"
-    /** The proposed mode; null when the answer is about the limit. */
-    readonly mode: RuleMode | null
-    /** The proposed limit, VND; undefined when the answer is about the mode. */
-    readonly limitVnd: number | null | undefined
-}
-
-/** A rule change the model proposed. */
-export interface ProposedRule {
-    /** The gate it answers. */
-    readonly gateKey: string
-    /** Discriminator. */
-    readonly kind: "rule"
-    /** The change. */
-    readonly payload: ProposedRulePayload
-}
-
-/** A branch the model proposed: where the bands of an action meet and who is asked above the line. */
-export interface ProposedBranch {
-    /** The gate it answers. */
-    readonly gateKey: string
-    /** Discriminator. */
-    readonly kind: "branch"
-    /** The branch. */
-    readonly payload: BranchCardPayload
-}
-
-/** One write the model proposed. */
-export type ProposedWrite = ProposedFact | ProposedRule | ProposedBranch
-
 const isObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
@@ -86,39 +39,12 @@ const clean = (value: unknown, max: number): string => (typeof value === "string
 const FACT_SUBJECTS: ReadonlyArray<BrainSubjectType> = SUBJECT_TYPES
 
 /** The key that makes two cards the same target: one waiting card per target. */
-export const targetKeyOf = (write: ProposedWrite): string => {
-    if (write.kind === "branch") return `branch:${write.payload.action}`
-    return write.kind === "fact"
-        ? `fact:${factSlugOf(write.payload.subjectLabel)}|${factSlugOf(write.payload.attributeLabel)}`
-        : `rule:${write.payload.action}`
-}
-
-/** An amount typed by the model: a number, or "20 trieu" / "1,5 ty" / "20000000" (accents are ignored). */
-export const vndOf = (value: unknown): number | null => {
-    if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? Math.round(value) : null
-    if (typeof value !== "string") return null
-    const normalized = value
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/\s+/g, " ")
-    const found = /^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u.exec(normalized)
-    if (found === null) return null
-    const unit = found[2] ?? ""
-    // The successful anchored match guarantees this maximal numeric prefix is nonempty.
-    const prefix = found.slice(1, 2).join("")
-    const digits = unit === "" ? prefix.replace(/[.,]/g, "") : prefix.replace(",", ".")
-    const amount = Number(digits)
-    if (!Number.isFinite(amount)) return null
-    return Math.round(amount * (UNIT_MULTIPLIER[unit] ?? 1))
-}
+export const targetKeyOf = (write: ProposedFact): string =>
+    `fact:${factSlugOf(write.payload.subjectLabel)}|${factSlugOf(write.payload.attributeLabel)}`
 
 /** The writes a gate declares; none for a gate that declares none. */
-export const gateWritesOf = (module: ModuleDefinition, gateKey: string): ReadonlyArray<GateWrite> =>
+export const gateWritesOf = (module: ModuleDefinition, gateKey: string): ReadonlyArray<FactWrite> =>
     module.gates.find((gate) => gate.key === gateKey)?.writes ?? []
-
-const actionOf = (module: ModuleDefinition, action: string): AuthorityActionDefinition | undefined =>
-    module.authorityActions.find((candidate) => candidate.action === action)
 
 const factOfGap = (
     module: ModuleDefinition,
@@ -128,8 +54,8 @@ const factOfGap = (
     gaps: ReadonlyArray<OpenGap>,
 ): ProposedFact | null => {
     const gap = gaps.find((candidate) => candidate.id === clean(item.gap, 60))
-    const attributeLabel = clean(item.attribute, 120) || gap?.attributeGuess || ""
-    const subject = subjectLabel || gap?.topic || ""
+    const attributeLabel = clean(item.attribute, 120) || (gap?.attributeGuess ?? "")
+    const subject = subjectLabel || (gap?.topic ?? "")
     if (gap === undefined || attributeLabel === "" || subject === "") return null
     const scope: Scope = module.audience === "customer" ? "public" : "internal"
     return {
@@ -154,7 +80,7 @@ const factOfGate = (
     subjectLabel: string,
     businessLabel: string,
 ): ProposedFact | null => {
-    const declared = gateWritesOf(module, gateKey).filter((write) => write.kind === "fact")
+    const declared = gateWritesOf(module, gateKey)
     const asked = clean(item.attribute, 120)
     const spec =
         declared.find((write) => factSlugOf(write.attributeLabel) === factSlugOf(asked)) ??
@@ -175,75 +101,45 @@ const factOfGate = (
     }
 }
 
-const ruleOfGate = (module: ModuleDefinition, item: Record<string, unknown>, gateKey: string): ProposedRule | null => {
-    const action = clean(item.action, 60)
-    const spec = gateWritesOf(module, gateKey)
-        .filter((write) => write.kind === "rule")
-        .find((write) => write.action === action)
-    if (spec === undefined) return null
-    const definition = actionOf(module, spec.action)
-    if (definition === undefined) return null
-    if (spec.field === "mode") {
-        const mode = MODES.find((candidate) => candidate === item.mode)
-        if (mode === undefined || (mode === "auto" && definition.maxMode !== null)) return null
-        return { gateKey, kind: "rule", payload: { action: spec.action, field: "mode", mode, limitVnd: undefined } }
-    }
-    const limitVnd = vndOf(item.limit_vnd)
-    if (limitVnd === null || limitVnd <= 0 || !definition.amountLimit) return null
-    return { gateKey, kind: "rule", payload: { action: spec.action, field: "limit_vnd", mode: null, limitVnd } }
-}
-
 /**
  * Keeps only the writes the module declared. A fact must match a declared fact write of its gate (attribute) and takes the declared
- * subject type and scope: the owner chooses the audience per gate, the model never widens it. A rule must match a declared rule write
- * (action and field). A write for a customer question (`gap`) is a fact about the audience of the module. At most eight per turn.
+ * subject type and scope: the owner chooses the audience per gate, the model never widens it. A write for a customer question (`gap`)
+ * is a fact about the audience of the module. At most eight per turn.
  */
 export const sanitizeWrites = (
     module: ModuleDefinition,
     raw: unknown,
     gaps: ReadonlyArray<OpenGap>,
     businessLabel: string,
-): ReadonlyArray<ProposedWrite> => {
+): ReadonlyArray<ProposedFact> => {
     if (!Array.isArray(raw)) return []
-    const kept = new Map<string, ProposedWrite>()
+    const kept = new Map<string, ProposedFact>()
     for (const item of raw) {
         if (!isObject(item)) continue
         const gateKey = clean(item.gate, 60)
         const value = clean(item.value, 2000)
         const subjectLabel = clean(item.subject, 160)
-        let write: ProposedWrite | null = null
-        if (item.kind === "rule") write = ruleOfGate(module, item, gateKey)
-        else if (item.kind === "fact" && value !== "") {
-            write =
-                gateKey === GAP_GATE
-                    ? factOfGap(module, item, value, subjectLabel, gaps)
-                    : factOfGate(module, item, gateKey, value, subjectLabel, businessLabel)
-        }
+        if (item.kind !== "fact" || value === "") continue
+        const write =
+            gateKey === GAP_GATE
+                ? factOfGap(module, item, value, subjectLabel, gaps)
+                : factOfGate(module, item, gateKey, value, subjectLabel, businessLabel)
         if (write !== null) kept.set(targetKeyOf(write), write)
     }
     return [...kept.values()].slice(0, WRITES_PER_TURN)
 }
 
-/** What the model is told each gate may write, one line per declared write. */
+/** What the model is told each gate may write, one line per declared fact. */
 export const writeSpecLines = (module: ModuleDefinition): ReadonlyArray<string> =>
     module.gates.flatMap((gate: ModuleGate) =>
-        (gate.writes ?? []).map((write) => {
-            if (write.kind === "fact") {
-                return `- gate ${gate.key}: fact | subjectType ${write.subjectType} | attribute "${write.attributeLabel}" | audience ${write.scope}`
-            }
-            const definition = actionOf(module, write.action)
-            const label = definition?.label.en ?? write.action
-            const field =
-                write.field === "mode"
-                    ? 'field mode: "auto" (runs by itself), "ask" (asks the owner first) or "never"'
-                    : "field limit_vnd: the amount in VND below which it runs by itself"
-            const capped = write.field === "mode" && definition?.maxMode !== null ? ' (never "auto")' : ""
-            return `- gate ${gate.key}: rule | action ${write.action} (${label}) | ${field}${capped}`
-        }),
+        gateWritesOf(module, gate.key).map(
+            (write) =>
+                `- gate ${gate.key}: fact | subjectType ${write.subjectType} | attribute "${write.attributeLabel}" | audience ${write.scope}`,
+        ),
     )
 
-/** The stored shape of a proposed write once the rule in force completed it: the card the owner will see. */
-export const cardOf = (write: ProposedWrite, payload: ProposedCardRecord["payload"]): ProposedCardRecord => ({
+/** The stored shape of a proposed write: the card the owner will see. */
+export const cardOf = (write: ProposedFact, payload: ProposedCardRecord["payload"]): ProposedCardRecord => ({
     gate_key: write.gateKey,
     kind: write.kind,
     target_key: targetKeyOf(write),

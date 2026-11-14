@@ -1,9 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import { REPLAY_TTL_MS, SWEEP_BATCH, SWEEP_MAX_BATCHES } from "./realtime.contracts"
+import { DatabaseError, DatabaseErrorCode } from "@modules/platform/database"
 import { REALTIME_MANAGERS } from "./realtime.decorators"
 import { RealtimeRetentionService } from "./realtime-retention.service"
 import { RealtimeEventEntity } from "./persistence/entities"
+
+/** What a fence that refuses a batch rejects with. */
+const FENCED_OUT = new DatabaseError({ code: DatabaseErrorCode.MigrationFailed })
 
 /** How many rows a batch deleted; undefined is a statement that answers no count. */
 type Deleted = number | undefined
@@ -71,7 +75,9 @@ describe("RealtimeRetentionService.sweep", () => {
     it("deletes nothing when the fence refuses a batch", async () => {
         const { retention, em } = await build(2)
 
-        await expect(retention.sweep(() => Promise.reject(new Error("fenced out")))).rejects.toThrow("fenced out")
+        await expect(retention.sweep(() => Promise.reject(FENCED_OUT))).rejects.toMatchObject({
+            code: DatabaseErrorCode.MigrationFailed,
+        })
 
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })

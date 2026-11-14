@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { QueryParams } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type QueryParams } from "@nivo-lite/api"
+import { adminApiTransport } from "@/modules/api-transport"
 import type { AdminHealthQuery } from "../__generated__/graphql"
 
 const query1: TypedDocumentNode<AdminHealthQuery> = gql`
@@ -72,7 +71,7 @@ export const queryAdminHealth = async ({
     query = QueryAdminHealth.Query1,
     signal,
 }: QueryAdminHealthParams = {}): Promise<ApolloClient.QueryResult<AdminHealthQuery>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(adminApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
     })

@@ -2,10 +2,10 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionRecord, ConnectionStatusFacts } from "@modules/domain/connections"
-import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { ToolsErrorCode } from "@modules/domain/tools"
 import { BankTransactionsRegistryService } from "@modules/domain/provider-registry"
 import type { BankTransaction } from "@modules/domain/provider-registry"
-import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
+import { AgentAccountsService } from "@modules/domain/tools"
 import { BANK_MANIFEST, BankNativeService } from "./bank-native.service"
 import type { NativeView } from "./native-view.policy"
 import { NativeViewService } from "./native-view.service"
@@ -122,7 +122,7 @@ describe("BankNativeService", () => {
         bindings.ofProvider.mockResolvedValue(feeds)
 
         await expect(service.invoke("ws-1", "transaction.list", {}, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.NativeRefused,
+            code: ToolsErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
     })
@@ -149,10 +149,10 @@ describe("BankNativeService", () => {
         const { service } = await build()
 
         await expect(service.invoke("ws-1", "transaction.list", { limit: 0 }, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.InvalidArguments,
+            code: ToolsErrorCode.InvalidArguments,
         })
         await expect(service.invoke("ws-1", "other", {}, CALLER)).rejects.toMatchObject({
-            code: McpGatewayErrorCode.UnknownTool,
+            code: ToolsErrorCode.UnknownTool,
         })
     })
 
@@ -160,7 +160,7 @@ describe("BankNativeService", () => {
         const views = mock<NativeViewService>()
         views.internalOf.mockResolvedValue(VIEW)
         const bindings = mock<ConnectionBindingsReadService>()
-        const abilities = mock<ProviderAbilitiesService>()
+        const abilities = mock<AgentAccountsService>()
         abilities.accountsOfAgent.mockResolvedValue(["mb", "vcb"])
         const transactions = jest.fn((connection: ConnectionRecord) =>
             Promise.resolve([{ ...TRANSACTION, id: `tx-${connection.id}`, occurredAt: connection.id === "mb" ? "2026-11-02" : "2026-11-03" }]),
@@ -171,7 +171,7 @@ describe("BankNativeService", () => {
                 BankTransactionsRegistryService,
                 { provide: NativeViewService, useValue: views },
                 { provide: ConnectionBindingsReadService, useValue: bindings },
-                { provide: ProviderAbilitiesService, useValue: abilities },
+                { provide: AgentAccountsService, useValue: abilities },
             ],
         }).compile()
         moduleRef.get(BankTransactionsRegistryService).register({ provider: "sepay", transactions })
@@ -181,7 +181,7 @@ describe("BankNativeService", () => {
 
         const answer = await service.invoke("ws-1", "transaction.list", {}, CALLER)
 
-        expect(abilities.accountsOfAgent).toHaveBeenCalledWith("ws-1", CALLER.agentId, "nivo.bank.transaction.list")
+        expect(abilities.accountsOfAgent).toHaveBeenCalledWith("ws-1", CALLER.agentId, "nivo.tool.bank.transaction.list")
         expect(answer).toMatchObject({
             provider: "sepay",
             transactions: [
@@ -194,5 +194,30 @@ describe("BankNativeService", () => {
         abilities.accountsOfAgent.mockClear()
         await service.invoke("ws-1", "transaction.list", {}, { ...CALLER, engine: true })
         expect(abilities.accountsOfAgent).not.toHaveBeenCalled()
+
+        transactions.mockClear()
+        const handed = await service.invoke("ws-1", "transaction.list", {}, { ...CALLER, connectionId: "vcb", provider: "sepay" })
+        expect(handed).toMatchObject({ transactions: [{ connectionId: "vcb" }] })
+        expect(transactions).toHaveBeenCalledTimes(1)
+        await expect(
+            service.invoke("ws-1", "transaction.list", {}, { ...CALLER, connectionId: "acb", provider: "sepay" }),
+        ).rejects.toMatchObject({ params: { reason: "not_connected" } })
+    })
+})
+
+// #10b (ARCH-REVIEW 2026-11-12 S7): the bank read is an `each` read; the engine's own caller (and an app with no rights) reads EVERY
+// live feed of the provider, never "the first feed alone".
+describe("BankNativeService: no silent pick", () => {
+    it("the engine's own caller reads every live feed, each movement naming its account", async () => {
+        const { service, bindings, transactions } = await build()
+        bindings.ofProvider.mockResolvedValue(["mb", "vcb"].map((id) => ({ ...feed("connected"), id })))
+        bindings.recordOf.mockImplementation((_workspaceId, id) => Promise.resolve({ ...record("live"), id, name: `Account ${id}` }))
+        transactions.mockImplementation((connection: ConnectionRecord) => Promise.resolve([{ ...TRANSACTION, id: `tx-${connection.id}` }]))
+
+        const answer = await service.invoke("ws-1", "transaction.list", {}, { ...CALLER, engine: true })
+
+        expect(transactions).toHaveBeenCalledTimes(2)
+        expect(answer).toMatchObject({ transactions: expect.arrayContaining([expect.objectContaining({ connectionId: "mb" })]) })
+        expect(answer).toMatchObject({ transactions: expect.arrayContaining([expect.objectContaining({ connectionId: "vcb" })]) })
     })
 })

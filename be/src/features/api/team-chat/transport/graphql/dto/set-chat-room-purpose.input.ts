@@ -14,6 +14,7 @@ export class SetChatRoomPurposeInput {
     /** Plain, the common room, or the room of one module's team. */
     @Field(() => ChatGroupPurpose)
     @IsIn(["group", "common", "module"])
+    @MaxLength(6)
     purpose!: string
 
     /** The module whose team room it is, for the purpose module. */

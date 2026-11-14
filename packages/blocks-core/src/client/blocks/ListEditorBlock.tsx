@@ -1,12 +1,10 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
-import { Alert, Button, Cluster, EmptyNotice, Fieldset, Form, Grid, SurfaceCard } from "@starci/grammar/common"
+import { Alert, Button, Cluster, EmptyNotice, Fieldset, Form, Grid } from "@starci/grammar/common"
 import type { listEditorBlock } from "../../blocks/list-editor.block"
 import { cellContextOf } from "../../rows/cell-format"
-import { formRecordSlot, mergedErrors, recordIdOf } from "../../rows/form-values"
-import type { FormErrors, FormValue } from "../../rows/form-values"
+import { formRecordSlot, mergedErrors, recordIdOf, type FormErrors, type FormValue } from "../../rows/form-values"
 import {
     appendRow,
     fieldKeyOf,
@@ -18,10 +16,11 @@ import {
     validateRows,
     withoutFieldError,
     withRowValue,
+    type ListErrors,
+    type ListRow,
 } from "../../rows/list-rows"
-import type { ListErrors, ListRow } from "../../rows/list-rows"
-import { FormFieldView } from "../composites/FormFieldView"
-import type { FormFieldData } from "../composites/FormFieldView"
+import { FormFieldView, type FormFieldData } from "../composites/FormFieldView"
+import { SurfaceFrame } from "../composites/SurfaceFrame"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
@@ -228,9 +227,9 @@ export const ListEditorBlock = (props: ListEditorProps): ReactNode => {
             placeholder={{}}
             onRetry={read.retry}
             render={(record, isLoading) => (
-                <SurfaceCard label={words(props.props.label)} headingLevel={2}>
+                <SurfaceFrame surface="card" label={words(props.props.label)}>
                     <ListEditorBody key={JSON.stringify(record)} props={props} record={record} isLoading={isLoading} />
-                </SurfaceCard>
+                </SurfaceFrame>
             )}
         />
     )

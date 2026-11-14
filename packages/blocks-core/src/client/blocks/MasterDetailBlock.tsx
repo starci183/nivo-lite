@@ -1,5 +1,4 @@
-import { Children } from "react"
-import type { ReactNode } from "react"
+import { Children, type ReactNode } from "react"
 import { EmptyNotice, Grid, SurfaceCard } from "@starci/grammar/common"
 import type { masterDetailBlock } from "../../blocks/master-detail.block"
 import { useBlockWords } from "../composites/useBlockWords"
@@ -15,12 +14,10 @@ export const MasterDetailBlock = (props: RenderOf<typeof masterDetailBlock>): Re
             kind="main-rail"
             primary={list}
             rail={
-                detail === null ? (
+                detail ?? (
                     <SurfaceCard ariaLabel={title}>
                         <EmptyNotice message={title} description={words(props.props.emptyBody)} />
                     </SurfaceCard>
-                ) : (
-                    detail
                 )
             }
             railWidth="wide"

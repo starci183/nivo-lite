@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateUpdateKnowledgeSource,
     type MutateUpdateKnowledgeSourceRequest,
 } from "@/modules/api/graphql/mutations/mutation-update-knowledge-source"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UpdateKnowledgeSourceMutation } from "@/modules/api"
 
 /** What the UpdateKnowledgeSource mutation is triggered with. */

@@ -3,6 +3,7 @@ import { ConnectionsApiModule } from "../../connections.module"
 import { AuthorizeGoogleResolver } from "./authorize-google.resolver"
 import { AuthorizeMetaResolver } from "./authorize-meta.resolver"
 import { AuthorizeZaloResolver } from "./authorize-zalo.resolver"
+import { BindableAgentsResolver } from "./bindable-agents.resolver"
 import { CheckConnectionResolver } from "./check-connection.resolver"
 import { CheckMetaResolver } from "./check-meta.resolver"
 import { ChooseMetaPageResolver } from "./choose-meta-page.resolver"
@@ -11,6 +12,8 @@ import { ConfigurableModuleClass } from "./connections-graphql.module-definition
 import { DeleteConnectionResolver } from "./delete-connection.resolver"
 import { DisconnectConnectionResolver } from "./disconnect-connection.resolver"
 import { FinishWebhookConnectionResolver } from "./finish-webhook-connection.resolver"
+import { GetConnectionAccountDataResolver } from "./get-connection-account-data.resolver"
+import { AccountDataRowsResolver } from "./account-data-rows.resolver"
 import { GetConnectionFirstEventResolver } from "./get-connection-first-event.resolver"
 import { GetGoogleStateResolver } from "./get-google-state.resolver"
 import { GetMetaConnectionResolver } from "./get-meta-connection.resolver"
@@ -18,6 +21,7 @@ import { GetMoneyConnectionResolver } from "./get-money-connection.resolver"
 import { GetZaloConnectionResolver } from "./get-zalo-connection.resolver"
 import { ListConnectionAgentsResolver } from "./list-connection-agents.resolver"
 import { ListConnectionsResolver } from "./list-connections.resolver"
+import { ListWebhookEventsResolver } from "./list-webhook-events.resolver"
 import { ReturnZaloAuthorizationResolver } from "./return-zalo-authorization.resolver"
 import { SaveProviderKeysResolver } from "./save-provider-keys.resolver"
 import { SaveZaloOaSecretResolver } from "./save-zalo-oa-secret.resolver"
@@ -43,6 +47,7 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         AuthorizeGoogleResolver,
         AuthorizeMetaResolver,
         AuthorizeZaloResolver,
+        BindableAgentsResolver,
         CheckConnectionResolver,
         CheckMetaResolver,
         ChooseMetaPageResolver,
@@ -50,6 +55,8 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         DeleteConnectionResolver,
         DisconnectConnectionResolver,
         FinishWebhookConnectionResolver,
+        GetConnectionAccountDataResolver,
+        AccountDataRowsResolver,
         GetConnectionFirstEventResolver,
         GetGoogleStateResolver,
         GetMetaConnectionResolver,
@@ -57,6 +64,7 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         GetZaloConnectionResolver,
         ListConnectionAgentsResolver,
         ListConnectionsResolver,
+        ListWebhookEventsResolver,
         ReturnZaloAuthorizationResolver,
         SaveProviderKeysResolver,
         SaveZaloOaSecretResolver,

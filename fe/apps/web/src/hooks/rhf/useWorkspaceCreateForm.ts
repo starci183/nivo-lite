@@ -3,17 +3,16 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import {
-    BUSINESS_TYPE_MAX,
-    OTHER_BUSINESS_TYPE,
-    WORKSPACE_BUSINESS_TYPES,
-    WORKSPACE_NAME_MAX,
-    WORKSPACE_NAME_MIN,
+  BUSINESS_TYPE_MAX,
+  OTHER_BUSINESS_TYPE,
+  WORKSPACE_BUSINESS_TYPES,
+  WORKSPACE_NAME_MAX,
+  WORKSPACE_NAME_MIN,
+  type WorkspaceBusinessType,
 } from "@/hooks/workspaces"
-import type { WorkspaceBusinessType } from "@/hooks/workspaces"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the create workspace form. */
 export interface WorkspaceCreateValues {

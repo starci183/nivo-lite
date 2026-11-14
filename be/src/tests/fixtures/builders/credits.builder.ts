@@ -58,7 +58,7 @@ export const ORDER: PaymentOrder = {
 /** The payable form of the top-up order. */
 export const PAYABLE: PayableOrder = {
     order: ORDER,
-    qrUrl: "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=299000&des=NIVO8F3K2&template=compact",
+    qrUrl: "https://vietqr.app/img?acc=0123&bank=MB&amount=299000&des=NIVO8F3K2&template=compact",
     bank: { account: "0123", bank: "MB", holder: "NIVO" },
 }
 /** A pending upgrade payment order. */
@@ -82,7 +82,7 @@ export const UPGRADE_ORDER: PaymentOrder = {
 export const UPGRADE_PAYABLE: PayableOrder = {
     ...PAYABLE,
     order: UPGRADE_ORDER,
-    qrUrl: "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=1495000&des=NIVO8F3K2&template=compact",
+    qrUrl: "https://vietqr.app/img?acc=0123&bank=MB&amount=1495000&des=NIVO8F3K2&template=compact",
 }
 type UpgradeResultQuoteShape = {
     amount: number

@@ -2,15 +2,12 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { factDrawerOf, factKeyOf } from "@/modules/brain"
-import type { FactDrawerWords, FactKey } from "@/modules/brain"
+import { factDrawerOf, factKeyOf, type FactDrawerWords, type FactKey } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref, workspaceHref } from "@/modules/routes"
-import type { BrainTab } from "@/modules/routes"
+import { brainTabHref, workspaceHref, type BrainTab } from "@/modules/routes"
 import type { BrainFact, BrainLens, FactDrawerDetailView } from "@/modules/types"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { useFactBatch } from "./useFactBatch"
-import type { FactOperation } from "./useFactBatch"
+import { useFactBatch, type FactOperation } from "./useFactBatch"
 import { useFactRetire } from "./useFactRetire"
 import { useFailureToast } from "./useFailureToast"
 
@@ -68,12 +65,12 @@ export const useFactDetailDrawer = (input: FactDetailDrawerInput): FactDetailDra
     const retire = useFactRetire(input.canWrite)
     const [openId, setOpenId] = useState<string | null>(null)
     const [pending, setPending] = useState<"approve" | "reject" | null>(null)
-    const [isHistoryOpen, setHistoryOpen] = useState(false)
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false)
     const fact = input.facts.find((one) => one.id === openId)
     const one = fact === undefined ? undefined : input.keys.find((key) => key.key === factKeyOf(fact))
     const close = () => {
         setOpenId(null)
-        setHistoryOpen(false)
+        setIsHistoryOpen(false)
     }
     const view =
         fact === undefined
@@ -117,7 +114,7 @@ export const useFactDetailDrawer = (input: FactDetailDrawerInput): FactDetailDra
         on: {
             open: (factId) => {
                 setOpenId(factId)
-                setHistoryOpen(false)
+                setIsHistoryOpen(false)
             },
             close,
             edit: () => {
@@ -128,7 +125,7 @@ export const useFactDetailDrawer = (input: FactDetailDrawerInput): FactDetailDra
             approve: () => decide("approve"),
             reject: () => decide("reject"),
             menu: (id) => {
-                if (id === "history") setHistoryOpen(!isHistoryOpen)
+                if (id === "history") setIsHistoryOpen(!isHistoryOpen)
                 if (id === "retire" && fact !== undefined) retire.ask(fact.id)
             },
             confirmRetire: () => {

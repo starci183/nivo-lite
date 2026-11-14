@@ -18,6 +18,11 @@ export type CallRefusal =
     | "call_cycle"
     /** A run of the same target for the same lead with the same params still stands. */
     | "call_duplicate"
+    /**
+     * The target is switched on but readiness hides it (a blocking node none of whose providers is bound): no hand-off reaches it and
+     * nothing runs in its place; the founder is told which providers it waits for (`AgentGraphFlowRunsService`).
+     */
+    | "call_target_hidden"
 
 /** What a wake says of the call that made it: the calling run and the params it passed. */
 export interface WorkflowCallFacts {
@@ -33,8 +38,8 @@ export interface CallLink {
     readonly agentId: string
     /** The workflow, or the agent's own graph when the run is pinned to none. */
     readonly workflow: string
-    /** The lead it served, or null. */
-    readonly leadId: string | null
+    /** The contact (the person) it served, or null. */
+    readonly contactId: string | null
     /** The digest of the params it was called with. */
     readonly paramHash: string
 }
@@ -54,7 +59,7 @@ export const callOf = (payload: unknown): WorkflowCallFacts | null => {
 
 /** Plain data with every object's members in key order, so the same params give the same text. */
 const canonicalOf = (value: unknown): unknown => {
-    if (Array.isArray(value)) return value.map(canonicalOf)
+    if (Array.isArray(value)) return value.map((item) => canonicalOf(item))
     if (!isRecord(value)) return value
     return Object.fromEntries(
         Object.keys(value)
@@ -69,20 +74,20 @@ export const paramHashOf = (params: Readonly<Record<string, unknown>>): string =
         .update(JSON.stringify(canonicalOf(params)))
         .digest("hex")
 
-/** The lead a call is about: the trigger's own, else the one its params pass. */
-export const callLeadOf = (trigger: Readonly<Record<string, unknown>>, call: WorkflowCallFacts): string | null =>
-    textOf(trigger.leadId) ?? textOf(call.params.leadId)
+/** The contact a call is about: the trigger's own, else the one its params pass (workflow-call inputs carry `contactId`). */
+export const callContactOf = (trigger: Readonly<Record<string, unknown>>, call: WorkflowCallFacts): string | null =>
+    textOf(trigger.contactId) ?? textOf(call.params.contactId)
 
-/** Whether two links are the same workflow for the same lead with the same params. */
+/** Whether two links are the same workflow for the same contact with the same params. */
 const sameLink = (left: CallLink, right: CallLink): boolean =>
     left.agentId === right.agentId &&
     left.workflow === right.workflow &&
-    left.leadId === right.leadId &&
+    left.contactId === right.contactId &&
     left.paramHash === right.paramHash
 
 /**
  * Why a call is refused by its chain, or null when it may start. `chain` holds the workflows that led to the call, nearest first: the
- * call is refused past the depth limit, and when the target already runs in the chain for the same lead with the same params.
+ * call is refused past the depth limit, and when the target already runs in the chain for the same contact with the same params.
  */
 export const chainRefusalOf = (target: CallLink, chain: ReadonlyArray<CallLink>): CallRefusal | null => {
     if (chain.some((link) => sameLink(link, target))) return "call_cycle"

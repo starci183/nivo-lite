@@ -1,6 +1,9 @@
 import { CONTRACT_TYPES, TRIGGER_SOURCE_KINDS } from "@nivo-lite/agent-sdk/graph"
 import type { ContractProblem, GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
-import { latestTemplateVersion, workflowTemplateOf } from "../modules/workflow-templates"
+import { latestTemplateVersion, parseWorkflowTemplate, type WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
+import consult from "./legacy-templates/consult.template.json"
+import frontDesk from "./legacy-templates/front-desk.template.json"
+import reconcile from "./legacy-templates/reconcile.template.json"
 import {
     AGENT_LABELS,
     CONTRACT_TYPE_LABELS,
@@ -18,6 +21,13 @@ import {
     paramLabelOf,
     triggerViewsOf,
 } from "./workflow-contract-view"
+
+/**
+ * The last JSON templates of the front desk, the consult and the reconciliation, kept as data for the views of an @1 graph spec (the
+ * agents' graphs are `nivo/agent-graph@2` since the flip; the back end reads them into @1 for these views).
+ */
+const LEGACY_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [frontDesk, consult, reconcile].map((raw) => parseWorkflowTemplate(raw))
+const workflowTemplateOf = (id: string): WorkflowTemplate | null => LEGACY_TEMPLATES.find((one) => one.id === id) ?? null
 
 /** The graph a template ships now. */
 const graphOf = (id: string): GraphSpec => {
@@ -121,10 +131,9 @@ describe("triggerViewsOf", () => {
             ["zalo", "zalo", "Zalo", true, null],
             ["telegram", "telegram", "Telegram", true, null],
         ])
-        // The channel supplies messageIds too, but the contract does not take it, so it is no chip.
-        expect(vi[0]?.params.map((one) => one.name)).toEqual(["conversationId", "leadId", "channel", "text", "messages"])
-        expect(vi[0]?.params[0]).toEqual({ name: "conversationId", label: "Cu\u1ed9c tr\u00f2 chuy\u1ec7n", type: "string", typeLabel: "ch\u1eef" })
-        expect(vi[0]?.params[4]).toMatchObject({ type: "array", typeLabel: "danh s\u00e1ch" })
+        // Design change 2026-11-14 (the one event pipeline): a channel supplies only the generic members (route, contact, account, subject,
+        // data); the legacy front desk's contract (conversationId, leadId, channel, text, messages) takes none of them, so it shows no chip.
+        expect(vi[0]?.params.map((one) => one.name)).toEqual([])
         expect(en[0]).toMatchObject({ key: "call", sourceKind: "workflow", sourceLabel: "Called by another workflow", hasConnection: false })
         expect(en[0]?.params.map((one) => one.name)).toEqual(["conversationId", "text", "channel", "leadId"])
         expect(en[0]?.params[3]).toMatchObject({ label: "Customer", type: "string" })
@@ -174,7 +183,8 @@ describe("triggerViewsOf", () => {
     it("shows every param a source supplies when the graph has no contract", () => {
         const { contract: _contract, ...bare } = accountingSpec
 
-        expect(triggerViewsOf(bare, "vi")[0]?.params.map((one) => one.name)).toEqual(["transactionId"])
+        // A bank feed supplies the generic members of an account event; its `transactionId` is in `data` (design change 2026-11-14).
+        expect(triggerViewsOf(bare, "vi")[0]?.params.map((one) => one.name)).toEqual(["eventId", "accountId", "data", "locale"])
     })
 })
 
@@ -197,26 +207,20 @@ describe("outcomeViewsOf", () => {
     })
 })
 
+// Design change (R35, R43): the conversation hold is deleted; the entry view names who may call, nothing more.
 describe("entryViewOf", () => {
     it("words the entry rule of the graph in both languages", () => {
-        expect(entryViewOf(chatbotSpec, "vi")).toEqual({ openTo: "any", holdsConversation: false, label: "M\u1ecdi quy tr\u00ecnh \u0111\u01b0\u1ee3c g\u1ecdi" })
+        expect(entryViewOf(chatbotSpec, "vi")).toEqual({ openTo: "any", label: "M\u1ecdi quy tr\u00ecnh \u0111\u01b0\u1ee3c g\u1ecdi" })
         const closed: GraphSpec = { ...accountingSpec, entry: { openTo: "agent" } }
-        expect(entryViewOf(accountingSpec, "en")).toEqual({ openTo: "any", holdsConversation: false, label: "Any workflow may call" })
-        expect(entryViewOf(closed, "vi")).toEqual({ openTo: "agent", holdsConversation: false, label: "Ch\u1ec9 quy tr\u00ecnh c\u1ee7a agent n\u00e0y" })
-        expect(entryViewOf(closed, "en")).toEqual({ openTo: "agent", holdsConversation: false, label: "Only this agent's workflows" })
-    })
-
-    it("tells whether the workflow holds the conversation of its customer", () => {
-        const holding: GraphSpec = { ...salesSpec, entry: { openTo: "any", holdsConversation: true } }
-
-        expect(entryViewOf(holding, "en")).toEqual({ openTo: "any", holdsConversation: true, label: "Any workflow may call" })
-        expect(entryViewOf({ ...holding, entry: { openTo: "any", holdsConversation: false } }, "en").holdsConversation).toBe(false)
+        expect(entryViewOf(accountingSpec, "en")).toEqual({ openTo: "any", label: "Any workflow may call" })
+        expect(entryViewOf(closed, "vi")).toEqual({ openTo: "agent", label: "Ch\u1ec9 quy tr\u00ecnh c\u1ee7a agent n\u00e0y" })
+        expect(entryViewOf(closed, "en")).toEqual({ openTo: "agent", label: "Only this agent's workflows" })
     })
 
     it("opens the workflow to any caller when the graph names no rule", () => {
         const { entry: _entry, ...none } = accountingSpec
 
-        expect(entryViewOf(none, "en")).toEqual({ openTo: "any", holdsConversation: false, label: "Any workflow may call" })
+        expect(entryViewOf(none, "en")).toEqual({ openTo: "any", label: "Any workflow may call" })
     })
 })
 
@@ -346,7 +350,6 @@ describe("contractProblemText", () => {
         "TRIGGER_INPUT_TYPE",
         "TRIGGER_CONNECTION_INVALID",
         "TRIGGER_CONDITION_UNKNOWN",
-        "TRIGGER_SOURCES_MISMATCH",
         "TRIGGER_KEY_DUPLICATE",
         "CONTRACT_INPUT_DUPLICATE",
         "CALL_TARGET_UNKNOWN",
@@ -360,7 +363,6 @@ describe("contractProblemText", () => {
         "OUTCOME_OUTPUT_MISSING",
         "OUTCOME_OUTPUT_UNKNOWN",
         "OUTCOME_OUTPUT_TYPE",
-        "ENTRY_HOLD_WITHOUT_CONVERSATION",
     ]
 
     it.each(CODES)("words %s in both languages and leaves no placeholder behind", (code) => {
@@ -394,17 +396,7 @@ describe("contractProblemText", () => {
         expect(contractProblemText({ code: "OUTCOME_DUPLICATE", at: "outcomes.won" }, "en")).toBe("Two outcomes or fields share won.")
     })
 
-    it("words a hold without the conversation input, in both languages", () => {
-        const problem: ContractProblem = { code: "ENTRY_HOLD_WITHOUT_CONVERSATION", at: "entry.holdsConversation" }
-
-        expect(contractProblemText(problem, "en")).toBe("A workflow that holds the conversation must require the conversation as an input.")
-        expect(contractProblemText(problem, "vi")).toMatch(/^Quy tr/)
-    })
-
     it("leaves the param out when the problem names none", () => {
-        expect(contractProblemText({ code: "TRIGGER_SOURCES_MISMATCH", at: "triggers" }, "en")).toBe(
-            "The wake sources do not match the workflow's inputs.",
-        )
         expect(contractProblemText({ code: "CALL_TARGET_UNKNOWN", at: "to-sales" }, "vi")).toBe(
             "B\u01b0\u1edbc to-sales g\u1ecdi m\u1ed9t quy tr\u00ecnh kh\u00f4ng c\u00f3 trong c\u1eeda h\u00e0ng.",
         )

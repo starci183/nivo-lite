@@ -151,7 +151,6 @@ export interface PublicBrainView {
         readonly isRemoving: boolean
     }
     readonly on: {
-        readonly reviewAll: () => void
         readonly selectTab: (id: string) => void
         readonly search: (value: string) => void
         readonly setTab: (id: string) => void

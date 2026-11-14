@@ -10,12 +10,11 @@ export type {
     FirstEvent,
     FirstEventState,
     HealthCandidate,
-    IntakeConnection,
     Provider,
     SyncSchedule,
     WizardSettlement,
 } from "./connections.contracts"
-export type { ConnectionStatusFacts, FeedAccountFacts } from "./connection-bindings-read.contracts"
+export type { ConnectionStatusFacts } from "./connection-bindings-read.contracts"
 export { ConnectionsModule } from "./connections.module"
 export { ConnectionsService } from "./connections.service"
 export { connectionsEntities } from "./persistence/entities"
@@ -25,3 +24,5 @@ export { ConnectionsAdminReadService } from "./connections-admin-read.service"
 export type { ConnectionBadgeRow } from "./connections-admin-read.service"
 export { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 export { ConnectionBindingsReadService } from "./connection-bindings-read.service"
+export { connectionAttentionOf } from "./connection-attention.policy"
+export type { ConnectionAttention } from "./connection-attention.policy"

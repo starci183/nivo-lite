@@ -2,8 +2,8 @@ import type { QueryBus } from "@nestjs/cqrs"
 import { Args, Query, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
-import { InjectQueryBus } from "@modules/platform/cqrs"
-import type { Principal } from "@modules/platform/cqrs"
+import { InjectQueryBus, type Principal } from "@modules/platform/cqrs"
+import { AcceptedLocale, type Locale } from "@modules/platform/i18n"
 import { ReadAgentRunQuery } from "../../application/read-agent-run.query"
 import { ReadAgentRunsQuery } from "../../application/read-agent-runs.query"
 import {
@@ -41,9 +41,10 @@ export class AgentRunsResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
         @Args("input") input: AgentRunInput,
+        @AcceptedLocale() locale: Locale,
     ): Promise<AgentRunDetailType | null> {
         const detail = await this.queryBus.execute(
-            new ReadAgentRunQuery({ request: toReadAgentRunRequest(workspaceId, input), principal }),
+            new ReadAgentRunQuery({ request: toReadAgentRunRequest(workspaceId, input, locale), principal }),
         )
         return toAgentRunDetailType(detail)
     }

@@ -1,6 +1,10 @@
 import type { ChannelConnectionsService } from "@modules/domain/channel-connections"
-import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionsService } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    type ConnectionActor,
+    type ConnectionsService,
+} from "@modules/domain/connections"
 import type { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import type { ConnectionLifecycleService } from "@modules/domain/connection-lifecycle"
 import type { GoogleConnectionsService } from "@modules/domain/google-connections"
@@ -163,4 +167,19 @@ export const runCommand = async (
     if (runner === undefined) return invalid("kind")
     const value = await runner(services, actor, input)
     return value ?? true
+}
+
+/**
+ * The connection a finished command connected or activated as a customer channel, or null for any other command: the Telegram connect (the
+ * answer holds the connection), the Meta page choice (the input names it) and the first-event poll that finds a connection connected with
+ * its first event kept (a Zalo OA stays pending until then). The caller makes sure that channel has its front door.
+ */
+export const connectedChannelOf = (kind: string, input: Input, value: unknown): string | null => {
+    if (kind === "meta.page") return typeof input.connectionId === "string" ? input.connectionId : null
+    if (kind === "connection.first-event") {
+        const arrived = isRecord(value) && value.status === "connected" && value.firstEvent !== null
+        return arrived && typeof input.connectionId === "string" ? input.connectionId : null
+    }
+    if (kind !== "telegram.connect" || !isRecord(value) || !isRecord(value.connection)) return null
+    return typeof value.connection.id === "string" ? value.connection.id : null
 }

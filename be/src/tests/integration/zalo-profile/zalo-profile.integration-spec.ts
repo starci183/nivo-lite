@@ -1,14 +1,12 @@
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { agentsEntities } from "@modules/domain/agents"
-import { ChatConversationsService } from "@modules/domain/chat-records"
 import { PollLimiterService } from "@modules/domain/connection-poll"
-import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
+import { toolCallLogEntities } from "@modules/domain/tool-call-log"
 import { ZaloReconcileService } from "@modules/domain/zalo-provider"
-import { ZALO } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
+import { ZALO, type ZaloClient } from "@modules/integrations/zalo"
 import { eachInOrder } from "@modules/platform/primitives"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { seedConversation, seededNameOf } from "../../fixtures/builders/chat-seed.builder"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox } from "../../world/backend-role-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
@@ -33,7 +31,7 @@ const OA_ACCESS = "access-token"
 const ROWS_MAX = 20
 
 const [AgentEntity] = agentsEntities
-const [McpCallLogEntity] = mcpCallLogEntities
+const [ToolCallLogEntity] = toolCallLogEntities
 
 beforeAll(async () => {
     await persistGraphTenant(seed.manager, who)
@@ -74,7 +72,7 @@ afterEach(() => {
 
 /** A Zalo customer's conversation on a connection, opened as the webhook opens it: named after nobody. */
 const met = (connectionId: string, customerId: string) =>
-    world.resolve(ChatConversationsService).meet({
+    seedConversation(world, {
         workspaceId: who.workspaceId,
         agentId: who.agentId,
         channel: "zalo",
@@ -84,10 +82,8 @@ const met = (connectionId: string, customerId: string) =>
     })
 
 /** The name the inbox shows for the customer. */
-const nameOf = async (connectionId: string, customerId: string): Promise<string | null> => {
-    const found = await world.resolve(ChatConversationsService).find(who.workspaceId, "zalo", connectionId, customerId)
-    return found.kind === "ok" ? found.value.visitorName : null
-}
+const nameOf = (connectionId: string, customerId: string): Promise<string | null> =>
+    seededNameOf(world, who.workspaceId, "zalo", connectionId, customerId)
 
 /** One reconcile run of the connection, as the reconcile job runs it: the missed messages first (this connection has none), then the profiles. */
 const round = (connectionId: string) =>
@@ -111,13 +107,13 @@ describe("the profile round of a Zalo connection", () => {
             where: { workspaceId: who.workspaceId, module: "nivo" },
             take: 1,
         })
-        const logged = await seed.manager.find(McpCallLogEntity, {
+        const logged = await seed.manager.find(ToolCallLogEntity, {
             select: { connector: true, tool: true, outcome: true },
             where: { workspaceId: who.workspaceId, agentId: String(nivo?.id) },
             take: ROWS_MAX,
         })
         expect(logged.map(({ connector, tool, outcome }) => ({ connector, tool, outcome }))).toEqual([
-            { connector: "chat", tool: "nivo.chat.profile.get", outcome: "ok" },
+            { connector: "chat", tool: "nivo.tool.chat.profile.get", outcome: "ok" },
         ])
     })
 

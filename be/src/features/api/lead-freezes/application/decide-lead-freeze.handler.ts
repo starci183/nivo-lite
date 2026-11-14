@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { LeadFreezeDoorService } from "@modules/domain/lead-freezes"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DecideLeadFreezeCommand } from "./decide-lead-freeze.command"
 import type { DecideLeadFreezeOutcome } from "./lead-freeze.contracts"
 

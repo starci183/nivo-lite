@@ -2,24 +2,16 @@
 export const CONSOLE_ROUTES = {
     login: "/login",
     workspaceHome: "/overview",
-    inbox: "/inbox",
     chat: "/chat",
-    authority: "/authority",
+    contacts: "/contacts",
     connections: "/connections",
     team: "/team",
     teamInvite: "/team?invite=1",
-    permissions: "/permissions",
 } as const
-
-/** One section of the authority page. */
-export const authoritySectionPath = (section: string): string => `/authority/${section}`
 
 /** The workbench of one module, opened on one work item. */
 export const workItemHref = (module: string, workItemId: string): string =>
     `/agents/${module}/workbench?focus=${workItemId}`
-
-/** The team page opened on the invite form of one staff member. */
-export const teamInviteHref = (staffId: string): string => `/team?invite_staff=${encodeURIComponent(staffId)}`
 
 /** The page that lists the agents to add. */
 export const AGENTS_ROUTE = "/agents"
@@ -40,9 +32,22 @@ export const zaloReturnPath = (query: Readonly<Record<string, string | undefined
     return search.size === 0 ? "/connections/zalo/callback" : `/connections/zalo/callback?${search.toString()}`
 }
 
-/** The page of one Zalo OA connection, on a tab when one is named. */
-export const zaloConnectionHref = (connectionId: string, tab?: string): string =>
-    tab === undefined ? `/connections/zalo/${connectionId}` : `/connections/zalo/${connectionId}?tab=${tab}`
+/** The page of one Zalo OA connection: the account's page on the one provider template (its Cau hinh tab). */
+export const zaloConnectionHref = (connectionId: string): string => `/connections/open/${connectionId}`
+
+/** The page of one person the agents work with: the people list with this person open. */
+export const contactHref = (contactId: string): string => `${CONSOLE_ROUTES.contacts}/${encodeURIComponent(contactId)}`
 
 /** The team chat opened on one room. */
 export const chatRoomHref = (roomId: string): string => `${CONSOLE_ROUTES.chat}?room=${encodeURIComponent(roomId)}`
+
+/** The query parameter of a workflow's map that opens one step's panel (the node panel of rights). */
+export const WORKFLOW_STEP_PARAM = "step"
+
+/** The Quyen tab of one agent: the accounts it is attached to and what its steps call. */
+export const agentRightsPath = (module: string, installationId: string): string =>
+    `${AGENTS_ROUTE}/${module}/${installationId}/connections`
+
+/** One step of one workflow of an agent: the workflow's map with that step's panel open. */
+export const workflowStepPath = (module: string, installationId: string, workflowKey: string, nodeKey: string): string =>
+    `${AGENTS_ROUTE}/${module}/${installationId}/workflows/${encodeURIComponent(workflowKey)}/map?${WORKFLOW_STEP_PARAM}=${encodeURIComponent(nodeKey)}`

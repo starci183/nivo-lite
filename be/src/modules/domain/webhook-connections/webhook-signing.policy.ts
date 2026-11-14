@@ -1,21 +1,20 @@
 import { createHmac } from "node:crypto"
-import { WEBHOOK_EVENTS } from "./webhook-connections.contracts"
-import type { WebhookEvent } from "./webhook-connections.contracts"
 
-const webhookEvents: ReadonlyArray<string> = WEBHOOK_EVENTS
+/** True for one of the available outgoing events (the ids the installation and the engine offer). */
+export const isWebhookEvent = (value: unknown, available: ReadonlyArray<string>): value is string =>
+    typeof value === "string" && available.includes(value)
 
-/** True for one of the outgoing events. */
-export const isWebhookEvent = (value: unknown): value is WebhookEvent =>
-    typeof value === "string" && webhookEvents.includes(value)
-
-/** The distinct valid events of a list, in the order given. */
-export const pickEvents = (events: ReadonlyArray<string>): Array<WebhookEvent> => [
-    ...new Set(events.filter(isWebhookEvent)),
+/** The distinct available events of a list, in the order given. */
+export const pickEvents = (events: ReadonlyArray<string>, available: ReadonlyArray<string>): Array<string> => [
+    ...new Set(events.filter((event) => isWebhookEvent(event, available))),
 ]
 
-/** The events stored in the public facts of a connection (comma separated). */
-export const eventsOf = (meta: Readonly<Record<string, string>>): Array<WebhookEvent> =>
-    pickEvents((meta.events ?? "").split(",").map((event) => event.trim()))
+/** The available events stored in the public facts of a connection (comma separated). */
+export const eventsOf = (meta: Readonly<Record<string, string>>, available: ReadonlyArray<string>): Array<string> =>
+    pickEvents(
+        (meta.events ?? "").split(",").map((event) => event.trim()),
+        available,
+    )
 
 /** The per-workspace signing key: HMAC-SHA256 of the signing secret and "n8n:" plus the workspace id, hex. */
 export const workspaceSigningSecret = (signingSecret: string, workspaceId: string): string =>

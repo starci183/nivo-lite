@@ -1,9 +1,8 @@
 import { mock } from "@starci/jest-preset"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
-import type { WorkflowTemplate } from "@nivo-lite/blocks-core/modules"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx, ScopedWork } from "@modules/domain/entity-engine"
+import { latestTemplateVersion, type WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
+import { EntityEngineService, type ScopedTx, type ScopedWork } from "@modules/domain/entity-engine"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import type { EntityManager } from "typeorm"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { AgentWorkflowAdoptionService } from "../../../modules/domain/agent-graphs/agent-workflow-adoption.service"
@@ -12,12 +11,13 @@ import { AgentWorkflowRunsService } from "../../../modules/domain/agent-graphs/a
 import { AgentWorkflowStoreService } from "../../../modules/domain/agent-graphs/agent-workflow-store.service"
 import type {
     RunWorkflowPin,
+    RunWorkflowPinWrite,
     WorkflowRecord,
     WorkflowVersionRecord,
 } from "../../../modules/domain/agent-graphs/agent-workflows.contracts"
 
 /** The modules whose agents the demo shop runs. */
-export type ModuleName = "accounting" | "chatbot" | "sales"
+export type ModuleName = "chatbot" | "sales"
 
 const SEEDED_AT = new Date("2026-11-09T02:00:00.000Z")
 
@@ -42,7 +42,7 @@ export interface SeededWorkflow {
  * version, in catalogue order. A template that is neither stays a draft and never takes a wake.
  */
 export const seededWorkflowsOf = (agentId: string, moduleKey: string): ReadonlyArray<SeededWorkflow> =>
-    WORKFLOW_TEMPLATES.filter(
+    INSTALLED.templates().filter(
         (template: WorkflowTemplate) =>
             template.moduleKey === moduleKey && (template.primary || template.seedActive === true),
     ).map((template) => {
@@ -101,7 +101,6 @@ const isRecord = (value: unknown): value is Readonly<Record<string, JsonValue>> 
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** The text of a member of a write, or an empty text. */
-const textOf = (value: JsonValue | undefined): string => (typeof value === "string" ? value : "")
 
 const versionRecordOf = (agentId: string, workflow: SeededWorkflow): WorkflowVersionRecord => ({
     id: workflow.versionId,
@@ -157,14 +156,13 @@ export const workflowWorldOf = (agents: Readonly<Record<string, string>>): Workf
                 found === undefined ? null : workflowRecordOf(found.agentId, found.workflow, 0),
             )
         },
-        pinRun: (_tx: ScopedTx, values: Readonly<Record<string, JsonValue>>) => {
-            const runId = textOf(values.runId)
-            if (!pins.has(runId))
-                pins.set(runId, {
-                    runId,
-                    workflowId: textOf(values.workflowId),
-                    workflowVersionId: textOf(values.workflowVersionId),
-                    workflowVersion: Number(values.workflowVersion),
+        pinRun: (_tx: ScopedTx, values: RunWorkflowPinWrite) => {
+            if (!pins.has(values.runId))
+                pins.set(values.runId, {
+                    runId: values.runId,
+                    workflowId: values.workflowId,
+                    workflowVersionId: values.workflowVersionId,
+                    workflowVersion: values.workflowVersion,
                 })
             return Promise.resolve()
         },

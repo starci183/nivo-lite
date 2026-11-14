@@ -1,7 +1,6 @@
 import type { useTranslations } from "next-intl"
 import { isDocumentActive } from "@/modules/documents"
-import { trustLevelOf } from "./labels"
-import type { TrustLevel } from "./labels"
+import { trustLevelOf, type TrustLevel } from "./labels"
 import type {
     BrainDocFactView,
     BrainDocRowView,

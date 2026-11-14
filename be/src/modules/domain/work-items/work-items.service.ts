@@ -1,33 +1,23 @@
 import { Injectable } from "@nestjs/common"
-import { In, Like } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { WorkItemEntity } from "./persistence/entities"
-import { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
 import type {
-    AccountingWork,
-    ClosedClaim,
     DoneMark,
     NewWorkItem,
     OptionalInstallationId,
     OptionalWorkItem,
-    PreparedSave,
     Proposal,
-    StillWaitingMark,
     WaitingMark,
     WorkItem,
     WorkItemKey,
     WorkItemRecord,
     WorkResult,
 } from "./work-items.contracts"
-import type { InboundWorkState } from "./inbound-work-state.contracts"
 import {
-    closedClaimsOf,
     firstWorkItem,
     queuedValuesOf,
     recordsOfRaw,
@@ -35,39 +25,15 @@ import {
     toWorkItem,
     toWorkItemRecord,
 } from "./work-items.mapper"
-import { ACCOUNTING_COLUMNS, FREE_TO_TAKE, FREE_TO_TAKE_UNALIASED, LEAD_ITEMS_MAX } from "./work-items.rows"
-
-/** The staff member an item is given to, or null when the assignment is cleared. */
-type AssignedStaff = string | null
 
 @Injectable()
-/** The work items of a workspace: the only writer of public.work_items. */
+/** The work items of a workspace (the items thread approvals write, `approve_tool_call`): the only writer of public.work_items. */
 export class WorkItemsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectIds() private readonly ids: Ids,
     ) {}
-
-    /** The newest steps shown by the Sales workbench. */
-    async listForWorkbench(workspaceId: string, limit: number = 400): Promise<Array<WorkItem>> {
-        const rows = await this.entityManager.find(WorkItemEntity, {
-            where: { workspaceId },
-            order: { createdAt: "DESC", id: "DESC" },
-            take: Math.min(1000, Math.max(1, limit)),
-        })
-        return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
-    }
-
-    /** The chronological steps shown by one customer's journey. */
-    async listForLead(workspaceId: string, leadId: string): Promise<Array<WorkItem>> {
-        const rows = await this.entityManager.find(WorkItemEntity, {
-            where: { workspaceId, leadId },
-            order: { createdAt: "ASC", id: "ASC" },
-            take: LEAD_ITEMS_MAX,
-        })
-        return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
-    }
 
     /** The installation that owns a work item of the workspace; null when there is no such row or it names no installation. */
     async installationIdOf(workspaceId: string, id: string): Promise<OptionalInstallationId> {
@@ -82,72 +48,6 @@ export class WorkItemsService {
     async findMany(ids: ReadonlyArray<string>, limit: number): Promise<Array<WorkItem>> {
         const rows = await this.entityManager.find(WorkItemEntity, { where: { id: In([...ids]) }, take: limit })
         return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
-    }
-
-    /** How many items of one action have a dedupe key that starts with the prefix. */
-    countByDedupePrefix(workspaceId: string, action: string, prefix: string): Promise<number> {
-        return this.entityManager.count(WorkItemEntity, {
-            where: { workspaceId, action, dedupeKey: Like(`${prefix}%`) },
-        })
-    }
-
-    /** Requeues a step only while it is in one of the caller's allowed failed states. */
-    async retry(
-        workspaceId: string,
-        id: string,
-        from: ReadonlyArray<WorkItem["status"]>,
-        tx: EntityManager = this.entityManager,
-    ): Promise<OptionalWorkItem> {
-        return firstWorkItem(
-            await this.changed(
-                tx,
-                { workspaceId, id },
-                "status = ANY(:allowed)",
-                { allowed: [...from] },
-                {
-                    status: "queued",
-                    error: null,
-                    reason: null,
-                    reasons: [],
-                    completedAt: null,
-                    leasedAt: null,
-                },
-            ),
-        )
-    }
-
-    /** Permanently stops a failed step; null if another caller changed it first. */
-    async stopFailed(
-        workspaceId: string,
-        id: string,
-        manager: EntityManager = this.entityManager,
-    ): Promise<OptionalWorkItem> {
-        const now = this.clock.now()
-        return firstWorkItem(
-            await this.changed(
-                manager,
-                { workspaceId, id },
-                "status = 'failed'",
-                {},
-                {
-                    status: "rejected",
-                    completedAt: now,
-                    leasedAt: now,
-                },
-            ),
-        )
-    }
-
-    /** The newest accounting work items' lineage for the accounting book. */
-    listAccounting(workspaceId: string, limit: number = 500): Promise<Array<AccountingWork>> {
-        return this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select(ACCOUNTING_COLUMNS)
-            .where("w.workspace_id = :workspaceId AND w.department = 'accounting'", { workspaceId })
-            .orderBy("w.created_at", "DESC")
-            .addOrderBy("w.id", "DESC")
-            .limit(limit)
-            .getRawMany<AccountingWork>()
     }
 
     /**
@@ -192,61 +92,6 @@ export class WorkItemsService {
         return row === null ? null : toWorkItem(toWorkItemRecord(row))
     }
 
-    /** Takes a queued item for processing; null when another worker holds it. The lease is CLAIM_LEASE_SECONDS. */
-    async claim(workspaceId: string, id: string): Promise<OptionalWorkItem> {
-        const now = this.clock.now()
-        return firstWorkItem(
-            await this.changed(
-                this.entityManager,
-                { workspaceId, id },
-                `status = 'queued' AND ${FREE_TO_TAKE_UNALIASED}`,
-                { now, lease: CLAIM_LEASE_SECONDS },
-                { leasedAt: now },
-            ),
-        )
-    }
-
-    /** The oldest queued chain step of the workspace that is free to take. */
-    async nextQueued(workspaceId: string): Promise<OptionalWorkItem> {
-        const row = await this.freeQueued(workspaceId).getOne()
-        return row === null ? null : toWorkItem(toWorkItemRecord(row))
-    }
-
-    /** Up to `limit` workspaces with a queued chain step free to take, the one waiting longest first. */
-    async workspacesWithQueued(limit: number): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select("w.workspace_id", "workspace_id")
-            .where("w.status = 'queued' AND w.reason IS NULL")
-            .andWhere(FREE_TO_TAKE, { now: this.clock.now(), lease: CLAIM_LEASE_SECONDS })
-            .groupBy("w.workspace_id")
-            .orderBy("min(w.created_at)", "ASC")
-            .addOrderBy("w.workspace_id", "ASC")
-            .limit(limit)
-            .getRawMany<{ workspace_id: string }>()
-        return rows.map((row) => row.workspace_id)
-    }
-
-    /** The oldest available queued step of this inbound input; never selects another event or a live input. */
-    async nextInboundQueued(workspaceId: string, eventId: string): Promise<OptionalWorkItem> {
-        const row = await this.freeQueued(workspaceId).andWhere("w.inbound_event_id = :eventId", { eventId }).getOne()
-        return row === null ? null : toWorkItem(toWorkItemRecord(row))
-    }
-
-    /** Counts all steps of the input, including work leased to another attempt, so a worker never acknowledges unfinished work. */
-    async inboundState(workspaceId: string, eventId: string): Promise<InboundWorkState> {
-        const row = await this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .select([
-                "(COUNT(*) FILTER (WHERE w.status = 'queued'))::int AS queued",
-                "(COUNT(*) FILTER (WHERE w.status = 'failed'))::int AS failed",
-                "(COUNT(*) FILTER (WHERE w.status = 'waiting_decision'))::int AS waiting",
-            ])
-            .where("w.workspace_id = :workspaceId AND w.inbound_event_id = :eventId", { workspaceId, eventId })
-            .getRawOne<InboundWorkState>()
-        return row ?? { queued: 0, failed: 0, waiting: 0 }
-    }
-
     /** Guarded transition of a decision: only an item that waits becomes queued again; null otherwise. */
     async reopen(workspaceId: string, id: string): Promise<OptionalWorkItem> {
         return firstWorkItem(
@@ -257,25 +102,6 @@ export class WorkItemsService {
                 {},
                 {
                     status: "queued",
-                    leasedAt: this.clock.now(),
-                },
-            ),
-        )
-    }
-
-    /** Saves what the performer prepared and the address it corrected. */
-    async savePrepared(id: string, prepared: PreparedSave): Promise<WorkItem> {
-        return requireWorkItem(
-            await this.changed(
-                this.entityManager,
-                { id },
-                null,
-                { subjectType: prepared.subjectType, subjectId: prepared.subjectId, leadId: prepared.leadId },
-                {
-                    proposal: prepared.proposal,
-                    subjectType: () => "COALESCE(CAST(:subjectType AS text), subject_type)",
-                    subjectId: () => "COALESCE(CAST(:subjectId AS uuid), subject_id)",
-                    leadId: () => "COALESCE(CAST(:leadId AS uuid), lead_id)",
                     leasedAt: this.clock.now(),
                 },
             ),
@@ -316,78 +142,6 @@ export class WorkItemsService {
                 },
             ),
         )
-    }
-
-    /** Stores a hold note on an item that is still waiting, joining the caller's transaction when supplied. False when it is no longer waiting. */
-    async hold(
-        workspaceId: string,
-        id: string,
-        proposal: Proposal,
-        manager: EntityManager = this.entityManager,
-    ): Promise<boolean> {
-        const rows = await this.changed(
-            manager,
-            { workspaceId, id },
-            "status = 'waiting_decision'",
-            {},
-            {
-                proposal,
-                leasedAt: this.clock.now(),
-            },
-            "id",
-        )
-        return rows[0] !== undefined
-    }
-
-    /** Assigns an item to a staff member, or clears the assignment. False when the item is not in the workspace. */
-    async assign(workspaceId: string, id: string, staffId: AssignedStaff): Promise<boolean> {
-        const rows = await this.changed(
-            this.entityManager,
-            { workspaceId, id },
-            null,
-            {},
-            {
-                assignedStaffId: staffId,
-                leasedAt: this.clock.now(),
-            },
-            "id",
-        )
-        return rows[0] !== undefined
-    }
-
-    /** Links the approval card that decided an item to it. */
-    async attachExecution(workspaceId: string, id: string, executionId: string): Promise<void> {
-        await this.entityManager.update(WorkItemEntity, { workspaceId, id }, { executionId })
-    }
-
-    /** Closes the "customer says they paid" checks still waiting for an invoice that was just paid; answers the closed items. */
-    async settleClaims(
-        workspaceId: string,
-        settledBy: string,
-        dedupePrefix: string,
-        result: WorkResult,
-    ): Promise<Array<ClosedClaim>> {
-        const now = this.clock.now()
-        const closed = await this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .update()
-            .set({
-                status: "done",
-                decidedPath: "auto",
-                reason: "routine",
-                completedAt: now,
-                leasedAt: now,
-                evidenceState: "verified",
-                result,
-            })
-            .where(
-                "workspace_id = :workspaceId AND action = 'reconcile_payment' AND status = 'waiting_decision' " +
-                    "AND id <> :settledBy AND dedupe_key LIKE CAST(:dedupePrefix AS text) || '%'",
-                { workspaceId, settledBy, dedupePrefix },
-            )
-            .returning("id, inbound_event_id")
-            .execute()
-        return closedClaimsOf(closed.raw)
     }
 
     /** Closes an item as done. */
@@ -443,35 +197,6 @@ export class WorkItemsService {
                 },
             ),
         )
-    }
-
-    /** Puts an item back in front of the person who approved it because data is still missing. */
-    async markStillWaiting(id: string, still: StillWaitingMark): Promise<void> {
-        await this.changed(
-            this.entityManager,
-            { id },
-            null,
-            {},
-            {
-                status: "waiting_decision",
-                proposal: still.proposal,
-                missingFields: [...still.missing],
-                reason: still.reason,
-                reasons: [...still.reasons],
-                leasedAt: this.clock.now(),
-            },
-        )
-    }
-
-    /** The oldest queued chain step of the workspace that is free to take; the caller narrows it further. */
-    private freeQueued(workspaceId: string): SelectQueryBuilder<WorkItemEntity> {
-        return this.entityManager
-            .createQueryBuilder(WorkItemEntity, "w")
-            .where("w.workspace_id = :workspaceId AND w.status = 'queued' AND w.reason IS NULL", { workspaceId })
-            .andWhere(FREE_TO_TAKE, { now: this.clock.now(), lease: CLAIM_LEASE_SECONDS })
-            .orderBy("w.created_at", "ASC")
-            .addOrderBy("w.id", "ASC")
-            .limit(1)
     }
 
     /**

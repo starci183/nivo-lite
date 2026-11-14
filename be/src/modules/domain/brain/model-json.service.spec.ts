@@ -39,35 +39,32 @@ describe("ModelJsonService", () => {
         expect(logger.error).not.toHaveBeenCalled()
     })
 
-    it("logs an unreadable object and still returns a valid nested list", async () => {
+    it("a slice that does not parse while another does is a retry (info, slice kinds), never an unreadable answer", async () => {
         const { service, logger } = await build()
 
         expect(service.jsonOf('{bad: ["Tea"]}')).toEqual(["Tea"])
-        expect(logger.error).toHaveBeenCalledTimes(1)
-        expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.AnswerUnreadable, expect.any(SyntaxError))
-    })
-
-    it("logs an unreadable list and still returns a valid nested object", async () => {
-        const { service, logger } = await build()
-
         expect(service.jsonOf('[bad, {"title":"Tea"}]')).toEqual({ title: "Tea" })
-        expect(logger.error).toHaveBeenCalledTimes(1)
-        expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.AnswerUnreadable, expect.any(SyntaxError))
+        expect(logger.info).toHaveBeenNthCalledWith(1, BrainLogEvent.AnswerSliceRetried, { workspaceId: null, failed: "object", parsed: "list" })
+        expect(logger.info).toHaveBeenNthCalledWith(2, BrainLogEvent.AnswerSliceRetried, { workspaceId: null, failed: "list", parsed: "object" })
+        expect(logger.warn).not.toHaveBeenCalled()
+        expect(logger.error).not.toHaveBeenCalled()
     })
 
-    it("returns null after both candidates fail to parse", async () => {
+    it("an answer with no slice that parses is ONE unreadable event, with its length and the slices tried, never its text", async () => {
         const { service, logger } = await build()
 
-        expect(service.jsonOf("{bad: [wrong]}")).toBeNull()
-        expect(logger.error).toHaveBeenCalledTimes(2)
-        expect(logger.error).toHaveBeenNthCalledWith(1, BrainLogEvent.AnswerUnreadable, expect.any(SyntaxError))
-        expect(logger.error).toHaveBeenNthCalledWith(2, BrainLogEvent.AnswerUnreadable, expect.any(SyntaxError))
+        expect(service.jsonOf("{bad: [wrong]}", "ws-1")).toBeNull()
+        expect(logger.warn).toHaveBeenCalledTimes(1)
+        // Whose call it was (TRIAGE-6: Round U counted 9 dev-wide with no workspace on the line).
+        expect(logger.warn).toHaveBeenCalledWith(BrainLogEvent.AnswerUnreadable, { workspaceId: "ws-1", chars: 14, slicesTried: 2 })
+        expect(logger.error).not.toHaveBeenCalled()
     })
 
-    it("skips missing, unmatched or backwards boundaries", async () => {
+    it("an answer with no object or list at all is unreadable too, once", async () => {
         const { service, logger } = await build()
 
         for (const answer of ["plain text", "{", "[", "} {", "] ["]) expect(service.jsonOf(answer)).toBeNull()
-        expect(logger.error).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledTimes(5)
+        expect(logger.warn).toHaveBeenCalledWith(BrainLogEvent.AnswerUnreadable, { workspaceId: null, chars: 10, slicesTried: 0 })
     })
 })

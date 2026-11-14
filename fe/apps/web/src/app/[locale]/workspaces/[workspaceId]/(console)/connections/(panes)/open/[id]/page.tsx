@@ -5,10 +5,9 @@ export { connectionOpenMetadata as generateMetadata } from "@/features/pages/Con
 
 type PageProps = {
     readonly params: Promise<{ readonly id: string }>
-    readonly searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-/** Adapts the open-connection route to its page owner; the query names the open tab. */
-const Page = (props: PageProps) => <ConnectionOpenPage params={props.params} searchParams={props.searchParams} />
+/** Adapts a connected account's page to its page owner: the page itself is the Configuration tab. */
+const Page = (props: PageProps) => <ConnectionOpenPage params={props.params} />
 
 export default Page

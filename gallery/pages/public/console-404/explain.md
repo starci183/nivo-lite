@@ -12,8 +12,8 @@ Vì sao: console top bar on white with the workspace identity, the round languag
 Luật: `nivo-surface-layering.md`, `locale-switch-round-dropdown.md`, `owner-colors-exact.md` (dark only from theme tokens).
 Grammar: `TopBar`, `node_modules/@starci/grammar/dist/core/composite/TopBar/index.d.ts`; `ThemeSwitch` composite.
 
-## Thanh bên trái (Tổng quan, Đầu vào, Trò chuyện / Điều hành: Second Brain, Giao quyền / Thiết lập: Agent, Đội ngũ, Quyền, Kết nối, Credit & gói)
-Vì sao: SAI — (partly right, see the flagged part) white sidebar with a right border, nav groups with 12 muted group labels, each item an icon + 14 label, a pink count chip on Second Brain (73 = work waiting on the owner). A collapse button at the top. SAI: "Đội ngũ" (sparkle icon) and "Quyền" appear as separate items beside "Giao quyền" in a group above: three authority-like labels (Giao quyền, Đội ngũ, Quyền) with similar meaning.
+## Thanh bên trái (Tổng quan, Đầu vào, Trò chuyện / Điều hành: Second Brain / Thiết lập: Agent, Đội ngũ, Kết nối, Credit & gói)
+Vì sao: SAI — (partly right, see the flagged part) white sidebar with a right border, nav groups with 12 muted group labels, each item an icon + 14 label, a pink count chip on Second Brain (73 = work waiting on the owner). A collapse button at the top.
 Luật: `nivo-surface-layering.md` (white sidebar), `table-heroui-native-section-head.md` (pink chip only for work waiting on owner), `type-scale-14-12.md`.
 Grammar: `Sidebar`, `node_modules/@starci/grammar/dist/core/composite/Sidebar/index.d.ts`; `ConsoleSidebar` composite; `Badge`.
 

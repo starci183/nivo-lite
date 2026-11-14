@@ -134,10 +134,10 @@ describe("sales.move-stage", () => {
         const state = sampleState([])
         const input = { id: "lead-1", to: "qualified" }
         expect(
-            await execute(moveStageAction, failingUpdate(state, "engine.entity.sales.lead", "stale"), input, STAFF),
+            await execute(moveStageAction, failingUpdate(state, "engine.entity.blocks-core.sales.lead", "stale"), input, STAFF),
         ).toMatchObject({ ok: false, reason: "conflict" })
         expect(
-            await execute(moveStageAction, failingUpdate(state, "engine.entity.sales.lead", "missing"), input, STAFF),
+            await execute(moveStageAction, failingUpdate(state, "engine.entity.blocks-core.sales.lead", "missing"), input, STAFF),
         ).toMatchObject({ ok: false, reason: "refused", message: { key: "refusal_missing" } })
     })
 
@@ -158,7 +158,7 @@ describe("sales.move-stage", () => {
             permission: "sales.manage",
             transactional: true,
             optimistic: true,
-            refreshes: ["sales.leads", "sales.lead-counts", "sales.lead"],
+            refreshes: ["blocks-core.sales.api.lead.list", "blocks-core.sales.api.lead.counts", "blocks-core.sales.api.lead.get"],
         })
     })
 })
@@ -205,10 +205,10 @@ describe("sales.confirm-order", () => {
 
     it("lets staff confirm an order with no total when the settings say it need not wait", async () => {
         const state = withSettings({ draftWithoutTotalNeedsApproval: false })
-        state.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: null, amountVnd: null })
+        state.orders.push({ ...ORDER_WAITING, id: "order-9", contactId: null, amountVnd: null })
         expect(await run(confirmOrderAction, { id: "order-9" }, state)).toEqual({ ok: true, data: { changed: true } })
         const strict = sampleState([])
-        strict.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: null, amountVnd: null })
+        strict.orders.push({ ...ORDER_WAITING, id: "order-9", contactId: null, amountVnd: null })
         expect(await run(confirmOrderAction, { id: "order-9" }, strict)).toMatchObject({ ok: false })
     })
 
@@ -255,7 +255,7 @@ describe("sales.confirm-order", () => {
         state.leads.splice(0, 1, { ...LEAD_NEW, stage: "lost" })
         await run(confirmOrderAction, { id: "order-2" }, state)
         expect(stageOf(state, "lead-1")).toBe("lost")
-        state.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: "lead-5", amountVnd: 100_000 })
+        state.orders.push({ ...ORDER_WAITING, id: "order-9", contactId: "contact-lead-5", amountVnd: 100_000 })
         expect(await run(confirmOrderAction, { id: "order-9" }, state)).toEqual({ ok: true, data: { changed: true } })
         expect(stageOf(state, "lead-5")).toBe("won")
         expect(state.leads.find((lead) => lead.id === "lead-5")?.version).toBe("1")
@@ -263,8 +263,8 @@ describe("sales.confirm-order", () => {
 
     it("confirms an order with no customer, or whose customer is gone", async () => {
         const state = sampleState([])
-        state.orders.push({ ...ORDER_WAITING, id: "order-8", leadId: null, amountVnd: 100_000 })
-        state.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: "lead-9", amountVnd: 100_000 })
+        state.orders.push({ ...ORDER_WAITING, id: "order-8", contactId: null, amountVnd: 100_000 })
+        state.orders.push({ ...ORDER_WAITING, id: "order-9", contactId: "contact-lead-9", amountVnd: 100_000 })
         expect(await run(confirmOrderAction, { id: "order-8" }, state)).toEqual({ ok: true, data: { changed: true } })
         expect(await run(confirmOrderAction, { id: "order-9" }, state)).toEqual({ ok: true, data: { changed: true } })
     })
@@ -273,12 +273,12 @@ describe("sales.confirm-order", () => {
         const state = sampleState([])
         const input = { id: "order-2" }
         expect(
-            await execute(confirmOrderAction, failingUpdate(state, "engine.entity.sales.order", "stale"), input, STAFF),
+            await execute(confirmOrderAction, failingUpdate(state, "engine.entity.blocks-core.sales.order", "stale"), input, STAFF),
         ).toMatchObject({ reason: "conflict" })
         expect(
             await execute(
                 confirmOrderAction,
-                failingUpdate(state, "engine.entity.sales.order", "missing"),
+                failingUpdate(state, "engine.entity.blocks-core.sales.order", "missing"),
                 input,
                 STAFF,
             ),
@@ -290,7 +290,7 @@ describe("sales.confirm-order", () => {
         expect(
             await execute(
                 confirmOrderAction,
-                failingUpdate(state, "engine.entity.sales.lead", "stale"),
+                failingUpdate(state, "engine.entity.blocks-core.sales.lead", "stale"),
                 { id: "order-2" },
                 STAFF,
             ),
@@ -299,7 +299,7 @@ describe("sales.confirm-order", () => {
 
     it("declares what it refreshes", () => {
         expect(confirmOrderAction).toMatchObject({ permission: "sales.manage", transactional: true })
-        expect(confirmOrderAction.refreshes).toContain("sales.orders-waiting")
+        expect(confirmOrderAction.refreshes).toContain("blocks-core.sales.api.order.waiting")
     })
 })
 
@@ -349,7 +349,7 @@ describe("sales.cancel-order", () => {
         expect(
             await execute(
                 cancelOrderAction,
-                failingUpdate(state, "engine.entity.payment.claim", "stale"),
+                failingUpdate(state, "engine.entity.blocks-core.sales.claim", "stale"),
                 { id: "order-3" },
                 STAFF,
             ),
@@ -405,12 +405,12 @@ describe("sales.cancel-order", () => {
         const state = sampleState([])
         const input = { id: "order-2" }
         expect(
-            await execute(cancelOrderAction, failingUpdate(state, "engine.entity.sales.order", "stale"), input, STAFF),
+            await execute(cancelOrderAction, failingUpdate(state, "engine.entity.blocks-core.sales.order", "stale"), input, STAFF),
         ).toMatchObject({ reason: "conflict" })
         expect(
             await execute(
                 cancelOrderAction,
-                failingUpdate(state, "engine.entity.sales.order", "missing"),
+                failingUpdate(state, "engine.entity.blocks-core.sales.order", "missing"),
                 input,
                 STAFF,
             ),
@@ -487,7 +487,7 @@ describe("sales.save-settings", () => {
 
     it("declares who may save it and what it refreshes", () => {
         expect(saveSettingsAction).toMatchObject({ permission: "sales.manage", transactional: true })
-        expect(saveSettingsAction.refreshes).toContain("sales.settings")
-        expect(saveSettingsAction.refreshes).toContain("sales.orders-waiting")
+        expect(saveSettingsAction.refreshes).toContain("blocks-core.sales.api.settings.get")
+        expect(saveSettingsAction.refreshes).toContain("blocks-core.sales.api.order.waiting")
     })
 })

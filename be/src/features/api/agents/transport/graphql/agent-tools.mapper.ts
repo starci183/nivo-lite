@@ -1,4 +1,5 @@
-import type { AgentToolLine, GetAgentToolsRequest } from "../../application/get-agent-tools.contracts"
+import type { AgentToolLine } from "@modules/domain/agent-pages"
+import type { GetAgentToolsRequest } from "../../application/get-agent-tools.contracts"
 import type { AgentIdInput } from "./dto/agent-id.input"
 import type { AgentToolType } from "./dto/agent-tool.type"
 

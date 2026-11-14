@@ -2,14 +2,14 @@ import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { WorkItemsErrorCode } from "./errors/work-items.error"
 import type { WorkItemRecord } from "./work-items.contracts"
-import { closedClaimsOf, recordsOfRaw, toProposal, toWorkItem, requireWorkItem } from "./work-items.mapper"
+import { recordsOfRaw, toProposal, toWorkItem, requireWorkItem } from "./work-items.mapper"
 
 const SUBJECT = Symbol("work-items.mapper")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: SUBJECT, useValue: { toProposal, toWorkItem, requireWorkItem, recordsOfRaw, closedClaimsOf } },
+            { provide: SUBJECT, useValue: { toProposal, toWorkItem, requireWorkItem, recordsOfRaw } },
         ],
     }).compile()
     return moduleRef.get<typeof import("./work-items.mapper")>(SUBJECT)
@@ -103,15 +103,11 @@ describe("returned rows", () => {
         const subject = await build()
 
         expect(subject.recordsOfRaw([{ id: "item-1" }, { name: "stray" }, null])).toEqual([{ id: "item-1" }])
-        expect(subject.closedClaimsOf([{ id: "item-1", inbound_event_id: null }, 3])).toEqual([
-            { id: "item-1", inbound_event_id: null },
-        ])
     })
 
     it.each([undefined, {}, "rows"])("takes no row from the raw answer %p", async (raw) => {
         const subject = await build()
 
         expect(subject.recordsOfRaw(raw)).toEqual([])
-        expect(subject.closedClaimsOf(raw)).toEqual([])
     })
 })

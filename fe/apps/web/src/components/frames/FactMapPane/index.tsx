@@ -16,8 +16,14 @@ interface FactMapPaneProps {
     }
 }
 
+/** The props of Actions. */
+interface ActionsProps {
+    readonly view: FactMapPaneView
+    readonly on: FactMapPaneProps["on"]
+}
+
 /** The actions of the selected fact: Approve is the primary when a value waits, Edit and the comparison beside it. */
-const Actions = (props: { readonly view: FactMapPaneView; readonly on: FactMapPaneProps["on"] }) => {
+const Actions = (props: ActionsProps) => {
     const { view, on } = props
     if (view.approve === null && view.edit === null && view.compare === null) return null
     return (
@@ -48,8 +54,13 @@ const Actions = (props: { readonly view: FactMapPaneView; readonly on: FactMapPa
     )
 }
 
+/** The props of Documents. */
+interface DocumentsProps {
+    readonly view: FactMapPaneView
+}
+
 /** The documents the node cites, as a list under its heading. */
-const Documents = (props: { readonly view: FactMapPaneView }) =>
+const Documents = (props: DocumentsProps) =>
     props.view.documents.length === 0 ? null : (
         <Stack gap="row">
             <Heading level={4}>{props.view.documentsTitle}</Heading>
@@ -65,8 +76,14 @@ const Documents = (props: { readonly view: FactMapPaneView }) =>
         </Stack>
     )
 
+/** The props of Readers. */
+interface ReadersProps {
+    readonly view: FactMapPaneView
+    readonly none: string
+}
+
 /** The agents that read the fact, as a list under its heading; a subject has no readers of its own. */
-const Readers = (props: { readonly view: FactMapPaneView; readonly none: string }) => {
+const Readers = (props: ReadersProps) => {
     if (props.view.value === null) return null
     return (
         <Stack gap="row">

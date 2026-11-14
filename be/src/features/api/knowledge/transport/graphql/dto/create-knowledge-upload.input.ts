@@ -1,5 +1,5 @@
 import { Field, InputType, Int } from "@nestjs/graphql"
-import { IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator"
+import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator"
 import { NullAsAbsent } from "@modules/platform/graphql"
 
 @InputType()
@@ -25,4 +25,12 @@ export class CreateKnowledgeUploadInput {
     @IsInt()
     @Min(0)
     sizeBytes?: number
+
+    /** The area the file goes into, `public` or `internal`: a file too large for what that area has left is refused before it is sent. */
+    @Field(() => String, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsIn(["public", "internal"])
+    @MaxLength(40)
+    visibility?: string
 }

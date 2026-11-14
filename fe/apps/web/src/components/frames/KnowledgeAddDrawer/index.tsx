@@ -27,15 +27,10 @@ const DriveRow = (props: Props) => {
     const drive = props.props.drive
     return (
         <Stack gap="inline">
-            <Cluster gap="row" align="center" justify="between">
+            <Cluster gap="identity" align="center" justify="between">
                 {drive.note === undefined ? null : <Text size="sm">{drive.note}</Text>}
                 {drive.label === undefined ? null : (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isDisabled={props.props.isBusy}
-                        onPress={props.on.connectDrive}
-                    >
+                    <Button intent="neutral" size="sm" isDisabled={props.props.isBusy} onPress={props.on.connectDrive}>
                         {drive.label}
                     </Button>
                 )}
@@ -48,6 +43,14 @@ const DriveRow = (props: Props) => {
 /** The files and links panel with the Drive row under its drop zone, then what is waiting to be added. */
 const FilesPart = (props: Props) => (
     <>
+        {props.props.refusal === null ? null : (
+            <Alert
+                tone="neutral"
+                title={props.props.refusal.title}
+                description={props.props.refusal.body}
+                action={{ label: props.props.refusal.actionLabel, onAction: props.on.seeDocuments }}
+            />
+        )}
         <AddFilesPanel
             {...props.props.files}
             afterDrop={<DriveRow {...props} />}
@@ -124,7 +127,7 @@ const DrawerBody = (props: Props) => (
                 minValue={0}
                 maxValue={props.props.usage.max}
                 valueLabel={props.props.usage.valueLabel}
-                tone={props.props.usage.tone}
+                tone="foreground"
             />
         )}
         {props.props.summary === null ? null : (

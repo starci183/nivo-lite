@@ -1,0 +1,20 @@
+{
+  "nodeVideoScriptTitle": "Viết kịch bản video",
+  "nodeVideoVoiceTitle": "Đọc lời video",
+  "nodeVideoScenesTitle": "Tạo cảnh video",
+  "nodeVideoResultTitle": "Chờ các cảnh video",
+  "nodeVideoKeepTitle": "Lưu các đoạn phim",
+  "nodeVideoLinksTitle": "Lấy địa chỉ các tệp",
+  "nodeVideoComposeTitle": "Dựng video hoàn chỉnh",
+  "nodeVideoRenderCheckTitle": "Xem tiến độ dựng video",
+  "nodeVideoOutputTitle": "Lưu video đã dựng",
+  "nodeVideoReviewTitle": "Gửi video để duyệt",
+  "nodeVideoPublishTitle": "Đăng video",
+  "nodeVideoStuckTitle": "Báo video không dựng được",
+  "videoReviewHeading": "Video chờ duyệt",
+  "videoReviewLine": "Video \"{title}\" đã dựng xong: một video ghép từ {clips} đoạn phim, có phụ đề (không có lời đọc), đã lưu cùng dự án. Mở ở bàn làm việc Video rồi duyệt để đăng.",
+  "videoReviewLineWithVoice": "Video \"{title}\" đã dựng xong: một video ghép từ {clips} đoạn phim, có lời đọc và phụ đề, đã lưu cùng dự án. Mở ở bàn làm việc Video rồi duyệt để đăng.",
+  "videoStuckHeading": "Video chưa dựng được",
+  "videoStuckLine": "Video \"{title}\" chưa dựng được: {why}.",
+  "videoStuckTimedOut": "video chưa xong sau nhiều lần chờ"
+}

@@ -31,7 +31,7 @@ describe("AgentRunStoreService open", () => {
     it("inserts the run of a wake that has none", async () => {
         const { store, records, em } = await build()
         records.runOfWake.mockResolvedValue(null)
-        records.insertRun.mockResolvedValue({ ok: true, row: runRowOf(), version: "1" })
+        records.insertRun.mockResolvedValue(runRowOf())
         await expect(store.open(em, OPEN)).resolves.toMatchObject({ id: "run-1", status: "running" })
         expect(records.insertRun).toHaveBeenCalledWith(
             scoped,
@@ -46,20 +46,12 @@ describe("AgentRunStoreService open", () => {
         expect(records.insertRun).not.toHaveBeenCalled()
     })
 
-    it("reads the run again when a racing open took the wake first, and refuses any other refusal", async () => {
+    it("reads the run again when a racing open took the wake first, and refuses a race whose run it cannot read", async () => {
         const { store, records, em } = await build()
         records.runOfWake.mockResolvedValueOnce(null).mockResolvedValueOnce(runRecordOf())
-        records.insertRun.mockResolvedValue({
-            ok: false,
-            reason: "taken",
-            constraint: "wake_planning_key",
-            refusal: "x",
-        })
+        records.insertRun.mockResolvedValue(null)
         await expect(store.open(em, OPEN)).resolves.toMatchObject({ id: "run-1" })
         records.runOfWake.mockReset().mockResolvedValue(null)
-        await expect(store.open(em, OPEN)).rejects.toMatchObject({ code: "AGENT_RUNS_RESULT_REJECTED" })
-        records.runOfWake.mockReset().mockResolvedValue(null)
-        records.insertRun.mockResolvedValue({ ok: false, reason: "invalid" })
         await expect(store.open(em, OPEN)).rejects.toMatchObject({ code: "AGENT_RUNS_RESULT_REJECTED" })
     })
 

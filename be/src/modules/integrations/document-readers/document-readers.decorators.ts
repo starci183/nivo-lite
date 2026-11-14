@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { DocumentLibraries } from "./document-readers.contracts"
 import type { DocumentReadersPort } from "./document-readers.port"
 

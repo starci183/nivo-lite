@@ -1,6 +1,6 @@
 "use client"
 
-import { MODULE_FIXTURES } from "@nivo-lite/blocks-core/fixtures"
+import { MODULE_FIXTURES } from "@/modules/plugin-registry"
 import { useLocale } from "next-intl"
 import { useMemo } from "react"
 import { fixtureTablesOf } from "@/modules/workbench-fixtures"

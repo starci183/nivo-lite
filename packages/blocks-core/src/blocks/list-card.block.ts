@@ -1,14 +1,11 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { ALL_TAB } from "../rows/filter-tabs"
 import { CELL_TONES } from "../rows/table-rows"
 import { CHIPS_MAX, ITEMS_MAX, PATH_MAX } from "./bounds"
-import { labelsProp } from "./labels-prop"
-import type { LabelsSchema } from "./labels-prop"
-import { paramName } from "./param-name"
-import type { ParamNameSchema } from "./param-name"
+import { labelsProp, type LabelsSchema } from "./labels-prop"
+import { paramName, type ParamNameSchema } from "./param-name"
 import type { EnumSchema, OptionalRead, RequiredRead, TextSchema } from "./schema-types"
 
 /** The longest raw value a badge is given a tone for, and the most values one badge gives a tone. */
@@ -49,7 +46,13 @@ type Props = z.ZodObject<{
     filterLabel: z.ZodOptional<TextSchema>
     filterAll: z.ZodOptional<TextSchema>
     filters: z.ZodOptional<z.ZodArray<FilterSchema>>
+    headLink: z.ZodOptional<HeadLinkSchema>
 }>
+
+/** The one link at the end of the card's head ("see all"): its words and a path beside the page. */
+type HeadLinkSchema = z.ZodObject<{ label: TextSchema; path: z.ZodString }>
+
+const headLink: HeadLinkSchema = z.object({ label: specText, path: z.string().min(1).max(PATH_MAX) })
 
 const props: Props = z
     .object({
@@ -77,6 +80,7 @@ const props: Props = z
         filterLabel: specText.optional(),
         filterAll: specText.optional(),
         filters: z.array(filter).min(1).max(ITEMS_MAX).optional(),
+        headLink: headLink.optional(),
     })
     .refine((value) => !value.search || value.searchParam !== undefined)
     .refine((value) =>
@@ -104,7 +108,8 @@ const slots: Slots = {
 /**
  * A list of records as ONE card: its header holds the filter tabs (each with its count, from the `counts` read) and the search field on
  * one line, then the rows under it, one of which the `selectParam` marks and a press writes; further pages load from a footer. The
- * card owns its states: loading, empty, nothing found, failed and forbidden draw inside it with the header kept.
+ * card owns its states: loading, empty, nothing found, failed and forbidden draw inside it with the header kept. With `headLink` the
+ * head ends with one link to a page beside this one (a desk card's "see all").
  */
 export const listCardBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.list-card",

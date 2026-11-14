@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { BrainFactsReadService } from "@modules/domain/brain-facts"
-import { DossierFindingsService } from "@modules/domain/dossier-review"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { PublicDocumentsService } from "@modules/domain/public-documents"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -14,10 +13,8 @@ const build = async (role: WorkspaceRole) => {
     const members = mock<WorkspaceMembersService>()
     const facts = mock<BrainFactsReadService>()
     const gaps = mock<KnowledgeGapsService>()
-    const findings = mock<DossierFindingsService>()
     const documents = mock<PublicDocumentsService>()
     members.require.mockResolvedValue(mock<Awaited<ReturnType<WorkspaceMembersService["require"]>>>({ role }))
-    findings.activeCount.mockResolvedValue(4)
     facts.waitingCards.mockResolvedValue(3)
     gaps.countOpen.mockResolvedValue(2)
     documents.countProposals.mockResolvedValue(1)
@@ -27,36 +24,30 @@ const build = async (role: WorkspaceRole) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: BrainFactsReadService, useValue: facts },
             { provide: KnowledgeGapsService, useValue: gaps },
-            { provide: DossierFindingsService, useValue: findings },
             { provide: PublicDocumentsService, useValue: documents },
         ],
     }).compile()
-    return { service: moduleRef.get(BrainTodoService), members, facts, gaps, findings, documents }
+    return { service: moduleRef.get(BrainTodoService), members, facts, gaps, documents }
 }
 
 describe("BrainTodoService count", () => {
-    it.each(["owner", "manager"] as const)(
-        "sums fact cards, open questions and proposals for a %s, the findings beside the total",
-        async (role) => {
-            const { service, members } = await build(role)
+    it.each(["owner", "manager"] as const)("sums fact cards, open questions and proposals for a %s", async (role) => {
+        const { service, members } = await build(role)
 
-            await expect(service.count("u1", WS)).resolves.toEqual({
-                findings: 4,
-                facts: 3,
-                questions: 2,
-                proposals: 1,
-                total: 6,
-            })
+        await expect(service.count("u1", WS)).resolves.toEqual({
+            facts: 3,
+            questions: 2,
+            proposals: 1,
+            total: 6,
+        })
 
-            expect(members.require).toHaveBeenCalledWith("u1", WS)
-        },
-    )
+        expect(members.require).toHaveBeenCalledWith("u1", WS)
+    })
 
-    it("gives no inbox to a member who cannot see the facts or the questions, the findings beside it", async () => {
+    it("gives no inbox to a member who cannot see the facts or the questions", async () => {
         const { service, facts, gaps, documents } = await build("staff")
 
         await expect(service.count("u1", WS)).resolves.toEqual({
-            findings: 4,
             facts: 0,
             questions: 0,
             proposals: 0,
@@ -69,11 +60,11 @@ describe("BrainTodoService count", () => {
     })
 
     it("refuses someone who is not a member of the workspace", async () => {
-        const { service, members, findings } = await build("owner")
+        const { service, members, facts } = await build("owner")
         members.require.mockRejectedValue(new Error("not a member"))
 
         await expect(service.count("u1", WS)).rejects.toThrow("not a member")
 
-        expect(findings.activeCount).not.toHaveBeenCalled()
+        expect(facts.waitingCards).not.toHaveBeenCalled()
     })
 })

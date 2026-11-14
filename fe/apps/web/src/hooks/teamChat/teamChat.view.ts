@@ -10,6 +10,8 @@ export type Words = ReturnType<typeof useTranslations<"teamChat">>
 export interface RoomViewContext {
     readonly room: TeamChatRoomState
     readonly t: Words
+    /** The viewer's language. */
+    readonly locale: string
     /** The shared words of every pane frame (the way back to the list). */
     readonly backLabel: string
     readonly labels: SlotLabels
@@ -26,3 +28,6 @@ export interface AgentOfRoom {
     readonly name: string
     readonly picture: string | null
 }
+
+/** The DOM id of the card of a leave request (set by the card from its work item), which a refused press brings into view. */
+export const approvalCardIdOf = (workItemId: string): string => `stop-approval-${workItemId}`

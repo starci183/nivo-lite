@@ -1,6 +1,5 @@
 import type { Condition, DecidePoint, GraphBranch, GraphDocument, GraphNode } from "../agent-graphs.contracts"
-import { intervalOf, topOf } from "./interval.policy"
-import type { Interval } from "./interval.policy"
+import { intervalOf, topOf, type Interval } from "./interval.policy"
 
 /** What a learned proposal moves: the signal, the branch it is about and the amounts of its evidence. */
 export interface LearnedPatch {
@@ -59,7 +58,7 @@ const autoBelow = (
     fact: string,
 ): { readonly auto: GraphBranch; readonly from: number } | undefined =>
     branches.flatMap((branch) => {
-        if (branch.then !== "auto" || branch.when === "else") return []
+        if (branch.mode !== "auto" || branch.when === "else") return []
         const interval = intervalOf(branch.when, fact)
         const top = interval === null ? null : topOf(interval)
         return top !== null && top === lower.lo ? [{ auto: branch, from: top }] : []
@@ -119,7 +118,7 @@ const raised = (old: number, amounts: ReadonlyArray<number>): number =>
 
 const lowered = (old: number, amounts: ReadonlyArray<number>): number => {
     const floor = Math.floor(Math.min(...amounts, old) / STEP) * STEP
-    return floor < old ? floor : old
+    return Math.min(floor, old)
 }
 
 /** A backup for an asked branch whose request ran out of time: the owners of the workspace. */

@@ -9,7 +9,7 @@ import { useBrainBoard } from "./useBrainBoard"
 import { useFailureToast } from "./useFailureToast"
 
 /** What the facts filter of the queue draws and calls to apply the facts of one document together. */
-export interface BrainBulkApply extends BulkApplyView {
+interface BrainBulkApply extends BulkApplyView {
     readonly on: {
         readonly ask: (sourceId: string) => void
         readonly cancel: () => void

@@ -3,7 +3,6 @@ import {
     numberOf as realNumberOf,
     comparedOf as realComparedOf,
     rateOf as realRateOf,
-    channelsOf as realChannelsOf,
 } from "./dashboard-facts.policy"
 
 const SUBJECT = Symbol("dashboard-facts.policy")
@@ -17,7 +16,6 @@ const build = async () => {
                     numberOf: realNumberOf,
                     comparedOf: realComparedOf,
                     rateOf: realRateOf,
-                    channelsOf: realChannelsOf,
                 },
             },
         ],
@@ -26,7 +24,6 @@ const build = async () => {
         numberOf: typeof realNumberOf
         comparedOf: typeof realComparedOf
         rateOf: typeof realRateOf
-        channelsOf: typeof realChannelsOf
     }>(SUBJECT)
 }
 
@@ -63,44 +60,5 @@ describe("rateOf", () => {
         const policy = await build()
 
         expect(policy.rateOf(7, 5)).toBe(1)
-    })
-})
-
-describe("channelsOf", () => {
-    it("merges leads and revenue, the channel with the most leads first, and drops a channel with neither", async () => {
-        const policy = await build()
-
-        const channels = policy.channelsOf(
-            new Map([
-                ["zalo", 21],
-                ["website", 11],
-                ["telegram", 0],
-            ]),
-            new Map([
-                ["zalo", 1_900_000],
-                ["facebook", 310_000],
-            ]),
-        )
-
-        expect(channels).toEqual([
-            { channel: "zalo", leads: 21, revenueVnd: 1_900_000 },
-            { channel: "website", leads: 11, revenueVnd: 0 },
-            { channel: "facebook", leads: 0, revenueVnd: 310_000 },
-        ])
-    })
-
-    it("breaks ties by revenue, then by name", async () => {
-        const policy = await build()
-
-        const channels = policy.channelsOf(
-            new Map([
-                ["b", 2],
-                ["a", 2],
-                ["c", 2],
-            ]),
-            new Map([["c", 5]]),
-        )
-
-        expect(channels.map((facts) => facts.channel)).toEqual(["c", "a", "b"])
     })
 })

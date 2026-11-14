@@ -3,10 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import { EMAIL_PATTERN, NAME_MIN_LENGTH, PASSWORD_MIN_LENGTH } from "@/hooks/auth"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the sign-up form. */
 export interface SignupValues {

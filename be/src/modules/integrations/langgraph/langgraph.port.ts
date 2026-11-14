@@ -57,6 +57,29 @@ export interface ThreadState {
     readonly founderAnswers: ReadonlyArray<unknown>
     /** The frame of the loop in progress, or null. An update replaces it. */
     readonly loop: unknown
+    /**
+     * What each branch of a fan-out left, by branch id (plain JSON); empty outside a fan-out. An update adds or replaces the ids it
+     * names and keeps the others, so the branches of one superstep each write their own id; `null` empties it. Absent in a thread
+     * stored before fan-outs ran (= empty).
+     */
+    readonly branches?: Readonly<Record<string, unknown>> | undefined
+    /**
+     * The branch this run of a node belongs to: the value a `ThreadSend` gave it, or null for a node the thread's shared state
+     * started. A node of a branch sees the state as it was when its branch was sent, plus what the earlier nodes of the same branch
+     * wrote (its own `steps`); it never sees what another branch wrote meanwhile.
+     */
+    readonly branch?: unknown
+}
+
+/**
+ * One branch of a fan-out (LangGraph's `Send`): the node it starts at and the value the branch carries (plain JSON), which every node
+ * of the branch reads as `state.branch`. The branches of one answer run in the same superstep, in parallel.
+ */
+export interface ThreadSend {
+    /** The node the branch starts at: one the sending node declared (its `next` or one of its `ends`). */
+    readonly node: string
+    /** What the branch carries. */
+    readonly branch: unknown
 }
 
 /** What a node writes into the state: only the keys it names change (`steps` by node key, the others whole). */
@@ -69,6 +92,8 @@ export interface ThreadUpdate {
     readonly founderAnswers?: ReadonlyArray<unknown> | undefined
     /** The new loop frame, or null to clear it. */
     readonly loop?: unknown
+    /** Branch records to add or replace, by branch id, or null to empty them. */
+    readonly branches?: Readonly<Record<string, unknown>> | null | undefined
 }
 
 /** What `start` feeds a new thread. */
@@ -86,6 +111,18 @@ export interface ThreadNodeAnswer {
      * node did not declare (its `next` or one of its `ends`) is refused with `LANGGRAPH_ROUTE_UNDECLARED`.
      */
     readonly goto?: string | undefined
+    /**
+     * A FAN-OUT instead of a `goto`: one branch per entry, all run in the next superstep in parallel (an empty list sends none: this
+     * node's road ends here while the thread's other branches go on). The thread's cursor stays on this node until a node of the shared
+     * state routes again. Taken only outside a branch.
+     */
+    readonly sends?: ReadonlyArray<ThreadSend> | undefined
+    /**
+     * Inside a branch: true makes the `goto` a plain route that LEAVES the branch (the node it names reads the thread's shared state,
+     * once per superstep however many branches route to it: the join). Absent, the `goto` continues the branch. A node of a branch
+     * writes only `steps` and `branches` (`LANGGRAPH_BRANCH_INVALID` otherwise) and never ends the thread.
+     */
+    readonly join?: boolean | undefined
 }
 
 /** What a node's run is handed beside the state. It is bound to one drive of one thread and is not kept past the run. */
@@ -140,6 +177,12 @@ export interface ThreadGraph {
     readonly entry: string
     /** The nodes, the engine's gate node included. */
     readonly nodes: ReadonlyArray<ThreadGraphNode>
+    /**
+     * The node visits one drive of this graph may need (a graph with a loop until a condition: its rounds); the drive's recursion
+     * limit is the larger of this and the app's `stepLimit`, so a legal loop is stopped by its own round counter, never by the library.
+     * Absent: the app's `stepLimit`.
+     */
+    readonly stepLimit?: number | undefined
 }
 
 /** A thread that waits for a person. */

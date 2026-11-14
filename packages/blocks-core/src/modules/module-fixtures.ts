@@ -1,9 +1,11 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
-import { ACCOUNTING_FIXTURES, PAYMENT_FIXTURES } from "./accounting"
+import { BOOKING_FIXTURES } from "./booking"
 import { CHATBOT_FIXTURES } from "./chatbot"
-import { LOYALTY_FIXTURES } from "./loyalty"
+import { CONTENT_FIXTURES } from "./content"
+import { HIRING_FIXTURES } from "./hiring"
 import { PLATFORM_FIXTURES } from "./platform"
 import { SALES_FIXTURES } from "./sales"
+import { VIDEO_FIXTURES } from "./video"
 
 /** The data of one read in each state a prototype draws: the answer when ready, and whether each other state exists for it. */
 export interface ReadFixture {
@@ -30,10 +32,11 @@ export interface ModuleFixtures {
  * state without a back end. Imported only by the prototype host; production bundles never reach it.
  */
 export const MODULE_FIXTURES: Readonly<Record<string, ModuleFixtures>> = {
-    loyalty: LOYALTY_FIXTURES,
     sales: SALES_FIXTURES,
     chatbot: CHATBOT_FIXTURES,
-    accounting: ACCOUNTING_FIXTURES,
-    payment: PAYMENT_FIXTURES,
     platform: PLATFORM_FIXTURES,
+    hiring: HIRING_FIXTURES,
+    booking: BOOKING_FIXTURES,
+    video: VIDEO_FIXTURES,
+    content: CONTENT_FIXTURES,
 }

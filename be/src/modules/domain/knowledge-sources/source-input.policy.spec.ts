@@ -1,10 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
+import { MAX_UPLOAD_BYTES } from "./knowledge-sources.contracts"
 import type { AddSourceInput } from "./knowledge-sources.contracts"
 import {
     NOW,
     metaChanges,
+    moveOf,
     tagsOf,
     normalizeSource,
     normalizeUpdate,
@@ -20,6 +22,7 @@ type Subject = {
     normalizeSource: typeof normalizeSource
     normalizeUpdate: typeof normalizeUpdate
     metaChanges: typeof metaChanges
+    moveOf: typeof moveOf
     replacementContent: typeof replacementContent
     safeFileName: typeof safeFileName
 }
@@ -33,6 +36,7 @@ const buildSubject = async () => {
                     normalizeSource,
                     normalizeUpdate,
                     metaChanges,
+                    moveOf,
                     replacementContent,
                     safeFileName,
                 },
@@ -57,17 +61,23 @@ describe("normalizeSource audience", () => {
         ["unknown", "other"],
         ["empty", ""],
         ["internal", "internal"],
-    ])(
-        "adds a source whose audience is %s as internal: there is no picker, the part of the Brain decides",
-        async (_name, visibility) => {
-            const subject = await buildSubject()
+    ])("adds a source whose area is %s to the internal area (the default upload area)", async (_name, visibility) => {
+        const subject = await buildSubject()
 
-            expect(subject.normalizeSource(WS, inputOf({ visibility }))).toMatchObject({
-                kind: "ok",
-                value: { visibility: "internal" },
-            })
-        },
-    )
+        expect(subject.normalizeSource(WS, inputOf({ visibility }))).toMatchObject({
+            kind: "ok",
+            value: { visibility: "internal" },
+        })
+    })
+
+    it("adds a source to the public area when the member uploads it there (what you upload is what you get)", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.normalizeSource(WS, inputOf({ visibility: "public" }))).toMatchObject({
+            kind: "ok",
+            value: { visibility: "public" },
+        })
+    })
 })
 
 describe("normalizeSource", () => {
@@ -150,11 +160,6 @@ describe("normalizeSource", () => {
 describe("normalizeSource", () => {
     it.each([
         ["an unknown kind", inputOf({ kind: "audio" }), KnowledgeSourcesErrorCode.SourceKindUnknown],
-        [
-            "a public document, which only an approved public document is",
-            inputOf({ visibility: "public" }),
-            KnowledgeSourcesErrorCode.PublicByApproval,
-        ],
         ["a link that is not http", inputOf({ kind: "url", url: "ftp://x" }), KnowledgeSourcesErrorCode.UrlInvalid],
         [
             "a file outside the workspace",
@@ -199,13 +204,37 @@ describe("normalizeUpdate", () => {
         ).toEqual({ kind: "ok", value: { title: "T", topic: "x", tags: ["a"], module: "m", visibility: null } })
     })
 
-    it("refuses to make a document public", async () => {
+    it("moves a document to either area, and refuses a visibility that names neither", async () => {
         const subject = await buildSubject()
 
         expect(subject.normalizeUpdate({ sourceId: "s", visibility: "public" })).toMatchObject({
-            kind: "refused",
-            code: KnowledgeSourcesErrorCode.PublicByApproval,
+            kind: "ok",
+            value: { visibility: "public" },
         })
+        expect(subject.normalizeUpdate({ sourceId: "s", visibility: "internal" })).toMatchObject({
+            kind: "ok",
+            value: { visibility: "internal" },
+        })
+        expect(subject.normalizeUpdate({ sourceId: "s", visibility: "everyone" })).toMatchObject({
+            kind: "refused",
+            code: KnowledgeSourcesErrorCode.VisibilityUnknown,
+        })
+    })
+
+    it("answers the move of a whole document with its parts, or none when no area is asked", async () => {
+        const subject = await buildSubject()
+        const whole = { ids: ["s1", "p2"], title: "Wash price list", visibility: "internal", origin: null }
+        const toPublic = { title: null, topic: null, tags: null, module: null, visibility: "public" as const }
+
+        expect(subject.moveOf(whole, toPublic, "Lan")).toEqual({
+            sourceIds: ["s1", "p2"],
+            title: "Wash price list",
+            from: "internal",
+            to: "public",
+            movedBy: "Lan",
+        })
+        expect(subject.moveOf(whole, { ...toPublic, visibility: null }, "Lan")).toBeNull()
+        expect(subject.moveOf(null, toPublic, "Lan")).toBeNull()
     })
 
     it("clears a topic and a module with an empty text and names an empty title", async () => {
@@ -338,11 +367,11 @@ describe("replacementUpload and uploadVerdict", () => {
     it("refuses an old Office file and a file over the limit at the door, and lets the rest through", () => {
         expect(uploadVerdict("Bang gia.XLS", null)).toMatchObject({ code: KnowledgeSourcesErrorCode.LegacyOffice })
         expect(uploadVerdict("slides.ppt", 10)).toMatchObject({ code: KnowledgeSourcesErrorCode.LegacyOffice })
-        expect(uploadVerdict("scan.pdf", 52_428_801)).toMatchObject({
+        // One file is at most MAX_UPLOAD_BYTES (never more than the Second Brain's whole limit).
+        expect(uploadVerdict("scan.pdf", MAX_UPLOAD_BYTES + 1)).toMatchObject({
             code: KnowledgeSourcesErrorCode.FileTooLarge,
-            params: { size: 50, max: 50 },
         })
-        expect(uploadVerdict("scan.pdf", 52_428_800)).toEqual({ kind: "ok", value: null })
+        expect(uploadVerdict("scan.pdf", MAX_UPLOAD_BYTES)).toEqual({ kind: "ok", value: null })
         expect(uploadVerdict("anh.jpg", null)).toEqual({ kind: "ok", value: null })
     })
 })

@@ -69,10 +69,6 @@ export class AgentEntity extends UuidAbstractEntity {
     @Column({ name: "assignable_rooms", type: "text", array: true, default: () => "'{}'::text[]" })
     assignableRooms!: Array<string>
 
-    /** The agents it may pass work to. */
-    @Column({ name: "can_tag_agent_ids", type: "uuid", array: true, default: () => "'{}'::uuid[]" })
-    canTagAgentIds!: Array<string>
-
     /** The HTTPS address of the picture the owner gave the agent, or null for the generated avatar. */
     @Column({ name: "avatar_url", type: "text", nullable: true })
     avatarUrl!: string | null

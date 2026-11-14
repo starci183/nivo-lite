@@ -8,6 +8,8 @@ import type {
     MessageInboxPoller,
     PaymentInstructionPort,
 } from "./provider-ports.contracts"
+import type { DomainRegistrarPort } from "./domain-ports.contracts"
+import type { ChannelProfilePort } from "./channel-profile-ports.contracts"
 
 @Injectable()
 /** The bank providers whose transactions can be read back to catch what the webhook never delivered. */
@@ -32,3 +34,11 @@ export class MessageInboxPollerRegistryService extends ProviderRegistryService<M
 @Injectable()
 /** The providers that keep the business ledger of a workspace. */
 export class LedgerRegistryService extends ProviderRegistryService<LedgerPort> {}
+
+@Injectable()
+/** The domain registrars whose accounts serve the generic domain purposes (`nivo.tool.domain.*`). */
+export class DomainRegistrarRegistryService extends ProviderRegistryService<DomainRegistrarPort> {}
+
+@Injectable()
+/** The messaging providers that read what their channel says of a person (name, picture), for the provider-neutral profile tool. */
+export class ChannelProfileRegistryService extends ProviderRegistryService<ChannelProfilePort> {}

@@ -1,17 +1,21 @@
-import { Injectable } from "@nestjs/common"
-import { STOPPED_DECISIONS, TOOL, type WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
+import { Injectable, Optional } from "@nestjs/common"
+import { STOPPED_DECISIONS, type WorkflowStoppedPayload } from "@nivo-lite/agent-sdk/team-chat"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
 import {
+    LINE_FACT,
     NO_NEEDS,
     STOP_CARD_MESSAGE_KIND,
     type StopCardApproval,
     type StopCardKind,
     type StopCardNeeds,
+    type StopCardReplyKind,
     type StopCardSectionGiven,
     type StopCardState,
 } from "@modules/domain/team-chat"
 import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { RunStop, StopCardContext } from "./run-stop.contracts"
+import type { ApprovalCardPreview } from "../approval-card.policy"
 
 /** The longest summary line of a card. */
 const SUMMARY_MAX = 4000
@@ -110,6 +114,17 @@ export const approvalOf = (stop: RunStop): StopCardApproval | null => {
     }
 }
 
+/**
+ * What a reply on the card was. On a permission request the owner's verdict reaches the thread as a retry (approved) or as words
+ * (refused: an approval stop takes no words of its own), so the trace names it `approve` / `refuse`: the decision, who and when, lives
+ * on the card, never as a second line (D-MX-10, owner law stop-card-design).
+ */
+export const replyKindOf = (stop: Pick<RunStop, "kind">, kind: StopCardReplyKind): StopCardReplyKind => {
+    if (stop.kind !== "approval") return kind
+    if (kind === "retry") return "approve"
+    return kind === "answer" ? "refuse" : kind
+}
+
 @Injectable()
 /**
  * The card of a stop in the team chat: ONE message per step of a run, posted under the key the old engine used, then rewritten in place
@@ -120,8 +135,10 @@ export const approvalOf = (stop: RunStop): StopCardApproval | null => {
  */
 export class StopCardsService {
     constructor(
-        private readonly nodes: GraphNodeRegistryService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        // The node registry holds the team chat's post executor. An app with no node host (the mcp app answers a stop's verdict, which
+        // writes no card: the api's drain rewrites it when it applies the answer) has none, and posts nothing, as with no executor.
+        @Optional() private readonly nodes?: GraphNodeRegistryService,
     ) {}
 
     /** The typed part of the card of a stop as it stands now. */
@@ -140,7 +157,7 @@ export class StopCardsService {
                     : this.catalog.get(headlineKeyOf(stop, state, takenOver), {}, locale),
             needs,
             replies: stop.answers.map((answer) => ({
-                kind: answer.kind,
+                kind: replyKindOf(stop, answer.kind),
                 text: answer.text,
                 by: answer.by,
                 at: answer.at,
@@ -154,14 +171,19 @@ export class StopCardsService {
 
     /** Posts the card of an open stop, or folds it into the card already there; answers the chat message id, or null when nothing posts. */
     async posted(workspaceId: string, stop: RunStop, context: StopCardContext, now: string): Promise<string | null> {
-        const post = this.nodes.optionalExecutorOf(TOOL.teamMessagePost)
+        const post = this.nodes?.optionalExecutorOf(TOOL.teamMessagePost)
         if (post === undefined) return null
         const section = this.sectionOf(stop, context.locale)
-        const card: WorkflowStoppedPayload & { readonly stop: StopCardSectionGiven } = {
+        const approvalCard = stop.detail.approvalCard
+        const card: WorkflowStoppedPayload & {
+            readonly stop: StopCardSectionGiven
+            readonly preview?: ApprovalCardPreview | undefined
+        } = {
             workflow: context.workflow,
             step: context.step,
             runId: stop.runId,
-            leadId: stop.leadId,
+            // The engine names no sales lead: the stop is about a contact (the card payload keeps `leadId` for the readers that still take it).
+            leadId: null,
             conversationId: stop.conversationId,
             by: context.by,
             reason: stop.reason,
@@ -175,6 +197,7 @@ export class StopCardsService {
             firstAt: now,
             lastAt: now,
             stop: section,
+            ...(approvalCard?.preview === undefined ? {} : { preview: approvalCard.preview }),
         }
         // The readable line: the reason and the question only. The facts are the engine's raw values; the card shows them apart.
         const summary = [stop.reason, stop.question ?? ""].filter((part) => part !== "").join("\n")
@@ -184,6 +207,8 @@ export class StopCardsService {
             title: section.headline,
             summary: summary.slice(0, SUMMARY_MAX),
             card,
+            // The approval card the engine built before the write (agent-sdk `approval.decision`'s payload), on a permission request.
+            ...(approvalCard === undefined ? {} : { decision: approvalCard }),
         }
         const subject = await post.execute(turnOf(workspaceId, stop, context.locale), payload, {
             key: `${key}:${String(stop.repeats)}`,
@@ -197,17 +222,27 @@ export class StopCardsService {
      * keeping every reply on it. Nothing posts when the stop never had a card: a rewrite never makes a second card.
      */
     async rewritten(workspaceId: string, stop: RunStop, locale: StopCardContext["locale"]): Promise<void> {
-        const post = this.nodes.optionalExecutorOf(TOOL.teamMessagePost)
+        const post = this.nodes?.optionalExecutorOf(TOOL.teamMessagePost)
         if (post === undefined || stop.cardMessageId === null) return
         const section = this.sectionOf(stop, locale)
         const key = stopCardKeyOf(stop.runId, stop.stepKey)
         const summary = [section.headline, stop.reason].join("\n")
+        // What the record says about the engine's holding line (not told to the customer, and why) travels with every rewrite, raw:
+        // the team chat words it on the card, so the card never stays silent about a line the send refused.
+        const lineFacts = stop.detail.facts
+            .filter((fact) => fact.name === LINE_FACT.told || fact.name === LINE_FACT.reason)
+            .map((fact) => ({ name: fact.name, value: fact.value }))
+        const notTold = lineFacts.find((fact) => fact.name === LINE_FACT.reason)?.value
         const payload = {
             kind: STOP_CARD_MESSAGE_KIND,
-            rewrite: { title: section.headline, summary: summary.slice(0, SUMMARY_MAX), stop: section },
+            rewrite: { title: section.headline, summary: summary.slice(0, SUMMARY_MAX), stop: section, lineFacts },
+            ...(stop.detail.approvalCard === undefined ? {} : { decision: stop.detail.approvalCard }),
         }
+        // A fact added to an open stop (a credit that joined its run, D-MX-3) rewrites the card too: the key counts the facts, and
+        // names the reason a holding line was not told (a second refusal for another reason is another write).
+        const written = `f${String(stop.detail.facts.length)}${notTold === undefined ? "" : `:${notTold}`}`
         await post.execute(turnOf(workspaceId, stop, locale), payload, {
-            key: `${key}:${section.state}:${String(stop.repeats)}:${String(stop.answers.length)}`,
+            key: `${key}:${section.state}:${String(stop.repeats)}:${String(stop.answers.length)}:${written}`,
             dedupeKey: key,
         })
     }

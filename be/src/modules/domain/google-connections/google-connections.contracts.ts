@@ -38,14 +38,6 @@ export interface StoredGoogleTokens {
     readonly expires_at: number
 }
 
-/** The spreadsheet an automation writes to. */
-export interface OrdersSheet {
-    /** The Google spreadsheet id. */
-    readonly spreadsheetId: string
-    /** The url to open it. */
-    readonly spreadsheetUrl: string
-}
-
 /** Where the Google Drive read grant of a workspace stands: never given, working, or revoked. */
 export type DriveGrantState = "none" | "connected" | "lost"
 

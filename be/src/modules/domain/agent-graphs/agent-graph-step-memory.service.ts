@@ -2,21 +2,31 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import {
     factsOf,
-    iterationKeyOf,
+    iterationKeyPartsOf,
     OUTCOME_STEP,
     resolveInput,
     resolveParams,
     splitBindings,
+    type MemorySubject,
+    type NodeDefinition,
+    type ParamBindings,
+    type RefScope,
+    type StepFailure,
+    type StepMemory,
 } from "@nivo-lite/agent-sdk/node"
-import type { MemorySubject, NodeDefinition, ParamBindings, RefScope, StepFailure, StepMemory } from "@nivo-lite/agent-sdk/node"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type { StepJson, StepView } from "@modules/domain/agent-runs"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import { LeadMemoryService, leadMemorySubjectOf, memorySubjectOf } from "@modules/domain/lead-memory"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { MAIN_WORKFLOW_KEY, namespaceOf, nodeStepKeyOf } from "./policies/graph-flow.policy"
-import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
+import { installedStepIn } from "@modules/domain/installed-plugins"
+import { LeadMemoryService, contactMemorySubjectOf, memorySubjectOf } from "@modules/domain/lead-memory"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import {
+    MAIN_WORKFLOW_KEY,
+    namespaceOf,
+    nodeStepKeyIn,
+    nodeStepKeyOf,
+    type GraphNodeStepInput,
+} from "./policies/graph-flow.policy"
 
 /** What a node runs with once its bindings are resolved: its settings and its data. */
 export interface BoundNode {
@@ -59,13 +69,27 @@ export const failureOfResult = (result: StepJson): StepFailure | null => {
     }
 }
 
-/** The outcome of each node done before in this run, by node key, from the results their steps kept (a later iteration wins). */
+/**
+ * Whether a step done before is seen from the step that runs: every step outside a loop, and a body step of a loop only from outside that
+ * loop or from the SAME item of it (inside item k, `steps.<body node>` reads item k's own step or nothing, never another item's).
+ */
+const seenFrom = (stepKey: string, input: Pick<GraphNodeStepInput, "item" | "loop"> | undefined): boolean => {
+    const parts = iterationKeyPartsOf(stepKey)
+    if (parts === null || input?.loop === undefined || input.item === undefined || parts.loopKey !== input.loop.nodeKey) return true
+    return parts.itemKey === input.item.key
+}
+
+/**
+ * The outcome of each node done before in this run, by node key, from the results their steps kept (a later item wins outside the
+ * loop; inside an item only that item's own body steps are seen).
+ */
 export const stepsOfRun = (
     step: StepView,
     versionId: string,
+    input?: Pick<GraphNodeStepInput, "item" | "loop">,
 ): Readonly<Record<string, StepMemory>> =>
     Object.fromEntries(
-        Object.entries(step.earlier).map(([key, result]): [string, StepMemory] => {
+        Object.entries(step.earlier).filter(([key]) => seenFrom(key, input)).map(([key, result]): [string, StepMemory] => {
             const error = failureOfResult(result)
             const output: unknown = result.output
             return [
@@ -81,6 +105,33 @@ export const stepsOfRun = (
             ]
         }),
     )
+
+/** The item key of an `until` round (`r<round>`, until-rounds.policy.ts `roundKeyOf`). */
+const ROUND_KEY = /^r([1-9][0-9]{0,3})$/u
+
+/**
+ * Inside round r (> 1) of a `loop({ until })` body: the outcome of each body node in round r - 1, by node key (what a ref
+ * `{ round: "previous" }` reads, ruling R13: a round sees the round before only, never older ones). Empty in round 1 and outside a body.
+ * The thread keeps every round's steps under their own keys (`<loop>[r<n>].<node>`), so the round before stays readable after its step
+ * ran again in the round that runs.
+ */
+export const previousRoundOf = (
+    step: StepView,
+    versionId: string,
+    input?: Pick<GraphNodeStepInput, "item" | "loop">,
+): Readonly<Record<string, StepMemory>> => {
+    const loop = input?.loop
+    const round = input?.item === undefined ? null : ROUND_KEY.exec(input.item.key)
+    if (loop === undefined || round === null || Number(round[1]) <= 1) return {}
+    const previous = `r${String(Number(round[1]) - 1)}`
+    const earlier = Object.fromEntries(
+        Object.entries(step.earlier).filter(([key]) => {
+            const parts = iterationKeyPartsOf(key)
+            return parts !== null && parts.loopKey === loop.nodeKey && parts.itemKey === previous
+        }),
+    )
+    return stepsOfRun({ ...step, earlier }, versionId)
+}
 
 /** The values the latest outcome step of the run bound (`output.values`), which `out.*` reads; undefined before any. */
 export const outOfRun = (flow: GraphSpec, steps: Readonly<Record<string, StepMemory>>): Readonly<Record<string, JsonValue>> | undefined => {
@@ -123,16 +174,16 @@ export class AgentGraphStepMemoryService {
     ) {}
 
     /**
-     * Who a step's run is about, or null for a run about no customer: the trigger's lead, else the lead an earlier step of the run named
-     * (`leadId` in its output: the conversation became that lead), else the trigger's conversation.
+     * Who a step's run is about, or null for a run about nobody: the trigger's contact, else the contact an earlier step of the run named
+     * (`contactId` in its output: the conversation's person became known), else the trigger's conversation.
      */
     subjectOf(step: StepView, input: GraphNodeStepInput): MemorySubject | null {
         const subject = memorySubjectOf(input.trigger)
-        if (subject?.leadId !== null) return subject
+        if (subject?.contactId !== null) return subject
         const named = Object.values(step.earlier)
-            .map((result) => (isObject(result.output) ? textOf(result.output.leadId) : null))
-            .find((leadId): leadId is string => leadId !== null)
-        return named === undefined ? subject : leadMemorySubjectOf(named, subject.conversationId)
+            .map((result) => (isObject(result.output) ? textOf(result.output.contactId) : null))
+            .find((contactId): contactId is string => contactId !== null)
+        return named === undefined ? subject : contactMemorySubjectOf(named, subject.conversationId)
     }
 
     /** The namespace a step writes under. */
@@ -140,28 +191,32 @@ export class AgentGraphStepMemoryService {
         return input.namespace ?? namespaceOf(flow.moduleKey, MAIN_WORKFLOW_KEY)
     }
 
-    /** The key memory keeps a step under: its node key, with the iteration inside a for-each body. */
+    /** The key memory keeps a step under: its node key, with the loop and the item inside a for-each body (`<loop>[<item>].<node>`). */
     memoryKeyOf(input: GraphNodeStepInput): string {
-        return input.item === undefined ? input.nodeKey : iterationKeyOf(input.nodeKey, input.item.index)
+        return nodeStepKeyIn({ key: input.nodeKey }, input)
     }
 
     /** The scope a node's refs resolve against. */
     async scopeOf(step: StepView, flow: GraphSpec, input: GraphNodeStepInput): Promise<RefScope> {
         const subject = this.subjectOf(step, input)
-        const steps = stepsOfRun(step, input.versionId)
+        const steps = stepsOfRun(step, input.versionId, input)
         const memory =
             subject === null || this.memory === undefined
                 ? null
                 : await this.memory.snapshot(step.workspaceId, subject, "step")
         const out = outOfRun(flow, steps)
-        return {
+        const previous = previousRoundOf(step, input.versionId, input)
+        const scope = {
             trigger: input.trigger,
             steps,
             namespace: this.namespaceOf(flow, input),
             memory,
             ...(input.item === undefined ? {} : { item: { value: isJson(input.item.value) ? input.item.value : null, index: input.item.index } }),
             ...(out === undefined ? {} : { out }),
+            // R13: the body steps of the round before (`RefScope.previous`, what a ref `{ round: "previous" }` reads).
+            ...(Object.keys(previous).length === 0 ? {} : { previous }),
         }
+        return scope
     }
 
     /**
@@ -173,8 +228,8 @@ export class AgentGraphStepMemoryService {
     }
 
     /**
-     * Keeps a step's outcome in the customer's memory, with the trigger of the run and the lead facts the node's output proves. A step
-     * whose output names the lead the conversation just became (`leadId`) moves the conversation's memory to that lead first.
+     * Keeps a step's outcome in the person's memory, with the trigger of the run and the lead facts the node's output proves. A step
+     * whose output names the contact of the conversation (`contactId`) moves the conversation's memory to that contact first.
      */
     async remember(
         step: StepView,
@@ -186,7 +241,8 @@ export class AgentGraphStepMemoryService {
         const found = this.subjectOf(step, input)
         if (found === null || this.memory === undefined) return
         const subject = await this.adopted(step.workspaceId, found, outcome.output)
-        const definition = this.nodes.installed().nodes.get(node.step)
+        // A template node (`defineTemplateNode`) declares its lead facts as a `defineNode` node does: both are read the same way.
+        const definition = installedStepIn(this.nodes.installed().nodes, node.step) ?? undefined
         await this.memory.write(step.workspaceId, {
             subject,
             namespace: this.namespaceOf(flow, input),
@@ -200,12 +256,12 @@ export class AgentGraphStepMemoryService {
         })
     }
 
-    /** The subject after a step whose output names a lead while the run is still about a conversation: the lead, memory moved to it. */
+    /** The subject after a step whose output names a contact while the run is still about a conversation: the contact, memory moved to it. */
     private async adopted(workspaceId: string, subject: MemorySubject, output: unknown): Promise<MemorySubject> {
-        const leadId = isObject(output) ? textOf(output.leadId) : null
-        if (subject.leadId !== null || leadId === null || subject.conversationId === null || this.memory === undefined)
+        const contactId = isObject(output) ? textOf(output.contactId) : null
+        if (subject.contactId !== null || contactId === null || subject.conversationId === null || this.memory === undefined)
             return subject
-        await this.memory.adopt(workspaceId, subject.conversationId, leadId)
-        return leadMemorySubjectOf(leadId, subject.conversationId)
+        await this.memory.adopt(workspaceId, subject.conversationId, contactId)
+        return contactMemorySubjectOf(contactId, subject.conversationId)
     }
 }

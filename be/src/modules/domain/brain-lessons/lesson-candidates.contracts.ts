@@ -30,8 +30,6 @@ export interface LessonCandidate extends LessonPlace {
     readonly runId: string
     /** The question the agent could not handle (masked). */
     readonly question: string
-    /** Its significant words. */
-    readonly keywords: ReadonlyArray<string>
     /** The person's words (masked). */
     readonly answer: string
     /** The member who answered. */
@@ -42,7 +40,7 @@ export interface LessonCandidate extends LessonPlace {
     readonly thenDid: LessonCandidateThen
     /** Whether the words state a general rule; null = not judged. */
     readonly general: boolean | null
-    /** The group of the same gap. */
+    /** The candidate's own group id, given when it is kept (no code reads which answers ask the same thing: the draft call's model does, and a card gathers its answers by `changeId`). */
     readonly groupId: string
     /** Where it stands. */
     readonly status: LessonCandidateStatus
@@ -53,6 +51,28 @@ export interface LessonCandidate extends LessonPlace {
     /** The truth in force once learned, or null. */
     readonly factId: string | null
 }
+
+/** The pieces of the reason line of a question card, each already shaped for reading. */
+export interface ContradictionParts {
+    /** How many times the founder was asked. */
+    readonly asked: number
+    /** The topic of the gap, in the shop's words. */
+    readonly topic: string
+    /** The older answer, quoted. */
+    readonly older: string
+    /** The day of the older answer (dd/mm). */
+    readonly olderDay: string
+    /** The newer answer, quoted. */
+    readonly newer: string
+    /** The day of the newer answer (dd/mm). */
+    readonly newerDay: string
+}
+
+/** The card a lesson candidate stands on, or null when none is open. */
+export type MaybeChangeId = string | null
+
+/** The states a decided card moves its candidates to: learned, declined, or free again (superseded). */
+export type LessonClosedStatus = Extract<LessonCandidateStatus, "learned" | "declined" | "candidate">
 
 /** An answered stop to keep as a candidate. */
 export interface LessonCandidateInput extends LessonPlace {

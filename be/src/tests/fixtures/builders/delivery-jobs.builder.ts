@@ -5,11 +5,10 @@ import type { MetaInboxService } from "@modules/domain/meta-inbox"
 import type { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import type { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import type { EntityManager } from "typeorm"
-import { connectionsEntities } from "@modules/domain/connections"
 import { workspacesEntities } from "@modules/domain/workspaces"
+import { persistReceiptConnection } from "./account-data.builder"
 
 const WorkspaceEntity: (typeof workspacesEntities)[0] = workspacesEntities[0]
-const ConnectionEntity: (typeof connectionsEntities)[0] = connectionsEntities[0]
 
 /** The receipt capabilities covered by the delivery processors. */
 export type DeliveryKind = "meta" | "telegram" | "sepay"
@@ -65,22 +64,23 @@ export const deliveryIntakeBuilder = async (
     identity: DeliveryFixtureIdentity,
 ): Promise<DeliveryIntakeBuilderResultShape> => {
     const { id, connection, proofId, workspaceId } = identity
-    if (kind === "telegram") {
-        await manager.insert(ConnectionEntity, {
-            id: connection,
-            workspaceId: workspaceId,
-            provider: "telegram",
-            name: "Delivery proof",
-            status: "connected",
-            environment: "test",
+    if (kind === "telegram" || kind === "meta") {
+        // A door resolves the connection at receipt: an account row needs a live connection, and a Meta event is owned by the
+        // connection of its Page.
+        await persistReceiptConnection(manager, {
+            connectionId: connection,
+            workspaceId,
+            provider: kind,
+            ...(kind === "meta" ? { publicMeta: { page_id: pageIdOf(proofId) } } : {}),
         })
     }
     // Include the whole scenario UUID: fakeIds increments its tail, while its leading group stays fixed per run.
     // Thirteen hex digits keep the provider id inside JavaScript's safe integer range.
     const numericId = Number.parseInt(createHash("sha256").update(id).digest("hex").slice(0, 13), 16)
-    const metaBody = Buffer.from(JSON.stringify({ object: "page", entry: [], proofId }))
+    const metaBody = metaBodyOf(proofId)
+    // Each event of a Meta delivery is one receipt of its Page's account, under `<connection>:<event key>`; the proof id is the message id.
     const deliveryId = {
-        meta: createHash("sha256").update(metaBody).digest("hex"),
+        meta: `${connection}:dm:${proofId}`,
         telegram: `${connection}:77`,
         sepay: String(numericId),
     }[kind]
@@ -88,6 +88,29 @@ export const deliveryIntakeBuilder = async (
     const accept = intakeActions(owners, metaBody, connection, numericId)[kind]
     return { service, accept, message: { deliveryId }, queue: `${kind}-delivery` }
 }
+
+/** The Page a proof's Meta delivery belongs to. */
+const pageIdOf = (proofId: string): string => `page-${proofId}`
+
+/** One signed-shape Meta delivery holding one direct message of a person to the proof's Page; the message id is the proof id. */
+const metaBodyOf = (proofId: string): Buffer =>
+    Buffer.from(
+        JSON.stringify({
+            object: "page",
+            entry: [
+                {
+                    id: pageIdOf(proofId),
+                    messaging: [
+                        {
+                            sender: { id: "proof-person" },
+                            timestamp: Date.parse("2026-11-12T00:00:00.000Z"),
+                            message: { mid: proofId, text: "Hello" },
+                        },
+                    ],
+                },
+            ],
+        }),
+    )
 
 const intakeActions = (owners: DeliveryIntakeOwners, metaBody: Buffer, connection: string, numericId: number) => ({
     meta: () => owners.meta.accept(metaBody, "receipt-proof"),

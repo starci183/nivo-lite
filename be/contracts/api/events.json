@@ -1,14 +1,5 @@
 {
   "events": {
-    "ai_generation_completed": {
-      "payload": {
-        "generationId": "string",
-        "purpose": "string",
-        "status": "string",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
     "approval_resolved": {
       "payload": {
         "action": "string",
@@ -20,44 +11,11 @@
       },
       "version": 1
     },
-    "bank_credit_booked": {
-      "payload": {
-        "amountVnd": "number",
-        "inboundEventId": "string",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
-    "booking_status_changed": {
-      "payload": {
-        "bookingId": "string",
-        "kind": "string",
-        "previous": "string?",
-        "status": "string",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
     "connection_ready": {
       "payload": {
         "connectionId": "string",
         "dedupeKey": "string",
         "provider": "string",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
-    "deal_won": {
-      "payload": {
-        "amountVnd": "number?",
-        "channel": "string?",
-        "company": "string?",
-        "evidence": "string?",
-        "leadId": "string",
-        "name": "string",
-        "need": "string?",
-        "orderNo": "string?",
-        "source": "string?",
         "workspaceId": "string"
       },
       "version": 1
@@ -87,67 +45,6 @@
       "payload": {
         "indexedAt": "number",
         "sourceId": "string",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
-    "lead_captured": {
-      "payload": {
-        "channel": "string",
-        "company": "string",
-        "contactName": "string",
-        "email": "string?",
-        "leadId": "string",
-        "need": "string",
-        "phone": "string?",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
-    "order_confirmed": {
-      "payload": {
-        "amountVnd": "number?",
-        "channel": "string?",
-        "confirmedBy": "string",
-        "customer": "string",
-        "items": "string",
-        "leadId": "string?",
-        "orderId": "string",
-        "orderNo": "string",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
-    "order_shipped": {
-      "payload": {
-        "carrier": "string",
-        "leadId": "string?",
-        "orderId": "string",
-        "orderNo": "string",
-        "shippedAt": "string",
-        "trackingCode": "string",
-        "userId": "string",
-        "workspaceId": "string"
-      },
-      "version": 1
-    },
-    "payment_reconciled": {
-      "payload": {
-        "amountVnd": "number?",
-        "channel": "string?",
-        "contractId": "string?",
-        "customer": "string",
-        "invoiceId": "string",
-        "invoiceNo": "string",
-        "leadId": "string?",
-        "orderId": "string?",
-        "orderNo": "string?",
-        "paidAt": "string?",
-        "periodEndsOn": "string?",
-        "subjectId": "string?",
-        "subjectType": "string?",
-        "transactionId": "string?",
-        "workItemId": "string",
         "workspaceId": "string"
       },
       "version": 1

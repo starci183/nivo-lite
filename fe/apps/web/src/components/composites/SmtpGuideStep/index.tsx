@@ -10,6 +10,9 @@ type SmtpGuideStepProps = {
     readonly cautionTitle: string
 }
 
+/** The loading flag a step passes on to a notice when it has one. */
+const loadingOf = (isLoading: boolean | undefined) => (isLoading === undefined ? {} : { isLoading })
+
 /** The guide of the chosen way of sending: where it connects, the steps for a non-technical owner and what to watch for. */
 export const SmtpGuideStep = (props: SmtpGuideStepProps) => (
     <>
@@ -21,7 +24,7 @@ export const SmtpGuideStep = (props: SmtpGuideStepProps) => (
         </Text>
         {props.guide.prefilled === null ? null : (
             <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loadingOf(props.isLoading)}
                 tone="informative"
                 title={props.guide.prefilled}
             />

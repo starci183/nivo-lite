@@ -2,7 +2,6 @@ export type {
     Bilingual,
     BilingualList,
     ModuleAudience,
-    ModuleAuthorityMode,
     ModuleCapabilityRole,
     ModuleFactSubject,
     ModuleGateWrite,
@@ -11,9 +10,7 @@ export type {
     ModuleServer,
     ModuleServerVocabulary,
     ModuleTemplate,
-    ModuleTemplateAction,
     ModuleTemplateAgent,
-    ModuleTemplateCommand,
     ModuleTemplateGate,
     ModuleTemplateRoles,
     ModuleTemplateRequirements,
@@ -22,39 +19,19 @@ export type {
 } from "./module.types"
 export { moduleListProblems, templatesOf } from "./registry"
 export type {
-    ClaimSpec,
-    FactRef,
-    IntentSpec,
-    LimitSpec,
-    MemberSpec,
-    ModuleAgentTemplate,
-    ModuleContracts,
-    ModuleDocument,
-    ModuleDocumentAction,
-    ModuleDocumentGate,
-    ModuleDocumentSchemaId,
-    ModuleManifest,
-    ModuleProblem,
-    ModuleProblemCode,
-    OutcomeCondition,
-    OutcomeRulesSpec,
-    OutcomeSpec,
-    SignalSpec,
-} from "./module-document.types"
-export { moduleDocumentSchema } from "./module-document.schema"
-export { MODULE_CHANGELOG_MAX, moduleProblems } from "./module-problems"
-export type {
     ModuleAgent,
     ModuleAbilityDefault,
     ModuleAbilityDefaults,
     ModuleAgentAbilities,
-    ModuleAgentPolicy,
+    ModuleContactBlock,
     ModuleDeclaration,
     ModuleDeclarationConfig,
     SeedSpecProblem,
 } from "./declaration.types"
-export type { CountsReadConfig, ListReadConfig, ListReadDefinition } from "./declaration-list.types"
+export type { CountsReadConfig, ListReadConfig, ListReadDefinition, ListRowsJoin } from "./declaration-list.types"
 export type { ActionInputResult, ReadVariablesResult } from "./declaration-input"
 export { countsRead, listRead } from "./declaration-list"
 export { defineModule, seedSpecProblems } from "./declaration"
 export { actionInputOf, readVariablesOf } from "./declaration-input"
+export type { ContactBlockProblem, ContactBlockProblemCode } from "./contact-blocks"
+export { CONTACT_VARIABLE, contactBlockNodeOf, contactBlockProblems } from "./contact-blocks"

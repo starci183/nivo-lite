@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { MyInvitesService } from "@modules/domain/workspace-invites"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DeclineInviteCommand } from "./decline-invite.command"
 
 @CommandHandler(DeclineInviteCommand)

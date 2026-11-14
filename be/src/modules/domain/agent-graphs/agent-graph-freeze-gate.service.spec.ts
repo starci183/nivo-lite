@@ -13,31 +13,22 @@ import type { FlowThreadRun, FlowThreads } from "./agent-graph-flow-runs.service
 import { AgentGraphCallGuardService } from "./agent-graph-call-guard.service"
 import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
 import type { FlowFreezePort } from "./agent-graph-freeze-gate.service"
-import { GRAPH_FLOW_TRIGGER_MESSAGES } from "./agent-graphs.decorators"
-import type { FlowTriggerMessages } from "./agent-graphs.port"
 import { AgentGraphsService } from "./agent-graphs.service"
 
 const FLOW: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["agent"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes: [{ key: "end", kind: "output", step: "stop" }],
 }
 
-const TURN = agentTurnViewOf({ source: "tag", context: { authorAgentId: "agent-2", text: "order" } })
+/** A hand-off wake about a customer: the verb `workflow.called` names the person (a conversation: the customer subject), so a freeze may hold it. */
+const TURN = agentTurnViewOf({ source: "tag", context: { authorAgentId: "agent-2", text: "order", conversationId: "conv-1" } })
 
-const buildGate = async (bindMessages: boolean) => {
-    const messages = mock<FlowTriggerMessages>({
-        messagesOf: jest.fn().mockResolvedValue([{ id: "m-1", text: "hi", at: "t", attachments: [] }]),
-    })
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            AgentGraphFreezeGateService,
-            ...(bindMessages ? [{ provide: GRAPH_FLOW_TRIGGER_MESSAGES, useValue: messages }] : []),
-        ],
-    }).compile()
-    return { gate: moduleRef.get(AgentGraphFreezeGateService), messages }
+const buildGate = async () => {
+    const moduleRef = await Test.createTestingModule({ providers: [AgentGraphFreezeGateService] }).compile()
+    return { gate: moduleRef.get(AgentGraphFreezeGateService) }
 }
 
 /** What waits for the founder for the customer of the specs: the step a frozen workflow stopped on, and since when. */
@@ -52,14 +43,14 @@ const portOf = (held: boolean) =>
 
 describe("AgentGraphFreezeGateService", () => {
     it("holds nothing and freezes nothing while no capability keeps freezes", async () => {
-        const { gate } = await buildGate(false)
+        const { gate } = await buildGate()
         await expect(gate.hold(TURN, {})).resolves.toBe(false)
         await expect(gate.frozen("ws-1", { leadId: "lead-1" })).resolves.toBe(false)
         await expect(gate.waitingOf("ws-1", { leadId: "lead-1" })).resolves.toEqual([])
     })
 
     it("asks the freezes whether a workflow of a customer is frozen and what waits for the founder, recording nothing itself", async () => {
-        const { gate } = await buildGate(false)
+        const { gate } = await buildGate()
         const port = portOf(true)
         gate.set(port)
         const trigger = { conversationId: "c-1", workflowId: "wf-consult" }
@@ -73,7 +64,7 @@ describe("AgentGraphFreezeGateService", () => {
     })
 
     it("asks the freezes registered last", async () => {
-        const { gate } = await buildGate(false)
+        const { gate } = await buildGate()
         const first = portOf(false)
         const last = portOf(true)
         gate.set(first)
@@ -85,15 +76,10 @@ describe("AgentGraphFreezeGateService", () => {
         expect(first.hold).not.toHaveBeenCalled()
     })
 
-    it("tells a node step of a graph apart, and reads the lines of a conversation when the app binds them", async () => {
-        const bound = await buildGate(true)
-        expect(bound.gate.isNodeStep("graph_node")).toBe(true)
-        expect(bound.gate.isNodeStep("tool")).toBe(false)
-        await expect(bound.gate.linesOf("ws-1", "c-1", ["m-1"])).resolves.toHaveLength(1)
-        expect(bound.messages.messagesOf).toHaveBeenCalledWith("ws-1", "c-1", ["m-1"])
-
-        const bare = await buildGate(false)
-        await expect(bare.gate.linesOf("ws-1", "c-1", ["m-1"])).resolves.toEqual([])
+    it("tells a node step of a graph apart", async () => {
+        const { gate } = await buildGate()
+        expect(gate.isNodeStep("graph_node")).toBe(true)
+        expect(gate.isNodeStep("tool")).toBe(false)
     })
 })
 
@@ -122,7 +108,7 @@ const buildFlows = async (held: boolean, refusal: string | null = null, waiting:
         stateOfAgent: jest
             .fn()
             .mockResolvedValue(
-                stateOf({ activeVersionId: "version-1", active: { nodes: [], rights: [], flow: FLOW } }),
+                stateOf({ activeVersionId: "version-1", active: { nodes: [], flow: FLOW } }),
             ),
     })
     const runs = mock<AgentRunsService>({ open: jest.fn().mockResolvedValue(runViewOf({ id: "run-1" })) })

@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateMaintainBrain } from "@/modules/api/graphql/mutations/mutation-maintain-brain"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { MaintainBrainMutation } from "@/modules/api"
 
 /** The SWR key of the maintainBrain mutation. */

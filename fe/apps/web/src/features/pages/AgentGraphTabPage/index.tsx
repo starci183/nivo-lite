@@ -22,3 +22,6 @@ export const AgentGraphTabPage = (props: AgentGraphTabPageProps): ReactElement =
     if (!isModuleKey(props.module)) notFound()
     return <AgentWorkflowGraph module={props.module} installationId={props.installationId} />
 }
+
+/** The same Graph tab while the route loads: the canvas reads the agent from the address and draws its own skeleton. */
+export const AgentGraphTabLoadingPage = (): ReactElement => <AgentWorkflowGraph />

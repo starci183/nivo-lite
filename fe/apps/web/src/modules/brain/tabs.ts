@@ -5,8 +5,9 @@ import {
     LEGACY_BRAIN_TABS,
     brainTabHref,
     brainTabOfAddress,
+    type BrainPart,
+    type BrainTab,
 } from "@/modules/routes"
-import type { BrainPart, BrainTab } from "@/modules/routes"
 
 /** What the address of the Second Brain says: the tab, the view inside it and the parameters that open a form on one. */
 interface BrainTabAddress {

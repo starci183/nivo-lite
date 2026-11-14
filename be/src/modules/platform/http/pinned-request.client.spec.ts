@@ -144,6 +144,46 @@ describe("sendPinned", () => {
         expect(exchange.options.signal).toBeUndefined()
     })
 
+})
+
+describe("sendPinned and the size of an answer", () => {
+    afterEach(() => {
+        jest.restoreAllMocks()
+    })
+
+    it("stops at the caller's own size without failing, keeping nothing", async () => {
+        const subject = await buildSubject()
+
+        const exchange = new Exchange()
+        const pending = subject.sendPinned(new URL("https://shop.example/big"), pin, init({ maxBytes: 4 }))
+        exchange.response.emit("data", Buffer.from("abc"))
+        exchange.response.emit("data", Buffer.from("de"))
+
+        await expect(pending).resolves.toMatchObject({ status: 200, body: Buffer.alloc(0), tooLarge: true })
+        expect(exchange.response.destroyed).toBe(true)
+    })
+
+    it("stops before reading when the answer declares more than the caller's own size", async () => {
+        const subject = await buildSubject()
+
+        const exchange = new Exchange()
+        exchange.response.headers = { "content-length": "5000" }
+        const pending = subject.sendPinned(new URL("https://shop.example/big"), pin, init({ maxBytes: 4 }))
+
+        await expect(pending).resolves.toMatchObject({ tooLarge: true, body: Buffer.alloc(0) })
+    })
+
+    it("keeps a body within the caller's own size, which may exceed the default cap", async () => {
+        const subject = await buildSubject()
+
+        const exchange = new Exchange()
+        const pending = subject.sendPinned(new URL("https://shop.example/ok"), pin, init({ maxBytes: 30_000_000 }))
+        exchange.response.emit("data", Buffer.alloc(26_000_000))
+        exchange.response.emit("end")
+
+        await expect(pending).resolves.toMatchObject({ status: 200 })
+    })
+
     it("cuts a body over the cap and reports a network error", async () => {
         const subject = await buildSubject()
 

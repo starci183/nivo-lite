@@ -54,7 +54,7 @@ const servesPrefix = (index: IndexDef, equality: ReadonlyArray<string>, order: O
     if (!predicateHolds(index.where, equality) || (index.using !== undefined && index.using !== "btree")) {
         return false
     }
-    const columns = index.on.map(columnOf)
+    const columns = index.on.map((entry) => columnOf(entry))
     const pinned = columns.slice(0, equality.length).map((column) => column.name)
     return (
         pinned.length === equality.length &&

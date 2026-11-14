@@ -2,6 +2,7 @@ import type { ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
 import type { MemberDirectory, ParkedRuns, RightsDirectory, RunStanding } from "../platform.types"
 import { membersPort, parkedRunsPort, rightsPort } from "../ports"
+import { PLATFORM_REFUSAL_WORDS, type PlatformRefusal } from "../refusals"
 import { resumeRunAction } from "./resume-run.action"
 
 const contextOf = (memberId: string | null): RunContext => ({
@@ -49,7 +50,11 @@ const execute = (world: World, raw: unknown, memberId: string | null = "m1") => 
 }
 
 const PARKED: RunStanding = { module: "sales", parked: true }
-const refused = (key: string): ActionResult => ({ ok: false, reason: "refused", message: { key } })
+const refused = (reason: PlatformRefusal): ActionResult => ({
+    ok: false,
+    reason: "refused",
+    message: PLATFORM_REFUSAL_WORDS[reason],
+})
 
 describe("platform.resume-run", () => {
     it("resumes a parked run for a manager", async () => {
@@ -66,26 +71,26 @@ describe("platform.resume-run", () => {
 
     it("refuses a member who is neither, and an actor that is no member", async () => {
         const staff = execute({ standing: PARKED, holders: ["chatbot.manage"] }, { id: "run-1" })
-        await expect(staff.result).resolves.toEqual(refused("refusal_forbidden"))
+        await expect(staff.result).resolves.toEqual(refused("forbidden"))
         expect(staff.resumed).toEqual([])
         await expect(execute({ standing: PARKED }, { id: "run-1" }, null).result).resolves.toEqual(
-            refused("refusal_forbidden"),
+            refused("forbidden"),
         )
     })
 
     it("refuses a run that is not there, and a run that is not parked", async () => {
         await expect(execute({ standing: null, manager: true }, { id: "x" }).result).resolves.toEqual(
-            refused("refusal_missing"),
+            refused("missing"),
         )
         const running = execute({ standing: { module: "sales", parked: false }, manager: true }, { id: "run-1" })
-        await expect(running.result).resolves.toEqual(refused("refusal_not_parked"))
+        await expect(running.result).resolves.toEqual(refused("not_parked"))
         expect(running.resumed).toEqual([])
     })
 
     it("refuses a run the engine found no longer parked, and an input it does not declare", async () => {
         await expect(
             execute({ standing: PARKED, manager: true, resumes: false }, { id: "run-1" }).result,
-        ).resolves.toEqual(refused("refusal_not_parked"))
+        ).resolves.toEqual(refused("not_parked"))
         await expect(execute({ standing: PARKED, manager: true }, {}).result).resolves.toMatchObject({
             ok: false,
             reason: "invalid",

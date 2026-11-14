@@ -2,8 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { productCalendarDay } from "@/modules/dayjs"
-import { dailyOf } from "./usageCard.shared"
-import type { UsageCardData } from "./usageCard.shared"
+import { dailyOf, type UsageCardData } from "./usageCard.shared"
 
 /** The usage card's words with no figures, for a region that draws its skeleton before any read (no data operation runs). */
 export const useUsageCardPlaceholder = (): UsageCardData => {

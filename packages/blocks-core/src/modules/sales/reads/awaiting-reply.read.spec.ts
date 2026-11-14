@@ -5,7 +5,7 @@ import { awaitingReplyRead } from "./awaiting-reply.read"
 
 const CONTEXT = salesContextOf()
 
-describe("sales.awaiting-reply", () => {
+describe("blocks-core.sales.api.lead.awaiting-reply", () => {
     it("lists the open customers who wait, longest wait first, and leaves out closed deals", async () => {
         const state = sampleState([])
         state.leads.push({ ...LEAD_NEW, id: "lead-8", contactName: "Early", awaitingSince: "2026-11-05T06:00:00.000Z" })

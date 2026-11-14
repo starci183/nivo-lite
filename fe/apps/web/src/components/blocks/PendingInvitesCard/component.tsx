@@ -1,5 +1,4 @@
-import { Button, Cluster, Section } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, Cluster, Section, type ListRowData } from "@starci/grammar/common"
 import type { PendingInviteView } from "@/modules/types"
 
 /** Copy and rows the connected pending-invitations card supplies. */
@@ -25,7 +24,7 @@ const actionsOf = (props: PendingInvitesCardBaseProps, invite: PendingInviteView
     const isPending = props.props.pendingId === invite.id
     return (
         <Cluster gap="row">
-            <Button intent="commit" isPending={isPending} onPress={() => props.on.accept(invite.id)}>
+            <Button intent="neutral" isPending={isPending} onPress={() => props.on.accept(invite.id)}>
                 {props.props.acceptLabel}
             </Button>
             <Button intent="alternative" isDisabled={isPending} onPress={() => props.on.decline(invite.id)}>

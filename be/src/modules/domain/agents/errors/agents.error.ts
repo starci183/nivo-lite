@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the agents capability. */
 export enum AgentsErrorCode {
@@ -23,12 +22,10 @@ export enum AgentsErrorCode {
     AvatarInvalid = "AGENTS_AVATAR_INVALID",
     /** The preset picture is not one an agent may wear. */
     AvatarPresetInvalid = "AGENTS_AVATAR_PRESET_INVALID",
-    /** An nivo.agent.tag effect names no agent, or a module the workspace runs no agent for; `params.refusal` is the node refusal it reports. */
+    /** An nivo.tool.agent.tag effect names no agent, or a module the workspace runs no agent for; `params.refusal` is the node refusal it reports. */
     TagTargetMissing = "AGENTS_TAG_TARGET_MISSING",
-    /** The tag rights refuse an nivo.agent.tag effect, or the tag door refused it for another reason; `params.refusal` is the node refusal it reports. */
+    /** The tag rights refuse an nivo.tool.agent.tag effect, or the tag door refused it for another reason; `params.refusal` is the node refusal it reports. */
     TagRefused = "AGENTS_TAG_REFUSED",
-    /** A care.schedule effect names a step no schedule can hold (an unknown step, a moment that is not an instant or is too far away); `params.refusal` is the node refusal it reports. */
-    CareScheduleInvalid = "AGENTS_CARE_SCHEDULE_INVALID",
 }
 
 /** How each agents code travels. */
@@ -45,7 +42,6 @@ export const AGENTS_ERROR_KINDS: Record<AgentsErrorCode, ErrorKind> = {
     [AgentsErrorCode.AvatarPresetInvalid]: "invalid",
     [AgentsErrorCode.TagTargetMissing]: "invalid",
     [AgentsErrorCode.TagRefused]: "forbidden",
-    [AgentsErrorCode.CareScheduleInvalid]: "invalid",
 }
 
 /** The one error class of the agents capability. */

@@ -15,7 +15,7 @@ export class KnowledgeReadingWarningType {
     @Field(() => Int, { nullable: true })
     count?: number | null
 
-    /** The note in plain Vietnamese, e.g. "Trang 3 không đọc được.". */
+    /** The note in plain Vietnamese, e.g. "Trang 3 khong doc duoc.". */
     @Field(() => String)
     message!: string
 }

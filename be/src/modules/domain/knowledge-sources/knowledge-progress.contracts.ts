@@ -1,6 +1,6 @@
 import type { SourceStatus } from "./knowledge-sources.contracts"
 
-/** The stages a source passes while it is taken in, in order; the table holds them under a CHECK. The last, `critic`, is worn by a ready document while the critic checks its dossier. */
+/** The stages a source passes while it is taken in, in order; the table holds them under a CHECK. The last, `critic`, is worn by a ready document while the critic checks it. */
 export type SourceStage = "read" | "chunk" | "embed" | "store" | "facts" | "critic"
 
 /** Where one source stands while a worker is on it: the state the Knowledge page shows, read from the row. */

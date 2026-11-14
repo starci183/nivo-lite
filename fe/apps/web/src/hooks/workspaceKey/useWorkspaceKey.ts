@@ -1,5 +1,4 @@
-import { tenantKey } from "@starci/next-data"
-import type { KeyOrWait } from "@starci/next-data"
+import { tenantKey, type KeyOrWait } from "@starci/next-data"
 import { useOpenWorkspaceId } from "./useOpenWorkspaceId"
 
 /**

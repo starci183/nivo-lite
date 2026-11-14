@@ -170,6 +170,41 @@ describe("a stored stop card as a screen shows it", () => {
         expect(subject.stopCardViewOf(null, () => "")).toBeNull()
     })
 
+    it("serves the approval card and the preview STORED on the line (after a reload): call label, facts, preview as JSON text", async () => {
+        const subject = await buildSubject()
+        const section = subject.countedSectionOf(GIVEN, null)
+        const whole = "D\u1EA1 ch\u1ECB \u01A1i, \u0111\u01A1n c\u1EE7a ch\u1ECB \u0111\u00E3 xong. ".repeat(70).slice(0, 2000)
+        const decision = {
+            step: { nodeId: "payment.refund", title: "Hoan tien", description: "Hoan tien cho khach" },
+            call: { tool: "nivo.tool.payment.refund.create", account: "SePay · MB", label: { vi: "Ho\u00E0n ti\u1EC1n", en: "Refund" } },
+            facts: [{ name: "So tien", value: "50.000 d" }],
+            text: "Hoan 50.000 d cho don DH-7.",
+            preview: { kind: "tcore.card", payload: { no: "7" } },
+            content: [
+                { name: "text", kind: "text" as const, value: whole },
+                { name: "images", kind: "address" as const, value: "https://img.example/qr.png" },
+            ],
+        }
+        const stored = { ...BASE, decision, preview: { kind: "tcore.card", payload: { no: "8" } } }
+        const view = subject.stopCardViewOf(envelope(subject.typedPayloadOf(stored, section)), () => "")
+
+        expect(view?.decision).toEqual({
+            step: decision.step,
+            call: decision.call,
+            facts: [{ name: "So tien", value: "50.000 d", technical: false }],
+            text: decision.text,
+            preview: { kind: "tcore.card", payloadJson: '{"no":"7"}' },
+            content: decision.content,
+        })
+        expect(view?.decision?.content[0]?.value).toHaveLength(2000)
+        expect(view?.preview).toEqual({ kind: "tcore.card", payloadJson: '{"no":"8"}' })
+        // A card stored before the label (or with no decision) serves null, never a missing member.
+        const old = subject.stopCardViewOf(envelope(subject.typedPayloadOf({ ...BASE, decision: { ...decision, content: undefined, call: { tool: "t", account: null } } }, section)), () => "")
+        expect(old?.decision?.call.label).toBeNull()
+        expect(old?.decision?.content).toEqual([])
+        expect(subject.stopCardViewOf(envelope(subject.typedPayloadOf(BASE, section)), () => "")).toMatchObject({ decision: null, preview: null })
+    })
+
     it("shows each fact with its technical mark: false for a fact stored before facts were worded, true for a raw value", async () => {
         const subject = await buildSubject()
         const section = subject.countedSectionOf(GIVEN, null)

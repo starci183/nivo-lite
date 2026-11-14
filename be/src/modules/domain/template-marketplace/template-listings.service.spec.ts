@@ -1,14 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
-import { AgentPluginsService } from "@modules/domain/agent-plugins"
+import { FakeClock, mock, mockEntityManager, type MockEntityManager } from "@starci/jest-preset"
 import {
-    AgentTemplateVersionsService,
-    AgentTemplatesError,
-    AgentTemplatesErrorCode,
+  AgentTemplateVersionsService,
+  AgentTemplatesError,
+  AgentTemplatesErrorCode,
+  type StoredVersion,
 } from "@modules/domain/agent-templates"
-import type { StoredVersion } from "@modules/domain/agent-templates"
-import { ModulesService } from "@modules/domain/modules"
 import { AdminAccessService } from "@modules/domain/platform-admin"
 import type { Principal } from "@modules/platform/cqrs"
 import { CLOCK } from "@modules/platform/clock"
@@ -62,14 +59,6 @@ const build = async (options: Options = {}) => {
         listOf: jest.fn().mockResolvedValue([{ key: "spa-booking-by-linh" }]),
     })
     const likeness = mock<TemplateLikenessService>({ covers: jest.fn().mockResolvedValue(options.consented ?? true) })
-    const modules = mock<ModulesService>({
-        find: jest.fn().mockResolvedValue({
-            key: "accounting",
-            connectionProviders: ["sepay", "dossier", "unknown"],
-            authorityActions: [{ action: "pay_supplier", maxMode: null }],
-        }),
-    })
-    const plugins = mock<AgentPluginsService>({ keys: jest.fn().mockReturnValue([]) })
     const access = mock<AdminAccessService>({
         requireAdmin:
             options.notAdmin === true
@@ -85,8 +74,6 @@ const build = async (options: Options = {}) => {
             { provide: CLOCK, useValue: new FakeClock(ROW_AT) },
             { provide: AgentTemplateVersionsService, useValue: versions },
             { provide: TemplateLikenessService, useValue: likeness },
-            { provide: ModulesService, useValue: modules },
-            { provide: AgentPluginsService, useValue: plugins },
             { provide: AdminAccessService, useValue: access },
         ],
     }).compile()

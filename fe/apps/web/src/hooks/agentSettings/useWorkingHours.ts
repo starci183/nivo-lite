@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
 import { useMutateSaveWorkingHoursSwr } from "@/hooks/swr"
-import { defaultHours, parseHours, serialiseHours } from "@/modules/workingHours"
-import type { WorkingHours } from "@/modules/workingHours"
+import { defaultHours, parseHours, serialiseHours, type WorkingHours } from "@/modules/workingHours"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useRefreshInstallation } from "./useRefreshInstallation"
 

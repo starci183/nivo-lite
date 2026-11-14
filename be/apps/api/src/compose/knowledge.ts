@@ -1,24 +1,18 @@
 import { DriveGrantService } from "@modules/domain/google-connections"
-import { DecisionCorrectionsService } from "@modules/domain/decisions"
 import type { DynamicModule } from "@nestjs/common"
 import { BRAIN_ERROR_KINDS, BRAIN_MESSAGES, BrainModule } from "@modules/domain/brain"
 import { BrainCommandsModule } from "@modules/domain/brain-commands"
-import {
-    BRAIN_DOSSIERS_ERROR_KINDS,
-    BRAIN_DOSSIERS_MESSAGES,
-    BrainDossiersModule,
-} from "@modules/domain/brain-dossiers"
 import { BrainEvalCasesModule } from "@modules/domain/brain-eval-cases"
 import {
     DOSSIER_REVIEW_ERROR_KINDS,
     DOSSIER_REVIEW_MESSAGES,
     DossierReviewModule,
 } from "@modules/domain/dossier-review"
-import { DossierReasonerService, DossierReviewAiModule, RemedyWriterService } from "@modules/domain/dossier-review-ai"
+import { DossierReasonerService, DossierReviewAiModule } from "@modules/domain/dossier-review-ai"
 import { BrainExtractionsModule } from "@modules/domain/brain-extractions"
 import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from "@modules/domain/brain-facts"
 import { BRAIN_LESSONS_ERROR_KINDS, BRAIN_LESSONS_MESSAGES, BrainLessonsModule } from "@modules/domain/brain-lessons"
-import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
+import { EMBEDDING_DIMENSIONS, KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
 import {
     PUBLIC_DOCUMENTS_ERROR_KINDS,
@@ -26,7 +20,14 @@ import {
     PublicDocumentsModule,
 } from "@modules/domain/public-documents"
 import { KnowledgeSuggestionStateModule } from "@modules/domain/knowledge-suggestion-state"
-import { KNOWLEDGE_ERROR_KINDS, KNOWLEDGE_MESSAGES, KnowledgeModule } from "@modules/domain/knowledge"
+import {
+    KNOWLEDGE_ERROR_KINDS,
+    KNOWLEDGE_MESSAGES,
+    KnowledgeModule,
+    VectorEmbedderService,
+} from "@modules/domain/knowledge"
+import { TeamChatNoticesService } from "@modules/domain/team-chat"
+import { VectorSyncModule } from "@modules/domain/vector-sync"
 import {
     KNOWLEDGE_SOURCES_ERROR_KINDS,
     KNOWLEDGE_SOURCES_MESSAGES,
@@ -39,8 +40,10 @@ import {
     NivoKnowledgeModule,
 } from "@modules/domain/nivo-knowledge"
 import { DocumentsModule } from "@modules/integrations/documents"
-import { AiGatewayModule } from "@modules/integrations/ai-gateway"
+import { DOCUMENT_READERS_ERROR_KINDS, DOCUMENT_READERS_MESSAGES } from "@modules/integrations/document-readers"
+import { AiGatewayModule, chatProfileRoutes } from "@modules/integrations/ai-gateway"
 import { AiModule } from "@modules/integrations/ai"
+import { QDRANT_ERROR_KINDS, QDRANT_MESSAGES, QdrantModule } from "@modules/integrations/qdrant"
 import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { MODULE_KNOWLEDGE_FOLDERS } from "@modules/domain/modules"
 import type { ApiOptions } from "../api.options"
@@ -49,8 +52,11 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** The knowledge area of the API, in registration order. */
 export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
     AiGatewayModule.register({ isGlobal: true, ...options.aiGateway }),
-    AiModule.register({ isGlobal: true, ...options.aiTasks.endpoint }),
+    AiModule.register({ isGlobal: true, ...options.aiTasks.endpoint, profileRoutes: chatProfileRoutes() }),
     DocumentsModule.register({ isGlobal: true, ...options.documents }),
+    // The vector index (Qdrant) and the sync that keeps it in step with Postgres. Without `QDRANT_URL` the index is not bound and
+    // vectors stay in Postgres: that address is the one switch. The vector size is the embedding profile's.
+    QdrantModule.register({ isGlobal: true, ...options.qdrant, dimensions: EMBEDDING_DIMENSIONS }),
     KnowledgeSourcesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeChunksModule.register({ isGlobal: true }),
     KnowledgeSuggestionStateModule.register({ isGlobal: true }),
@@ -64,26 +70,25 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
         indexChunkDelayMs: options.knowledge.indexChunkDelayMs,
     }),
     BrainFactsModule.register({ isGlobal: true }),
-    BrainDossiersModule.register({ isGlobal: true }),
-    DossierReviewAiModule.register({ isGlobal: true }),
-    DossierReviewModule.register({
+    VectorSyncModule.register({
         isGlobal: true,
-        reasoner: DossierReasonerService,
-        writer: RemedyWriterService,
+        embedder: VectorEmbedderService,
+        driftReporter: TeamChatNoticesService,
     }),
+    DossierReviewAiModule.register({ isGlobal: true }),
+    DossierReviewModule.register({ isGlobal: true, model: DossierReasonerService }),
     KnowledgeGapsModule.register({ isGlobal: true }),
     PublicDocumentsModule.register({ isGlobal: true }),
     BrainLessonsModule.register({ isGlobal: true }),
     BrainExtractionsModule.register({ isGlobal: true }),
     BrainCommandsModule.register({ isGlobal: true }),
     BrainEvalCasesModule.register({ isGlobal: true }),
-    BrainModule.register({ isGlobal: true, corrections: DecisionCorrectionsService }),
+    BrainModule.register({ isGlobal: true }),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */
 export const knowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     BRAIN_ERROR_KINDS,
-    BRAIN_DOSSIERS_ERROR_KINDS,
     DOSSIER_REVIEW_ERROR_KINDS,
     BRAIN_FACTS_ERROR_KINDS,
     BRAIN_LESSONS_ERROR_KINDS,
@@ -91,11 +96,12 @@ export const knowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     KNOWLEDGE_SOURCES_ERROR_KINDS,
     NIVO_KNOWLEDGE_ERROR_KINDS,
     PUBLIC_DOCUMENTS_ERROR_KINDS,
+    QDRANT_ERROR_KINDS,
+    DOCUMENT_READERS_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
 export const knowledgeMessages: ReadonlyArray<MessageBundle> = [
-    BRAIN_DOSSIERS_MESSAGES,
     DOSSIER_REVIEW_MESSAGES,
     BRAIN_FACTS_MESSAGES,
     BRAIN_LESSONS_MESSAGES,
@@ -104,4 +110,6 @@ export const knowledgeMessages: ReadonlyArray<MessageBundle> = [
     KNOWLEDGE_SOURCES_MESSAGES,
     NIVO_KNOWLEDGE_MESSAGES,
     PUBLIC_DOCUMENTS_MESSAGES,
+    QDRANT_MESSAGES,
+    DOCUMENT_READERS_MESSAGES,
 ]

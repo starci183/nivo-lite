@@ -1,7 +1,10 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { InjectWebhookProofRegistry } from "@modules/platform/http-security"
-import type { WebhookProof, WebhookProofRegistry, WebhookProofRequest } from "@modules/platform/http-security"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import {
+    InjectWebhookProofRegistry,
+    type WebhookProof,
+    type WebhookProofRegistry,
+    type WebhookProofRequest,
+} from "@modules/platform/http-security"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 

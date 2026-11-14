@@ -1,6 +1,6 @@
 import type { NodeAgentLoop, NodeAgentLoopEnd, NodeHostPorts } from "../../node/host.types"
 import type { EffectPayload, NodeStore, SubjectRef } from "../../node/node.types"
-import { SdkError } from "../../sdk-error"
+import { UnscriptedError, type UnscriptedCode } from "./unscripted-error"
 
 /** What a node test tunes. */
 export interface FakeNodePortsOptions {
@@ -90,14 +90,11 @@ const pick = (
     fields: ReadonlyArray<string>,
 ): Readonly<Record<string, unknown>> => Object.fromEntries(fields.map((field) => [field, row[field]]))
 
-/** What a call past the end of a script is refused with. */
-type Unscripted = "MODEL_UNSCRIPTED" | "TOOL_UNSCRIPTED"
-
 /** Thrown when a node calls the model or a tool more often than its example scripted. */
-const unscripted = (code: Unscripted): SdkError => new SdkError(code, code)
+const unscripted = (code: UnscriptedCode): UnscriptedError => new UnscriptedError(code)
 
 /** Answers from a script in order, refusing a call past its end. */
-const scriptOf = (answers: ReadonlyArray<unknown> | undefined, code: Unscripted): (() => unknown) => {
+const scriptOf = (answers: ReadonlyArray<unknown> | undefined, code: UnscriptedCode): (() => unknown) => {
     const left = [...(answers ?? [])]
     return () => {
         if (left.length === 0) throw unscripted(code)
@@ -115,7 +112,7 @@ const isObject = (value: unknown): value is Readonly<Record<string, unknown>> =>
  */
 const scriptedAgentLoop =
     (next: () => unknown, loops: Array<FakeAgentLoop>, facts: Array<FakeAgentFact>) =>
-    async (loop: NodeAgentLoop): Promise<NodeAgentLoopEnd> => {
+    (loop: NodeAgentLoop): Promise<NodeAgentLoopEnd> => {
         const { call, done, confused, ...shown } = loop
         loops.push(shown)
         const take = async (taken: number): Promise<NodeAgentLoopEnd> => {

@@ -21,10 +21,7 @@ const PUBLIC_PATHS = [
     "/api/engine",
     "/api/v1",
     "/api/content",
-    "/b",
-    "/api/b",
-    "/w",
-    "/j",
+    "/form",
     "/l",
     "/health",
     // A prototype build answers the fixture workspace from fixtures, with no back end to sign in to (the url with or without its locale).
@@ -34,10 +31,7 @@ const PUBLIC_PATHS = [
               ...i18n.locales.map((locale) => `/${locale}/workspaces/${PROTOTYPE_WORKSPACE_ID}`),
           ]
         : []),
-] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
-
-// /workspaces/<company>/jobs/<job>: the public job page, which names the company by its public slug (the proxy cannot load the routes barrel, so it spells the shape again).
-const PUBLIC_JOB_PAGE = /^(?:\/[a-z]{2})?\/workspaces\/[^/]+\/jobs\/[^/]+$/u
+]
 
 // Every path is served from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides);
 // the shared proxy leaves handlers, liveness and framework files (its default roots) alone.
@@ -45,7 +39,7 @@ const negotiateLocale = createProxy(i18n)
 
 /** Segment-aware prefix match, so "/auth" never swallows "/authority". */
 const isPublicPath = (pathname: string): boolean =>
-    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) || PUBLIC_JOB_PAGE.test(pathname)
+    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 
 /** Only same-site paths may come back through `?next=`. */
 const safeNext = (value: string | null): string | null =>

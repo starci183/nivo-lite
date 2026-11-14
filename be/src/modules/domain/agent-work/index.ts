@@ -1,35 +1,44 @@
 export { agentWorkEntities } from "./persistence/entities"
-export { AGENT_WORK_ERROR_KINDS } from "./errors/agent-work.error"
+export { AGENT_WORK_ERROR_KINDS, AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 export { AGENT_WORK_MESSAGES } from "./messages/agent-work.messages"
 export { AgentWorkModule } from "./agent-work.module"
 export { AgentDrainService } from "./agent-drain.service"
 export { AgentGoalsService } from "./agent-goals.service"
 export { AgentTasksService } from "./agent-tasks.service"
+export {
+    TIMER_DATA_BYTES_MAX,
+    TIMER_DATA_MEMBERS_MAX,
+    TIMER_MAX_MINUTES,
+    TIMER_MIN_MINUTES,
+    TIMER_REF_MAX,
+    timerDueAtOf,
+    timerDueInBounds,
+    timerTaskKeyOf,
+    timerTaskOf,
+    timerTaskTitleOf,
+    timerWakeAtOf,
+} from "./timer-task.policy"
+export type { TimerTask } from "./timer-task.policy"
 export { AgentWorkDoorsService } from "./agent-work-doors.service"
 export { AgentTriggersService } from "./agent-triggers.service"
 export { AgentTurnsService } from "./agent-turns.service"
 export { AgentWakeRetentionService } from "./agent-wake-retention.service"
-export { AgentWakeService } from "./agent-wake.service"
-export { AgentTagService } from "./agent-tag.service"
-export type { AgentTagRequest, AgentTaggedBySource } from "./agent-tag.contracts"
-export { parseAgentWorkConfig } from "./agent-work.config"
+export { AgentWakeService, WAITING_REASON, handedBackOf, type PendingScopeWake } from "./agent-wake.service"
 export { tagContextOf, tagPayloadOf } from "./agent-tag.policy"
 export { AgentWorkHandlersService } from "./agent-work-handlers.service"
 export { AgentWorkReadService } from "./agent-work-read.service"
 export { AgentWorkSettingsService } from "./agent-work-settings.service"
-export {
-    AGENT_BURST_POLICY,
-    AGENT_TAG_RIGHTS,
-    AGENT_TURN_EXECUTOR,
-} from "./agent-work.decorators"
+export { AGENT_TURN_EXECUTOR } from "./agent-work.decorators"
 export { AgentWorkAccessService } from "./agent-work-access.service"
+export { boardOf, detailOf, itemOf } from "./agent-runs-view.policy"
+export { decidingItemIdOf, decisionOf, verdictOf } from "./agent-run-decision.policy"
+export type { AgentRunDecision, AgentRunDetail, AgentRunItem, AgentRunsBoard } from "./agent-runs-view.contracts"
 export { ENGINE_THREAD_SOURCE, wakeSources } from "./agent-wake-source.policy"
 export type {
     AgentGoalRecord,
     AgentGoalStatus,
     AgentGoalWrite,
-    AgentRunningTurn,
-    AgentTaskOp,
+    AgentTaskData,
     AgentTaskRecord,
     AgentTriggerKind,
     AgentTriggerPreset,
@@ -40,6 +49,7 @@ export type {
     AgentWakeContext,
     AgentWakeSource,
     AgentWakeView,
+    OptionalWakeId,
     AgentWorkDue,
     AgentWorkSettingsRecord,
     AgentWorkState,
@@ -49,13 +59,9 @@ export type {
 export type {
     AgentHandlerEnding,
     AgentTurnExecutor,
-    AgentTurnAttachment,
     AgentTurnPlan,
     AgentTurnPrep,
     AgentTurnRun,
-    AgentWorkFallback,
     AgentWorkFlow,
     AgentWorkHandler,
 } from "./agent-work.port"
-export type { AgentBegin } from "./agent-work-turns.contracts"
-export type { AgentBurstPolicy, AgentBurstSetting } from "./agent-work.port"

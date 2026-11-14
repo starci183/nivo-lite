@@ -1,11 +1,9 @@
 import { Test } from "@nestjs/testing"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { mock } from "@starci/jest-preset"
-import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
-import type { InstallationDirectory, OptionalContextVersion } from "@modules/domain/agents"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import { MemberGrantsService } from "@modules/domain/member-grants"
+import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -47,31 +45,29 @@ const CONFLICT = {
     createdAt: "2026-11-01T00:00:00.000Z",
 } as const
 
-const NO_RULES: OptionalContextVersion = { version: 1, summary: "A spa", gates: [], facts: [], toneEvidence: "" }
-
 const build = async (
     state: OptionalGraphState,
     installed = true,
     waiting: ReadonlyArray<object> = [PROPOSAL],
-    version: OptionalContextVersion = NO_RULES,
-    versionId: string | null = "context-1",
 ) => {
     const graphs = mock<AgentGraphsService>({ stateOfAgent: jest.fn().mockResolvedValue(state) })
     const context = mock<AgentGraphContextService>({ contextOf: jest.fn().mockResolvedValue(contextOf()) })
-    const proposals = mock<AgentGraphProposalsService>({ openOf: jest.fn().mockResolvedValue(waiting) })
+    const proposals = mock<AgentGraphProposalsService>({
+        openOf: jest.fn().mockResolvedValue(waiting),
+        unheldOf: jest.fn().mockResolvedValue([]),
+    })
     const installations = mock<InstallationRecordsService>({
         findById: jest
             .fn()
             .mockResolvedValue(
-                installed ? { id: "inst-1", moduleKey: "accounting", activeContextVersionId: versionId } : null,
+                installed ? { id: "inst-1", moduleKey: "accounting", activeContextVersionId: "context-1" } : null,
             ),
     })
-    const directory = mock<InstallationDirectory>({ contextVersionOf: jest.fn().mockResolvedValue(version) })
-    const members = mock<MemberGrantsService>({
+    const members = mock<WorkspaceMembersReadService>({
         directory: jest
             .fn()
             .mockResolvedValue([
-                { memberId: "dinh", name: "Dinh", role: "manager", roomId: null, status: "active", rooms: [] },
+                { id: "dinh", user_id: "user-dinh", display_name: "Dinh", role: "manager", status: "active" },
             ]),
     })
     const brain = mock<BrainFactsService>({
@@ -107,14 +103,13 @@ const build = async (
             { provide: AgentGraphContextService, useValue: context },
             { provide: AgentGraphProposalsService, useValue: proposals },
             { provide: InstallationRecordsService, useValue: installations },
-            { provide: MemberGrantsService, useValue: members },
+            { provide: WorkspaceMembersReadService, useValue: members },
             { provide: BrainFactsService, useValue: brain },
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: AGENTS_INSTALLATIONS, useValue: directory },
             { provide: GraphNodeRegistryService, useValue: nodes },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphViewService), directory, brain }
+    return { service: moduleRef.get(AgentGraphViewService), brain, proposals }
 }
 
 describe("AgentGraphViewService.viewOf", () => {
@@ -138,7 +133,7 @@ describe("AgentGraphViewService.viewOf", () => {
     })
 
     it("names the person who approves on the card, in the catalog words of the language asked", async () => {
-        const ask = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() })])
+        const ask = graphOf([branchOf({ key: "else", when: "else", mode: "ask", next: "ask", approver: approverOf() })])
         const { service } = await build(stateOf({ draft: ask }))
 
         const view = await service.viewOf("ws-1", "agent-1", "vi")
@@ -149,7 +144,7 @@ describe("AgentGraphViewService.viewOf", () => {
 
     it("says the draft has something to publish when it differs from the version that decides", async () => {
         const edited = graphOf([
-            branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() }),
+            branchOf({ key: "else", when: "else", mode: "ask", next: "ask", approver: approverOf() }),
         ])
         const { service } = await build(stateOf({ draft: edited }))
 
@@ -159,7 +154,7 @@ describe("AgentGraphViewService.viewOf", () => {
     })
 
     it("lists what is wrong and what is vague in the draft", async () => {
-        const vague = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: null })])
+        const vague = graphOf([branchOf({ key: "else", when: "else", mode: "ask", next: "ask", approver: null })])
         const { service } = await build(stateOf({ draft: vague }))
 
         const view = await service.viewOf("ws-1", "agent-1", "en")
@@ -198,7 +193,7 @@ describe("AgentGraphViewService.viewOf > conflicts and refusals", () => {
             { kind: "brain" as const, factId: "other", passage: "Other rule", valueHash: "old" },
             { kind: "brain" as const, factId: "fact-1", passage: "Approved under 3M", valueHash: "approved" },
         ]
-        const draft = { nodes: [nodeOf({ key: "citing", sources })], rights: [] }
+        const draft = { nodes: [nodeOf({ key: "citing", sources })] }
         const { service, brain } = await build(stateOf({ draft }), true, [CONFLICT])
         brain.get.mockResolvedValue(null)
 
@@ -218,29 +213,23 @@ describe("AgentGraphViewService.viewOf > conflicts and refusals", () => {
 })
 
 describe("AgentGraphViewService.viewOf the rules the graph does not hold", () => {
-    it("lists the sums the published setup states as a rule that no condition of the graph holds", async () => {
-        const rules: OptionalContextVersion = {
-            version: 2,
-            summary: "Don tren 8 trieu phai xin y kien chu.",
-            gates: [{ label: "Pay", evidence: "Chi tren 8 trieu thi cho chu duyet" }],
-            facts: ["Open 9 to 6"],
-            toneEvidence: "",
-        }
-        const { service, directory } = await build(stateOf(), true, [], rules)
+    it("lists the open gaps of the setup that carry a sum no condition of the draft holds, with no reading of the setup text", async () => {
+        const { service, proposals } = await build(stateOf())
+        proposals.unheldOf.mockResolvedValue([
+            { amountVnd: 8_000_000, quote: "any sentence" },
+            { amountVnd: 5_000_000, quote: "a sum the draft holds" },
+        ])
 
         const view = await service.viewOf("ws-1", "agent-1", "en")
 
-        expect(view.unheldRules).toEqual([{ amountVnd: 8_000_000, quote: "Don tren 8 trieu phai xin y kien chu" }])
-        expect(directory.contextVersionOf).toHaveBeenCalledWith("context-1")
+        expect(view.unheldRules).toEqual([{ amountVnd: 8_000_000, quote: "any sentence" }])
+        expect(proposals.unheldOf).toHaveBeenCalledWith("ws-1", "agent-1")
     })
 
-    it("lists no unheld rule when no setup is published or the published one is gone", async () => {
-        const unpublished = await build(stateOf(), true, [], NO_RULES, null)
-        const gone = await build(stateOf(), true, [], null)
+    it("lists no unheld rule when the setup raised none", async () => {
+        const { service } = await build(stateOf())
 
-        await expect(unpublished.service.viewOf("ws-1", "agent-1", "en")).resolves.toMatchObject({ unheldRules: [] })
-        await expect(gone.service.viewOf("ws-1", "agent-1", "en")).resolves.toMatchObject({ unheldRules: [] })
-        expect(unpublished.directory.contextVersionOf).not.toHaveBeenCalled()
+        await expect(service.viewOf("ws-1", "agent-1", "en")).resolves.toMatchObject({ unheldRules: [] })
     })
 })
 
@@ -287,14 +276,14 @@ describe("AgentGraphViewService flow cards", () => {
             schema: "nivo/agent-graph@1",
             moduleKey: "sales",
             trigger: { kind: "tag", sources: ["agent"] },
-            grant: { rights: [], tools: [], effects: [] },
+            grant: { tools: [], effects: [] },
             nodes: [
                 { key: "consult", kind: "output", step: "sales.consult", group: "consult", next: "route" },
                 { key: "route", kind: "condition", step: "sales.consult-route", group: "consult", routes: {} },
                 { key: "pay", kind: "execute", step: "sales.care-await", wait: { kind: "payment", reminder: "2h" } },
             ],
         } as const
-        const { service } = await build(stateOf({ draft: { nodes: [], rights: [], flow } }))
+        const { service } = await build(stateOf({ draft: { nodes: [], flow } }))
 
         const view = await service.viewOf("ws-1", "agent-1", "en")
 

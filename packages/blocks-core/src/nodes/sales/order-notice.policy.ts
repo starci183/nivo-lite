@@ -1,6 +1,5 @@
 import { messageOf } from "../../messages/catalog"
-import { orderLinesOf } from "../payment/payment-request.policy"
-import type { OrderLine } from "../payment/payment-request.policy"
+import { orderLinesOf, type OrderLine } from "./order-lines.policy"
 
 /** The languages an order notice is written in. */
 export type NoticeLocale = "vi" | "en"
@@ -19,7 +18,7 @@ export interface OrderNoticeFacts {
     readonly address: string
 }
 
-const SEPARATOR = " · "
+const SEPARATOR = " \u00b7 "
 
 /** An amount of VND with its thousands separated by dots and the currency after it. */
 export const amountTextOf = (amountVnd: number, locale: NoticeLocale): string =>

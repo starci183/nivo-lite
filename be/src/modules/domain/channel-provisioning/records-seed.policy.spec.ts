@@ -3,6 +3,9 @@ import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connecti
 import { readSeedRecords } from "./records-seed.policy"
 import { RECORDS_SEED_SCHEMA } from "./records-seed.contracts"
 
+/** A package-qualified record type of another agent: the policy reads the seed, it never looks the type up. */
+const SECOND_ENTITY = "fixture-pkg.shop.settings"
+
 const refused = (field: string) =>
     new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
 
@@ -37,9 +40,18 @@ describe("readSeedRecords", () => {
     })
 
     it("reads the records of every document, in order", () => {
-        const second = record({ entity: "chat.settings", values: { key: "chat" } })
+        const second = record({ entity: SECOND_ENTITY, values: { key: "chat" } })
 
         expect(policy.readSeedRecords(envelope(document([record()]), document([second])))).toEqual([record(), second])
+    })
+
+    it("takes a package-qualified entity name of three parts and refuses one of four", () => {
+        const qualified = record({ entity: "blocks-core.hiring.job", values: { key: "hiring" } })
+
+        expect(policy.readSeedRecords(envelope(document([qualified])))).toEqual([qualified])
+        expect(() => policy.readSeedRecords(envelope(document([record({ entity: "a.b.c.d" })])))).toThrow(
+            refused("record.entity"),
+        )
     })
 
     it.each([

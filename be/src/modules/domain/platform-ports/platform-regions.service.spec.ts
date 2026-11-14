@@ -4,8 +4,8 @@ import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { BoundConnection } from "@modules/domain/agent-connections"
 import { AgentKnowledgeLensService } from "@modules/domain/agent-knowledge"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
-import type { ProviderBoard } from "@modules/domain/mcp-gateway"
+import { AgentAccountsService } from "@modules/domain/tools"
+import type { ProviderBoard } from "@modules/domain/tools"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -44,7 +44,7 @@ const COUNTS = {
 }
 
 const OVERVIEW = {
-    module: "accounting",
+    module: "sales",
     installationId: null,
     audience: "internal" as const,
     waitingFacts: 1,
@@ -67,7 +67,7 @@ const OVERVIEW = {
 }
 
 /**
- * The rights board of a workspace: Zalo OA (one account), SePay with two accounts (MB, the default receiving one, and VCB) and payOS with
+ * The rights board of a workspace: Zalo OA (one account), SePay with two accounts (MB and VCB) and payOS with
  * no ability. Agent a1 is attached to both SePay accounts and to payOS; a2 to the Zalo OA.
  */
 const BOARD = {
@@ -76,21 +76,21 @@ const BOARD = {
             provider: "zalo_oa",
             label: { vi: "Zalo OA", en: "Zalo OA" },
             kind: "messaging",
-            kindLabel: { vi: "Tin nhắn", en: "Messaging" },
+            kindLabel: { vi: "Tin nh\u1eafn", en: "Messaging" },
             connected: true,
-            abilities: [{ id: "customer.send", label: { vi: "Gửi tin cho khách", en: "Send to customers" }, scope: "write", tools: [] }],
-            accounts: [{ connectionId: "z1", provider: "zalo_oa", label: "Tiệm hoa NIVO", connected: true, isDefault: false }],
+            abilities: [{ id: "customer.send", label: { vi: "G\u1eedi tin cho kh\u00e1ch", en: "Send to customers" }, scope: "write", tools: [] }],
+            accounts: [{ connectionId: "z1", provider: "zalo_oa", label: "Ti\u1ec7m hoa NIVO", connected: true, isDefault: false }],
         },
         {
             provider: "sepay",
             label: { vi: "SePay", en: "SePay" },
             kind: "payment",
-            kindLabel: { vi: "Thanh toán", en: "Payment" },
+            kindLabel: { vi: "Thanh to\u00e1n", en: "Payment" },
             connected: true,
             abilities: [
-                { id: "bank.read", label: { vi: "Đọc giao dịch", en: "Read transactions" }, scope: "read", tools: [] },
-                { id: "payment.rematch", label: { vi: "Dò lại tiền", en: "Rematch" }, scope: "write", tools: [] },
-                { id: "payment.qr", label: { vi: "Tạo QR", en: "Create QR" }, scope: "write", tools: [] },
+                { id: "bank.read", label: { vi: "\u0110\u1ecdc giao d\u1ecbch", en: "Read transactions" }, scope: "read", tools: [] },
+                { id: "payment.rematch", label: { vi: "D\u00f2 l\u1ea1i ti\u1ec1n", en: "Rematch" }, scope: "write", tools: [] },
+                { id: "payment.qr", label: { vi: "T\u1ea1o QR", en: "Create QR" }, scope: "write", tools: [] },
             ],
             accounts: [
                 { connectionId: "k-mb", provider: "sepay", label: "MB •••• 5252", connected: true, isDefault: true },
@@ -101,17 +101,17 @@ const BOARD = {
             provider: "payos",
             label: { vi: "payOS", en: "payOS" },
             kind: "payment",
-            kindLabel: { vi: "Thanh toán", en: "Payment" },
+            kindLabel: { vi: "Thanh to\u00e1n", en: "Payment" },
             connected: true,
             abilities: [],
             accounts: [{ connectionId: "p1", provider: "payos", label: "payOS shop", connected: true, isDefault: false }],
         },
     ],
     attachments: [
-        { agentId: "a1", connectionId: "k-mb", provider: "sepay", abilities: { "bank.read": "auto", "payment.rematch": "auto", "payment.qr": "ask" } },
-        { agentId: "a1", connectionId: "k-vcb", provider: "sepay", abilities: { "bank.read": "auto" } },
-        { agentId: "a1", connectionId: "p1", provider: "payos", abilities: {} },
-        { agentId: "a2", connectionId: "z1", provider: "zalo_oa", abilities: { "customer.send": "auto" } },
+        { agentId: "a1", connectionId: "k-mb", provider: "sepay" },
+        { agentId: "a1", connectionId: "k-vcb", provider: "sepay" },
+        { agentId: "a1", connectionId: "p1", provider: "payos" },
+        { agentId: "a2", connectionId: "z1", provider: "zalo_oa" },
     ],
 } as unknown as ProviderBoard
 
@@ -120,7 +120,7 @@ const build = async () => {
     const directory = mock<AgentDirectoryService>()
     const gaps = mock<KnowledgeGapsService>()
     const lens = mock<AgentKnowledgeLensService>()
-    const abilities = mock<ProviderAbilitiesService>({ board: jest.fn().mockResolvedValue(BOARD) })
+    const abilities = mock<AgentAccountsService>({ board: jest.fn().mockResolvedValue(BOARD) })
     lens.overviewFor.mockResolvedValue(OVERVIEW)
     lens.waitingFactLabel.mockResolvedValue(null)
     const catalog = mock<MessageCatalog>()
@@ -133,14 +133,14 @@ const build = async () => {
             { provide: AgentDirectoryService, useValue: directory },
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: AgentKnowledgeLensService, useValue: lens },
-            { provide: ProviderAbilitiesService, useValue: abilities },
+            { provide: AgentAccountsService, useValue: abilities },
         ],
     }).compile()
     return { service: moduleRef.get(PlatformRegionsService), bindings, directory, gaps, lens, abilities }
 }
 
 describe("PlatformRegionsService connections: the accounts attached to the agent, read only", () => {
-    it("lists one row per attached ACCOUNT: provider · account, abilities with the mode of each write, and the default receiving flag", async () => {
+    it("lists one row per attached ACCOUNT: provider · account, the tool groups its provider serves, no mode (a call's mode is its node's)", async () => {
         const { service, bindings, abilities } = await build()
         bindings.connectionsFor.mockResolvedValue([
             connection({ id: "k-mb", provider: "sepay", name: "MB", accountMasked: "5252", purpose: "bank_feed" }),
@@ -157,21 +157,19 @@ describe("PlatformRegionsService connections: the accounts attached to the agent
                 {
                     id: "k-mb",
                     name: "SePay · MB •••• 5252",
-                    description:
-                        "Đọc giao dịch · Dò lại tiền (vi:workbench.platform.connections.mode_auto:{}) · Tạo QR (vi:workbench.platform.connections.mode_ask:{})",
+                    description: "\u0110\u1ecdc giao d\u1ecbch \u00b7 D\u00f2 l\u1ea1i ti\u1ec1n \u00b7 T\u1ea1o QR",
                     provider: "sepay",
                     account: "MB •••• 5252",
-                    isDefaultReceiving: true,
-                    access: "auto",
+                    access: "attached",
                     accountMasked: "5252",
                 },
                 {
                     id: "k-vcb",
                     name: "SePay · VCB •••• 0071",
-                    description: "Đọc giao dịch",
+                    description: "\u0110\u1ecdc giao d\u1ecbch \u00b7 D\u00f2 l\u1ea1i ti\u1ec1n \u00b7 T\u1ea1o QR",
                     provider: "sepay",
                     account: "VCB •••• 0071",
-                    access: "read",
+                    access: "attached",
                 },
                 {
                     id: "p1",
@@ -179,6 +177,7 @@ describe("PlatformRegionsService connections: the accounts attached to the agent
                     description: "vi:workbench.platform.connections.none:{}",
                     provider: "payos",
                     account: "payOS shop",
+                    access: "attached",
                 },
             ],
         })
@@ -194,7 +193,7 @@ describe("PlatformRegionsService connections: the accounts attached to the agent
 describe("PlatformRegionsService knowledge", () => {
     it("counts the documents by visibility and lists the most asked open gaps of the agent's module", async () => {
         const { service, directory, gaps, lens } = await build()
-        directory.find.mockResolvedValue({ id: "a1", name: "Chat", module: "chatbot", canTagAgentIds: [] })
+        directory.find.mockResolvedValue({ id: "a1", name: "Chat", module: "chatbot" })
         lens.countsFor.mockResolvedValue(COUNTS)
         gaps.openOfModule.mockResolvedValue({
             openCount: 3,
@@ -231,14 +230,14 @@ describe("PlatformRegionsService knowledge", () => {
 describe("PlatformRegionsService knowledge summary", () => {
     it("sums the documents and the approved facts of the layers and names the fact that waits", async () => {
         const { service, directory, gaps, lens } = await build()
-        directory.find.mockResolvedValue({ id: "a1", name: "KT", module: "accounting", canTagAgentIds: [] })
+        directory.find.mockResolvedValue({ id: "a1", name: "KT", module: "sales" })
         lens.countsFor.mockResolvedValue(COUNTS)
         gaps.openOfModule.mockResolvedValue({ openCount: 0, items: [] })
         lens.waitingFactLabel.mockResolvedValue("Threshold · auto post")
 
         const region = await service.knowledgeOf("w1", "a1", "en")
 
-        expect(lens.overviewFor).toHaveBeenCalledWith("w1", "accounting", null)
+        expect(lens.overviewFor).toHaveBeenCalledWith("w1", "sales", null)
         expect(region.summary).toEqual({
             documentsLine: 'en:workbench.platform.knowledge.documents_line:{"documents":6,"public":2}',
             factsLine: 'en:workbench.platform.knowledge.facts_line:{"approved":1,"total":4}',

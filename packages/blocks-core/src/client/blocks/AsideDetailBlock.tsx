@@ -1,5 +1,4 @@
-import { Children } from "react"
-import type { ReactNode } from "react"
+import { Children, type ReactNode } from "react"
 import { Grid } from "@starci/grammar/common"
 import type { asideDetailBlock } from "../../blocks/aside-detail.block"
 import type { RenderOf } from "../render-props"

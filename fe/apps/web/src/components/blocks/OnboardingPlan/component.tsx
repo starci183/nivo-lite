@@ -8,8 +8,7 @@ import {
     Text,
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { PlanCards } from "@/components/composites/PlanCards"
-import type { PlanOfferCard } from "@/components/composites/PlanCards"
+import { PlanCards, type PlanOfferCard } from "@/components/composites/PlanCards"
 
 /** Copy, plans and state the plan step supplies. */
 export interface OnboardingPlanBaseProps {

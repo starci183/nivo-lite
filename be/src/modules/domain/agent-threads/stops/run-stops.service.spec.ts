@@ -1,14 +1,25 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { WorkEngineService } from "@modules/domain/decisions"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
+import {
+    ACK_LINE_VI,
+    AMOUNT_ONE_THOUSAND_VI,
+    BOOK_IT_LOWER_VI,
+    BOOK_SO3_SUGGESTION_VI,
+    CREDIT_NO_ORDER_REASON_VI,
+    CREDIT_ORDER_QUESTION_VI,
+    MATCH_STEP_TITLE_VI,
+    RECONCILE_TITLE_VI,
+    YES_SO3_ANSWER_VI,
+} from "@tests/fixtures/i18n/agent-threads-spec.messages"
+import { ApprovalItemsService } from "./approval-items.service"
 import { RunStopsErrorCode } from "./errors/run-stops.error"
-import { RunStopRecordsService } from "./run-stop-records.service"
-import type { StopBuild } from "./run-stop-records.service"
+import { RunStopRecordsService, type StopBuild } from "./run-stop-records.service"
 import type { RunStop, StopOpen } from "./run-stop.contracts"
 import { RunStopsService, linesWithSendsOf, toldCustomerOf, type KeptSend } from "./run-stops.service"
 import { StopCardsService } from "./stop-cards.service"
+import { stopToldOf } from "./stop-gate.policy"
 
 const NOW = "2026-11-10T10:00:00.000Z"
 const REF = { workspaceId: "ws-1", runId: "run-1" }
@@ -20,17 +31,17 @@ const OPEN: StopOpen = {
     stepKey: "match",
     agentId: "agent-1",
     workflowId: "wf-1",
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_report",
-    reason: "Khoản 1.000đ, nội dung không chỉ đơn nào",
-    question: "Khoản này của đơn SO-0003?",
-    suggestions: [{ text: "Ghi nhận cho SO-0003", handledBy: "workflow" }],
-    facts: [{ name: "amount", value: "1.000đ" }],
+    reason: CREDIT_NO_ORDER_REASON_VI,
+    question: CREDIT_ORDER_QUESTION_VI,
+    suggestions: [{ text: BOOK_SO3_SUGGESTION_VI, handledBy: "workflow" }],
+    facts: [{ name: "amount", value: AMOUNT_ONE_THOUSAND_VI }],
     card: {
         locale: "vi",
-        workflow: { moduleKey: "accounting", key: "reconcile", title: "Đối soát tiền về" },
-        step: { key: "match", nodeId: "accounting.match-payment", title: "Khớp tiền với đơn" },
+        workflow: { moduleKey: "accounting", key: "reconcile", title: RECONCILE_TITLE_VI },
+        step: { key: "match", nodeId: "accounting.match-payment", title: MATCH_STEP_TITLE_VI },
         by: "ai",
     },
 }
@@ -42,7 +53,7 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
     stepKey: "match",
     agentId: "agent-1",
     workflowId: "wf-1",
-    leadId: null,
+    contactId: null,
     conversationId: null,
     kind: "ai_report",
     state: "open",
@@ -60,9 +71,9 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
 })
 
 /** The records in memory: one stop, patched as the engine would. */
-const build = async (initial: RunStop | null = stopOf(), work: WorkEngineService | null = null) => {
+const memoryStopOf = (initial: RunStop | null) => {
     let current = initial
-    const records = mock<RunStopRecordsService>({
+    const methods: Partial<RunStopRecordsService> = {
         open: jest.fn(() => {
             current = current ?? stopOf()
             return Promise.resolve(current)
@@ -75,22 +86,50 @@ const build = async (initial: RunStop | null = stopOf(), work: WorkEngineService
             current = { ...current, ...values, version: String(Number(current.version) + 1) }
             return Promise.resolve(current)
         }),
-    })
-    const cards = mock<StopCardsService>({
-        posted: jest.fn().mockResolvedValue("msg-1"),
-        resolved: jest.fn().mockResolvedValue(undefined),
-        rewritten: jest.fn().mockResolvedValue(undefined),
-    })
+    }
+    return { methods, current: () => current }
+}
+
+/** The card door: the card posts as msg-1, rewrites and resolutions succeed. */
+const cardAnswers = (): Partial<StopCardsService> => ({
+    posted: jest.fn().mockResolvedValue("msg-1"),
+    resolved: jest.fn().mockResolvedValue(undefined),
+    rewritten: jest.fn().mockResolvedValue(undefined),
+})
+
+/** The service over one stop in memory, in an app without the work engine. */
+const build = async (initial: RunStop | null = stopOf()) => {
+    const memory = memoryStopOf(initial)
+    const records = mock<RunStopRecordsService>(memory.methods)
+    const cards = mock<StopCardsService>(cardAnswers())
     const moduleRef = await Test.createTestingModule({
         providers: [
             RunStopsService,
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: RunStopRecordsService, useValue: records },
             { provide: StopCardsService, useValue: cards },
-            ...(work === null ? [] : [{ provide: WorkEngineService, useValue: work }]),
         ],
     }).compile()
-    return { stops: moduleRef.get(RunStopsService), records, cards, current: () => current }
+    return { stops: moduleRef.get(RunStopsService), records, cards, current: memory.current }
+}
+
+/** The service over one stop in memory, with the approval items that close an approval stop's item. */
+const buildWithWork = async (initial: RunStop) => {
+    const memory = memoryStopOf(initial)
+    const records = mock<RunStopRecordsService>(memory.methods)
+    const cards = mock<StopCardsService>(cardAnswers())
+    const work = mock<ApprovalItemsService>()
+    work.withdrawn.mockResolvedValue(true)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            RunStopsService,
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: RunStopRecordsService, useValue: records },
+            { provide: StopCardsService, useValue: cards },
+            { provide: ApprovalItemsService, useValue: work },
+        ],
+    }).compile()
+    return { stops: moduleRef.get(RunStopsService), records, work, current: memory.current }
 }
 
 describe("RunStopsService.stopped: every run that cannot go on gets the same stop, with a customer or without", () => {
@@ -125,33 +164,22 @@ describe("RunStopsService.decide: the founder's answer reaches a bank-fed run li
         const route = await stops.decide(
             REF,
             "match",
-            { kind: "answer", text: "Đúng, của SO-0003", by: "owner-1", at: "2026-11-10T10:05:00.000Z" },
+            { kind: "answer", text: YES_SO3_ANSWER_VI, by: "owner-1", at: "2026-11-10T10:05:00.000Z" },
             "__freeze",
             { locale: "vi" },
         )
 
         expect(route).toEqual({
             goto: "match",
-            founderAnswers: [{ text: "Đúng, của SO-0003", at: "2026-11-10T10:05:00.000Z" }],
+            founderAnswers: [{ text: YES_SO3_ANSWER_VI, at: "2026-11-10T10:05:00.000Z" }],
             resolves: false,
         })
         expect(current()).toMatchObject({
             state: "open",
-            answers: [{ kind: "answer", text: "Đúng, của SO-0003", by: "owner-1" }],
+            answers: [{ kind: "answer", text: YES_SO3_ANSWER_VI, by: "owner-1" }],
             decision: { kind: "answer" },
         })
         expect(cards.resolved).not.toHaveBeenCalled()
-    })
-
-    it("resolves the stop and rewrites its card at once on skip", async () => {
-        const { stops, cards, current } = await build(stopOf({ cardMessageId: "msg-1" }))
-
-        await expect(
-            stops.decide(REF, "match", { kind: "skip", by: "owner-1", at: "t" }, "__freeze", { locale: "vi" }),
-        ).resolves.toMatchObject({ goto: "__end__", resolves: true })
-
-        expect(current()).toMatchObject({ state: "resolved", resolvedAt: NOW })
-        expect(cards.resolved).toHaveBeenCalledWith("ws-1", expect.objectContaining({ state: "resolved" }), "vi", NOW)
     })
 
     it("rewrites the same card in place once per decision that keeps the stop open, with the trace so far", async () => {
@@ -183,6 +211,19 @@ describe("RunStopsService.decide: the founder's answer reaches a bank-fed run li
         )
         expect(cards.posted).not.toHaveBeenCalled()
         expect(cards.resolved).not.toHaveBeenCalled()
+    })
+})
+
+describe("RunStopsService.decide: a skip resolves the stop, and what is no decision is refused", () => {
+    it("resolves the stop and rewrites its card at once on skip", async () => {
+        const { stops, cards, current } = await build(stopOf({ cardMessageId: "msg-1" }))
+
+        await expect(
+            stops.decide(REF, "match", { kind: "skip", by: "owner-1", at: "t" }, "__freeze", { locale: "vi" }),
+        ).resolves.toMatchObject({ goto: "__end__", resolves: true })
+
+        expect(current()).toMatchObject({ state: "resolved", resolvedAt: NOW })
+        expect(cards.resolved).toHaveBeenCalledWith("ws-1", expect.objectContaining({ state: "resolved" }), "vi", NOW)
     })
 
     it("does not rewrite the open card on skip: the resolved card is written instead", async () => {
@@ -221,37 +262,35 @@ describe("RunStopsService.completed and the per-stop send guard", () => {
         expect(cards.resolved).toHaveBeenCalledTimes(1)
     })
 
-    it("keeps each line sent while the stop is open once, and refuses a second line to that customer until the founder answers in words", async () => {
+    it("keeps each line sent while the stop is open once: the told line stands through a retry, the founder's words clear it", async () => {
         const { stops, current } = await build()
-        const line = { conversationId: "conv-9", text: "Dạ tiệm đã nhận 1.000đ, đang kiểm tra ạ", at: "2026-11-10T10:00:05.000Z" }
+        const line = { conversationId: "conv-9", text: ACK_LINE_VI, at: "2026-11-10T10:00:05.000Z" }
 
         await stops.lineSent(REF, "match", line)
         await stops.lineSent(REF, "match", line)
         expect(current()?.customerLines).toEqual([line])
-        await expect(stops.sendRefusal(REF, "match", "conv-9")).resolves.toEqual({
-            code: "already_told_for_this_stop",
-            line,
-        })
 
         await stops.decide(REF, "match", { kind: "retry", by: "owner-1", at: "2026-11-10T10:01:00.000Z" }, "__freeze", {
             locale: "vi",
         })
-        await expect(stops.sendRefusal(REF, "match", "conv-9")).resolves.not.toBeNull()
+        const retried = current()
+        expect(retried === null ? null : stopToldOf(retried)).toEqual(line)
 
         await stops.decide(
             REF,
             "match",
-            { kind: "answer", text: "ghi nhận", by: "owner-1", at: "2026-11-10T10:02:00.000Z" },
+            { kind: "answer", text: BOOK_IT_LOWER_VI, by: "owner-1", at: "2026-11-10T10:02:00.000Z" },
             "__freeze",
             { locale: "vi" },
         )
-        await expect(stops.sendRefusal(REF, "match", "conv-9")).resolves.toBeNull()
+        const answered = current()
+        expect(answered === null ? undefined : stopToldOf(answered)).toBeNull()
     })
 })
 
 describe("RunStopsService.stopped: the stop holds what the step told customers, read from the effect ledger (D.1)", () => {
     const sendOf = (over: Partial<KeptSend> = {}): KeptSend => ({
-        args: { leadId: "lead-9", text: "Shop da nhan, dang kiem tra a." },
+        args: { contactId: "lead-9", text: "Shop da nhan, dang kiem tra a." },
         subject: { kind: "message", id: "m-1", facts: { conversationId: "conv-9", delivery: "acknowledged" } },
         at: "2026-11-10T09:59:00.000Z",
         ...over,
@@ -285,7 +324,7 @@ describe("RunStopsService.stopped: the stop holds what the step told customers, 
 
         await stops.stopped(OPEN)
 
-        expect(ledger.recordsOf).toHaveBeenCalledWith("ws-1", { runId: "run-1", stepKey: "match" }, ["nivo.lead.message.send"])
+        expect(ledger.recordsOf).toHaveBeenCalledWith("ws-1", { runId: "run-1", stepKey: "match" }, ["nivo.tool.customer.message.send"])
         expect(current().customerLines).toEqual([
             { conversationId: "conv-9", text: "Shop da nhan, dang kiem tra a.", at: "2026-11-10T09:59:00.000Z" },
         ])
@@ -296,15 +335,15 @@ describe("RunStopsService.stopped: the stop holds what the step told customers, 
 
         await stops.stopped(OPEN)
 
-        expect(current()).toMatchObject({ leadId: "lead-9", conversationId: "conv-9" })
+        expect(current()).toMatchObject({ contactId: "lead-9", conversationId: "conv-9" })
     })
 
     it("D-P11-4: a stop of a run with its own customer keeps it, whoever the step told", async () => {
-        const { stops, current } = await withLedger([sendOf()], stopOf({ leadId: "lead-1", conversationId: "conv-1" }))
+        const { stops, current } = await withLedger([sendOf()], stopOf({ contactId: "lead-1", conversationId: "conv-1" }))
 
-        await stops.stopped({ ...OPEN, leadId: "lead-1", conversationId: "conv-1" })
+        await stops.stopped({ ...OPEN, contactId: "lead-1", conversationId: "conv-1" })
 
-        expect(current()).toMatchObject({ leadId: "lead-1", conversationId: "conv-1" })
+        expect(current()).toMatchObject({ contactId: "lead-1", conversationId: "conv-1" })
     })
 
     it("keeps each line once when the stop opens again, and leaves out a send with no words or no conversation", async () => {
@@ -321,24 +360,50 @@ describe("RunStopsService.stopped: the stop holds what the step told customers, 
     })
 })
 
+describe("RunStopsService.factsAdded: what arrives for an open stop rewrites its one card in place (D-MX-3)", () => {
+    const JOINED = { name: "creditJoined:tx-2", value: "1000 VND - DH202611110005" }
+
+    it("adds the facts to the open stop, replaces a fact of the same name, and rewrites the card; a repeat writes nothing", async () => {
+        const { stops, cards, current } = await build(stopOf({ cardMessageId: "msg-1" }))
+
+        await expect(
+            stops.factsAdded(REF, "match", [JOINED, { name: "receivedTotalVnd", value: "1000" }], { locale: "vi" }),
+        ).resolves.toBe(true)
+        await expect(stops.factsAdded(REF, "match", [{ name: "receivedTotalVnd", value: "2000" }], { locale: "vi" })).resolves.toBe(true)
+        await expect(stops.factsAdded(REF, "match", [{ name: "receivedTotalVnd", value: "2000" }], { locale: "vi" })).resolves.toBe(false)
+
+        expect(current()?.detail.facts).toEqual([...OPEN.facts, JOINED, { name: "receivedTotalVnd", value: "2000" }])
+        expect(cards.rewritten).toHaveBeenCalledTimes(2)
+    })
+
+    it("writes nothing on a stop that is resolved or gone", async () => {
+        const resolved = await build(stopOf({ state: "resolved" }))
+        await expect(resolved.stops.factsAdded(REF, "match", [JOINED], { locale: "vi" })).resolves.toBe(false)
+        expect(resolved.cards.rewritten).not.toHaveBeenCalled()
+
+        const gone = await build(null)
+        await expect(gone.stops.factsAdded(REF, "match", [JOINED], { locale: "vi" })).resolves.toBe(false)
+    })
+})
+
 describe("toldCustomerOf", () => {
     const line = (conversationId: string, at: string) => ({ conversationId, text: "Shop dang kiem tra", at })
-    const none = { leadId: null, conversationId: null }
+    const none = { contactId: null, conversationId: null }
 
     it("names the conversation of the oldest line told and the lead a send to it named; null when the stop has a customer or told nobody", () => {
         const send: KeptSend = {
-            args: { leadId: "lead-9", text: "Shop dang kiem tra" },
+            args: { contactId: "lead-9", text: "Shop dang kiem tra" },
             subject: { kind: "message", id: "m-1", facts: { conversationId: "conv-9" } },
             at: "2026-11-10T09:00:00.000Z",
         }
 
         expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z"), line("conv-2", "2026-11-10T08:00:00.000Z")], [send])).toEqual({
-            leadId: null,
+            contactId: null,
             conversationId: "conv-2",
         })
-        expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z")], [send])).toEqual({ leadId: "lead-9", conversationId: "conv-9" })
-        expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z")])).toEqual({ leadId: null, conversationId: "conv-9" })
-        expect(toldCustomerOf({ leadId: "lead-1", conversationId: null }, [line("conv-9", "2026-11-10T09:00:00.000Z")], [send])).toBeNull()
+        expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z")], [send])).toEqual({ contactId: "lead-9", conversationId: "conv-9" })
+        expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z")])).toEqual({ contactId: null, conversationId: "conv-9" })
+        expect(toldCustomerOf({ contactId: "lead-1", conversationId: null }, [line("conv-9", "2026-11-10T09:00:00.000Z")], [send])).toBeNull()
         expect(toldCustomerOf(none, [])).toBeNull()
     })
 })
@@ -358,31 +423,29 @@ describe("linesWithSendsOf", () => {
     })
 })
 
+/** An approval stop with its work item, and these facts besides. */
+const approvalStop = (facts: ReadonlyArray<readonly [string, string]> = []) =>
+    stopOf({
+        kind: "approval",
+        detail: {
+            suggestions: [],
+            facts: [["tool", "nivo.x"], ["workItemId", "item-1"], ["fingerprint", "f-1"], ...facts].map(([name, value]) => ({
+                name,
+                value,
+            })),
+        },
+    })
+
+/** The value of a fact of the stop, or null. */
+const stopFactOf = (stop: RunStop | null, name: string) => stop?.detail.facts.find((fact) => fact.name === name)?.value ?? null
+
 // FX4 (D-P11-6): skipping an approval stop left its `approve_tool_call` item waiting in the owner's inbox (the run-page door then
 // answered `decision_not_found`). Any decision that closes the stop other than its item's own verdict withdraws the item.
 describe("RunStopsService: an approval stop that closes another way withdraws its item", () => {
-    const approvalStop = (facts: ReadonlyArray<readonly [string, string]> = []) =>
-        stopOf({
-            kind: "approval",
-            detail: {
-                suggestions: [],
-                facts: [["tool", "nivo.x"], ["workItemId", "item-1"], ["fingerprint", "f-1"], ...facts].map(([name, value]) => ({
-                    name,
-                    value,
-                })),
-            },
-        })
-    const workOf = (): WorkEngineService & { readonly resumeWork: jest.Mock } =>
-        mock<WorkEngineService>({ resumeWork: jest.fn().mockResolvedValue({}) }) as WorkEngineService & {
-            readonly resumeWork: jest.Mock
-        }
-    const factOf = (stop: RunStop | null, name: string) => stop?.detail.facts.find((fact) => fact.name === name)?.value ?? null
-
     it.each(["skip", "answer", "retry", "take_over"] as const)(
-        "%s: the stop keeps `withdrawn` first, then the item is closed rejected by the engine with the reason",
+        "%s: the stop keeps `withdrawn` first, then the item is closed refused with the reason",
         async (kind) => {
-            const work = workOf()
-            const { stops, current } = await build(approvalStop(), work)
+            const { stops, work, current } = await buildWithWork(approvalStop())
             const decision =
                 kind === "answer"
                     ? { kind, text: "Khong can", by: "owner-1", at: NOW }
@@ -390,59 +453,147 @@ describe("RunStopsService: an approval stop that closes another way withdraws it
 
             await stops.decide(REF, "match", decision, "__freeze", { locale: "vi" })
 
-            expect(factOf(current(), "verdict")).toBe("withdrawn")
-            expect(work.resumeWork).toHaveBeenCalledTimes(1)
-            expect(work.resumeWork).toHaveBeenCalledWith(
-                { workspaceId: "ws-1", actor: "NIVO", locale: "vi" },
-                "item-1",
-                "rejected",
-                {},
-                { name: "NIVO", kind: "staff" },
-                `withdrawn:stop_${kind}`,
-            )
+            expect(stopFactOf(current(), "verdict")).toBe("withdrawn")
+            expect(work.withdrawn).toHaveBeenCalledTimes(1)
+            expect(work.withdrawn).toHaveBeenCalledWith("ws-1", "item-1", "vi", `withdrawn:stop_${kind}`)
         },
     )
 
     it("the item's own verdict (kept on the stop before it resumes the thread) withdraws nothing", async () => {
-        const work = workOf()
-        const { stops } = await build(approvalStop([["verdict", "approved:owner-1"]]), work)
+        const { stops, work } = await buildWithWork(approvalStop([["verdict", "approved:owner-1"]]))
 
         await stops.decide(REF, "match", { kind: "retry", by: "owner-1", at: NOW }, "__freeze", { locale: "vi" })
 
-        expect(work.resumeWork).not.toHaveBeenCalled()
+        expect(work.withdrawn).not.toHaveBeenCalled()
+    })
+})
+
+describe("RunStopsService.lineNotTold: an engine line the send refused is kept as NOT told", () => {
+    it("keeps the two facts on the open stop, never a line told, and rewrites the card; a second refusal replaces the reason", async () => {
+        const { stops, cards, current } = await build()
+
+        await stops.lineNotTold(REF, "match", "ability_off", { locale: "vi" })
+        await stops.lineNotTold(REF, "match", "not_attached", { locale: "vi" })
+
+        expect(current()?.customerLines).toEqual([])
+        expect(current()?.detail.facts.filter((fact) => fact.name.startsWith("customerLine"))).toEqual([
+            { name: "customerLine", value: "not_told" },
+            { name: "customerLineReason", value: "not_attached" },
+        ])
+        expect(cards.rewritten).toHaveBeenCalledTimes(2)
     })
 
+    it("writes nothing for a stop that is resolved or does not exist", async () => {
+        const resolved = await build(stopOf({ state: "resolved" }))
+        const none = await build(null)
+
+        await resolved.stops.lineNotTold(REF, "match", "ability_off", { locale: "vi" })
+        await none.stops.lineNotTold(REF, "match", "ability_off", { locale: "vi" })
+
+        expect(resolved.cards.rewritten).not.toHaveBeenCalled()
+        expect(resolved.current()?.detail.facts).toEqual(stopOf().detail.facts)
+        expect(none.cards.rewritten).not.toHaveBeenCalled()
+    })
+
+    it("writes nothing on an approval stop: its facts and lines stay, its card is not rewritten", async () => {
+        const { stops, records, cards, current } = await build(approvalStop())
+
+        await stops.lineNotTold(REF, "match", "ability_off", { locale: "vi" })
+
+        expect(current()).toEqual(approvalStop())
+        expect(records.patch).not.toHaveBeenCalled()
+        expect(cards.rewritten).not.toHaveBeenCalled()
+    })
+
+    it("a line kept as NOT told is no line told: the told line sees none, a later line counts once", async () => {
+        const { stops, current } = await build()
+
+        await stops.lineNotTold(REF, "match", "route_held", { locale: "vi" })
+
+        const notTold = current()
+        expect(notTold).not.toBeNull()
+        if (notTold === null) return
+        expect(stopToldOf(notTold)).toBeNull()
+
+        const line = { conversationId: "conv-9", text: ACK_LINE_VI, at: "2026-11-10T10:00:05.000Z" }
+        await stops.lineSent(REF, "match", line)
+        expect(current()?.customerLines).toEqual([line])
+        const told = current()
+        expect(told === null ? null : stopToldOf(told)).toEqual(line)
+    })
+})
+
+describe("RunStopsService.declinedByTakeOver: taking over a permission request IS its decline, by the person", () => {
+    const LAN = { memberId: "member-lan", name: "Lan" }
+
+    it("keeps the decline verdict on the stop first, then closes the item refused BY THE PERSON with the take-over note", async () => {
+        const { stops, work, current } = await buildWithWork(approvalStop())
+        work.withdrawn.mockImplementation(() => {
+            // A later verdict on the item must find the verdict already kept (it then hands the thread nothing).
+            expect(stopFactOf(current(), "verdict")).toBe("refused")
+            return Promise.resolve(true)
+        })
+
+        await expect(stops.declinedByTakeOver(REF, "match", LAN, { locale: "vi" })).resolves.toBe(true)
+
+        expect(work.withdrawn).toHaveBeenCalledTimes(1)
+        expect(work.withdrawn).toHaveBeenCalledWith("ws-1", "item-1", "vi", "declined_by_takeover:member-lan")
+    })
+
+    it("the take-over that follows withdraws nothing: the item was declined once, by one path", async () => {
+        const { stops, work, current } = await buildWithWork(approvalStop())
+
+        await stops.declinedByTakeOver(REF, "match", LAN, { locale: "vi" })
+        const route = await stops.decide(REF, "match", { kind: "take_over", by: "member-lan", at: NOW }, "__freeze", { locale: "vi" })
+
+        expect(work.withdrawn).toHaveBeenCalledTimes(1)
+        expect(stopFactOf(current(), "verdict")).toBe("refused")
+        // The thread stays at the gate with the stop open: the step is not run again, so nothing is sent and no report stop opens.
+        expect(route.resolves).toBe(false)
+        expect(current()?.state).toBe("open")
+        expect(current()?.decision?.kind).toBe("take_over")
+    })
+
+    it("declines nothing for a stop that is no permission request, one already decided, or a resolved one", async () => {
+        const plain = await buildWithWork(stopOf())
+        const decided = await buildWithWork(approvalStop([["verdict", "approved:owner-1"]]))
+        const resolved = await buildWithWork({ ...approvalStop(), state: "resolved" })
+
+        for (const world of [plain, decided, resolved]) {
+            await expect(world.stops.declinedByTakeOver(REF, "match", LAN, { locale: "vi" })).resolves.toBe(false)
+            expect(world.work.withdrawn).not.toHaveBeenCalled()
+        }
+    })
+})
+
+describe("RunStopsService: an approval stop's item is withdrawn when the run closes, the step completes, or late", () => {
     it("the run closing and the step completing withdraw it too; a stop of another kind has no item", async () => {
-        const closing = workOf()
-        const completing = workOf()
-        const other = workOf()
-        const closed = await build(approvalStop(), closing)
+        const closed = await buildWithWork(approvalStop())
         closed.records.ofRun.mockResolvedValue([approvalStop()])
-        const completed = await build(approvalStop(), completing)
-        const plain = await build(stopOf(), other)
+        const completed = await buildWithWork(approvalStop())
+        const plain = await buildWithWork(stopOf())
 
         await closed.stops.runClosed(REF, { locale: "vi" })
         await completed.stops.completed(REF, "match", { locale: "vi" })
         await plain.stops.decide(REF, "match", { kind: "skip", by: "owner-1", at: NOW }, "__freeze", { locale: "vi" })
 
-        expect(closing.resumeWork.mock.calls[0]?.[5]).toBe("withdrawn:run_closed")
-        expect(completing.resumeWork.mock.calls[0]?.[5]).toBe("withdrawn:step_completed")
-        expect(other.resumeWork).not.toHaveBeenCalled()
+        expect(closed.work.withdrawn.mock.calls[0]?.[3]).toBe("withdrawn:run_closed")
+        expect(completed.work.withdrawn.mock.calls[0]?.[3]).toBe("withdrawn:step_completed")
+        expect(plain.work.withdrawn).not.toHaveBeenCalled()
     })
 
     it("a stop resolved before items were withdrawn: a late decision withdraws the item it left open, once", async () => {
-        const work = workOf()
-        const { stops } = await build({ ...approvalStop(), state: "resolved" }, work)
+        const { stops, work } = await buildWithWork({ ...approvalStop(), state: "resolved" })
 
         expect(await stops.leftoverWithdrawn(REF, "match", { locale: "vi" })).toBe(true)
         expect(await stops.leftoverWithdrawn(REF, "match", { locale: "vi" })).toBe(false)
-        expect(work.resumeWork).toHaveBeenCalledTimes(1)
-        expect(work.resumeWork.mock.calls[0]?.[5]).toBe("withdrawn:stop_closed_earlier")
+        expect(work.withdrawn).toHaveBeenCalledTimes(1)
+        expect(work.withdrawn.mock.calls[0]?.[3]).toBe("withdrawn:stop_closed_earlier")
     })
 
-    it("an item a person decided meanwhile stays as it is (the work engine refuses): the decision still stands", async () => {
-        const work = mock<WorkEngineService>({ resumeWork: jest.fn().mockRejectedValue(new Error("not waiting")) })
-        const { stops } = await build(approvalStop(), work)
+    it("an item a person decided meanwhile stays as it is (nothing left to take): the decision still stands", async () => {
+        const { stops, work } = await buildWithWork(approvalStop())
+        work.withdrawn.mockResolvedValue(false)
 
         await expect(
             stops.decide(REF, "match", { kind: "skip", by: "owner-1", at: NOW }, "__freeze", { locale: "vi" }),

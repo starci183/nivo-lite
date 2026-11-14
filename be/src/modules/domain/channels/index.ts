@@ -1,10 +1,9 @@
 export { CHANNEL_SENDER_REGISTRY, InjectChannelSenderRegistry } from "./channels.decorators"
 export { ChannelDeliveryService } from "./channel-delivery.service"
-export { ChannelCollageService } from "./channel-collage.service"
 export { imageLinksOf, showsPictures } from "./channel-image.policy"
-export { sepayQrUrlOf } from "./qr-image.policy"
-export type { ChannelImage, StoredCollage } from "./channel-image.contracts"
-export { ChatSendNativeService } from "./chat-send-native.service"
+export type { ChannelImage } from "./channel-image.contracts"
+export { CustomerProfileNativeService } from "./customer-profile-native.service"
+export { CustomerMessageNativeService } from "./customer-message-native.service"
 export { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
 export { ConnectionHealthService } from "./connection-health.service"
 export { parseChannelsConfig } from "./channels.config"
@@ -14,6 +13,7 @@ export { CHANNELS_MESSAGES } from "./messages/channels.messages"
 export { ZaloCredentialsService } from "./zalo-credentials.service"
 export { ZaloWebhookGateService } from "./zalo-webhook-gate.service"
 export { ZaloConnectService } from "./zalo-connect.service"
+export { ZaloConnectionFieldsService } from "./zalo-connection-fields.service"
 export { ZaloPageService } from "./zalo-page.service"
 export { TelegramPageService } from "./telegram-page.service"
 export type { TelegramPageView } from "./telegram-page.contracts"
@@ -23,9 +23,7 @@ export type {
     ChannelSender,
     ChannelSenderRegistry,
     DeliveryRequest,
-    DeliveryOutcome,
-    DeliveryResult,
-    RenewalNotification,
+    PersonDeliveryRequest,
     ZaloAuthorization,
     ZnsRenewalSettings,
     OptionalZnsRenewal,

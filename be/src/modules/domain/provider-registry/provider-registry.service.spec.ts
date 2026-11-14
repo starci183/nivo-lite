@@ -1,10 +1,11 @@
+import { ProviderRegistryError, ProviderRegistryErrorCode } from "./errors/provider-registry.error"
 import {
     BankFeedPollerRegistryService,
     BankTransactionsRegistryService,
     PaymentInstructionRegistryService,
 } from "./provider-registries.service"
 
-const port = (provider: string) => ({ provider, qrUrl: () => provider })
+const port = (provider: string) => ({ provider, qrUrl: () => provider, transfer: () => Promise.reject(new ProviderRegistryError({ code: ProviderRegistryErrorCode.CallNotSent })) })
 
 describe("ProviderRegistryService", () => {
     it("finds a registered port by its provider key, lists them in order and knows who is missing", () => {

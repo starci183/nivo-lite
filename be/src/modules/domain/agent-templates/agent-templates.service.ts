@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AgentGraphsService } from "@modules/domain/agent-graphs"
-import type { GraphDocument } from "@modules/domain/agent-graphs"
+import { AgentGraphsService, type GraphDocument } from "@modules/domain/agent-graphs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { PublicDocumentsService } from "@modules/domain/public-documents"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"

@@ -4,9 +4,8 @@ import {
     mutateRevokeSession,
     type mutateRevokeSession as MutateRevokeSessionOperation,
 } from "@/modules/api/graphql/mutations/mutation-revoke-session"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RevokeSessionMutation } from "@/modules/api"
 
 /** The SWR key of the revokeSession mutation. */

@@ -1,6 +1,9 @@
 import { Input, Select, Text, Stack } from "@starci/grammar/common"
 import type { SmtpAccountView, SmtpText } from "@/modules/types"
 
+/** The `isLoading` prop, spread only when the caller states it (an absent flag stays absent). */
+const loadingOf = (isLoading: boolean | undefined) => (isLoading === undefined ? {} : { isLoading })
+
 /** What the sender step draws and reports. */
 type SmtpAccountStepProps = {
     readonly isLoading?: boolean
@@ -44,7 +47,7 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                 {account.showHost ? renderSmtpAccountStepServerFields(text, locked, account, props) : null}
                 {account.showUser ? (
                     <Input
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                        {...loadingOf(props.isLoading)}
                         id="smtp-user"
                         name="user"
                         label={text.fieldUser}
@@ -57,12 +60,12 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                 {account.showPassword ? renderSmtpAccountStepPassword(account, locked, props) : null}
             </Stack>
             {account.fixedUserNote === null ? null : (
-                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
+                <Text {...loadingOf(props.isLoading)} size="xs" tone="muted">
                     {account.fixedUserNote}
                 </Text>
             )}
             {account.prefilledNote === null ? null : (
-                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
+                <Text {...loadingOf(props.isLoading)} size="xs" tone="muted">
                     {account.prefilledNote}
                 </Text>
             )}
@@ -82,7 +85,7 @@ const renderSmtpAccountStepServerFields = (
 ) => (
     <>
         <Input
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            {...loadingOf(props.isLoading)}
             id="smtp-host"
             name="host"
             label={text.fieldHost}
@@ -91,7 +94,7 @@ const renderSmtpAccountStepServerFields = (
             onValueChange={props.onHost}
         />
         <Input
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            {...loadingOf(props.isLoading)}
             id="smtp-port"
             name="port"
             label={text.fieldPort}
@@ -100,7 +103,7 @@ const renderSmtpAccountStepServerFields = (
             onValueChange={props.onPort}
         />
         <Select
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            {...loadingOf(props.isLoading)}
             label={text.fieldSecurity}
             isDisabled={locked}
             value={account.security}
@@ -117,7 +120,7 @@ const renderSmtpAccountStepPassword = (
     props: SmtpAccountStepProps,
 ) => (
     <Input
-        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+        {...loadingOf(props.isLoading)}
         id="smtp-password"
         name="password"
         label={account.passwordLabel}
@@ -140,7 +143,7 @@ const SmtpSenderField = (input: SmtpSenderFieldProps) => {
     const props = input.props
     return (
         <Input
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            {...loadingOf(props.isLoading)}
             id={SMTP_SENDER_IDS[input.field]}
             name={input.field}
             label={input.label}

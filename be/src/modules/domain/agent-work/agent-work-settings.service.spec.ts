@@ -48,7 +48,6 @@ describe("AgentWorkSettingsService reads", () => {
             workspaceId: "ws-1",
             workEnabled: true,
             road: "core",
-            backgroundDailyCap: 50,
         })
         await expect(unknown.service.settingsOf("ws-1")).resolves.toMatchObject({ road: "core", workEnabled: true })
         await expect(known.service.roadOf("ws-1")).resolves.toBe("core")

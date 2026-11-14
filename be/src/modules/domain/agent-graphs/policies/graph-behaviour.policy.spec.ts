@@ -49,7 +49,7 @@ describe("graph-behaviour.policy sameBehaviour", () => {
             "another outcome of a branch",
             graphOf([
                 ...OWNER_EXAMPLE.slice(0, 2),
-                branchOf({ key: "else", when: "else", then: "stop", next: "stop", approver: null }),
+                branchOf({ key: "else", when: "else", mode: "stop", next: "stop", approver: null }),
             ]),
         ],
         [

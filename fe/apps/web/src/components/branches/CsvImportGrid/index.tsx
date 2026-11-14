@@ -80,7 +80,7 @@ export const CsvImportGrid = (props: CsvImportGridProps) => (
                 ))}
             </HorizontalScrollRegion>
         </Fieldset>
-        <Cluster gap="inline">
+        <Cluster gap="identity">
             <Button
                 {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                 intent="neutral"

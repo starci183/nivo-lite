@@ -1,0 +1,166 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "booking",
+  "params": {
+    "q": { "type": "string", "url": "q", "default": "" },
+    "status": { "type": "enum", "of": "blocks-core.booking.api.booking.list.status", "url": "status", "default": "all" }
+  },
+  "views": [
+    {
+      "id": "bookings",
+      "label": { "key": "tab_bookings" },
+      "root": {
+        "id": "bookings-table",
+        "block": "core.table",
+        "props": {
+          "label": { "key": "bookings_label" },
+          "title": { "key": "bookings_title" },
+          "empty": { "key": "bookings_empty" },
+          "emptySearch": { "key": "bookings_empty_search" },
+          "idPath": "id",
+          "searchParam": "q",
+          "labels": {
+            "status": {
+              "requested": { "key": "status_requested" },
+              "confirmed": { "key": "status_confirmed" },
+              "cancelled": { "key": "status_cancelled" },
+              "done": { "key": "status_done" }
+            }
+          },
+          "columns": [
+            { "term": { "key": "col_customer" }, "path": "customerName", "subPath": "customerPhone", "width": "fill", "minWidth": 180, "truncate": true },
+            { "term": { "key": "col_start" }, "path": "startAt", "format": "dateTime", "width": "fit" },
+            { "term": { "key": "col_party" }, "path": "partySize", "format": "number", "align": "end", "width": "fit", "priority": "low" },
+            {
+              "term": { "key": "col_status" },
+              "path": "status",
+              "format": "badge",
+              "width": "fit",
+              "tones": { "requested": "warning", "confirmed": "info", "cancelled": "muted", "done": "success" }
+            },
+            { "term": { "key": "col_note" }, "path": "note", "width": "fill", "truncate": true, "hideBelow": "desktop", "priority": "low" }
+          ]
+        },
+        "bind": { "rows": { "read": "blocks-core.booking.api.booking.list", "variables": { "q": "$q", "status": "$status", "sort": "upcoming" } } }
+      }
+    },
+    {
+      "id": "services",
+      "label": { "key": "tab_services" },
+      "root": {
+        "id": "services-page",
+        "block": "core.stack",
+        "props": { "gap": "region" },
+        "children": [
+          {
+            "id": "services-table",
+            "block": "core.table",
+            "props": {
+              "label": { "key": "services_label" },
+              "empty": { "key": "services_empty" },
+              "idPath": "id",
+              "currency": "VND",
+              "columns": [
+                { "term": { "key": "col_service" }, "path": "name", "width": "fill", "minWidth": 180, "truncate": true },
+                { "term": { "key": "col_duration" }, "path": "durationMin", "format": "number", "align": "end", "width": "fit" },
+                { "term": { "key": "col_price" }, "path": "priceVnd", "format": "money", "align": "end", "width": "fit" }
+              ]
+            },
+            "bind": { "rows": { "read": "blocks-core.booking.api.service.list" } }
+          },
+          {
+            "id": "service-form",
+            "block": "core.form",
+            "props": {
+              "label": { "key": "service_form_title" },
+              "submitLabel": { "key": "service_form_submit" },
+              "successNotice": { "key": "saved_notice" },
+              "currency": "VND",
+              "fields": [
+                { "name": "name", "label": { "key": "field_service_name" }, "kind": "text", "required": true, "max": 500 },
+                { "name": "durationMin", "label": { "key": "field_duration" }, "kind": "number", "required": true, "max": 1440 },
+                { "name": "bufferMin", "label": { "key": "field_buffer" }, "hint": { "key": "field_buffer_hint" }, "kind": "number", "max": 1440 },
+                { "name": "priceVnd", "label": { "key": "field_price" }, "kind": "money", "required": true }
+              ]
+            },
+            "bind": { "submit": { "action": "blocks-core.booking.service-save" } },
+            "when": { "permission": "booking.manage" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "resources",
+      "label": { "key": "tab_resources" },
+      "root": {
+        "id": "resources-page",
+        "block": "core.stack",
+        "props": { "gap": "region" },
+        "children": [
+          {
+            "id": "resources-table",
+            "block": "core.table",
+            "props": {
+              "label": { "key": "resources_label" },
+              "empty": { "key": "resources_empty" },
+              "idPath": "id",
+              "labels": { "kind": { "person": { "key": "kind_person" }, "room": { "key": "kind_room" } } },
+              "columns": [
+                { "term": { "key": "col_resource" }, "path": "name", "width": "fill", "minWidth": 180, "truncate": true },
+                { "term": { "key": "col_kind" }, "path": "kind", "width": "fit" },
+                { "term": { "key": "col_capacity" }, "path": "capacity", "format": "number", "align": "end", "width": "fit" }
+              ]
+            },
+            "bind": { "rows": { "read": "blocks-core.booking.api.resource.list" } }
+          },
+          {
+            "id": "resource-form",
+            "block": "core.form",
+            "props": {
+              "label": { "key": "resource_form_title" },
+              "submitLabel": { "key": "resource_form_submit" },
+              "successNotice": { "key": "saved_notice" },
+              "fields": [
+                { "name": "name", "label": { "key": "field_resource_name" }, "kind": "text", "required": true, "max": 500 },
+                {
+                  "name": "kind",
+                  "label": { "key": "field_kind" },
+                  "kind": "choice",
+                  "required": true,
+                  "options": [
+                    { "value": "person", "label": { "key": "kind_person" } },
+                    { "value": "room", "label": { "key": "kind_room" } }
+                  ]
+                },
+                { "name": "capacity", "label": { "key": "field_capacity" }, "hint": { "key": "field_capacity_hint" }, "kind": "number", "required": true, "max": 1000 }
+              ]
+            },
+            "bind": { "submit": { "action": "blocks-core.booking.resource-save" } },
+            "when": { "permission": "booking.manage" }
+          }
+        ]
+      }
+    },
+    {
+      "id": "settings",
+      "label": { "key": "tab_settings" },
+      "root": {
+        "id": "settings-form",
+        "block": "core.form",
+        "props": {
+          "label": { "key": "settings_title" },
+          "submitLabel": { "key": "settings_submit" },
+          "successNotice": { "key": "saved_notice" },
+          "fields": [
+            { "name": "slotStepMin", "label": { "key": "field_slot_step" }, "kind": "number", "required": true, "max": 1440 },
+            { "name": "minLeadMin", "label": { "key": "field_min_lead" }, "hint": { "key": "field_min_lead_hint" }, "kind": "number", "required": true, "max": 43200 },
+            { "name": "maxAdvanceDays", "label": { "key": "field_max_advance" }, "kind": "number", "required": true, "max": 365 },
+            { "name": "remindHoursBefore", "label": { "key": "field_remind_hours" }, "hint": { "key": "field_remind_hours_hint" }, "kind": "number", "required": true, "max": 168 }
+          ]
+        },
+        "bind": { "record": { "read": "blocks-core.booking.api.settings.get" }, "submit": { "action": "blocks-core.booking.settings-save" } },
+        "when": { "permission": "booking.manage" }
+      }
+    }
+  ]
+}

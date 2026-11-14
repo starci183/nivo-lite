@@ -1,5 +1,4 @@
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 import type { DecisionItem, SeatPair, SeatRule, WorkspaceMember, WorkspaceRole } from "./workspace-members.contracts"
 

@@ -1,6 +1,3 @@
-import type { FactRecord } from "@modules/domain/brain-facts"
-import type { Passage } from "@modules/domain/knowledge"
-
 /** Who an agent's view of the knowledge is for: the public view of a customer, or the team's view. */
 export type KnowledgeAudience = "customer" | "internal"
 
@@ -58,26 +55,6 @@ export interface GapNote {
     readonly question: string
     /** What the reply said. */
     readonly signals: GapSignals
-}
-
-/** Limits of one per-turn recall. */
-export interface RecallLimits {
-    /** How many facts at most. */
-    readonly facts: number
-    /** How many business passages at most. */
-    readonly passages: number
-    /** How many characters the block may take. */
-    readonly budget: number
-}
-
-/** The brief and the passages it was made from, for the citations of a tool answer. */
-export interface Recalled {
-    /** The prompt block; empty when nothing matched. */
-    readonly brief: string
-    /** The business passages the brief quotes. */
-    readonly passages: ReadonlyArray<Passage>
-    /** The confirmed facts the brief quotes, so the cards of the turn can name them as its sources. */
-    readonly facts: ReadonlyArray<FactRecord>
 }
 
 /** What a task the system runs for an agent asks of the business notes: the lane of the agent and a question. */

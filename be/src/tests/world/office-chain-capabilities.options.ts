@@ -1,26 +1,12 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AGENTS_ROOMS, AgentOwnershipService, AgentsModule } from "@modules/domain/agents"
-import {
-    APPROVAL_REQUESTS_ERROR_KINDS,
-    APPROVAL_REQUESTS_MESSAGES,
-    ApprovalRequestsModule,
-} from "@modules/domain/approval-requests"
-import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
-import {
-    AUTHORITY_RULES_ERROR_KINDS,
-    AUTHORITY_RULES_MESSAGES,
-    AuthorityRulesModule,
-} from "@modules/domain/authority-rules"
 import { EventsModule } from "@modules/domain/events"
 import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/domain/chat-room-directory"
 import { teamChatEntities } from "@modules/domain/team-chat"
-import { MEMBER_GRANTS_ERROR_KINDS, MEMBER_GRANTS_MESSAGES, MemberGrantsModule } from "@modules/domain/member-grants"
 import { StaffModule } from "@modules/domain/staff"
-import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
+import { WorkspaceMembersModule, type AccountDirectory } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
@@ -47,26 +33,25 @@ class OfficeAgentOwnersModule {
             providers: [
                 AgentOwnershipService,
                 { provide: AGENTS_ROOMS, useExisting: ChatRoomDirectoryService },
-                AuthorityActionsService,
                 { provide: OFFICE_ACCOUNTS, useClass: UnreadAccountDirectory },
             ],
-            exports: [AgentOwnershipService, AuthorityActionsService, OFFICE_ACCOUNTS],
+            exports: [AgentOwnershipService, OFFICE_ACCOUNTS],
         }
     }
 }
 
 /**
- * The approval chain of the agents as the api composes it: the approval requests over the authority rules and the member grants,
+ * The approval chain of the agents as the api composes it: the member grants and the rooms,
  * each port bound the way the app root binds it (the agent owners to the agents capability's ownership rules).
  */
 export const OFFICE_CHAIN_MODULES: Array<DynamicModule> = [
     I18nModule.register({
         isGlobal: true,
-        bundles: [APPROVAL_REQUESTS_MESSAGES, AUTHORITY_RULES_MESSAGES, ERRORS_MESSAGES, MEMBER_GRANTS_MESSAGES],
+        bundles: [ERRORS_MESSAGES],
     }),
     ErrorsModule.register({
         isGlobal: true,
-        kinds: [APPROVAL_REQUESTS_ERROR_KINDS, AUTHORITY_RULES_ERROR_KINDS, MEMBER_GRANTS_ERROR_KINDS],
+        kinds: [],
     }),
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
@@ -75,12 +60,6 @@ export const OFFICE_CHAIN_MODULES: Array<DynamicModule> = [
     OfficeAgentOwnersModule.register(),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: OFFICE_ACCOUNTS }),
     ModuleInstallationsModule.register({ isGlobal: true }),
-    AuthorityRulesModule.register({ isGlobal: true }),
     ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
-    MemberGrantsModule.register({ isGlobal: true }),
     { module: OfficeChainQueueProofModule, global: true },
-    ApprovalRequestsModule.register({
-        isGlobal: true,
-        ports: { agentOwners: AgentOwnershipService },
-    }),
 ]

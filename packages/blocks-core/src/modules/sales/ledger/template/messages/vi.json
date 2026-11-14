@@ -1,0 +1,18 @@
+{
+  "gates.scope.label": "Phạm vi công việc",
+  "gates.scope.hint": "Kế toán AI làm những việc gì: hóa đơn, đối soát, nhắc nợ...",
+  "gates.scope.writes.0.attributeLabel": "Phạm vi kế toán AI",
+  "gates.currency_tax.label": "Tiền tệ và thuế",
+  "gates.currency_tax.hint": "Đơn vị tiền, thuế GTGT, quy tắc làm tròn.",
+  "gates.currency_tax.writes.0.attributeLabel": "Thuế VAT và làm tròn",
+  "gates.source_evidence.label": "Nguồn chứng từ",
+  "gates.source_evidence.hint": "Số liệu lấy từ đâu: đơn hàng, sao kê ngân hàng, file...",
+  "gates.approval_policy.label": "Chính sách duyệt và ngưỡng",
+  "gates.approval_policy.hint": "Số tiền nào AI tự làm, số nào cần bạn duyệt.",
+  "gates.evidence_requirements.label": "Yêu cầu chứng từ",
+  "gates.evidence_requirements.hint": "Cần những chứng từ nào trước khi xuất hóa đơn hoặc ghi nhận thanh toán.",
+  "gates.evidence_requirements.writes.0.attributeLabel": "Chứng từ bắt buộc",
+  "gates.prohibited_actions.label": "Việc không được làm",
+  "gates.prohibited_actions.hint": "Những thao tác tuyệt đối không tự làm (hoàn tiền, hủy hóa đơn...).",
+  "gates.prohibited_actions.writes.0.attributeLabel": "Việc kế toán AI không được tự làm"
+}

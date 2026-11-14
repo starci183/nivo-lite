@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { RedisClient } from "./redis.client"
 import { REDIS_CLIENT, REDIS_OPTIONS } from "./redis.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./redis.module-definition"

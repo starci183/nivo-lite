@@ -1,8 +1,11 @@
 import type { LocatedText } from "@modules/domain/knowledge-chunks"
-import { StoredNote } from "@modules/domain/knowledge-sources"
-import type { ReadingWarning, SourceReading } from "@modules/domain/knowledge-sources"
-import { DocumentRefusalCode, DocumentWarningCode } from "@modules/integrations/document-readers"
-import type { DocumentWarning, ReadDocument } from "@modules/integrations/document-readers"
+import { StoredNote, type ReadingWarning, type SourceReading } from "@modules/domain/knowledge-sources"
+import {
+    DocumentRefusalCode,
+    DocumentWarningCode,
+    type DocumentWarning,
+    type ReadDocument,
+} from "@modules/integrations/document-readers"
 import { DocumentsErrorCode } from "@modules/integrations/documents"
 
 /** The stored note (the code the Knowledge list shows its own text for) of each refusal of the readers. */
@@ -55,7 +58,11 @@ const warningsOf = (warnings: ReadonlyArray<DocumentWarning>, say: Say): Array<R
         code: warning.code,
         place: warning.place,
         count: warning.count,
-        message: say(WARNING_KEYS[warning.code], { place: warning.place ?? "", count: warning.count ?? 0 }),
+        message: say(WARNING_KEYS[warning.code], {
+            place: warning.place ?? "",
+            count: warning.count ?? 0,
+            left: warning.left ?? 0,
+        }),
     }))
 
 /** Where and when a document was read: the stored object and the instant. */

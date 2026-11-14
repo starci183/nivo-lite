@@ -48,30 +48,3 @@ describe("SourceCategoriesService categories", () => {
         expect(fakes[0]?.callsOf("groupBy")).toEqual([["s.topic"]])
     })
 })
-
-describe("SourceCategoriesService dossierCounts", () => {
-    it("counts the documents that name a dossier reference by tag or by the number their title starts with", async () => {
-        const em = mockEntityManager()
-        const fakes = queueQueryBuilders(em, [
-            {
-                getRawMany: [
-                    { topic: "LEGAL FILES", ref: "1", documents: "6" },
-                    { topic: "LEGAL FILES", ref: 2, documents: "1" },
-                    { topic: "x", ref: "3" },
-                    "nope",
-                ],
-            },
-        ])
-        const { service, members } = await build(em)
-
-        await expect(service.dossierCounts("u1", WS)).resolves.toEqual([
-            { topic: "LEGAL FILES", ref: "1", documentCount: 6 },
-        ])
-        expect(members.require).toHaveBeenCalledWith("u1", WS)
-        const [where] = fakes[0]?.callsOf("where") ?? []
-        expect(where?.[0]).toContain("'^dossier:0*([0-9]+)$'")
-        expect(where?.[0]).toContain("IS NOT NULL")
-        expect(where?.[1]).toEqual({ workspaceId: WS })
-        expect(fakes[0]?.callsOf("addGroupBy")).toEqual([["ref"]])
-    })
-})

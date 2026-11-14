@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 
 /** The queue name: the contract between this producer, the migration tick and the processor of the run-data-sync job (the durable queue name). */
 export const DATA_SYNC_QUEUE = "data_sync"

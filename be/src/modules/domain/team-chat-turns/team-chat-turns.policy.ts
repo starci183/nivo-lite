@@ -1,17 +1,29 @@
-import { TEAM_CHAT_LINES_MAX, TEAM_CHAT_LINE_MAX, TEAM_CHAT_TEXT_MAX } from "@nivo-lite/blocks-core"
-import type { TeamChatLine, TeamChatStanding } from "@nivo-lite/blocks-core"
+import {
+    TEAM_CHAT_LINES_MAX,
+    TEAM_CHAT_LINE_MAX,
+    TEAM_CHAT_TEXT_MAX,
+    type TeamChatLine,
+    type TeamChatStanding,
+} from "@nivo-lite/agent-sdk/team-chat"
+import type { HeardReply, PersonLineHeard } from "@modules/domain/team-chat"
 import { parseJsonText } from "@modules/platform/primitives"
+import {
+    PAUSE_LINES,
+    UNHANDLED_LINES,
+    captureFileReason,
+    captureRetireReason,
+} from "./messages/team-chat-turns.messages"
 import type {
     ChatTurnLimit,
-    HeardReply,
-    PersonLineHeard,
+    PauseLine,
     RoomAdmission,
     TurnParams,
     TurnTargets,
+    UnroutedTurn,
 } from "./team-chat-turns.contracts"
 
 /** The kinds of agent lines a person decides on: a reply to one is that decision's door (P1's stop door, BG4's card), never a chat turn. */
-const DECISION_CARD_KINDS: ReadonlyArray<string> = ["workflow.stopped", "brain.change"]
+const DECISION_CARD_KINDS: ReadonlySet<string> = new Set(["workflow.stopped", "brain.change"])
 
 /** The message kind of an approval card. */
 const APPROVAL_KIND = "approval"
@@ -30,7 +42,7 @@ export const agentMessageKindOf = (agentMessage: string | null): string | null =
 
 /** True for a line a person decides on (a stop card, an approval card, a truth change card): a reply to it is that card's own door. */
 export const isDecisionCard = (line: HeardReply): boolean =>
-    line.kind === APPROVAL_KIND || DECISION_CARD_KINDS.includes(agentMessageKindOf(line.agentMessage) ?? "")
+    line.kind === APPROVAL_KIND || DECISION_CARD_KINDS.has(agentMessageKindOf(line.agentMessage) ?? "")
 
 /** The agent of a direct room, read from its sorted pair (`"agent:<id>|user:<id>"`); null for a room of two people. */
 export const agentOfDirectKey = (directKey: string | null): string | null => {
@@ -62,22 +74,33 @@ export const turnTargetsOf = (line: PersonLineHeard): TurnTargets => {
 /** The standing of a workspace role: owner and manager govern, everyone else is staff. */
 export const standingOf = (role: string): TeamChatStanding => (role === "owner" || role === "manager" ? role : "staff")
 
-/** True for a standing that may file a truth change by hand ("Ghi vào Second Brain"). */
+/** True for a standing that may file a truth change by hand ("Save to Second Brain"). */
 export const mayCapture = (standing: TeamChatStanding): boolean => standing === "owner" || standing === "manager"
 
 /** One stored room line as a chat turn is shown it: who wrote it (a name), the words cut to a line. */
 export interface StoredLine {
+    /** The message. */
     readonly id: string
+    /** `user`, `agent` or `system`. */
     readonly authorKind: string
+    /** The account or the agent; null for a system line. */
     readonly authorId: string | null
+    /** Its words. */
     readonly body: string
+    /** When it was written. */
     readonly createdAt: Date
+}
+
+/** Who wrote a stored line, as a chat turn names it. */
+const lineByOf = (authorKind: string): TeamChatLine["by"] => {
+    if (authorKind === "user") return "person"
+    return authorKind === "agent" ? "agent" : "system"
 }
 
 /** A stored line as the turn reads it, named by the given names (an unnamed author keeps an empty name). */
 export const turnLineOf = (line: StoredLine, names: ReadonlyMap<string, string>): TeamChatLine => ({
     id: line.id,
-    by: line.authorKind === "user" ? "person" : line.authorKind === "agent" ? "agent" : "system",
+    by: lineByOf(line.authorKind),
     name: line.authorId === null ? "" : (names.get(line.authorId) ?? ""),
     text: line.body.trim().slice(0, TEAM_CHAT_LINE_MAX),
     at: line.createdAt.toISOString(),
@@ -104,7 +127,7 @@ export const askedTextOf = (body: string): string => body.trim().slice(0, TEAM_C
 /** The event key of one chat turn: one per message and agent, so a retried send or a replayed listener wakes the agent once. */
 export const turnKeyOf = (messageId: string, agentId: string): string => `chat-turn:${messageId}:${agentId}`
 
-/** The event key of a capture ("Ghi vào Second Brain"): once per message and agent. */
+/** The event key of a capture ("Save to Second Brain"): once per message and agent. */
 export const captureKeyOf = (messageId: string, agentId: string): string => `chat-capture:${messageId}:${agentId}`
 
 /** The workflow namespace of a module's chat turn, as the thread flag names it. */
@@ -143,22 +166,39 @@ export const fittedParamsOf = (params: TurnParams, max: number = TURN_PARAMS_MAX
 }
 
 /** The one line an agent says when its room reached the limit of turns, in the team's language. */
-export const pauseLineOf = (locale: "vi" | "en"): { readonly title: string; readonly text: string } =>
-    locale === "en"
-        ? {
-              title: "Pausing for a moment",
-              text: "Many questions in this room in a short time: I pause for a few minutes, then I answer again.",
-          }
-        : {
-              title: "Em tạm dừng một lúc",
-              text: "Phòng này vừa hỏi em nhiều quá: em tạm dừng vài phút rồi trả lời tiếp nhé.",
-          }
+export const pauseLineOf = (locale: "vi" | "en"): PauseLine => ({ ...PAUSE_LINES[locale] })
 
 /**
- * The reason a hand-filed truth change carries ("Ghi vào Second Brain" with the truth named on the form): who pressed it, on their own
+ * The reason a hand-filed truth change carries ("Save to Second Brain" with the truth named on the form): who pressed it, on their own
  * message or a message of the room; never a copy of the value.
  */
 export const captureReasonOf = (name: string, value: string | null): string =>
-    value === null
-        ? `${name} bấm "Ghi vào Second Brain" trên tin nhắn này để bỏ sự thật đang dùng; chờ chủ tiệm đồng ý.`
-        : `${name} bấm "Ghi vào Second Brain" trên tin nhắn này để ghi thành quy định của tiệm, thay cho giá trị đang dùng (nếu có); không nói thời hạn thì giữ một năm.`
+    value === null ? captureRetireReason(name) : captureFileReason(name)
+
+/** The key of the one line NIVO writes under a message whose named agents started no chat turn. */
+export const unhandledKeyOf = (messageId: string): string => `chat-unhandled:${messageId}`
+
+/** The agents a message names that the router starts no turn for at all (they are none of its targets), each once. */
+export const outsideTurnsOf = (
+    mentions: ReadonlyArray<string>,
+    targets: ReadonlyArray<string>,
+): ReadonlyArray<UnroutedTurn> =>
+    [...new Set(mentions)]
+        .filter((agentId) => !targets.includes(agentId))
+        .map((agentId): UnroutedTurn => ({ agentId, code: "outside_turn" }))
+
+/** The words of the line NIVO writes for the turns that did not start, in the team's language. */
+export const unhandledLineOf = (locale: "vi" | "en"): PauseLine => ({ ...UNHANDLED_LINES[locale] })
+
+/**
+ * The structured message of that line, as stored JSON text: a notice with the agents and the code of each turn that did not start
+ * (ids and codes; the words are the line's own).
+ */
+export const unhandledMessageOf = (line: PauseLine, turns: ReadonlyArray<UnroutedTurn>): string =>
+    JSON.stringify({
+        kind: "message.text",
+        intent: "notify",
+        title: line.title,
+        summary: line.text,
+        payload: { text: line.text, unrouted: turns.map((turn) => ({ agentId: turn.agentId, code: turn.code })) },
+    })

@@ -13,7 +13,7 @@ import {
     useMutateSaveAgentGraphDraftSwr,
 } from "@/hooks/swr"
 import type { AgentGraphWireDocument } from "@/modules/agent-graph"
-import { useGraphQLWithToast } from "@/modules/toast"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 
 const GRAPH_KEYS: ReadonlySet<unknown> = new Set([
     QUERY_AGENT_GRAPH_SWR_KEY,
@@ -47,6 +47,18 @@ export const useAgentGraphWrites = (onSaved: (isDraftEmpty: boolean) => void) =>
         await mutate(isGraphKey)
         return true
     }
+    // The three roads that make a version live (publish, restore, confirm a proposal) are one call each, with their own success toast and
+    // reads (rights.md: a node declares its mode; the engine has no upgrade gate, so no version waits for an owner's yes).
+    const live = async (run: () => Promise<unknown>, successMessage: string): Promise<boolean> =>
+        (await runGraphQL(
+            async () => {
+                await run()
+                toast.success(successMessage)
+                await done(true, true)
+                return true
+            },
+            { showSuccessToast: false },
+        )) === true
     return {
         refresh: async (): Promise<boolean> => done(true, true),
         saveDocument: async (
@@ -67,11 +79,11 @@ export const useAgentGraphWrites = (onSaved: (isDraftEmpty: boolean) => void) =>
                 false,
             ),
         publish: async (agentId: string, note: string, successMessage: string): Promise<boolean> =>
-            done(await runGraphQL(() => publish.trigger({ agentId, note }), { successMessage }), true),
+            live(() => publish.trigger({ agentId, note }), successMessage),
         restore: async (agentId: string, versionId: string, successMessage: string): Promise<boolean> =>
-            done(await runGraphQL(() => restore.trigger({ agentId, versionId }), { successMessage }), true),
+            live(() => restore.trigger({ agentId, versionId }), successMessage),
         confirm: async (agentId: string, proposalId: string, successMessage: string): Promise<boolean> =>
-            done(await runGraphQL(() => confirm.trigger({ agentId, proposalId }), { successMessage }), true),
+            live(() => confirm.trigger({ agentId, proposalId }), successMessage),
         mode: async (agentId: string, mode: string): Promise<void> => {
             const result = await runGraphQL(() => setMode.trigger({ agentId, mode }), { showSuccessToast: false })
             if (result !== undefined) await mutate(isGraphKey)

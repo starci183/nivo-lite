@@ -1,6 +1,5 @@
-import { SpecWorkbench } from "@nivo-lite/agent-sdk/client"
+import { SpecWorkbench, type PageFrameTabs } from "@nivo-lite/agent-sdk/client"
 import type { ActionDefinition, ReadDefinition } from "@nivo-lite/agent-sdk/block"
-import type { PageFrameTabs } from "@nivo-lite/agent-sdk/client"
 import type { StoredSpec } from "@nivo-lite/agent-sdk/spec"
 
 /** Resolved atoms of one workbench: its spec and what the spec may bind. */

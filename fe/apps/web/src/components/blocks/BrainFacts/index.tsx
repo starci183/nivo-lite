@@ -43,6 +43,8 @@ export const BrainFacts = (props: BrainFactsProps) => {
                     byDocument: t("byDocument"),
                     errorBody: f("errorBody"),
                 },
+                pager: page.pager,
+                paging: page.paging,
                 count: page.count,
                 status: page.filters.status,
                 selectedStatus: page.filters.selected,
@@ -55,12 +57,16 @@ export const BrainFacts = (props: BrainFactsProps) => {
                 conflict: page.conflict.view,
                 detail: page.detail.view,
                 factDrawer: page.drawer,
-                card: { title: m("cardTitle"), modeLabel: m("modeLabel"), modeList: m("modeList"), modeMap: m("modeMap") },
+                card: {
+                    title: m("cardTitle"),
+                    modeLabel: m("modeLabel"),
+                    modeList: m("modeList"),
+                    modeMap: m("modeMap"),
+                },
                 mode: page.map.mode,
                 map: page.map.view,
             }}
             on={{
-                reviewAll: header.on.reviewAll,
                 selectTab: header.on.selectTab,
                 ...page.on,
                 ...page.pick.on,

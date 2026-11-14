@@ -1,11 +1,9 @@
 import { builder } from "@starci/jest-preset"
-import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
-import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
-import type { CardRecord, FactCardPayload, RuleCardPayload } from "@modules/domain/module-setup-writes"
+import type { CardRecord, FactCardPayload } from "@modules/domain/module-setup-writes"
 
 const NOW = "2026-10-13T02:00:00.000Z"
 
@@ -41,7 +39,7 @@ export const factOf: (overrides?: Partial<FactRecord>) => FactRecord = builder<F
 /** An open knowledge gap offered during setup. */
 export const gapOf: (overrides?: Partial<GapRecord>) => GapRecord = builder<GapRecord>({
     id: "gap-1",
-    module: "accounting",
+    module: "sales",
     question: "Do you take cards?",
     topic: null,
     attributeGuess: null,
@@ -53,48 +51,6 @@ export const gapOf: (overrides?: Partial<GapRecord>) => GapRecord = builder<GapR
     reopenedCount: 0,
 })
 
-/** An accounting action of the authority registry. */
-export const actionOf: (overrides?: Partial<AuthorityActionRecord>) => AuthorityActionRecord =
-    builder<AuthorityActionRecord>({
-        action: "issue_invoice",
-        module_key: "accounting",
-        sort_order: 1,
-        default_mode: "ask",
-        default_limit_vnd: null,
-        default_required_fields: [],
-        amount_limit: false,
-        max_mode: null,
-        label: { en: "Issue an invoice", vi: "Xuat hoa don" },
-    })
-
-/** The registry the setup cards are checked against: two free actions and one that can never run alone. */
-export const REGISTRY: Array<AuthorityActionRecord> = [
-    actionOf(),
-    actionOf({ action: "send_email" }),
-    actionOf({ action: "pay_vendor", max_mode: "ask" }),
-]
-
-/** An authority rule of the accounting module. */
-export const ruleOf: (overrides?: Partial<AuthorityRuleRecord>) => AuthorityRuleRecord = builder<AuthorityRuleRecord>({
-    id: "rule-1",
-    workspace_id: "ws-1",
-    department: "accounting",
-    action: "issue_invoice",
-    mode: "ask",
-    limit_vnd: 1000000,
-    required_fields: ["customer"],
-    note: "",
-    updated_at: "2026-10-01T00:00:00.000Z",
-    unit: "vnd",
-    auto_max: null,
-    ask_max: null,
-    agents: [],
-    approver_roles: ["owner", "manager"],
-    approver_rooms: [],
-    approver_members: [],
-    approval_policy: "any",
-    timeout_minutes: 30,
-})
 /** The open setup session of the installation. */
 export const SESSION: SetupSessionRecord = {
     id: "s-1",
@@ -106,13 +62,13 @@ export const SESSION: SetupSessionRecord = {
     gateEvidence: {},
     createdAt: NOW,
 }
-/** The accounting installation in setup. */
+/** The sales installation in setup. */
 export const installationOf: (overrides?: Partial<InstallationRecord>) => InstallationRecord =
     builder<InstallationRecord>({
         id: "inst-1",
         workspaceId: "ws-1",
-        moduleKey: "accounting",
-        name: "Accounting",
+        moduleKey: "sales",
+        name: "Sales",
         isMulti: true,
         agentId: "agent-1",
         status: "setup",
@@ -130,7 +86,6 @@ export const FACT: FactCardPayload = {
     value: "7 to 21",
     scope: "public",
 }
-export const RULE: RuleCardPayload = { action: "issue_invoice", field: "limit_vnd", mode: "auto", limitVnd: 5000000 }
 export const CARD_BASE: Omit<CardRecord, "kind" | "payload"> = {
     id: "card-1",
     workspaceId: "ws-1",
@@ -152,11 +107,4 @@ export const factCard = (
     status,
     kind: "fact",
     payload: { ...FACT, ...payload },
-})
-/** A rule card of the setup session. */
-export const ruleCard = (payload: Partial<RuleCardPayload> = {}): CardRecord => ({
-    ...CARD_BASE,
-    targetKey: "rule:issue_invoice",
-    kind: "rule",
-    payload: { ...RULE, ...payload },
 })

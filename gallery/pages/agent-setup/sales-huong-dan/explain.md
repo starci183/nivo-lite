@@ -17,10 +17,10 @@ Vì sao: `PaneGrid` hai cột; trái là giếng hồng cuộn với các khối
 Luật: `pink-page-surface-rule`, `nivo-surface-layering`, ui-laws (Layout B).
 Grammar: `PaneGrid` `columns`, `Pane area="side" surface`, `core/frame/PaneGrid/index.d.ts`, `core/frame/PaneSection/index.d.ts`.
 
-## Agent hiểu gì về việc của bạn (Label) và ba nhóm bên trong
-Vì sao: "Agent hiểu gì về việc của bạn" là Label của cả mục (14/500), phiên bản đang dùng ("Bản 7 · đang dùng") là chữ thường 12 muted ở cuối hàng, không phải chip. Bên trong, "Được tự làm", "Phải hỏi bạn", "Không bao giờ làm" là Sublabel (12/500 muted), mỗi nhóm một thẻ danh sách trắng ngay dưới (cách 8), các nhóm cách nhau 8 vì cùng thuộc Label này; khoảng cách lớn chỉ nằm giữa các mục cấp trên. Không lồng Label trong Label. Mỗi hàng: câu quy tắc, tên mục, chip trạng thái "Đã xác nhận", nút "Sửa" sm neutral ở cuối.
-Luật: `surfacecard-select-subtitle` (Label / Sublabel hierarchy, Versions), `type-scale-14-12`, `suggestion-button-sm`.
-Grammar: `Sublabel` (`core/leaf/Sublabel/index.d.ts`), `SurfaceCard kind="list"` với `actionPlacement="end"` (`core/surfaceCardData.d.ts`, ListData), `Stack gap="inline"`; Grammar 0.37.7 sẽ có API riêng cho nhóm này, hiện dùng Sublabel + token gap.
+## Agent hiểu gì về việc của bạn (Label) và một danh sách
+Vì sao: "Agent hiểu gì về việc của bạn" là Label của cả mục (14/500), phiên bản đang dùng ("Bản 7 · đang dùng") là chữ thường 12 muted ở cuối hàng, không phải chip. Dưới Label là MỘT thẻ danh sách trắng gồm các mục cài đặt (không còn ba nhóm "Được tự làm / Phải hỏi bạn / Không bao giờ làm": nhóm đó suy ra từ chữ trong mã mục bằng regex, trái luật no-word-matching-code, và "không bao giờ" không còn trong mô hình quyền). Mỗi hàng: câu quy tắc, tên mục, Badge không chấm "Đã xác nhận" (nhãn kết quả, không phải trạng thái sống: badge-no-dot), nút "Sửa" sm neutral ở cuối.
+Luật: `surfacecard-select-subtitle`, `badge-no-dot` (drawing), `type-scale-14-12`, `no-word-matching-code`.
+Grammar: `SurfaceCard kind="list"` với `actionPlacement="end"` (`core/surfaceCardData.d.ts`, ListData).
 
 ## Chú thích dưới các nhóm ("Đã xác nhận 6/6 · Bản 7 đang chạy · …")
 Vì sao: một caption 12 muted nói về dữ liệu của các thẻ (tiến độ xác nhận, bản chạy), đúng chỗ của caption.

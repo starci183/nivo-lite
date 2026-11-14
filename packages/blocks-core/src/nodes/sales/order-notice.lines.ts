@@ -1,8 +1,7 @@
 import type { OrderSummaryLine } from "../../modules/sales/agent-message-kinds"
 import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import { nameKey } from "../order/order.policy"
-import { amountTextOf } from "./order-notice.policy"
-import type { NoticeLocale } from "./order-notice.policy"
+import { amountTextOf, type NoticeLocale } from "./order-notice.policy"
 
 /** A catalogue row as the notices read it for the photo of an ordered item. */
 export interface CatalogueImageRow {

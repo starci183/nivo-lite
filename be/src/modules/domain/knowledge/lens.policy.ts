@@ -1,10 +1,15 @@
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import type { Audience, Lens, LensRequest } from "./knowledge.contracts"
 
 /**
- * Marketing modules publish what they write (social posts, videos), so they read PUBLIC knowledge only, whatever the module registry
- * says about their audience. Add a module here when its output is published or reaches people outside the business.
+ * The modules that publish what they write (social posts, videos), as their catalogue templates declare (`publishes`): they read
+ * PUBLIC knowledge only, whatever their audience.
  */
-const PUBLIC_ONLY_MODULES: ReadonlySet<string> = new Set(["content", "video"])
+const PUBLIC_ONLY_MODULES: ReadonlySet<string> = new Set(
+    INSTALLED.servers()
+        .filter((server) => server.template.publishes === true)
+        .map((server) => server.key),
+)
 
 /** Whether a lens of this request sees public knowledge only. */
 const seesPublicOnly = (request: LensRequest): boolean =>

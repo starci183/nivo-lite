@@ -8,6 +8,7 @@ import { AdminHealthResolver } from "./admin-health.resolver"
 import { AdminExtendSubscriptionResolver } from "./admin-extend-subscription.resolver"
 import { AdminSetWorkspaceStatusResolver } from "./admin-set-workspace-status.resolver"
 import { AdminSetWorkspacePlanResolver } from "./admin-set-workspace-plan.resolver"
+import { AdminSetWorkspaceEnterpriseKeyResolver } from "./admin-set-workspace-enterprise-key.resolver"
 import { AdminResendWorkspaceInviteResolver } from "./admin-resend-workspace-invite.resolver"
 
 @Module({
@@ -20,6 +21,7 @@ import { AdminResendWorkspaceInviteResolver } from "./admin-resend-workspace-inv
         AdminExtendSubscriptionResolver,
         AdminSetWorkspaceStatusResolver,
         AdminSetWorkspacePlanResolver,
+        AdminSetWorkspaceEnterpriseKeyResolver,
         AdminResendWorkspaceInviteResolver,
     ],
 })

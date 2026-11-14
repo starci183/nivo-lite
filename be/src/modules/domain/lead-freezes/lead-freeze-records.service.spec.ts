@@ -1,47 +1,60 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import { SCOPE, pageOf, wireScope } from "@tests/fixtures/builders/agent-graph-records.builder"
+import { ContactsService, ConversationContactsService } from "@modules/domain/contacts"
+import type { ContactWithIdentities } from "@modules/domain/contacts"
+import { MemoryContactFreezeStore } from "@tests/fixtures/builders/engine-core-stores.builder"
+import { CONTACT_FREEZE_STORE } from "./contact-freeze-store.port"
 import { LeadFreezesError, LeadFreezesErrorCode } from "./errors/lead-freezes.error"
 import { LeadFreezeRecordsService } from "./lead-freeze-records.service"
-import { freezeOf } from "./lead-freezes.mapper"
 import type { LeadFreeze } from "./lead-freezes.contracts"
 
-const rowOf = (id: string, data: RecordRow["data"], version = "2"): RecordRow => ({
-    id,
-    workspaceId: "ws-1",
-    version,
-    createdAt: "2026-11-04T10:00:00.000Z",
-    updatedAt: "2026-11-04T10:00:00.000Z",
-    data,
-})
-
-const FREEZE_ROW = rowOf("freeze-1", {
-    key: "lead:lead-1",
-    leadId: "lead-1",
+const FREEZE: LeadFreeze = {
+    id: "freeze-1",
+    version: "2",
+    key: "contact:lead-1",
+    contactId: "lead-1",
     conversationId: "c-1",
     status: "frozen",
     frozenRunId: "run-1",
+    agentId: null,
+    frozenAt: "2026-11-04T10:00:00.000Z",
+    frozenReason: null,
+    stepKey: null,
+    stepTitle: null,
+    customerName: null,
+    workItemId: null,
     episode: 1,
     failures: 1,
-    pending: { events: [] },
+    heldBy: null,
+    releasedAt: null,
+    releasedBy: null,
+    releaseReason: null,
+    pending: [],
+}
+
+/** A contact as the contacts store answers it. */
+const contactOf = (id: string, displayName: string): ContactWithIdentities => ({
+    id,
+    workspaceId: "ws-1",
+    displayName,
+    tags: [],
+    state: "active",
+    createdAt: "2026-11-04T10:00:00.000Z",
+    updatedAt: "2026-11-04T10:00:00.000Z",
+    identities: [],
 })
 
-const written = (row: RecordRow): EngineResult => ({ ok: true, row, version: row.version })
-
-const build = async () => {
-    const engine = mock<EntityEngineService>()
-    wireScope(engine)
-    const mutations = mock<EntityMutationService>()
+const build = async (conversations?: ConversationContactsService, contacts?: ContactsService, rows: ReadonlyArray<LeadFreeze> = [FREEZE]) => {
+    const store = new MemoryContactFreezeStore(rows)
     const moduleRef = await Test.createTestingModule({
         providers: [
             LeadFreezeRecordsService,
-            { provide: EntityEngineService, useValue: engine },
-            { provide: EntityMutationService, useValue: mutations },
+            { provide: CONTACT_FREEZE_STORE, useValue: store },
+            ...(conversations === undefined ? [] : [{ provide: ConversationContactsService, useValue: conversations }]),
+            ...(contacts === undefined ? [] : [{ provide: ContactsService, useValue: contacts }]),
         ],
     }).compile()
-    return { service: moduleRef.get(LeadFreezeRecordsService), engine, mutations }
+    return { service: moduleRef.get(LeadFreezeRecordsService), store }
 }
 
 const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
@@ -54,150 +67,80 @@ const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
 }
 
 describe("LeadFreezeRecordsService reads", () => {
-    it("finds a freeze by its key, its run and its lead through declared indexes, and by its id", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValue(pageOf([FREEZE_ROW]))
-        engine.get.mockResolvedValue(FREEZE_ROW)
+    it("finds a freeze by its key, its run and its lead, and by its id", async () => {
+        const { service } = await build()
 
-        await expect(service.byKey("ws-1", "lead:lead-1")).resolves.toMatchObject({ id: "freeze-1", status: "frozen" })
+        await expect(service.byKey("ws-1", "contact:lead-1")).resolves.toMatchObject({ id: "freeze-1", status: "frozen" })
         await expect(service.byRun("ws-1", "run-1")).resolves.toMatchObject({ frozenRunId: "run-1" })
-        await expect(service.byLead("ws-1", "lead-1")).resolves.toMatchObject({ leadId: "lead-1" })
-        await expect(service.byId("ws-1", "freeze-1")).resolves.toMatchObject({ key: "lead:lead-1" })
-
-        const wheres = engine.list.mock.calls.map((call) => call[1].where)
-        expect(wheres).toEqual([
-            { op: "eq", field: "key", value: "lead:lead-1" },
-            { op: "eq", field: "frozenRunId", value: "run-1" },
-            { op: "eq", field: "leadId", value: "lead-1" },
-        ])
-        expect(engine.list.mock.calls[0]?.[1]).toMatchObject({
-            from: "agent.lead-freeze",
-            order: [["id", "asc"]],
-            page: { size: 1 },
-        })
+        await expect(service.byContact("ws-1", "lead-1")).resolves.toMatchObject({ contactId: "lead-1" })
+        await expect(service.byId("ws-1", "freeze-1")).resolves.toMatchObject({ key: "contact:lead-1" })
     })
 
     it("answers null for a freeze that is not there, and joins the caller's transaction when given one", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValue(pageOf([]))
-        engine.get.mockResolvedValue(null)
+        const { service, store } = await build()
+        const find = jest.spyOn(store, "find")
         const manager = mockEntityManager()
 
-        await expect(service.byKey("ws-1", "lead:x", manager)).resolves.toBeNull()
+        await expect(service.byKey("ws-1", "contact:x", manager)).resolves.toBeNull()
         await expect(service.byId("ws-1", "x")).resolves.toBeNull()
-        expect(engine.within).toHaveBeenCalledWith(manager, "ws-1", expect.any(Function))
+        expect(find).toHaveBeenCalledWith("ws-1", { key: "contact:x" }, manager)
     })
 
-    it("lists the customers frozen or retried, oldest first, by the status index", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValueOnce(pageOf([FREEZE_ROW])).mockResolvedValueOnce(pageOf([]))
+    it("lists the customers frozen or retried, oldest first, by status", async () => {
+        const retrying = { ...FREEZE, id: "freeze-2", key: "contact:lead-2", status: "retrying" as const, frozenAt: "2026-11-03T10:00:00.000Z" }
+        const released = { ...FREEZE, id: "freeze-3", key: "contact:lead-3", status: "released" as const }
+        const { service } = await build(undefined, undefined, [FREEZE, retrying, released])
 
-        await expect(service.holding("ws-1")).resolves.toHaveLength(1)
-
-        expect(engine.list.mock.calls.map((call) => call[1].where)).toEqual([
-            { op: "eq", field: "status", value: "frozen" },
-            { op: "eq", field: "status", value: "retrying" },
-        ])
-        expect(engine.list.mock.calls[0]?.[1].order).toEqual([
-            ["frozenAt", "asc"],
-            ["id", "asc"],
-        ])
+        await expect(service.holding("ws-1")).resolves.toMatchObject([{ id: "freeze-1" }, { id: "freeze-2" }])
     })
 })
 
 describe("LeadFreezeRecordsService reads of the other capabilities", () => {
-    it("reads the lead of a conversation and the name of a lead", async () => {
-        const { service, engine } = await build()
-        engine.get
-            .mockResolvedValueOnce(rowOf("c-1", { leadId: "lead-1" }))
-            .mockResolvedValueOnce(rowOf("lead-1", { contactName: "A" }))
-        await expect(service.leadOfConversation("ws-1", "c-1")).resolves.toBe("lead-1")
-        await expect(service.nameOfLead("ws-1", "lead-1")).resolves.toBe("A")
-        engine.get.mockResolvedValue(null)
-        await expect(service.leadOfConversation("ws-1", "c-2")).resolves.toBeNull()
+    it("reads the contact of a conversation, its aliases and its name from the contacts; nothing without them", async () => {
+        const conversations = mock<ConversationContactsService>()
+        conversations.contactOf.mockImplementation((_ws, id) => Promise.resolve(id === "c-1" ? "contact-1" : null))
+        const contacts = mock<ContactsService>()
+        contacts.aliasesOf.mockResolvedValue(["contact-1", "contact-old"])
+        contacts.get.mockResolvedValue(contactOf("contact-1", "A"))
+        const { service } = await build(conversations, contacts)
+        await expect(service.contactOfConversation("ws-1", "c-1")).resolves.toBe("contact-1")
+        await expect(service.contactOfConversation("ws-1", "c-2")).resolves.toBeNull()
+        await expect(service.aliasesOf("ws-1", "contact-1")).resolves.toEqual(["contact-1", "contact-old"])
+        await expect(service.nameOfContact("ws-1", "contact-1")).resolves.toBe("A")
+        const bare = await build()
+        await expect(bare.service.contactOfConversation("ws-1", "c-1")).resolves.toBeNull()
+        await expect(bare.service.aliasesOf("ws-1", "contact-1")).resolves.toEqual(["contact-1"])
     })
 
-    it("finds the frozen customer a transfer pays by the transfer code of their orders", async () => {
-        const { service, engine } = await build()
-        const freeze: LeadFreeze = freezeOf(FREEZE_ROW)
-        const other: LeadFreeze = { ...freeze, id: "freeze-2", leadId: "lead-2" }
-        const noLead: LeadFreeze = { ...freeze, id: "freeze-3", leadId: null }
-        engine.get.mockResolvedValue(rowOf("tx-1", { reference: "DH202611090001 chuyen khoan" }))
-        engine.list
-            .mockResolvedValueOnce(pageOf([rowOf("o-9", { orderNo: "DH-20261109-0009" })]))
-            .mockResolvedValueOnce(pageOf([rowOf("o-1", { orderNo: "DH-20261109-0001" })]))
-
-        await expect(service.leadOfTransaction("ws-1", "tx-1", [noLead, other, freeze])).resolves.toMatchObject({
-            id: "freeze-1",
-        })
-        expect(engine.list.mock.calls.map((call) => call[1].where)).toEqual([
-            { op: "eq", field: "leadId", value: "lead-2" },
-            { op: "eq", field: "leadId", value: "lead-1" },
-        ])
-        expect(engine.list.mock.calls[0]?.[1]).toMatchObject({
-            from: "sales.order",
-            order: [
-                ["createdAt", "desc"],
-                ["id", "desc"],
-            ],
-        })
-
-        engine.get.mockResolvedValue(rowOf("tx-2", { reference: null }))
-        await expect(service.leadOfTransaction("ws-1", "tx-2", [freeze])).resolves.toBeNull()
-        engine.get.mockResolvedValue(rowOf("tx-3", { reference: "nothing" }))
-        engine.list.mockResolvedValue(pageOf([rowOf("o-1", { orderNo: "DH-20261109-0001" })]))
-        await expect(service.leadOfTransaction("ws-1", "tx-3", [freeze])).resolves.toBeNull()
-    })
 })
 
 describe("LeadFreezeRecordsService writes", () => {
     it("ensures one freeze per customer key, and finds the one a racer wrote first", async () => {
-        const { service, engine, mutations } = await build()
-        mutations.mutate.mockResolvedValueOnce(written(FREEZE_ROW))
-        const subject = { key: "lead:lead-1", leadId: "lead-1", conversationId: "c-1" }
+        const { service, store } = await build(undefined, undefined, [])
+        const subject = { key: "contact:lead-1", contactId: "lead-1", conversationId: "c-1" }
 
-        await expect(service.ensure("ws-1", subject, { status: "released", pending: [] })).resolves.toMatchObject({
-            id: "freeze-1",
-        })
-        expect(mutations.mutate).toHaveBeenCalledWith(
-            SCOPE,
-            {
-                op: "ensure",
-                entity: "agent.lead-freeze",
-                match: "key",
-                values: {
-                    status: "released",
-                    pending: { events: [] },
-                    key: "lead:lead-1",
-                    leadId: "lead-1",
-                    conversationId: "c-1",
-                },
-            },
-            "job",
-        )
+        const made = await service.ensure("ws-1", subject, { status: "released", pending: [] })
+        expect(made).toMatchObject({ key: "contact:lead-1", contactId: "lead-1", conversationId: "c-1", status: "released" })
+        expect(store.writes).toEqual([{ op: "insert", id: made.id, values: { status: "released", pending: [] } }])
 
-        mutations.mutate.mockResolvedValueOnce({
-            ok: false,
-            reason: "taken",
-            constraint: "freeze_key",
-            refusal: "lead-freeze-taken",
-        })
-        engine.list.mockResolvedValueOnce(pageOf([FREEZE_ROW]))
-        await expect(service.ensure("ws-1", subject, {})).resolves.toMatchObject({ id: "freeze-1" })
+        await expect(service.ensure("ws-1", subject, {})).resolves.toMatchObject({ id: made.id })
+        expect(store.writes).toHaveLength(1)
 
-        mutations.mutate.mockResolvedValueOnce({ ok: false, reason: "invalid" })
-        engine.list.mockResolvedValueOnce(pageOf([]))
+        jest.spyOn(store, "insert").mockResolvedValueOnce(null)
+        jest.spyOn(store, "find").mockResolvedValueOnce(null)
         await expect(codeOf(service.ensure("ws-1", subject, {}))).resolves.toBe(LeadFreezesErrorCode.RecordUnreadable)
     })
 })
 
 describe("LeadFreezeRecordsService writes under the version read", () => {
     it("patches under the version read, builds again after another writer moved the freeze, and writes nothing on a null build", async () => {
-        const { service, engine, mutations } = await build()
-        engine.get.mockResolvedValueOnce(FREEZE_ROW).mockResolvedValueOnce(rowOf("freeze-1", FREEZE_ROW.data, "3"))
-        mutations.mutate
-            .mockResolvedValueOnce({ ok: false, reason: "stale" })
-            .mockResolvedValueOnce(written(rowOf("freeze-1", { ...FREEZE_ROW.data, status: "retrying" }, "4")))
+        const { service, store } = await build()
+        const update = jest.spyOn(store, "update")
+        // Another writer moves the freeze between the first read and its write.
+        update.mockImplementationOnce(async (ws, id, _expected, values) => {
+            await MemoryContactFreezeStore.prototype.update.call(store, ws, id, "2", {})
+            return MemoryContactFreezeStore.prototype.update.call(store, ws, id, "2", values)
+        })
         const versions: Array<string> = []
 
         const patched = await service.patch("ws-1", "freeze-1", (freeze) => {
@@ -207,32 +150,27 @@ describe("LeadFreezeRecordsService writes under the version read", () => {
 
         expect(patched).toMatchObject({ status: "retrying", version: "4" })
         expect(versions).toEqual(["2", "3"])
-        expect(mutations.mutate.mock.calls[1]?.[1]).toEqual({
-            op: "update",
-            entity: "agent.lead-freeze",
-            key: "freeze-1",
-            expected: "3",
-            values: { status: "retrying" },
-        })
+        expect(update.mock.calls[1]?.slice(0, 4)).toEqual(["ws-1", "freeze-1", "3", { status: "retrying" }])
 
-        engine.get.mockResolvedValueOnce(FREEZE_ROW)
         await expect(service.patch("ws-1", "freeze-1", () => null)).resolves.toBeNull()
     })
 
-    it("refuses a freeze that is gone, a write the engine rejects, and one that keeps losing the race", async () => {
-        const { service, engine, mutations } = await build()
-        engine.get.mockResolvedValueOnce(null)
-        await expect(codeOf(service.patch("ws-1", "freeze-1", () => ({ status: "frozen" })))).resolves.toBe(
+    it("refuses a freeze that is gone, one removed before its write, and one that keeps losing the race", async () => {
+        const gone = await build(undefined, undefined, [])
+        await expect(codeOf(gone.service.patch("ws-1", "freeze-1", () => ({ status: "frozen" })))).resolves.toBe(
             LeadFreezesErrorCode.RecordUnreadable,
         )
-        engine.get.mockResolvedValueOnce(FREEZE_ROW)
-        mutations.mutate.mockResolvedValueOnce({ ok: false, reason: "invalid" })
-        await expect(codeOf(service.patch("ws-1", "freeze-1", () => ({ status: "frozen" })))).resolves.toBe(
+        const removed = await build()
+        jest.spyOn(removed.store, "update").mockImplementationOnce(() => {
+            removed.store.rows.splice(0, 1)
+            return Promise.resolve(null)
+        })
+        await expect(codeOf(removed.service.patch("ws-1", "freeze-1", () => ({ status: "frozen" })))).resolves.toBe(
             LeadFreezesErrorCode.RecordUnreadable,
         )
-        engine.get.mockResolvedValue(FREEZE_ROW)
-        mutations.mutate.mockResolvedValue({ ok: false, reason: "stale" })
-        await expect(codeOf(service.patch("ws-1", "freeze-1", () => ({ status: "frozen" })))).resolves.toBe(
+        const raced = await build()
+        jest.spyOn(raced.store, "update").mockResolvedValue(null)
+        await expect(codeOf(raced.service.patch("ws-1", "freeze-1", () => ({ status: "frozen" })))).resolves.toBe(
             LeadFreezesErrorCode.Contended,
         )
     })

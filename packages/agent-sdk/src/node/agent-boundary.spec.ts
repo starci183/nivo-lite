@@ -1,5 +1,4 @@
 import { z } from "../schema/zod-entry"
-import type { DataRight } from "../rights/rights.types"
 import { EXAMPLE_TURN } from "../tests/fixtures/node-examples"
 import { scriptedNodePorts } from "../tests/fixtures/node-ports"
 import { defineEffect, defineTool } from "./effect"
@@ -16,32 +15,26 @@ import type { NodeDefinition, NodeModelRequest } from "./node.types"
  * runs. There is no other way out of the loop: a turn is a call, the output, or "I am confused".
  */
 
-const WRITE_ORDER: DataRight = { kind: "order", access: "write", scope: "turn", fields: ["status"] }
-
 const send = defineEffect({
-    id: "nivo.lead.message.send",
+    id: "nivo.tool.customer.message.send",
     title: { key: "t" },
     payload: z.object({ conversationId: z.string(), text: z.string() }),
-    rights: [],
 })
 const settle = defineEffect({
-    id: "nivo.payment.order.settle",
+    id: "nivo.tool.payment.order.settle",
     title: { key: "t" },
     payload: z.object({ orderId: z.string() }),
-    rights: [WRITE_ORDER],
 })
 const refund = defineEffect({
     id: "payment.order.refund",
     title: { key: "t" },
     payload: z.object({ orderId: z.string() }),
-    rights: [],
 })
 const find = defineTool({
     id: "catalog.item.find",
     title: { key: "t" },
     args: z.object({ words: z.string().max(100) }),
     result: z.object({ items: z.array(z.string()) }),
-    rights: [],
     mutates: false,
 })
 const ledger = defineTool({
@@ -49,7 +42,6 @@ const ledger = defineTool({
     title: { key: "t" },
     args: z.object({ orderId: z.string() }),
     result: z.object({ lines: z.array(z.string()) }),
-    rights: [],
     mutates: false,
 })
 
@@ -63,8 +55,7 @@ const replyStep: NodeDefinition = defineNode({
     params: z.object({}),
     input: z.object({ thread: z.array(z.string()) }),
     output: OUTPUT,
-    rights: [],
-    effects: ["nivo.lead.message.send", "nivo.payment.order.settle"],
+    effects: ["nivo.tool.customer.message.send", "nivo.tool.payment.order.settle"],
     tools: ["catalog.item.find", "ledger.entry.read"],
     run: async (input, context) => {
         const decision = await context.agent.run({ goal: "Answer the customer.", input, output: OUTPUT, maxTurns: 4 })
@@ -76,15 +67,21 @@ const replyStep: NodeDefinition = defineNode({
 /** Everything installed in the app, and everything the agent's module declares for it: both wider than the step. */
 const EFFECTS = new Map([send, settle, refund].map((effect) => [effect.id, effect]))
 const TOOLS = new Map([find, ledger].map((tool) => [tool.id, tool]))
-const AGENT_TOOLS = ["nivo.lead.message.send", "nivo.payment.order.settle", "payment.order.refund", "catalog.item.find", "ledger.entry.read"]
+const AGENT_TOOLS = ["nivo.tool.customer.message.send", "nivo.tool.payment.order.settle", "payment.order.refund", "catalog.item.find", "ledger.entry.read"]
 
-/** The workflow's grant: the catalogue tool by name, no ledger tool, and no right to write an order. */
-const GRANT: NodeRunRequest["grant"] = { rights: [], tools: ["catalog.item.find"] }
+/** The workflow's grant: the catalogue tool by name, no ledger tool. */
+const GRANT: NodeRunRequest["grant"] = { tools: ["catalog.item.find"] }
 
 const DONE = { done: { said: "ok" } }
 
+/** One call the scripted model makes. */
+interface ModelCall {
+    readonly tool: string
+    readonly args: Readonly<Record<string, unknown>>
+}
+
 /** Runs the step with the model scripted to make one call, then finish; answers what ran and what the model was told. */
-const attempt = async (call: { readonly tool: string; readonly args: Readonly<Record<string, unknown>> }) => {
+const attempt = async (call: ModelCall) => {
     const fake = scriptedNodePorts({ model: [{ call }, DONE], tools: [{ items: ["rose"] }] })
     const json = jest.spyOn(fake.ports.model, "json")
     const request: NodeRunRequest = {
@@ -105,8 +102,8 @@ const attempt = async (call: { readonly tool: string; readonly args: Readonly<Re
 
 describe("agent boundary: an engine agent calls only what its step declares and its workflow grants", () => {
     it("runs a call of a declared, granted effect and a declared, granted tool", async () => {
-        const sent = await attempt({ tool: "nivo.lead.message.send", args: { conversationId: "c-1", text: "Dạ có ạ." } })
-        expect(sent.fake.executed.map((one) => one.id)).toEqual(["nivo.lead.message.send"])
+        const sent = await attempt({ tool: "nivo.tool.customer.message.send", args: { conversationId: "c-1", text: "D\u1ea1 c\u00f3 \u1ea1." } })
+        expect(sent.fake.executed.map((one) => one.id)).toEqual(["nivo.tool.customer.message.send"])
         expect(sent.told[0]).toMatchObject({ ok: true })
 
         const looked = await attempt({ tool: "catalog.item.find", args: { words: "hoa" } })
@@ -144,11 +141,10 @@ describe("agent boundary: an engine agent calls only what its step declares and 
         expect(told[0]).toMatchObject({ ok: false, refused: { code: "RIGHTS_DENIED" } })
     })
 
-    it("refuses a declared effect whose right the workflow did not grant", async () => {
-        const { fake, told } = await attempt({ tool: "nivo.payment.order.settle", args: { orderId: "o-1" } })
+    it("runs an effect its step declares: no data right stands between the step's code and its effect", async () => {
+        const { fake } = await attempt({ tool: "nivo.tool.payment.order.settle", args: { orderId: "o-1" } })
 
-        expect(fake.executed).toEqual([])
-        expect(told[0]).toMatchObject({ ok: false, refused: { code: "RIGHTS_DENIED" } })
+        expect(fake.executed).toMatchObject([{ id: "nivo.tool.payment.order.settle", payload: { orderId: "o-1" } }])
     })
 
     it("refuses arguments the tool's schema does not accept: the model cannot smuggle a member past it", async () => {
@@ -156,7 +152,7 @@ describe("agent boundary: an engine agent calls only what its step declares and 
         expect(extra.fake.toolCalls).toEqual([])
         expect(extra.told[0]).toMatchObject({ ok: false, refused: { code: "TOOL_ARGS_INVALID" } })
 
-        const wrong = await attempt({ tool: "nivo.lead.message.send", args: { conversationId: "c-1" } })
+        const wrong = await attempt({ tool: "nivo.tool.customer.message.send", args: { conversationId: "c-1" } })
         expect(wrong.fake.executed).toEqual([])
         expect(wrong.told[0]).toMatchObject({ ok: false, refused: { code: "EFFECT_PAYLOAD_INVALID" } })
     })

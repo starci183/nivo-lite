@@ -39,6 +39,11 @@ export interface ParamRef {
     readonly $ref: string
     /** What the param holds when the ref finds nothing. */
     readonly default?: JsonValue | undefined
+    /**
+     * `previous`: inside an `until` loop body, the ref reads its body step's output of the ROUND BEFORE (the default in round 1): how a
+     * round carries what the last one decided (coordinator ruling R13, 2026-11-14). Absent: the value as it stands now.
+     */
+    readonly round?: "previous" | undefined
 }
 
 /** One param of a graph node: a fixed value as written, or a ref resolved at run time. */
@@ -77,17 +82,63 @@ export const LOOP_ITEMS_PARAM = "items"
 /** The member of `item.*` that reads the position of the element, from 0. */
 export const LOOP_INDEX_MEMBER = "$index"
 
+/** The param of a for-each node that caps the list: at most this many items run, the rest are counted in `held`. */
+export const LOOP_MAX_PARAM = "max"
+
+/** The most items one loop runs (the cap `max` may lower, never raise). */
+export const LOOP_MAX = 50
+
 /**
- * What a for-each node answers once every iteration ended: the steps after the loop read only this, never a body step directly.
- * `results` holds the output of the last body node of each iteration, in order (null for a failed one).
+ * The param of a for-each node that names the body node whose output the loop gathers per item (`nivo/agent-graph@2`). Absent (a `@1`
+ * document): the output of the body node the item's iteration ended on.
+ */
+export const LOOP_COLLECT_PARAM = "collect"
+
+/**
+ * The param of a for-each node that names the member of an item that is its identity (a business id: `orderId`). Absent: the item's
+ * index. The identity is inside every body step's key, so the same call for two items is two calls and the same item re-run is one.
+ */
+export const LOOP_ITEM_KEY_PARAM = "itemKey"
+
+/** The longest item identity kept as it is; a longer one (or one with a character a step key cannot carry) is kept as a digest. */
+export const LOOP_ITEM_KEY_MAX = 64
+
+/** Two items of one list share an identity: the loop stops before any item runs (never a silent collapse into one). */
+export const FOREACH_ITEM_KEY_DUPLICATE = "FOREACH_ITEM_KEY_DUPLICATE"
+
+/** An item has no usable identity under the declared `itemKey` (absent, or not a string or a finite number): the loop stops before any item runs. */
+export const FOREACH_ITEM_KEY_MISSING = "FOREACH_ITEM_KEY_MISSING"
+
+/** One item in a for-each node's output: its identity and the output of the `collect` node (null when the item's route did not reach it). */
+export interface LoopItemOutput {
+    /** The item's identity (`itemKey`'s value, bounded, or its index). */
+    readonly key: string
+    /** The gathered output, or null. */
+    readonly output: JsonValue
+}
+
+/** The items past the cap: how many did not run in this round and the identity of the first of them. */
+export interface LoopHeld {
+    /** How many items were not run. */
+    readonly count: number
+    /** The identity of the first one not run. */
+    readonly firstKey: string
+}
+
+/**
+ * What a for-each node answers once every item ran: the steps after the loop read only this, never a body step directly. `items` holds,
+ * per item run and in order, its identity and the gathered output; `held` the items past the cap, or null when every item ran.
  */
 export interface LoopOutput {
-    /** The output of each iteration, in order. */
+    /** Each item that ran, in order. */
+    readonly items: ReadonlyArray<LoopItemOutput>
+    /** The items past the cap, or null. */
+    readonly held: LoopHeld | null
+    /**
+     * The gathered output of each item, in order (`items[i].output`).
+     * @deprecated A bridge for the `@1` templates that still read `steps.<loop>.output.results`; removed with their conversion.
+     */
     readonly results: ReadonlyArray<JsonValue>
-    /** How many iterations ended done. */
-    readonly okCount: number
-    /** The iterations that ended in a business failure, with it. */
-    readonly failed: ReadonlyArray<{ readonly index: number; readonly error: StepFailure }>
 }
 
 /** The element a body step works on. */
@@ -98,8 +149,38 @@ export interface LoopItem {
     readonly index: number
 }
 
-/** The memory key of a body step in one iteration: `<nodeKey>[<index>]`, so a resume runs only the iterations not done. */
-export const iterationKeyOf = (nodeKey: string, index: number): string => `${nodeKey}[${index}]`
+/** The opening and the closing of an item's identity in a body step's key, and what parts it from the body node. */
+const ITERATION_OPEN = "["
+const ITERATION_CLOSE_THEN_NODE = "]."
+
+/**
+ * The key of a body step in one item: `<loopKey>[<itemKey>].<nodeKey>` (the step path of the ledger, the memory and the stops), so a
+ * resume runs only what that item did not do, and the same call of two items is two calls. `itemKey` is the bounded identity.
+ */
+export const iterationKeyOf = (loopKey: string, itemKey: string, nodeKey: string): string =>
+    `${loopKey}${ITERATION_OPEN}${itemKey}${ITERATION_CLOSE_THEN_NODE}${nodeKey}`
+
+/** The parts of a body step's key. */
+export interface IterationKeyParts {
+    /** The for-each node. */
+    readonly loopKey: string
+    /** The item's identity. */
+    readonly itemKey: string
+    /** The body node. */
+    readonly nodeKey: string
+}
+
+/**
+ * The parts of a body step's key, or null for the key of a step outside every loop. A node key never holds `]` or `.`, so the body
+ * node is what follows the last `].`, and the loop is what precedes the first `[`.
+ */
+export const iterationKeyPartsOf = (stepKey: string): IterationKeyParts | null => {
+    const close = stepKey.lastIndexOf(ITERATION_CLOSE_THEN_NODE)
+    const open = stepKey.indexOf(ITERATION_OPEN)
+    if (close < 0 || open <= 0 || open > close) return null
+    const nodeKey = stepKey.slice(close + ITERATION_CLOSE_THEN_NODE.length)
+    return nodeKey === "" ? null : { loopKey: stepKey.slice(0, open), itemKey: stepKey.slice(open + 1, close), nodeKey }
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------------
 // Outcomes
@@ -193,7 +274,7 @@ export const LEAD_FACTS: readonly [
 /** One fact of a lead. */
 export type LeadFact = (typeof LEAD_FACTS)[number]
 
-/** How a value is masked for display: a secret is never shown; personal data shows its shape only (`09•••••12`). */
+/** How a value is masked for display: a secret is never shown; personal data shows its shape only (`09*****12`). */
 export type Sensitivity = "secret" | "pii"
 
 /** The lead facts that are personal data, masked for display by default. */
@@ -232,14 +313,14 @@ export interface StepMemory {
 }
 
 /**
- * Who a memory belongs to: the lead, else the conversation of a customer who is not a lead yet (the same key the lead freeze uses).
- * When the lead is created mid-run, the engine re-keys the conversation's entries to the lead (`LeadMemoryStore.adopt`).
+ * Who a memory belongs to: the contact (the engine's person), else the conversation of a person no contact holds yet (the same key the
+ * freeze uses). When the contact is named mid-run, the engine re-keys the conversation's entries to it (`LeadMemoryStore.adopt`).
  */
 export interface MemorySubject {
-    /** `lead:<id>` or `conversation:<id>`. */
+    /** `contact:<id>` or `conversation:<id>`. */
     readonly key: string
-    /** The lead, when known. */
-    readonly leadId: string | null
+    /** The contact, when known. */
+    readonly contactId: string | null
     /** The conversation, when known. */
     readonly conversationId: string | null
 }
@@ -268,6 +349,11 @@ export interface RefScope {
     readonly item?: LoopItem | undefined
     /** After an outcome step: the values it bound for its outcome; absent elsewhere. */
     readonly out?: Readonly<Record<string, JsonValue>> | undefined
+    /**
+     * Inside an `until` body: the outcomes of the body's steps in the ROUND BEFORE, by node key (empty in round 1); what a ref
+     * `{ round: "previous" }` reads (coordinator ruling R13; the engine fills it). Absent elsewhere.
+     */
+    readonly previous?: Readonly<Record<string, StepMemory>> | undefined
 }
 
 /** One write of memory: the outcome of one step, under its workflow's namespace. Idempotent by (subject, runId, nodeKey). */
@@ -296,7 +382,7 @@ export interface MemoryWrite {
 export type MemoryReader = "step" | "display"
 
 /**
- * The store of lead memory. Implemented once in the engine (`be/src/modules/domain/lead-memory`), on the `agent.lead-memory` entity.
+ * The store of lead memory. Implemented once in the engine (`be/src/modules/domain/lead-memory`), on the contacts' memory table.
  * Every method is workspace-scoped.
  */
 export interface LeadMemoryStore {
@@ -306,10 +392,10 @@ export interface LeadMemoryStore {
     stepOf(workspaceId: string, subject: MemorySubject, runId: string, nodeKey: string): Promise<StepMemory | null>
     /** Writes one step's outcome and the facts it proves; a repeat of the same (runId, nodeKey) changes nothing. */
     write(workspaceId: string, write: MemoryWrite): Promise<void>
-    /** Moves a conversation's entries to the lead it became, so the memory is one per customer. */
-    adopt(workspaceId: string, conversationId: string, leadId: string): Promise<void>
-    /** Marks the lead closed (won, lost): retention counts from here. */
-    closed(workspaceId: string, leadId: string, at: Date): Promise<void>
+    /** Moves a conversation's entries to the contact it is, so the memory is one per person. */
+    adopt(workspaceId: string, conversationId: string, contactId: string): Promise<void>
+    /** Marks the contact's memory closed: retention counts from here. */
+    closed(workspaceId: string, contactId: string, at: Date): Promise<void>
     /** Deletes what retention says is due; answers how many entries went. */
     sweep(workspaceId: string, now: Date): Promise<number>
 }
@@ -326,7 +412,7 @@ export interface MemoryRetention {
 
 /**
  * How long memory is kept. Proposed policy: entries of a lead stay while the lead is open; 30 days after it closes they go (the lead
- * record itself, orders and payments stay — they are the business's own records). A lead that never closes keeps 365 days from its last
+ * record itself, orders and payments stay - they are the business's own records). A lead that never closes keeps 365 days from its last
  * write. A conversation that never became a lead keeps 30 days from its last write.
  */
 export const MEMORY_RETENTION: MemoryRetention = { afterCloseDays: 30, openIdleDays: 365, conversationIdleDays: 30 }

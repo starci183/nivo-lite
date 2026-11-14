@@ -10,14 +10,14 @@ area: team-permissions
 Block `TeamPanes` (components/blocks/TeamPanes/component.tsx) with frames `TeamPeopleList`, `TeamDetail`, composites `TeamMemberDetail`, `TeamInviteDrawer`, `TeamInviteDetail`. Shots `1440.png`, `390.png`. Grammar paths under `node_modules/@starci/grammar/dist/core/`. Overlays ("N", red dot) are not content.
 
 ## Khung console (thanh trên, thanh bên)
-Vì sao: SAI — (partly right, see the flagged part) white top bar (workspace identity, round language dropdown, theme toggle, Sprout avatar) and white sidebar; the current item "Đội ngũ" is a pink pill. SAI in the sidebar: "Đội ngũ" and "Quyền" are separate items while "Quyền" is also a TAB of Đội ngũ, and "Giao quyền" (authority) sits above: three permission-like entries, with "Quyền" duplicated as a sidebar item and a tab. The theme toggle has no law behind it (CHƯA RÕ).
+Vì sao: SAI — (partly right, see the flagged part) white top bar (workspace identity, round language dropdown, theme toggle, Sprout avatar) and white sidebar; the current item "Đội ngũ" is a pink pill. The theme toggle has no law behind it (CHƯA RÕ).
 Luật: `nivo-surface-layering.md`, `locale-switch-round-dropdown.md`, `owner-colors-exact.md`.
 Grammar: `TopBar`, `Sidebar`, `node_modules/@starci/grammar/dist/core/composite/Sidebar/index.d.ts`.
 
-## Dải đầu trang (đường dẫn, "Đội ngũ", mô tả, nút "+ Mời thêm người", tab Thành viên / Quyền)
-Vì sao: SAI — flush-left breadcrumb, title, 14 muted sublabel and tab layer one in the white band are right; the invite command is the one primary CTA with a plus icon, correct for a primary CTA. Defects: a blank 64px pink strip above the band, and the band content starts at x 268 (full-bleed pane) while the same band on Billing starts at x 288 (80rem card pane) — fine for a Layout B pane but the band must align with its own body.
+## Dải đầu trang (đường dẫn, "Đội ngũ", mô tả, nút "+ Mời thêm người")
+Vì sao: SAI — flush-left breadcrumb, title and 14 muted sublabel in the white band are right (no tab row: the page has one view); the invite command is the one primary CTA with a plus icon, correct for a primary CTA. Defects: a blank 64px pink strip above the band, and the band content starts at x 268 (full-bleed pane) while the same band on Billing starts at x 288 (80rem card pane) — fine for a Layout B pane but the band must align with its own body.
 Luật: `nivo-surface-layering.md`, `page-header-left-sublabel-xs.md`, `pink-page-surface-rule.md`.
-Grammar: `PageHeader tabs`, `node_modules/@starci/grammar/dist/core/frame/PageHeader/index.d.ts`; `Button intent="commit"`.
+Grammar: `PageHeader`, `node_modules/@starci/grammar/dist/core/frame/PageHeader/index.d.ts`; `Button intent="commit"`.
 
 ## Cột trái: ô tìm "Tìm theo tên hoặc email" và tab lọc (Tất cả, Thành viên 2, Lời mời 0)
 Vì sao: the list pane's head: search field then filter tabs (underline = secondary tabs) with grey count chips and grey 0 shown on filter tabs, per the law. "Tất cả" and "Thành viên" carry the same people (all vs members), the third tab is invites.

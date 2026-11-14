@@ -1,7 +1,24 @@
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { DocumentRefusalCode } from "./document-readers.contracts"
-import { acceptsName, extensionOf, isLockedOffice, kindOf } from "./document-kind.policy"
+import { acceptsName as acceptsNameSubject, extensionOf as extensionOfSubject, isLockedOffice as isLockedOfficeSubject, kindOf as kindOfSubject } from "./document-kind.policy"
+
+const SUBJECT = Symbol("document-kind.policy")
+
+describe("document-kind.policy built the way Nest does", () => {
+    let acceptsName: typeof acceptsNameSubject
+    let extensionOf: typeof extensionOfSubject
+    let isLockedOffice: typeof isLockedOfficeSubject
+    let kindOf: typeof kindOfSubject
+
+    beforeAll(async () => {
+        const moduleRef = await Test.createTestingModule({
+            providers: [{ provide: SUBJECT, useValue: mock<{ acceptsName: typeof acceptsNameSubject; extensionOf: typeof extensionOfSubject; isLockedOffice: typeof isLockedOfficeSubject; kindOf: typeof kindOfSubject }>({ acceptsName: acceptsNameSubject, extensionOf: extensionOfSubject, isLockedOffice: isLockedOfficeSubject, kindOf: kindOfSubject }) }],
+        }).compile()
+        ;({ acceptsName, extensionOf, isLockedOffice, kindOf } = moduleRef.get<{ acceptsName: typeof acceptsNameSubject; extensionOf: typeof extensionOfSubject; isLockedOffice: typeof isLockedOfficeSubject; kindOf: typeof kindOfSubject }>(SUBJECT))
+    })
 
 const fixture = (name: string): Uint8Array => new Uint8Array(readFileSync(join(__dirname, "fixtures", name)))
 
@@ -79,4 +96,5 @@ describe("document kind policy", () => {
         expect(isLockedOffice(fixture("locked.docx"))).toBe(true)
         expect(isLockedOffice(fixture("legacy.doc"))).toBe(false)
     })
+})
 })

@@ -6,6 +6,7 @@ import { SOURCE_PART_ROWS } from "@tests/fixtures/builders/knowledge-sources.bui
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
+import { VectorSyncService } from "@modules/domain/vector-sync"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
 import { KnowledgeSourceEntity } from "./persistence/entities"
@@ -18,6 +19,7 @@ const LATER_PARTS = { workspaceId: WS, origin: "part:s1" }
 /** What a write of the table answers. */
 const WRITTEN = {}
 
+/** The service with no vector sync bound (the sync is optional: a deployment without an index has none). */
 const build = async (em: MockEntityManager) => {
     const queue = mock<KnowledgeQueue>()
     const progress = mock<KnowledgeProgressService>()
@@ -30,6 +32,23 @@ const build = async (em: MockEntityManager) => {
         ],
     }).compile()
     return { service: moduleRef.get(SourcePartsService), queue, progress }
+}
+
+/** The service with a vector sync bound; its double comes back to be read by the case. */
+const buildWithSync = async (em: MockEntityManager) => {
+    const queue = mock<KnowledgeQueue>()
+    const progress = mock<KnowledgeProgressService>()
+    const vectorSync = mock<VectorSyncService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            SourcePartsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: KnowledgeQueue, useValue: queue },
+            { provide: KnowledgeProgressService, useValue: progress },
+            { provide: VectorSyncService, useValue: vectorSync },
+        ],
+    }).compile()
+    return { service: moduleRef.get(SourcePartsService), queue, progress, vectorSync }
 }
 
 describe("SourcePartsService splitLong", () => {
@@ -110,6 +129,29 @@ describe("SourcePartsService removeWhole", () => {
             ],
         ])
         expect(tx.em.delete).toHaveBeenCalledWith(KnowledgeSourceEntity, LATER_PARTS)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("writes the vector index's sync event of the source and each part in the delete's transaction", async () => {
+        const tx = fakeTransaction(
+            mockEntityManager({
+                find: [KnowledgeSourceEntity, [SOURCE_PART_ROWS.later]],
+                delete: [KnowledgeSourceEntity, WRITTEN],
+            }),
+        )
+        queueQueryBuilders(tx.em, [{ execute: { raw: [{ title: "Plan (1/2)" }] } }])
+        const { service, vectorSync } = await buildWithSync(tx.em)
+
+        await service.removeWhole(WS, "s1")
+
+        expect(vectorSync.changedSource.mock.calls.map(([workspace, source]) => [workspace, source])).toEqual([
+            [WS, "s1"],
+            [WS, "p2"],
+        ])
+        // Both events ride the transaction's manager, the one the delete ran in.
+        const managers: ReadonlyArray<unknown> = vectorSync.changedSource.mock.calls.map((call): unknown => call[2])
+        expect(typeof Reflect.get(Object(managers[0]), "transaction")).toBe("function")
+        expect(managers[1]).toBe(managers[0])
         expect(tx.commits).toBe(1)
     })
 

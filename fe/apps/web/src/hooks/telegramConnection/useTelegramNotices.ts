@@ -35,6 +35,10 @@ export const useTelegramNotices = (
                       ...(stored === WEBHOOK_REFUSED_CODE ? { description: t("webhookRefusedHint") } : {}),
                   },
               ]),
+        // Connected, yet Telegram cannot be read at the moment: neutral and informative (a refused token is the stored error above).
+        ...(isLive && page.attention === "degraded"
+            ? [{ id: "degraded", tone: "informative" as const, title: t("degradedTitle"), description: t("degradedBody") }]
+            : []),
         ...(command === "" ? [] : [{ id: "command", tone: "negative" as const, title: command }]),
         ...(data !== undefined && connectionCheckOf(data).localOnly
             ? [{ id: "local", tone: "informative" as const, title: t("localTitle"), description: t("localBody") }]

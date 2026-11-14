@@ -41,5 +41,5 @@ export const FIELD_PATTERN: RegExp = /^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z0-9_-]{1,64
 /** A relation or measure name: a letter, then letters and digits. */
 export const IDENT_PATTERN: RegExp = /^[A-Za-z][A-Za-z0-9]*$/
 
-/** An entity name: `<module>.<name>`, as a registry id. */
+/** An entity name, as a registry id: `<package>.<agent>.<domain>` (`blocks-core.video.project`), or the `<module>.<name>` of a type not yet qualified. */
 export const ENTITY_PATTERN: RegExp = /^[a-z][a-z0-9-]*\.[a-z][a-zA-Z0-9.-]*$/

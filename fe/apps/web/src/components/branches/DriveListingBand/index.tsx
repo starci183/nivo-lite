@@ -1,5 +1,11 @@
 import { Alert, Button, CheckboxGroup, EmptyNotice, Section, type PresentationState } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
+
+/** Why the add command is disabled, only when the listing says so. */
+const disabledReasonOf = (disabledReason: string | undefined) => (disabledReason === undefined ? {} : { disabledReason })
+
+/** The `isLoading` prop, spread only when the caller states it (an absent flag stays absent). */
+const loadingOf = (isLoading: boolean | undefined) => (isLoading === undefined ? {} : { isLoading })
 /** One file the owner can tick: its name, the line under it, and whether NIVO can read it at all. */
 interface DriveFileChoice {
     readonly value: string
@@ -44,14 +50,14 @@ export const DriveListingBand = (props: DriveListingBandProps) => {
     const { listing } = props
     return (
         <Section
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            {...loadingOf(props.isLoading)}
             title={listing.title}
             meta={listing.count}
             headingLevel={3}
         >
             {listing.empty === undefined ? (
                 <CheckboxGroup
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    {...loadingOf(props.isLoading)}
                     label={listing.filesLabel}
                     isLabelHidden
                     name="drive-files"
@@ -69,7 +75,7 @@ export const DriveListingBand = (props: DriveListingBandProps) => {
             )}
             {listing.notices.map((notice) => (
                 <Alert
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    {...loadingOf(props.isLoading)}
                     key={notice.id}
                     tone={notice.tone}
 
@@ -77,20 +83,16 @@ export const DriveListingBand = (props: DriveListingBandProps) => {
                 />
             ))}
             {listing.empty === undefined ? (
-                <>
-                    <Button
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                <Button
+                        {...loadingOf(props.isLoading)}
                         intent="commit"
                         isPending={listing.add.isPending}
                         isDisabled={listing.add.isDisabled}
-                        {...(listing.add.disabledReason === undefined
-                            ? {}
-                            : { disabledReason: listing.add.disabledReason })}
+                        {...disabledReasonOf(listing.add.disabledReason)}
                         onPress={props.on.add}
                     >
                         {listing.add.label}
                     </Button>
-                </>
             ) : null}
         </Section>
     )

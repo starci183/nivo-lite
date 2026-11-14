@@ -2,12 +2,12 @@ import type { SourceState } from "@modules/domain/knowledge-sources"
 import type { SourceRecordRef, ReviewedSourceRef } from "./public-documents.contracts"
 
 /**
- * Whether an internal source changed since the owner approved a public document drafted from it: it is gone, it became public (so it is
- * not the internal text that was read), or its text hash differs. A hash that is null means the text is being read again: the new text
- * is not known yet, so the source counts as changed only once its hash is back and differs.
+ * Whether a source changed since the owner approved a public document drafted from it: it is gone, it left the public area (it was
+ * moved to the internal area, so customers may no longer read what it says), or its text hash differs. A hash that is null means the
+ * text is being read again: the new text is not known yet, so the source counts as changed only once its hash is back and differs.
  */
 export const hasChanged = (recorded: SourceRecordRef, current: SourceState | undefined): boolean => {
-    if (current?.visibility !== "internal") return true
+    if (current?.visibility !== "public") return true
     return current.contentHash !== null && current.contentHash !== recorded.contentHash
 }
 

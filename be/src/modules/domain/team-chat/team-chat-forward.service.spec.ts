@@ -113,3 +113,20 @@ describe("TeamChatForwardService forward", () => {
         expect(result.refusal).toBe(TeamChatErrorCode.BodyEmpty)
     })
 })
+
+describe("TeamChatForwardService and the NIVO room of the founder", () => {
+    it("refuses a forward INTO the founder's NIVO room (read-only), and still forwards a line out of it", async () => {
+        const { subject, store, access } = await build()
+        const nivo = roomOf({ id: TO_ROOM, kind: "direct", name: null, directKey: `system:nivo|user:${ANA}` })
+        access.visibleRoom.mockImplementation((_ws, _viewer, roomId) =>
+            Promise.resolve(roomId === TO_ROOM ? nivo : roomOf({ id: FROM_ROOM })),
+        )
+        expect(refusalOf(await subject.forward(WS, ANA, MSG, TO_ROOM))).toBe(TeamChatErrorCode.Forbidden)
+        expect(store.insertText).not.toHaveBeenCalled()
+
+        access.visibleRoom.mockImplementation((_ws, _viewer, roomId) =>
+            Promise.resolve(roomId === FROM_ROOM ? roomOf({ ...nivo, id: FROM_ROOM }) : roomOf({ id: TO_ROOM })),
+        )
+        expect(refusalOf(await subject.forward(WS, ANA, MSG, TO_ROOM))).toBe("done")
+    })
+})

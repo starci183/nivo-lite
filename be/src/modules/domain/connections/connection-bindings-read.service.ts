@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ConnectionBindingFacts,
@@ -11,8 +10,7 @@ import type {
 } from "./connection-bindings-read.contracts"
 import { toConnectionRecord } from "./connections.mapper"
 import type { OptionalConnectionRecord } from "./connections.contracts"
-import { projectConnections } from "./persistence/connection.projection"
-import type { ConnectionProjection } from "./persistence/connection.projection"
+import { projectConnections, type ConnectionProjection } from "./persistence/connection.projection"
 import { ConnectionEntity } from "./persistence/entities"
 
 /** The text a provider reported in the public meta, trimmed; null when it is missing or blank. */
@@ -33,6 +31,17 @@ const bindingFactsOf = (row: ConnectionEntity): ConnectionBindingFacts => ({
     accountMasked: reportedText(row.publicMeta, "account_masked"),
 })
 
+/** The account a connection is: its workspace and its provider. */
+export interface ConnectionAccount {
+    /** The workspace that owns the connection. */
+    readonly workspaceId: string
+    /** The provider, as `connections.provider` names it. */
+    readonly provider: string
+}
+
+/** The account of a connection, or null when there is no such connection. */
+export type OptionalConnectionAccount = ConnectionAccount | null
+
 @Injectable()
 /** The connection reads the agent bindings need: the facts of the connections an agent is bound to, and whether a workspace holds one. */
 export class ConnectionBindingsReadService {
@@ -46,7 +55,7 @@ export class ConnectionBindingsReadService {
             where: { id: In([...new Set(connectionIds)]) },
             take: limit,
         })
-        return rows.map(bindingFactsOf)
+        return rows.map((row) => bindingFactsOf(row))
     }
 
     /** One connection of the workspace as its record, for a read-only app that hands it to a provider port; null when there is none. */
@@ -121,6 +130,18 @@ export class ConnectionBindingsReadService {
             where: { id: connectionId },
         })
         return row?.workspaceId ?? null
+    }
+
+    /** The workspace and the provider of the connection (one primary-key read); null when there is no such connection. */
+    async accountOf(
+        connectionId: string,
+        manager: EntityManager,
+    ): Promise<OptionalConnectionAccount> {
+        const row = await manager.findOne(ConnectionEntity, {
+            select: { id: true, workspaceId: true, provider: true },
+            where: { id: connectionId },
+        })
+        return row === null ? null : { workspaceId: row.workspaceId, provider: row.provider }
     }
 
     /** The name and environment of the connection; null when there is no such connection. */

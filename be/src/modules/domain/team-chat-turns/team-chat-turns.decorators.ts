@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { TeamChatTurnsOptions } from "./team-chat-turns.options"
 
 /** Token of the chat turns' options, exported so a spec can provide them. */

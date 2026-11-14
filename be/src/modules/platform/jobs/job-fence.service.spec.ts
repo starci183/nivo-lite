@@ -75,7 +75,7 @@ describe("JobFenceService", () => {
         it("rolls the fence back when the domain write fails", async () => {
             const { tx } = lockTransaction(true)
             const { fence } = await build(tx.em)
-            const failure = new Error("the change failed")
+            const failure = new JobsError({ code: JobsErrorCode.FencedOut })
 
             await expect(fence.write(job, () => Promise.reject(failure))).rejects.toBe(failure)
 

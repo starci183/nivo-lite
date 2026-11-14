@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { KnowledgeChunksService } from "./knowledge-chunks.service"
+import { PassageSearchService } from "./passage-search.service"
+import { PassageVectorRowsService } from "./passage-vector-rows.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./knowledge-chunks.module-definition"
 
 @Module({})
@@ -11,8 +12,8 @@ export class KnowledgeChunksModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), KnowledgeChunksService],
-            exports: [KnowledgeChunksService],
+            providers: [...(base.providers ?? []), KnowledgeChunksService, PassageSearchService, PassageVectorRowsService],
+            exports: [KnowledgeChunksService, PassageSearchService, PassageVectorRowsService],
         }
     }
 }

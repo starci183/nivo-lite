@@ -138,7 +138,7 @@ describe("EngineFailureService reading", () => {
     it("throws the engine error a failed read stands for", async () => {
         const { failures } = await build()
 
-        await expect(failures.reading("sales.lead", () => Promise.reject(pgError("40P01")))).rejects.toMatchObject({
+        await expect(failures.reading("sales.lead", jest.fn().mockRejectedValue(pgError("40P01")))).rejects.toMatchObject({
             code: EntityEngineErrorCode.Unavailable,
         })
     })

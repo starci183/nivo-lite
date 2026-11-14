@@ -27,7 +27,7 @@ export const orderCodesIn = (...texts: ReadonlyArray<TransferText>): Array<strin
         const compact = (text ?? "")
             .normalize("NFKD")
             .toUpperCase()
-            .replace(/[^A-Z0-9]/g, "")
+            .replaceAll(/[^A-Z0-9]/g, "")
         for (let at = compact.indexOf(ORDER_PREFIX); at >= 0; at = compact.indexOf(ORDER_PREFIX, at + 1)) {
             pattern.lastIndex = at
             const match = pattern.exec(compact)

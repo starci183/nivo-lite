@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
+import type { ChannelTarget } from "./channels.contracts"
 import type { EntityManager } from "typeorm"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { ConnectionsService } from "@modules/domain/connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -24,7 +24,7 @@ export class ChannelPlanNoticeService {
     ) {}
 
     /** Keeps the one open owner work item of the outage of the connection the conversation runs on; a conversation with no connection has nothing to upgrade. */
-    async planBlocked(target: ChatConversationTarget): Promise<void> {
+    async planBlocked(target: ChannelTarget): Promise<void> {
         const connectionId = target.connectionId
         if (connectionId === null) return
         const connection = await this.connections.find(target.workspaceId, connectionId)
@@ -40,7 +40,7 @@ export class ChannelPlanNoticeService {
     }
 
     /** A reply reached a customer on the connection, so its plan allows replies again: the open item of the outage is closed. */
-    async recovered(target: ChatConversationTarget): Promise<void> {
+    async recovered(target: ChannelTarget): Promise<void> {
         if (target.connectionId === null) return
         await this.inboundEvents.closeOutage(target.workspaceId, target.channel, seriesOf(target.connectionId))
     }

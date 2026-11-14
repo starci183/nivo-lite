@@ -1,8 +1,7 @@
 import type { AiCutSpend } from "@modules/integrations/ai"
 import type { ChatMessage, MeterEntry, TextRequest } from "./ai-tasks.contracts"
 import { meteredCallOf } from "./metered-call.policy"
-import { modelFactsOf } from "./model-choice.policy"
-import type { ModelChoice } from "./model-choice.policy"
+import { modelFactsOf, type ModelChoice } from "./model-choice.policy"
 
 /** The model a failed try of a fixed task is booked with: the endpoint's chat profile served it, its model was never told. */
 const UNTOLD_MODEL = "work"

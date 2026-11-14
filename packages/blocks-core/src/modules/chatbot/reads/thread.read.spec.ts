@@ -2,8 +2,8 @@ import { WAITING_ROW } from "../fixtures/chatbot.fixtures"
 import { STAFF_CONTEXT, memoryProvider, memoryWorld, recordOfThread } from "../fixtures/chatbot.memory"
 import { THREAD } from "./thread.read"
 
-describe("the chatbot.thread read", () => {
-    it("shows the conversation with the facts of the customer it is linked to and the customer record behind it", async () => {
+describe("the blocks-core.chatbot.api.chat.get read", () => {
+    it("shows the conversation and the contact behind it", async () => {
         const result = await THREAD.execute?.(memoryProvider(memoryWorld()), { id: "c1" }, STAFF_CONTEXT)
         expect(result).toEqual({
             ok: true,
@@ -12,14 +12,10 @@ describe("the chatbot.thread read", () => {
                 name: "Minh Anh Nguyen",
                 channelName: "Zalo",
                 avatarUrl: "",
-                leadId: "l1",
+                contactId: "0c0a0000-0000-4000-8000-0000000000c1",
+                routeId: "0c0a0000-0000-4000-8000-0000000000a1",
                 status: "needs",
                 handledBy: "",
-                stage: "qualified",
-                need: "Two flower pots",
-                company: "Lotus Studio",
-                phone: "0901234567",
-                email: "minh@example.com",
             },
         })
     })
@@ -38,15 +34,15 @@ describe("the chatbot.thread read", () => {
 
     it("names the holder of a conversation a person holds", async () => {
         const result = await THREAD.execute?.(memoryProvider(memoryWorld()), { id: "c2" }, STAFF_CONTEXT)
-        expect(result).toMatchObject({ ok: true, data: { handledBy: "Thu Ha Le", channelName: "Telegram", stage: "" } })
+        expect(result).toMatchObject({ ok: true, data: { handledBy: "Thu Ha Le", channelName: "Telegram" } })
     })
 
-    it("answers nothing for a conversation the workspace does not have, and empty facts for a customer not yet captured", async () => {
+    it("answers nothing for a conversation the workspace does not have, and an empty contact for a customer no contact holds", async () => {
         const provider = memoryProvider(memoryWorld())
         expect(await THREAD.execute?.(provider, { id: "missing" }, STAFF_CONTEXT)).toEqual({ ok: true, data: null })
         expect(await THREAD.execute?.(provider, { id: "c3" }, STAFF_CONTEXT)).toMatchObject({
             ok: true,
-            data: { stage: "", need: "", phone: "" },
+            data: { contactId: "", routeId: "" },
         })
     })
 

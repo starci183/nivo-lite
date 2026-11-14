@@ -60,7 +60,7 @@ export const LandingProductBase = (props: LandingProductBaseProps) => {
     const current = props.props.views.find((view) => view.id === props.props.selectedId) ?? props.props.views[0]
     return (
         <div id="product" className={ANCHOR}>
-            <Section id={props.props.headingId} title={props.props.title} description={props.props.eyebrow}>
+            <Section id={props.props.headingId} title={props.props.title} caption={props.props.eyebrow}>
                 {current === undefined ? null : (
                     <div className={PRODUCT_DESKTOP}>
                         <SurfaceCard>

@@ -1,7 +1,7 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { EffectOnce, NodeAgentLoops, NodeModelDoor, NodeToolDoor } from "./graph-nodes.contracts"
 import type { GraphNodesOptions } from "./graph-nodes.options"
+import { NODE_EFFECT_STORE, type NodeEffectStore } from "./node-effect-store.port"
 
 /** Token of the graph-nodes options: the install the app assembled. */
 export const GRAPH_NODES_OPTIONS: unique symbol = Symbol("domain.graph-nodes.options")
@@ -39,3 +39,7 @@ export const GRAPH_NODE_AGENT_LOOPS: unique symbol = Symbol("domain.graph-nodes.
 /** Injects the host's own agent loop. Parameter type: NodeAgentLoops. */
 export const InjectGraphNodeAgentLoops = (): TypedParameterDecorator<NodeAgentLoops> =>
     injector<NodeAgentLoops>(GRAPH_NODE_AGENT_LOOPS)
+
+/** Injects the store of node effect rows. Parameter type: NodeEffectStore. */
+export const InjectNodeEffectStore = (): TypedParameterDecorator<NodeEffectStore> =>
+    injector<NodeEffectStore>(NODE_EFFECT_STORE)

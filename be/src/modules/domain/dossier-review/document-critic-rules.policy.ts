@@ -1,113 +1,40 @@
-import { factSlugOf, sameValue } from "@modules/domain/brain-facts"
-import { blanksIn } from "./blank.policy"
-import { foldText } from "./document-state.policy"
-import type {
-    CriticCandidate,
-    CriticFact,
-    CriticPoint,
-    CriticQuote,
-    CritiqueInput,
-} from "./document-critic.contracts"
+import { sameValue } from "@modules/domain/brain-facts"
+import { argueInTime, arguesInTime } from "./critic-window.policy"
+import { boundedPoints, type RuleCritique } from "./document-critic-bound.policy"
 import {
-    dateText,
-    datesIn,
-    factOfLine,
-    factQuote,
-    inputChoice,
-    lineQuote,
-    linesOf,
-    looksLikeSlip,
-    moneyIn,
-    moneyOf,
-    moneyText,
-    removeChoice,
-    valueChoice,
-    type CriticLine,
-} from "./document-critic-text.policy"
-import { hasAnyWord } from "./rule-kit.policy"
-
-/** Words that promise money changes hands; a line with one and no number cannot be acted on. */
-const MONEY_WORDS = ["tinh them", "phu thu", "thu them", "cong them", "tinh phi", "phi", "gia", "giam", "giam gia", "chiet khau", "coc", "dat coc"]
-
-/** Words that leave the amount or the condition to later. */
-const LATER_WORDS = ["bao sau", "tuy", "tuy truong hop", "thoa thuan", "lien he", "theo thuc te", "tinh sau", "se bao"]
-
-/** Words that make a line about an offer or a rule still meant to apply. */
-const OFFER_WORDS = ["uu dai", "khuyen mai", "giam", "hieu luc", "ap dung", "het han", "tang", "mien phi"]
-
-/** Words that make a line about a period (a closing, a validity). */
-const PERIOD_WORDS = [...OFFER_WORDS, "nghi", "dong cua", "den", "tu", "toi", "truoc ngay", "den het"]
-
-/** Words of a total. */
-const TOTAL_WORDS = ["tong", "tong cong", "cong", "thanh tien", "tong tien"]
-
-/** Words of an attribute that must carry an amount. */
-const PRICE_ATTRIBUTES = ["gia", "phi", "tien", "muc phi", "muc gia", "phu thu", "coc"]
-
-const hasDigit = (text: string): boolean => /\d/u.test(text)
-
-/** What every rule reads about the document. */
-interface Reading {
-    readonly input: CritiqueInput
-    readonly lines: ReadonlyArray<CriticLine>
-}
-
-const quoteOf = (reading: Reading, line: CriticLine, fact: CriticFact | null): CriticQuote =>
-    lineQuote(line, reading.input.sourceId, reading.input.title, fact?.id ?? null)
-
-const nameOf = (line: CriticLine): string => line.label ?? line.heading ?? line.text.slice(0, 60)
-
-/** inside_contradiction / typo: one labelled thing given two amounts in the document (a delivery fee of 30.000 in one section, 25.000 in another). */
-const insideByLines = (reading: Reading): ReadonlyArray<CriticPoint> => {
-    const byLabel = new Map<string, Array<{ readonly line: CriticLine; readonly amount: number }>>()
-    for (const line of reading.lines) {
-        const amount = line.value === null ? undefined : moneyIn(line.value)[0]?.amount
-        if (line.labelKey === null || amount === undefined) continue
-        byLabel.set(line.labelKey, [...(byLabel.get(line.labelKey) ?? []), { line, amount }])
-    }
-    return [...byLabel.entries()].flatMap(([key, items]): Array<CriticPoint> => {
-        const distinct = [...new Map(items.map((item) => [item.amount, item])).values()]
-        const [a, b] = distinct
-        if (a === undefined || b === undefined) return []
-        const factA = factOfLine(a.line, reading.input.facts)
-        const factB = factOfLine(b.line, reading.input.facts)
-        const label = nameOf(a.line)
-        const slip = looksLikeSlip(a.amount, b.amount)
-        const { say } = reading.input
-        const amounts = { a: moneyText(a.amount), b: moneyText(b.amount) }
-        return [
-            {
-                kind: slip ? "typo" : "inside_contradiction",
-                origin: "rule",
-                severity: "high",
-                subject: key,
-                line: say(slip ? "slip.line" : "inside.line", { label }),
-                why: say(slip ? "slip.why" : "inside.why", amounts),
-                question: say("inside.question", { label }),
-                quotes: [quoteOf(reading, a.line, factA), quoteOf(reading, b.line, factB)],
-                against: null,
-                choices: [
-                    valueChoice("a", moneyText(a.amount), moneyText(a.amount), factA?.id ?? null),
-                    valueChoice("b", moneyText(b.amount), moneyText(b.amount), factB?.id ?? null),
-                ],
-                target: { subjectLabel: a.line.heading ?? label, attributeLabel: label },
-            },
-        ]
-    })
-}
+    contradictionPairOf,
+    type CriticCandidate,
+    type CriticFact,
+    type CriticPoint,
+    type CriticQuote,
+    type CritiqueInput,
+} from "./document-critic.contracts"
+import { factQuote, valueChoice } from "./document-critic-text.policy"
 
 const keyOf = (fact: CriticFact): string => `${fact.subjectKey}|${fact.attribute}`
 
-/** inside_contradiction: two facts of the document on one key with different values, when no labelled line already shows it. */
-const insideByFacts = (reading: Reading, shown: ReadonlySet<string>): ReadonlyArray<CriticPoint> => {
+/** The first two of the facts that argue once their periods are read (`argueInTime`), or null when no two do. */
+const arguingPair = (facts: ReadonlyArray<CriticFact>): readonly [CriticFact, CriticFact] | null => {
+    for (const [index, a] of facts.entries()) {
+        const b = facts.slice(index + 1).find((other) => argueInTime(a, other))
+        if (b !== undefined) return [a, b]
+    }
+    return null
+}
+
+/**
+ * inside_contradiction (D1): ONE document gives ONE key two different values that argue (both cannot be in force). Two values
+ * stated for periods that do not overlap, or a period's value beside the standing one, are not a contradiction (date arithmetic,
+ * `critic-window.policy`); the same value twice is a duplicate and asks nothing.
+ */
+const insideByFacts = (input: CritiqueInput): ReadonlyArray<CriticPoint> => {
     const byKey = new Map<string, Array<CriticFact>>()
-    for (const fact of reading.input.facts) byKey.set(keyOf(fact), [...(byKey.get(keyOf(fact)) ?? []), fact])
+    for (const fact of input.facts) byKey.set(keyOf(fact), [...(byKey.get(keyOf(fact)) ?? []), fact])
     return [...byKey.entries()].flatMap(([key, facts]): Array<CriticPoint> => {
-        const [a, b] = facts.filter((fact, index) => facts.findIndex((other) => sameValue(other.value, fact.value)) === index)
-        if (a === undefined || b === undefined) return []
-        const quotes = [a, b].map((fact) => factQuote(fact, reading.input.passages, reading.input.sourceId, reading.input.title))
-        const hashes = quotes.map((quote) => quote.chunkHash ?? "").sort().join(",")
-        if (shown.has(hashes)) return []
+        const pair = arguingPair(facts.filter((fact, index) => facts.findIndex((other) => sameValue(other.value, fact.value)) === index))
+        if (pair === null) return []
+        const [a, b] = pair
+        const quotes = [a, b].map((fact) => factQuote(fact, input.passages, input.sourceId, input.title))
         const label = `${a.subjectLabel} · ${a.attributeLabel}`
         return [
             {
@@ -115,9 +42,9 @@ const insideByFacts = (reading: Reading, shown: ReadonlySet<string>): ReadonlyAr
                 origin: "rule",
                 severity: "high",
                 subject: key,
-                line: reading.input.say("inside.line", { label }),
-                why: reading.input.say("inside.why", { a: a.value, b: b.value }),
-                question: reading.input.say("inside.question", { label }),
+                line: input.say("inside.line", { label }),
+                why: input.say("inside.why", { a: a.value, b: b.value }),
+                question: input.say("inside.question", { label }),
                 quotes,
                 against: null,
                 choices: [valueChoice("a", a.value, a.value, a.id), valueChoice("b", b.value, b.value, b.id)],
@@ -126,29 +53,54 @@ const insideByFacts = (reading: Reading, shown: ReadonlySet<string>): ReadonlyAr
     })
 }
 
-/** shop_contradiction / other_document / typo: a fact of the document against a truth in force or a waiting proposal on the same thing. */
-const againstShop = (reading: Reading): ReadonlyArray<CriticPoint> =>
-    reading.input.facts.flatMap((fact): Array<CriticPoint> => {
-        // Only an exact key is a rule's business: a candidate found by meaning may be another thing, so the model judges it.
-        const near = (reading.input.candidates.get(fact.id) ?? []).filter(
-            (candidate) => candidate.match === "key" && candidate.fact.id !== fact.id && !sameValue(candidate.fact.value, fact.value),
-        )
-        const truth = near.find((candidate) => candidate.fact.status === "active")
-        const other = truth ?? near.find((candidate) => candidate.fact.status === "proposed")
-        if (other === undefined) return []
-        return [pointAgainst(reading, fact, other)]
+/**
+ * The candidate a waiting fact of the document argues with, of the given ways of finding it: another truth with ANOTHER value (once
+ * normalised: the same value is a duplicate, never a question) whose period argues with it; the truth in force first, else a value
+ * waiting from another document. Null when none argues.
+ */
+const rivalOf = (input: CritiqueInput, fact: CriticFact, match: CriticCandidate["match"]): CriticCandidate | null => {
+    const rivals = (input.candidates.get(fact.id) ?? []).filter(
+        (candidate) =>
+            candidate.match === match &&
+            candidate.fact.id !== fact.id &&
+            !sameValue(candidate.fact.value, fact.value) &&
+            arguesInTime(fact, candidate.fact, candidate.fact.status === "active"),
+    )
+    return rivals.find((one) => one.fact.status === "active") ?? rivals.find((one) => one.fact.status === "proposed") ?? null
+}
+
+/**
+ * shop_contradiction / other_document, SAME KEY: a fact of the document against a truth in force (from another source) or a value
+ * waiting from another document on the exact same key. Only an exact key is this rule's business; the same thing under another key
+ * is the same-fact judge's link (`linkedFacts`). A value stated for a period over a standing value, or beside another period it does
+ * not overlap, argues with nothing.
+ */
+const againstShop = (input: CritiqueInput): ReadonlyArray<readonly [CriticFact, CriticCandidate]> =>
+    input.facts.flatMap((fact) => {
+        const other = rivalOf(input, fact, "key")
+        return other === null ? [] : [[fact, other] as const]
     })
 
-const pointAgainst = (reading: Reading, fact: CriticFact, other: CriticCandidate): CriticPoint => {
+/**
+ * shop_contradiction / other_document, ANOTHER KEY: a WAITING truth of the document that the same-fact judge linked to another truth
+ * (`conflictWith`: the same thing, read under another key) giving another value: in force, or waiting from another document. The
+ * link is the judge's (a model reading two lines); code compares only ids and normal-form values.
+ */
+const linkedFacts = (input: CritiqueInput): ReadonlyArray<readonly [CriticFact, CriticCandidate]> =>
+    input.facts.flatMap((fact) => {
+        if (fact.status !== "proposed") return []
+        const other = rivalOf(input, fact, "named")
+        return other === null ? [] : [[fact, other] as const]
+    })
+
+/** The point that sets a fact of the document against another truth: ONE card naming both, with the two values to pick from. */
+const pointAgainst = (input: CritiqueInput, fact: CriticFact, other: CriticCandidate): CriticPoint => {
     const inForce = other.fact.status === "active"
-    const mine = moneyOf(fact.value)
-    const theirs = moneyOf(other.fact.value)
-    const slip = mine !== null && theirs !== null && looksLikeSlip(mine, theirs)
     const label = `${fact.subjectLabel} · ${fact.attributeLabel}`
     const where = other.sourceTitle === null ? "" : ` (${other.sourceTitle})`
-    const { say } = reading.input
+    const { say } = input
     const words = { label, value: fact.value, other: other.fact.value, where }
-    const quote = factQuote(fact, reading.input.passages, reading.input.sourceId, reading.input.title)
+    const quote = factQuote(fact, input.passages, input.sourceId, input.title)
     const otherQuote: CriticQuote = {
         text: (other.fact.quote ?? other.fact.value).slice(0, 300),
         passageId: null,
@@ -164,29 +116,15 @@ const pointAgainst = (reading: Reading, fact: CriticFact, other: CriticCandidate
         sourceTitle: other.sourceTitle,
         factId: other.fact.id,
     }
-    if (slip) {
-        return {
-            kind: "typo",
-            origin: "rule",
-            severity: "high",
-            subject: keyOf(fact),
-            line: say("typo.line", words),
-            why: say(inForce ? "typo.why_truth" : "typo.why_document", words),
-            question: say("typo.question", words),
-            quotes: [quote, otherQuote],
-            against,
-            choices: [
-                { id: "a", label: say("choice.fix_to", { value: other.fact.value }), needsInput: false, inputHint: null, answer: { kind: "value", factId: fact.id, value: other.fact.value } },
-                { id: "b", label: say("choice.keep_value", { value: fact.value }), needsInput: false, inputHint: null, answer: { kind: "keep_document", factId: fact.id, value: fact.value } },
-            ],
-        }
-    }
+    // The same key keeps the subject its points always had (their stored identity); a link names the other truth too, so one fact
+    // linked to a truth and set against another on its own key gives two points.
+    const subject = other.match === "named" ? `${keyOf(fact)}|${other.fact.id}` : keyOf(fact)
     if (inForce) {
         return {
             kind: "shop_contradiction",
             origin: "rule",
             severity: "high",
-            subject: keyOf(fact),
+            subject,
             line: say("shop.line", words),
             why: say("shop.why", words),
             question: say("shop.question", words),
@@ -202,7 +140,7 @@ const pointAgainst = (reading: Reading, fact: CriticFact, other: CriticCandidate
         kind: "other_document",
         origin: "rule",
         severity: "medium",
-        subject: keyOf(fact),
+        subject,
         line: say("other.line", words),
         why: other.sourceTitle === null ? say("other.why", words) : say("other.why_titled", { ...words, title: other.sourceTitle }),
         question: say("other.question", words),
@@ -215,165 +153,6 @@ const pointAgainst = (reading: Reading, fact: CriticFact, other: CriticCandidate
     }
 }
 
-/** vague: a line that promises money (or leaves it to later) with no number an agent could quote (rush delivery "costs extra, staff will say"). */
-const vagueLines = (reading: Reading): ReadonlyArray<CriticPoint> =>
-    reading.lines.flatMap((line): Array<CriticPoint> => {
-        if (hasDigit(line.text) || blanksIn(line.text).length > 0) return []
-        const money = hasAnyWord(line.folded, MONEY_WORDS)
-        const later = hasAnyWord(line.folded, LATER_WORDS)
-        if (!money || (!later && !hasAnyWord(line.folded, ["tinh them", "phu thu", "thu them", "cong them"]))) return []
-        const name = line.heading ?? nameOf(line)
-        const fact = factOfLine(line, reading.input.facts)
-        return [
-            {
-                kind: "vague",
-                origin: "rule",
-                severity: "medium",
-                subject: line.folded.slice(0, 120),
-                line: reading.input.say("vague.line", { name }),
-                why: reading.input.say("vague.why"),
-                question: reading.input.say("vague.question", { name }),
-                quotes: [quoteOf(reading, line, fact)],
-                against: null,
-                choices: [
-                    inputChoice("a", reading.input.say("choice.fill_amount"), reading.input.say("vague.hint", { name }), fact?.id ?? null),
-                    removeChoice("b", reading.input.say("choice.drop_rule"), fact?.id ?? null),
-                ],
-                target: { subjectLabel: name, attributeLabel: reading.input.say("target.extra") },
-            },
-        ]
-    })
-
-/** template: a blank left to fill in, or text a template left for another shop. */
-const templateLines = (reading: Reading): ReadonlyArray<CriticPoint> =>
-    reading.lines.flatMap((line): Array<CriticPoint> => {
-        const [blank] = blanksIn(line.text)
-        if (blank === undefined) return []
-        const fact = factOfLine(line, reading.input.facts) ?? reading.input.facts.find((one) => one.quote !== null && blanksIn(one.value).length > 0 && line.folded.includes(foldText(one.quote))) ?? null
-        const name = nameOf(line)
-        return [
-            {
-                kind: "template",
-                origin: "rule",
-                severity: "medium",
-                subject: line.folded.slice(0, 120),
-                line: reading.input.say(blank.kind === "blank" ? "template.line_blank" : "template.line_template", { name }),
-                why: reading.input.say(blank.kind === "blank" ? "template.why_blank" : "template.why_template", { blank: blank.text }),
-                question: reading.input.say("template.question", { name }),
-                quotes: [quoteOf(reading, line, fact)],
-                against: null,
-                choices: [
-                    inputChoice("a", reading.input.say("choice.fill_blank"), name, fact?.id ?? null),
-                    removeChoice("b", reading.input.say("choice.drop_line"), fact?.id ?? null),
-                ],
-                target: {
-                    subjectLabel: name,
-                    attributeLabel: reading.input.say(hasAnyWord(line.folded, ["gia", "phi"]) || moneyIn(line.text).length > 0 ? "target.price" : "target.content"),
-                },
-            },
-        ]
-    })
-
-/** stale_date: a line about a period whose last date is already past, or a date that does not exist. */
-const staleLines = (reading: Reading): ReadonlyArray<CriticPoint> =>
-    reading.lines.flatMap((line): Array<CriticPoint> => {
-        const dates = datesIn(line.text)
-        if (dates.length === 0) return []
-        const impossible = dates.find((date) => date.iso === null)
-        const last = dates
-            .flatMap((date) => (date.iso === null ? [] : [date.iso]))
-            .sort((a, b) => a.localeCompare(b))
-            .at(-1)
-        const past = last !== undefined && last < reading.input.today && hasAnyWord(line.folded, PERIOD_WORDS)
-        if (impossible === undefined && !past) return []
-        const offer = hasAnyWord(line.folded, OFFER_WORDS)
-        const fact = factOfLine(line, reading.input.facts)
-        const name = line.heading ?? nameOf(line)
-        return [
-            {
-                kind: "stale_date",
-                origin: "rule",
-                severity: impossible !== undefined || offer ? "high" : "low",
-                subject: line.folded.slice(0, 120),
-                line:
-                    impossible === undefined
-                        ? reading.input.say("stale.line_past", { date: dateText(last ?? "") })
-                        : reading.input.say("stale.line_impossible", { date: impossible.text }),
-                why:
-                    impossible === undefined
-                        ? reading.input.say(offer ? "stale.why_offer" : "stale.why_info", { today: dateText(reading.input.today) })
-                        : reading.input.say("stale.why_impossible", { date: impossible.text }),
-                question: reading.input.say("stale.question", { name }),
-                quotes: [quoteOf(reading, line, fact)],
-                against: null,
-                choices: [
-                    removeChoice("a", reading.input.say("choice.ended"), fact?.id ?? null),
-                    inputChoice("b", reading.input.say("choice.fix_date"), reading.input.say("hint.until"), fact?.id ?? null),
-                ],
-                target: { subjectLabel: name, attributeLabel: reading.input.say("target.until") },
-            },
-        ]
-    })
-
-/** arithmetic: a total in a section that is not the sum of the other amounts listed there. */
-const arithmeticLines = (reading: Reading): ReadonlyArray<CriticPoint> =>
-    reading.input.passages.flatMap((passage): Array<CriticPoint> => {
-        const lines = reading.lines.filter((line) => line.passage.id === passage.id && line.value !== null)
-        const total = lines.find((line) => line.labelKey !== null && hasAnyWord(line.labelKey, TOTAL_WORDS))
-        const stated = total?.value === null || total === undefined ? undefined : moneyIn(total.value)[0]?.amount
-        const parts = lines.filter((line) => line !== total).flatMap((line) => moneyIn(line.value ?? "").slice(0, 1))
-        if (total === undefined || stated === undefined || parts.length < 2) return []
-        const sum = parts.reduce((all, part) => all + part.amount, 0)
-        if (sum === stated) return []
-        const fact = factOfLine(total, reading.input.facts)
-        const name = nameOf(total)
-        const { say } = reading.input
-        const words = { name, sum: moneyText(sum), stated: moneyText(stated) }
-        return [
-            {
-                kind: "arithmetic",
-                origin: "rule",
-                severity: "high",
-                subject: total.folded.slice(0, 120),
-                line: say("arithmetic.line", words),
-                why: say("arithmetic.why", words),
-                question: say("arithmetic.question", words),
-                quotes: [quoteOf(reading, total, fact)],
-                against: null,
-                choices: [
-                    { id: "a", label: say("choice.fix_to", { value: words.sum }), needsInput: false, inputHint: null, answer: { kind: "value", factId: fact?.id ?? null, value: moneyText(sum) } },
-                    { id: "b", label: say("choice.keep_value", { value: words.stated }), needsInput: false, inputHint: null, answer: { kind: "keep_document", factId: fact?.id ?? null, value: moneyText(stated) } },
-                ],
-                target: { subjectLabel: name, attributeLabel: say("target.total") },
-            },
-        ]
-    })
-
-/** missing: a fact whose attribute is a price or a fee and whose value gives no amount (and is not a blank, which `template` shows). */
-const missingFacts = (reading: Reading): ReadonlyArray<CriticPoint> =>
-    reading.input.facts.flatMap((fact): Array<CriticPoint> => {
-        const attribute = factSlugOf(fact.attributeLabel).replaceAll("-", " ")
-        if (!hasAnyWord(attribute, PRICE_ATTRIBUTES) || hasDigit(fact.value) || blanksIn(fact.value).length > 0) return []
-        const label = `${fact.subjectLabel} · ${fact.attributeLabel}`
-        return [
-            {
-                kind: "missing",
-                origin: "rule",
-                severity: "medium",
-                subject: keyOf(fact),
-                line: reading.input.say("missing.line", { label }),
-                why: reading.input.say("missing.why", { value: fact.value }),
-                question: reading.input.say("missing.question", { label }),
-                quotes: [factQuote(fact, reading.input.passages, reading.input.sourceId, reading.input.title)],
-                against: null,
-                choices: [
-                    inputChoice("a", reading.input.say("choice.fill_money"), label, fact.id),
-                    removeChoice("b", reading.input.say("choice.drop"), fact.id),
-                ],
-            },
-        ]
-    })
-
 /** The hashes a point quotes from this document, sorted: with its kind and subject, its identity. */
 export const ownHashesOf = (point: CriticPoint): string =>
     point.quotes
@@ -383,29 +162,37 @@ export const ownHashesOf = (point: CriticPoint): string =>
         .join(",")
 
 /**
- * The deterministic rules over the WHOLE document (cheap and exact, so a later upload re-runs them all and the reconciliation keeps the
- * state of every point found again): contradictions inside the document and against the shop, typing slips, vague rules, blanks and
- * template text, past or impossible dates, totals that do not add up, prices with no amount. Each point once.
+ * What CODE says about a document (owner 2026-11-12: documents are entered by the business's own people and are TRUSTED; only
+ * contradictions between data ask the founder). Every rule compares DATA with DATA, by ids, keys, periods and normal-form values,
+ * and reads no line by itself:
+ * - one document giving one key two values (`insideByFacts`, D1);
+ * - a value of the document against the truth in force, or a value waiting from another document, on the same key (`againstShop`);
+ * - a waiting value the same-fact judge linked to another truth (the same thing under another key) with another value
+ *   (`linkedFacts`).
+ * ONE point per pair of truths: a pair raised twice here is kept once, and a pair an open point of another document already asks
+ * about (`asked`) is not raised again on this side. A typo, a vague, stale or template line, a wrong sum: no point (they go in force
+ * as filed). Text addressed to an AI is the model's one question (`PRODUCED_MODEL_KINDS`).
  */
-export const criticRules = (input: CritiqueInput): ReadonlyArray<CriticPoint> => {
-    const reading: Reading = { input, lines: linesOf(input.passages) }
-    const byLines = insideByLines(reading)
-    const shown = new Set(byLines.map(ownHashesOf))
-    const all = [
-        ...byLines,
-        ...insideByFacts(reading, shown),
-        ...againstShop(reading),
-        ...vagueLines(reading),
-        ...templateLines(reading),
-        ...staleLines(reading),
-        ...arithmeticLines(reading),
-        ...missingFacts(reading),
-    ]
-    const seen = new Set<string>()
-    return all.filter((point) => {
-        const identity = `${point.kind}|${point.subject}|${ownHashesOf(point)}`
-        if (seen.has(identity)) return false
-        seen.add(identity)
+export const ruleCritique = (input: CritiqueInput): RuleCritique => {
+    const asked = new Set(input.asked ?? [])
+    const pairs = [...againstShop(input), ...linkedFacts(input)].filter(([fact, other]) => {
+        const pair = contradictionPairOf(fact.id, other.fact.id)
+        if (asked.has(pair)) return false
+        asked.add(pair)
         return true
     })
+    const all = [...insideByFacts(input), ...pairs.map(([fact, other]) => pointAgainst(input, fact, other))]
+    const seen = new Set<string>()
+    return boundedPoints(
+        input.say,
+        all.filter((point) => {
+            const identity = `${point.kind}|${point.subject}|${ownHashesOf(point)}`
+            if (seen.has(identity)) return false
+            seen.add(identity)
+            return true
+        }),
+    )
 }
+
+/** The points of `ruleCritique` alone. */
+export const criticRules = (input: CritiqueInput): ReadonlyArray<CriticPoint> => ruleCritique(input).points

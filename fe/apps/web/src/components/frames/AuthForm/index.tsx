@@ -28,7 +28,7 @@ export const AuthForm = (props: AuthFormProps) => (
         onSubmit={props.onSubmit}
         isPending={props.isPending}
     >
-        <Stack gap="section">
+        <Stack gap="row">
             {props.error === undefined ? null : (
                 <Alert title={props.error.title} description={props.error.text} tone="negative" />
             )}

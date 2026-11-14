@@ -1,7 +1,11 @@
 import { createHmac } from "node:crypto"
+import { bankFactsOf, type BankFacts } from "./bank-facts.policy"
 import { sameText } from "./channel-secret.policy"
 
-/** One Casso transaction as the webhook carries it; Casso names the id `id`, `tid` or `reference` depending on the version. */
+/**
+ * One Casso transaction as the webhook carries it; Casso names the id `id`, `tid` or `reference` depending on the version. `id` is
+ * Casso's own row id; the bank's reference is `tid` in V1 and `reference` in V2. Values are not yet trusted.
+ */
 interface CassoTransaction {
     readonly id?: number | string
     readonly tid?: string
@@ -9,6 +13,14 @@ interface CassoTransaction {
     readonly description?: string
     readonly amount?: number | string
     readonly bankName?: string
+    /** V1: the bank account number of the transaction. */
+    readonly bank_sub_acc_id?: unknown
+    /** V2: the bank account number of the transaction. */
+    readonly accountNumber?: unknown
+    /** V1: when the bank booked it (`YYYY-MM-DD HH:mm:ss`, Vietnam time). */
+    readonly when?: unknown
+    /** V2: when the bank booked it (`YYYY-MM-DD HH:mm:ss`, Vietnam time). */
+    readonly transactionDateTime?: unknown
 }
 
 /** What the door proves: the signature header (V2) or the legacy secure token (V1), and the integration's secret key. */
@@ -23,8 +35,8 @@ export interface CassoProof {
     readonly key: string
 }
 
-/** One credit a Casso delivery announces. */
-export interface CassoCredit {
+/** One credit a Casso delivery announces, with the bank's facts of it when Casso passes them on. */
+export interface CassoCredit extends BankFacts {
     /** The credited amount in VND, always positive. */
     readonly amount: number
     /** The transfer content. */
@@ -71,8 +83,18 @@ export const isCassoAuthentic = (proof: CassoProof): boolean => {
 /** True when Casso reports an error for this delivery (`error` other than 0): acknowledged and ignored. */
 export const isCassoError = (body: Readonly<Record<string, unknown>>): boolean => Number(body.error ?? 0) !== 0
 
-/** The credits of a delivery: positive amounts with an id; V1 sends an array in `data`, V2 one object. */
+/** The bank's facts of one row, read by the webhook version: V1 `tid` / `bank_sub_acc_id` / `when`, V2 `reference` / `accountNumber` / `transactionDateTime`. */
+const cassoBankFactsOf = (row: CassoTransaction, v1: boolean): BankFacts =>
+    v1
+        ? bankFactsOf(row.tid, row.bank_sub_acc_id, row.when)
+        : bankFactsOf(row.reference, row.accountNumber, row.transactionDateTime)
+
+/**
+ * The credits of a delivery: positive amounts with an id; V1 sends an array in `data`, V2 one object. The event id stays Casso's
+ * first id as it always was; the bank's reference, account and time are added only when the row carries them.
+ */
 export const cassoCredits = (body: Readonly<Record<string, unknown>>): Array<CassoCredit> => {
+    const v1 = Array.isArray(body.data)
     const rows = (Array.isArray(body.data) ? body.data : [body.data]).filter(
         (row): row is CassoTransaction => typeof row === "object" && row !== null,
     )
@@ -86,6 +108,7 @@ export const cassoCredits = (body: Readonly<Record<string, unknown>>): Array<Cas
                 content: (row.description ?? "").trim(),
                 eventId: `casso:${id}`,
                 bankName: row.bankName ?? "Casso",
+                ...cassoBankFactsOf(row, v1),
             },
         ]
     })

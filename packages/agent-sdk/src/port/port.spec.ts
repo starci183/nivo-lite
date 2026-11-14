@@ -30,7 +30,7 @@ describe("definePort", () => {
     it("refuses a malformed id", () => {
         expect(captured(() => definePort("Booking.Plan"))).toMatchObject({
             code: "ID_MALFORMED",
-            at: "Booking.Plan",
+            params: { at: "Booking.Plan" },
             name: "SdkDefinitionError",
         })
     })
@@ -63,6 +63,6 @@ describe("unprovided", () => {
     it("throws PORT_UNPROVIDED naming the port", () => {
         const error = captured(() => unprovided(PLAN))
         expect(error).toBeInstanceOf(SdkDefinitionError)
-        expect(error).toMatchObject({ code: "PORT_UNPROVIDED", at: "booking.plan" })
+        expect(error).toMatchObject({ code: "PORT_UNPROVIDED", params: { at: "booking.plan" } })
     })
 })

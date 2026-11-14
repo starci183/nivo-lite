@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { mutate } from "@/modules/viewer-cache"
-import { useAvatarUpload, type AvatarProblem } from "@/hooks/avatar"
-import type { AvatarDoors } from "@/hooks/avatar"
+import { useAvatarUpload, type AvatarProblem, type AvatarDoors } from "@/hooks/avatar"
 import {
     QUERY_MY_ACCOUNT_SWR_KEY,
     QUERY_CHAT_ROOMS_SWR_KEY,

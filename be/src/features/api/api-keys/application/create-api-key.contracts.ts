@@ -1,4 +1,4 @@
-import type { ApiKeyView } from "@modules/domain/api-keys"
+import type { ApiKeyKind, ApiKeyView } from "@modules/domain/api-keys"
 
 /** What creating an API key takes: the workspace, the name and, for an agent's MCP credential, the agent. */
 export interface CreateApiKeyRequest {
@@ -6,7 +6,9 @@ export interface CreateApiKeyRequest {
     readonly workspaceId: string
     /** The name of the key. */
     readonly name: string
-    /** The agent of the workspace the key acts as on the MCP endpoint; absent for a public API key. */
+    /** What the key is for; absent for a public API key. */
+    readonly kind?: ApiKeyKind | undefined
+    /** The agent of the workspace the key is scoped to; absent for an unscoped key. */
     readonly agentId?: string | undefined
 }
 

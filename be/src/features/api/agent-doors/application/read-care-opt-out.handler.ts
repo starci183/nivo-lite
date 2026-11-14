@@ -1,6 +1,5 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { CareOptOutService } from "@modules/domain/agent-doors"
-import type { CareOptOutView } from "@modules/domain/agent-doors"
+import { CareOptOutService, type CareOptOutView } from "@modules/domain/agent-doors"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ReadCareOptOutQuery } from "./read-care-opt-out.query"
@@ -16,7 +15,6 @@ export class ReadCareOptOutHandler extends ICQRSHandler<ReadCareOptOutQuery, Car
     }
 
     protected override process(query: ReadCareOptOutQuery): Promise<CareOptOutView | null> {
-        const { principal, request } = query.params
-        return this.optOuts.read(principal.id, request.workspaceId, request.leadId)
+        return this.optOuts.read(query.params.principal.id, query.params.request.workspaceId, query.params.request.leadId)
     }
 }

@@ -1,6 +1,10 @@
 import { builder } from "@starci/jest-preset"
-import type { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { StoredNote, contentHashOf, knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
+import {
+    type KnowledgeSourcesService,
+    StoredNote,
+    contentHashOf,
+    knowledgeSourcesEntities,
+} from "@modules/domain/knowledge-sources"
 
 const KnowledgeSourceEntity: (typeof knowledgeSourcesEntities)[0] = knowledgeSourcesEntities[0]
 type KnowledgeSourceEntity = InstanceType<typeof KnowledgeSourceEntity>
@@ -125,7 +129,6 @@ export const readable: ReadableShape = {
 const ready = { status: "ready", progress: 100 }
 const blocked = { status: "blocked_credits" }
 const forIndex = StoredNote.NoCreditsForIndex
-const forFacts = StoredNote.NoCreditsForFacts
 const note = StoredNote.KeywordOnly
 const contentHash = contentHashOf("text")
 
@@ -153,7 +156,6 @@ export const SOURCE_STAGE_CASES: Array<[string, (service: KnowledgeSourcesServic
         (s) => s.blockIndexing(WS, "s1", forIndex, 60),
         { ...blocked, error: forIndex, chunkCount: 60, progress: 80 },
     ],
-    ["blocks the facts", (s) => s.blockFacts(WS, "s1", forFacts), { ...blocked, error: forFacts }],
 ]
 
 /** Test data for explicit reindex requests. */

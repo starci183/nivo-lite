@@ -38,8 +38,8 @@ export interface ConnectionNextStep {
     readonly status: { readonly label: string; readonly tone: ConnectionPaneTone; readonly isDot: boolean }
     /** What is wrong or still missing, and which agents it stops. */
     readonly body: string
-    /** The one command; null when the viewer may not act. `isPrimary` marks the fix of a failure. */
-    readonly action: { readonly label: string; readonly href: string; readonly isPrimary: boolean } | null
+    /** The one command, a neutral small button (the page's one red command is "Add connection"); null when the viewer may not act. */
+    readonly action: { readonly label: string; readonly href: string } | null
 }
 
 /** The health figures of the Connections page. */

@@ -1,7 +1,6 @@
-import type { CredentialPrincipal } from "@modules/domain/identity"
+import { type CredentialPrincipal, Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
 import type { QueryBus } from "@nestjs/cqrs"
 import { Args, Query, Resolver } from "@nestjs/graphql"
-import { Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
 import { InjectQueryBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { PreviewInviteQuery } from "../../application/preview-invite.query"

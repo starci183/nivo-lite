@@ -1,7 +1,7 @@
 import { STAFF_CONTEXT, memoryProvider, memoryWorld } from "../fixtures/chatbot.memory"
 import { DECISIONS, DECISIONS_SHOWN } from "./decisions.read"
 
-describe("the chatbot.decisions read", () => {
+describe("the blocks-core.chatbot.api.chat.waiting read", () => {
     it("asks for the conversations that wait for a person, a few at a time, and counts all of them", async () => {
         const world = memoryWorld()
         const result = await DECISIONS.execute?.(memoryProvider(world), {}, STAFF_CONTEXT)

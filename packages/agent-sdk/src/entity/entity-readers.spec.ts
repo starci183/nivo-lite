@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { thrownFailureOf } from "../tests/thrown-failure"
 import { field } from "./entity"
 import type { AnyEntityDefinition } from "./entity-any.types"
 import { rowSchemaOf } from "./entity-readers"
@@ -82,10 +83,10 @@ describe("rowSchemaOf", () => {
 
     it("refuses a declaration the readers cannot bound", () => {
         const unbounded: FieldDef = { kind: "text", nullable: false }
-        expect(() => rowSchemaOf(entityOf({ x: unbounded }))).toThrow("ENTITY_TEXT_UNBOUNDED: sales.lead.fields.x")
+        expect(thrownFailureOf(() => rowSchemaOf(entityOf({ x: unbounded })))).toEqual({ code: "ENTITY_TEXT_UNBOUNDED", at: "sales.lead.fields.x" })
         const noValues: FieldDef = { kind: "enum", nullable: false }
-        expect(() => rowSchemaOf(entityOf({ x: noValues }))).toThrow("ENTITY_ENUM_EMPTY: sales.lead.fields.x")
+        expect(thrownFailureOf(() => rowSchemaOf(entityOf({ x: noValues })))).toEqual({ code: "ENTITY_ENUM_EMPTY", at: "sales.lead.fields.x" })
         const noShape: FieldDef = { kind: "jsonb", nullable: false }
-        expect(() => rowSchemaOf(entityOf({ x: noShape }))).toThrow("ENTITY_JSONB_SHAPE_MISSING: sales.lead.fields.x")
+        expect(thrownFailureOf(() => rowSchemaOf(entityOf({ x: noShape })))).toEqual({ code: "ENTITY_JSONB_SHAPE_MISSING", at: "sales.lead.fields.x" })
     })
 })

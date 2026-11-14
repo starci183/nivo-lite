@@ -85,6 +85,18 @@ describe("withPartsRolledUp", () => {
         ])
     })
 
+    it("stands for the part updated last by the instant, whatever offset its time is written in", async () => {
+        const subject = await build()
+
+        const rows = subject.withPartsRolledUp([
+            { summary: summaryOf({ updatedAt: "2026-10-01T20:00:00.000Z" }), origin: null },
+            // 00:00 on the 2nd at +07:00 is 17:00 on the 1st in UTC: earlier than the first part, though its text sorts later.
+            { summary: summaryOf({ id: "s2", title: "Plan (2/2)", updatedAt: "2026-10-02T00:00:00.000+07:00" }), origin: "part:s1" },
+        ])
+
+        expect(rows[0]?.updatedAt).toBe("2026-10-01T20:00:00.000Z")
+    })
+
     it("shows the state of the part that most needs attention: a failed or unfinished part is not hidden by a ready first part", async () => {
         const subject = await build()
         const first = { summary: summaryOf(), origin: null }

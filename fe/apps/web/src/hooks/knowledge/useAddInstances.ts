@@ -3,8 +3,7 @@
 import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { pickCopy } from "@/modules/catalog"
-import { instanceOptions } from "@/modules/documents"
-import type { InstanceOption } from "@/modules/documents"
+import { instanceOptions, type InstanceOption } from "@/modules/documents"
 import { useModuleInstallations } from "./useModuleInstallations"
 import { useWorkspaceMember } from "./useWorkspaceMember"
 

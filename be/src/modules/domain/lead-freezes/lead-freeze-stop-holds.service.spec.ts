@@ -3,7 +3,7 @@ import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jes
 import { AgentGraphFreezeGateService } from "@modules/domain/agent-graphs"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import type { RunView } from "@modules/domain/agent-runs"
-import { ThreadRunsService, ThreadSweepService } from "@modules/domain/agent-threads"
+import { RunStopsService, ThreadRunsService, ThreadSweepService } from "@modules/domain/agent-threads"
 import type { ThreadSettledListener, ThreadSweepRider } from "@modules/domain/agent-threads"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -12,6 +12,7 @@ import type { Logger } from "@modules/platform/logging"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
 import { frozenFreezeOf, pendingLineOf, releasedFreezeOf } from "@tests/fixtures/builders/lead-freezes.builder"
+import { LeadFreezesError, LeadFreezesErrorCode } from "./errors/lead-freezes.error"
 import { LeadFreezeRecordsService } from "./lead-freeze-records.service"
 import type { FreezeBuild } from "./lead-freeze-records.service"
 import { LeadFreezeStopHoldsService } from "./lead-freeze-stop-holds.service"
@@ -22,12 +23,8 @@ import { LeadFreezesLogEvent } from "./lead-freezes.log-events"
 import { LeadFreezesService } from "./lead-freezes.service"
 import type { FreezeSubject, HeldStop, LeadFreeze } from "./lead-freezes.contracts"
 
-
-
 /** Where the run of a freeze stands, as a spec moves it. */
-interface RunState {
-    status: RunView["status"] | null
-}
+interface RunState { status: RunView["status"] | null }
 
 /** The records of the freezes in memory, read and written the way the engine does it. */
 const memoryOf = (records: Map<string, LeadFreeze>) => {
@@ -36,7 +33,7 @@ const memoryOf = (records: Map<string, LeadFreeze>) => {
     return {
         byKey: (_ws: string, key: string) => Promise.resolve(find((each) => each.key === key)),
         byId: (_ws: string, id: string) => Promise.resolve(records.get(id) ?? null),
-        byLead: (_ws: string, leadId: string) => Promise.resolve(find((each) => each.leadId === leadId)),
+        byContact: (_ws: string, contactId: string) => Promise.resolve(find((each) => each.contactId === contactId)),
         byRun: (_ws: string, runId: string) => Promise.resolve(find((each) => each.frozenRunId === runId)),
         holding: () => Promise.resolve([...records.values()].filter((each) => each.status !== "released")),
         ensure: (_ws: string, subject: FreezeSubject) => {
@@ -48,7 +45,8 @@ const memoryOf = (records: Map<string, LeadFreeze>) => {
         },
         patch: (_ws: string, id: string, update: FreezeBuild) => {
             const freeze = records.get(id)
-            if (freeze === undefined) return Promise.reject(new Error("gone"))
+            if (freeze === undefined)
+                return Promise.reject(new LeadFreezesError({ code: LeadFreezesErrorCode.NotFound }))
             const values = update(freeze)
             if (values === null) return Promise.resolve(null)
             const next = { ...freeze, ...values, version: String(Number(freeze.version) + 1) }
@@ -58,46 +56,56 @@ const memoryOf = (records: Map<string, LeadFreeze>) => {
     }
 }
 
-const build = async (initial: LeadFreeze | null = null, status: RunView["status"] | null = "parked") => {
-    const records = new Map<string, LeadFreeze>(initial === null ? [] : [[initial.id, initial]])
+/** The freeze records double over the in-memory records. */
+const storeOf = (records: Map<string, LeadFreeze>) => {
     const memory = memoryOf(records)
-    const store = mock<LeadFreezeRecordsService>({
+    return {
         byKey: jest.fn(memory.byKey),
         byId: jest.fn(memory.byId),
-        byLead: jest.fn(memory.byLead),
+        byContact: jest.fn(memory.byContact),
         byRun: jest.fn(memory.byRun),
         holding: jest.fn(memory.holding),
         ensure: jest.fn(memory.ensure),
         patch: jest.fn(memory.patch),
-        leadOfConversation: jest.fn().mockResolvedValue(null),
-        nameOfLead: jest.fn().mockResolvedValue("Nguyen Van A"),
-        leadOfTransaction: jest.fn().mockResolvedValue(null),
-    })
-    const runState: RunState = { status }
-    // The runs as the stop holds read them: where a run stands, and the run a wake tried again already opened.
-    const runs = mock<AgentRunsService>({
-        runOf: jest.fn((_ws: string, runId: string) =>
-            Promise.resolve(runState.status === null ? null : runViewOf({ id: runId, status: runState.status })),
-        ),
-        runIdOfWake: jest.fn().mockResolvedValue(null),
-    })
-    // The open stops of thread runs, as a spec opens and closes them.
-    const openStops: Array<HeldStop> = []
-    const stops = mock<LeadFreezeStopsService>({
-        openOfCustomer: jest.fn((_ws: string, customer: StopCustomer) =>
-            Promise.resolve(
-                openStops.filter(
-                    (stop) =>
-                        (customer.leadId !== null && stop.leadId === customer.leadId) ||
-                        (customer.conversationId !== null && stop.conversationId === customer.conversationId),
-                ),
+        contactOfConversation: jest.fn().mockResolvedValue(null),
+        aliasesOf: jest.fn((_ws: string, contactId: string) => Promise.resolve([contactId])),
+        nameOfContact: jest.fn().mockResolvedValue("Nguyen Van A"),
+    }
+}
+
+/** The runs as the stop holds read them: where a run stands, and the run a wake tried again already opened. */
+const runsOf = (runState: RunState) => ({
+    runOf: jest.fn((_ws: string, runId: string) =>
+        Promise.resolve(runState.status === null ? null : runViewOf({ id: runId, status: runState.status })),
+    ),
+    runIdOfWake: jest.fn().mockResolvedValue(null),
+})
+
+/** The open stops of thread runs, as a spec opens and closes them. */
+const stopsOf = (openStops: Array<HeldStop>) => ({
+    openOfCustomer: jest.fn((_ws: string, customer: StopCustomer) =>
+        Promise.resolve(
+            openStops.filter(
+                (stop) =>
+                    (customer.contactId !== null &&
+                        stop.contactId !== null &&
+                        [customer.contactId, ...(customer.aliases ?? [])].includes(stop.contactId)) ||
+                    (customer.conversationId !== null && stop.conversationId === customer.conversationId),
             ),
         ),
-        openOfRun: jest.fn((_ws: string, runId: string) =>
-            Promise.resolve(openStops.filter((stop) => stop.runId === runId)),
-        ),
-    })
-    const wakes = mock<LeadFreezeWakesService>({ replay: jest.fn().mockResolvedValue(1) })
+    ),
+    openOfRun: jest.fn((_ws: string, runId: string) => Promise.resolve(openStops.filter((stop) => stop.runId === runId))),
+})
+
+const build = async (initial: LeadFreeze | null = null, status: RunView["status"] | null = "parked") => {
+    const records = new Map<string, LeadFreeze>(initial === null ? [] : [[initial.id, initial]])
+    const store = mock<LeadFreezeRecordsService>(storeOf(records))
+    const runState: RunState = { status }
+    const runs = mock<AgentRunsService>(runsOf(runState))
+    const openStops: Array<HeldStop> = []
+    const stops = mock<LeadFreezeStopsService>(stopsOf(openStops))
+    const wakes = mock<LeadFreezeWakesService>({ replay: jest.fn().mockResolvedValue(1), dropped: jest.fn().mockResolvedValue(1) })
+    const runStops = mock<RunStopsService>({ factsAdded: jest.fn().mockResolvedValue(true) })
     const gate = mock<AgentGraphFreezeGateService>()
     // The hooks of the thread runs and of the thread sweep, as the stop holds register on them.
     const settled: Array<ThreadSettledListener> = []
@@ -108,6 +116,7 @@ const build = async (initial: LeadFreeze | null = null, status: RunView["status"
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
         providers: [
+            LeadFreezeStopHoldsService,
             LeadFreezesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:05:00.000Z") },
@@ -119,7 +128,7 @@ const build = async (initial: LeadFreeze | null = null, status: RunView["status"
             { provide: LeadFreezeStopsService, useValue: stops },
             { provide: ThreadRunsService, useValue: threadRuns },
             { provide: ThreadSweepService, useValue: sweep },
-            LeadFreezeStopHoldsService,
+            { provide: RunStopsService, useValue: runStops },
         ],
     }).compile()
     return {
@@ -136,6 +145,7 @@ const build = async (initial: LeadFreeze | null = null, status: RunView["status"
         logger,
         openStops,
         stops,
+        runStops,
     }
 }
 
@@ -143,12 +153,7 @@ const build = async (initial: LeadFreeze | null = null, status: RunView["status"
 const replayedOf = (wakes: ReturnType<typeof mock<LeadFreezeWakesService>>): ReadonlyArray<string> =>
     wakes.replay.mock.calls[0]?.[3].map((each) => each.wakeId) ?? []
 
-const CHAT_TURN = agentTurnViewOf({
-    wakeId: "wake-9",
-    agentId: "chatbot",
-    source: "customer",
-    context: { conversationId: "c-1" },
-})
+const CHAT_TURN = agentTurnViewOf({ wakeId: "wake-9", agentId: "chatbot", source: "trigger", context: { conversationId: "c-1" } })
 
 /** An open stop of thread run run-7 of the front desk, about lead-1 in conversation c-1. */
 const OPEN_STOP: HeldStop = {
@@ -156,23 +161,25 @@ const OPEN_STOP: HeldStop = {
     stepKey: "consult",
     agentId: "chatbot",
     workflowId: "wf-front-desk",
-    leadId: "lead-1",
+    contactId: "lead-1",
     conversationId: "c-1",
     toldConversationIds: [],
     stoppedAt: "2026-11-04T10:00:00.000Z",
 }
 
 /** A line of lead-1 to the front desk, as the flow asks `hold` before it opens a run. */
-const FRONT_DESK = { leadId: "lead-1", conversationId: "c-1", workflowId: "wf-front-desk", messageIds: ["m-9"] }
+// A person's line of the one pipeline: told apart by the channel identity its event is about (`subject`), not by a source.
+const LINE_SUBJECT = { channel: "zalo", id: "u-1" }
+const FRONT_DESK = { contactId: "lead-1", conversationId: "c-1", workflowId: "wf-front-desk", messageIds: ["m-9"], subject: LINE_SUBJECT }
 
 const turnOf = (wakeId: string, attempts = 1) =>
-    agentTurnViewOf({ wakeId, agentId: "chatbot", source: "customer", context: { conversationId: "c-1" }, attempts })
+    agentTurnViewOf({ wakeId, agentId: "chatbot", source: "trigger", context: { conversationId: "c-1" }, attempts })
 
 /** The hold of run-7's stop, after it held one line. */
 const threadHoldOf = (overrides: Partial<LeadFreeze> = {}): LeadFreeze =>
     frozenFreezeOf({
         id: "freeze-7",
-        key: "lead:lead-1|wf:wf-front-desk",
+        key: "contact:lead-1|wf:wf-front-desk",
         frozenRunId: "run-7",
         frozenReason: "run_stop",
         stepKey: "consult",
@@ -193,15 +200,14 @@ describe("LeadFreezeStopHoldsService registration", () => {
         expect(store.byRun).toHaveBeenCalledWith("ws-1", "run-7")
         expect(records.get("freeze-7")?.status).toBe("released")
 
-        records.set("freeze-8", threadHoldOf({ id: "freeze-8", key: "lead:lead-2|wf:wf-front-desk", leadId: "lead-2" }))
+        records.set("freeze-8", threadHoldOf({ id: "freeze-8", key: "contact:lead-2|wf:wf-front-desk", contactId: "lead-2" }))
         await riders[0]?.("ws-1")
         expect(records.get("freeze-8")?.status).toBe("released")
         expect(wakes.replay).toHaveBeenCalledTimes(2)
     })
-
 })
 
-describe("LeadFreezesService: a thread run's stop holds the customer's new wakes", () => {
+describe("LeadFreezesService: a thread run's stop holds the customer's new wakes: the customer and the workflow a stop holds", () => {
     it("holds a new wake of the same customer and workflow while the stop is open: recorded once, no owner item", async () => {
         const { service, records, logger, openStops } = await build(null, "waiting")
         openStops.push(OPEN_STOP)
@@ -211,7 +217,7 @@ describe("LeadFreezesService: a thread run's stop holds the customer's new wakes
 
         expect([...records.values()]).toEqual([
             expect.objectContaining({
-                key: "lead:lead-1|wf:wf-front-desk",
+                key: "contact:lead-1|wf:wf-front-desk",
                 status: "frozen",
                 frozenRunId: "run-7",
                 frozenReason: "run_stop",
@@ -230,17 +236,74 @@ describe("LeadFreezesService: a thread run's stop holds the customer's new wakes
 
     it("serves a wake of another workflow, of another customer, and of a customer whose only stop is bank-fed", async () => {
         const { service, records, openStops } = await build(null, "waiting")
-        const bankFed = { ...OPEN_STOP, runId: "run-bank", leadId: null, conversationId: null, workflowId: "wf-reconcile" }
+        const bankFed = { ...OPEN_STOP, runId: "run-bank", contactId: null, conversationId: null, workflowId: "wf-reconcile" }
         openStops.push(OPEN_STOP, bankFed)
 
         await expect(service.hold(CHAT_TURN, { ...FRONT_DESK, workflowId: "wf-consult" })).resolves.toBe(false)
-        await expect(service.hold(CHAT_TURN, { leadId: "lead-2", workflowId: "wf-front-desk" })).resolves.toBe(false)
+        await expect(service.hold(CHAT_TURN, { contactId: "lead-2", workflowId: "wf-front-desk" })).resolves.toBe(false)
         const credit = { subject: "bank-transaction:tx-1", workflowId: "wf-reconcile" }
         await expect(service.hold(CHAT_TURN, credit)).resolves.toBe(false)
 
         expect(records.size).toBe(0)
     })
 
+    it("holds the next line of the SAME contact on ANOTHER channel after a verified merge: one stop, one hold (keyed by the contact)", async () => {
+        const { service, records, openStops, store } = await build(null, "waiting")
+        // The Zalo person (contact-zalo) is stopped in c-zalo; the Telegram person proved the same phone and merged into contact-zalo.
+        openStops.push({ ...OPEN_STOP, contactId: "contact-zalo", conversationId: "c-zalo" })
+        store.aliasesOf.mockResolvedValue(["contact-zalo", "contact-tg"])
+        const telegram = agentTurnViewOf({ wakeId: "wake-tg", agentId: "chatbot", source: "trigger", context: { conversationId: "c-tg" } })
+
+        await expect(
+            service.hold(telegram, { contactId: "contact-zalo", conversationId: "c-tg", workflowId: "wf-front-desk", messageIds: ["m-tg"], subject: LINE_SUBJECT }),
+        ).resolves.toBe(true)
+
+        expect([...records.values()]).toEqual([
+            expect.objectContaining({
+                key: "contact:contact-zalo|wf:wf-front-desk",
+                frozenRunId: "run-7",
+                pending: [expect.objectContaining({ wakeId: "wake-tg", messageIds: ["m-tg"] })],
+            }),
+        ])
+    })
+
+    it("holds the next line of the SAME contact on ANOTHER conversation with no merge at all: the contact keys the hold", async () => {
+        const { service, records, openStops } = await build(null, "waiting")
+        openStops.push({ ...OPEN_STOP, contactId: "contact-1", conversationId: "c-1" })
+        const other = agentTurnViewOf({ wakeId: "wake-c2", agentId: "chatbot", source: "trigger", context: { conversationId: "c-2" } })
+
+        await expect(
+            service.hold(other, { contactId: "contact-1", conversationId: "c-2", workflowId: "wf-front-desk", messageIds: ["m-c2"], subject: LINE_SUBJECT }),
+        ).resolves.toBe(true)
+
+        expect([...records.values()]).toEqual([
+            expect.objectContaining({ key: "contact:contact-1|wf:wf-front-desk", frozenRunId: "run-7" }),
+        ])
+    })
+
+    it("holds it too when the stop was written under the id that was merged away: the redirect's alias is the same person", async () => {
+        const { service, openStops, store } = await build(null, "waiting")
+        openStops.push({ ...OPEN_STOP, contactId: "contact-tg", conversationId: "c-tg" })
+        store.aliasesOf.mockResolvedValue(["contact-zalo", "contact-tg"])
+        const zalo = agentTurnViewOf({ wakeId: "wake-z", agentId: "chatbot", source: "trigger", context: { conversationId: "c-zalo" } })
+
+        await expect(
+            service.hold(zalo, { contactId: "contact-zalo", conversationId: "c-zalo", workflowId: "wf-front-desk", messageIds: ["m-z"], subject: LINE_SUBJECT }),
+        ).resolves.toBe(true)
+    })
+
+    it("never holds another person: a contact with no alias of the stop's is served", async () => {
+        const { service, openStops } = await build(null, "waiting")
+        openStops.push({ ...OPEN_STOP, contactId: "contact-tg", conversationId: "c-tg" })
+        const zalo = agentTurnViewOf({ wakeId: "wake-z", agentId: "chatbot", source: "trigger", context: { conversationId: "c-zalo" } })
+
+        await expect(
+            service.hold(zalo, { contactId: "contact-zalo", conversationId: "c-zalo", workflowId: "wf-front-desk", messageIds: ["m-z"], subject: LINE_SUBJECT }),
+        ).resolves.toBe(false)
+    })
+})
+
+describe("LeadFreezesService: a thread run's stop holds the customer's new wakes: retries, a run that is over, and what waits", () => {
     it("never holds the wake that opened the stopped run when it is tried again, before or after the hold exists", async () => {
         const { service, runs, openStops } = await build(null, "waiting")
         openStops.push(OPEN_STOP)
@@ -282,11 +345,7 @@ describe("LeadFreezesService: the hold of a stop is released when the stop close
         await holds.threadSettled("ws-1", "run-7")
         await holds.threadSettled("ws-1", "run-7")
 
-        expect(records.get("freeze-1")).toMatchObject({
-            status: "released",
-            releaseReason: "stop_closed",
-            releasedBy: "engine",
-        })
+        expect(records.get("freeze-1")).toMatchObject({ status: "released", releaseReason: "stop_closed", releasedBy: "engine" })
         expect(wakes.replay).toHaveBeenCalledTimes(1)
         expect(replayedOf(wakes)).toEqual(["wake-9", "wake-10"])
         await expect(service.hold(turnOf("wake-11"), FRONT_DESK)).resolves.toBe(false)
@@ -354,7 +413,7 @@ describe("LeadFreezesService: the founder answers the stop, never the hold", () 
 
     it("reads a hold whose stop closed as released, replaying its events", async () => {
         const { service, wakes } = await build(threadHoldOf(), "waiting")
-        await expect(service.stateOfLead("ws-1", "lead-1")).resolves.toBeNull()
+        await expect(service.stateOfContact("ws-1", "lead-1")).resolves.toBeNull()
         expect(replayedOf(wakes)).toEqual(["wake-2"])
     })
 })

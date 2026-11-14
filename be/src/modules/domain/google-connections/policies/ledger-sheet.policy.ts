@@ -1,7 +1,14 @@
+import { localDate } from "@modules/domain/workspace-settings"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { BusinessLedgerEntry } from "@modules/domain/provider-registry"
-import { GoogleError, ledgerCategoryText, ledgerHeader, ledgerTab, ledgerVoidText } from "@modules/integrations/google"
-import type { SheetCell } from "@modules/integrations/google"
+import {
+    GoogleError,
+    ledgerCategoryText,
+    ledgerHeader,
+    ledgerTab,
+    ledgerVoidText,
+    type SheetCell,
+} from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "../errors/google-connections.error"
 import { CONSENT_PREFIX } from "./consent-reason.policy"
 
@@ -19,9 +26,6 @@ export const SHEETS_GRANTED = "granted"
 
 /** The meta value that marks a ledger sheet whose header row was written. */
 export const HEADER_WRITTEN = "written"
-
-/** The offset of Vietnam from UTC, in milliseconds: the day an entry belongs to is the day on the shop's wall. */
-const VIETNAM_OFFSET_MS = 7 * 3_600_000
 
 /** The meta value that marks a ledger sheet laid out as the cash book tab: the tab, the header and the columns of this version. */
 export const LEDGER_LAYOUT = "v2"
@@ -75,8 +79,8 @@ export const ledgerRowOf = (entry: BusinessLedgerEntry): ReadonlyArray<SheetCell
     ]
 }
 
-/** The day (`YYYY-MM-DD`) an instant belongs to on the shop's wall. */
-export const dayOf = (now: Date): string => new Date(now.getTime() + VIETNAM_OFFSET_MS).toISOString().slice(0, 10)
+/** The day (`YYYY-MM-DD`) an instant belongs to on the shop's wall: the wall clock of the workspace's time zone. */
+export const dayOf = (now: Date, timeZone: string): string => localDate(now.getTime(), timeZone)
 
 /** The row that takes one transaction back by its key alone: the day, the key and the word for a reversal, with no amount. */
 export const voidRowOf = (transactionId: string, day: string): ReadonlyArray<SheetCell> => [
@@ -123,7 +127,7 @@ export const consentRowOf = (rows: ReadonlyArray<ConnectionRecord>, email: strin
     const awaiting = (row: ConnectionRecord): boolean =>
         (row.status === "error" && (row.lastError ?? "").startsWith(CONSENT_PREFIX)) ||
         (row.status === "pending" && row.meta.consent === "needed")
-    return rows.find(awaiting) ?? null
+    return rows.find((item) => awaiting(item)) ?? null
 }
 
 /** The public facts a consent leaves on a connection: the account email, and `consent: given` where the seed had made it wait. */

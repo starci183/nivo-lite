@@ -38,6 +38,40 @@
               },
               "required": {
                 "type": "boolean"
+              },
+              "members": {
+                "maxItems": 40,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "maxLength": 200,
+                      "pattern": "^[a-z][a-zA-Z0-9]{0,63}$"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "string",
+                        "number",
+                        "integer",
+                        "boolean",
+                        "object",
+                        "array"
+                      ]
+                    },
+                    "required": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type",
+                    "required"
+                  ],
+                  "additionalProperties": false
+                }
               }
             },
             "required": [
@@ -74,12 +108,15 @@
                 "enum": [
                   "zalo",
                   "telegram",
+                  "facebook",
+                  "instagram",
                   "website",
                   "sepay",
                   "timer",
                   "schedule",
                   "chats-group",
-                  "workflow"
+                  "workflow",
+                  "provider"
                 ]
               },
               "connectionId": {
@@ -93,6 +130,16 @@
                     "type": "null"
                   }
                 ]
+              },
+              "provider": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[a-z][a-z0-9_]{1,30}$"
+              },
+              "trigger": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[a-z][a-z0-9.-]{1,60}$"
               }
             },
             "required": [
@@ -110,13 +157,14 @@
                 "param": {
                   "type": "string",
                   "maxLength": 200,
-                  "pattern": "^[a-z][a-zA-Z0-9]{0,63}$"
+                  "pattern": "^[a-z][a-zA-Z0-9]{0,63}(\\.[A-Za-z][A-Za-z0-9_-]{0,63}){0,2}$"
                 },
                 "op": {
                   "type": "string",
                   "enum": [
                     "equals",
                     "not-equals",
+                    "in",
                     "contains",
                     "present"
                   ]
@@ -131,6 +179,23 @@
               ],
               "additionalProperties": false
             }
+          },
+          "correlationKey": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "routeId",
+                  "contactId",
+                  "accountId",
+                  "eventId"
+                ]
+              },
+              {
+                "type": "string",
+                "pattern": "^data\\.[a-z][a-zA-Z0-9]{0,63}$"
+              }
+            ]
           }
         },
         "required": [
@@ -204,9 +269,6 @@
             "any",
             "agent"
           ]
-        },
-        "holdsConversation": {
-          "type": "boolean"
         }
       },
       "required": [
@@ -235,107 +297,6 @@
               "schedule"
             ]
           }
-        },
-        "burst": {
-          "type": "object",
-          "properties": {
-            "channel": {
-              "type": "object",
-              "properties": {
-                "window": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                },
-                "maxWait": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                }
-              },
-              "required": [
-                "window"
-              ],
-              "additionalProperties": false
-            },
-            "chats-group": {
-              "type": "object",
-              "properties": {
-                "window": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                },
-                "maxWait": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                }
-              },
-              "required": [
-                "window"
-              ],
-              "additionalProperties": false
-            },
-            "agent": {
-              "type": "object",
-              "properties": {
-                "window": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                },
-                "maxWait": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                }
-              },
-              "required": [
-                "window"
-              ],
-              "additionalProperties": false
-            },
-            "system-event": {
-              "type": "object",
-              "properties": {
-                "window": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                },
-                "maxWait": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                }
-              },
-              "required": [
-                "window"
-              ],
-              "additionalProperties": false
-            },
-            "schedule": {
-              "type": "object",
-              "properties": {
-                "window": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                },
-                "maxWait": {
-                  "type": "string",
-                  "maxLength": 200,
-                  "pattern": "^\\d{1,6}(ms|s|m)$"
-                }
-              },
-              "required": [
-                "window"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": false
         }
       },
       "required": [
@@ -347,57 +308,6 @@
     "grant": {
       "type": "object",
       "properties": {
-        "rights": {
-          "maxItems": 100,
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "kind": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 200
-              },
-              "access": {
-                "type": "string",
-                "enum": [
-                  "read",
-                  "write"
-                ]
-              },
-              "scope": {
-                "type": "string",
-                "enum": [
-                  "turn",
-                  "workspace"
-                ]
-              },
-              "fields": {
-                "type": "array",
-                "prefixItems": [
-                  {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 200
-                  }
-                ],
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 200
-                },
-                "minItems": 1
-              }
-            },
-            "required": [
-              "kind",
-              "access",
-              "scope",
-              "fields"
-            ],
-            "additionalProperties": false
-          }
-        },
         "tools": {
           "maxItems": 100,
           "type": "array",
@@ -416,7 +326,6 @@
         }
       },
       "required": [
-        "rights",
         "tools",
         "effects"
       ],
@@ -524,6 +433,72 @@
             "type": "string",
             "maxLength": 200,
             "pattern": "^[a-z0-9][a-z0-9./:-]{0,79}$"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "ask"
+            ]
+          },
+          "accounts": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "pattern": "^[a-z][a-z0-9-]*$"
+                },
+                "provider": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "connectionId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "operations": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "ask"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "kind",
+                "provider",
+                "connectionId"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [

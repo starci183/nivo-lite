@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { RemoteFilesError, RemoteFilesErrorCode } from "./errors/remote-files.error"
 import type { RemoteFileAnswer, RemoteFileRequest } from "./remote-files.contracts"
 import { InjectRemoteFilesOptions } from "./remote-files.decorators"
@@ -25,12 +24,15 @@ export class RemoteFilesClient implements RemoteFiles {
 
     /** Asks the address once; a network failure or a timeout is a `RemoteFilesError`, every answer (a redirect or a refusal too) is described. */
     async read(request: RemoteFileRequest): Promise<RemoteFileAnswer> {
+        const ceiling = request.limits?.maxBytes ?? this.options.maxBytes
+        const maxBytes = Math.min(request.maxBytes, ceiling)
         const answer = await this.http
             .request({
                 method: "GET",
                 url: request.url,
                 read: "bytes",
-                timeoutMs: Math.min(request.timeoutMs, this.options.timeoutMs),
+                timeoutMs: Math.min(request.timeoutMs, request.limits?.timeoutMs ?? this.options.timeoutMs),
+                ...(request.limits === undefined ? {} : { maxBytes }),
                 ...(request.headers === undefined ? {} : { headers: request.headers }),
                 ...(request.pin === undefined ? {} : { pin: request.pin }),
                 ...(request.redirect === undefined ? {} : { redirect: request.redirect }),
@@ -40,9 +42,8 @@ export class RemoteFilesClient implements RemoteFiles {
             })
         const contentType = answer.headers?.["content-type"] ?? ""
         const body = Buffer.isBuffer(answer.body) ? answer.body : null
-        const length = body?.length ?? 0
-        const maxBytes = Math.min(request.maxBytes, this.options.maxBytes)
-        const kept = body !== null && isSuccess(answer.status) && request.accepts(contentType)
+        const length = answer.tooLarge === true ? maxBytes + 1 : (body?.length ?? 0)
+        const kept = body !== null && answer.tooLarge !== true && isSuccess(answer.status) && request.accepts(contentType)
         return {
             status: answer.status,
             contentType,

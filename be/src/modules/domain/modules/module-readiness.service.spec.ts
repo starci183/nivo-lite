@@ -1,24 +1,30 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { McpGatewayService } from "@modules/domain/mcp-gateway"
-import type { RoleReadiness } from "@modules/domain/mcp-gateway"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ACCOUNTING_MODULE } from "./accounting.contracts"
-import { CHATBOT_MODULE } from "./chatbot.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { ModulesService } from "./modules.service"
+import { catalogModuleOf } from "./modules.testing"
+
+const SALES_MODULE = catalogModuleOf("sales")
+const CHATBOT_MODULE = catalogModuleOf("chatbot")
+
+/** Sales as if it required a role no family of the code plays (`receivable.find`): what a module that still needs a connection looks like. */
+const NEEDY_SALES = {
+    ...SALES_MODULE,
+    requires: { ...SALES_MODULE.requires, roles: { requires: ["receivable.find" as const], uses: [] } },
+}
 
 const recordOf = builder<InstallationRecord>({
     id: "inst-1",
     workspaceId: "ws-1",
-    moduleKey: "accounting",
-    name: "Accounting",
+    moduleKey: "sales",
+    name: "Sales",
     isMulti: false,
     agentId: "agent-1",
     status: "live",
@@ -27,20 +33,6 @@ const recordOf = builder<InstallationRecord>({
     activeContextVersionId: "version-1",
     settings: {},
     createdAt: "2026-10-20T00:00:00.000Z",
-})
-
-const readinessOf = builder<RoleReadiness>({
-    ready: false,
-    missing: ["payment.credits.list"],
-    providers: {
-        "identity.find": [],
-        "identity.upsert": [],
-        "receivable.find": [],
-        "receivable.recordPayment": [],
-        "payment.credits.list": ["SePay"],
-        "payment.debits.list": [],
-        "invoice.list": [],
-    },
 })
 
 const sessionOf = builder<SetupSessionRecord>({
@@ -59,15 +51,13 @@ const build = async () => {
     installations.find.mockResolvedValue(recordOf())
     installations.settleConnection.mockResolvedValue(null)
     const catalog = mock<ModulesService>()
-    catalog.find.mockImplementation((key) => Promise.resolve(key === "accounting" ? ACCOUNTING_MODULE : CHATBOT_MODULE))
-    const gateway = mock<McpGatewayService>()
-    gateway.readiness.mockResolvedValue(readinessOf())
+    catalog.find.mockImplementation((key) => Promise.resolve(key === "sales" ? NEEDY_SALES : CHATBOT_MODULE))
     const agents = mock<AgentDirectoryService>()
     agents.identitiesOf.mockResolvedValue([
         {
             id: "agent-1",
-            name: "AI Accounting",
-            handle: "accounting",
+            name: "AI Sales",
+            handle: "sales",
             avatarUrl: "https://cdn.test/a.png",
             avatarPreset: null,
         },
@@ -81,7 +71,6 @@ const build = async () => {
             ModuleReadinessService,
             { provide: InstallationRecordsService, useValue: installations },
             { provide: ModulesService, useValue: catalog },
-            { provide: McpGatewayService, useValue: gateway },
             { provide: AgentDirectoryService, useValue: agents },
             { provide: ContextVersionsService, useValue: versions },
             { provide: SetupSessionsService, useValue: sessions },
@@ -91,7 +80,6 @@ const build = async () => {
         readiness: moduleRef.get(ModuleReadinessService),
         installations,
         catalog,
-        gateway,
         agents,
         versions,
         sessions,
@@ -99,30 +87,25 @@ const build = async () => {
 }
 
 describe("ModuleReadinessService.needsOf", () => {
-    it("answers the missing required roles of a module with their providers", async () => {
-        const { readiness, gateway } = await build()
+    it("answers the required roles of a module no family of the code plays, with their providers (none)", async () => {
+        const { readiness } = await build()
 
-        await expect(readiness.needsOf("ws-1", "accounting")).resolves.toEqual([
-            { role: "payment.credits.list", providers: ["SePay"] },
-        ])
-        expect(gateway.readiness).toHaveBeenCalledWith("ws-1", ["payment.credits.list"])
+        await expect(readiness.needsOf("sales")).resolves.toEqual([{ role: "receivable.find", providers: [] }])
     })
 
-    it("needs nothing when the required roles are ready or the module requires none", async () => {
-        const { readiness, gateway } = await build()
-        gateway.readiness.mockResolvedValue(readinessOf({ ready: true, missing: [] }))
+    it("needs nothing when the code plays the required roles (Sales' bank credits: SePay) or the module requires none", async () => {
+        const { readiness, catalog } = await build()
+        catalog.find.mockImplementation((key) => Promise.resolve(key === "sales" ? SALES_MODULE : CHATBOT_MODULE))
 
-        await expect(readiness.needsOf("ws-1", "accounting")).resolves.toEqual([])
-        await expect(readiness.needsOf("ws-1", "chatbot")).resolves.toEqual([])
-        expect(gateway.readiness).toHaveBeenCalledTimes(1)
+        await expect(readiness.needsOf("sales")).resolves.toEqual([])
+        await expect(readiness.needsOf("chatbot")).resolves.toEqual([])
     })
 
     it("needs nothing for a module that declares no roles", async () => {
-        const { readiness, catalog, gateway } = await build()
+        const { readiness, catalog } = await build()
         catalog.find.mockResolvedValue({ ...CHATBOT_MODULE, requires: { capabilities: [], connections: [] } })
 
-        await expect(readiness.needsOf("ws-1", "chatbot")).resolves.toEqual([])
-        expect(gateway.readiness).not.toHaveBeenCalled()
+        await expect(readiness.needsOf("chatbot")).resolves.toEqual([])
     })
 
     it("shows an installation with its agent, its version number and what it still needs connected", async () => {
@@ -130,14 +113,14 @@ describe("ModuleReadinessService.needsOf", () => {
 
         await expect(readiness.withNeeds(recordOf())).resolves.toEqual({
             ...recordOf(),
-            agentName: "AI Accounting",
-            agentHandle: "accounting",
+            agentName: "AI Sales",
+            agentHandle: "sales",
             agentAvatarUrl: "https://cdn.test/a.png",
             agentAvatarPreset: null,
             activeVersion: 3,
-            connectionNeeds: [{ role: "payment.credits.list", providers: ["SePay"] }],
+            connectionNeeds: [{ role: "receivable.find", providers: [] }],
             lifecycle: "needs_connection",
-            setupProgress: { confirmed: 0, total: ACCOUNTING_MODULE.gates.length },
+            setupProgress: { confirmed: 0, total: SALES_MODULE.gates.length },
         })
         expect(agents.identitiesOf).toHaveBeenCalledWith("ws-1", ["agent-1"])
         expect(versions.numbersOf).toHaveBeenCalledWith(["version-1"])
@@ -152,7 +135,7 @@ describe("ModuleReadinessService.needsOf", () => {
             readiness.withNeeds(recordOf({ agentId: null, activeContextVersionId: null })),
         ).resolves.toMatchObject({
             agentName: "",
-            agentHandle: "accounting",
+            agentHandle: "sales",
             agentAvatarUrl: null,
             activeVersion: null,
         })
@@ -202,8 +185,8 @@ describe("ModuleReadinessService.settle", () => {
     })
 
     it("asks to resume a waiting installation once its connections are ready, and keeps a status nothing moved", async () => {
-        const { readiness, installations, gateway } = await build()
-        gateway.readiness.mockResolvedValue(readinessOf({ ready: true, missing: [] }))
+        const { readiness, installations, catalog } = await build()
+        catalog.find.mockImplementation((key) => Promise.resolve(key === "sales" ? SALES_MODULE : CHATBOT_MODULE))
         installations.find.mockResolvedValue(recordOf({ status: "paused" }))
 
         await expect(readiness.settle("ws-1", "inst-1")).resolves.toBe("paused")

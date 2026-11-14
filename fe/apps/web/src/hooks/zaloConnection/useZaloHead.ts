@@ -16,11 +16,9 @@ import type {
     ZaloHeadView,
 } from "@/modules/types"
 import { useConnectionLife } from "@/hooks/connectionPage"
-import { chipToneOf, zaloLifecycleOf, zaloStatusKindOf } from "./zaloConnection.shared"
+import { chipToneOf, zaloLifecycleOf, zaloStatusKindOf, type ZaloStatusKind } from "./zaloConnection.shared"
 import { useConnectionsRole } from "@/hooks/connections"
-import { useZaloPage } from "./useZaloPage"
-import type { ZaloPageData } from "./useZaloPage"
-import type { ZaloStatusKind } from "./zaloConnection.shared"
+import { useZaloPage, type ZaloPageData } from "./useZaloPage"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 const CHIP_KEYS = { ok: "chipOk", waiting: "chipWaiting", check: "chipCheck" } as const
@@ -71,6 +69,7 @@ export const useZaloHead = (connectionId: string): UseZaloHeadResult => {
         chipTone: chipToneOf(page.healthy, page.access.state, page.status),
         facts: t("facts", { oaId: page.oaId === "" ? "-" : page.oaId, appId: page.appId === "" ? "-" : page.appId }),
         banner: bannerOf(page),
+        attention: page.attention === "needs_reauth" || page.attention === "degraded" ? page.attention : null,
     }))
 
     const reconnect = useCallback(async (): Promise<void> => {

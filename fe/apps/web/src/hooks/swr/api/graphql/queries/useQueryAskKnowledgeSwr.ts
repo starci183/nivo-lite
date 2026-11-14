@@ -4,8 +4,7 @@ import {
     queryAskKnowledge,
     type queryAskKnowledge as QueryAskKnowledgeOperation,
 } from "@/modules/api/graphql/queries/query-ask-knowledge"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { AskKnowledgeQuery } from "@/modules/api"
 
 /** What the askKnowledge query is triggered with. */

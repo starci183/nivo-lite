@@ -1,7 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import { PublicApiProcessingService } from "@modules/domain/public-api"
-import { InjectJobClaims, InjectJobFence } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobFenceService, JobStep } from "@modules/platform/jobs"
+import {
+    InjectJobClaims,
+    InjectJobFence,
+    type ClaimedJob,
+    type JobClaims,
+    type JobFenceService,
+    type JobStep,
+} from "@modules/platform/jobs"
 
 @Injectable()
 /** Keeps the inbox, request fulfillment and completion inside the live worker's fence. */

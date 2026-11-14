@@ -85,21 +85,23 @@ describe("ZaloClient / exchangeCode and refreshTokens", () => {
 
     it.each([
         [
-            "the numeric error and the reason Zalo gave when it refuses the grant",
+            "the numeric error and the reason Zalo gave when it refuses the grant (a refused refresh token: the credential's)",
             { status: 200, body: { error: -118, error_description: "refresh token is used" } },
             { reason: "refresh token is used", zaloCode: -118 },
+            ZaloErrorCode.TokenRefreshRefused,
         ],
         [
-            "the status when the answer is empty and carries no numeric error",
+            "the status when the answer is empty and carries no numeric error (an outage, not a refusal)",
             { status: 502, body: undefined },
             { reason: "502" },
+            ZaloErrorCode.Rejected,
         ],
-    ])("reports %s", async (_name, answer, params) => {
+    ])("reports %s", async (_name, answer, params, code) => {
         const { client, http } = await build()
         http.request.mockResolvedValue(answer)
 
         await expect(client.refreshTokens("app-1", "secret", "r1")).rejects.toMatchObject({
-            code: ZaloErrorCode.Rejected,
+            code,
             params: { path: "/v4/oa/access_token", ...params },
         })
     })
@@ -211,10 +213,10 @@ describe("ZaloClient / oaProfile", () => {
         const { client, http } = await build()
         http.request.mockResolvedValue({
             status: 200,
-            body: { error: 0, data: { oa_id: 4318000000000001, name: " Tiệm hoa NIVO ", avatar: "https://zalo.test/oa.png" } },
+            body: { error: 0, data: { oa_id: 4318000000000001, name: " Ti\u1EC7m hoa NIVO ", avatar: "https://zalo.test/oa.png" } },
         })
 
-        await expect(client.oaProfile("access")).resolves.toEqual({ oaId: "4318000000000001", name: "Tiệm hoa NIVO" })
+        await expect(client.oaProfile("access")).resolves.toEqual({ oaId: "4318000000000001", name: "Ti\u1EC7m hoa NIVO" })
 
         expect(http.request).toHaveBeenCalledWith(
             objectLike({ method: "GET", url: "https://api.test/v2.0/oa/getoa", headers: { access_token: "access" } }),
@@ -268,7 +270,7 @@ describe("ZaloClient / sendCsImage", () => {
         http.request.mockResolvedValue({ status: 200, body: { error: 0, data: { message_id: "m-2" } } })
 
         await expect(
-            client.sendCsImage("access", "user-1", "https://qr.sepay.vn/img?acc=1&amount=5"),
+            client.sendCsImage("access", "user-1", "https://vietqr.app/img?acc=1&amount=5"),
         ).resolves.toBeUndefined()
 
         expect(http.request).toHaveBeenCalledWith({
@@ -282,7 +284,7 @@ describe("ZaloClient / sendCsImage", () => {
                         type: "template",
                         payload: {
                             template_type: "media",
-                            elements: [{ media_type: "image", url: "https://qr.sepay.vn/img?acc=1&amount=5" }],
+                            elements: [{ media_type: "image", url: "https://vietqr.app/img?acc=1&amount=5" }],
                         },
                     },
                 },
@@ -295,7 +297,7 @@ describe("ZaloClient / sendCsImage", () => {
         const { client, http } = await build()
         http.request.mockResolvedValue({ status: 200, body: { error: -213, message: "not follower" } })
 
-        await expect(client.sendCsImage("access", "user-1", "https://qr.sepay.vn/img")).rejects.toMatchObject({
+        await expect(client.sendCsImage("access", "user-1", "https://vietqr.app/img")).rejects.toMatchObject({
             code: ZaloErrorCode.NotFollower,
             params: { zaloCode: -213 },
         })
@@ -449,81 +451,3 @@ describe("ZaloClient / recentChats and conversation", () => {
     })
 })
 
-describe("ZaloClient / what an error says", () => {
-    /** The `body` param of a failure, as text. */
-    const bodyOf = (failure: unknown): string =>
-        String(Reflect.get(Object(Reflect.get(Object(failure), "params")), "body"))
-
-    it("keeps Zalo's number, its words, the status and the answer, and the endpoint without the query that names a customer", async () => {
-        const { client, http } = await build()
-        const answer = {
-            error: -224,
-            message: "Application does not have permission",
-            detail: { access_token: "secret-token", note: "x" },
-        }
-        http.request.mockResolvedValue({ status: 200, body: answer })
-
-        const failure = await client.conversation("token", "user-1", 0).catch((cause: unknown) => cause)
-
-        expect(failure).toMatchObject({
-            code: ZaloErrorCode.PlanRestricted,
-            params: {
-                path: "/v2.0/oa/conversation",
-                reason: "Application does not have permission",
-                zaloCode: -224,
-                status: 200,
-            },
-        })
-        expect(bodyOf(failure)).toContain("Application does not have permission")
-        expect(bodyOf(failure)).toContain("[redacted]")
-        expect(bodyOf(failure)).not.toContain("secret-token")
-    })
-
-    it("cuts a long answer short", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue({ status: 200, body: { error: -1, message: "x".repeat(2000) } })
-
-        const failure = await client.recentChats("token", 0).catch((cause: unknown) => cause)
-
-        expect(bodyOf(failure)).toHaveLength(500)
-    })
-
-    it("names the status and the answer when Zalo answers an HTTP failure without an error number", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue({ status: 502, body: { message: "bad gateway" } })
-
-        const failure = await client.recentChats("token", 0).catch((cause: unknown) => cause)
-
-        expect(failure).toMatchObject({
-            code: ZaloErrorCode.Unavailable,
-            params: {
-                path: "/v2.0/oa/listrecentchat",
-                reason: "HTTP 502",
-                status: 502,
-                body: '{"message":"bad gateway"}',
-            },
-        })
-    })
-
-    it("names the status and an empty answer when Zalo answers something that is not an object", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue({ status: 504, body: undefined })
-
-        const failure = await client.recentChats("token", 0).catch((cause: unknown) => cause)
-
-        expect(failure).toMatchObject({ params: { reason: "HTTP 504", status: 504, body: "" } })
-    })
-
-    it("keeps the status and the answer of a refused token exchange, without any token it echoed", async () => {
-        const { client, http } = await build()
-        http.request.mockResolvedValue({
-            status: 400,
-            body: { error: -118, error_name: "invalid code", access_token: "" },
-        })
-
-        const failure = await client.exchangeCode("app", "secret", "code", "verifier").catch((cause: unknown) => cause)
-
-        expect(bodyOf(failure)).toBe('{"error":-118,"error_name":"invalid code","access_token":"[redacted]"}')
-        expect(failure).toMatchObject({ params: { status: 400 } })
-    })
-})

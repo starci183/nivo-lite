@@ -5,7 +5,6 @@ export type {
     AppObject,
     MetaEvent,
     MetaPageChoice,
-    MetaPageCredentials,
     MetaSubscriptionStatus,
     PageSubscription,
     SendResult,

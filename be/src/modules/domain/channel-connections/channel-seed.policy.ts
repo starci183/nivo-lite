@@ -61,3 +61,9 @@ export const googleClientOf = (
     if (clientId === undefined || clientSecret === undefined) return invalidSeed("google")
     return { clientId, clientSecret }
 }
+
+/** The characters and length Telegram allows for a webhook `secret_token` (Bot API setWebhook). */
+const TELEGRAM_SECRET_TOKEN = /^[A-Za-z0-9_-]{1,256}$/u
+
+/** True for a value Telegram takes as a webhook `secret_token`. */
+export const isTelegramSecretToken = (value: string): boolean => TELEGRAM_SECRET_TOKEN.test(value)

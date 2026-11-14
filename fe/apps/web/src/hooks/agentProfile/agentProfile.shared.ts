@@ -1,5 +1,3 @@
-import { authorityModeOf, type AuthorityMode } from "@/modules/authority"
-
 /** The length of an agent's display name after trimming; the server refuses others. */
 export const AGENT_NAME_LIMITS = { min: 2, max: 40 } as const
 
@@ -7,7 +5,6 @@ export const AGENT_NAME_LIMITS = { min: 2, max: 40 } as const
 export type AssignRole = "owner" | "manager" | "staff"
 
 const ROLES: ReadonlyArray<AssignRole> = ["owner", "manager", "staff"]
-const OPERATING_MODES = ["assist", "autopilot"] as const
 
 /** One person of the workspace as the page draws them. */
 export interface PersonView {
@@ -16,13 +13,6 @@ export interface PersonView {
     readonly role: AssignRole
     /** False once the member was disabled. */
     readonly isActive: boolean
-}
-
-/** One rule of the owner's authority that applies to the agent. */
-export interface AppliedRuleView {
-    readonly action: string
-    readonly mode: AuthorityMode
-    readonly note: string
 }
 
 /** One piece of recent work. */
@@ -52,21 +42,12 @@ export interface AgentProfileView {
     readonly module: string
     readonly isActive: boolean
     readonly roomName: string | null
-    /** assist asks first, autopilot works alone; null when no instance drives the agent. */
-    readonly mode: "assist" | "autopilot" | null
     readonly owner: PersonView | null
     readonly fallback: PersonView | null
     /** The member who answers right now (the owner, else the fallback, else the workspace owner). */
     readonly responderId: string
     readonly assignableRoles: ReadonlyArray<AssignRole>
     readonly assignableRooms: ReadonlyArray<string>
-    readonly canTag: ReadonlyArray<{
-        readonly id: string
-        readonly name: string
-        readonly module: string
-        readonly isActive: boolean
-    }>
-    readonly rules: RegionView<AppliedRuleView>
     readonly recent: RegionView<RecentWorkView>
 }
 
@@ -95,7 +76,6 @@ export interface AgentPageWire {
         readonly module: string
         readonly status: string
         readonly roomName?: string | null
-        readonly operatingMode?: string | null
     }
     readonly ownership: {
         readonly owner?: OwnerWire | null
@@ -103,14 +83,7 @@ export interface AgentPageWire {
         readonly responder: { readonly ownerMemberId: string }
         readonly assignableRoles: ReadonlyArray<string>
         readonly assignableRooms: ReadonlyArray<{ readonly name: string }>
-        readonly canTag: ReadonlyArray<{
-            readonly id: string
-            readonly name: string
-            readonly module: string
-            readonly status: string
-        }>
     }
-    readonly rules: RegionWire<{ readonly action: string; readonly mode: string; readonly note: string }>
     readonly recent: RegionWire<{
         readonly id: string
         readonly action: string
@@ -121,9 +94,6 @@ export interface AgentPageWire {
 }
 
 const roleOf = (value: string): AssignRole => ROLES.find((role) => role === value) ?? "staff"
-
-const modeOf = (value: string | null | undefined): AgentProfileView["mode"] =>
-    OPERATING_MODES.find((mode) => mode === value) ?? null
 
 const personOf = (wire: OwnerWire | null | undefined): PersonView | null =>
     wire === null || wire === undefined
@@ -146,22 +116,11 @@ export const toAgentProfile = (wire: AgentPageWire): AgentProfileView => ({
     module: wire.agent.module,
     isActive: wire.agent.status === "active",
     roomName: wire.agent.roomName ?? null,
-    mode: modeOf(wire.agent.operatingMode),
     owner: personOf(wire.ownership.owner),
     fallback: personOf(wire.ownership.fallback),
     responderId: wire.ownership.responder.ownerMemberId,
     assignableRoles: ROLES.filter((role) => wire.ownership.assignableRoles.includes(role)),
     assignableRooms: wire.ownership.assignableRooms.map((room) => room.name),
-    canTag: wire.ownership.canTag.map((target) => ({
-        id: target.id,
-        name: target.name,
-        module: target.module,
-        isActive: target.status === "active",
-    })),
-    rules: regionOf(wire.rules, (rule) => {
-        const mode = authorityModeOf(rule.mode)
-        return mode === null ? null : { action: rule.action, mode, note: rule.note }
-    }),
     recent: regionOf(wire.recent, (work) => ({
         id: work.id,
         action: work.action,
@@ -171,26 +130,20 @@ export const toAgentProfile = (wire: AgentPageWire): AgentProfileView => ({
     })),
 })
 
-/** The identity chips under the name: what the agent is, where it sits, how far it goes alone, and whether it is paused. */
-export type ChipId = "kind" | "room" | "assist" | "autopilot" | "paused"
+/** The identity chips under the name: what the agent is, where it sits, and whether it is paused. */
+export type ChipId = "kind" | "room" | "paused"
 
 /** One identity chip: its words are the page's, its room name (when it has one) is data. */
 export interface ChipView {
     readonly id: ChipId
-    readonly tone: "neutral" | "warning" | "success" | "danger"
+    readonly tone: "neutral" | "danger"
     /** The room name for the room chip; null otherwise. */
     readonly room: string | null
-}
-
-const MODE_CHIPS: Readonly<Record<"assist" | "autopilot", ChipView>> = {
-    assist: { id: "assist", tone: "warning", room: null },
-    autopilot: { id: "autopilot", tone: "success", room: null },
 }
 
 /** The chips of an agent, in display order. */
 export const profileChipsOf = (agent: AgentProfileView): ReadonlyArray<ChipView> => [
     { id: "kind", tone: "neutral", room: null },
     ...(agent.roomName === null ? [] : [{ id: "room" as const, tone: "neutral" as const, room: agent.roomName }]),
-    ...(agent.mode === null ? [] : [MODE_CHIPS[agent.mode]]),
     ...(agent.isActive ? [] : [{ id: "paused" as const, tone: "danger" as const, room: null }]),
 ]

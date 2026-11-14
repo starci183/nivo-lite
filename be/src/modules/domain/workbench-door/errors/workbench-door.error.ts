@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the workbench door. */
 export enum WorkbenchDoorErrorCode {
@@ -17,7 +16,7 @@ export enum WorkbenchDoorErrorCode {
     ExternalInTx = "WORKBENCH_DOOR_EXTERNAL_IN_TX",
     /** Two modules declare the same read or action id. */
     RegistryDuplicate = "WORKBENCH_DOOR_REGISTRY_DUPLICATE",
-    /** A read or action id is not `<module>.<name>`. */
+    /** A read or action id has none of the lawful forms (`isOperationId`). */
     RegistryIdInvalid = "WORKBENCH_DOOR_REGISTRY_ID_INVALID",
     /** A read or action lists a port nothing provides. */
     RegistryPortUnknown = "WORKBENCH_DOOR_REGISTRY_PORT_UNKNOWN",
@@ -29,6 +28,8 @@ export enum WorkbenchDoorErrorCode {
     ActionFailed = "WORKBENCH_DOOR_ACTION_FAILED",
     /** The authority rules ask a person before the action runs. */
     ActionRefused = "WORKBENCH_DOOR_ACTION_REFUSED",
+    /** A file call names a read or action that does not reach the record type it names. */
+    FileNotDeclared = "WORKBENCH_DOOR_FILE_NOT_DECLARED",
 }
 
 /** How each workbench door code travels. */
@@ -46,6 +47,7 @@ export const WORKBENCH_DOOR_ERROR_KINDS: Record<WorkbenchDoorErrorCode, ErrorKin
     [WorkbenchDoorErrorCode.ActionConflict]: "conflict",
     [WorkbenchDoorErrorCode.ActionFailed]: "unavailable",
     [WorkbenchDoorErrorCode.ActionRefused]: "conflict",
+    [WorkbenchDoorErrorCode.FileNotDeclared]: "forbidden",
 }
 
 /** The one error class of the workbench door capability. */

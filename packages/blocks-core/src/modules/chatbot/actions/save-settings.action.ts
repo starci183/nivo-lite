@@ -10,18 +10,18 @@ import { SETTINGS } from "../ports"
 import { refusal, writeRefusal } from "./refusal"
 
 /**
- * `chatbot.save-settings`: saves the rules of the Chatbot (the holding message it sends while the AI works, up to 400 characters) as
- * the one `chat.settings` record of the workspace. Only owners and managers hold the
+ * `blocks-core.chatbot.settings-save`: saves the rules of the Chatbot (the holding message it sends while the AI works, up to 400 characters) as
+ * the one `blocks-core.chatbot.settings` record of the workspace. Only owners and managers hold the
  * permission. A setting outside its bounds is refused with the words on its own field; nothing is saved then.
  */
 export const SAVE_SETTINGS: ActionDefinition = defineAction({
-    id: "chatbot.save-settings",
+    id: "blocks-core.chatbot.settings-save",
     permission: "chatbot.manage",
     label: chatbotText("action_save_settings"),
     input: z.object({ holdingMessage: z.string().max(MAX_BODY) }),
     ports: { settings: SETTINGS, members: membersPort },
     transactional: true,
-    refreshes: ["chatbot.settings"],
+    refreshes: ["blocks-core.chatbot.api.settings.get"],
     run: async ({ settings, members }, input, context) => {
         const member = context.memberId === null ? null : await members.get(context.memberId)
         if (member === null) return refusal("forbidden", "reply_forbidden")

@@ -11,6 +11,7 @@ import {
     directKeyOf,
     groupNameOf,
     isPurposeValid,
+    isReadOnlyRoom,
     isUniqueViolation,
     isUuid,
     lineClientIdOf,
@@ -215,5 +216,15 @@ describe("room purpose", () => {
         expect(subject.isPurposeValid({ purpose: "module", module: "sales" })).toBe(true)
         expect(subject.isPurposeValid({ purpose: "module", module: "  " })).toBe(false)
         expect(subject.isPurposeValid({ purpose: "module", module: "m".repeat(65) })).toBe(false)
+    })
+})
+
+describe("the read-only room", () => {
+    it("is the founder's NIVO room only: a direct room keyed by NIVO and the person; every other room takes lines", () => {
+        expect(isReadOnlyRoom({ kind: "direct", directKey: `system:nivo|user:${ME.memberId}` })).toBe(true)
+        expect(isReadOnlyRoom({ kind: "direct", directKey: directKeyOf(ME, YOU) })).toBe(false)
+        expect(isReadOnlyRoom({ kind: "direct", directKey: directKeyOf(ME, BOT) })).toBe(false)
+        expect(isReadOnlyRoom({ kind: "group", directKey: null })).toBe(false)
+        expect(isReadOnlyRoom({ kind: "group", directKey: `system:nivo|user:${ME.memberId}` })).toBe(false)
     })
 })

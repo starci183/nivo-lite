@@ -1,5 +1,10 @@
-import { DocumentWarningCode, MAX_TABLE_ROWS } from "./document-readers.contracts"
-import type { DocumentSection, DocumentTable, DocumentWarning } from "./document-readers.contracts"
+import {
+  DocumentWarningCode,
+  MAX_TABLE_ROWS,
+  type DocumentSection,
+  type DocumentTable,
+  type DocumentWarning,
+} from "./document-readers.contracts"
 
 /** A byte order mark of UTF-16 (little or big endian), or null. */
 const utf16Of = (bytes: Uint8Array): "utf-16le" | "utf-16be" | null => {
@@ -18,7 +23,7 @@ export const decodeText = (bytes: Uint8Array): string => {
         utf16 === null
             ? new TextDecoder("utf-8").decode(bytes).replace(/^﻿/u, "")
             : new TextDecoder(utf16).decode(bytes)
-    return text.replace(/\r\n?/gu, "\n")
+    return text.replaceAll(/\r\n?/gu, "\n")
 }
 
 /** A Markdown heading line: its text, or null. */
@@ -27,10 +32,13 @@ const headingOf = (line: string): string | null => {
     return match?.[1]?.trim() ?? null
 }
 
+/** A section being collected: its heading (null before the first heading) and the lines under it. */
+type SectionDraft = { heading: string | null; lines: Array<string> }
+
 /** The headings of a Markdown-like text and the text under each; empty when it has no heading. */
 export const sectionsOf = (text: string): Array<DocumentSection> => {
-    const sections: Array<{ heading: string | null; lines: Array<string> }> = []
-    let current: { heading: string | null; lines: Array<string> } = { heading: null, lines: [] }
+    const sections: Array<SectionDraft> = []
+    let current: SectionDraft = { heading: null, lines: [] }
     for (const line of text.split("\n")) {
         const heading = headingOf(line)
         if (heading === null) {
@@ -87,12 +95,12 @@ export const delimitedRows = (text: string, delimiter: string): Array<Array<stri
 }
 
 /** One cell as a table line carries it: one line, no pipe (the pipe separates cells), spaces tidied. */
-export const cellText = (value: string): string => value.replace(/\s+/gu, " ").replaceAll("|", "/").trim()
+export const cellText = (value: string): string => value.replaceAll(/\s+/gu, " ").replaceAll("|", "/").trim()
 
 /** The rows that hold something, each cut at its last filled cell. */
 const filledRows = (rows: ReadonlyArray<ReadonlyArray<string>>): Array<Array<string>> =>
     rows
-        .map((row) => row.map(cellText))
+        .map((row) => row.map((cell) => cellText(cell)))
         .map((row) => {
             let end = row.length
             while (end > 0 && row[end - 1] === "") end -= 1
@@ -104,15 +112,20 @@ const filledRows = (rows: ReadonlyArray<ReadonlyArray<string>>): Array<Array<str
 export const tableText = (table: DocumentTable): string =>
     [table.header, ...table.rows].map((row) => row.join(" | ")).join("\n")
 
+/** A table made from rows, or null, with the warnings of the cut. */
+type TableBuild = { readonly table: DocumentTable | null; readonly warnings: ReadonlyArray<DocumentWarning> }
+
 /** A table from its rows, the first filled row as its header, at most `MAX_TABLE_ROWS` rows, with a warning when rows were left. */
 export const tableOf = (
     name: string | null,
     rows: ReadonlyArray<ReadonlyArray<string>>,
-): { readonly table: DocumentTable | null; readonly warnings: ReadonlyArray<DocumentWarning> } => {
+): TableBuild => {
     const [header, ...body] = filledRows(rows)
     if (header === undefined) return { table: null, warnings: [] }
     const kept = body.slice(0, MAX_TABLE_ROWS)
     const warnings: Array<DocumentWarning> =
-        body.length > kept.length ? [{ code: DocumentWarningCode.RowsOverLimit, place: name, count: kept.length }] : []
+        body.length > kept.length
+            ? [{ code: DocumentWarningCode.RowsOverLimit, place: name, count: kept.length, left: body.length - kept.length }]
+            : []
     return { table: { name, header, rows: kept }, warnings }
 }

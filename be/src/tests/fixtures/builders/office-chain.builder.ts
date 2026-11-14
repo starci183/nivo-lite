@@ -1,6 +1,4 @@
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { callDbFunction } from "@modules/platform/database"
+import { In, type EntityManager } from "typeorm"
 import { eachInOrder } from "@modules/platform/primitives"
 import { agentsEntities } from "@modules/domain/agents"
 import { workspacesEntities } from "@modules/domain/workspaces"
@@ -34,12 +32,11 @@ const PEOPLE: ReadonlyArray<{
     readonly key: Exclude<OfficePerson, "nam">
     readonly role: "manager" | "staff"
     readonly name: string
-    readonly room: string
 }> = [
-    { key: "minh", role: "manager", name: "Anh Minh", room: "sales" },
-    { key: "ha", role: "manager", name: "Chi Ha", room: "sales" },
-    { key: "van", role: "staff", name: "Van", room: "accounting" },
-    { key: "lan", role: "staff", name: "Lan", room: "sales" },
+    { key: "minh", role: "manager", name: "Anh Minh" },
+    { key: "ha", role: "manager", name: "Chi Ha" },
+    { key: "van", role: "staff", name: "Van" },
+    { key: "lan", role: "staff", name: "Lan" },
 ]
 
 /**
@@ -61,10 +58,6 @@ export const persistOfficeRows = (manager: EntityManager, identity: OfficeIdenti
                 role: person.role,
                 displayName: person.name,
             })
-        })
-        await callDbFunction(tx, "public.ensure_office_rooms", [workspaceId])
-        await eachInOrder(PEOPLE, async (person) => {
-            await callDbFunction(tx, "public.seat_office_member", [workspaceId, person.room, users[person.key]])
         })
         const rows = await tx.find(WorkspaceMemberEntity, {
             where: { workspaceId, userId: In(Object.values(users)) },
@@ -95,13 +88,11 @@ export const persistOfficeRows = (manager: EntityManager, identity: OfficeIdenti
                 ...agent("accounting", "Ke toan AI", "accounting"),
                 ownerMemberId: members.van,
                 assignableRooms: ["accounting"],
-                canTagAgentIds: [agents.care],
             },
             {
                 ...agent("sales", "AI Sales", "sales"),
                 ownerMemberId: members.minh,
                 assignableRooms: ["sales"],
-                canTagAgentIds: [agents.accounting, agents.care],
             },
         ]
         await eachInOrder(agentRows, async (row) => {

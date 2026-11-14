@@ -1,10 +1,13 @@
+import { agentFlowsBlock } from "./agent-flows.block"
 import { agentMessageBlock } from "./agent-message.block"
+import { dataSetsBlock } from "./data-sets.block"
+import { reachCardBlock } from "./reach-card.block"
 import { asideDetailBlock } from "./aside-detail.block"
-import { accountingBlocks } from "./accounting/accounting-blocks"
+import { accountingBlocks } from "./sales/ledger/accounting-blocks"
 import { chatbotBlocks } from "./chatbot/chatbot-blocks"
 import { formBlock } from "./form.block"
 import { listEditorBlock } from "./list-editor.block"
-import { loyaltyBlocks } from "./loyalty/loyalty-blocks"
+import { loyaltyBlocks } from "./sales/loyalty/loyalty-blocks"
 import { salesBlocks } from "./sales/sales-blocks"
 import { listCardBlock } from "./list-card.block"
 import { tabbedPanelBlock } from "./tabbed-panel.block"
@@ -18,6 +21,8 @@ import { dashboardCardsBlock } from "./dashboard-cards.block"
 import { decisionQueueBlock, QUEUE_SURFACES } from "./decision-queue.block"
 import { detailBlock } from "./detail.block"
 import { explanationBlock } from "./explanation.block"
+import { filePreviewBlock } from "./file-preview.block"
+import { fileUploadBlock } from "./file-upload.block"
 import { figuresBlock } from "./figures.block"
 import { masterDetailBlock } from "./master-detail.block"
 import { recordListBlock } from "./record-list.block"
@@ -49,9 +54,9 @@ describe("coreBlocks", () => {
     it("lists every block once: the core ones under the core namespace, those of each module under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
         expect(new Set(ids).size).toBe(ids.length)
-        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(22)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(27)
         expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(chatbotBlocks.length)
-        expect(ids.filter((id) => id.startsWith("accounting."))).toHaveLength(accountingBlocks.length)
+        expect(ids.filter((id) => id.startsWith("sales."))).toHaveLength(salesBlocks.length + accountingBlocks.length + loyaltyBlocks.length)
     })
 
     it("carries the JSON Schema of every block's props", () => {
@@ -71,6 +76,8 @@ describe("coreBlocks", () => {
             tableBlock,
             boardBlock,
             formBlock,
+            fileUploadBlock,
+            filePreviewBlock,
             listEditorBlock,
             tabbedPanelBlock,
             asideDetailBlock,
@@ -83,6 +90,9 @@ describe("coreBlocks", () => {
             explanationBlock,
             graphBlock,
             runTimelineBlock,
+            agentFlowsBlock,
+            reachCardBlock,
+            dataSetsBlock,
             ...salesBlocks,
             ...loyaltyBlocks,
             ...accountingBlocks,

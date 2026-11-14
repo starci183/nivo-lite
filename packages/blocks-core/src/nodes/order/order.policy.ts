@@ -4,9 +4,9 @@ import { wordOf } from "../../messages/catalog"
 export const nameKey = (name: string): string =>
     name
         .normalize("NFD")
-        .replace(/\p{M}/gu, "")
+        .replaceAll(/\p{M}/gu, "")
         .replaceAll(wordOf("letterD"), "d")
         .replaceAll(wordOf("letterDCapital"), "D")
         .toLowerCase()
-        .replace(/\s+/g, " ")
+        .replaceAll(/\s+/g, " ")
         .trim()

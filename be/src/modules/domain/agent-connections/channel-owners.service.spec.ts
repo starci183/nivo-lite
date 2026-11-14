@@ -124,7 +124,7 @@ describe("ChannelOwnersService > conflictOf", () => {
         expect(conflict?.agentName).toBe("Lan")
     })
 
-    it("finds no conflict for the owner itself or another role", async () => {
+    it("finds no conflict for the owner itself or another role writing outbound", async () => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, LINKS.slice(0, 2)] })
         const { service } = await build(em)
 
@@ -139,7 +139,7 @@ describe("ChannelOwnersService > conflictOf", () => {
             service.conflictOf("w1", "tg1", {
                 agentId: "b1",
                 module: "booking",
-                purpose: "inbound_chat",
+                purpose: "outbound_chat",
             }),
         ).resolves.toBeNull()
     })
@@ -192,7 +192,7 @@ describe("ChannelOwnersService > requireFree", () => {
         })
     })
 
-    it("lets a claim through when no other agent of the role answers the channel", async () => {
+    it("lets a claim through when no other agent of the role answers the channel (outbound, another role)", async () => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, LINKS.slice(0, 2)] })
         const { service } = await build(em)
 
@@ -200,7 +200,7 @@ describe("ChannelOwnersService > requireFree", () => {
             service.requireFree("w1", "tg1", {
                 agentId: "b1",
                 module: "booking",
-                purpose: "inbound_chat",
+                purpose: "outbound_chat",
             }),
         ).resolves.toBeUndefined()
     })

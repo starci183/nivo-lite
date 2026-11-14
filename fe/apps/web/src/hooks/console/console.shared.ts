@@ -1,7 +1,13 @@
 import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
 import { APP_ROUTES, workspaceHref } from "@/modules/routes"
-import { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
-import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/modules/types"
+import {
+    ACCOUNT_ITEM,
+    PROFILE_ITEM,
+    SIGN_OUT_ITEM,
+    type ConsoleIconName,
+    type ConsoleSessionView,
+    type ConsoleWorkspace,
+} from "@/modules/types"
 
 /** The catalog key that names each role. */
 export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: "roleStaff" } as const
@@ -11,15 +17,15 @@ export type ConsoleDestination = {
     readonly key: string
     readonly label:
         | "navOverview"
-        | "navAuthority"
-        | "navInbox"
+        | "navContacts"
         | "navChat"
         | "navBrain"
         | "navModules"
         | "navTeam"
-        | "navPermissions"
         | "navConnections"
         | "navCredits"
+        | "navSettings"
+        | "navDevelopers"
     readonly route: string
     readonly icon: ConsoleIconName
     /** Rail section: the daily work, running the business, setting it up. */
@@ -33,20 +39,18 @@ export type ConsoleDestination = {
 /** The Brain owns the business memory, so its documents are no separate destination. */
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "overview", label: "navOverview", route: "/overview", icon: "overview", group: "work", managerOnly: true },
-    { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
-    { key: "chat", label: "navChat", route: "/chat", icon: "chat", group: "work" },
-    { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
-    { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
-    { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
-    { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
     {
-        key: "permissions",
-        label: "navPermissions",
-        route: "/permissions",
-        icon: "review",
-        group: "setup",
+        key: "contacts",
+        label: "navContacts",
+        route: "/contacts",
+        icon: "community",
+        group: "work",
         managerOnly: true,
     },
+    { key: "chat", label: "navChat", route: "/chat", icon: "chat", group: "work" },
+    { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
+    { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
+    { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
     {
         key: "connections",
         label: "navConnections",
@@ -56,6 +60,15 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
         managerOnly: true,
     },
     { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
+    { key: "settings", label: "navSettings", route: "/settings", icon: "settings", group: "setup", managerOnly: true },
+    {
+        key: "developers",
+        label: "navDevelopers",
+        route: "/developers",
+        icon: "developers",
+        group: "setup",
+        managerOnly: true,
+    },
 ]
 
 /** The destination a path inside the workspace belongs to; a path outside the rail to none. */

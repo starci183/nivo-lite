@@ -1,81 +1,46 @@
 import { ConnectionsModule } from "@modules/domain/connections"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { DataRecordsReadService } from "@modules/domain/data-records"
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import { AGENTS_INSTALLATIONS, AgentsModule, AgentsService } from "@modules/domain/agents"
-import { AuthorityService } from "@modules/domain/authority"
-import { AuthorityActionsModule } from "@modules/domain/authority-actions"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { ChatRecordsModule } from "@modules/domain/chat-records"
-import { DurableWorkService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { InboundEventStatus, OutboundAccessGate } from "@modules/domain/decisions"
+import { AgentConnectionsModule } from "@modules/domain/agent-connections"
+import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsModule, AgentsService } from "@modules/domain/agents"
+import { chatRecordsModules } from "./chat-records-modules"
+import { ChannelDeliveryService, type PersonDeliveryRequest } from "@modules/domain/channels"
+import { ContactsModule } from "@modules/domain/contacts"
+import { CustomerRoutesModule } from "@modules/domain/customer-routes"
 import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
 import { EventsModule } from "@modules/domain/events"
-import { InboundEventsService } from "@modules/domain/inbound-events"
 import { ApiKnowledgeSourcesService, SourceQuotaService } from "@modules/domain/knowledge-sources"
 import { KNOWLEDGE_STORAGE } from "../../modules/domain/knowledge-sources/knowledge-sources.decorators"
-import { AGENT_DIRECTORY, OfficeLinesService } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
-import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule, ModulesService } from "@modules/domain/modules"
+import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { PublicApiModule } from "@modules/domain/public-api"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { refused } from "@modules/platform/primitives"
 import { Secret } from "@modules/platform/config"
-import { EVENT_BUS } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
+import { EVENT_BUS, type EventBus } from "@modules/platform/event-bus"
 import { WebhookEventsService } from "@modules/domain/webhook-connections"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
-import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
-import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
-import { InstallationOperationsService, InstallationRecordsService } from "@modules/domain/module-installations"
-import { InvoicesLedgerService } from "@modules/domain/invoices"
-import { WorkItemsChainReadService, WorkItemsService } from "@modules/domain/work-items"
+import { WorkspaceMembersModule, type AccountDirectory } from "@modules/domain/workspace-members"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { IdsModule } from "@modules/platform/ids"
 import { JobsModule } from "@modules/platform/jobs"
-import { QueueModule } from "@modules/platform/queue"
-import type { QueueOptions } from "@modules/platform/queue"
+import { QueueModule, type QueueOptions } from "@modules/platform/queue"
 import { KnowledgeQueueModule } from "@modules/queues/knowledge"
-import { CommandPlannerService } from "../../modules/domain/decisions/command-planner.service"
-import { ModuleCatalogService } from "../../modules/domain/decisions/module-catalog.service"
-import { WorkApprovalService } from "../../modules/domain/decisions/work-approval.service"
-import type { WorkAskCards } from "../../modules/domain/decisions/work-lines.contracts"
-import { WorkLinesService } from "../../modules/domain/decisions/work-lines.service"
-import { WorkChainService } from "../../modules/domain/decisions/work-chain.service"
-import {
-    INBOUND_EVENT_STATUS,
-    MODULE_CATALOG_SOURCE,
-    OUTBOUND_ACCESS_GATE,
-    WORK_AGENT_DIRECTORY,
-    WORK_ASK_CARDS,
-} from "../../modules/domain/decisions/work-engine.decorators"
-import { WorkBranchService } from "../../modules/domain/decisions/work-branch.service"
-import { WorkIntakeService } from "../../modules/domain/decisions/work-intake.service"
-import { WorkItemClosedService } from "../../modules/domain/decisions/work-item-closed.service"
-import { WORK_PERFORMER_REGISTRY } from "../../modules/domain/decisions/work-performer.port"
-import { WorkPerformersService } from "../../modules/domain/decisions/work-performers.service"
-import { WorkRecorderService } from "../../modules/domain/decisions/work-recorder.service"
-import { PerformerKitService } from "../../modules/domain/work-performers/performer-kit.service"
 import { TeamChatProofModule } from "./team-chat-proof.module"
 import { queueOptions } from "./test-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 
 @Injectable()
 /** No agent or authentication account lookup is needed to admit an API request. */
-export class PublicApiProofDirectory implements AgentDirectory, AccountDirectory {
-    agentOfDepartment(): ReturnType<AgentDirectory["agentOfDepartment"]> {
-        return Promise.resolve(null)
-    }
-
-    agentById(): ReturnType<AgentDirectory["agentById"]> {
+export class PublicApiProofDirectory implements AccountDirectory {
+    agentOfDepartment(): Promise<null> {
         return Promise.resolve(null)
     }
 
@@ -84,30 +49,30 @@ export class PublicApiProofDirectory implements AgentDirectory, AccountDirectory
     }
 }
 
-@Injectable()
-/** The proof controls only the connection's access; the persisted authority rule still decides every item. */
-export class PublicApiProofAccess implements OutboundAccessGate {
-    access: "auto" | "ask" = "auto"
-
-    accessOf(): ReturnType<OutboundAccessGate["accessOf"]> {
-        return Promise.resolve(this.access)
-    }
+/** One delivery the processing asked the channel for, as the proof records it. */
+export interface ProofDelivery {
+    readonly workspaceId: string
+    readonly conversationId: string
+    readonly messageId: string
+    readonly text: string
 }
 
 @Injectable()
-/** The public api proofs open no team chat room, so no approval card stands for a decision and the ask is said as a line. */
-export class PublicApiProofAskCards implements WorkAskCards {
-    cardRooms(): ReturnType<WorkAskCards["cardRooms"]> {
-        return Promise.resolve(0)
+/** The channel of the proofs: records each delivery asked of it and answers that the channel took it; no network. */
+export class PublicApiProofDelivery {
+    readonly delivered: Array<ProofDelivery> = []
+
+    /** The sends addressed to a person on a route, as the public API's delivery makes them (the delivery ledger claims each key before it is asked). */
+    readonly toPerson: Array<PersonDeliveryRequest> = []
+
+    deliverToPerson(request: PersonDeliveryRequest): ReturnType<ChannelDeliveryService["deliverToPerson"]> {
+        this.toPerson.push(request)
+        return Promise.resolve({ delivered: true, failure: null, outcome: "acknowledged" })
     }
-}
 
-@Injectable()
-class PublicApiProofInbound implements InboundEventStatus {
-    constructor(private readonly inbound: InboundEventsService) {}
-
-    mark(...[ctx, id, status, leadId]: Parameters<InboundEventStatus["mark"]>): Promise<void> {
-        return this.inbound.mark(ctx.workspaceId, id, status, leadId)
+    deliver(request: ProofDelivery): ReturnType<ChannelDeliveryService["deliver"]> {
+        this.delivered.push(request)
+        return Promise.resolve({ delivered: true, failure: null, outcome: "acknowledged" })
     }
 }
 
@@ -153,33 +118,10 @@ class PublicApiProofPeersModule {
             ApiKeysService,
             ApiKnowledgeSourcesService,
             DataRecordsReadService,
-            AuthorityService,
-            CommandPlannerService,
-            DurableWorkService,
-            EvidenceService,
-            InboundEventsService,
-            ModuleCatalogService,
             SourceQuotaService,
-            OfficeLinesService,
             PublicApiProofDirectory,
-            PublicApiProofAccess,
-            PublicApiProofAskCards,
-            PerformerKitService,
-            WorkApprovalService,
-            WorkBranchService,
-            WorkChainService,
-            WorkEngineService,
-            WorkIntakeService,
-            WorkItemClosedService,
-            WorkLinesService,
-            WorkItemsService,
-            WorkItemsChainReadService,
+            PublicApiProofDelivery,
             InstallationRecordsService,
-            InstallationOperationsService,
-            InvoicesLedgerService,
-            WorkPerformersService,
-            WorkRecorderService,
-            AuthorityRulesService,
         ]
         return {
             module: PublicApiProofPeersModule,
@@ -190,15 +132,9 @@ class PublicApiProofPeersModule {
                 // No proof installs a module, so no agent has an installation.
                 QUIET_INSTALLATIONS,
                 { provide: KNOWLEDGE_STORAGE, useClass: PublicApiProofStorage },
-                { provide: AGENT_DIRECTORY, useExisting: PublicApiProofDirectory },
                 { provide: AgentsService, useExisting: PublicApiProofDirectory },
                 { provide: INBOX, useClass: InboxService },
-                { provide: INBOUND_EVENT_STATUS, useClass: PublicApiProofInbound },
-                { provide: MODULE_CATALOG_SOURCE, useExisting: ModulesService },
-                { provide: OUTBOUND_ACCESS_GATE, useExisting: PublicApiProofAccess },
-                { provide: WORK_AGENT_DIRECTORY, useExisting: PublicApiProofDirectory },
-                { provide: WORK_ASK_CARDS, useExisting: PublicApiProofAskCards },
-                { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
+                { provide: ChannelDeliveryService, useExisting: PublicApiProofDelivery },
                 {
                     provide: EVENT_BUS,
                     useFactory: (): Pick<EventBus, "publish"> => ({ publish: () => Promise.resolve() }),
@@ -228,16 +164,19 @@ export const publicApiProofModules = (options: QueueOptions): Array<DynamicModul
     // The real work items service stamps each new item with an id from this port.
     IdsModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
-    AuthorityActionsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     EntityEngineModule.register({
         isGlobal: true,
         alerts: ReadOnlyEngineAlertsService,
-        entities: FLOW_F_ENTITIES,
-        jobs: MODULE_JOBS,
+        entities: INSTALLED.entities(),
+        jobs: INSTALLED.jobs(),
         cursorKey: PUBLIC_API_PROOF_TOKEN_KEY,
     }),
-    ChatRecordsModule.register({ isGlobal: true }),
+    AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
+    ...chatRecordsModules(),
+    // The engine's contacts and routes: the conversation of the public API is a route, and its message is a row of the delivery ledger.
+    ContactsModule.register({ isGlobal: true }),
+    CustomerRoutesModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: PUBLIC_API_PROOF_TOKEN_KEY }),
     ConnectionsModule.register({
         isGlobal: true,

@@ -11,8 +11,8 @@ export interface KnowledgeSourcesFullOptions {
 }
 
 /**
- * The read-only mode (the mcp app): the reads that answer an agent's view (briefs, origins, public texts, the readable documents and
- * the dossier documents), with no storage door, no queue and nothing that writes.
+ * The read-only mode (the mcp app): the reads that answer an agent's view (briefs, origins, public texts, and the readable documents),
+ * with no storage door, no queue and nothing that writes.
  */
 export interface KnowledgeSourcesReadOnlyOptions {
     /** Registers the read-only mode. */

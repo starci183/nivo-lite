@@ -62,7 +62,7 @@ const footerOf = (
                 <MessageStatus kind="transport" state={entry.delivery.state} label={entry.delivery.label} />
             )}
             {entry.canRetry ? (
-                <Cluster gap="inline" wrap={false}>
+                <Cluster gap="identity" wrap={false}>
                     <Button intent="neutral" size="sm" onPress={() => onRetry(entry.id)}>
                         {words.retry}
                     </Button>

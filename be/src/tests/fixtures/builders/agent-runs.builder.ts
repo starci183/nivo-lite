@@ -1,4 +1,3 @@
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type {
     RunOpen,
     RunRecord,
@@ -6,6 +5,8 @@ import type {
     StepRecord,
     StepSpec,
     StepView,
+    StoredRun,
+    StoredStep,
 } from "@modules/domain/agent-runs"
 
 /** A step as a handler reads it, a read step on its first try unless the test says otherwise. */
@@ -106,61 +107,78 @@ export const stepRecordOf = (over: Partial<StepRecord> = {}): StepRecord => ({
     ...over,
 })
 
-/** The record row the engine returns for a run record's fields. */
-export const runRowOf = (over: Record<string, unknown> = {}, id = "run-1", version = "3"): RecordRow => ({
-    id,
-    workspaceId: "ws-1",
-    version,
-    createdAt: WHEN.toISOString(),
-    updatedAt: WHEN.toISOString(),
-    data: {
-        agentId: "agent-1",
-        wakeId: "wake-1",
-        trigger: "customer_message",
-        graphVersionId: null,
-        planning: false,
-        status: "running",
-        context: { conversationId: "c-1" },
-        error: null,
-        deadLetteredAt: null,
-        parkedBuild: null,
-        resumeAttempts: 0,
-        resumeNotBefore: null,
-        endedAt: null,
-        stepSeq: 0,
+/** The stored row of a run (public.agent_runs) for a run record's fields; `over` may set a member to any value (a row a reader refuses). */
+export const runRowOf = (over: Readonly<Record<string, unknown>> = {}, id = "run-1", version = "3"): StoredRun =>
+    ({
+        id,
+            workspaceId: "ws-1",
+            version,
+            createdAt: WHEN.toISOString(),
+            updatedAt: WHEN.toISOString(),
+            agentId: "agent-1",
+            wakeId: "wake-1",
+            trigger: "customer_message",
+            graphVersionId: null,
+            planning: false,
+            status: "running",
+            engine: "langgraph",
+            context: { conversationId: "c-1" },
+            error: null,
+            deadLetteredAt: null,
+            parkedBuild: null,
+            parkReason: null,
+            resumeAttempts: 0,
+            resumeNotBefore: null,
+            resumedAt: null,
+            resumedBy: null,
+            resumeReason: null,
+            waitWorkItemId: null,
+            waitDeadlineAt: null,
+            stepSeq: 0,
+            startedAt: WHEN.toISOString(),
+            endedAt: null,
+            cancelledAt: null,
+            cancelledBy: null,
+            workflowId: null,
+            workflowVersionId: null,
+            workflowVersion: null,
         ...over,
-    },
-})
+    })
 
-/** The record row the engine returns for a step record's fields. */
-export const stepRowOf = (over: Record<string, unknown> = {}, id = "s-1", version = "2"): RecordRow => ({
-    id,
-    workspaceId: "ws-1",
-    version,
-    createdAt: WHEN.toISOString(),
-    updatedAt: WHEN.toISOString(),
-    data: {
-        runId: "run-1",
-        ordinal: 1,
-        stepKey: "step-1",
-        nodeKey: "node",
-        kind: "tool",
-        effect: { kind: "read" },
-        input: {},
-        result: null,
-        status: "done",
-        attempt: 1,
-        maxAttempts: 3,
-        deadlineMs: 1000,
-        claimedUntil: null,
-        notBefore: WHEN.toISOString(),
-        waitItemId: null,
-        workItemId: null,
-        compAttempts: 0,
-        errorCode: null,
+/** The stored row of a step (public.agent_run_steps) for a step record's fields; `over` may set a member to any value. */
+export const stepRowOf = (over: Readonly<Record<string, unknown>> = {}, id = "s-1", version = "2"): StoredStep =>
+    ({
+        id,
+            workspaceId: "ws-1",
+            version,
+            createdAt: WHEN.toISOString(),
+            updatedAt: WHEN.toISOString(),
+            runId: "run-1",
+            ordinal: 1,
+            stepKey: "step-1",
+            nodeKey: "node",
+            kind: "tool",
+            effect: { kind: "read" },
+            input: {},
+            result: null,
+            status: "done",
+            attempt: 1,
+            maxAttempts: 3,
+            deadlineMs: 1000,
+            claimedUntil: null,
+            notBefore: WHEN.toISOString(),
+            waitItemId: null,
+            workItemId: null,
+            compAttempts: 0,
+            errorCode: null,
+            startedAt: null,
+            endedAt: null,
+            durationMs: null,
+            doorCalls: { calls: [] },
+            effectKey: null,
+            error: null,
         ...over,
-    },
-})
+    })
 
 /** The run a tag wakes on a published version of the graph. */
 export const OPEN: RunOpen = {

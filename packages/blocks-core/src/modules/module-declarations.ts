@@ -1,9 +1,11 @@
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
-import { accountingModule, paymentModule } from "./accounting"
+import { bookingModule } from "./booking"
 import { chatbotModule } from "./chatbot"
-import { loyaltyModule } from "./loyalty"
+import { contentModule } from "./content"
+import { hiringModule } from "./hiring"
 import { platformModule } from "./platform"
 import { salesModule } from "./sales"
+import { videoModule } from "./video"
 
 /**
  * The declaration of every module whose business runs in this package: its reads, actions, permissions and seed specs. The
@@ -11,10 +13,11 @@ import { salesModule } from "./sales"
  * module's seed spec from it.
  */
 export const MODULE_DECLARATIONS: ReadonlyArray<ModuleDeclaration> = [
-    loyaltyModule,
     salesModule,
     chatbotModule,
-    accountingModule,
-    paymentModule,
     platformModule,
+    hiringModule,
+    bookingModule,
+    videoModule,
+    contentModule,
 ]

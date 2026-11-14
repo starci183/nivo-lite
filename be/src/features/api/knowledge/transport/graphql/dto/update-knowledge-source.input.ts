@@ -45,7 +45,7 @@ export class UpdateKnowledgeSourceInput {
     @MaxLength(64)
     module?: string
 
-    /** `public` or `internal`. */
+    /** The area to move the document to, `public` or `internal`: its passages and truths follow (the founder's switch on a truth stays). */
     @Field(() => String, { nullable: true })
     @NullAsAbsent()
     @IsOptional()

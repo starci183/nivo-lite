@@ -1,5 +1,4 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { boundedJson } from "../../json.schema"
@@ -14,17 +13,21 @@ export const IF_OPS: ReadonlyArray<IfOp> = ["equals", "not-equals", "in", "prese
 
 /** The settings: how it compares, and with what (a list for `in`; nothing for `present` and `absent`). */
 export interface IfParams {
+    /** The comparison made between the input value and `compare`. */
     readonly op: IfOp
+    /** The value the input value is compared against. */
     readonly compare: JsonValue
 }
 
 /** What it reads: the value a ref binds (a step's output or error, a lead fact, the memory of another workflow). */
 export interface IfInput {
+    /** The value that is tested. */
     readonly value: JsonValue
 }
 
 /** Which way the run goes. */
 export interface IfOutput {
+    /** The branch taken: "yes" when the comparison held, "no" when it did not. */
     readonly branch: "yes" | "no"
 }
 
@@ -48,7 +51,7 @@ export const ifHolds = (value: JsonValue, op: IfOp, compare: JsonValue): boolean
         case "not-equals":
             return !same(value, compare)
         case "in":
-            return Array.isArray(compare) && compare.some((member) => same(member, value))
+            return Array.isArray(compare) && compare.some((member: JsonValue) => same(member, value))
         case "present":
             return isPresent(value)
         case "absent":
@@ -61,7 +64,7 @@ export const ifHolds = (value: JsonValue, op: IfOp, compare: JsonValue): boolean
 }
 
 /**
- * `core.if` ("Nếu"): the one business condition an owner writes in a graph. It compares a value a ref reads (what a step answered or
+ * `core.if` ("Neu"): the one business condition an owner writes in a graph. It compares a value a ref reads (what a step answered or
  * why it failed, a lead fact, another workflow's memory) and goes the `yes` or the `no` way. A rule of the engine (a retry, a frozen
  * lead, a duplicate run) is never written with it.
  */
@@ -72,7 +75,6 @@ export const coreIfNode: NodeDefinition<typeof input, typeof output, typeof para
     params,
     input,
     output,
-    rights: [],
     effects: [],
     run: (given, context) =>
         Promise.resolve({ branch: ifHolds(given.value, context.params.op, context.params.compare) ? "yes" : "no" }),

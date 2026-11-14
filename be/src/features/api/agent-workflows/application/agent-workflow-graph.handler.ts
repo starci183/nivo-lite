@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { AgentWorkflowsAdminService } from "@modules/domain/agent-graphs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { AgentWorkflowGraphResult } from "./agent-workflow-graph.contracts"
 import { AgentWorkflowGraphQuery } from "./agent-workflow-graph.query"
 

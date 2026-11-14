@@ -10,8 +10,8 @@ import {
     ChoiceChips,
     Select,
     Text,
+    type ListRowData,
 } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
 import type { PlanCardView, PlanGroupView } from "@/modules/types"
 
 interface PlanCatalogProps {
@@ -37,7 +37,7 @@ interface PlanCatalogProps {
 export const PlanCatalog = (props: PlanCatalogProps) => {
     const view = props.props
     return (
-        <Section title={view.title} description={view.text}>
+        <Section title={view.title} caption={view.text}>
             {view.notice ? <Alert tone="informative" title={view.notice} /> : null}
             {view.storage ? (
                 <Text size="sm" tone="muted">
@@ -56,7 +56,7 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                     key={group.id}
                     kind="list"
                     title={group.title}
-                    description={group.text}
+                    caption={group.text}
                     headingLevel={3}
                     items={group.cards.map((card) => planItemOf(card, props))}
                     empty={<EmptyNotice message={group.title} />}

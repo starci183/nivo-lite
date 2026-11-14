@@ -1,11 +1,4 @@
-import type { EntityDefinition, UniqueConstraint } from "@nivo-lite/agent-sdk/entity"
-import type { Query } from "@nivo-lite/agent-sdk/query"
-
-/** One value of an agent's policy: a number, a word or a switch. */
-export type PolicyValue = number | string | boolean
-
-/** The values of an agent's policy by name. */
-export type PolicyValues = Readonly<Record<string, PolicyValue>>
+import type { RunStop } from "@modules/domain/agent-threads/stops/run-stop.contracts"
 
 /** A line a step already sent the customer: its words and when it was sent. */
 export interface SentLine {
@@ -15,84 +8,11 @@ export interface SentLine {
     readonly at: string
 }
 
-/** The most lines of a conversation looked at to find what a step already sent, newest first. */
-export const SENT_LINES_LOOKED_AT = 20
-
-/** The entity a module keeps its workspace settings in: the saved values a policy default is replaced by. */
-export const settingsEntityOf = (moduleKey: string): string => `${moduleKey}.settings`
-
-/**
- * The read of a module's one settings record, cut to the names asked, in the order the entity is indexed on: a settings entity keeps
- * one record per workspace under an unconditional unique key (`key`, `scope`), and the index behind that key (its fields, then the id)
- * serves the order. Null when the entity declares no such key: it is then no one-record-per-workspace settings entity, and the policy
- * keeps its defaults rather than sending the engine a query no index serves.
- */
-export const settingsQueryOf = (entity: EntityDefinition, names: ReadonlyArray<string>): Query | null => {
-    const unique = (entity.constraints ?? []).find(
-        (constraint): constraint is UniqueConstraint => constraint.kind === "unique" && constraint.where === undefined,
-    )
-    if (unique === undefined) return null
-    return {
-        from: entity.name,
-        select: [...names],
-        order: [...unique.on.map((field): [string, "asc"] => [field, "asc"]), ["id", "asc"]],
-        page: { size: 1 },
-    }
-}
-
-/** The names of a policy that a settings record can hold: those the record declares a field for. */
-export const savedNamesOf = (defaults: PolicyValues, fields: ReadonlyArray<string>): ReadonlyArray<string> =>
-    Object.keys(defaults).filter((name) => fields.includes(name))
-
-/**
- * The values of a policy as they stand for a workspace: the defaults its module declares, each replaced by the value the workspace
- * saved under the same name when that value is of the default's own kind (a number for a number). A saved value of another kind, or a
- * name the policy does not declare, changes nothing.
- */
-export const policyValuesOf = (defaults: PolicyValues, saved: Readonly<Record<string, unknown>>): PolicyValues =>
-    Object.fromEntries(
-        Object.entries(defaults).map(([name, value]): [string, PolicyValue] => {
-            const own = saved[name]
-            const fits = typeof own === typeof value && (typeof own !== "number" || Number.isFinite(own))
-            return [name, fits && (typeof own === "number" || typeof own === "string" || typeof own === "boolean") ? own : value]
-        }),
-    )
-
-/** The start of the key every line of a step is kept under in a conversation: `line:<run>:<step>:`. */
-export const stepLinePrefixOf = (stepKey: string): string => `line:${stepKey}:`
-
 /** The time of a row as ISO text, or null when the row holds none. */
 const timeOf = (value: unknown): string | null => {
     if (value instanceof Date) return value.toISOString()
     return typeof value === "string" && value !== "" ? value : null
 }
-
-/**
- * The lines a step already sent, oldest first, among the rows of its conversation: those kept under the step's own key, with their
- * words and their time. A row of another step, of a person, or with no words is left out.
- */
-export const sentLinesOf = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>, stepKey: string): ReadonlyArray<SentLine> => {
-    const prefix = stepLinePrefixOf(stepKey)
-    return rows
-        .flatMap((row) => {
-            const at = timeOf(row.sentAt)
-            const mine = typeof row.channelRef === "string" && row.channelRef.startsWith(prefix)
-            return mine && typeof row.text === "string" && row.text !== "" && at !== null ? [{ text: row.text, at }] : []
-        })
-        .sort((left, right) => left.at.localeCompare(right.at))
-}
-
-/** The entity of the effect ledger (`agent.node-effect`): one record per call, with its run, step, arguments and facts (D.1). */
-export const LEDGER_ENTITY: string = "agent.node-effect"
-
-/** The entity of the stops of a run (`agent.run-stop`): one per run and step, with what the customer was told for it. */
-export const STOP_ENTITY: string = "agent.run-stop"
-
-/** The entity of a customer conversation, whose `leadId` names the customer. */
-export const CONVERSATION_ENTITY: string = "chat.conversation"
-
-/** The data kind of a customer record, when it is the turn's subject. */
-export const LEAD_KIND: string = "sales-lead"
 
 /** The most lines a turn is told were already sent: the newest, oldest first. */
 export const ALREADY_SENT_MAX: number = 20
@@ -120,22 +40,7 @@ export const stepPlaceOf = (key: string): StepPlace | null => {
     return at <= 0 || at === key.length - 1 ? null : { runId: key.slice(0, at), stepKey: key.slice(at + 1) }
 }
 
-/** The read of the ledger records of one run step, oldest first, served by the ledger's `run_step` index (run, step, id). */
-export const stepLedgerQueryOf = (place: StepPlace): Query => ({
-    from: LEDGER_ENTITY,
-    select: ["effectId", "args", "subjectEntity", "undoneAt"],
-    where: {
-        op: "and",
-        of: [
-            { op: "eq", field: "runId", value: place.runId },
-            { op: "eq", field: "stepKey", value: place.stepKey },
-        ],
-    },
-    order: [["id", "asc"]],
-    page: { size: STEP_RECORDS_LOOKED_AT },
-})
-
-/** A ledger record as the engine lists it: its data and when it was written. */
+/** A row of the effect ledger (`agent_node_effects`) as the policy reads it: its data and when it was written. */
 export interface LedgerRow {
     /** The record's data. */
     readonly data: Readonly<Record<string, unknown>>
@@ -163,20 +68,15 @@ export const ledgerLinesOf = (rows: ReadonlyArray<LedgerRow>, effects: ReadonlyA
         })
         .sort((left, right) => left.at.localeCompare(right.at))
 
-/** The read of the stops of one customer in one state, served by the stops' `lead_state` index (lead, state, id). */
-export const leadStopsQueryOf = (leadId: string, state: "open" | "resolved"): Query => ({
-    from: STOP_ENTITY,
-    select: ["runId", "stepKey", "customerLines", "resolvedAt"],
-    where: {
-        op: "and",
-        of: [
-            { op: "eq", field: "leadId", value: leadId },
-            { op: "eq", field: "state", value: state },
-        ],
-    },
-    order: [["id", "asc"]],
-    page: { size: STOPS_LOOKED_AT },
-})
+/** What the founder decided on a report about the customer: what the report asked, the founder's words, and when. */
+export interface FounderDecision {
+    /** The report's question, else its reason. */
+    readonly question: string
+    /** The founder's words. */
+    readonly answer: string
+    /** When the founder answered, ISO text. */
+    readonly at: string
+}
 
 /** What a stop says the customer was told: its run and step, the lines it holds, and when it was resolved (null while open). */
 export interface StopTold {
@@ -188,19 +88,61 @@ export interface StopTold {
     readonly lines: ReadonlyArray<SentLine>
     /** When it was resolved, ISO text; null while open. */
     readonly resolvedAt: string | null
+    /** What the founder answered on it in words, oldest first (D-MX-1): the founder's decisions for this customer. */
+    readonly decisions: ReadonlyArray<FounderDecision>
 }
 
-/** A stop as its record holds it, or null for a record that names no run and step. */
-export const stopToldOf = (data: Readonly<Record<string, unknown>>): StopTold | null => {
-    if (typeof data.runId !== "string" || typeof data.stepKey !== "string") return null
-    const held: unknown =
-        typeof data.customerLines === "object" && data.customerLines !== null ? Reflect.get(data.customerLines, "lines") : []
-    const lines = (Array.isArray(held) ? held : []).flatMap((line: unknown) => {
-        const text = wordsOf(line)
-        const at = typeof line === "object" && line !== null ? timeOf(Reflect.get(line, "at")) : null
-        return text !== null && at !== null ? [{ text, at }] : []
+/** The text of a value, or null when it holds none. */
+const textOrNull = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value : null)
+
+/** The founder's answers in words a stop keeps (its answers of kind `answer`), each with the question they answer. */
+const decisionsOf = (stop: RunStop): ReadonlyArray<FounderDecision> => {
+    const question = textOrNull(stop.question) ?? textOrNull(stop.reason) ?? ""
+    return stop.answers.flatMap((answer) => {
+        if (answer.kind !== "answer") return []
+        const text = textOrNull(answer.text)
+        const at = timeOf(answer.at)
+        return text !== null && at !== null ? [{ question, answer: text, at }] : []
     })
-    return { runId: data.runId, stepKey: data.stepKey, lines, resolvedAt: timeOf(data.resolvedAt) }
+}
+
+/** What a stop says the customer was told: its run and step, the lines it holds (with words and a time), its resolution and decisions. */
+export const stopToldOf = (stop: RunStop): StopTold => ({
+    runId: stop.runId,
+    stepKey: stop.stepKey,
+    lines: stop.customerLines.flatMap((line) => {
+        const text = wordsOf(line)
+        const at = timeOf(line.at)
+        return text !== null && at !== null ? [{ text, at }] : []
+    }),
+    resolvedAt: timeOf(stop.resolvedAt),
+    decisions: decisionsOf(stop),
+})
+
+/** The most founder decisions a turn is told: the newest, oldest first. */
+export const FOUNDER_DECISIONS_MAX: number = 10
+
+/**
+ * What the founder decided for the customer of a turn on the reports of OTHER steps (D-MX-1): the answers in words of every stop that
+ * counts, except the turn's own stop (its answers ride `founderAnswers`), each once, oldest first, the newest `FOUNDER_DECISIONS_MAX`.
+ * Facts only: the agent reads them as the shop's decisions for this customer.
+ */
+export const founderDecisionsOf = (
+    stops: ReadonlyArray<StopTold>,
+    own: StepPlace | null,
+): ReadonlyArray<FounderDecision> => {
+    const seen = new Set<string>()
+    return stops
+        .filter((stop) => own?.runId !== stop.runId || own.stepKey !== stop.stepKey)
+        .flatMap((stop) => stop.decisions)
+        .toSorted((left, right) => left.at.localeCompare(right.at))
+        .filter((decision) => {
+            const key = `${decision.at}\u0000${decision.answer}`
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+        })
+        .slice(-FOUNDER_DECISIONS_MAX)
 }
 
 /**

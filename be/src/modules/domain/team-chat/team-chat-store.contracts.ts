@@ -1,7 +1,5 @@
 import type {
     AgentPosted,
-    ApprovalRequestView,
-    ApprovalState,
     Attachment,
     ChatMemberRef,
     ChatRoomView,
@@ -26,10 +24,6 @@ export type OptionalMember = ChatMemberRef | null
 export type OptionalCard = StoredCard | null
 /** A room as a viewer reads it, or none. */
 export type OptionalRoomView = ChatRoomView | null
-/** The state of an approval for a viewer, or none. */
-export type OptionalApprovalState = ApprovalState | null
-/** The request an approval card is about, or none. */
-export type OptionalApprovalRequest = ApprovalRequestView | null
 /** A posted report, or none. */
 export type OptionalReport = ReportPosted | null
 /** A posted line, or none. */

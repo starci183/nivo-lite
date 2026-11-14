@@ -7,7 +7,8 @@ export const stableText = (value: unknown): string => {
     const members = Object.entries(value)
         .filter(([, member]) => member !== undefined)
         .sort(([left], [right]) => (left < right ? -1 : 1))
-    return `{${members.map(([key, member]) => `${JSON.stringify(key)}:${stableText(member)}`).join(",")}}`
+    const texts = members.map(([key, member]) => JSON.stringify(key) + ":" + stableText(member))
+    return `{${texts.join(",")}}`
 }
 
 /**

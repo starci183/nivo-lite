@@ -2,12 +2,10 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { KEEP_CHOICE, RETIRE_CHOICE, conflictDrawerOf } from "@/modules/brain"
-import type { FactDrawerWords, FactKey } from "@/modules/brain"
+import { KEEP_CHOICE, RETIRE_CHOICE, conflictDrawerOf, type FactDrawerWords, type FactKey } from "@/modules/brain"
 import type { BrainLens, ConflictDrawerView } from "@/modules/types"
-import { useFactBatch } from "./useFactBatch"
+import { useFactBatch, type FactOperation } from "./useFactBatch"
 import { useFailureToast } from "./useFailureToast"
-import type { FactOperation } from "./useFactBatch"
 
 /** What the comparison is read against: the keys that ask for a choice, the agents, and whether the reader may decide. */
 export interface ConflictDrawerInput {

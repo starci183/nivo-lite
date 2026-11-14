@@ -40,17 +40,13 @@ export const displayNameOf = (row: NamedInstallationRow): string =>
 export const isSetupPending = (lifecycle: AgentLifecycle | null): boolean =>
     lifecycle === "needs_setup" || lifecycle === "setting_up"
 
-/** The key (in the agent words) of the button that sends the owner to Setup: start it, or carry on with it. */
-export const setupLabelKey = (lifecycle: AgentLifecycle): "setupStart" | "continueSetup" =>
-    lifecycle === "setting_up" ? "continueSetup" : "setupStart"
-
 /** The name an installed agent answers to: its one display name, else its handle. */
 export const installationPersonName = (installation: Installation): string =>
     [installation.name, installation.agentHandle].find((name) => name.trim() !== "") ?? ""
 
 /** Accent-insensitive text for matching: NFD, marks stripped, d-stroke folded, lower case. */
 export const foldText = (text: string): string =>
-    text.normalize("NFD").replace(/[̀-ͯ]/gu, "").replace(/đ/giu, "d").toLowerCase()
+    text.normalize("NFD").replaceAll(/[̀-ͯ]/gu, "").replaceAll(/đ/giu, "d").toLowerCase()
 
 /** The parts of the facts line under an agent name. */
 type AgentSubtitleParts = {

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useMutateSubmitWebsiteLeadSwr } from "@/hooks/swr"
 import { graphQLErrorCode } from "@/modules/failure"
+import { websiteVisitorId } from "@/modules/storage"
 import type { WebsiteFormStatus, WebsiteFormValues } from "@/modules/types"
 
 /** What the hosted form of a shop website draws and does. */
@@ -23,6 +24,7 @@ const EMPTY: WebsiteFormValues = { name: "", phone: "", message: "" }
 const STATUS_OF: Readonly<Record<string, WebsiteFormStatus>> = {
     INBOX_LEADS_SITE_OFF: "off",
     INBOX_LEADS_SITE_UNKNOWN: "off",
+    ENTITY_ENGINE_AGENT_MISSING: "off",
     INBOX_LEADS_SUBMISSION_EMPTY: "empty",
 }
 
@@ -46,6 +48,7 @@ export const useWebsiteForm = (siteKey: string): WebsiteFormState => {
                 message: values.message,
                 pagePath: window.location.pathname,
                 device: window.matchMedia("(pointer: coarse)").matches ? "mobile" : "desktop",
+                visitor: websiteVisitorId(siteKey),
                 submissionId: crypto.randomUUID(),
             })
                 .then(() => {

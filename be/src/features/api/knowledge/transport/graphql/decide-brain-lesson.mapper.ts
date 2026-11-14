@@ -2,7 +2,7 @@ import type { DecideBrainLessonRequest } from "../../application/decide-brain-le
 import type { LessonRecord } from "@modules/domain/brain-lessons"
 import type { DecideBrainLessonInput } from "./dto/decide-brain-lesson.input"
 import type { BrainLessonType } from "./dto/brain-lesson.type"
-import { toBrainLessonType } from "./brain-records.mapper"
+import { toBrainLessonType } from "./brain-lesson.mapper"
 
 /** Maps the GraphQL input to the request. */
 export const toDecideBrainLessonRequest = (

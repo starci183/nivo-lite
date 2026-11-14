@@ -50,6 +50,7 @@ describe("ConnectionHealthService", () => {
                 ok: 0,
                 silent: 1,
                 failing: 0,
+                degraded: 0,
                 changed: 1,
             })
 
@@ -79,6 +80,7 @@ describe("ConnectionHealthService", () => {
                     ok: 1,
                     silent: 1,
                     failing: 0,
+                    degraded: 0,
                     changed: 1,
                 })
 
@@ -99,7 +101,7 @@ describe("ConnectionHealthService", () => {
     it("answers an empty tally when the first page has no connections", async () => {
         const { service, connections, logger } = await build()
 
-        await expect(service.checkAll()).resolves.toEqual({ checked: 0, ok: 0, silent: 0, failing: 0, changed: 0 })
+        await expect(service.checkAll()).resolves.toEqual({ checked: 0, ok: 0, silent: 0, failing: 0, degraded: 0, changed: 0 })
 
         expect(connections.healthBatch.mock.calls).toEqual([["", 200]])
         expect(connections.markHealth).not.toHaveBeenCalled()
@@ -114,7 +116,7 @@ describe("ConnectionHealthService", () => {
             connection({ status: "pending", health: "failing", lastEventAt: "" }),
         ])
 
-        await expect(service.checkAll()).resolves.toEqual({ checked: 0, ok: 0, silent: 0, failing: 0, changed: 0 })
+        await expect(service.checkAll()).resolves.toEqual({ checked: 0, ok: 0, silent: 0, failing: 0, degraded: 0, changed: 0 })
 
         expect(connections.healthBatch.mock.calls).toEqual([["", 200]])
         expect(connections.markHealth).not.toHaveBeenCalled()
@@ -130,7 +132,7 @@ describe("ConnectionHealthService", () => {
             connection({ id: "c-4", health: "failing", status: "error", lastError: "Reconnect" }),
         ])
 
-        await expect(service.checkAll()).resolves.toEqual({ checked: 4, ok: 2, silent: 1, failing: 1, changed: 0 })
+        await expect(service.checkAll()).resolves.toEqual({ checked: 4, ok: 2, silent: 1, failing: 1, degraded: 0, changed: 0 })
 
         expect(connections.healthBatch.mock.calls).toEqual([["", 200]])
         expect(connections.markHealth).not.toHaveBeenCalled()
@@ -145,7 +147,7 @@ describe("ConnectionHealthService", () => {
             connection({ id: "c-failing", workspaceId: "ws-2", status: "error", lastError: "Reconnect", health: "ok" }),
         ])
 
-        await expect(service.checkAll()).resolves.toEqual({ checked: 3, ok: 1, silent: 1, failing: 1, changed: 3 })
+        await expect(service.checkAll()).resolves.toEqual({ checked: 3, ok: 1, silent: 1, failing: 1, degraded: 0, changed: 3 })
 
         expect(connections.markHealth.mock.calls).toEqual([
             ["c-ok", { state: "ok", reason: "", checkedAt: NOW }],
@@ -171,9 +173,9 @@ describe("ConnectionHealthService", () => {
         const { service, connections, clock, logger } = await build()
         connections.healthBatch.mockResolvedValue([connection()])
 
-        await expect(service.checkAll(1)).resolves.toEqual({ checked: 1, ok: 1, silent: 0, failing: 0, changed: 0 })
+        await expect(service.checkAll(1)).resolves.toEqual({ checked: 1, ok: 1, silent: 0, failing: 0, degraded: 0, changed: 0 })
         clock.advance(3_600_000)
-        await expect(service.checkAll(1)).resolves.toEqual({ checked: 1, ok: 0, silent: 1, failing: 0, changed: 1 })
+        await expect(service.checkAll(1)).resolves.toEqual({ checked: 1, ok: 0, silent: 1, failing: 0, degraded: 0, changed: 1 })
 
         expect(connections.markHealth.mock.calls).toEqual([
             ["c-1", { state: "silent", reason: "no event for 2h", checkedAt: "2026-10-12T11:00:00.000Z" }],
@@ -194,7 +196,7 @@ describe("ConnectionHealthService", () => {
             connection({ id: "c-201", lastEventAt: "2026-10-12T07:00:00.000Z" }),
         ])
 
-        await expect(service.checkAll(2)).resolves.toEqual({ checked: 201, ok: 200, silent: 1, failing: 0, changed: 1 })
+        await expect(service.checkAll(2)).resolves.toEqual({ checked: 201, ok: 200, silent: 1, failing: 0, degraded: 0, changed: 1 })
 
         expect(connections.healthBatch.mock.calls).toEqual([
             ["", 200],
@@ -217,7 +219,7 @@ describe("ConnectionHealthService", () => {
             Array.from({ length: 200 }, (_, index) => connection({ id: `c-${index + 1}` })),
         )
 
-        await expect(service.checkAll()).resolves.toEqual({ checked: 200, ok: 200, silent: 0, failing: 0, changed: 0 })
+        await expect(service.checkAll()).resolves.toEqual({ checked: 200, ok: 200, silent: 0, failing: 0, degraded: 0, changed: 0 })
 
         expect(connections.healthBatch.mock.calls).toEqual([
             ["", 200],
@@ -255,7 +257,7 @@ describe("ConnectionHealthService", () => {
         ])
         expect(logger.warn).not.toHaveBeenCalled()
         finishMark()
-        await expect(checking).resolves.toEqual({ checked: 2, ok: 1, silent: 0, failing: 1, changed: 2 })
+        await expect(checking).resolves.toEqual({ checked: 2, ok: 1, silent: 0, failing: 1, degraded: 0, changed: 2 })
         expect(connections.markHealth.mock.calls).toEqual([
             ["c-1", { state: "failing", reason: "Reconnect", checkedAt: NOW }],
             ["c-2", { state: "ok", reason: "", checkedAt: NOW }],

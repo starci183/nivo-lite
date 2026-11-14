@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { TemplatePurchasesService } from "@modules/domain/template-marketplace"
 import type { InstalledTemplate } from "@nivo-lite/agent-sdk/template"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InstallTemplateListingCommand } from "./install-template-listing.command"
 
 @CommandHandler(InstallTemplateListingCommand)

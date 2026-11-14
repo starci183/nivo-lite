@@ -12,13 +12,10 @@ import {
     FILTER_MISSING,
     FILTER_WAITING,
     filterRows,
-    groupRows,
     waitingFirst,
-    type AgentCatalogGroup,
     type AgentCatalogRow,
     type CatalogFilterOption,
 } from "@/modules/agentCatalog"
-import { MODULE_REGISTRY } from "@/modules/catalog"
 import { TEAM_FILTER_FROM, catalogRowOf, type AgentCounts } from "./agentCatalog.shared"
 
 /** What the agents table draws and calls. */
@@ -27,8 +24,6 @@ export interface AgentTableView {
     readonly rows: ReadonlyArray<AgentCatalogRow>
     /** More agents than a person scans by eye: the chips and the search show. */
     readonly hasFilters: boolean
-    /** The same rows grouped by role, each under the head of its role. */
-    readonly groups: ReadonlyArray<AgentCatalogGroup>
     /** The chips: every agent, the ones missing a connection, the ones with facts waiting. */
     readonly options: ReadonlyArray<CatalogFilterOption>
     readonly filter: string
@@ -50,20 +45,12 @@ export const useAgentTable = (agents: ReadonlyArray<InstalledAgent>, filters: Ca
         const found = agentId === null ? undefined : dashboard?.agents.find((entry) => entry.agentId === agentId)
         return found === undefined ? undefined : { tasks: found.tasksDone, waiting: found.waiting }
     }
-    const all = agents.map((agent) => catalogRowOf(agent, workspaceId, t, countsOf(agent.agentId), canAdd))
+    const all = agents.map((agent) => catalogRowOf(agent, t, countsOf(agent.agentId), canAdd))
     const hasFilters = all.length > TEAM_FILTER_FROM
     const rows = waitingFirst(hasFilters ? filterRows(all, filter, filters.query) : all)
     return {
         rows,
         hasFilters,
-        groups: groupRows(rows, (roleKey) => {
-            const role = agents.find((agent) => agent.moduleKey === roleKey)?.roleName ?? roleKey
-            const count = agents.filter((agent) => agent.moduleKey === roleKey).length
-            return {
-                title: t("groupTitle", { role, count }),
-                addLabel: canAdd && MODULE_REGISTRY[roleKey].multiInstance ? t("groupAdd", { role }) : "",
-            }
-        }),
         options: [
             { id: FILTER_ALL, label: t("filterAll"), count: all.length },
             {

@@ -1,17 +1,17 @@
 import { AgentGraphsErrorCode } from "../errors/agent-graphs.error"
 import { requireKnownModels } from "./graph-models.policy"
 
-const documentOf = (nodes: ReadonlyArray<Readonly<Record<string, unknown>>>) => ({ nodes: [], rights: [], flow: { nodes } })
+const documentOf = (nodes: ReadonlyArray<Readonly<Record<string, unknown>>>) => ({ nodes: [], flow: { nodes } })
 
 describe("requireKnownModels", () => {
     it("passes a document with no flow, a flow naming no model, and Auto or a model of the vocabulary", () => {
-        expect(() => requireKnownModels({ nodes: [], rights: [] })).not.toThrow()
+        expect(() => requireKnownModels({ nodes: [] })).not.toThrow()
         expect(() => requireKnownModels(documentOf([{ key: "a", step: "chatbot.understand" }]))).not.toThrow()
         expect(() =>
             requireKnownModels(
                 documentOf([
                     { key: "a", step: "chatbot.understand", model: "auto" },
-                    { key: "b", step: "accounting.match-payment", model: "claude-sonnet-5-5" },
+                    { key: "b", step: "webbooks.payment-settle", model: "claude-sonnet-5-5" },
                 ]),
             ),
         ).not.toThrow()

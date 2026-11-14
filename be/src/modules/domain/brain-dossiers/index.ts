@@ -1,7 +1,0 @@
-export { brainDossiersEntities } from "./persistence/entities"
-export { BRAIN_DOSSIERS_ERROR_KINDS } from "./errors/brain-dossiers.error"
-export { BRAIN_DOSSIERS_MESSAGES } from "./messages/brain-dossiers.messages"
-export { BrainDossiersModule } from "./brain-dossiers.module"
-export { BrainDossiersService } from "./brain-dossiers.service"
-export { BrainDossiersReadService } from "./brain-dossiers-read.service"
-export type { DossierEntry, DossierImportResult, DossierRecord } from "./brain-dossiers.contracts"

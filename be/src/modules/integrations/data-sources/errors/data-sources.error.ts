@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the data-sources integration: why the owner's own system could not be read, in words the owner can act on. */
 export enum DataSourcesErrorCode {

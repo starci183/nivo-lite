@@ -10,28 +10,25 @@ import type { NodeDefinition, NodeModelRequest, TurnRef } from "./node.types"
 
 /**
  * PROMPT CACHE: a provider caches the prefix of a prompt, so the stable part of every model call of the engine (`instructions`: the
- * agent's craft and tool set, the shop's policy values, the step) must be the same text, byte for byte, whatever changes from call
+ * agent's craft and tool set, the step) must be the same text, byte for byte, whatever changes from call
  * to call; the volatile part (`volatile`, `input`) comes after it. These specs hold that layout.
  */
 
 const settle = defineEffect({
-    id: "nivo.payment.order.settle",
+    id: "nivo.tool.payment.order.settle",
     title: { key: "t.settle" },
     payload: z.object({ orderId: z.string(), transactionId: z.string() }),
-    rights: [],
 })
 const send = defineEffect({
-    id: "nivo.lead.message.send",
+    id: "nivo.tool.customer.message.send",
     title: { key: "t.send" },
     payload: z.object({ conversationId: z.string(), text: z.string() }),
-    rights: [],
 })
 const lookUp = defineTool({
     id: "catalog.item.find",
     title: { key: "t.find" },
     args: z.object({ words: z.string() }),
     result: z.object({ items: z.array(z.string()) }),
-    rights: [],
     mutates: false,
 })
 
@@ -39,7 +36,7 @@ const EFFECTS = new Map([settle, send].map((effect) => [effect.id, effect]))
 const TOOLS = new Map([[lookUp.id, lookUp]])
 
 /** The agent's whole set, as its module declares it: given out of name order on purpose. */
-const AGENT_TOOLS = ["nivo.payment.order.settle", "catalog.item.find", "nivo.lead.message.send"]
+const AGENT_TOOLS = ["nivo.tool.payment.order.settle", "catalog.item.find", "nivo.tool.customer.message.send"]
 
 const stepOf = (
     id: Namespaced,
@@ -55,7 +52,6 @@ const stepOf = (
         params: z.object({}),
         input: z.record(z.string(), z.unknown()),
         output,
-        rights: [],
         effects: [...effects],
         run: async (input, context) => {
             const decision = await context.agent.run({ goal, input, output })
@@ -64,17 +60,16 @@ const stepOf = (
         examples: [{ name: "answers", params: {}, input: {}, output: done, effects: [], model: [{ done }] }],
     })
 
-const SETTLE_STEP = stepOf("payment.settle", "Mark the order paid.", ["nivo.payment.order.settle"], z.object({ paid: z.boolean() }), {
+const SETTLE_STEP = stepOf("payment.settle", "Mark the order paid.", ["nivo.tool.payment.order.settle"], z.object({ paid: z.boolean() }), {
     paid: true,
 })
-const REPLY_STEP = stepOf("chat.reply", "Answer the customer.", ["nivo.lead.message.send"], z.object({ said: z.string() }), {
+const REPLY_STEP = stepOf("chat.reply", "Answer the customer.", ["nivo.tool.customer.message.send"], z.object({ said: z.string() }), {
     said: "ok",
 })
 
 const TURN: TurnRef = {
     ...EXAMPLE_TURN,
     guidance: "Speak kindly. Never promise a refund.",
-    policy: { refundDays: 7, approvalThresholdVnd: 5_000_000 },
     agentTools: AGENT_TOOLS,
 }
 
@@ -93,7 +88,7 @@ const asksOf = async (
         params: {},
         input,
         turn,
-        grant: { rights: [] },
+        grant: {},
         effects: EFFECTS,
         tools: TOOLS,
         key,
@@ -103,21 +98,20 @@ const asksOf = async (
 }
 
 const PAID = { done: { paid: true } }
-const SETTLE_CALL = { call: { tool: "nivo.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
+const SETTLE_CALL = { call: { tool: "nivo.tool.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
 
 describe("prompt cache: what the tool set costs", () => {
     const audience = "Who also reads the line: the owner alone, or a group too."
     const post = defineEffect({
-        id: "nivo.team.message.post",
+        id: "nivo.tool.team.message.post",
         title: { key: "effectTeamPost" },
         payload: z.union([
             z.object({ kind: z.literal("text"), text: z.string(), audience: z.string().describe(audience) }),
             z.object({ kind: z.literal("card"), orderId: z.string(), audience: z.string().describe(audience) }),
         ]),
-        rights: [],
     })
     const frameOf = (words?: (key: string) => string | undefined) => ({
-        turn: { ...EXAMPLE_TURN, agentTools: ["nivo.team.message.post", "nivo.lead.message.send"] },
+        turn: { ...EXAMPLE_TURN, agentTools: ["nivo.tool.team.message.post", "nivo.tool.customer.message.send"] },
         effects: new Map([post, send].map((effect) => [effect.id, effect])),
         tools: new Map(),
         ...(words === undefined ? {} : { words }),
@@ -160,11 +154,11 @@ describe("prompt cache: the stable prefix of a model call", () => {
                 ...TURN,
                 turnId: "turn-other",
                 subject: { kind: "lead", id: "lead-77" },
-                waitingOnFounder: [{ step: "Đánh dấu đã trả", since: "2026-11-10T04:00:00.000Z" }],
-                founderAnswers: [{ text: "duyệt", at: "2026-11-10T05:00:00.000Z" }],
-                alreadySent: [{ text: "Dạ shop đang kiểm tra ạ.", at: "2026-11-10T04:30:00.000Z" }],
+                waitingOnFounder: [{ step: "Mark as paid", since: "2026-11-10T04:00:00.000Z" }],
+                founderAnswers: [{ text: "approved", at: "2026-11-10T05:00:00.000Z" }],
+                alreadySent: [{ text: "The shop is checking.", at: "2026-11-10T04:30:00.000Z" }],
             },
-            { orderId: "o-999", at: "2026-11-11T09:30:00Z", thread: ["hello", "còn hàng không"] },
+            { orderId: "o-999", at: "2026-11-11T09:30:00Z", thread: ["hello", "still in stock?"] },
             "run-2:settle",
             [PAID],
         )
@@ -174,6 +168,33 @@ describe("prompt cache: the stable prefix of a model call", () => {
         expect(first?.volatile).toBeUndefined()
         expect(second?.volatile).toEqual(expect.stringContaining("`founderAnswers`"))
         expect(second?.input).not.toEqual(first?.input)
+    })
+
+    it("hands the founder's decisions for the customer and the credits joined to the run as volatile facts, never in the stable part (D-MX-1, D-MX-3)", async () => {
+        const [plain] = await asksOf(SETTLE_STEP, TURN, {}, "run-1:settle", [PAID])
+        const [told] = await asksOf(
+            SETTLE_STEP,
+            {
+                ...TURN,
+                founderDecisions: [
+                    { question: "Does the shop issue VAT invoices?", answer: "Yes, 8% fee", at: "2026-11-11T09:11:00.000Z" },
+                ],
+                creditsJoined: [
+                    { transactionId: "tx-2", amountVnd: 1000, reference: "DH202611110005", at: "2026-11-11T09:03:00.000Z" },
+                ],
+            },
+            {},
+            "run-1:settle",
+            [PAID],
+        )
+
+        expect(told?.instructions).toBe(plain?.instructions)
+        expect(told?.volatile).toEqual(expect.stringContaining("`founderDecisions`"))
+        expect(told?.volatile).toEqual(expect.stringContaining("`creditsJoined`"))
+        expect(told?.input).toMatchObject({
+            founderDecisions: [{ question: "Does the shop issue VAT invoices?", answer: "Yes, 8% fee" }],
+            creditsJoined: [{ transactionId: "tx-2", amountVnd: 1000 }],
+        })
     })
 
     it("holds nothing volatile: no id of the run, the turn or its subject, no clock, no thread", async () => {
@@ -190,7 +211,7 @@ describe("prompt cache: the stable prefix of a model call", () => {
         expect(JSON.stringify(asked?.input)).toContain("thread-SECRET")
     })
 
-    it("is shared by two different steps of the agent up to the step itself: the craft, the whole tool set and the shop's values", async () => {
+    it("is shared by two different steps of the agent up to the step itself: the craft and the whole tool set", async () => {
         const [settleAsk] = await asksOf(SETTLE_STEP, TURN, {}, "run-1:settle", [PAID])
         const [replyAsk] = await asksOf(REPLY_STEP, TURN, {}, "run-1:reply", [{ done: { said: "ok" } }])
         const settled = settleAsk?.instructions ?? ""
@@ -200,22 +221,21 @@ describe("prompt cache: the stable prefix of a model call", () => {
         expect(shared.length).toBeGreaterThan(0)
         expect(replied.startsWith(shared)).toBe(true)
         expect(replied.slice(shared.length).startsWith("Answer the customer.")).toBe(true)
-        // The shared part is L1 then L2: guidance, the full set in name order (not the step's own tools), how turns go, the values.
+        // The shared part is L1: guidance, the full set in name order (not the step's own tools), how turns go.
         expect(shared.startsWith("Speak kindly. Never promise a refund.\n\n")).toBe(true)
-        const names = ['"name":"catalog.item.find"', '"name":"nivo.lead.message.send"', '"name":"nivo.payment.order.settle"']
+        const names = ['"name":"catalog.item.find"', '"name":"nivo.tool.customer.message.send"', '"name":"nivo.tool.payment.order.settle"']
         const places = names.map((name) => shared.indexOf(name))
         expect(places.every((place) => place > 0)).toBe(true)
         expect([...places].sort((left, right) => left - right)).toEqual(places)
         expect(shared.indexOf("You act by calling tools")).toBeGreaterThan(places[2] ?? 0)
-        expect(shared.endsWith('{"approvalThresholdVnd":5000000,"refundDays":7}\n\n')).toBe(true)
+        expect(shared.endsWith("\n\n")).toBe(true)
         // The step names what it may call; the right itself stays in code.
-        expect(settled.slice(shared.length)).toContain('"tools":["nivo.payment.order.settle"]')
+        expect(settled.slice(shared.length)).toContain('"tools":["nivo.tool.payment.order.settle"]')
     })
 
-    it("writes equal data as equal text: the order the values or the tool ids were given in does not show", async () => {
+    it("writes equal data as equal text: the order the tool ids were given in does not show", async () => {
         const shuffled: TurnRef = {
             ...TURN,
-            policy: { approvalThresholdVnd: 5_000_000, refundDays: 7 },
             agentTools: [...AGENT_TOOLS].reverse(),
         }
         const [first] = await asksOf(SETTLE_STEP, TURN, {}, "k", [PAID])
@@ -236,18 +256,48 @@ describe("prompt cache: the stable prefix of a model call", () => {
         expect(opening(texts[2] ?? "").startsWith(opening(texts[1] ?? ""))).toBe(true)
     })
 
-    it("lays a host's own call for the agent out the same way, so it shares the craft, the tool set and the values", async () => {
+    it("lays a host's own call for the agent out the same way, so it shares the craft and the tool set", async () => {
         const [stepAsk] = await asksOf(SETTLE_STEP, TURN, {}, "k", [PAID])
         const core = guidedModelRequest(
             { turn: TURN, effects: EFFECTS, tools: TOOLS },
             { purpose: "core", instructions: "Decide what to do with the stuck step.", input: { reason: "x" } },
         )
 
-        const craft = core.instructions.slice(0, core.instructions.indexOf("The values of this policy"))
+        const craft = core.instructions.slice(0, core.instructions.indexOf("Decide what to do with the stuck step."))
         expect(craft.startsWith("Speak kindly. Never promise a refund.\n\n")).toBe(true)
         expect(craft).toContain('"name":"catalog.item.find"')
         // The guidance and the tool set open a step's call with the same text.
         expect(stepAsk?.instructions.startsWith(craft.trimEnd())).toBe(true)
-        expect(core.instructions.endsWith('{"approvalThresholdVnd":5000000,"refundDays":7}\n\nDecide what to do with the stuck step.')).toBe(true)
+        expect(core.instructions.endsWith("\n\nDecide what to do with the stuck step.")).toBe(true)
+    })
+})
+
+describe("prompt cache: where the opening every step shares ends (ENG1: L1 cached ACROSS steps)", () => {
+    it("names the length of the L1 opening: the same bytes for two steps, the step's own words after one blank line", async () => {
+        const [settleAsk] = await asksOf(SETTLE_STEP, TURN, {}, "run-1:settle", [PAID])
+        const [replyAsk] = await asksOf(REPLY_STEP, TURN, {}, "run-1:reply", [{ done: { said: "ok" } }])
+        const settled = settleAsk?.instructions ?? ""
+        const replied = replyAsk?.instructions ?? ""
+
+        expect(settleAsk?.sharedLength).toBeGreaterThan(0)
+        expect(replyAsk?.sharedLength).toBe(settleAsk?.sharedLength)
+        const opening = settled.slice(0, settleAsk?.sharedLength)
+        expect(replied.slice(0, replyAsk?.sharedLength)).toBe(opening)
+        expect(opening).toContain('"name":"catalog.item.find"')
+        expect(settled.slice(opening.length)).toMatch(/^\n\nMark the order paid\./u)
+        expect(replied.slice(opening.length)).toMatch(/^\n\nAnswer the customer\./u)
+    })
+
+    it("names it on a host's own call for the agent too, and not on a call whose turn carries no craft", () => {
+        const core = guidedModelRequest(
+            { turn: TURN, effects: EFFECTS, tools: TOOLS },
+            { purpose: "core", instructions: "Decide.", input: {} },
+        )
+        expect(core.instructions.slice(0, core.sharedLength)).toBe(core.instructions.slice(0, -"\n\nDecide.".length))
+
+        const bare = { purpose: "core", instructions: "Decide.", input: {} }
+        const plain = guidedModelRequest({ turn: EXAMPLE_TURN, effects: new Map(), tools: new Map() }, bare)
+        expect(plain).toBe(bare)
+        expect(plain.sharedLength).toBeUndefined()
     })
 })

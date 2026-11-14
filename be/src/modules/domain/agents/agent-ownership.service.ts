@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
 import type { EntityManager, UpdateResult } from "typeorm"
 import {
     WorkspaceMemberDirectoryService,
@@ -7,21 +6,18 @@ import {
     WorkspaceMembersService,
 } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { eachInOrder } from "@modules/platform/primitives"
-import { isAssignableRole, mayAssign, mayManage, mayTag, ownerCardOf, resolveOwners, rolesOf } from "./agent-ownership.policy"
+import { isAssignableRole, mayAssign, mayManage, ownerCardOf, resolveOwners, rolesOf } from "./agent-ownership.policy"
 import type { AgentOwners, AgentOwnership, OwnershipChange } from "./agents.contracts"
-import type { TagGrants } from "./agent-tag-grants.contracts"
 import { InjectAgentRooms } from "./agents.decorators"
 import type { AgentRooms } from "./agents.port"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
+import type { AssignContext, MemberState } from "./agents-reads.contracts"
 import { AgentEntity } from "./persistence/entities"
 
 /** The room keys and cards ownership reads are bounded by what one agent can name. */
 const MEMBER_LIMIT = 10
 const ROOM_LIMIT = 10
 const MEMBER_ROOMS_LIMIT = 50
-const TAG_LIMIT = 50
 
 /** The one row `public.workspace_owner_member` answers: its result is named after the function. */
 interface WorkspaceOwnerRow {
@@ -44,8 +40,8 @@ const GOVERNORS = ["owner", "manager"] as const
 
 @Injectable()
 /**
- * Who answers for each agent, who may hand it work and which agents it may pass work to: the ownership settings of the agents
- * table. `AgentsService` offers the three questions other capabilities ask (`ownerOf`, `canTag`, `canAssign`) by delegating here.
+ * Who answers for each agent and who may hand it work: the ownership settings of the agents table. `AgentsService` offers the
+ * questions other capabilities ask (`ownerOf`, `canAssign`) by delegating here.
  */
 export class AgentOwnershipService {
     constructor(
@@ -69,43 +65,6 @@ export class AgentOwnershipService {
             this.workspaceOwnerOf(agent.workspaceId),
         ])
         return this.responderOf(agent, new Set(active), workspaceOwner)
-    }
-
-    /** Whether an agent may pass work to another agent: both active, one workspace, the second on the first's list. */
-    async canTag(agentId: string, targetAgentId: string): Promise<boolean> {
-        const agents = await this.entityManager.find(AgentEntity, {
-            where: { id: In([agentId, targetAgentId]) },
-            take: 2,
-        })
-        const from = agents.find((agent) => agent.id === agentId)
-        const to = agents.find((agent) => agent.id === targetAgentId)
-        if (from === undefined || to === undefined) return false
-        const context: TagContext = {
-            fromStatus: from.status,
-            toStatus: to.status,
-            sameWorkspace: from.workspaceId === to.workspaceId,
-            listed: from.canTagAgentIds.includes(to.id),
-            sameAgent: from.id === to.id,
-        }
-        return mayTag(context)
-    }
-
-    /** Adds tag rights to the lists of the tagging agents of one workspace; a right already held stays as it is. */
-    async grantTags(workspaceId: string, grants: TagGrants): Promise<void> {
-        const taggers = [...new Set(grants.map((grant) => grant.from))]
-        if (taggers.length === 0) return
-        const rows = await this.entityManager.find(AgentEntity, {
-            select: { id: true, canTagAgentIds: true },
-            where: { workspaceId, id: In(taggers) },
-            take: taggers.length,
-        })
-        await eachInOrder(rows, (row) => {
-            const added = grants.filter((grant) => grant.from === row.id).map((grant) => grant.to)
-            const listed = [...new Set([...row.canTagAgentIds, ...added])]
-            return listed.length === row.canTagAgentIds.length
-                ? Promise.resolve()
-                : this.entityManager.update(AgentEntity, { id: row.id, workspaceId }, { canTagAgentIds: listed })
-        })
     }
 
     /** Whether a member may hand an agent work: by role or by a seat in a team-chat group the agent is open to; nobody may for a paused agent. */
@@ -151,21 +110,15 @@ export class AgentOwnershipService {
         return id
     }
 
-    /** Who answers for an agent, who may give it work and who it may pass work to; any member of the workspace may read it. */
+    /** Who answers for an agent and who may give it work; any member of the workspace may read it. */
     async ownershipOf(userId: string, workspaceId: string, agentId: string): Promise<AgentOwnership> {
         await this.members.require(userId, workspaceId)
         const agent = await this.ownershipRow(agentId, workspaceId)
         const stored = [agent.ownerMemberId, agent.fallbackMemberId].filter((id): id is string => id !== null)
-        const [states, workspaceOwner, rooms, targets] = await Promise.all([
+        const [states, workspaceOwner, rooms] = await Promise.all([
             this.memberStates(workspaceId, stored),
             this.workspaceOwnerOf(workspaceId),
             this.roomLabels(workspaceId, agent.assignableRooms),
-            this.entityManager.find(AgentEntity, {
-                select: { id: true, name: true, module: true, status: true },
-                where: { workspaceId, id: In(agent.canTagAgentIds) },
-                order: { createdAt: "ASC", id: "ASC" },
-                take: TAG_LIMIT,
-            }),
         ])
         const active = new Set(states.filter((state) => state.status === "active").map((state) => state.id))
         const cardOf = (id: string | null) => {
@@ -179,27 +132,18 @@ export class AgentOwnershipService {
             responder: this.responderOf(agent, active, workspaceOwner),
             assignableRoles: rolesOf(agent.assignableRoles),
             assignableRooms: rooms,
-            canTag: targets.map((target) => ({
-                id: target.id,
-                name: target.name,
-                module: target.module,
-                status: target.status,
-            })),
         }
     }
 
-    /** Replaces who is in charge of an agent, who may give it work and who it may pass work to; a manager only. */
+    /** Replaces who is in charge of an agent and who may give it work; a manager only. */
     async setOwnership(userId: string, workspaceId: string, agentId: string, change: OwnershipChange): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
         const people = [...new Set([change.ownerMemberId, change.fallbackMemberId])]
         const roles = [...new Set(change.assignableRoles)]
         const rooms = [...new Set(change.assignableRooms)]
-        const targets = [...new Set(change.canTagAgentIds)]
         if (!(await this.membersCounted(workspaceId, people))) throw this.invalidOwnership("owner")
         if (!roles.every(isAssignableRole)) throw this.invalidOwnership("assignableRoles")
         if (!(await this.roomsCounted(workspaceId, rooms))) throw this.invalidOwnership("assignableRooms")
-        if (targets.includes(agentId) || !(await this.agentsCounted(workspaceId, targets)))
-            throw this.invalidOwnership("canTagAgentIds")
         this.expectChanged(
             await this.entityManager.update(
                 AgentEntity,
@@ -209,7 +153,6 @@ export class AgentOwnershipService {
                     fallbackMemberId: change.fallbackMemberId,
                     assignableRoles: roles,
                     assignableRooms: rooms,
-                    canTagAgentIds: targets,
                 },
             ),
             agentId,
@@ -230,13 +173,6 @@ export class AgentOwnershipService {
     private async roomsCounted(workspaceId: string, ids: ReadonlyArray<string>): Promise<boolean> {
         if (ids.length === 0) return true
         return (await this.rooms.labelsOf(workspaceId, ids, ids.length)).length === ids.length
-    }
-
-    /** True when every given agent belongs to the workspace; an empty list is trivially so. */
-    private async agentsCounted(workspaceId: string, ids: ReadonlyArray<string>): Promise<boolean> {
-        if (ids.length === 0) return true
-        const counted = await this.entityManager.count(AgentEntity, { where: { workspaceId, id: In([...ids]) } })
-        return counted === ids.length
     }
 
     private async ownershipRow(agentId: string, workspaceId: string | null = null): Promise<AgentEntity> {

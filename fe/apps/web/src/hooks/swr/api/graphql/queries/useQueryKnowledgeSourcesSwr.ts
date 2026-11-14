@@ -20,6 +20,9 @@ const ACTIVE_POLL_MS = 3_000
 
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "queued", "reading", "indexing", "extracting_facts"])
 
+/** The truths states of a document that still move on their own (INGEST-2: no stream frame is sent for the truths work). */
+const ACTIVE_TRUTHS: ReadonlySet<string> = new Set(["running", "awaiting_critique", "blocked_credits"])
+
 /**
  * The documents of the active workspace, optionally filtered to one module or to the origin they came from (`google_drive`)
  * (the back end `knowledgeSources` query).
@@ -49,7 +52,12 @@ export const useQueryKnowledgeSourcesSwr = (
             return result.data.knowledgeSources
         },
         {
-            refreshInterval: (data) => (data?.some((one) => ACTIVE_STATUSES.has(one.status)) ? pollMs : 0),
+            refreshInterval: (data) =>
+                data?.some(
+                    (one) => ACTIVE_STATUSES.has(one.status) || (one.truths !== null && ACTIVE_TRUTHS.has(one.truths.state)),
+                )
+                    ? pollMs
+                    : 0,
         },
     )
 }

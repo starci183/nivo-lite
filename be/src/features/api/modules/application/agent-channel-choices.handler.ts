@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentInstanceCreationService } from "@modules/domain/agent-instances"
-import type { ChannelChoice } from "@modules/domain/agent-instances"
+import { AgentInstanceCreationService, type ChannelChoice } from "@modules/domain/agent-instances"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentChannelChoicesQuery } from "./agent-channel-choices.query"
 
 @QueryHandler(AgentChannelChoicesQuery)

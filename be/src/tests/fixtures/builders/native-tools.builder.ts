@@ -2,12 +2,12 @@ import { builder } from "@starci/jest-preset"
 import type { EventsService, EventEntry } from "@modules/domain/events"
 import type { EntityManager } from "typeorm"
 import { brainFactsEntities } from "@modules/domain/brain-facts"
-import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
-import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
+import { toolCallLogEntities } from "@modules/domain/tool-call-log"
+import { toolGrantsEntities } from "@modules/domain/tool-grants"
 
 const BrainFactEntity: (typeof brainFactsEntities)[0] = brainFactsEntities[0]
-const McpCallLogEntity: (typeof mcpCallLogEntities)[0] = mcpCallLogEntities[0]
-const McpToolGrantEntity: (typeof mcpToolGrantsEntities)[0] = mcpToolGrantsEntities[0]
+const ToolCallLogEntity: (typeof toolCallLogEntities)[0] = toolCallLogEntities[0]
+const ToolGrantEntity: (typeof toolGrantsEntities)[0] = toolGrantsEntities[0]
 
 /** One fact of a workspace as a native-tools scenario seeds it. */
 interface SeededFact {
@@ -46,7 +46,7 @@ export const grantTool = async (
     agentId: string,
     tool: string,
 ): Promise<void> => {
-    await manager.insert(McpToolGrantEntity, { workspaceId, agentId, tool, mode: "auto" })
+    await manager.insert(ToolGrantEntity, { workspaceId, agentId, tool, mode: "auto" })
 }
 
 /** The workspace and agent of one tenant of a scenario. */
@@ -57,7 +57,7 @@ interface Tenant {
 
 /**
  * Seeds the Brain scenario of the native-tools proof: the first tenant has a public and an internal fact, the second a public fact of
- * its own, and each agent holds a grant on `nivo.brain.search` only.
+ * its own, and each agent holds a grant on `nivo.tool.brain.search` only.
  */
 export const persistBrainScenario = async (manager: EntityManager, own: Tenant, other: Tenant): Promise<void> => {
     const shop = { subject: "Shop", attribute: "Opening hours" } as const
@@ -81,8 +81,8 @@ export const persistBrainScenario = async (manager: EntityManager, own: Tenant, 
             value: "9 to 17 weekdays",
             scope: "public",
         }),
-        grantTool(manager, own.workspaceId, own.agentId, "nivo.brain.search"),
-        grantTool(manager, other.workspaceId, other.agentId, "nivo.brain.search"),
+        grantTool(manager, own.workspaceId, own.agentId, "nivo.tool.brain.search"),
+        grantTool(manager, other.workspaceId, other.agentId, "nivo.tool.brain.search"),
     ])
 }
 
@@ -100,7 +100,7 @@ export const storedCallsOf = async (
     agentId: string,
     tool: string,
 ): Promise<Array<StoredCall>> => {
-    const rows = await manager.find(McpCallLogEntity, { where: { agentId, tool }, take: 10 })
+    const rows = await manager.find(ToolCallLogEntity, { where: { agentId, tool }, take: 10 })
     return rows.map((row) => ({
         tool: row.tool,
         outcome: row.outcome,

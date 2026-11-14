@@ -5,8 +5,7 @@ import {
     type mutateChangePassword as MutateChangePasswordOperation,
 } from "@/modules/api/graphql/mutations/mutation-change-password"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { ChangePasswordMutation } from "@/modules/api"
 
 /** The SWR key of the changePassword mutation. */

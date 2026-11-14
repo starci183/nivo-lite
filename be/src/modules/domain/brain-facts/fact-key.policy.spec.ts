@@ -1,5 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { AUTO_APPLY_TRUST, factSlugOf, numberOf, numbersOf, sameValue, TRUST } from "./fact-key.policy"
+import {
+    AUTO_APPLY_TRUST,
+    factSlugOf,
+    numberOf,
+    numbersOf,
+    sameValue,
+    TRUST,
+    valueFormOf,
+    readByJudge,
+    valueTypeProblemOf,
+} from "./fact-key.policy"
 
 type Subject = {
     factSlugOf: typeof factSlugOf
@@ -87,11 +97,12 @@ describe("fact keys", () => {
         ["eight", "8", false],
         ["8", "eight", false],
         ["first", "second", false],
-        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "5.000 \u20ab", true],
-        ["5.000 \u20ab/ch\u1eadu", "5.000 \u0111", true],
-        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "5000 VND", true],
-        ["5k m\u1ed7i ly", "5.000 \u0111", true],
-        ["5k moi ly", "5.000 \u0111", true],
+        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "5.000 \u20ab", false],
+        ["5.000 \u20ab/ch\u1eadu", "5.000 \u0111", false],
+        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "5000 VND", false],
+        ["5k m\u1ed7i ly", "5.000 \u0111", false],
+        ["5k moi ly", "5.000 \u0111", false],
+        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "5000 VND m\u1ed9t ch\u1eadu", true],
         ["5.000 \u20ab m\u1ed9t ch\u1eadu", "6.000 \u20ab", false],
         ["5.000 \u20ab m\u1ed9t ch\u1eadu", "6.000 \u20ab m\u1ed9t ch\u1eadu", false],
         ["5 tr\u1ee9ng", "5 tri\u1ec7u", false],
@@ -114,5 +125,92 @@ describe("fact keys numbersOf (BG2)", () => {
         ["kh\u00f4ng nh\u1eadn \u0111\u01a1n", []],
     ])("reads every number of %s", (text, expected) => {
         expect(numbersOf(text)).toEqual(expected)
+    })
+})
+
+describe("fact keys: the ONE normal form values are compared in (D-BR-10, the walk's 49 false conflicts)", () => {
+    it.each([
+        // Money written four ways (P01 / I05 / I07 lines of the walk).
+        ["30.000 \u0111", "30k", true],
+        ["30.000 \u0111", "30 ngh\u00ecn", true],
+        ["30.000 \u0111", "30,000 VND", true],
+        ["30k m\u1ed9t \u0111\u01a1n", "30.000 \u0111 m\u1ed7i \u0111\u01a1n", false],
+        ["30k", "35.000 \u0111", false],
+        // Shares.
+        ["5 ph\u1ea7n tr\u0103m", "5 %", true],
+        ["5%", "5 phan tram", true],
+        ["5%", "6%", false],
+        // Spans of the clock.
+        ["8:00\u201320:00", "8h \u0111\u1ebfn 20h", true],
+        ["8h00 - 20h30", "t\u1eeb 8 gi\u1edd \u0111\u1ebfn 20 gi\u1edd 30", true],
+        ["8:00\u201320:00", "8:00\u201320:30", false],
+        // Yes / no.
+        ["C\u00f3", "c\u00f3", true],
+        ["Kh\u00f4ng", "khong", true],
+        ["C\u00f3", "Kh\u00f4ng", false],
+        // Lengths of time.
+        ["24 gi\u1edd", "1 ng\u00e0y", true],
+        // A range of counts is not a span of the clock.
+        ["10-20 b\u00f4ng", "10:00-20:00", false],
+    ])("compares %s and %s as %s", (first, second, expected) => {
+        expect(sameValue(first, second)).toBe(expected)
+    })
+
+    it.each([
+        ["30.000 \u0111", { type: "money", key: "30000" }],
+        ["mi\u1ec5n ph\u00ed", { type: "money", key: "0" }],
+        ["30k m\u1ed9t \u0111\u01a1n", { type: "money", key: "30000:mot-don", worded: true }],
+        ["30000", { type: "number", key: "30000" }],
+        ["5 %", { type: "percent", key: "5" }],
+        ["8h \u0111\u1ebfn 20h", { type: "time_range", key: "08:00-20:00" }],
+        ["2 ti\u1ebfng", { type: "duration", key: "120" }],
+        ["C\u00f3", { type: "boolean", key: "yes" }],
+        ["57 V\u00f5 V\u0103n Ng\u00e2n", { type: "text", key: "57-vo-van-ngan" }],
+    ])("reads %s as %j", (value, form) => {
+        expect(valueFormOf(value)).toEqual(form)
+    })
+})
+
+describe("fact keys: a typed truth takes only a value of its type (D-BR-12)", () => {
+    const labels = "Giao h\u00e0ng Chi nh\u00e1nh 1 - C\u1ea7n Gi\u1edd giao"
+
+    it("reads the type from the value alone: a yes or no is a yes/no rule only when it is the whole value (no word is read against the labels)", () => {
+        expect(valueFormOf("kh\u00f4ng giao").type).toBe("text")
+        expect(valueFormOf("Kh\u00f4ng").type).toBe("boolean")
+    })
+
+    it("hands to the judge what code cannot compare beyond exact equality: free text and an amount with other words", () => {
+        expect(readByJudge("30k m\u1ed9t \u0111\u01a1n")).toBe(true)
+        expect(readByJudge("57 V\u00f5 V\u0103n Ng\u00e2n")).toBe(true)
+        expect(readByJudge("30.000 \u0111")).toBe(false)
+        expect(readByJudge("5%")).toBe(false)
+    })
+
+    it.each([
+        // The walk's A18: "maybe" on "Giao hang Chi nhanh 1 - Can Gio = khong giao" was applied.
+        [{ value: "Kh\u00f4ng", labels }, { value: "maybe", labels }, "not_boolean"],
+        // A value that is words ("no delivery") is text for code: it takes any value; what it means is not read here.
+        [{ value: "kh\u00f4ng giao", labels }, { value: "maybe", labels }, null],
+        [{ value: "kh\u00f4ng giao", labels }, { value: "C\u00f3", labels }, null],
+        [{ value: "30.000 \u0111", labels: "Ph\u00ed giao" }, { value: "abc", labels: "Ph\u00ed giao" }, "not_money"],
+        [{ value: "30.000 \u0111", labels: "Ph\u00ed giao" }, { value: "35000", labels: "Ph\u00ed giao" }, null],
+        [{ value: "5%", labels: "Gi\u1ea3m" }, { value: "120 \u0111", labels: "Gi\u1ea3m" }, "not_percent"],
+        [
+            { value: "8:00-20:00", labels: "Gi\u1edd" },
+            { value: "c\u1ea3 ng\u00e0y", labels: "Gi\u1edd" },
+            "not_time_range",
+        ],
+        [
+            { value: "24 gi\u1edd", labels: "\u0110\u1ed5i" },
+            { value: "l\u00e2u", labels: "\u0110\u1ed5i" },
+            "not_duration",
+        ],
+        [
+            { value: "57 V\u00f5 V\u0103n Ng\u00e2n", labels: "\u0110\u1ecba ch\u1ec9" },
+            { value: "maybe", labels: "\u0110\u1ecba ch\u1ec9" },
+            null,
+        ],
+    ])("replacing %j with %j is %s", (current, next, problem) => {
+        expect(valueTypeProblemOf(current, next)).toBe(problem)
     })
 })

@@ -1,8 +1,7 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { useBankName } from "@/hooks/banks"
 import { useFormatter, useTranslations } from "next-intl"
 import { GUIDES } from "@/hooks/connection-guides"
@@ -89,9 +88,9 @@ export const MoneyWizard = (props: MoneyWizardProps) => {
                 received: wizard.received ? moneyReceived(wizard.firstEvent, format, tw) : null,
                 hasCheckFailed: wizard.hasCheckFailed,
                 agentStep: {
-                    title: tw("agentTitleAccounting"),
+                    title: tw("agentTitleBank"),
                     notice: wizard.hasSkipped && !wizard.received ? tw("skipNote") : null,
-                    agents: agentChoicesOf(props.agents, props.provider, tw),
+                    agents: agentChoicesOf(props.agents, tw),
                     value: wizard.agentIds,
                     hint: tw("agentHint"),
                     none: tw("agentNone"),

@@ -1,16 +1,16 @@
 import { Test } from "@nestjs/testing"
-import { picturesAfterQr, sepayQrUrlOf } from "./qr-image.policy"
+import { picturesAfterQr, sepayQrUrlOf, withQrPicture } from "./qr-image.policy"
 
 const SUBJECT = Symbol("qr-image.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { picturesAfterQr, sepayQrUrlOf } }],
+        providers: [{ provide: SUBJECT, useValue: { picturesAfterQr, sepayQrUrlOf, withQrPicture } }],
     }).compile()
     return moduleRef.get<typeof import("./qr-image.policy")>(SUBJECT)
 }
 
-const QR = "https://qr.sepay.vn/img?acc=0123456789&bank=MB&amount=1500000&des=INV2026100001&template=compact"
+const QR = "https://vietqr.app/img?acc=0123456789&bank=MB&amount=1500000&des=INV2026100001&template=compact"
 
 describe("sepayQrUrlOf", () => {
     it("finds the QR link inside the renewal tail", async () => {
@@ -28,15 +28,15 @@ describe("sepayQrUrlOf", () => {
     it("answers the first link when there are two", async () => {
         const subject = await build()
 
-        expect(subject.sepayQrUrlOf(`${QR} and https://qr.sepay.vn/img?acc=9`)).toBe(QR)
+        expect(subject.sepayQrUrlOf(`${QR} and https://vietqr.app/img?acc=9`)).toBe(QR)
     })
 
     it.each([
         ["no link", "Hello"],
         ["another host", "https://img.vietqr.io/image/MB-1-compact.png"],
-        ["the SePay image path without a query", "https://qr.sepay.vn/img"],
-        ["a plain http link", "http://qr.sepay.vn/img?acc=1"],
-        ["a SePay link with nothing after the question mark", "See https://qr.sepay.vn/img?."],
+        ["the SePay image path without a query", "https://vietqr.app/img"],
+        ["a plain http link", "http://vietqr.app/img?acc=1"],
+        ["a SePay link with nothing after the question mark", "See https://vietqr.app/img?."],
     ])("answers null for %s", async (_label, text) => {
         const subject = await build()
 
@@ -58,5 +58,26 @@ describe("picturesAfterQr", () => {
     it("keeps every picture of a text that links no QR", async () => {
         const subject = await build()
         expect(subject.picturesAfterQr("Hello", [qrPicture, photo])).toEqual([qrPicture, photo])
+    })
+})
+
+describe("withQrPicture", () => {
+    const photo = { url: "https://api/1.jpg", caption: "Item 1" }
+
+    it("puts the QR the text links to first, as a picture without a caption", async () => {
+        const subject = await build()
+        expect(subject.withQrPicture(`QR: ${QR}.`, [photo])).toEqual([{ url: QR, caption: "" }, photo])
+    })
+
+    it("does not add the QR twice when a picture of the send already is it", async () => {
+        const subject = await build()
+        const qrPicture = { url: QR, caption: "INV2026100001" }
+        expect(subject.withQrPicture(`QR: ${QR}`, [qrPicture, photo])).toEqual([qrPicture, photo])
+    })
+
+    it("keeps the pictures as they are for a text that links no QR", async () => {
+        const subject = await build()
+        expect(subject.withQrPicture("Hello", [photo])).toEqual([photo])
+        expect(subject.withQrPicture("Hello", [])).toEqual([])
     })
 })

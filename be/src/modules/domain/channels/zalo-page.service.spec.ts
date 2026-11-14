@@ -1,8 +1,6 @@
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import { ChatConversationsService } from "@modules/domain/chat-records"
-import type { ChatFollower } from "@modules/domain/chat-records"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
@@ -11,7 +9,7 @@ import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import { ZALO_INBOX_READS } from "./channels.decorators"
-import type { ZaloInboxFactsRow, ZaloInboxReads } from "./channels.port"
+import type { ZaloInboxFactsRow, ZaloInboxReads, ZaloWriter } from "./channels.port"
 import type { ZaloSecret } from "./channels.contracts"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 
@@ -47,9 +45,8 @@ const connection = builder<ConnectionRecord>({
     firstEvent: null,
 })
 
-const follower: ChatFollower = {
-    conversationId: "k-1",
-    externalId: "u-1:99",
+const follower: ZaloWriter = {
+    userId: "u-1",
     name: "An",
     lastAt: "2026-10-28T09:00:00.000Z",
 }
@@ -57,7 +54,7 @@ const follower: ChatFollower = {
 const FACTS: ZaloInboxFactsRow = { last_at: "2026-10-28T09:30:00.000Z", has_text: true, has_follow: false }
 
 const build = async (
-    followers: ReadonlyArray<ChatFollower> = [follower],
+    followers: ReadonlyArray<ZaloWriter> = [follower],
     record: Partial<ConnectionRecord> = {},
     facts: ZaloInboxFactsRow | null = FACTS,
 ) => {
@@ -75,8 +72,7 @@ const build = async (
     delivery.sendToPerson.mockResolvedValue(undefined)
     const inboxReads = mock<ZaloInboxReads>()
     inboxReads.factsOf.mockResolvedValue(facts)
-    const conversations = mock<ChatConversationsService>()
-    conversations.followersOn.mockResolvedValue(followers)
+    inboxReads.writersSince.mockResolvedValue(followers)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloPageService,
@@ -86,15 +82,14 @@ const build = async (
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZALO_INBOX_READS, useValue: inboxReads },
             { provide: ChannelDeliveryService, useValue: delivery },
-            { provide: ChatConversationsService, useValue: conversations },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, conversations }
+    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, inboxReads }
 }
 
 describe("ZaloPageService view", () => {
     it("answers a healthy connection with masked secrets, the paste addresses, the check list and the 48-hour followers", async () => {
-        const { service, conversations } = await build()
+        const { service, inboxReads } = await build()
 
         const page = await service.view(actor, "c-1")
 
@@ -102,6 +97,7 @@ describe("ZaloPageService view", () => {
             id: "c-1",
             name: "Shop OA",
             healthy: true,
+            attention: null,
             oaId: "oa-77",
             appId: "123456",
             appSecretMask: "\u2022\u2022\u2022\u20221234",
@@ -121,12 +117,8 @@ describe("ZaloPageService view", () => {
         ])
         expect(JSON.stringify(page)).not.toContain("app-secret-1234")
         expect(JSON.stringify(page)).not.toContain("access-token")
-        expect(conversations.followersOn).toHaveBeenCalledWith("ws-1", {
-            channel: "zalo",
-            connectionId: "c-1",
-            since: new Date("2026-10-26T10:00:00.000Z"),
-            limit: 40,
-        })
+        // The people come from the engine's stored inbound messages of the connection, over the last 48 hours.
+        expect(inboxReads.writersSince).toHaveBeenCalledWith("c-1", new Date("2026-10-26T10:00:00.000Z"), 40)
     })
 
     it("closes the send and asks for attention when the token ended and nothing can renew it", async () => {

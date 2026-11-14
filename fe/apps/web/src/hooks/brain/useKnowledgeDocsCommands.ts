@@ -11,7 +11,6 @@ import { useWorkspaceId } from "@/hooks/workspaces"
 interface DocsCommandsInput {
     readonly selection: DocsSelection
     readonly selectTab: (id: string) => void
-    readonly reviewAll: () => void
     /** Reads again every read the screen is made of. */
     readonly reloads: ReadonlyArray<() => void>
     /** What the open document can do: read again, delete, and the commands of its row. */
@@ -38,7 +37,6 @@ export const useKnowledgeDocsCommands = (input: DocsCommandsInput): KnowledgeDoc
     const carried = address.carried
     return {
         selectTab: input.selectTab,
-        reviewAll: input.reviewAll,
         select: (id) =>
             router.push(
                 workspaceHref(

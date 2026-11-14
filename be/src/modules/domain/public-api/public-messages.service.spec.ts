@@ -27,7 +27,7 @@ const MESSAGE: AcceptMessageParams = {
 
 const RECORDED = { id: "request-1", inserted: true }
 
-type Conversation = { readonly id: string; readonly lead_id: string | null } | undefined
+type Conversation = { readonly id: string; readonly contactId: string; readonly channel: string; readonly accountId: string | null } | undefined
 
 /** A transaction whose conversation lookups answer the given conversation and whose one query builder is the ledger insert. */
 const transactionOf = (conversation: Conversation, ledger: ReadonlyArray<object>) => {
@@ -61,7 +61,7 @@ const build = async (entityManager: MockEntityManager, conversation?: Conversati
 
 describe("PublicMessagesService / acceptMessage", () => {
     it("admits messages:write and queues the conversation message with its idempotency key", async () => {
-        const tx = transactionOf({ id: "conv-1", lead_id: "lead-1" }, [RECORDED])
+        const tx = transactionOf({ id: "conv-1", contactId: "contact-1", channel: "zalo", accountId: "conn-1" }, [RECORDED])
         const { service, outbox, keys, chats } = await build(tx.em, tx.conversation)
 
         await expect(service.acceptMessage(MESSAGE)).resolves.toEqual({
@@ -95,7 +95,7 @@ describe("PublicMessagesService / acceptMessage", () => {
 
 describe("PublicMessagesService / acceptMessage", () => {
     it("answers queued for a repeated idempotency key and enqueues nothing again", async () => {
-        const tx = transactionOf({ id: "conv-1", lead_id: null }, [{ id: "request-1", inserted: false }])
+        const tx = transactionOf({ id: "conv-1", contactId: "contact-1", channel: "zalo", accountId: "conn-1" }, [{ id: "request-1", inserted: false }])
         const { service, outbox } = await build(tx.em, tx.conversation)
 
         await expect(service.acceptMessage(MESSAGE)).resolves.toEqual({
@@ -117,7 +117,7 @@ describe("PublicMessagesService / acceptMessage", () => {
         expect(tx.rollbacks).toBe(1)
     })
     it("refuses when the ledger answers no row", async () => {
-        const tx = transactionOf({ id: "conv-1", lead_id: null }, [])
+        const tx = transactionOf({ id: "conv-1", contactId: "contact-1", channel: "zalo", accountId: "conn-1" }, [])
         const { service } = await build(tx.em, tx.conversation)
 
         await expect(service.acceptMessage(MESSAGE)).rejects.toMatchObject({ code: PublicApiErrorCode.NotWritten })

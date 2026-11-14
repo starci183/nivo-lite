@@ -3,8 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { mapSlot } from "@/hooks/slot"
 import type { DataSlot, ZaloFactView } from "@/modules/types"
-import { useZaloPage } from "./useZaloPage"
-import type { ZaloPageData } from "./useZaloPage"
+import { useZaloPage, type ZaloPageData } from "./useZaloPage"
 
 /** The health tiles of the page: how long the token lasts, who wrote inside the 48 hours, how many agents work through the OA. */
 export const useZaloOverviewFacts = (connectionId: string): DataSlot<ReadonlyArray<ZaloFactView>> => {

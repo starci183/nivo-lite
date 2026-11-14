@@ -5,6 +5,24 @@ import { UuidAbstractEntity } from "@modules/platform/database"
 /** The billing states the table checks. */
 export type WorkspaceState = "pending_payment" | "active" | "past_due" | "cancelled"
 
+/** The theme parameters as the column stores them: the parameters only, never the derived tokens. */
+export interface WorkspaceThemeRow {
+    /** The hue of the accent. */
+    readonly hue: number
+    /** The chroma of the accent. */
+    readonly chroma: number
+    /** The lightness of the accent. */
+    readonly lightness: number
+    /** The base neutral the surfaces are tinted from. */
+    readonly base: number
+    /** The font family name. */
+    readonly font: string
+    /** The corner radius scale name. */
+    readonly radius: string
+    /** The colour mode the theme forces, or null to follow the viewer. */
+    readonly mode: string | null
+}
+
 @Entity({ schema: "public", name: "workspaces" })
 /** One workspace: the tenant every other row hangs off, and the billing facts support changes by hand. */
 export class WorkspaceEntity extends UuidAbstractEntity {
@@ -52,9 +70,25 @@ export class WorkspaceEntity extends UuidAbstractEntity {
     @Column({ name: "display_name", type: "text", nullable: true })
     displayName!: string | null
 
-    /** The brand logo URL. */
+    /** The brand logo URL (an https address; the picture sits in the public avatars bucket under `workspaces/`). */
     @Column({ name: "logo_url", type: "text", nullable: true })
     logoUrl!: string | null
+
+    /** The IANA time zone in which the workspace's day, week and month begin; the column starts with `Asia/Ho_Chi_Minh`. */
+    @Column({ name: "time_zone", type: "text", default: () => "'Asia/Ho_Chi_Minh'" })
+    timeZone!: string
+
+    /** The brand theme the workspace chose (hue, chroma, lightness, base, font, radius, optional mode); null wears the NIVO default. */
+    @Column({ name: "theme", type: "jsonb", nullable: true })
+    theme!: WorkspaceThemeRow | null
+
+    /**
+     * The enterprise identifier (`nivo-web`): one unique string an enterprise workspace carries beside its uuid; null for an ordinary
+     * workspace. Never selected by default: only the reads that ask for it name it, so no other read of a workspace changes
+     * (and the member is absent on a row read without it).
+     */
+    @Column({ name: "enterprise_key", type: "text", nullable: true, select: false })
+    enterpriseKey?: string | null
 
     /** When the owner deleted the workspace (a soft delete); null while it lives. */
     @Column({ name: "deleted_at", type: "timestamptz", nullable: true })

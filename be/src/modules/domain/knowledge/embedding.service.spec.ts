@@ -2,8 +2,9 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AI } from "@modules/integrations/ai"
 import type { AiService, AiUsage } from "@modules/integrations/ai"
-import { LOGGER } from "@modules/platform/logging"
+import { LOGGER, withWorkScope, workInScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { PHI_SHIP_VI } from "@tests/fixtures/i18n/knowledge-spec.messages"
 import { EmbeddingService } from "./embedding.service"
 import { UsageMeterService } from "./usage-meter.service"
 
@@ -96,6 +97,9 @@ describe("EmbeddingService", () => {
         ])
     })
 
+})
+
+describe("EmbeddingService: refusals", () => {
     it("refuses a count or a size of vectors other than asked, and logs it", async () => {
         const { service, ai, usage, logger } = await build()
         ai.embed.mockResolvedValueOnce({ vectors: [[1]], usage: USAGE })
@@ -114,5 +118,43 @@ describe("EmbeddingService", () => {
 
         await expect(service.embed({ workspaceId: "ws-1", texts: [], timeoutMs: 5000 })).resolves.toBeNull()
         await expect(service.embed({ workspaceId: "ws-1", texts: ["a"], timeoutMs: 5000 })).resolves.toBeNull()
+    })
+})
+
+describe("EmbeddingService: the credit pool and the step booked", () => {
+    it("checks the credit pool before every batch and stops at an empty pool: no call, nothing booked", async () => {
+        const { service, ai, usage } = await build()
+        ai.embed.mockImplementation(({ input }) =>
+            Promise.resolve({ vectors: input.map((_, index) => vector(index)), usage: USAGE }),
+        )
+        usage.blockedBy.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+
+        await expect(service.embed({ workspaceId: "ws-1", texts: texts(40), timeoutMs: 5000 })).resolves.toBeNull()
+
+        expect(usage.blockedBy).toHaveBeenNthCalledWith(1, "ws-1", "embedding", true)
+        expect(ai.embed).toHaveBeenCalledTimes(1)
+        expect(usage.record).toHaveBeenCalledTimes(1)
+    })
+
+    it("books a document's batches as its `index` step and a query as `search`", async () => {
+        const { service, ai, usage } = await build()
+        ai.embed.mockImplementation(({ input }) =>
+            Promise.resolve({ vectors: input.map((_, index) => vector(index)), usage: USAGE }),
+        )
+        const steps: Array<unknown> = []
+        usage.record.mockImplementation(() => {
+            steps.push(workInScope())
+            return Promise.resolve()
+        })
+
+        await withWorkScope({ kind: "document_read", ref: "source:s1" }, () =>
+            service.embed({ workspaceId: "ws-1", texts: texts(2), timeoutMs: 5000 }),
+        )
+        await service.embed({ workspaceId: "ws-1", texts: [PHI_SHIP_VI], timeoutMs: 5000, step: "search" })
+
+        expect(steps).toEqual([
+            { kind: "document_read", ref: "source:s1", stepKey: "index", agentId: null },
+            { kind: "knowledge_search", ref: null, stepKey: "search", agentId: null },
+        ])
     })
 })

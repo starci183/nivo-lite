@@ -1,7 +1,7 @@
 import { Command, isInterrupted } from "@langchain/langgraph"
 import { MemorySaver } from "@langchain/langgraph-checkpoint"
 import { Test } from "@nestjs/testing"
-import { LanggraphErrorCode } from "./errors/langgraph.error"
+import { LanggraphError, LanggraphErrorCode } from "./errors/langgraph.error"
 import { THREAD_END } from "./langgraph.port"
 import type { ThreadGraph, ThreadGraphNode } from "./langgraph.port"
 import { compiledOf } from "./thread-graph.adapter"
@@ -10,6 +10,18 @@ import { openingOf } from "./thread-state.policy"
 /** The members of the subject under test. */
 interface Subject {
     readonly compiledOf: typeof compiledOf
+}
+
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
 }
 
 const SUBJECT = Symbol("thread-graph.adapter")
@@ -22,7 +34,7 @@ const build = async (): Promise<Subject> => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
-const done: ThreadGraphNode["run"] = async () => ({})
+const done: ThreadGraphNode["run"] = () => Promise.resolve({})
 const graphOf = (nodes: ReadonlyArray<ThreadGraphNode>, entry = nodes[0]?.key ?? ""): ThreadGraph => ({
     version: "v1",
     entry,
@@ -71,10 +83,10 @@ describe("thread-graph.adapter", () => {
             const runs = { old: 0, renamed: 0 }
             const stopper =
                 (count: () => void): ThreadGraphNode["run"] =>
-                async (_state, scope) => {
+                (_state, scope) => {
                     count()
                     scope.stop({ ask: true })
-                    return {}
+                    return Promise.resolve({})
                 }
             const old = subject.compiledOf(graphOf([{ key: "consult", run: stopper(() => (runs.old += 1)) }]), saver)
             const renamed = subject.compiledOf(graphOf([{ key: "advise", run: stopper(() => (runs.renamed += 1)) }]), saver)
@@ -109,9 +121,7 @@ describe("thread-graph.adapter", () => {
         ])("refuses a graph with %s, naming the node", async (_name, graph, node) => {
             const subject = await build()
 
-            expect(() => subject.compiledOf(graph, new MemorySaver())).toThrow(
-                expect.objectContaining({ code: LanggraphErrorCode.GraphUnsound, params: { node } }),
-            )
+            expect(thrownBy(() => subject.compiledOf(graph, new MemorySaver()))).toEqual(objectLike({ code: LanggraphErrorCode.GraphUnsound, params: { node } }))
         })
     })
 
@@ -121,7 +131,7 @@ describe("thread-graph.adapter", () => {
             const saver = new MemorySaver()
             const compiled = subject.compiledOf(
                 graphOf([
-                    { key: "a", next: "b", run: async () => ({ goto: "c" }) },
+                    { key: "a", next: "b", run: () => Promise.resolve({ goto: "c" }) },
                     { key: "b", next: "c", run: done },
                     { key: "c", run: done },
                 ]),
@@ -140,8 +150,8 @@ describe("thread-graph.adapter", () => {
             const subject = await build()
             const compiled = subject.compiledOf(
                 graphOf([
-                    { key: "a", next: "b", run: async () => ({ goto: THREAD_END }) },
-                    { key: "b", run: async () => ({ update: { steps: { b: 1 } } }) },
+                    { key: "a", next: "b", run: () => Promise.resolve({ goto: THREAD_END }) },
+                    { key: "b", run: () => Promise.resolve({ update: { steps: { b: 1 } } }) },
                 ]),
                 new MemorySaver(),
             )
@@ -153,8 +163,8 @@ describe("thread-graph.adapter", () => {
         })
 
         it.each([
-            ["an update", async () => ({ update: { steps: { a: new Map() } } }), "update.steps.a"],
-            ["a trouble", async () => ({ update: { trouble: { cause: new Error("x") } } }), "update.trouble.cause"],
+            ["an update", () => Promise.resolve({ update: { steps: { a: new Map() } } }), "update.steps.a"],
+            ["a trouble", () => Promise.resolve({ update: { trouble: { cause: new Error("x") } } }), "update.trouble.cause"],
         ] satisfies ReadonlyArray<[string, ThreadGraphNode["run"], string]>)(
             "refuses %s that is not plain JSON",
             async (_name, run, at) => {
@@ -171,7 +181,7 @@ describe("thread-graph.adapter", () => {
         it("refuses a stop whose question is not plain JSON", async () => {
             const subject = await build()
             const compiled = subject.compiledOf(
-                graphOf([{ key: "a", run: async (_state, scope) => scope.stop({ when: new Date(0) }) }]),
+                graphOf([{ key: "a", run: (_state, scope) => Promise.resolve(scope.stop({ when: new Date(0) })) }]),
                 new MemorySaver(),
             )
 
@@ -188,16 +198,16 @@ describe("thread-graph.adapter", () => {
                 graphOf([
                     {
                         key: "a",
-                        run: async () => {
+                        run: () => {
                             runs.count += 1
-                            throw new Error("boom")
+                            return Promise.reject(new LanggraphError({ code: LanggraphErrorCode.GraphUnsound }))
                         },
                     },
                 ]),
                 new MemorySaver(),
             )
 
-            await expect(compiled.invoke(opening("v1", "a"), configOf("t"))).rejects.toThrow("boom")
+            await expect(compiled.invoke(opening("v1", "a"), configOf("t"))).rejects.toMatchObject({ code: LanggraphErrorCode.GraphUnsound })
             expect(runs.count).toBe(1)
         })
     })

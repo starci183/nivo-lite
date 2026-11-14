@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { CancelTimer, Timer } from "@modules/platform/retry"
 import { readHubMessage } from "./redis-envelope.mapper"

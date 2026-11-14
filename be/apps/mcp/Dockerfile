@@ -4,8 +4,9 @@
 #
 #   docker build -f be/apps/mcp/Dockerfile -t nivo-lite/mcp:<tag> .
 #
-# It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere. No secret is built in: credentials are
-# mounted at run time and .dockerignore keeps them out of the build context.
+# It follows the image canon (knowledge/hfs/docker.md) with no divergence: the runtime holds no media tool (NIVO processes no video, audio or
+# image with a native program; the providers do it). No secret is built in: credentials are mounted at run time and .dockerignore keeps them
+# out of the build context.
 
 FROM node:22.14.0-alpine3.21 AS manifests
 WORKDIR /app

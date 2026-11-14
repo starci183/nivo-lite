@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, QueryParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type QueryParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { PreviewCsvSourceQuery, PreviewCsvSourceQueryVariables } from "../__generated__/graphql"
 
 /** The variables of the `previewCsvSource` query. */
@@ -47,7 +46,7 @@ export const queryPreviewCsvSource = async ({
     request,
     signal,
 }: QueryPreviewCsvSourceParams): Promise<ApolloClient.QueryResult<QueryPreviewCsvSourceResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.query({
         query: queryMap[query],
         variables: { input: request },

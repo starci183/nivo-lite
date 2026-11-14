@@ -207,6 +207,7 @@ const AsideBody = (props: Props) => {
                     facts={shown.facts}
                     ideas={props.props.ideas}
                     nextReview={props.props.nextReview}
+                    questions={props.props.questions}
                     isLoading={isWaiting || shown.isLoading}
                     onIdea={props.on.idea}
                     onMore={props.on.moreIdeas}
@@ -234,11 +235,7 @@ export const KnowledgeDocsBase = (props: KnowledgeDocsBaseProps) => {
                 actions: (
                     <>
                         <AddAction view={view} />
-                        <BrainHeaderActions
-                            review={view.header.actions.review}
-                            add={null}
-                            onReview={props.on.reviewAll}
-                        />
+                        <BrainHeaderActions add={null} />
                     </>
                 ),
                 tabs: brainHeaderTabs({ tabs: view.header.tabs, onSelect: props.on.selectTab }),

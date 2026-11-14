@@ -18,27 +18,22 @@ import { API_SCHEDULERS } from "./schedulers"
 import { platformErrorKinds, platformMessages } from "./platform-catalog"
 import { JobsModule } from "@modules/platform/jobs"
 import { JobOpsModule } from "@modules/domain/job-ops"
+import { OBJECT_STORAGE_ERROR_KINDS, ObjectStorageModule } from "@modules/integrations/object-storage"
 import type { ApiOptions } from "../api.options"
-import { accountingErrorKinds, accountingMessages } from "./accounting"
 import { adminErrorKinds, adminMessages } from "./admin"
 import { agentApiErrorKinds, agentApiMessages } from "./agent-api"
 import { agentsErrorKinds, agentsMessages } from "./agents"
 import { agentWorkErrorKinds, agentWorkMessages } from "./agent-work"
-import { apiErrorKinds, apiMessages } from "./api"
 import { authenticationErrorKinds, authenticationMessages } from "./authentication"
 import { automationsErrorKinds, automationsMessages } from "./automations"
 import { billingErrorKinds, billingMessages } from "./billing"
 import { bindingsErrorKinds, bindingsMessages } from "./bindings"
-import { bookingsErrorKinds, bookingsMessages } from "./bookings"
-import { businessErrorKinds, businessMessages } from "./business"
 import { connectionsErrorKinds, connectionsMessages } from "./connections"
-import { contentErrorKinds, contentMessages } from "./content"
 import { identityErrorKinds, identityMessages } from "./identity"
 import { knowledgeErrorKinds, knowledgeMessages } from "./knowledge"
 import { messagingErrorKinds, messagingMessages } from "./messaging"
 import { agentGraphsErrorKinds, agentGraphsMessages } from "./agent-graphs"
 import { modulesErrorKinds, modulesMessages } from "./modules"
-import { videoErrorKinds, videoMessages } from "./video"
 
 /** Registers the shared platform services before the API's domain capabilities. */
 export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
@@ -49,53 +44,42 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
         isGlobal: true,
         bundles: [
             ...platformMessages,
-            ...accountingMessages,
             ...adminMessages,
             ...agentApiMessages,
             ...agentsMessages,
             ...agentWorkMessages,
-            ...apiMessages,
             ...authenticationMessages,
             ...automationsMessages,
             ...billingMessages,
             ...bindingsMessages,
-            ...bookingsMessages,
-            ...businessMessages,
             ...connectionsMessages,
-            ...contentMessages,
             ...identityMessages,
             ...knowledgeMessages,
             ...messagingMessages,
             ...modulesMessages,
             ...agentGraphsMessages,
-            ...videoMessages,
         ],
     }),
     ErrorsModule.register({
         isGlobal: true,
         kinds: [
             ...platformErrorKinds,
-            ...accountingErrorKinds,
             ...adminErrorKinds,
             ...agentApiErrorKinds,
             ...agentsErrorKinds,
             ...agentWorkErrorKinds,
-            ...apiErrorKinds,
             ...authenticationErrorKinds,
             ...automationsErrorKinds,
             ...billingErrorKinds,
             ...bindingsErrorKinds,
-            ...bookingsErrorKinds,
-            ...businessErrorKinds,
             ...connectionsErrorKinds,
-            ...contentErrorKinds,
             ...identityErrorKinds,
             ...knowledgeErrorKinds,
             ...messagingErrorKinds,
             ...modulesErrorKinds,
             ...agentGraphsErrorKinds,
-            ...videoErrorKinds,
             REALTIME_ERROR_KINDS,
+            OBJECT_STORAGE_ERROR_KINDS,
         ],
     }),
     CqrsModule.register({ isGlobal: true }),
@@ -112,6 +96,7 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
         ...withConnection(options.realtime, PRIMARY_ENTITY_MANAGER, options.database.url),
     }),
     AppErrorsModule.register({ isGlobal: true }),
+    ObjectStorageModule.register({ isGlobal: true, ...options.storage }),
     QueueModule.register({ isGlobal: true, schedulers: API_SCHEDULERS, ...options.queue }),
     EventBusModule.register({ isGlobal: true, consumersEnabled: true }),
     JobsModule.register({ isGlobal: true, connection: PRIMARY_ENTITY_MANAGER, ...options.jobs }),

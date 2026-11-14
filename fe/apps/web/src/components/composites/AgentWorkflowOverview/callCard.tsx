@@ -24,9 +24,9 @@ interface ParamRow extends DataTableRow {
     readonly param: WorkflowCallParamView
 }
 
-/** What one cell of a param row draws: its name, its value as a chip (pink when bound) or where it is taken from. */
+/** What one cell of a param row draws: its words, its value as a chip (pink when bound) or where it is taken from. */
 const cellOf = (param: WorkflowCallParamView, columnId: string) => {
-    if (columnId === "name") return <Text>{param.name}</Text>
+    if (columnId === "name") return <Text>{param.label}</Text>
     if (columnId === "value") return <WorkflowChips chips={[param.chip]} />
     return <Text tone="muted">{param.source}</Text>
 }

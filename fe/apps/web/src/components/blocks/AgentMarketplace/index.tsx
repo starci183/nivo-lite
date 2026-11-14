@@ -63,10 +63,7 @@ const listingViewOf = (listing: Listing, lens: ListingLens): ListingViews[number
             options: (parameter.options ?? []).map((option) => ({ id: option.value, label: lens.pick(option.label) })),
         }
     }),
-    needs: lens.t("needs", {
-        providers: listing.requiredProviders.join(", "),
-        actions: listing.requiredAuthorityActions.join(", "),
-    }),
+    needs: lens.t("needs", { providers: listing.requiredProviders.join(", ") }),
 })
 
 /** A marketplace with no listing still draws its section and its empty card, never one bare notice in their place. */

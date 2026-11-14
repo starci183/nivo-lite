@@ -15,7 +15,10 @@ import { CreateAgentWorkflowResolver } from "./create-agent-workflow.resolver"
 import { PublishAgentWorkflowVersionResolver } from "./publish-agent-workflow-version.resolver"
 import { RollbackAgentWorkflowResolver } from "./rollback-agent-workflow.resolver"
 import { AcceptAgentWorkflowTemplateResolver } from "./accept-agent-workflow-template.resolver"
+import { AgreeAgentNodeRightsResolver } from "./agree-agent-node-rights.resolver"
 import { SetAgentWorkflowStatusResolver } from "./set-agent-workflow-status.resolver"
+import { RunWorkflowResolver } from "./run-workflow.resolver"
+import { RunnableWorkflowResolver } from "./runnable-workflow.resolver"
 
 @Module({
     imports: [AgentWorkflowsApiModule.register({})],
@@ -35,6 +38,9 @@ import { SetAgentWorkflowStatusResolver } from "./set-agent-workflow-status.reso
         RollbackAgentWorkflowResolver,
         AcceptAgentWorkflowTemplateResolver,
         SetAgentWorkflowStatusResolver,
+        AgreeAgentNodeRightsResolver,
+        RunWorkflowResolver,
+        RunnableWorkflowResolver,
     ],
 })
 /** The GraphQL transport of the workflows tab and the template pages. */

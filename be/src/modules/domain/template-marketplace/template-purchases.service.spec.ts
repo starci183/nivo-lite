@@ -1,7 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentTemplateInstallerService, TemplateRecordsService } from "@modules/domain/agent-templates"
-import type { TemplateLicenseView } from "@modules/domain/agent-templates"
+import {
+    AgentTemplateInstallerService,
+    TemplateRecordsService,
+    type TemplateLicenseView,
+} from "@modules/domain/agent-templates"
 import type { PayableOrder } from "@modules/domain/billing"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { CreditsService } from "@modules/domain/credits"

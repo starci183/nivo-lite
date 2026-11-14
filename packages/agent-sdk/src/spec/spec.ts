@@ -1,4 +1,5 @@
 import type { ActionDefinition, BlockDefinition, BlockReadSlot, BlockSlot, ReadDefinition } from "../block/block.types"
+import { entityPortIdOf } from "../entity/port/entity-port"
 import type { DataShape } from "../schema/schema.types"
 import { allowedValuesOf, paramProblems } from "./spec-param"
 import { paramNameOf, valueAt } from "./spec-value"
@@ -81,6 +82,34 @@ const bindingProblem = (bindings: SpecBindings, slot: BlockSlot, binding: SpecBi
         return known === false ? "SPEC_BINDING_UNKNOWN" : null
     }
     return slot.kind === "read" ? readBindingProblem(bindings, slot, binding) : "SPEC_BINDING_KIND"
+}
+
+/** True when a read or action declares the entity port of the record type `type`. */
+const declaresEntity = (declared: ReadDefinition | ActionDefinition, type: string): boolean =>
+    Object.values(declared.ports ?? {}).some((port) => port.id === entityPortIdOf(type))
+
+/**
+ * The problems of a node whose block `reaches` a record type (the prop it names): a read or action bound to its slots that does not
+ * declare that type's entity port, which the door needs to grant the block's file calls. Not judged where the caller did not say
+ * what the spec may bind.
+ */
+const reachProblems = (
+    bindings: SpecBindings,
+    block: BlockDefinition,
+    node: SpecNode,
+    at: string,
+): ReadonlyArray<SpecProblem> => {
+    const type = block.reaches === undefined ? undefined : valueAt(node.props, block.reaches)
+    if (typeof type !== "string") return []
+    return Object.entries(node.bind ?? {}).flatMap(([name, binding]): ReadonlyArray<SpecProblem> => {
+        const declared =
+            "action" in binding
+                ? bindings.actions?.find((candidate) => candidate.id === binding.action)
+                : bindings.reads?.find((candidate) => candidate.id === binding.read)
+        return declared === undefined || declaresEntity(declared, type)
+            ? []
+            : [{ code: "SPEC_BINDING_ENTITY", at: `${at}.${name}` }]
+    })
 }
 
 /** The problems of the variables of a read binding: a variable the read does not declare, a `$name` that names no param. */
@@ -204,6 +233,7 @@ const walk = (context: WalkContext, node: SpecNode, depth: number): void => {
                   `${at}.showWhen`,
               )),
         ...slotProblems(context.bindings, context.params, block, node.bind ?? {}, at),
+        ...reachProblems(context.bindings, block, node, at),
         ...childrenProblems(block, children, context.scope, at),
     )
     for (const child of children) walk(context, child, depth + 1)

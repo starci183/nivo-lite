@@ -13,11 +13,13 @@ export type {
     NodeModel,
     NodeModelDecision,
     NodeModelRequest,
+    NodeData,
+    NodeGrant,
     NodeQuery,
     NodeRole,
     NodeStore,
     NodeTools,
-    RightsBoundData,
+    ReadScope,
     SubjectRef,
     TurnRef,
 } from "./node.types"
@@ -50,9 +52,14 @@ export { NodeRunError } from "./node-run-error"
 export { BRANCH_FIELD, defineNode } from "./node"
 export { defineDataKind, defineEffect, defineTool } from "./effect"
 export { ToolUndeclaredError } from "./tool-undeclared-error"
-export { callDigestOf, guidedModelRequest, runNode } from "./host"
+export { callDigestOf } from "./call-digest"
+export { guidedModelRequest, runNode } from "./host"
+export { TemplateRunError, effectAnswerOf, runTemplateNode, toolAnswerOf } from "./template-host"
+export type { TemplateHostPorts, TemplateNodeRunRequest, TemplateRunErrorCode } from "./template-host"
 export type { ModelCallFrame } from "./host"
 export { isRefused, REFUSED_KIND } from "./node.types"
+export { EFFECT_REFUSED, isRefusal, refusalOf } from "./effect-facts"
+export type { EffectFact, EffectFacts } from "./effect-facts"
 export { TRIGGER_SOURCE, inputSourcesOf, isInputRef, resolveInput, sourceOfRef } from "./binding"
 export { branchesOf, graphNodeProblems, nodeIndexOf, nodeListProblems } from "./problems"
 export { nodeSagaOf } from "./saga"
@@ -62,7 +69,10 @@ export type {
     LeadFact,
     LeadMemorySnapshot,
     LeadMemoryStore,
+    IterationKeyParts,
+    LoopHeld,
     LoopItem,
+    LoopItemOutput,
     LoopOutput,
     MemoryReader,
     MemorySubject,
@@ -86,11 +96,19 @@ export type {
     MemoryRetention,
 } from "./memory.contracts"
 export {
+    FOREACH_ITEM_KEY_DUPLICATE,
+    FOREACH_ITEM_KEY_MISSING,
     iterationKeyOf,
+    iterationKeyPartsOf,
     LEAD_FACTS,
     LOOP_BODY_ROUTE,
+    LOOP_COLLECT_PARAM,
     LOOP_INDEX_MEMBER,
+    LOOP_ITEM_KEY_MAX,
+    LOOP_ITEM_KEY_PARAM,
     LOOP_ITEMS_PARAM,
+    LOOP_MAX,
+    LOOP_MAX_PARAM,
     LOOP_STEP,
     MEMORY_RETENTION,
     OUTCOME_PARAM,
@@ -121,3 +139,8 @@ export {
     splitBindings,
     valueAt,
 } from "./memory"
+export type { GraphStepWiring, RunningNode, RunningNodeAccount } from "./running-node.types"
+export { agentTagEffect } from "./agent-tag-effect"
+export type { AgentTagPayload } from "./agent-tag-effect"
+export { channelSendCodePayload, channelSendEffect, lineOrderSchema } from "./channel-send-effect"
+export type { ChannelSendPayload } from "./channel-send-effect"

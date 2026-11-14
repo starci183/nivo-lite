@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
-import { InjectRealtimeRetention } from "@modules/platform/realtime"
-import type { RealtimeRetention } from "@modules/platform/realtime"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
+import { InjectRealtimeRetention, type RealtimeRetention } from "@modules/platform/realtime"
 
 @Injectable()
 /** The one effect of the job: the replay frames older than the replay window are deleted in bounded batches, each under the job fence; a repeated pass changes nothing more. */

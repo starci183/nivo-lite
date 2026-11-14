@@ -1,5 +1,4 @@
-import { CONFIRMED_STATUSES, LIVE_STATUSES } from "./order-status"
-import type { OrderStatus } from "./order-status"
+import { CONFIRMED_STATUSES, LIVE_STATUSES, type OrderStatus } from "./order-status"
 
 /** An order reduced to what a customer's detail names. */
 export interface OrderBrief {

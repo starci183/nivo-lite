@@ -78,8 +78,8 @@ const options = {
     channelSetup: wiringSettings.channelSetup,
     entityEngine: { cursorKey: new Secret(Buffer.alloc(32, 9).toString("base64")), buildId: undefined },
     channelProvisioning: { telegramToken: undefined, print: refuseWiringOperation },
-    workspaceSeed: { input: undefined, profileInput: undefined },
-    mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 1000 },
+    workspaceSeed: { input: undefined },
+    toolsConfig: { defaultTimeoutMs: 1000 },
 }
 
 /** Explicit doubles for the private resource tokens of the real registered modules. */
@@ -154,18 +154,12 @@ type BuildWiringProofResultOverridesShape = {
     value: unknown
 }
 
-type BuildWiringProofResultOptionsMcpGatewayRemoteShape = {
-    clientName: string
-}
-
-type BuildWiringProofResultOptionsMcpGatewayShape = {
-    remote: BuildWiringProofResultOptionsMcpGatewayRemoteShape
+type BuildWiringProofResultOptionsToolsConfigShape = {
     defaultTimeoutMs: number
 }
 
 type BuildWiringProofResultOptionsWorkspaceSeedShape = {
     input: undefined
-    profileInput: undefined
 }
 
 type BuildWiringProofResultOptionsChannelProvisioningShape = {
@@ -263,7 +257,7 @@ type BuildWiringProofResultOptionsShape = {
     entityEngine: BuildWiringProofResultOptionsEntityEngineShape
     channelProvisioning: BuildWiringProofResultOptionsChannelProvisioningShape
     workspaceSeed: BuildWiringProofResultOptionsWorkspaceSeedShape
-    mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
+    toolsConfig: BuildWiringProofResultOptionsToolsConfigShape
 }
 
 type BuildWiringProofResultShape = {

@@ -13,7 +13,7 @@ export const AgentGraphVersions = (props: AgentGraphVersionsProps) => (
     <Section
         kind="list"
         title={props.view.title}
-        description={props.view.hint}
+        caption={props.view.hint}
         isLoading={props.isLoading}
         headingLevel={3}
         items={props.view.items.map((item): ListRowData => ({

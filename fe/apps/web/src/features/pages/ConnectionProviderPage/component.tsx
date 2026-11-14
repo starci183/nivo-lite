@@ -1,9 +1,9 @@
 import { ConnectionProvider } from "@/components/blocks/ConnectionProvider"
 
-/** The provider segment the page draws. */
+/** The provider segment the page draws; none on the `[provider]` loading route, whose block reads the address. */
 export interface ConnectionProviderPageBaseProps {
     readonly props: {
-        readonly segment: string
+        readonly segment: string | undefined
     }
 }
 

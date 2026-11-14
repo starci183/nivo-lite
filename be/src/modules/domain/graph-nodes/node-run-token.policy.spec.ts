@@ -70,21 +70,33 @@ describe("run token policy", () => {
         expect(subject.verifyRunToken(KEY, signed(CLAIMS), NOW)).toEqual(CLAIMS)
     })
 
+    it("answers the workflow step a token signs, and refuses a step that is not one", async () => {
+        const subject = await build()
+        const step = { nodeKey: "send-qr", versionId: "v-3", workflowId: null }
+
+        expect(subject.verifyRunToken(KEY, subject.signRunToken(KEY, { ...CLAIMS, step }), NOW)).toEqual({ ...CLAIMS, step })
+        expect(subject.verifyRunToken(KEY, subject.signRunToken(KEY, CLAIMS), NOW)).not.toHaveProperty("step")
+        const bad: unknown = { ...CLAIMS, step: { nodeKey: "send-qr", versionId: 3, workflowId: null } }
+        const text = Buffer.from(JSON.stringify(bad)).toString("base64url")
+        const forged = [text, createHmac("sha256", KEY).update(text).digest("base64url")].join(".")
+        expect(subject.verifyRunToken(KEY, forged, NOW)).toBeNull()
+    })
+
     it("fingerprints a call by its tool and arguments, whatever order the members came in", async () => {
         const subject = await build()
-        const one = subject.toolFingerprintOf("nivo.ledger.entry.append", { entry: { a: 1, b: [1, "x"] }, note: null })
-        const same = subject.toolFingerprintOf("nivo.ledger.entry.append", { note: null, entry: { b: [1, "x"], a: 1 } })
+        const one = subject.toolFingerprintOf("nivo.tool.ledger.entry.append", { entry: { a: 1, b: [1, "x"] }, note: null })
+        const same = subject.toolFingerprintOf("nivo.tool.ledger.entry.append", { note: null, entry: { b: [1, "x"], a: 1 } })
 
         expect(one).toBe(same)
         expect(one).toMatch(/^[0-9a-f]{64}$/u)
-        expect(subject.toolFingerprintOf("nivo.ledger.entry.append", { entry: { a: 2, b: [1, "x"] }, note: null })).not.toBe(one)
-        expect(subject.toolFingerprintOf("nivo.ledger.entry.void", { entry: { a: 1, b: [1, "x"] }, note: null })).not.toBe(one)
+        expect(subject.toolFingerprintOf("nivo.tool.ledger.entry.append", { entry: { a: 2, b: [1, "x"] }, note: null })).not.toBe(one)
+        expect(subject.toolFingerprintOf("nivo.tool.ledger.entry.void", { entry: { a: 1, b: [1, "x"] }, note: null })).not.toBe(one)
     })
 
     it("fingerprints an argument with no value as a null one", async () => {
         const subject = await build()
-        expect(subject.toolFingerprintOf("nivo.ledger.entry.append", { note: undefined })).toBe(
-            subject.toolFingerprintOf("nivo.ledger.entry.append", { note: null }),
+        expect(subject.toolFingerprintOf("nivo.tool.ledger.entry.append", { note: undefined })).toBe(
+            subject.toolFingerprintOf("nivo.tool.ledger.entry.append", { note: null }),
         )
     })
 })

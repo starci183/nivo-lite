@@ -2,10 +2,9 @@ import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { AgentOwnerCardType } from "./agent-owner-card.type"
 import { AgentOwnersType } from "./agent-owners.type"
 import { AgentRoomLabelType } from "./agent-room-label.type"
-import { AgentTagTargetType } from "./agent-tag-target.type"
 
 @ObjectType()
-/** Who answers for an agent, who may give it work and whom it may pass work to. */
+/** Who answers for an agent and who may give it work. */
 export class AgentOwnershipType {
     /** The agent. */
     @Field(() => ID)
@@ -30,8 +29,4 @@ export class AgentOwnershipType {
     /** The rooms whose members may hand the agent work. */
     @Field(() => [AgentRoomLabelType])
     assignableRooms!: ReadonlyArray<AgentRoomLabelType>
-
-    /** The agents it may pass work to. */
-    @Field(() => [AgentTagTargetType])
-    canTag!: ReadonlyArray<AgentTagTargetType>
 }

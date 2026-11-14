@@ -1,9 +1,14 @@
 import { orderNumberOf, orderPrefixOf } from "./order-number"
 
 describe("order numbers", () => {
-    it("prefixes with the day in shop time", () => {
-        expect(orderPrefixOf(new Date("2026-10-13T10:00:00Z"))).toBe("DH-20261013-")
-        expect(orderPrefixOf(new Date("2026-10-13T18:00:00Z"))).toBe("DH-20261014-")
+    it("prefixes with the day in the workspace's time zone", () => {
+        expect(orderPrefixOf(new Date("2026-10-13T10:00:00Z"), "Asia/Ho_Chi_Minh")).toBe("DH-20261013-")
+        expect(orderPrefixOf(new Date("2026-10-13T18:00:00Z"), "Asia/Ho_Chi_Minh")).toBe("DH-20261014-")
+    })
+
+    it("a workspace in another zone gets another day at the same instant", () => {
+        expect(orderPrefixOf(new Date("2026-10-13T18:00:00Z"), "Europe/Berlin")).toBe("DH-20261013-")
+        expect(orderPrefixOf(new Date("2026-10-13T02:00:00Z"), "America/New_York")).toBe("DH-20261012-")
     })
 
     it("numbers the next order of the day, moving on after a clash", () => {

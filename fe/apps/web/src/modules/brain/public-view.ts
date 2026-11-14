@@ -7,8 +7,7 @@ import type {
     PublicDraftView,
     PublicTableRowView,
 } from "@/modules/types"
-import { failureKeyOf, listedPublicDocs, publicBadgeOf } from "./public-docs"
-import type { PublicBadge, PublicDocument } from "./public-docs"
+import { failureKeyOf, listedPublicDocs, publicBadgeOf, type PublicBadge, type PublicDocument } from "./public-docs"
 
 /** The translators the public documents screen speaks through. */
 type PublicTranslate = ReturnType<typeof useTranslations<"publicBrain">>
@@ -122,6 +121,7 @@ export const publicDraftOf = (
     format: PublicFormat,
 ): PublicDraftView => {
     const badge = publicBadgeOf(doc)
+    const approveKey = doc.needsReview ? "approveAgain" : "approveAndPublish"
     return {
         id: doc.id,
         title: doc.title,
@@ -147,7 +147,7 @@ export const publicDraftOf = (
         approveLabel:
             badge === "drafting" || badge === "failed"
                 ? null
-                : t(doc.needsReview ? "approveAgain" : "approveAndPublish"),
+                : t(approveKey),
     }
 }
 

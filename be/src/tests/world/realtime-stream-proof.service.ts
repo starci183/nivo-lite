@@ -104,7 +104,7 @@ const collector = () => {
         raw: () => raw,
         append: (text: string): void => {
             raw += text
-            pending = (pending + text).replace(/\r\n/g, "\n")
+            pending = (pending + text).replaceAll('\r\n', "\n")
             let boundary = pending.indexOf("\n\n")
             while (boundary >= 0) {
                 const frame = defaultFrame(pending.slice(0, boundary))

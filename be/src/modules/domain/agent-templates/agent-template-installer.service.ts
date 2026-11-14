@@ -1,6 +1,11 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentGraphPublishService, AgentGraphSeedService, graphDocumentSchema } from "@modules/domain/agent-graphs"
+import {
+    AgentGraphPublishService,
+    AgentGraphSeedService,
+    AgentWorkflowInstallService,
+    graphDocumentSchema,
+} from "@modules/domain/agent-graphs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModuleInstallService, ModulesService } from "@modules/domain/modules"
 import { PublicDocumentsService } from "@modules/domain/public-documents"
@@ -14,8 +19,7 @@ import type { InstalledTemplate } from "./agent-templates.contracts"
 import { TemplateInstallEntity, TemplateLicenseEntity } from "./persistence/entities"
 import { insertedId } from "./policies/inserted-id.policy"
 import { valuesOf } from "./policies/parameter-values.policy"
-import { instantiate, resolveValues } from "@nivo-lite/agent-sdk/template"
-import type { ParameterValues } from "@nivo-lite/agent-sdk/template"
+import { instantiate, resolveValues, type ParameterValues } from "@nivo-lite/agent-sdk/template"
 
 /** How the buyer came to hold the right to run the template. */
 export type InstallAccess =
@@ -83,6 +87,7 @@ export class AgentTemplateInstallerService {
         private readonly seed: AgentGraphSeedService,
         private readonly publish: AgentGraphPublishService,
         private readonly documents: PublicDocumentsService,
+        @Optional() private readonly workflows?: AgentWorkflowInstallService,
     ) {}
 
     /** Installs a template of the caller's own account as a new agent in this workspace, in shadow mode. */
@@ -130,8 +135,16 @@ export class AgentTemplateInstallerService {
         const by = { memberId: await this.members.idOf(userId, request.workspaceId), role: member.role }
         const filled = graphDocumentSchema.safeParse(instantiate(pkg, resolved.values))
         if (!filled.success) throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.ValuesRefused })
-        await this.publish.publishTemplate(request.workspaceId, made.agentId, filled.data, by)
+        // The agent was made in this call: what the template asks on accounts beyond what is agreed waits for the owner.
+        await this.publish.publishTemplate(request.workspaceId, made.agentId, filled.data, by, [], "wait")
         await this.publish.setMode(request.workspaceId, made.agentId, "shadow", by)
+        // The workflows the base module's plugin ships, made the way the stack seed makes a seeded shop's.
+        await this.workflows?.install({
+            workspaceId: request.workspaceId,
+            agentId: made.agentId,
+            installationId: made.installationId,
+            moduleKey: module.key,
+        })
         await eachInOrder(pkg.starterKnowledge, (document) =>
             this.documents.write(userId, request.workspaceId, { title: document.title, body: document.body }),
         )

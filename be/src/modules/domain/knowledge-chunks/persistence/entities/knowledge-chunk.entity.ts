@@ -59,4 +59,24 @@ export class KnowledgeChunkEntity extends UuidAbstractEntity {
     /** The page or slide number, or the sheet name, as the file gives it; null with the kind. */
     @Column({ name: "place_label", type: "text", nullable: true })
     placeLabel!: string | null
+
+    /** What the passage says, whatever model embedded it: the hex SHA-256 of its normalised text; null only for a row stored before the column and not yet backfilled. */
+    @Column({ name: "text_hash", type: "text", nullable: true })
+    textHash!: string | null
+
+    /** When the passage's vector was accepted by the vector index: searchable by meaning from then on; null while it is found by words only. */
+    @Column({ name: "indexed_at", type: "timestamptz", nullable: true })
+    indexedAt!: Date | null
+
+    /** The triage verdict: `rule` (read into truths), `data` (shop records, never truths) or `none`; null while not judged. */
+    @Column({ name: "triage", type: "text", nullable: true })
+    triage!: "rule" | "data" | "none" | null
+
+    /** The triage prompt version that judged the passage (0 = judged by code, no model); null while not judged. */
+    @Column({ name: "triage_version", type: "integer", nullable: true })
+    triageVersion!: number | null
+
+    /** The extraction prompt version that read the passage into truths; null while not read. */
+    @Column({ name: "truths_version", type: "integer", nullable: true })
+    truthsVersion!: number | null
 }

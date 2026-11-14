@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentGraphAdminService } from "@modules/domain/agent-graphs"
-import type { AskCoverage } from "@modules/domain/agent-graphs"
+import { AgentGraphAdminService, type AskCoverage } from "@modules/domain/agent-graphs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListAgentGraphCoverageQuery } from "./list-agent-graph-coverage.query"
 
 @QueryHandler(ListAgentGraphCoverageQuery)

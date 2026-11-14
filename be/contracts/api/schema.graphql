@@ -5,17 +5,8 @@ type AbilityLabelType {
   vi: String!
 }
 
-type AbilityTickType {
-  id: String!
-  mode: String!
-}
-
-input AbilityWishInput {
-  id: String! @inputBounds(maxLength: 41)
-  mode: String!
-}
-
 input AcceptAgentWorkflowTemplateInput {
+  agreedRights: [AgreedRightInput!] @inputBounds(maxItems: 500)
   expectedLatest: Int @inputBounds(min: 0, max: 100000)
   installationId: ID! @inputBounds(maxLength: 36)
   note: String! @inputBounds(maxLength: 500)
@@ -28,24 +19,51 @@ type AcceptInviteType {
 }
 
 input AcceptTemplateUpdateInput {
+  agreedRights: [TemplateUpdateAgreedRightInput!] @inputBounds(maxItems: 500)
   installationId: ID! @inputBounds(maxLength: 36)
   unitIds: [String!]! @inputBounds(maxItems: 200, itemMaxLength: 140)
 }
 
-input AddBookingInput {
-  date: String! @inputBounds(maxLength: 10)
-  force: Boolean!
-  name: String! @inputBounds(maxLength: 120)
-  note: String @inputBounds(maxLength: 400)
-  party: Int! @inputBounds(min: 1, max: 200)
-  phone: String @inputBounds(maxLength: 40)
-  resourceId: ID @inputBounds(maxLength: 36)
-  serviceId: ID! @inputBounds(maxLength: 36)
-  time: String! @inputBounds(maxLength: 5)
+type AccountDataRowType {
+  id: String!
+  key: String!
+  occurredAt: String!
+  typeVersion: Int!
+  value: JsonObject!
 }
 
-type AddBookingType {
-  id: ID!
+input AccountDataRowsInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
+  limit: Int @inputBounds(min: 1, max: 100)
+  type: String! @inputBounds(maxLength: 50)
+}
+
+type AccountDataRowsType {
+  refusal: String
+  rows: [AccountDataRowType!]!
+}
+
+type AccountDataStatsType {
+  types: [AccountDataTypeStatsType!]!
+}
+
+type AccountDataTypeStatsType {
+  newestAt: DateTime
+  purpose: String
+  rows: Int!
+  type: String!
+}
+
+type AccountDataTypeType {
+  fields: [String!]!
+  provider: String
+  type: String!
+  version: Int!
+  write: String!
+}
+
+input AccountDataTypesInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 type AdminActivityType {
@@ -96,6 +114,10 @@ type AdminCreditsType {
   limit: Float
   ownLimit: Float
   used: Float!
+}
+
+type AdminEnterpriseKeySetType {
+  enterpriseKey: String
 }
 
 type AdminErrorType {
@@ -207,6 +229,11 @@ input AdminResendWorkspaceInviteInput {
 
 type AdminSessionType {
   email: String!
+}
+
+input AdminSetWorkspaceEnterpriseKeyInput {
+  enterpriseKey: String = null @inputBounds(maxLength: 40)
+  workspaceId: ID! @inputBounds(maxLength: 36)
 }
 
 input AdminSetWorkspacePlanInput {
@@ -332,7 +359,6 @@ type AgentAppliedRuleType {
 }
 
 type AgentAttachmentType {
-  abilities: [AbilityTickType!]!
   agentId: ID!
   connectionId: ID!
   provider: String!
@@ -494,6 +520,28 @@ type AgentDashboardWaitingType {
   total: Int!
 }
 
+type AgentDeletionImpactChannelType {
+  connectionId: ID
+  kind: String!
+  name: String!
+  provider: String
+}
+
+type AgentDeletionImpactRecordTypeType {
+  count: Int!
+  title: String!
+  type: String!
+}
+
+type AgentDeletionImpactType {
+  agentId: ID
+  channels: [AgentDeletionImpactChannelType!]!
+  files: Int!
+  installationId: ID!
+  recordTypes: [AgentDeletionImpactRecordTypeType!]!
+  records: Int!
+}
+
 input AgentGenMessageInput {
   content: String! @inputBounds(maxLength: 60000)
   role: String!
@@ -533,6 +581,13 @@ type AgentGoalType {
   source: String!
   status: String!
   title: String!
+}
+
+input AgentGraphAgreedRightInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
+  mode: String! @inputBounds(maxLength: 4)
+  nodeKey: String! @inputBounds(maxLength: 200)
+  operation: String! @inputBounds(maxLength: 200)
 }
 
 type AgentGraphAiNodeType {
@@ -584,27 +639,6 @@ type AgentGraphLayoutPositionType {
 
 type AgentGraphLayoutType {
   positions: [AgentGraphLayoutPositionType!]!
-}
-
-type AgentGraphRunEntryType {
-  action: String!
-  branchKey: String!
-  closedAs: String
-  createdAt: String!
-  differs: Boolean!
-  factsJson: String!
-  gateVerdict: String
-  id: String!
-  mode: String!
-  outcome: String!
-  pathJson: String!
-  road: String!
-  subjectId: String
-  subjectType: String
-  unjudged: String
-  unreadJson: String!
-  version: Int
-  workItemId: String
 }
 
 type AgentGraphRunType {
@@ -709,6 +743,17 @@ type AgentKnowledgeType {
   waitingFacts: Int!
 }
 
+type AgentNodeRightsAgreedType {
+  agreed: Int!
+  nodeRightsDecide: Boolean!
+}
+
+type AgentNodeRightsType {
+  accounts: [AgentRightAccountType!]!
+  agentId: ID!
+  rows: [AgentRightRowType!]!
+}
+
 type AgentOwnerCardType {
   active: Boolean!
   memberId: ID!
@@ -726,7 +771,6 @@ type AgentOwnershipType {
   agentId: ID!
   assignableRoles: [String!]!
   assignableRooms: [AgentRoomLabelType!]!
-  canTag: [AgentTagTargetType!]!
   fallback: AgentOwnerCardType
   owner: AgentOwnerCardType
   responder: AgentOwnersType!
@@ -751,13 +795,7 @@ type AgentPageType {
   rules: AgentRulesRegionType!
 }
 
-input AgentProviderAbilityInput {
-  id: String! @inputBounds(maxLength: 41)
-  mode: String!
-}
-
 input AgentProviderRightInput {
-  abilities: [AgentProviderAbilityInput!]! @inputBounds(maxItems: 20)
   connectionId: ID! @inputBounds(maxLength: 36)
 }
 
@@ -774,6 +812,28 @@ type AgentRecentWorkType {
   leadId: ID
   status: String!
   title: String!
+}
+
+type AgentRightAccountType {
+  connectionId: ID!
+  kind: String
+  name: String!
+  operations: [NodeRightOperationType!]!
+  provider: String!
+  stepsUsing: Int!
+}
+
+type AgentRightRowType {
+  connectionId: ID!
+  mode: String!
+  nodeKey: String!
+  operation: NodeRightOperationType!
+  step: String!
+  stepTitle: NodeRightWordsType
+  versionNumber: Int!
+  workflowId: ID!
+  workflowKey: String!
+  workflowName: String!
 }
 
 type AgentRoomLabelType {
@@ -801,6 +861,7 @@ type AgentRunAiCallType {
   failedTries: Int!
   failures: [String!]!
   finishReasons: [String!]!
+  label: String
   maxTry: Int
   modelProviders: [String!]!
   modelReasons: [String!]!
@@ -864,6 +925,7 @@ type AgentRunDetailType {
   item: AgentRunItemType
   row: AgentRunRowType!
   steps: [AgentRunStepType!]!
+  truthReads: [AgentRunTruthReadType!]!
 }
 
 type AgentRunFactType {
@@ -928,7 +990,26 @@ type AgentRunStepType {
 
 type AgentRunStopDecisionType {
   outcome: String!
+  refusal: AgentRunStopRefusalType
   stepKey: String
+}
+
+type AgentRunStopRefusalType {
+  door: String!
+  stopId: ID!
+  verdicts: [String!]!
+  workItemId: ID!
+}
+
+type AgentRunTruthFactType {
+  factId: ID!
+  version: Int
+}
+
+type AgentRunTruthReadType {
+  at: String!
+  facts: [AgentRunTruthFactType!]!
+  tool: String!
 }
 
 type AgentRunWorkflowPinType {
@@ -958,6 +1039,14 @@ type AgentRunsType {
   workflows: [AgentRunWorkflowType!]!
 }
 
+type AgentSearchProbeType {
+  answer: String
+  ms: Int!
+  ok: Boolean!
+  refusal: String
+  tool: String!
+}
+
 type AgentSummaryType {
   avatarUrl: String
   createdAt: String!
@@ -966,13 +1055,6 @@ type AgentSummaryType {
   module: String!
   name: String!
   role: String!
-  status: String!
-}
-
-type AgentTagTargetType {
-  id: ID!
-  module: String!
-  name: String!
   status: String!
 }
 
@@ -987,16 +1069,22 @@ type AgentTaskType {
   workItemId: ID
 }
 
+type AgentTemplateNodeRequestsType {
+  askCount: Int!
+  count: Int!
+  rights: [TemplateNodeRequestType!]!
+  templateId: String!
+  version: Int!
+}
+
 input AgentTextsInput {
   instructions: String! @inputBounds(maxLength: 20000)
   knowledge: String! @inputBounds(maxLength: 50000)
 }
 
 type AgentToolAccountType {
-  ability: String!
   accountLabel: String!
   connectionId: ID!
-  mode: String!
   provider: String!
 }
 
@@ -1014,6 +1102,13 @@ type AgentToolType {
   ready: Boolean!
   summary: AgentToolTextType!
   title: AgentToolTextType!
+}
+
+input AgentTriggerPickInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
+  stream: String! @inputBounds(maxLength: 300)
+  verb: String! @inputBounds(maxLength: 120)
+  workflowId: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentTriggerType {
@@ -1126,8 +1221,9 @@ type AgentWorkflowDiffType {
   beforeJson: String
   effectsAdded: [String!]!
   effectsRemoved: [String!]!
-  rightsAdded: [String!]!
-  rightsRemoved: [String!]!
+  nodeRightsAdded: [AgentWorkflowNodeRightType!]!
+  nodeRightsLoosened: [AgentWorkflowNodeRightType!]!
+  nodeRightsRemoved: [AgentWorkflowNodeRightType!]!
   steps: [AgentWorkflowStepDiffType!]!
   toolsAdded: [String!]!
   toolsRemoved: [String!]!
@@ -1152,10 +1248,43 @@ input AgentWorkflowInput {
   workflowId: ID! @inputBounds(maxLength: 36)
 }
 
+type AgentWorkflowNodeRightType {
+  connectionId: ID
+  kind: String!
+  mode: String!
+  nodeKey: String!
+  operation: String!
+  operationTitle: AgentWorkflowTitleType
+  provider: String
+  stepTitle: AgentWorkflowTitleType
+}
+
 type AgentWorkflowParamChangeType {
   afterJson: String
   beforeJson: String
   name: String!
+}
+
+type AgentWorkflowReadinessBlockType {
+  connectionIds: [ID!]!
+  provider: String!
+  reason: String!
+  stream: String
+  tool: String
+  verb: String
+}
+
+type AgentWorkflowReadinessType {
+  blocked: [AgentWorkflowReadinessBlockType!]!
+  hidden: Boolean!
+  reconnect: [AgentWorkflowReconnectType!]!
+  skipped: [String!]!
+  waitingFor: [String!]!
+}
+
+type AgentWorkflowReconnectType {
+  connectionId: ID!
+  provider: String!
 }
 
 type AgentWorkflowStepDiffType {
@@ -1180,6 +1309,11 @@ type AgentWorkflowTemplatePreviewType {
   templateVersion: Int!
 }
 
+type AgentWorkflowTitleType {
+  en: String!
+  vi: String!
+}
+
 type AgentWorkflowType {
   activeNumber: Int
   id: String!
@@ -1187,6 +1321,7 @@ type AgentWorkflowType {
   latestNumber: Int!
   name: String!
   primary: Boolean!
+  readiness: AgentWorkflowReadinessType
   status: String!
   stepCount: Int!
   templateChangedSteps: Int
@@ -1218,6 +1353,18 @@ input AgentWorkflowsInput {
   locale: String @inputBounds(maxLength: 2)
 }
 
+input AgreeAgentNodeRightsInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  triggerPicks: [AgentTriggerPickInput!] @inputBounds(maxItems: 50)
+}
+
+input AgreedRightInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
+  mode: String! @inputBounds(maxLength: 4)
+  nodeKey: String! @inputBounds(maxLength: 200)
+  operation: String! @inputBounds(maxLength: 200)
+}
+
 type AiModelChoiceType {
   available: Boolean!
   hint: String!
@@ -1247,10 +1394,25 @@ input AnswerBrainCritiqueInput {
   value: String @inputBounds(maxLength: 500)
 }
 
+enum ApiKeyInactiveReason {
+  holder_gone
+  holder_not_manager
+}
+
+enum ApiKeyKind {
+  mcp
+  public_api
+}
+
 type ApiKeyType {
   agentId: String
   createdAt: String!
+  endpointUrl: String
+  holderId: String
+  holderName: String
   id: ID!
+  inactiveReason: ApiKeyInactiveReason
+  kind: ApiKeyKind!
   lastUsedAt: String
   name: String!
   prefix: String!
@@ -1261,36 +1423,10 @@ input ApplyBrainFactGroupInput {
   sourceId: ID! @inputBounds(maxLength: 36)
 }
 
-type ApplyResultType {
-  duplicate: Boolean!
-}
-
-input ApplyToHiringJobInput {
-  answers: [HiringApplyAnswerInput!]! @inputBounds(maxItems: 50)
-  availability: String! @inputBounds(maxLength: 500)
-  consent: Boolean!
-  cvName: String @inputBounds(maxLength: 255)
-  cvPath: String @inputBounds(maxLength: 500)
-  email: String! @inputBounds(maxLength: 254)
-  job: String! @inputBounds(maxLength: 120)
-  name: String! @inputBounds(maxLength: 160)
-  phone: String! @inputBounds(maxLength: 40)
-  website: String @inputBounds(maxLength: 200)
-  ws: String! @inputBounds(maxLength: 80)
-}
-
-input ApproveMcpConnectorInput {
-  key: String! @inputBounds(maxLength: 31)
-}
-
 input ApprovePublicDocumentInput {
   expectedDraftRevision: Int! @inputBounds(min: 0, max: 2147483647)
   id: ID! @inputBounds(maxLength: 36)
   reviewedChanges: Boolean
-}
-
-input ApproveVideoProjectInput {
-  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 type ApproverMemberType {
@@ -1299,11 +1435,6 @@ type ApproverMemberType {
   role: String!
   rooms: [String!]!
   status: String!
-}
-
-input ArchiveVideoProjectInput {
-  archived: Boolean!
-  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 input AskGuideInput {
@@ -1319,25 +1450,7 @@ input AskKnowledgeInput {
   question: String! @inputBounds(maxLength: 600)
 }
 
-input AssignBrainDossierInput {
-  assigneeId: ID = null @inputBounds(maxLength: 36)
-  dossierId: ID! @inputBounds(maxLength: 36)
-  dueAt: String = null @inputBounds(maxLength: 10)
-}
-
-input AssignDossierFindingInput {
-  assigneeId: ID = null @inputBounds(maxLength: 36)
-  dueAt: String = null @inputBounds(maxLength: 10)
-  findingId: ID! @inputBounds(maxLength: 36)
-}
-
-input AssignInboxLeadInput {
-  agentId: ID = null @inputBounds(maxLength: 36)
-  leadId: ID! @inputBounds(maxLength: 36)
-}
-
 input AttachAgentProviderInput {
-  abilities: [AbilityWishInput!]! @inputBounds(maxItems: 20)
   agentId: ID! @inputBounds(maxLength: 36)
   connectionId: ID! @inputBounds(maxLength: 36)
 }
@@ -1345,79 +1458,6 @@ input AttachAgentProviderInput {
 input AttachProviderByTemplateInput {
   agentIds: [ID!]! @inputBounds(maxItems: 50, itemMaxLength: 36)
   connectionId: ID! @inputBounds(maxLength: 36)
-}
-
-input AttachedFileInput {
-  contentBase64: String! @inputBounds(maxLength: 28000000)
-  name: String! @inputBounds(maxLength: 255)
-}
-
-input AuthorityPatchInput {
-  brand_voice: String @inputBounds(maxLength: 4000)
-  goal_first_reply_minutes: Int @inputBounds(min: 0, max: 100000)
-  goal_new_customers: Int @inputBounds(min: 0, max: 1000000)
-  goal_note: String @inputBounds(maxLength: 2000)
-  goal_revenue_vnd: Int @inputBounds(min: 0, max: 1000000000000000)
-  limits_note: String @inputBounds(maxLength: 4000)
-  policies: String @inputBounds(maxLength: 8000)
-  reply_style: String @inputBounds(maxLength: 4000)
-}
-
-type AuthorityProfileType {
-  brand_voice: String!
-  goal_first_reply_minutes: Int
-  goal_new_customers: Int
-  goal_note: String!
-  goal_revenue_vnd: Float
-  limits_note: String!
-  policies: String!
-  reply_style: String!
-  updated_at: String!
-  updated_by: String
-}
-
-input AuthorityRuleChangeInput {
-  action: String! @inputBounds(maxLength: 80)
-  agents: [ID!] @inputBounds(maxItems: 50)
-  approval_policy: String
-  approver_members: [ID!] @inputBounds(maxItems: 50)
-  approver_roles: [String!] @inputBounds(maxItems: 3)
-  approver_rooms: [String!] @inputBounds(maxItems: 20)
-  ask_max: Float @inputBounds(min: 0, max: 1000000000000)
-  auto_max: Float @inputBounds(min: 0, max: 1000000000000)
-  department: String! @inputBounds(maxLength: 40)
-  limit_vnd: Int = null @inputBounds(min: 0, max: 1000000000000)
-  mode: String!
-  note: String = null @inputBounds(maxLength: 500)
-  required_fields: [String!] = [] @inputBounds(maxItems: 30, itemMaxLength: 60)
-  timeout_minutes: Int @inputBounds(min: 1, max: 10080)
-  unit: String
-}
-
-type AuthorityRuleType {
-  action: String!
-  agents: [ID!]!
-  approval_policy: String!
-  approver_members: [ID!]!
-  approver_roles: [String!]!
-  approver_rooms: [String!]!
-  ask_max: Float
-  auto_max: Float
-  department: String!
-  id: ID!
-  limit_vnd: Float
-  mode: String!
-  note: String!
-  required_fields: [String!]!
-  timeout_minutes: Int!
-  unit: String!
-  updated_at: String!
-  workspace_id: ID!
-}
-
-type AuthoritySheetType {
-  profile: AuthorityProfileType
-  rules: [AuthorityRuleType!]!
 }
 
 input AuthorizeDriveInput {
@@ -1566,174 +1606,27 @@ type BillingWorkspaceType {
   tierCredits: Float
 }
 
+input BindProviderTriggerDeciderInput {
+  agentId: ID @inputBounds(maxLength: 36)
+  connectionId: ID! @inputBounds(maxLength: 36)
+  trigger: String! @inputBounds(maxLength: 64)
+}
+
+type BindableAgentType {
+  agentId: ID!
+  purpose: String!
+}
+
+input BindableAgentsInput {
+  provider: String! @inputBounds(maxLength: 60)
+}
+
 type BindingSuggestionType {
   branchKey: String!
   nodeKey: String!
   parameter: String!
   target: String!
   termIndex: Int
-}
-
-type BookingBoardEntryType {
-  checkedIn: Boolean!
-  conflictNote: String!
-  customer: String!
-  date: String!
-  depositStatus: String!
-  depositVnd: Float!
-  endClock: String!
-  endMin: Int!
-  endMs: Float!
-  feeVnd: Float!
-  holdsSlot: Boolean!
-  id: ID!
-  leadId: ID
-  note: String!
-  party: Int!
-  phone: String
-  priceVnd: Float
-  reschedules: Int!
-  resourceId: ID!
-  service: String!
-  serviceId: ID!
-  source: String!
-  startClock: String!
-  startMin: Int!
-  startMs: Float!
-  status: String!
-}
-
-type BookingBoardExceptionType {
-  closed: Boolean!
-  date: String!
-  end: String
-  id: ID!
-  note: String!
-  resourceId: ID
-  start: String
-}
-
-type BookingBoardHoursType {
-  end: String!
-  resourceId: ID!
-  start: String!
-  weekday: Int!
-}
-
-input BookingBoardInput {
-  from: String @inputBounds(maxLength: 10)
-  to: String @inputBounds(maxLength: 10)
-}
-
-type BookingBoardResourceType {
-  active: Boolean!
-  capacity: Int!
-  color: String!
-  id: ID!
-  kind: String!
-  name: String!
-  sort: Int!
-  staffId: ID
-}
-
-type BookingBoardServiceType {
-  active: Boolean!
-  bufferMin: Int!
-  description: String!
-  durationMin: Int!
-  followupDays: Int
-  id: ID!
-  name: String!
-  priceVnd: Float
-  resourceKind: String
-}
-
-type BookingBoardStaffType {
-  id: ID!
-  name: String!
-}
-
-type BookingBoardType {
-  bookings: [BookingBoardEntryType!]!
-  exceptions: [BookingBoardExceptionType!]!
-  figures: BookingFiguresType!
-  from: String!
-  hours: [BookingBoardHoursType!]!
-  nowMs: Float!
-  resources: [BookingBoardResourceType!]!
-  services: [BookingBoardServiceType!]!
-  settings: BookingSettingsType!
-  staff: [BookingBoardStaffType!]!
-  stats: BookingStatsType!
-  timezone: String!
-  to: String!
-  today: String!
-  waitlist: [BookingBoardWaitType!]!
-}
-
-type BookingBoardWaitType {
-  customer: String!
-  fromMs: Float!
-  id: ID!
-  party: Int!
-  phone: String
-  service: String!
-  status: String!
-  toMs: Float!
-}
-
-type BookingFiguresType {
-  bookingsToday: Int!
-  depositsPending: Int!
-  depositsPendingVnd: Float!
-  finished30d: Int!
-  noShowPct30d: Float
-  utilisationPct: Float
-}
-
-input BookingHoursRowInput {
-  end: String! @inputBounds(maxLength: 5)
-  start: String! @inputBounds(maxLength: 5)
-  weekday: Int! @inputBounds(min: 1, max: 7)
-}
-
-type BookingResourceStatType {
-  bookedMin: Float!
-  name: String!
-  openMin: Float!
-  pct: Float!
-  resourceId: ID!
-}
-
-type BookingSettingsType {
-  address: String!
-  autoConfirm: Boolean!
-  cancelWindowHours: Int!
-  depositPct: Int!
-  handoffOrder: Boolean!
-  lateCancelFeePct: Int!
-  maxAdvanceDays: Int!
-  minLeadMin: Int!
-  noShowFeeVnd: Float!
-  publicEnabled: Boolean!
-  publicNote: String!
-  publicSlug: String
-  reminderHours: [Float!]!
-  slotStepMin: Int!
-  timezone: String!
-}
-
-type BookingStatsType {
-  byResource: [BookingResourceStatType!]!
-  byStatus: [BookingStatusCountType!]!
-  doneRevenueVnd: Float!
-  noShowPct: Float!
-  total: Int!
-}
-
-type BookingStatusCountType {
-  count: Int!
-  status: String!
 }
 
 type BrainBulkAppliedType {
@@ -1835,11 +1728,15 @@ type BrainCritiqueReviewType {
   released: Boolean!
   releasedAt: String
   state: String!
+  waitingPassages: Int!
 }
 
 type BrainCritiqueServingType {
+  heldPassages: Int!
+  reasons: [String!]!
   state: String!
   totalPassages: Int!
+  unreviewedPassages: Int!
   withheldPassages: Int!
 }
 
@@ -1862,34 +1759,6 @@ type BrainCritiqueType {
   serving: BrainCritiqueServingType!
   sourceId: ID!
   title: String!
-}
-
-type BrainDossierImportType {
-  imported: Int!
-  removed: Int!
-  skipped: Int!
-}
-
-type BrainDossierOwnerType {
-  assigneeId: ID
-  dueAt: String
-  id: ID!
-}
-
-type BrainDossierType {
-  assigneeId: ID
-  category: String!
-  categoryOrder: Int!
-  documentCount: Int!
-  drafts: String
-  dueAt: String
-  existing: String
-  id: ID!
-  missing: String
-  name: String!
-  position: Int!
-  ref: String!
-  status: String!
 }
 
 type BrainEvidenceType {
@@ -1931,6 +1800,15 @@ type BrainFactType {
   validFrom: String
   validTo: String
   value: String!
+}
+
+input BrainFactsPageInput {
+  after: String @inputBounds(maxLength: 200)
+  first: Int @inputBounds(min: 1, max: 2000)
+  search: String @inputBounds(maxLength: 200)
+  sourceId: ID @inputBounds(maxLength: 36)
+  statuses: [String!] @inputBounds(maxItems: 6)
+  subjectType: String
 }
 
 type BrainGapType {
@@ -2037,7 +1915,9 @@ type BrainGraphSourceType {
 
 type BrainGraphTotalsType {
   nodes: Int!
+  nodesNotShown: Int!
   pending: Int!
+  pendingNotShown: Int!
   recentlyChanged: Int!
   relations: Int!
 }
@@ -2067,9 +1947,123 @@ type BrainLessonType {
   title: String!
 }
 
+type BrainPoliciesType {
+  canEdit: Boolean!
+  derivation: BrainPolicyDerivationType!
+  groups: [BrainPolicyGroupType!]!
+  missing: [BrainPolicyMissingType!]!
+  pendingTotal: Int!
+}
+
+type BrainPolicyAudienceType {
+  customers: Boolean!
+  installationId: ID
+  modules: [String!]!
+  scope: String!
+}
+
+type BrainPolicyDerivationType {
+  derivedAt: String
+  error: String
+  pendingFacts: Int!
+  state: String!
+}
+
+type BrainPolicyDetailType {
+  canEdit: Boolean!
+  history: [BrainPolicyValueType!]!
+  proposals: [BrainPolicyProposalType!]!
+  row: BrainPolicyRowType!
+}
+
+type BrainPolicyGroupType {
+  rows: [BrainPolicyRowType!]!
+  subjectKey: String!
+  subjectLabel: String!
+}
+
+input BrainPolicyInput {
+  factId: ID! @inputBounds(maxLength: 36)
+}
+
+type BrainPolicyMissingType {
+  attributeGuess: String
+  count: Int!
+  gapId: ID!
+  lastSeenAt: String!
+  module: String!
+  question: String!
+  topic: String
+}
+
+type BrainPolicyParameterType {
+  amountVnd: Float
+  from: String
+  minutes: Int
+  per: String
+  percent: Float
+  text: String
+  to: String
+  type: String!
+  yes: Boolean
+}
+
+type BrainPolicyProposalType {
+  audience: BrainPolicyAudienceType!
+  factId: ID!
+  flags: [String!]!
+  kind: String!
+  parameter: BrainPolicyParameterType!
+  proposedAt: String!
+  proposedBy: String!
+  source: BrainPolicySourceType!
+  status: String!
+  unit: String
+  useAction: String!
+  validFrom: String
+  validTo: String
+  value: String!
+  version: Int
+}
+
+type BrainPolicyRowType {
+  attribute: String!
+  attributeLabel: String!
+  current: BrainPolicyValueType
+  factId: ID!
+  pendingCount: Int!
+  pendingValues: [String!]!
+  policyId: ID
+  reason: String
+  scheduled: BrainPolicyValueType
+  subjectKey: String!
+  subjectLabel: String!
+  title: String
+  type: String!
+}
+
+type BrainPolicySourceType {
+  at: String
+  count: Int!
+  kind: String!
+  label: String!
+}
+
+type BrainPolicyValueType {
+  audience: BrainPolicyAudienceType!
+  factId: ID!
+  parameter: BrainPolicyParameterType!
+  source: BrainPolicySourceType!
+  status: String!
+  unit: String
+  validFrom: String
+  validTo: String
+  value: String!
+  version: Int
+}
+
 type BrainTodoType {
   facts: Int!
-  findings: Int!
   proposals: Int!
   questions: Int!
   total: Int!
@@ -2078,69 +2072,16 @@ type BrainTodoType {
 type BrainType {
   extractions: [BrainExtractionType!]!
   facts: [BrainFactType!]!
+  factsNextCursor: String
+  factsTotal: Int!
   gaps: [BrainGapType!]!
   gapsOpen: Int!
   lenses: [BrainLensType!]!
   lessons: [BrainLessonType!]!
 }
 
-input BrandColorInput {
-  hex: String! @inputBounds(maxLength: 7)
-  name: String! @inputBounds(maxLength: 40)
-}
-
-type BrandColorType {
-  hex: String!
-  name: String!
-}
-
-input BrandKitInput {
-  address: String! @inputBounds(maxLength: 200)
-  avoid: [String!]! @inputBounds(maxItems: 10, itemMaxLength: 120)
-  brandName: String! @inputBounds(maxLength: 80)
-  colors: [BrandColorInput!]! @inputBounds(maxItems: 6)
-  fonts: [String!]! @inputBounds(maxItems: 4, itemMaxLength: 60)
-  imagery: [String!]! @inputBounds(maxItems: 5, itemMaxLength: 120)
-  tone: String! @inputBounds(maxLength: 400)
-}
-
-type BrandKitType {
-  address: String!
-  avoid: [String!]!
-  brandName: String!
-  colors: [BrandColorType!]!
-  fonts: [String!]!
-  imagery: [String!]!
-  tone: String!
-}
-
-type BrandProposalType {
-  createdAt: String!
-  decidedBy: String
-  fileName: String!
-  fileSize: Int!
-  id: ID!
-  installationId: ID
-  kit: BrandKitType!
-  setupSessionId: ID
-  status: String!
-}
-
-input BrandProposalsInput {
-  installationId: ID! @inputBounds(maxLength: 36)
-}
-
 input CancelAgentRunInput {
   runId: ID! @inputBounds(maxLength: 64)
-}
-
-input CancelBookingInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type CancelBookingType {
-  feeDue: Boolean!
-  status: String!
 }
 
 input CancelTelegramLoginInput {
@@ -2154,9 +2095,7 @@ input CaptureChatTruthInput {
 }
 
 input CardDecisionInput {
-  approverMemberId: String @inputBounds(maxLength: 36)
   attributeLabel: String @inputBounds(maxLength: 120)
-  belongsTo: String
   decision: String!
   limitVnd: Int @inputBounds(min: 0, max: 1000000000000)
   mode: String
@@ -2200,9 +2139,25 @@ input ChangeSmtpPasswordInput {
   password: String! @inputBounds(maxLength: 500)
 }
 
-type ChannelValueType {
-  channel: String!
-  value: Int!
+type ChatApprovalCallType {
+  account: String
+  label: ChatBilingualType
+  tool: String!
+}
+
+type ChatApprovalCardType {
+  call: ChatApprovalCallType!
+  content: [ChatApprovalContentType!]!
+  facts: [ChatStopFactType!]!
+  preview: ChatPreviewType
+  step: ChatApprovalStepType!
+  text: String!
+}
+
+type ChatApprovalContentType {
+  kind: String!
+  name: String!
+  value: String!
 }
 
 enum ChatApprovalStatus {
@@ -2210,6 +2165,12 @@ enum ChatApprovalStatus {
   expired
   pending
   refused
+}
+
+type ChatApprovalStepType {
+  description: String!
+  nodeId: String!
+  title: String!
 }
 
 type ChatApprovalType {
@@ -2234,6 +2195,23 @@ enum ChatAuthorKind {
   user
 }
 
+type ChatBackgroundStoppedCardType {
+  episode: String!
+  reason: String!
+  since: String!
+  target: ChatBackgroundStoppedTargetType!
+  work: String!
+}
+
+type ChatBackgroundStoppedTargetType {
+  kind: String!
+}
+
+type ChatBilingualType {
+  en: String!
+  vi: String!
+}
+
 type ChatBrainChangeByType {
   memberId: ID
   name: String!
@@ -2241,6 +2219,7 @@ type ChatBrainChangeByType {
 
 type ChatBrainChangeCardType {
   canApprove: Boolean!
+  canKeepBoth: Boolean!
   canReject: Boolean!
   changeId: ID!
   cost: ChatBrainChangeCostType
@@ -2267,7 +2246,10 @@ type ChatBrainChangeCostType {
 }
 
 type ChatBrainChangeCurrentType {
+  factKey: ChatBrainChangeFactKeyType
+  match: String
   source: String!
+  startsAt: String
   value: String!
   version: Int
 }
@@ -2375,6 +2357,7 @@ type ChatMessageType {
   authorId: ID
   authorKind: ChatAuthorKind!
   authorName: String!
+  backgroundStopped: ChatBackgroundStoppedCardType
   body: String!
   brainChange: ChatBrainChangeCardType
   createdAt: String!
@@ -2406,6 +2389,11 @@ type ChatPageInfoType {
 input ChatPinInput {
   messageId: ID! @inputBounds(maxLength: 36)
   roomId: ID! @inputBounds(maxLength: 36)
+}
+
+type ChatPreviewType {
+  kind: String!
+  payloadJson: String!
 }
 
 input ChatReactInput {
@@ -2504,6 +2492,7 @@ type ChatRoomType {
   purpose: ChatRoomPurpose!
   purposeModule: String
   unreadCount: Int!
+  withNivo: Boolean!
 }
 
 type ChatRoomUnreadType {
@@ -2534,6 +2523,7 @@ type ChatStopCardType {
   approval: ChatStopApprovalType
   by: ChatStopAuthor!
   conversationId: ID
+  decision: ChatApprovalCardType
   facts: [ChatStopFactType!]!
   firstAt: String!
   headline: String!
@@ -2542,6 +2532,7 @@ type ChatStopCardType {
   message: String!
   moduleKey: String!
   needs: ChatStopNeedsType!
+  preview: ChatPreviewType
   question: String
   repeats: Int!
   replies: [ChatStopReplyType!]!
@@ -2663,19 +2654,6 @@ input CheckConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input CheckInBookingInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type CheckInBookingType {
-  feeDue: Boolean!
-  status: String!
-}
-
-input CheckMcpConnectorInput {
-  key: String! @inputBounds(maxLength: 31)
-}
-
 input CheckMetaInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   repair: Boolean!
@@ -2691,32 +2669,42 @@ input CloseAgentTaskInput {
   taskId: ID! @inputBounds(maxLength: 36)
 }
 
-input CompleteBookingInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type CompleteBookingType {
-  feeDue: Boolean!
-  status: String!
-}
-
 input ConfirmAgentGraphProposalInput {
   agentId: String! @inputBounds(maxLength: 36)
+  agreedRights: [AgentGraphAgreedRightInput!] @inputBounds(maxItems: 500)
   proposalId: String! @inputBounds(maxLength: 36)
-}
-
-input ConfirmBookingInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type ConfirmBookingType {
-  feeDue: Boolean!
-  status: String!
 }
 
 input ConnectTelegramInput {
   name: String! @inputBounds(maxLength: 120)
   token: String! @inputBounds(maxLength: 200)
+}
+
+type ConnectionActionMemberType {
+  key: String!
+  label: ConnectionFieldWordsType!
+}
+
+type ConnectionActionResultType {
+  action: String!
+  form: ConnectionFieldsType!
+  results: [ConnectionActionValueType!]!
+}
+
+type ConnectionActionType {
+  canRun: Boolean!
+  confirm: ConnectionTextType
+  guidance: ConnectionTextType
+  inputs: [ConnectionFieldType!]!
+  key: String!
+  label: ConnectionFieldWordsType!
+  results: [ConnectionActionMemberType!]!
+}
+
+type ConnectionActionValueType {
+  key: String!
+  label: ConnectionFieldWordsType!
+  value: String
 }
 
 type ConnectionAgentGrantType {
@@ -2742,6 +2730,46 @@ type ConnectionCheckType {
   webhookOk: Boolean!
 }
 
+type ConnectionFieldChoiceType {
+  confirm: ConnectionTextType
+  label: ConnectionFieldWordsType!
+  value: String!
+}
+
+type ConnectionFieldType {
+  choiceSource: String
+  choices: [ConnectionFieldChoiceType!]!
+  copyable: Boolean!
+  editable: Boolean!
+  guidance: ConnectionTextType
+  key: String!
+  kind: String!
+  label: ConnectionFieldWordsType!
+  maxLength: Int
+  minLength: Int
+  required: Boolean!
+  sealed: Boolean
+  searchable: Boolean!
+  value: String
+}
+
+type ConnectionFieldWordsType {
+  en: String!
+  vi: String!
+}
+
+type ConnectionFieldsType {
+  actions: [ConnectionActionType!]!
+  canEdit: Boolean!
+  canTest: Boolean!
+  connectionId: ID!
+  displayName: String!
+  fields: [ConnectionFieldType!]!
+  guidance: ConnectionTextType
+  provider: String!
+  writable: Boolean!
+}
+
 type ConnectionGrantType {
   agentId: ID!
 }
@@ -2749,6 +2777,11 @@ type ConnectionGrantType {
 type ConnectionNeed {
   providers: [String!]!
   role: String!
+}
+
+type ConnectionTextType {
+  key: String
+  text: ConnectionFieldWordsType
 }
 
 type ConnectionType {
@@ -2775,175 +2808,94 @@ input ConnectionWishInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-type ContentAiRequestedType {
-  id: String!
-  itemId: String
-  status: String!
+type ContactDetailType {
+  contact: ContactType!
+  memory: ContactMemoryType!
+  suggestions: [ContactSuggestionType!]!
 }
 
-type ContentAiStatusType {
-  errorCode: String
-  id: String!
-  ideas: Int
-  itemId: String
-  planId: String
-  progress: Int!
-  resultId: String
-  seconds: Int
-  skippedPast: Int
-  status: String!
-  warnings: [ContentAiWarningType!]!
-}
-
-type ContentAiWarningDetailType {
-  figure: String
+type ContactIdentityType {
+  account: String!
+  at: String!
+  id: ID!
+  joinedBy: String
   kind: String!
-  length: Int
-  max: Int
-  phrase: String
+  provider: String!
+  source: String!
+  value: String!
+  verified: Boolean!
+  verifiedBy: String
 }
 
-type ContentAiWarningType {
-  channel: String!
-  warning: ContentAiWarningDetailType!
+input ContactInput {
+  id: ID! @inputBounds(maxLength: 36)
 }
 
-type ContentAutomationFlagsType {
-  offerDraft: Boolean!
-  todayReminder: Boolean!
-  weeklySummary: Boolean!
-}
-
-type ContentAutomationMarkType {
-  key: String!
+type ContactMemoryFactType {
+  name: String!
   value: String!
 }
 
-type ContentBrandAuthorityType {
-  brandVoice: String!
-  limitsNote: String!
-  replyStyle: String!
+type ContactMemoryNoteType {
+  at: String!
+  output: String!
+  status: String!
+  step: String!
+  workflow: String!
 }
 
-type ContentBrandFactType {
-  attribute: String!
-  subject: String!
-  value: String!
+type ContactMemoryType {
+  facts: [ContactMemoryFactType!]!
+  notes: [ContactMemoryNoteType!]!
 }
 
-type ContentBrandMaterialType {
-  authority: ContentBrandAuthorityType!
-  brainFacts: [ContentBrandFactType!]!
-  setup: ContentBrandSetupType!
-  shop: String!
-  sources: [ContentBrandSourceType!]!
+type ContactModuleAgentType {
+  agentId: ID
+  agentName: String!
+  blocks: [ContactModuleBlockType!]!
+  installationId: ID!
+  moduleKey: String!
 }
 
-type ContentBrandSettingsType {
-  automations: ContentAutomationFlagsType!
-  avoid: String!
-  brandVoice: String!
-  cta: String!
-  hashtags: [String!]!
-  marks: [ContentAutomationMarkType!]!
-  workspaceId: ID!
-}
-
-type ContentBrandSetupType {
-  audience: String!
-  channels: String!
-  claimsLimits: String!
-  facts: [String!]!
-  summary: String!
-  tone: String!
-}
-
-type ContentBrandSourceType {
-  content: String!
+type ContactModuleBlockType {
+  count: Int!
+  dataJson: String!
+  hasMore: Boolean!
+  id: String!
+  nodeJson: String!
   title: String!
-  topic: String
 }
 
-input ContentCadenceInput {
-  channel: String!
-  days: [Int!]! @inputBounds(maxItems: 7, itemMin: 1, itemMax: 7)
-  postsPerWeek: Int! @inputBounds(min: 0, max: 21)
-  time: String! @inputBounds(maxLength: 5)
+input ContactModuleBlocksInput {
+  contactId: ID! @inputBounds(maxLength: 36)
 }
 
-type ContentCadenceType {
-  channel: String!
-  days: [Int!]!
-  id: ID!
-  postsPerWeek: Int!
-  time: String!
-  workspaceId: ID!
+type ContactSuggestionType {
+  contactId: ID!
+  displayName: String
+  identityKind: String
+  identityValue: String
+  why: String!
 }
 
-type ContentConfigurationType {
-  cadence: [ContentCadenceType!]!
-  pillars: [ContentPillarType!]!
-  settings: ContentBrandSettingsType!
-}
-
-input ContentMediaInput {
-  limit: Int! = 30 @inputBounds(min: 1, max: 80)
-  paths: [String!]! = [] @inputBounds(maxItems: 80, itemMaxLength: 1024)
-  videoIds: [ID!]! = [] @inputBounds(maxItems: 80)
-}
-
-input ContentMediaLibraryInput {
-  limit: Int! = 30 @inputBounds(min: 1, max: 80)
-}
-
-type ContentMediaRefType {
-  kind: String!
-  name: String!
-  path: String!
-}
-
-type ContentMediaType {
-  library: [ContentMediaRefType!]!
-  urls: [ContentMediaUrlType!]!
-  videos: [ContentMediaVideoType!]!
-}
-
-type ContentMediaUploadType {
-  name: String!
-  path: String!
-  signedUrl: String!
-  token: String!
-}
-
-type ContentMediaUrlType {
-  download: String!
-  key: String!
-  view: String!
-}
-
-type ContentMediaVideoType {
+type ContactType {
   createdAt: String!
-  durationMs: Int
+  displayName: String
   id: ID!
-  name: String!
+  identities: [ContactIdentityType!]!
+  tags: [String!]!
+  updatedAt: String!
 }
 
-input ContentPillarInput {
-  active: Boolean!
-  description: String! @inputBounds(maxLength: 300)
-  id: ID @inputBounds(maxLength: 36)
-  name: String! @inputBounds(maxLength: 80)
-  weight: Int! @inputBounds(min: 0, max: 20)
+input ContactsInput {
+  cursor: String @inputBounds(maxLength: 200)
+  search: String @inputBounds(maxLength: 320)
+  size: Int @inputBounds(min: 1, max: 50)
 }
 
-type ContentPillarType {
-  active: Boolean!
-  description: String!
-  id: ID!
-  name: String!
-  sort: Int!
-  weight: Int!
-  workspaceId: ID!
+type ContactsPageType {
+  contacts: [ContactType!]!
+  next: String
 }
 
 type ContextNoteType {
@@ -2971,9 +2923,8 @@ type ContextVersionType {
 }
 
 type ConversationReleaseType {
-  agentId: ID
+  answered: Int!
   outcome: String!
-  person: String
 }
 
 type CopiedSetupType {
@@ -3018,6 +2969,7 @@ input CreateAgentWorkflowInput {
 
 input CreateApiKeyInput {
   agentId: String @inputBounds(maxLength: 36)
+  kind: ApiKeyKind
   name: String! @inputBounds(maxLength: 200)
 }
 
@@ -3027,19 +2979,6 @@ input CreateChatRoomInput {
   name: String = null @inputBounds(maxLength: 200)
   purpose: ChatGroupPurpose = null
   purposeModule: String = null @inputBounds(maxLength: 200)
-}
-
-type CreateCvUploadType {
-  contentType: String!
-  path: String!
-  token: String!
-}
-
-input CreateHiringCvUploadInput {
-  contentType: String! @inputBounds(maxLength: 100)
-  fileName: String! @inputBounds(maxLength: 255)
-  job: String! @inputBounds(maxLength: 120)
-  ws: String! @inputBounds(maxLength: 80)
 }
 
 input CreateInviteInput {
@@ -3052,20 +2991,7 @@ input CreateKnowledgeUploadInput {
   contentType: String! @inputBounds(maxLength: 100)
   filename: String! @inputBounds(maxLength: 200)
   sizeBytes: Int @inputBounds(min: 0)
-}
-
-input CreateVideoMediaUploadInput {
-  name: String! @inputBounds(maxLength: 200)
-  size: Int! @inputBounds(min: 1, max: 52428800)
-  type: String! @inputBounds(maxLength: 100)
-}
-
-input CreateVideoProjectInput {
-  aspect: String! @inputBounds(maxLength: 5)
-  goal: String! @inputBounds(maxLength: 40)
-  inputs: VideoInputsInput
-  targetSeconds: Int! @inputBounds(min: 10, max: 90)
-  title: String @inputBounds(maxLength: 120)
+  visibility: String @inputBounds(maxLength: 40)
 }
 
 input CreateWorkspaceInput {
@@ -3166,20 +3092,68 @@ type CreditUsageSummaryType {
   status: CreditQuotaStatusType
 }
 
-input CreditWorkUsageInput {
-  days: Int @inputBounds(min: 1, max: 90)
+input CrmAuthInput {
+  name: String @inputBounds(maxLength: 64)
+  type: String!
+  value: String! @inputBounds(maxLength: 4000)
 }
 
-type CreditWorkUsageType {
-  calls: Int!
-  costUsd: Float!
-  credits: Float!
-  day: String!
-  failedCostUsd: Float!
-  failedTries: Int!
-  module: String!
-  tokens: Float!
-  workKind: String!
+type CrmConnectionType {
+  compatible: Boolean!
+  connectionId: ID!
+  driftFromTemplate: [String!]!
+  pin: CrmPinType!
+  templated: Boolean!
+}
+
+type CrmConnectionViewType {
+  authName: String!
+  authType: String!
+  baseUrl: String!
+  crmId: String!
+  hasSecret: Boolean!
+  pin: CrmPinType
+  swaggerUrl: String!
+}
+
+type CrmOperationStateType {
+  effect: String
+  method: String
+  op: String!
+  path: String
+  state: String!
+}
+
+type CrmOperationType {
+  method: String!
+  op: String!
+  path: String!
+}
+
+type CrmPinType {
+  connector: String!
+  documentSha256: String!
+  live: Boolean!
+  needed: [CrmOperationStateType!]!
+  others: [CrmOperationType!]!
+  pinnedAt: String!
+  swaggerUrl: String!
+}
+
+type CrmTemplateLabelType {
+  en: String!
+  vi: String!
+}
+
+type CrmTemplateType {
+  authName: String!
+  authType: String!
+  baseUrlHint: String!
+  docs: String!
+  id: String!
+  label: CrmTemplateLabelType!
+  neededCount: Int!
+  swaggerPath: String!
 }
 
 type CsvImportResultType {
@@ -3209,6 +3183,43 @@ type CsvSavedImportType {
   name: String!
   scheduleMinutes: Int
   summary: String!
+}
+
+type CustomerMessageFileType {
+  caption: String
+  contentType: String!
+  name: String!
+  url: String!
+}
+
+type CustomerMessagePageType {
+  next: String
+  rows: [CustomerMessageType!]!
+}
+
+type CustomerMessageType {
+  accountId: ID
+  agentId: ID
+  channel: String!
+  contactId: ID!
+  deliveredAt: String
+  direction: String!
+  files: [CustomerMessageFileType!]!
+  id: ID!
+  memberId: ID
+  orderJson: String
+  reason: String
+  routeId: ID!
+  saidAt: String!
+  state: String
+  text: String!
+}
+
+input CustomerMessagesInput {
+  after: String @inputBounds(maxLength: 40)
+  limit: Int @inputBounds(min: 1, max: 100)
+  routeId: ID! @inputBounds(maxLength: 36)
+  since: String @inputBounds(maxLength: 40)
 }
 
 scalar DataJson
@@ -3271,6 +3282,7 @@ input DecideAgentRunStepInput {
 }
 
 type DecideAgentRunStepType {
+  accepted: [AgentRunDecisionVerdict!]
   ok: Boolean!
   refusal: String
 }
@@ -3291,12 +3303,6 @@ input DecideBrainFactInput {
 input DecideBrainLessonInput {
   action: String! @inputBounds(maxLength: 40)
   id: ID! @inputBounds(maxLength: 36)
-}
-
-input DecideBrandProposalInput {
-  decision: String!
-  kit: BrandKitInput
-  proposalId: ID! @inputBounds(maxLength: 36)
 }
 
 input DecideChatApprovalInput {
@@ -3337,12 +3343,12 @@ type DeclinedInviteType {
   role: String!
 }
 
-type DeleteCandidateType {
-  files: Int!
-}
-
 input DeleteConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input DeleteContactInput {
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input DeleteKnowledgeSourceInput {
@@ -3351,6 +3357,10 @@ input DeleteKnowledgeSourceInput {
 
 input DeleteWorkspaceInput {
   confirmName: String! @inputBounds(maxLength: 120)
+}
+
+type DeriveBrainPoliciesResultType {
+  outcome: String!
 }
 
 input DetachAgentProviderInput {
@@ -3375,11 +3385,6 @@ input DismissContextNoteInput {
   noteId: ID! @inputBounds(maxLength: 36)
 }
 
-input DismissDossierFindingInput {
-  findingId: ID! @inputBounds(maxLength: 36)
-  reason: String! @inputBounds(maxLength: 500)
-}
-
 input DismissKnowledgeGapInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -3396,156 +3401,6 @@ type DoorPressType {
   memberId: ID!
   memberName: String!
   outcome: String!
-}
-
-type DossierDraftPlaceholderType {
-  label: String!
-  reason: String!
-}
-
-type DossierFindingConnectionType {
-  nodes: [DossierFindingType!]!
-  pageInfo: DossierFindingPageInfoType!
-}
-
-type DossierFindingEvidenceType {
-  factId: ID
-  factLine: String
-  label: String!
-  passageId: ID
-  placeKind: String
-  placeLabel: String
-  quote: String
-  role: String!
-  sourceId: ID
-  sourceTitle: String
-}
-
-type DossierFindingInUseType {
-  sourceTitle: String
-  value: String!
-}
-
-input DossierFindingNoteInput {
-  findingId: ID! @inputBounds(maxLength: 36)
-  note: String = null @inputBounds(maxLength: 500)
-}
-
-type DossierFindingPageInfoType {
-  endCursor: String
-  hasNextPage: Boolean!
-}
-
-type DossierFindingParamType {
-  name: String!
-  value: String!
-}
-
-input DossierFindingRefInput {
-  findingId: ID! @inputBounds(maxLength: 36)
-}
-
-type DossierFindingType {
-  assigneeId: ID
-  code: String
-  createdAt: String!
-  decidedAt: String
-  decisionNote: String
-  detail: String!
-  dismissReason: String
-  dossierId: ID
-  dossierName: String
-  dossierRef: String
-  draftId: ID
-  draftStatus: String
-  dueAt: String
-  evidence: [DossierFindingEvidenceType!]!
-  firstSeenAt: String!
-  id: ID!
-  inUse: DossierFindingInUseType
-  kind: String!
-  lastSeenAt: String!
-  origin: String!
-  params: [DossierFindingParamType!]!
-  relatedDossierIds: [ID!]!
-  remedyAction: String!
-  remedyDocumentType: String
-  reopenedCount: Int!
-  resolution: String
-  resolvedAt: String
-  severity: String!
-  status: String!
-  title: String!
-  updatedAt: String!
-}
-
-input DossierFindingsInput {
-  after: String = null @inputBounds(maxLength: 2048)
-  assigneeId: ID = null @inputBounds(maxLength: 36)
-  dossierId: ID = null @inputBounds(maxLength: 36)
-  draftsAwaiting: Boolean = null
-  first: Int = 50 @inputBounds(min: 1, max: 100)
-  severities: [String!] = null @inputBounds(maxItems: 4)
-  statuses: [String!] = null @inputBounds(maxItems: 4)
-  unassigned: Boolean = null
-}
-
-input DossierRemedyDraftRefInput {
-  draftId: ID! @inputBounds(maxLength: 36)
-}
-
-type DossierRemedyDraftType {
-  body: String!
-  createdAt: String!
-  decidedAt: String
-  documentType: String!
-  dossierId: ID
-  error: String
-  findingId: ID!
-  id: ID!
-  instructions: String
-  placeholders: [DossierDraftPlaceholderType!]!
-  rejectReason: String
-  sourceId: ID
-  status: String!
-  title: String!
-  updatedAt: String!
-}
-
-type DossierReviewRunType {
-  aiState: String
-  createdAt: String!
-  dossierId: ID
-  dropped: Int!
-  finishedAt: String
-  id: ID!
-  opened: Int!
-  resolved: Int!
-  scope: String!
-  startedAt: String
-  status: String!
-  trigger: String!
-}
-
-type DossierReviewSummaryType {
-  confirmed: Int!
-  critical: Int!
-  dossiers: [DossierReviewType!]!
-  draftsAwaiting: Int!
-  high: Int!
-  isRunning: Boolean!
-  latestRun: DossierReviewRunType
-  open: Int!
-}
-
-type DossierReviewType {
-  checklistStatus: String!
-  criticalCount: Int!
-  dossierId: ID!
-  highCount: Int!
-  openCount: Int!
-  reviewedAt: String!
-  status: String!
 }
 
 input DraftPublicDocumentInput {
@@ -3588,10 +3443,6 @@ input DrivePickedFolderInput {
   token: String! @inputBounds(maxLength: 4096)
 }
 
-input DuplicateVideoProjectInput {
-  projectId: ID! @inputBounds(maxLength: 36)
-}
-
 input EnqueueKnowledgeSourceInput {
   content: String @inputBounds(maxLength: 120000)
   installationId: ID @inputBounds(maxLength: 36)
@@ -3629,19 +3480,14 @@ type FirstPartySyncReportType {
   unchanged: [String!]!
 }
 
+input ForgetContactMemoryInput {
+  contactId: ID! @inputBounds(maxLength: 36)
+  facts: [String!]! @inputBounds(maxItems: 50, itemMaxLength: 60)
+}
+
 input ForkFirstPartyTemplateInput {
   key: String! @inputBounds(maxLength: 60)
   sourceKey: String! @inputBounds(maxLength: 60)
-}
-
-type GenerateAdType {
-  attempts: Int!
-  facebook: String!
-  generatedAt: String!
-  ms: Int!
-  sanitised: Boolean!
-  topcv: String!
-  zalo: String!
 }
 
 input GetAgentGraphInput {
@@ -3653,16 +3499,29 @@ input GetAgentGraphRunInput {
   workItemId: String! @inputBounds(maxLength: 36)
 }
 
+input GetAgentNodeRightsInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+}
+
+input GetAgentTemplateNodeRequestsInput {
+  templateId: String! @inputBounds(maxLength: 200)
+  version: Int @inputBounds(min: 1, max: 100000)
+}
+
 input GetAiModelPickerInput {
   locale: String @inputBounds(maxLength: 2)
 }
 
-input GetConnectionFirstEventInput {
+input GetConnectionAccountDataInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input GetContentAiStatusInput {
-  id: String! @inputBounds(maxLength: 36)
+input GetConnectionFieldsInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input GetConnectionFirstEventInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 input GetMetaConnectionInput {
@@ -3673,8 +3532,16 @@ input GetMoneyConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input GetRecentTitlesInput {
-  id: ID! @inputBounds(maxLength: 36)
+input GetProviderOfferInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input GetProviderRightHoldersInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
+}
+
+input GetProviderTriggerStatesInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 input GetSepayConnectionInput {
@@ -3683,10 +3550,6 @@ input GetSepayConnectionInput {
 
 input GetTelegramPageInput {
   connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-input GetVideoProjectInput {
-  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 input GetZaloConnectionInput {
@@ -3732,275 +3595,6 @@ input GuideTurnInput {
   text: String! @inputBounds(maxLength: 2000)
 }
 
-type HiringAnswerType {
-  answer: String!
-  question: String!
-  questionId: String!
-}
-
-input HiringApplyAnswerInput {
-  answer: String! @inputBounds(maxLength: 4000)
-  questionId: String! @inputBounds(maxLength: 60)
-}
-
-input HiringAvailabilityWindowInput {
-  endMin: Int! @inputBounds(min: 0, max: 1440)
-  startMin: Int! @inputBounds(min: 0, max: 1440)
-  weekday: Int! @inputBounds(min: 0, max: 6)
-}
-
-type HiringBenchType {
-  candidates: [HiringCandidateType!]!
-  figures: HiringFiguresType!
-  interviews: [HiringInterviewType!]!
-  jobs: [HiringJobType!]!
-  meUserId: ID!
-  members: [HiringMemberType!]!
-  nowIso: String!
-  offers: [HiringOfferType!]!
-  onboarding: [HiringOnboardingType!]!
-  origin: String!
-  settings: HiringSettingsType!
-  waitingApprovals: Int!
-}
-
-type HiringCandidateDetailType {
-  cv: HiringCvType
-  events: [HiringEventType!]!
-}
-
-input HiringCandidateRefInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type HiringCandidateType {
-  answers: [HiringAnswerType!]!
-  availability: String!
-  conversationId: ID
-  createdAt: String!
-  cvMime: String
-  cvName: String
-  cvPath: String
-  cvSize: Int
-  email: String!
-  id: ID!
-  jobId: ID!
-  name: String!
-  notes: String!
-  phone: String!
-  rejectedReason: String
-  score: Int
-  scoreLabel: String
-  scoreReasons: [HiringScoreReasonType!]!
-  scoreSummary: String
-  screenedAt: String
-  source: String!
-  staffId: ID
-  stage: String!
-  stageChangedAt: String!
-  workspaceId: ID!
-}
-
-type HiringCvType {
-  mime: String!
-  name: String!
-  url: String!
-}
-
-type HiringEventType {
-  actor: String!
-  createdAt: String!
-  id: ID!
-  kind: String!
-  summary: String!
-}
-
-type HiringFiguresType {
-  interviewsWeek: Int!
-  offersSent: Int!
-  offersWaiting: Int!
-  openRoles: Int!
-  pipeline: Int!
-  totalRoles: Int!
-}
-
-type HiringInterviewType {
-  candidateId: ID!
-  createdAt: String!
-  durationMin: Int!
-  id: ID!
-  interviewerName: String!
-  interviewerUserId: ID
-  jobId: ID!
-  location: String!
-  mode: String!
-  note: String!
-  proposedSlots: [HiringSlotType!]!
-  reminderSentAt: String
-  slotEnd: String
-  slotStart: String
-  status: String!
-  token: String!
-  workItemId: ID
-  workspaceId: ID!
-}
-
-input HiringJobQuestionInput {
-  choices: [String!] @inputBounds(maxItems: 30)
-  expectChoices: [String!] @inputBounds(maxItems: 30)
-  expectNumber: Float
-  expectYesNo: String
-  id: String @inputBounds(maxLength: 60)
-  required: Boolean!
-  text: String! @inputBounds(maxLength: 1000)
-  type: String!
-}
-
-type HiringJobQuestionType {
-  choices: [String!]!
-  expectChoices: [String!]
-  expectNumber: Float
-  expectYesNo: String
-  id: String!
-  required: Boolean!
-  text: String!
-  type: String!
-}
-
-input HiringJobRefInput {
-  jobId: ID! @inputBounds(maxLength: 36)
-}
-
-input HiringJobRequirementsInput {
-  availability: [String!]! @inputBounds(maxItems: 30)
-  experienceNote: String! @inputBounds(maxLength: 500)
-  experienceYears: Int @inputBounds(min: 0, max: 60)
-  mustHave: [String!]! @inputBounds(maxItems: 30)
-  niceToHave: [String!]! @inputBounds(maxItems: 30)
-  skills: [String!]! @inputBounds(maxItems: 30)
-}
-
-type HiringJobRequirementsType {
-  availability: [String!]!
-  experienceNote: String!
-  experienceYears: Int
-  mustHave: [String!]!
-  niceToHave: [String!]!
-  skills: [String!]!
-}
-
-type HiringJobType {
-  adVariants: JsonObject
-  channels: [String!]!
-  closesAt: String
-  createdAt: String!
-  description: String!
-  employmentType: String!
-  headcount: Int!
-  id: ID!
-  location: String!
-  payMaxVnd: Float
-  payMinVnd: Float
-  payUnit: String!
-  position: String!
-  publicUrl: String
-  questions: [HiringJobQuestionType!]!
-  requirements: HiringJobRequirementsType!
-  schedule: String!
-  slug: String!
-  status: String!
-  title: String!
-  updatedAt: String!
-  workspaceId: ID!
-}
-
-type HiringMemberType {
-  name: String!
-  role: String!
-  userId: ID!
-  windows: [HiringWindowType!]!
-}
-
-input HiringOfferRefInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type HiringOfferTermsType {
-  note: String!
-  pay: String!
-  probation: String!
-  startDate: String!
-  title: String!
-}
-
-type HiringOfferType {
-  candidateId: ID!
-  createdAt: String!
-  draft: String!
-  expiresAt: String
-  id: ID!
-  jobId: ID!
-  respondedAt: String
-  sentAt: String
-  sentVia: String
-  status: String!
-  terms: HiringOfferTermsType!
-  token: String!
-  workItemId: ID
-  workspaceId: ID!
-}
-
-type HiringOnboardingType {
-  candidateId: ID!
-  done: Boolean!
-  doneAt: String
-  id: ID!
-  sort: Int!
-  title: String!
-}
-
-type HiringOutcomeType {
-  error: String
-  status: String!
-  summary: String!
-}
-
-type HiringScoreReasonType {
-  criterion: String!
-  note: String!
-  status: String!
-}
-
-type HiringSettingsType {
-  adTone: String!
-  applyConsentText: String!
-  autoCloseWhenFilled: Boolean!
-  notifyNewCandidate: Boolean!
-  publicSlug: String!
-  remindInterview: Boolean!
-  retentionDays: Int!
-  workspaceId: ID!
-}
-
-type HiringSlotType {
-  end: String!
-  start: String!
-}
-
-type HiringStatusType {
-  status: String!
-}
-
-input HiringTokenInput {
-  token: String! @inputBounds(maxLength: 200)
-}
-
-type HiringWindowType {
-  endMin: Int!
-  startMin: Int!
-  weekday: Int!
-}
-
 type ImapConnectionType {
   agentIds: [ID!]!
   email: String!
@@ -4024,149 +3618,6 @@ input ImportAgentTemplateInput {
   templateKey: String! @inputBounds(maxLength: 60)
   values: JsonObject!
   version: Int! @inputBounds(min: 1, max: 100000)
-}
-
-input ImportBrainDossiersInput {
-  contentBase64: String! @inputBounds(maxLength: 14000000)
-  name: String! @inputBounds(maxLength: 255)
-  sheet: String @inputBounds(maxLength: 120)
-}
-
-type InboundEventType {
-  amountVnd: Float
-  body: String!
-  channel: String!
-  createdAt: String!
-  duplicateCount: Int!
-  eventId: String
-  externalRef: String
-  id: ID!
-  kind: String!
-  leadId: ID
-  senderContact: String
-  senderName: String
-  status: String!
-}
-
-input InboundEventsInput {
-  limit: Int! = 40 @inputBounds(min: 1, max: 100)
-}
-
-type InboxAgentOptionType {
-  id: ID!
-  name: String!
-}
-
-type InboxApprovalType {
-  agentName: String
-  amountVnd: Float
-  itemsText: String
-  orderId: ID
-  orderNo: String
-}
-
-type InboxCountsType {
-  all: Int!
-  needsYou: Int!
-  new: Int!
-  ordered: Int!
-  paid: Int!
-}
-
-type InboxFiguresType {
-  autoReplyPct: Int
-  avgResponseSeconds: Int
-  needsYou: Int!
-  newToday: Int!
-  visitors7d: Int!
-}
-
-type InboxLeadDetailType {
-  approval: InboxApprovalType
-  email: String
-  lead: InboxLeadRowType!
-  needs: InboxNeedsType!
-  orders: [InboxOrderType!]!
-  paidCount: Int!
-  paidVnd: Float!
-  phone: String
-  source: InboxSourceType!
-  timeline: [InboxTimelineEntryType!]!
-  zaloLinked: Boolean!
-}
-
-input InboxLeadInput {
-  id: ID! @inputBounds(maxLength: 200)
-}
-
-type InboxLeadRowType {
-  agentAvatarUrl: String
-  agentId: ID
-  agentName: String
-  amountVnd: Float
-  channel: String!
-  chips: [String!]!
-  eventCount: Int!
-  firstAt: String!
-  id: ID!
-  isUnmatched: Boolean!
-  lastAt: String!
-  name: String!
-  needsOwner: Boolean!
-  stage: String!
-  summary: String!
-  via: String
-}
-
-input InboxLeadsInput {
-  agentId: String = null @inputBounds(maxLength: 36)
-  channel: String = null @inputBounds(maxLength: 20)
-  limit: Int! = 60 @inputBounds(min: 1, max: 100)
-  search: String = null @inputBounds(maxLength: 120)
-  sort: String! = "recent" @inputBounds(maxLength: 20)
-  tab: String! = "all" @inputBounds(maxLength: 20)
-}
-
-type InboxLeadsType {
-  agents: [InboxAgentOptionType!]!
-  counts: InboxCountsType!
-  figures: InboxFiguresType!
-  leads: [InboxLeadRowType!]!
-}
-
-type InboxNeedsType {
-  delivery: String
-  items: String
-  note: String
-  summary: String
-  valueVnd: Float
-}
-
-type InboxOrderType {
-  amountVnd: Float
-  createdAt: String!
-  id: ID!
-  itemsText: String
-  orderNo: String!
-  status: String!
-}
-
-type InboxSourceType {
-  campaign: String
-  channel: String!
-  device: String
-  landing: String
-  via: String
-}
-
-type InboxTimelineEntryType {
-  amountVnd: Float
-  at: String!
-  channel: String
-  id: ID!
-  kind: String!
-  status: String
-  text: String!
 }
 
 input InstallModuleInput {
@@ -4242,6 +3693,18 @@ type KnowledgeAiWorkCostType {
   tokens: Int!
 }
 
+type KnowledgeAreaUsageType {
+  count: Int!
+  leftBytes: Int!
+  limitBytes: Int!
+  usedBytes: Int!
+}
+
+type KnowledgeAreasUsageType {
+  internal: KnowledgeAreaUsageType!
+  public: KnowledgeAreaUsageType!
+}
+
 type KnowledgeCategoryType {
   documentCount: Int!
   order: Int
@@ -4255,6 +3718,13 @@ type KnowledgeDocumentAiCostType {
   read: KnowledgeAiWorkCostType!
   reread: KnowledgeAiWorkCostType!
   total: KnowledgeAiWorkCostType!
+}
+
+type KnowledgeDocumentsUsageType {
+  areas: KnowledgeAreasUsageType!
+  count: Int!
+  limitBytes: Int!
+  usedBytes: Int!
 }
 
 type KnowledgeReadingWarningType {
@@ -4272,6 +3742,22 @@ type KnowledgeSourceDetailType {
 
 input KnowledgeSourceInput {
   id: ID! @inputBounds(maxLength: 36)
+}
+
+type KnowledgeSourceNatureAnswerType {
+  id: ID!
+  reopened: Int!
+}
+
+type KnowledgeSourceNatureType {
+  by: String!
+  disagreesWith: [ID!]
+  evidence: [String!]
+  modelNature: String
+  nature: String!
+  reason: String!
+  ruleSections: Int
+  sections: Int
 }
 
 type KnowledgeSourceReadingType {
@@ -4307,9 +3793,29 @@ type KnowledgeSourceTextType {
   tags: [String!]!
   title: String!
   topic: String
+  truths: KnowledgeSourceTruthsType
   updatedAt: String!
   visibility: String!
   workspaceId: ID!
+}
+
+type KnowledgeSourceTruthsType {
+  callsDone: Int!
+  callsSkipped: Int!
+  callsTotal: Int!
+  linesRefused: Int!
+  linesUnread: Int
+  nature: KnowledgeSourceNatureType
+  note: String
+  passagesKept: Int!
+  passagesTotal: Int!
+  passagesTriaged: Int!
+  stage: String
+  state: String!
+  truthsAsked: Int!
+  truthsFound: Int!
+  truthsInForce: Int!
+  truthsWaiting: Int!
 }
 
 type KnowledgeSourceType {
@@ -4332,6 +3838,7 @@ type KnowledgeSourceType {
   tags: [String!]!
   title: String!
   topic: String
+  truths: KnowledgeSourceTruthsType
   updatedAt: String!
   visibility: String!
   workspaceId: ID!
@@ -4347,9 +3854,24 @@ type KnowledgeSuggestionContextType {
   decisions: [SuggestionDecisionType!]!
 }
 
-type KnowledgeUsageType {
+type KnowledgeTruthsUsageType {
+  count: Int!
   limitBytes: Int!
+  limitCount: Int!
   usedBytes: Int!
+}
+
+type KnowledgeUsageType {
+  documents: KnowledgeDocumentsUsageType!
+  limitBytes: Int!
+  limitMb: Float!
+  truthBytes: Int!
+  truthBytesCeiling: Int!
+  truths: KnowledgeTruthsUsageType!
+  truthsCeiling: Int!
+  truthsInForce: Int!
+  usedBytes: Int!
+  usedMb: Float!
 }
 
 input LeadFreezeInput {
@@ -4358,6 +3880,7 @@ input LeadFreezeInput {
 }
 
 type LeadFreezeType {
+  contactId: ID
   heldBy: String
   id: ID!
   leadId: ID
@@ -4421,17 +3944,20 @@ input LinkBrainFactsInput {
   toFactId: ID! @inputBounds(maxLength: 36)
 }
 
-type LinkStaffType {
-  staffId: ID!
+input LinkContactIdentityInput {
+  account: ID @inputBounds(maxLength: 36)
+  contactId: ID! @inputBounds(maxLength: 36)
+  kind: String! @inputBounds(maxLength: 10)
+  value: String! @inputBounds(maxLength: 320)
+}
+
+type LinkContactIdentityType {
+  contactId: ID!
+  outcome: String!
 }
 
 input ListAgentGraphCoverageInput {
   agentId: String! @inputBounds(maxLength: 36)
-}
-
-input ListAgentGraphRunsInput {
-  agentId: String! @inputBounds(maxLength: 36)
-  limit: Int! = 50 @inputBounds(min: 1, max: 100)
 }
 
 input ListAgentGraphVersionsInput {
@@ -4448,10 +3974,6 @@ input ListSepayEventsInput {
 
 input ListTelegramChatsInput {
   connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-input ListVideoProjectsInput {
-  includeArchived: Boolean
 }
 
 type ListingCardType {
@@ -4491,6 +4013,10 @@ type ListingType {
   version: Int!
 }
 
+input LoadCrmConnectionInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+}
+
 input LoadCsvImportInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -4503,119 +4029,13 @@ input LoadImapConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input LoadOpenApiConnectionInput {
-  connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-input LoadOpenApiSpecInput {
-  specText: String! @inputBounds(maxLength: 5000000)
-  specUrl: String! @inputBounds(maxLength: 1000)
-}
-
 input LoadTelegramUserSetupInput {
   connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-type ManualEvidenceType {
-  duplicate: Boolean!
-}
-
-input MarkBookingNoShowInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type MarkBookingNoShowType {
-  feeDue: Boolean!
-  status: String!
 }
 
 input MarkChatRoomReadInput {
   messageId: ID = null @inputBounds(maxLength: 36)
   roomId: ID! @inputBounds(maxLength: 36)
-}
-
-input MarkContentPublishedInput {
-  channel: String! @inputBounds(maxLength: 20)
-  how: String! = "" @inputBounds(maxLength: 1000)
-  id: ID! @inputBounds(maxLength: 36)
-  url: String! = "" @inputBounds(maxLength: 2000)
-}
-
-type MarkContentPublishedType {
-  allDone: Boolean!
-  id: ID!
-}
-
-input MarkVideoPublishedInput {
-  projectId: ID! @inputBounds(maxLength: 36)
-}
-
-input MarketingReportInput {
-  weekStart: String! = "" @inputBounds(maxLength: 10)
-}
-
-input McpCallLogInput {
-  limit: Int @inputBounds(min: 1, max: 200)
-}
-
-type McpCallLogType {
-  agentName: String!
-  approvedBy: String
-  argsMasked: String!
-  at: String!
-  durationMs: Int!
-  errorCode: String
-  id: String!
-  outcome: String!
-  resultSummary: String!
-  tool: String!
-}
-
-type McpConnectorType {
-  approvedAt: String
-  checkedAt: String
-  contractVersion: String!
-  credentialSetAt: String
-  credentialState: String!
-  key: String!
-  kind: String!
-  name: String!
-  status: String!
-  timeoutMs: Int!
-  tools: [McpToolType!]!
-  url: String
-}
-
-type McpToolGrantType {
-  agentId: String!
-  agentName: String!
-  constraintsJson: String!
-  limitVnd: Float
-  mode: String!
-  tool: String!
-}
-
-type McpToolType {
-  approved: Boolean!
-  description: String!
-  name: String!
-  scope: String!
-}
-
-input MemberGrantChangeInput {
-  maxAmount: Float = null @inputBounds(min: 0, max: 1000000000000)
-  memberId: ID! @inputBounds(maxLength: 36)
-}
-
-type MemberGrantType {
-  action: String!
-  maxAmount: Float
-  memberId: ID!
-  unit: String!
-}
-
-input MemberGrantsInput {
-  action: String! @inputBounds(maxLength: 80)
 }
 
 type MemberListingType {
@@ -4664,6 +4084,11 @@ type MembershipType {
   lobby: MembershipLobbyType!
   member: MemberType!
   workspace: WorkspaceType!
+}
+
+input MergeContactsInput {
+  fromContactId: ID! @inputBounds(maxLength: 36)
+  intoContactId: ID! @inputBounds(maxLength: 36)
 }
 
 type MetaAppObjectType {
@@ -4725,14 +4150,6 @@ type MetaWizardConnectionType {
   status: String!
 }
 
-type ModuleAcceptedCommandType {
-  action: String!
-  command: String!
-  description: ModuleBilingualType!
-  requiredFields: [String!]!
-  subjectType: String!
-}
-
 type ModuleAgentType {
   capabilities: ModuleBilingualListType!
   handle: String!
@@ -4770,7 +4187,6 @@ type ModuleCategoryType {
 }
 
 type ModuleDefinitionType {
-  accepts: [ModuleAcceptedCommandType!]!
   agent: ModuleAgentType!
   audience: String!
   authorityActions: [ModuleAuthorityActionType!]!
@@ -4789,6 +4205,7 @@ type ModuleDefinitionType {
   multiInstance: Boolean!
   name: ModuleBilingualType!
   order: Int!
+  plugin: ModulePluginType!
   points: ModuleBilingualListType!
   purpose: String!
   requires: ModuleRequirementsType!
@@ -4851,6 +4268,12 @@ type ModuleInstallationType {
 
 input ModuleKeyInput {
   key: String! @inputBounds(maxLength: 24)
+  workspaceId: ID = null @inputBounds(maxLength: 36)
+}
+
+type ModulePluginType {
+  key: String!
+  label: ModuleBilingualType!
 }
 
 type ModuleRequirementFactsType {
@@ -4870,77 +4293,41 @@ type ModulesCatalogType {
   modules: [ModuleDefinitionType!]!
 }
 
-input MoveBookingInput {
-  force: Boolean!
-  id: ID! @inputBounds(maxLength: 36)
-  resourceId: ID! @inputBounds(maxLength: 36)
-  startAt: String! @inputBounds(maxLength: 40)
-}
-
-type MoveBookingType {
-  id: ID!
-}
-
-type MoveCandidateType {
-  stage: String!
-}
-
-input MoveHiringCandidateInput {
-  id: ID! @inputBounds(maxLength: 36)
-  reason: String @inputBounds(maxLength: 1000)
-  stage: String!
-}
-
 type Mutation {
   acceptAgentWorkflowTemplate(input: AcceptAgentWorkflowTemplateInput!): AgentWorkflowVersionType!
   acceptInvite(input: InviteTokenInput!): AcceptInviteType!
   acceptTemplateUpdate(input: AcceptTemplateUpdateInput!): UpdateOfferType
-  addBooking(input: AddBookingInput!): AddBookingType!
   addChatRoomMember(input: ChatRoomMemberInput!): ChatRoomPayloadType!
   adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
+  adminSetWorkspaceEnterpriseKey(input: AdminSetWorkspaceEnterpriseKeyInput!): AdminEnterpriseKeySetType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
   adminSetWorkspaceStatus(input: AdminSetWorkspaceStatusInput!): AdminStatusSetType!
+  agreeAgentNodeRights(input: AgreeAgentNodeRightsInput!): AgentNodeRightsAgreedType!
   answerBrainCritique(input: AnswerBrainCritiqueInput!): BrainCritiquePointType!
   applyBrainFactGroup(input: ApplyBrainFactGroupInput!): BrainBulkAppliedType!
-  applyContentCadencePresets: SavedContentRowsType!
-  applyContentPillarPresets: SavedContentRowsType!
   applySetup(input: ModuleInstallationIdInput!): SetupApplyResultType!
-  applyToHiringJob(input: ApplyToHiringJobInput!): ApplyResultType!
-  approveDossierRemedyDraft(input: DossierRemedyDraftRefInput!): DossierRemedyDraftType!
-  approveMcpConnector(input: ApproveMcpConnectorInput!): Int!
   approvePublicDocument(input: ApprovePublicDocumentInput!): PublicDocumentType!
-  approveVideoProject(input: ApproveVideoProjectInput!): VideoProjectType!
   archivePublicDocument(input: PublicDocumentIdInput!): Boolean!
-  archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   askGuide(input: AskGuideInput!): GuideAskedType!
-  assignBrainDossier(input: AssignBrainDossierInput!): BrainDossierOwnerType!
-  assignDossierFinding(input: AssignDossierFindingInput!): DossierFindingType!
-  assignInboxLead(input: AssignInboxLeadInput!): Boolean!
   attachAgentProvider(input: AttachAgentProviderInput!): Boolean!
   attachProviderByTemplate(input: AttachProviderByTemplateInput!): [ID!]!
   authorizeDrive(input: AuthorizeDriveInput!): DriveAuthorizeUrlType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
+  bindProviderTriggerDecider(input: BindProviderTriggerDeciderInput!): ProviderTriggerStateType!
   cancelAgentRun(input: CancelAgentRunInput!): AgentRunCancelType!
-  cancelBooking(input: CancelBookingInput!): CancelBookingType!
-  cancelHiringOffer(input: HiringOfferRefInput!): Boolean!
   cancelTelegramLogin(input: CancelTelegramLoginInput!): Boolean!
   captureChatTruth(input: CaptureChatTruthInput!): ChatTruthCaptureType!
   changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
   changePassword(input: ChangePasswordInput!): Boolean!
   changeSmtpPassword(input: ChangeSmtpPasswordInput!): Boolean!
   checkConnection(input: CheckConnectionInput!): ConnectionCheckType!
-  checkInBooking(input: CheckInBookingInput!): CheckInBookingType!
-  checkMcpConnector(input: CheckMcpConnectorInput!): String!
   checkMeta(input: CheckMetaInput!): MetaCheckType!
   chooseMetaPage(input: ChooseMetaPageInput!): MetaWizardConnectionType!
   closeAgentTask(input: CloseAgentTaskInput!): AgentWorkAckType!
-  completeBooking(input: CompleteBookingInput!): CompleteBookingType!
   confirmAgentGraphProposal(input: ConfirmAgentGraphProposalInput!): AgentGraphVersionType!
-  confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
-  confirmDossierFinding(input: DossierFindingNoteInput!): DossierFindingType!
   connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
   copyInviteLink(input: InviteRefInput!): InviteResultType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
@@ -4948,17 +4335,13 @@ type Mutation {
   createAgentWorkflow(input: CreateAgentWorkflowInput!): AgentWorkflowType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
   createChatRoom(input: CreateChatRoomInput!): ChatRoomPayloadType!
-  createHiringCvUpload(input: CreateHiringCvUploadInput!): CreateCvUploadType!
   createInvite(input: CreateInviteInput!): InviteResultType!
   createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
-  createVideoMediaUpload(input: CreateVideoMediaUploadInput!): VideoMediaUploadType!
-  createVideoProject(input: CreateVideoProjectInput!): VideoProjectType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideAgentRunStep(input: DecideAgentRunStepInput!): DecideAgentRunStepType!
   decideBrainChange(input: DecideBrainChangeInput!): BrainChangeDecisionType!
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
-  decideBrandProposal(input: DecideBrandProposalInput!): BrandProposalType!
   decideChatApproval(input: DecideChatApprovalInput!): ChatDecisionPayloadType!
   decideLeadFreeze(input: DecideLeadFreezeInput!): DecideLeadFreezeType!
   decideRunStop(input: DecideRunStopInput!): AgentRunStopDecisionType!
@@ -4966,96 +4349,72 @@ type Mutation {
   declineAgentGraphProposal(input: DeclineAgentGraphProposalInput!): Boolean!
   declineInvite(input: InviteRefInput!): Boolean!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
-  deleteHiringCandidate(input: HiringCandidateRefInput!): DeleteCandidateType!
+  deleteContact(input: DeleteContactInput!): Boolean!
   deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
   deleteWorkspace(input: DeleteWorkspaceInput!): Boolean!
+  deriveBrainPolicies: DeriveBrainPoliciesResultType!
   detachAgentProvider(input: DetachAgentProviderInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
   disconnectDrive: Boolean!
   dismissContextNote(input: DismissContextNoteInput!): Boolean!
-  dismissDossierFinding(input: DismissDossierFindingInput!): DossierFindingType!
   dismissKnowledgeGap(input: DismissKnowledgeGapInput!): Boolean!
   draftPublicDocument(input: DraftPublicDocumentInput!): PublicDocumentType!
-  duplicateVideoProject(input: DuplicateVideoProjectInput!): VideoProjectType!
   enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
+  fileConfirm(input: WorkbenchFileConfirmInput!): WorkbenchAnswerType!
+  fileDelete(input: WorkbenchFileDeleteInput!): WorkbenchAnswerType!
+  fileLink(input: WorkbenchFileLinkInput!): WorkbenchAnswerType!
+  fileUpload(input: WorkbenchFileUploadInput!): WorkbenchAnswerType!
   finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
+  forgetContactMemory(input: ForgetContactMemoryInput!): [String!]!
   forkFirstPartyTemplate(input: ForkFirstPartyTemplateInput!): TemplateVersionType!
   forwardChatMessage(input: ChatForwardInput!): ChatMessagePayloadType!
-  generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   importAgentTemplate(input: ImportAgentTemplateInput!): InstalledTemplateType!
-  importBrainDossiers(input: ImportBrainDossiersInput!): BrainDossierImportType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
   installTemplateListing(input: InstallTemplateListingInput!): InstalledTemplateType!
   joinInvite(input: InviteRefInput!): AcceptInviteType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
   leaveWorkspace: Boolean!
   linkBrainFacts(input: LinkBrainFactsInput!): BrainGraphEdgeType!
-  linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
+  linkContactIdentity(input: LinkContactIdentityInput!): LinkContactIdentityType!
   logoutOtherSessions: Boolean!
   maintainBrain: Boolean!
-  markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
   markChatRoomRead(input: MarkChatRoomReadInput!): ChatReadPayloadType!
-  markContentPublished(input: MarkContentPublishedInput!): MarkContentPublishedType!
-  markVideoPublished(input: MarkVideoPublishedInput!): VideoProjectType!
-  moveBooking(input: MoveBookingInput!): MoveBookingType!
-  moveHiringCandidate(input: MoveHiringCandidateInput!): MoveCandidateType!
+  mergeContacts(input: MergeContactsInput!): ContactType!
   orderTemplateListing(input: OrderTemplateListingInput!): TemplateOrderType!
   packageAgentTemplate(input: PackageAgentTemplateInput!): TemplateVersionType!
   pinChatMessage(input: ChatPinInput!): ChatMessagePayloadType!
-  postMarketingWeeklyReport: WeeklyReportType!
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
-  proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
   publishAgentGraph(input: PublishAgentGraphInput!): AgentGraphVersionType!
   publishAgentWorkflowVersion(input: PublishAgentWorkflowVersionInput!): AgentWorkflowVersionType!
   reactToChatMessage(input: ChatReactInput!): ChatMessagePayloadType!
   recheckZaloConnection(input: RecheckZaloConnectionInput!): ZaloPageType!
-  recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
   recordTemplateLikeness(input: RecordTemplateLikenessInput!): LikenessGrantType!
   redraftPublicDocument(input: PublicDocumentIdInput!): PublicDocumentType!
   reembedKnowledge: Boolean!
-  registerMcpConnector(input: RegisterMcpConnectorInput!): Boolean!
   reindexKnowledgeSource(input: ReindexKnowledgeSourceInput!): SourceRefType!
-  rejectDossierRemedyDraft(input: RejectDossierRemedyDraftInput!): DossierRemedyDraftType!
   releaseBrainCritique(input: BrainCritiqueSourceInput!): BrainCritiqueServingType!
   releaseConversation(input: ReleaseConversationInput!): ConversationReleaseType!
   removeAgent(input: ModuleInstallationIdInput!): ModuleInstallationType!
   removeAgentTrigger(input: RemoveAgentTriggerInput!): AgentWorkAckType!
-  removeBookingException(input: RemoveBookingExceptionInput!): RemoveBookingExceptionType!
-  removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
-  removeBookingService(input: RemoveBookingServiceInput!): RemoveBookingServiceType!
-  removeBookingWaitlistEntry(input: RemoveBookingWaitlistEntryInput!): RemoveBookingWaitlistEntryType!
   removeChatRoomMember(input: ChatRoomMemberInput!): ChatRoomPayloadType!
   removeMember(input: MemberRefInput!): Boolean!
   renameAgent(input: RenameAgentInput!): AgentAckType!
+  renameApiKey(input: RenameApiKeyInput!): ApiKeyType!
   renameInstallationAgent(input: RenameInstallationAgentInput!): ModuleInstallationType!
   renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
   renameWorkspace(input: RenameWorkspaceInput!): Boolean!
-  reopenDossierFinding(input: DossierFindingRefInput!): DossierFindingType!
   requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestChatFileUpload(input: RequestChatFileUploadInput!): ChatFileUploadPayloadType!
-  requestContentDraft(input: RequestContentDraftInput!): ContentAiRequestedType!
-  requestContentMediaUpload(input: RequestContentMediaUploadInput!): ContentMediaUploadType!
-  requestContentMonthPlan(input: RequestContentMonthPlanInput!): ContentAiRequestedType!
-  requestContentQuickDraft(input: RequestContentQuickDraftInput!): ContentAiRequestedType!
   requestDataSync(input: RequestDataSyncInput!): DataSyncRunType!
-  requestDossierRemedyDraft(input: RequestDossierRemedyDraftInput!): DossierRemedyDraftType!
-  requestDossierReview(input: RequestDossierReviewInput!): DossierReviewRunType!
-  requestHiringInterview(input: RequestHiringInterviewInput!): HiringOutcomeType!
-  requestHiringOffer(input: RequestHiringOfferInput!): HiringOutcomeType!
   requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   requestMyAvatarUpload(input: RequestMyAvatarUploadInput!): MyAvatarUploadType!
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
-  requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
-  requestVideoRender(input: RequestVideoRenderInput!): RequestVideoRenderType!
-  requestVideoScript(input: RequestVideoScriptInput!): RequestVideoScriptType!
-  rescreenHiringCandidate(input: HiringCandidateRefInput!): HiringOutcomeType!
+  requestWorkspaceLogoUpload(input: RequestWorkspaceLogoUploadInput!): WorkspaceLogoUploadType!
   resendInvite(input: InviteRefInput!): InviteResultType!
   resendTelegramCode(input: ResendTelegramCodeInput!): Boolean!
-  resolveDossierFinding(input: ResolveDossierFindingInput!): DossierFindingType!
-  respondHiringInterview(input: RespondHiringInterviewInput!): RespondSlotType!
-  respondHiringOffer(input: RespondHiringOfferInput!): RespondOfferType!
+  resetWorkspaceTheme: Boolean!
   restoreAgentGraphVersion(input: RestoreAgentGraphVersionInput!): AgentGraphVersionType!
   restoreWorkspace: Boolean!
   resumeAgentRun(input: ResumeAgentRunInput!): AgentRunResumeType!
@@ -5070,40 +4429,25 @@ type Mutation {
   revokeSession(input: RevokeSessionInput!): Boolean!
   rollbackAgentWorkflow(input: RollbackAgentWorkflowInput!): AgentWorkflowVersionType!
   rotateSepayKey(input: RotateSepayKeyInput!): SepayKeyType!
+  runConnectionAction(input: RunConnectionActionInput!): ConnectionActionResultType!
   runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
   runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
   runScheduledItemNow(input: RunScheduledItemNowInput!): RunScheduledItemNowType!
+  runWorkflow(input: RunWorkflowInput!): WorkflowRunType!
   saveAgentGoal(input: SaveAgentGoalInput!): AgentGoalType!
   saveAgentGraphDraft(input: SaveAgentGraphDraftInput!): Int!
   saveAgentGraphLayout(input: SaveAgentGraphLayoutInput!): AgentGraphLayoutType!
   saveAgentTrigger(input: SaveAgentTriggerInput!): AgentTriggerType!
-  saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
-  saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
-  saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
-  saveBookingPolicy(input: SaveBookingPolicyInput!): SaveBookingPolicyType!
-  saveBookingPublicPage(input: SaveBookingPublicPageInput!): SaveBookingPublicPageType!
-  saveBookingResource(input: SaveBookingResourceInput!): SaveBookingResourceType!
-  saveBookingService(input: SaveBookingServiceInput!): SaveBookingServiceType!
   saveBrainFact(input: SaveBrainFactInput!): SavedFactType!
   saveBrainLesson(input: SaveBrainLessonInput!): BrainLessonType!
-  saveContentBrand(input: SaveContentBrandInput!): ContentBrandSettingsType!
-  saveContentCadence(input: SaveContentCadenceInput!): SavedContentRowsType!
-  saveContentPillars(input: SaveContentPillarsInput!): SavedContentRowsType!
+  saveCrmConnection(input: SaveCrmConnectionInput!): CrmConnectionType!
   saveDatabaseConnection(input: SaveDatabaseConnectionInput!): ID!
-  saveDossierRemedyDraft(input: SaveDossierRemedyDraftInput!): DossierRemedyDraftType!
-  saveHiringAvailability(input: SaveHiringAvailabilityInput!): SaveAvailabilityType!
-  saveHiringJob(input: SaveHiringJobInput!): SaveJobType!
-  saveHiringNotes(input: SaveHiringNotesInput!): Boolean!
-  saveHiringSettings(input: SaveHiringSettingsInput!): HiringSettingsType!
   saveHoldingMessage(input: SaveHoldingMessageInput!): ModuleInstallationType!
   saveImapConnection(input: SaveImapConnectionInput!): ID!
-  saveMemberGrants(input: SaveMemberGrantsInput!): [MemberGrantType!]!
-  saveOpenApiConnection(input: SaveOpenApiConnectionInput!): ID!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveStaff(input: SaveStaffInput!): StaffOptionType!
   saveTelegramUserSetup(input: SaveTelegramUserSetupInput!): Boolean!
-  saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
   saveWebsiteSite(input: SaveWebsiteSiteInput!): WebsiteSiteType!
   saveWorkingHours(input: SaveWorkingHoursInput!): ModuleInstallationType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
@@ -5111,7 +4455,6 @@ type Mutation {
   sendChatMessage(input: SendChatMessageInput!): ChatMessagePayloadType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
-  setAgentAbility(input: SetAgentAbilityInput!): Boolean!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
   setAgentAvatarPreset(input: SetAgentAvatarPresetInput!): AgentAckType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
@@ -5121,31 +4464,25 @@ type Mutation {
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
   setAgentWork(input: SetAgentWorkInput!): AgentWorkStateType!
   setAgentWorkflowStatus(input: SetAgentWorkflowStatusInput!): Boolean!
+  setBrainPolicy(input: SetBrainPolicyInput!): SetBrainPolicyResultType!
   setCareOptOut(input: SetCareOptOutInput!): SetCareOptOutType!
   setChatRoomMuted(input: SetChatRoomMutedInput!): ChatRoomPayloadType!
   setChatTyping(input: SetChatTypingInput!): ChatTypingSignalType!
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
-  setContentAutomation(input: SetContentAutomationInput!): ContentBrandSettingsType!
-  setDefaultReceivingAccount(input: SetDefaultReceivingAccountInput!): Boolean!
   setDefaultSmtp(input: SetDefaultSmtpInput!): Boolean!
-  setHiringInterviewStatus(input: SetHiringInterviewStatusInput!): Boolean!
-  setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
+  setKnowledgeSourceNature(input: SetKnowledgeSourceNatureInput!): KnowledgeSourceNatureAnswerType!
   setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
   setLedgerSheet(input: SetLedgerSheetInput!): GoogleLedgerType!
-  setMcpConnectorCredential(input: SetMcpConnectorCredentialInput!): Int!
-  setMcpToolGrant(input: SetMcpToolGrantInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
   setModuleLive(input: SetModuleLiveInput!): ModuleInstallationType!
   setMyAvatar(input: SetMyAvatarInput!): Boolean!
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
-  setSepayEnvironment(input: SetSepayEnvironmentInput!): SepayConnectionType!
+  setProviderTriggerEnabled(input: SetProviderTriggerEnabledInput!): ProviderTriggerStateType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
-  setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
   setTeamRoomPostRight(input: SetChatRoomPostRightInput!): ChatRoomPayloadType!
   setTeamRoomPurpose(input: SetChatRoomPurposeInput!): ChatRoomPayloadType!
   setWorkspaceAgentWork(input: SetWorkspaceAgentWorkInput!): WorkspaceAgentWorkType!
-  shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   skipBrainCritique(input: SkipBrainCritiqueInput!): BrainCritiquePointType!
   startFirstWorkspace: StartFirstWorkspaceType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
@@ -5153,25 +4490,26 @@ type Mutation {
   startTelegramLogin(input: StartTelegramLoginInput!): TelegramLoginStartedType!
   startWebhookConnection(input: StartWebhookConnectionInput!): CreatedWebhookType!
   startZaloConnection(input: StartZaloConnectionInput!): ZaloWizardConnectionType!
-  submitContentForApproval(input: SubmitContentForApprovalInput!): SubmitContentForApprovalType!
   submitTelegramCode(input: SubmitTelegramCodeInput!): TelegramLoginStageType!
   submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
   submitTemplateListing(input: SubmitTemplateListingInput!): ListingType!
   submitWebsiteLead(input: SubmitWebsiteLeadInput!): Boolean!
   syncFirstPartyTemplates: FirstPartySyncReportType!
-  syncMcpConnector(input: SyncMcpConnectorInput!): Int!
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
-  toggleHiringOnboarding(input: ToggleHiringOnboardingInput!): Boolean!
   undoBrainFactBatch(input: UndoBrainFactBatchInput!): BrainBulkUndoneType!
   unlinkBrainFacts(input: UnlinkBrainFactsInput!): Boolean!
+  unlinkContactIdentity(input: UnlinkContactIdentityInput!): ContactType!
   unpinChatMessage(input: ChatPinInput!): ChatMessagePayloadType!
-  updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
+  unsetBrainPolicy(input: UnsetBrainPolicyInput!): UnsetBrainPolicyResultType!
+  updateConnection(input: UpdateConnectionInput!): ConnectionFieldsType!
+  updateContact(input: UpdateContactInput!): ContactType!
   updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
   updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
   updateProfile(input: UpdateProfileInput!): Boolean!
   updatePublicDocument(input: UpdatePublicDocumentInput!): PublicDocumentType!
-  updateVideoProject(input: UpdateVideoProjectInput!): VideoProjectType!
   updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
+  updateWorkspaceSettings(input: UpdateWorkspaceSettingsInput!): WorkspaceSettingsType!
+  updateWorkspaceTheme(input: UpdateWorkspaceThemeInput!): WorkspaceThemeType
   verifyTemplateLikeness(input: LikenessGrantIdInput!): LikenessGrantType!
   wantConnector(input: WantConnectorInput!): Boolean!
   workbenchAction(input: WorkbenchActionInput!): WorkbenchAnswerType!
@@ -5209,43 +4547,18 @@ input NivoKnowledgeCountInput {
   module: String! @inputBounds(maxLength: 40)
 }
 
-type OpenApiAuthHintType {
-  name: String!
-  type: String!
+type NodeRightOperationType {
+  effect: String
+  id: String!
+  kind: String!
+  method: String
+  path: String
+  title: NodeRightWordsType
 }
 
-input OpenApiAuthInput {
-  name: String! @inputBounds(maxLength: 100)
-  password: String! @inputBounds(maxLength: 500)
-  type: String! @inputBounds(maxLength: 20)
-  user: String! @inputBounds(maxLength: 500)
-  value: String! @inputBounds(maxLength: 4000)
-}
-
-type OpenApiConnectionType {
-  authUser: String!
-  config: DataJson!
-  hasSecret: Boolean!
-  name: String!
-  syncEveryMinutes: Int
-}
-
-type OpenApiSpecType {
-  authHint: OpenApiAuthHintType!
-  baseUrl: String!
-  ops: DataJson!
-  specUrl: String!
-  title: String!
-}
-
-type OpenApiTestType {
-  error: String
-  idField: String!
-  itemCount: Int!
-  itemsPath: String!
-  sampleKeys: [String!]!
-  status: Int!
-  titleField: String!
+type NodeRightWordsType {
+  en: String!
+  vi: String!
 }
 
 input OrderTemplateListingInput {
@@ -5281,7 +4594,6 @@ type PackageReportType {
   nodes: Int!
   people: Int!
   privateSources: Int!
-  rights: Int!
 }
 
 type PackageSummaryType {
@@ -5290,7 +4602,6 @@ type PackageSummaryType {
   key: String!
   parameters: [TemplateParameterType!]!
   personName: String
-  proposedRights: [ProposedRightType!]!
   requiredAuthorityActions: [String!]!
   requiredProviders: [String!]!
   starterKnowledge: Int!
@@ -5358,37 +4669,24 @@ input PreviewDatabaseTableInput {
   target: DatabaseTargetInput!
 }
 
-input ProposeBrandKitInput {
-  file: AttachedFileInput!
-  installationId: String! = "" @inputBounds(maxLength: 36)
-  setupSessionId: String! = "" @inputBounds(maxLength: 36)
+input ProbeAgentSearchInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+  arguments: String! @inputBounds(maxLength: 4000)
+  conversationId: ID @inputBounds(maxLength: 36)
+  tool: String! @inputBounds(maxLength: 80)
 }
 
 type ProposedAttachmentType {
-  abilities: [AbilityTickType!]!
   accountLabel: String
   connected: Boolean!
   connectionId: ID
   provider: String!
 }
 
-type ProposedRightType {
-  kind: String!
-  scope: String!
-}
-
-type ProviderAbilityType {
-  id: String!
-  label: AbilityLabelType!
-  scope: String!
-  tools: [String!]!
-}
-
 type ProviderAccountType {
   accountLabel: String!
   connected: Boolean!
   connectionId: ID!
-  isDefaultReceiving: Boolean!
   kind: String!
   provider: String!
 }
@@ -5405,14 +4703,98 @@ type ProviderKeysResultType {
   localOnly: Boolean!
 }
 
+type ProviderOfferBatchingType {
+  maxEvents: Int
+  mode: String!
+}
+
+type ProviderOfferMemberType {
+  choices: [String!]!
+  description: String
+  filterable: Boolean!
+  format: String
+  label: ProviderOfferWordsType
+  name: String!
+  required: Boolean!
+  type: String
+}
+
+type ProviderOfferOperationType {
+  method: String
+  path: String
+  state: String!
+  unsupported: [String!]!
+}
+
+type ProviderOfferReadType {
+  freshness: String!
+  kind: String!
+  name: String!
+  parameters: [ProviderOfferMemberType!]!
+  returns: [ProviderOfferMemberType!]!
+  shape: String!
+  summary: ProviderOfferWordsType
+}
+
+type ProviderOfferToolType {
+  description: String
+  effect: String
+  id: String!
+  kind: String!
+  operation: ProviderOfferOperationType
+  parameters: [ProviderOfferMemberType!]!
+  returns: [ProviderOfferMemberType!]!
+  summary: ProviderOfferWordsType
+  title: ProviderOfferWordsType
+}
+
+type ProviderOfferTriggerType {
+  batching: ProviderOfferBatchingType!
+  decided: Boolean!
+  kind: String!
+  name: String!
+  payload: [ProviderOfferMemberType!]!
+  recovery: String!
+  summary: ProviderOfferWordsType!
+}
+
+type ProviderOfferType {
+  api: [ProviderOfferReadType!]!
+  connectionId: ID!
+  mcp: [ProviderOfferToolType!]!
+  provider: String!
+  triggers: [ProviderOfferTriggerType!]!
+}
+
+type ProviderOfferWordsType {
+  en: String!
+  vi: String!
+}
+
+type ProviderRightCountsType {
+  all: Int!
+  held: Int!
+  unheld: Int!
+  writes: Int!
+}
+
+type ProviderRightHoldersType {
+  connectionId: ID!
+  counts: ProviderRightCountsType!
+  provider: String!
+  screens: [ProviderScreenRightType!]!
+  tools: [ProviderToolRightType!]!
+  triggers: [ProviderTriggerRightType!]!
+}
+
 type ProviderRightType {
-  abilities: [ProviderAbilityType!]!
   accounts: [ProviderAccountType!]!
   connected: Boolean!
   kind: String!
   kindLabel: AbilityLabelType!
   label: AbilityLabelType!
   provider: String!
+  tools: [String!]!
 }
 
 type ProviderRightsType {
@@ -5420,8 +4802,13 @@ type ProviderRightsType {
   providers: [ProviderRightType!]!
 }
 
+type ProviderScreenRightType {
+  everyMember: Boolean!
+  name: String!
+  summary: NodeRightWordsType
+}
+
 type ProviderTemplateCandidateType {
-  abilities: [AbilityTickType!]!
   agentId: ID!
   agentName: String!
   module: String!
@@ -5431,36 +4818,43 @@ input ProviderTemplateCandidatesInput {
   connectionId: ID! @inputBounds(maxLength: 36)
 }
 
-input PublicBookingPageInput {
-  slug: String! @inputBounds(maxLength: 41)
+type ProviderToolRightType {
+  holders: [RightHolderType!]!
+  open: Boolean!
+  operation: NodeRightOperationType!
 }
 
-type PublicBookingPageType {
-  address: String!
-  note: String!
-  services: [PublicBookingServiceType!]!
-  shop: String!
-  slug: String!
-  timezone: String!
-}
-
-type PublicBookingServiceType {
-  description: String!
-  durationMin: Int!
-  id: ID!
+type ProviderTriggerAgentChoiceType {
+  agentId: ID!
   name: String!
-  priceVnd: Float
 }
 
-input PublicBookingTimesInput {
-  date: String! @inputBounds(maxLength: 10)
-  party: Int! @inputBounds(min: 1, max: 20)
-  serviceId: String! @inputBounds(maxLength: 36)
-  slug: String! @inputBounds(maxLength: 41)
+type ProviderTriggerRightType {
+  holders: [TriggerHolderType!]!
+  name: String!
+  summary: NodeRightWordsType!
 }
 
-type PublicBookingTimesType {
-  times: [String!]!
+type ProviderTriggerStateType {
+  canCatchUp: Boolean!
+  connectionId: ID!
+  coreDecides: Boolean!
+  decided: Boolean!
+  deciderAgentId: ID
+  deciderAgentName: String
+  deciderChoices: [ProviderTriggerAgentChoiceType!]!
+  enabled: Boolean!
+  enabledAt: String
+  firedCount: Int!
+  kind: String!
+  lastFiredAt: String
+  name: String!
+  summary: ProviderTriggerWordsType!
+}
+
+type ProviderTriggerWordsType {
+  en: String!
+  vi: String!
 }
 
 input PublicDocumentIdInput {
@@ -5494,97 +4888,19 @@ type PublicDocumentType {
   updatedAt: String!
 }
 
-input PublicHiringJobInput {
-  job: String! @inputBounds(maxLength: 120)
-  ws: String! @inputBounds(maxLength: 80)
-}
-
-type PublicInterviewType {
-  candidateName: String!
-  durationMin: Int!
-  interviewerName: String!
-  jobTitle: String!
-  location: String!
-  mode: String!
-  note: String!
-  proposedSlots: [PublicSlotType!]!
-  shop: String!
-  slotStart: String
-  status: String!
-}
-
-type PublicJobType {
-  closesAt: String
-  company: String!
-  consentText: String!
-  description: String!
-  employmentType: String!
-  headcount: Int!
-  location: String!
-  open: Boolean!
-  payMaxVnd: Float
-  payMinVnd: Float
-  payUnit: String!
-  position: String!
-  questions: [PublicQuestionType!]!
-  requirements: PublicRequirementsType!
-  schedule: String!
-  status: String!
-  title: String!
-}
-
 type PublicLeftOutType {
   label: String!
   reason: String!
 }
 
-type PublicOfferType {
-  candidateName: String!
-  expiresAt: String
-  jobTitle: String!
-  letter: String!
-  location: String!
-  shop: String!
-  status: String!
-  terms: PublicTermsType!
-}
-
-type PublicQuestionType {
-  choices: [String!]!
-  id: ID!
-  required: Boolean!
-  text: String!
-  type: String!
-}
-
-type PublicRequirementsType {
-  availability: [String!]!
-  experienceNote: String!
-  experienceYears: Int
-  mustHave: [String!]!
-  niceToHave: [String!]!
-  skills: [String!]!
-}
-
-type PublicSlotType {
-  end: String!
-  start: String!
-}
-
-type PublicTermsType {
-  note: String!
-  pay: String!
-  probation: String!
-  startDate: String!
-  title: String!
-}
-
 input PublishAgentGraphInput {
   agentId: String! @inputBounds(maxLength: 36)
+  agreedRights: [AgentGraphAgreedRightInput!] @inputBounds(maxItems: 500)
   note: String! @inputBounds(maxLength: 500)
 }
 
 input PublishAgentWorkflowVersionInput {
+  agreedRights: [AgreedRightInput!] @inputBounds(maxItems: 500)
   expectedLatest: Int @inputBounds(min: 0, max: 100000)
   graphJson: String! @inputBounds(maxLength: 400000)
   installationId: ID! @inputBounds(maxLength: 36)
@@ -5593,6 +4909,8 @@ input PublishAgentWorkflowVersionInput {
 }
 
 type Query {
+  accountDataRows(input: AccountDataRowsInput!): AccountDataRowsType!
+  accountDataTypes(input: AccountDataTypesInput!): [AccountDataTypeType!]!
   adminHealth: AdminHealthType!
   adminSession: AdminSessionType!
   adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
@@ -5603,17 +4921,19 @@ type Query {
   agentConnectionCandidates(input: AgentConnectionCandidatesInput!): [AgentConnectionCandidateType!]!
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
+  agentDeletionImpact(input: ModuleInstallationIdInput!): AgentDeletionImpactType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agentGraphCoverage(input: ListAgentGraphCoverageInput!): [AgentGraphCoverageType!]!
   agentGraphLayout(input: AgentGraphLayoutInput!): AgentGraphLayoutType!
   agentGraphRun(input: GetAgentGraphRunInput!): AgentGraphRunType!
-  agentGraphRuns(input: ListAgentGraphRunsInput!): [AgentGraphRunEntryType!]!
   agentKnowledge(input: AgentIdInput!): AgentKnowledgeType!
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
+  agentNodeRights(input: GetAgentNodeRightsInput!): AgentNodeRightsType!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentRun(input: AgentRunInput!): AgentRunDetailType
   agentRunWorkflows(input: AgentRunWorkflowsInput!): [AgentRunWorkflowPinType!]!
   agentRuns(input: AgentWorkInstanceInput!): AgentRunsType!
+  agentTemplateNodeRequests(input: GetAgentTemplateNodeRequestsInput!): AgentTemplateNodeRequestsType!
   agentTemplatePreview(input: PackageAgentTemplateInput!): PackagePreviewType!
   agentTools(input: AgentIdInput!): [AgentToolType!]!
   agentWork(input: AgentWorkInstanceInput!): AgentWorkType!
@@ -5628,8 +4948,6 @@ type Query {
   apiKeys: [ApiKeyType!]!
   approverDirectory: [ApproverMemberType!]!
   askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
-  authority: AuthoritySheetType!
-  billingBankAccount: BillingBankAccountType!
   billingPlan(input: BillingPlanInput!): BillingPlanType
   billingPlanQuote(input: BillingPlanQuoteInput!): BillingPlanQuoteType!
   billingPlans: [BillingPlanType!]!
@@ -5637,30 +4955,28 @@ type Query {
   billingStorage: BillingStorageType!
   billingWorkspace: BillingWorkspaceType!
   billingWorkspaces: [BillingWorkspaceType!]!
-  bookingBoard(input: BookingBoardInput): BookingBoardType!
-  brain: BrainType!
+  bindableAgents(input: BindableAgentsInput!): [BindableAgentType!]!
+  brain(facts: BrainFactsPageInput): BrainType!
   brainCritique(input: BrainCritiqueInput!): BrainCritiqueType!
   brainCritiqueSources: [BrainCritiqueSourceType!]!
-  brainDossiers: [BrainDossierType!]!
   brainGraph(input: BrainGraphInput): BrainGraphType!
+  brainPolicies: BrainPoliciesType!
+  brainPolicy(input: BrainPolicyInput!): BrainPolicyDetailType
   brainTodo: BrainTodoType!
-  brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   careOptOut(input: CareOptOutInput!): CareOptOutType
   chatMessages(input: ChatMessagesInput!): ChatMessagePageType!
   chatRoom(input: ChatRoomInput!): ChatRoomType
   chatRooms(input: ChatRoomsInput): [ChatRoomType!]!
   chatUnread: ChatUnreadType!
+  connectionAccountData(input: GetConnectionAccountDataInput!): AccountDataStatsType!
   connectionAgentGrants: [ConnectionAgentGrantType!]!
   connectionAgents: [ConnectionAgentType!]!
+  connectionFields(input: GetConnectionFieldsInput!): ConnectionFieldsType!
   connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
   connections: [ConnectionType!]!
-  contentAiStatus(input: GetContentAiStatusInput!): ContentAiStatusType!
-  contentBrandMaterial: ContentBrandMaterialType!
-  contentConfiguration: ContentConfigurationType!
-  contentDraftingBlocked: Boolean!
-  contentMedia(input: ContentMediaInput!): ContentMediaType!
-  contentMediaLibrary(input: ContentMediaLibraryInput!): [ContentMediaRefType!]!
-  contentRecentTitles(input: GetRecentTitlesInput!): [String!]!
+  contact(input: ContactInput!): ContactDetailType
+  contactModuleBlocks(input: ContactModuleBlocksInput!): [ContactModuleAgentType!]!
+  contacts(input: ContactsInput!): ContactsPageType!
   contextNotes(input: ContextNotesInput!): [ContextNoteType!]!
   creditPacks: [CreditPackType!]!
   creditPacksBought: [CreditPackPurchaseType!]!
@@ -5668,22 +4984,17 @@ type Query {
   creditRecentCostUsd(input: CreditRecentCostInput!): Float!
   creditTopupLots: [CreditTopupLotType!]!
   creditUsageSummary: CreditUsageSummaryType!
-  creditWorkUsage(input: CreditWorkUsageInput!): [CreditWorkUsageType!]!
+  crmConnection(input: LoadCrmConnectionInput!): CrmConnectionViewType!
+  crmTemplates: [CrmTemplateType!]!
+  customerMessages(input: CustomerMessagesInput!): CustomerMessagePageType!
   dataSyncRun(input: DataSyncRunInput!): DataSyncRunType!
-  dossierFindings(input: DossierFindingsInput! = {}): DossierFindingConnectionType!
-  dossierRemedyDraft(input: DossierRemedyDraftRefInput!): DossierRemedyDraftType
-  dossierReviewSummary: DossierReviewSummaryType!
   driveGrant: DriveGrantType!
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
   exportAgentTemplate(input: TemplateVersionRefInput!): String!
+  fileUrl(input: WorkbenchFileUrlInput!): WorkbenchAnswerType!
   getAgentGraph(input: GetAgentGraphInput!): AgentGraphType!
   googleConnectionState: GoogleStateType!
-  hiringCandidateDetail(input: HiringCandidateRefInput!): HiringCandidateDetailType!
-  hiringWorkbench: HiringBenchType!
-  inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
-  inboxLead(input: InboxLeadInput!): InboxLeadDetailType!
-  inboxLeads(input: InboxLeadsInput!): InboxLeadsType!
   instanceOfRecord(input: InstanceOfRecordInput!): ID
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
   knowledgeCategories: [KnowledgeCategoryType!]!
@@ -5698,21 +5009,14 @@ type Query {
   loadCsvImport(input: LoadCsvImportInput!): CsvSavedImportType!
   loadDatabaseConnection(input: LoadDatabaseConnectionInput!): SavedDatabaseType!
   loadImapConnection(input: LoadImapConnectionInput!): ImapConnectionType!
-  loadOpenApiConnection(input: LoadOpenApiConnectionInput!): OpenApiConnectionType!
-  loadOpenApiSpec(input: LoadOpenApiSpecInput!): OpenApiSpecType!
   loadTelegramUserSetup(input: LoadTelegramUserSetupInput!): TelegramSetupStateType!
-  marketingWeeklyReport(input: MarketingReportInput!): WeeklyReportType!
   marketplaceListings: [ListingCardType!]!
-  mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
-  mcpConnectors: [McpConnectorType!]!
-  mcpToolGrants: [McpToolGrantType!]!
-  memberGrants(input: MemberGrantsInput!): [MemberGrantType!]!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
   moduleInstallations: [ModuleInstallationType!]!
   moduleRequirementFacts: ModuleRequirementFactsType!
-  modulesCatalog: ModulesCatalogType!
+  modulesCatalog(workspaceId: ID = null): ModulesCatalogType!
   moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
   myAccount: MyAccountType!
   myAgentTemplates: [TemplateType!]!
@@ -5730,14 +5034,16 @@ type Query {
   paymentOrders: [BillingPaymentOrderType!]!
   previewCsvSource(input: PreviewCsvSourceInput!): CsvPreviewType!
   previewDatabaseTable(input: PreviewDatabaseTableInput!): DatabasePreviewType!
+  probeAgentSearch(input: ProbeAgentSearchInput!): AgentSearchProbeType!
+  providerOffer(input: GetProviderOfferInput!): ProviderOfferType!
+  providerRightHolders(input: GetProviderRightHoldersInput!): ProviderRightHoldersType!
   providerRights: ProviderRightsType!
   providerTemplateCandidates(input: ProviderTemplateCandidatesInput!): [ProviderTemplateCandidateType!]!
-  publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
-  publicBookingTimes(input: PublicBookingTimesInput!): PublicBookingTimesType!
+  providerTriggerStates(input: GetProviderTriggerStatesInput!): [ProviderTriggerStateType!]!
   publicDocuments: [PublicDocumentType!]!
-  publicHiringInterview(input: HiringTokenInput!): PublicInterviewType!
-  publicHiringJob(input: PublicHiringJobInput!): PublicJobType!
-  publicHiringOffer(input: HiringTokenInput!): PublicOfferType!
+  recordTypes: [RecordModuleType!]!
+  runStops(input: RunStopsInput): RunStopsPageType!
+  runnableWorkflow(input: RunnableWorkflowInput!): RunnableWorkflowType!
   scheduledItems: [ScheduledItemType!]!
   sepayConnection(input: GetSepayConnectionInput!): SepayConnectionType!
   sepayConnectionEvents(input: ListSepayEventsInput!): [SepayWebhookEventType!]!
@@ -5749,17 +5055,10 @@ type Query {
   templateUpdateOffers: [UpdateOfferType!]!
   testDatabase(input: TestDatabaseInput!): [DatabaseTableType!]!
   testImapConnection(input: TestImapConnectionInput!): ImapFoldersType!
-  testOpenApiOperation(input: TestOpenApiOperationInput!): OpenApiTestType!
-  videoBrand: VideoBrandType!
-  videoFigures: VideoFiguresType!
-  videoMedia: [VideoMediaType!]!
-  videoProject(input: GetVideoProjectInput!): VideoProjectType!
-  videoProjects(input: ListVideoProjectsInput!): [VideoProjectType!]!
-  videoRenderStatus(input: VideoRenderStatusInput!): VideoRenderStatusType!
-  videoScope: VideoScopeType!
-  videoScriptStatus(input: VideoScriptStatusInput!): VideoScriptStatusType!
-  videoSources: [VideoSourceType!]!
+  toolCallLog(input: ToolCallLogInput): [ToolCallLogType!]!
+  webhookEvents: [WebhookEventOptionType!]!
   websiteSite: WebsiteSiteType!
+  websiteTheme(input: WebsiteThemeInput!): WebsiteThemeType
   workbenchRead(input: WorkbenchReadInput!): WorkbenchAnswerType!
   workflowTemplate(input: WorkflowTemplateInput!): WorkflowTemplateType!
   workflowTemplates(input: WorkflowTemplatesInput!): [WorkflowTemplateType!]!
@@ -5768,8 +5067,10 @@ type Query {
   workspaceDeclinedInvites: [DeclinedInviteType!]!
   workspaceInvites: [PendingInviteType!]!
   workspaceMembers: [MemberListingType!]!
+  workspaceSettings: WorkspaceSettingsType!
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
+  workspaceTheme: WorkspaceThemeType
   zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
   zaloConnectionPage(input: GetZaloPageInput!): ZaloPageType!
 }
@@ -5778,12 +5079,32 @@ input RecheckZaloConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input RecordManualEvidenceInput {
-  amount: Float! @inputBounds(min: 1, max: 1000000000000)
-  content: String! @inputBounds(maxLength: 500)
-  date: String! @inputBounds(maxLength: 10)
-  note: String @inputBounds(maxLength: 1000)
-  payer: String @inputBounds(maxLength: 120)
+type RecordActionType {
+  id: String!
+  inputJson: String
+  permission: String!
+}
+
+type RecordFieldType {
+  kind: String!
+  name: String!
+  nullable: Boolean!
+  values: [String!]
+}
+
+type RecordModuleType {
+  actions: [RecordActionType!]!
+  module: String!
+  reads: [RecordReadType!]!
+  types: [RecordTypeType!]!
+}
+
+type RecordReadType {
+  dataKind: String!
+  id: String!
+  permission: String!
+  shape: String!
+  variablesJson: String!
 }
 
 input RecordTemplateLikenessInput {
@@ -5794,13 +5115,9 @@ input RecordTemplateLikenessInput {
   templateKey: String! @inputBounds(maxLength: 60)
 }
 
-input RegisterMcpConnectorInput {
-  contractVersion: String! @inputBounds(maxLength: 60)
-  credential: String @inputBounds(maxLength: 4096)
-  key: String! @inputBounds(maxLength: 31)
-  name: String! @inputBounds(maxLength: 80)
-  timeoutMs: Int @inputBounds(min: 500, max: 15000)
-  url: String! @inputBounds(maxLength: 2000)
+type RecordTypeType {
+  fields: [RecordFieldType!]!
+  name: String!
 }
 
 input ReindexKnowledgeSourceInput {
@@ -5809,14 +5126,8 @@ input ReindexKnowledgeSourceInput {
   storagePath: String @inputBounds(maxLength: 400)
 }
 
-input RejectDossierRemedyDraftInput {
-  draftId: ID! @inputBounds(maxLength: 36)
-  reason: String = null @inputBounds(maxLength: 500)
-}
-
 input ReleaseConversationInput {
   conversationId: ID! @inputBounds(maxLength: 36)
-  hold: String @inputBounds(maxLength: 10)
 }
 
 input RemoveAgentTriggerInput {
@@ -5824,41 +5135,14 @@ input RemoveAgentTriggerInput {
   triggerId: ID! @inputBounds(maxLength: 36)
 }
 
-input RemoveBookingExceptionInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type RemoveBookingExceptionType {
-  id: ID!
-}
-
-input RemoveBookingResourceInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type RemoveBookingResourceType {
-  id: ID!
-}
-
-input RemoveBookingServiceInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type RemoveBookingServiceType {
-  id: ID!
-}
-
-input RemoveBookingWaitlistEntryInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type RemoveBookingWaitlistEntryType {
-  id: ID!
-}
-
 input RenameAgentInput {
   agentId: ID! @inputBounds(maxLength: 36)
   name: String! @inputBounds(maxLength: 120)
+}
+
+input RenameApiKeyInput {
+  keyId: ID! @inputBounds(maxLength: 36)
+  name: String! @inputBounds(maxLength: 200)
 }
 
 input RenameInstallationAgentInput {
@@ -5873,39 +5157,6 @@ input RenameModuleInstallationInput {
 
 input RenameWorkspaceInput {
   name: String! @inputBounds(maxLength: 120)
-}
-
-type ReportDayType {
-  channels: [ChannelValueType!]!
-  day: String!
-}
-
-type ReportMetricType {
-  changePct: Int
-  previous: Int!
-  value: Int!
-}
-
-type ReportPostType {
-  channel: String!
-  engagements: Int!
-  href: String
-  id: String!
-  publishedAt: String!
-  title: String!
-}
-
-type ReportSourceType {
-  kind: String!
-  label: String!
-  layer: Int!
-  ref: String!
-}
-
-type ReportSuggestionType {
-  body: String!
-  sources: [ReportSourceType!]!
-  title: String!
 }
 
 input RequestAgentAvatarUploadInput {
@@ -5929,54 +5180,8 @@ input RequestChatFileUploadInput {
   sizeBytes: Int! @inputBounds(min: 1, max: 2147483647)
 }
 
-input RequestContentDraftInput {
-  hint: String @inputBounds(maxLength: 12000)
-  id: String! @inputBounds(maxLength: 36)
-}
-
-input RequestContentMediaUploadInput {
-  contentType: String! @inputBounds(maxLength: 32)
-  name: String! @inputBounds(maxLength: 255)
-  sizeBytes: Int! @inputBounds(min: 1, max: 10485760)
-}
-
-input RequestContentMonthPlanInput {
-  month: String! @inputBounds(maxLength: 7)
-}
-
-input RequestContentQuickDraftInput {
-  channels: [String!]! @inputBounds(maxItems: 4)
-  topic: String! @inputBounds(maxLength: 12000)
-}
-
 input RequestDataSyncInput {
   connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-input RequestDossierRemedyDraftInput {
-  findingId: ID! @inputBounds(maxLength: 36)
-  instructions: String = null @inputBounds(maxLength: 1000)
-}
-
-input RequestDossierReviewInput {
-  dossierId: ID = null @inputBounds(maxLength: 36)
-}
-
-input RequestHiringInterviewInput {
-  candidateId: ID! @inputBounds(maxLength: 36)
-  durationMin: Int! @inputBounds(min: 5, max: 480)
-  interviewerUserId: ID @inputBounds(maxLength: 36)
-  location: String! @inputBounds(maxLength: 500)
-  mode: String!
-}
-
-input RequestHiringOfferInput {
-  candidateId: ID! @inputBounds(maxLength: 36)
-  note: String! @inputBounds(maxLength: 2000)
-  pay: String! @inputBounds(maxLength: 200)
-  probation: String! @inputBounds(maxLength: 200)
-  startDate: String! @inputBounds(maxLength: 60)
-  title: String! @inputBounds(maxLength: 200)
 }
 
 input RequestLessonMiningInput {
@@ -6001,79 +5206,18 @@ type RequestPaymentOrderType {
   status: String!
 }
 
-input RequestPublicBookingInput {
-  email: String @inputBounds(maxLength: 120)
-  name: String! @inputBounds(maxLength: 120)
-  note: String @inputBounds(maxLength: 400)
-  party: Int! @inputBounds(min: 1, max: 20)
-  phone: String! @inputBounds(maxLength: 40)
-  serviceId: String! @inputBounds(maxLength: 36)
-  slug: String! @inputBounds(maxLength: 41)
-  start: String! @inputBounds(maxLength: 40)
-  token: String! @inputBounds(maxLength: 64)
-  website: String @inputBounds(maxLength: 200)
-}
-
-type RequestPublicBookingType {
-  alternatives: [String!]!
-  bookingId: ID
-  code: String!
-  serviceName: String!
-  startIso: String!
-  state: String!
-}
-
-input RequestVideoRenderInput {
-  projectId: ID! @inputBounds(maxLength: 36)
-}
-
-type RequestVideoRenderType {
-  id: ID!
-  projectId: ID!
-  renderId: ID!
-  status: String!
-}
-
-input RequestVideoScriptInput {
-  projectId: String! @inputBounds(maxLength: 36)
-}
-
-type RequestVideoScriptType {
-  id: String!
-  projectId: String!
-  status: String!
+input RequestWorkspaceLogoUploadInput {
+  contentType: String! @inputBounds(maxLength: 100)
+  sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
 }
 
 input ResendTelegramCodeInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input ResolveDossierFindingInput {
-  findingId: ID! @inputBounds(maxLength: 36)
-  note: String! @inputBounds(maxLength: 500)
-}
-
-input RespondHiringInterviewInput {
-  start: String @inputBounds(maxLength: 40)
-  token: String! @inputBounds(maxLength: 200)
-}
-
-input RespondHiringOfferInput {
-  accept: Boolean!
-  token: String! @inputBounds(maxLength: 200)
-}
-
-type RespondOfferType {
-  outcome: String!
-}
-
-type RespondSlotType {
-  outcome: String!
-  slotStart: String
-}
-
 input RestoreAgentGraphVersionInput {
   agentId: String! @inputBounds(maxLength: 36)
+  agreedRights: [AgentGraphAgreedRightInput!] @inputBounds(maxItems: 500)
   versionId: String! @inputBounds(maxLength: 36)
 }
 
@@ -6130,7 +5274,21 @@ input RevokeSessionInput {
   sessionId: ID! @inputBounds(maxLength: 36)
 }
 
+type RightHolderType {
+  agentId: ID!
+  agentName: String!
+  mode: String!
+  nodeKey: String!
+  step: String!
+  stepTitle: NodeRightWordsType
+  versionNumber: Int!
+  workflowId: ID!
+  workflowKey: String!
+  workflowName: String!
+}
+
 input RollbackAgentWorkflowInput {
+  agreedRights: [AgreedRightInput!] @inputBounds(maxItems: 500)
   expectedLatest: Int @inputBounds(min: 0, max: 100000)
   installationId: ID! @inputBounds(maxLength: 36)
   note: String! @inputBounds(maxLength: 500)
@@ -6140,6 +5298,12 @@ input RollbackAgentWorkflowInput {
 
 input RotateSepayKeyInput {
   connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input RunConnectionActionInput {
+  action: String! @inputBounds(maxLength: 40)
+  connectionId: ID! @inputBounds(maxLength: 64)
+  fields: [UpdateConnectionFieldInput!] @inputBounds(maxItems: 10)
 }
 
 input RunCsvImportInput {
@@ -6181,6 +5345,80 @@ type RunScheduledItemNowType {
   outcome: String!
 }
 
+type RunStopApprovalType {
+  ability: String!
+  account: String!
+  args: [RunStopArgumentType!]!
+  tool: String!
+  workItemId: String!
+}
+
+type RunStopArgumentType {
+  name: String!
+  value: String!
+}
+
+type RunStopNeedsType {
+  answer: Boolean!
+  decisions: [String!]!
+  verdicts: [String!]!
+}
+
+type RunStopType {
+  agentId: String!
+  agentName: String
+  approval: RunStopApprovalType
+  contactId: String
+  contactName: String
+  conversationId: String
+  kind: String!
+  needs: RunStopNeedsType!
+  question: String
+  reason: String!
+  repeats: Int!
+  runId: String!
+  stepKey: String!
+  stopId: String!
+  stoppedAt: String!
+  suggestions: [String!]!
+  workflowId: String
+  workflowName: String
+}
+
+input RunStopsInput {
+  cursor: String @inputBounds(maxLength: 8)
+  limit: Int @inputBounds(min: 1, max: 50)
+}
+
+type RunStopsPageType {
+  next: String
+  stops: [RunStopType!]!
+  total: Int!
+}
+
+input RunWorkflowInput {
+  inputs: JsonObject!
+  installationId: ID! @inputBounds(maxLength: 36)
+  opKey: String! @inputBounds(maxLength: 200)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
+input RunnableWorkflowInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  locale: String @inputBounds(maxLength: 2)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
+type RunnableWorkflowType {
+  inputSchemaJson: String
+  key: String!
+  name: String!
+  refusal: String
+  runnable: Boolean!
+  status: String!
+  workflowId: String!
+}
+
 input SaveAgentGoalInput {
   detail: String! @inputBounds(maxLength: 2000)
   dueAt: DateTime = null
@@ -6213,93 +5451,6 @@ input SaveAgentTriggerInput {
   triggerId: ID = null @inputBounds(maxLength: 36)
 }
 
-input SaveAuthorityRuleInput {
-  change: AuthorityRuleChangeInput!
-}
-
-type SaveAvailabilityType {
-  saved: Int!
-}
-
-input SaveBookingExceptionInput {
-  closed: Boolean!
-  date: String! @inputBounds(maxLength: 10)
-  end: String! @inputBounds(maxLength: 5)
-  note: String! @inputBounds(maxLength: 200)
-  resourceId: ID @inputBounds(maxLength: 36)
-  start: String! @inputBounds(maxLength: 5)
-}
-
-type SaveBookingExceptionType {
-  id: ID!
-}
-
-input SaveBookingHoursInput {
-  resourceId: ID! @inputBounds(maxLength: 36)
-  rows: [BookingHoursRowInput!]! @inputBounds(maxItems: 56)
-}
-
-type SaveBookingHoursType {
-  id: ID!
-}
-
-input SaveBookingPolicyInput {
-  address: String! @inputBounds(maxLength: 300)
-  autoConfirm: Boolean!
-  cancelWindowHours: Int! @inputBounds(min: 0, max: 720)
-  depositPct: Int! @inputBounds(min: 0, max: 100)
-  handoffOrder: Boolean!
-  lateCancelFeePct: Int! @inputBounds(min: 0, max: 100)
-  maxAdvanceDays: Int! @inputBounds(min: 1, max: 365)
-  minLeadMin: Int! @inputBounds(min: 0, max: 100000)
-  noShowFeeVnd: Int! @inputBounds(min: 0, max: 1000000000)
-  slotStepMin: Int! @inputBounds(min: 5, max: 240)
-  timezone: String! @inputBounds(maxLength: 80)
-}
-
-type SaveBookingPolicyType {
-  workspaceId: ID!
-}
-
-input SaveBookingPublicPageInput {
-  enabled: Boolean!
-  note: String! @inputBounds(maxLength: 400)
-  slug: String! @inputBounds(maxLength: 80)
-}
-
-type SaveBookingPublicPageType {
-  workspaceId: ID!
-}
-
-input SaveBookingResourceInput {
-  active: Boolean!
-  capacity: Int! @inputBounds(min: 1, max: 200)
-  id: ID @inputBounds(maxLength: 36)
-  kind: String! @inputBounds(maxLength: 40)
-  name: String! @inputBounds(maxLength: 120)
-  staffId: ID @inputBounds(maxLength: 36)
-}
-
-type SaveBookingResourceType {
-  id: ID!
-}
-
-input SaveBookingServiceInput {
-  active: Boolean!
-  bufferMin: Int! @inputBounds(min: 0, max: 480)
-  description: String! @inputBounds(maxLength: 600)
-  durationMin: Int! @inputBounds(min: 5, max: 1440)
-  followupDays: Int @inputBounds(min: 1, max: 730)
-  id: ID @inputBounds(maxLength: 36)
-  name: String! @inputBounds(maxLength: 160)
-  priceVnd: Int @inputBounds(min: 0, max: 1000000000)
-  resourceKind: String! @inputBounds(maxLength: 40)
-}
-
-type SaveBookingServiceType {
-  id: ID!
-}
-
 input SaveBrainFactInput {
   attributeLabel: String! @inputBounds(maxLength: 200)
   gapId: ID @inputBounds(maxLength: 36)
@@ -6320,19 +5471,12 @@ input SaveBrainLessonInput {
   title: String! @inputBounds(maxLength: 200)
 }
 
-input SaveContentBrandInput {
-  avoid: String! @inputBounds(maxLength: 1500)
-  brandVoice: String! @inputBounds(maxLength: 1500)
-  cta: String! @inputBounds(maxLength: 300)
-  hashtags: String! @inputBounds(maxLength: 4000)
-}
-
-input SaveContentCadenceInput {
-  rows: [ContentCadenceInput!]! @inputBounds(maxItems: 4)
-}
-
-input SaveContentPillarsInput {
-  rows: [ContentPillarInput!]! @inputBounds(maxItems: 100)
+input SaveCrmConnectionInput {
+  auth: CrmAuthInput!
+  baseUrl: String! @inputBounds(maxLength: 1000)
+  connectionId: ID @inputBounds(maxLength: 64)
+  crmId: String! @inputBounds(maxLength: 64)
+  swaggerUrl: String @inputBounds(maxLength: 1000)
 }
 
 input SaveDatabaseConnectionInput {
@@ -6341,50 +5485,6 @@ input SaveDatabaseConnectionInput {
   name: String! @inputBounds(maxLength: 200)
   tables: DataJson!
   target: DatabaseTargetInput!
-}
-
-input SaveDossierRemedyDraftInput {
-  body: String! @inputBounds(maxLength: 40000)
-  draftId: ID! @inputBounds(maxLength: 36)
-  title: String! @inputBounds(maxLength: 160)
-}
-
-input SaveHiringAvailabilityInput {
-  memberUserId: ID! @inputBounds(maxLength: 36)
-  windows: [HiringAvailabilityWindowInput!]! @inputBounds(maxItems: 49)
-}
-
-input SaveHiringJobInput {
-  channels: [String!] @inputBounds(maxItems: 10)
-  closesAt: String @inputBounds(maxLength: 40)
-  description: String @inputBounds(maxLength: 8000)
-  employmentType: String
-  headcount: Int @inputBounds(min: 1, max: 100)
-  id: ID @inputBounds(maxLength: 36)
-  location: String @inputBounds(maxLength: 200)
-  payMaxVnd: Float @inputBounds(min: 0)
-  payMinVnd: Float @inputBounds(min: 0)
-  payUnit: String
-  position: String @inputBounds(maxLength: 120)
-  questions: [HiringJobQuestionInput!]! @inputBounds(maxItems: 30)
-  requirements: HiringJobRequirementsInput
-  schedule: String @inputBounds(maxLength: 200)
-  title: String! @inputBounds(maxLength: 200)
-}
-
-input SaveHiringNotesInput {
-  id: ID! @inputBounds(maxLength: 36)
-  notes: String! @inputBounds(maxLength: 10000)
-}
-
-input SaveHiringSettingsInput {
-  adTone: String @inputBounds(maxLength: 200)
-  applyConsentText: String @inputBounds(maxLength: 4000)
-  autoCloseWhenFilled: Boolean
-  notifyNewCandidate: Boolean
-  publicSlug: String @inputBounds(maxLength: 80)
-  remindInterview: Boolean
-  retentionDays: Int @inputBounds(min: 0, max: 3650)
 }
 
 input SaveHoldingMessageInput {
@@ -6406,24 +5506,6 @@ input SaveImapConnectionInput {
   user: String! @inputBounds(maxLength: 400)
 }
 
-type SaveJobType {
-  id: ID!
-  slug: String!
-}
-
-input SaveMemberGrantsInput {
-  action: String! @inputBounds(maxLength: 80)
-  grants: [MemberGrantChangeInput!]! @inputBounds(maxItems: 200)
-}
-
-input SaveOpenApiConnectionInput {
-  auth: OpenApiAuthInput!
-  config: DataJson!
-  connectionId: ID @inputBounds(maxLength: 64)
-  name: String! @inputBounds(maxLength: 200)
-  syncEveryMinutes: Int
-}
-
 input SaveProviderKeysInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   values: ProviderKeysInput!
@@ -6442,15 +5524,6 @@ input SaveTelegramUserSetupInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   everyMinutes: Int
   sinceDays: Int!
-}
-
-input SaveVideoBrandInput {
-  logoPath: String @inputBounds(maxLength: 300)
-  musicTrack: String @inputBounds(maxLength: 60)
-  primary: String! @inputBounds(maxLength: 7)
-  secondary: String! @inputBounds(maxLength: 7)
-  shopName: String! @inputBounds(maxLength: 60)
-  voice: String! @inputBounds(maxLength: 80)
 }
 
 input SaveWebsiteSiteInput {
@@ -6480,10 +5553,6 @@ input SaveZnsRenewalInput {
   plan: String! @inputBounds(maxLength: 50)
   templateId: String! @inputBounds(maxLength: 20)
   transferContent: String! @inputBounds(maxLength: 50)
-}
-
-type SavedContentRowsType {
-  count: Int!
 }
 
 type SavedDatabaseTargetType {
@@ -6599,13 +5668,6 @@ type SepayWebhookEventType {
   providerEventId: String
 }
 
-input SetAgentAbilityInput {
-  ability: String! @inputBounds(maxLength: 41)
-  agentId: ID! @inputBounds(maxLength: 36)
-  connectionId: ID! @inputBounds(maxLength: 36)
-  mode: String!
-}
-
 input SetAgentAvatarInput {
   agentId: ID! @inputBounds(maxLength: 36)
   path: String @inputBounds(maxLength: 80)
@@ -6629,8 +5691,7 @@ input SetAgentGraphModeInput {
 input SetAgentOwnershipInput {
   agentId: ID! @inputBounds(maxLength: 36)
   assignableRoles: [String!]! @inputBounds(maxItems: 3)
-  assignableRooms: [String!]! @inputBounds(maxItems: 6)
-  canTagAgentIds: [ID!]! @inputBounds(maxItems: 50)
+  assignableRooms: [String!]! @inputBounds(maxItems: 10)
   fallbackMemberId: ID! @inputBounds(maxLength: 36)
   ownerMemberId: ID! @inputBounds(maxLength: 36)
 }
@@ -6652,9 +5713,25 @@ input SetAgentWorkInput {
 }
 
 input SetAgentWorkflowStatusInput {
+  agreedRights: [AgreedRightInput!] @inputBounds(maxItems: 500)
   installationId: ID! @inputBounds(maxLength: 36)
   status: String! @inputBounds(maxLength: 20)
   workflowId: ID! @inputBounds(maxLength: 36)
+}
+
+input SetBrainPolicyInput {
+  audience: String @inputBounds(maxLength: 10)
+  factId: ID! @inputBounds(maxLength: 36)
+  validFrom: String @inputBounds(maxLength: 40)
+  validTo: String @inputBounds(maxLength: 40)
+  value: String @inputBounds(maxLength: 500)
+}
+
+type SetBrainPolicyResultType {
+  factId: ID
+  outcome: String!
+  problem: String
+  value: String
 }
 
 input SetCareOptOutInput {
@@ -6700,27 +5777,13 @@ input SetConnectionGrantInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input SetContentAutomationInput {
-  key: String!
-  on: Boolean!
-}
-
-input SetDefaultReceivingAccountInput {
-  connectionId: ID! @inputBounds(maxLength: 36)
-}
-
 input SetDefaultSmtpInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input SetHiringInterviewStatusInput {
-  id: ID! @inputBounds(maxLength: 36)
-  status: String!
-}
-
-input SetHiringJobStatusInput {
-  id: ID! @inputBounds(maxLength: 36)
-  status: String!
+input SetKnowledgeSourceNatureInput {
+  nature: String @inputBounds(maxLength: 16)
+  sourceId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetKnowledgeSuggestionStateInput {
@@ -6730,19 +5793,6 @@ input SetKnowledgeSuggestionStateInput {
 
 input SetLedgerSheetInput {
   sheet: String! @inputBounds(maxLength: 300)
-}
-
-input SetMcpConnectorCredentialInput {
-  credential: String! @inputBounds(maxLength: 4096)
-  key: String! @inputBounds(maxLength: 31)
-}
-
-input SetMcpToolGrantInput {
-  agentId: String! @inputBounds(maxLength: 36)
-  constraintsJson: String @inputBounds(maxLength: 2000)
-  limitVnd: Float @inputBounds(min: 0)
-  mode: String!
-  tool: String! @inputBounds(maxLength: 112)
 }
 
 input SetMemberStatusInput {
@@ -6766,9 +5816,11 @@ input SetOperatingModeInput {
   mode: String!
 }
 
-input SetSepayEnvironmentInput {
-  connectionId: ID! @inputBounds(maxLength: 64)
-  environment: String!
+input SetProviderTriggerEnabledInput {
+  catchUp: Boolean! = false
+  connectionId: ID! @inputBounds(maxLength: 36)
+  enabled: Boolean!
+  trigger: String! @inputBounds(maxLength: 64)
 }
 
 input SetSetupGateInput {
@@ -6776,11 +5828,6 @@ input SetSetupGateInput {
   evidence: String = "" @inputBounds(maxLength: 800)
   gateKey: String! @inputBounds(maxLength: 60)
   setupSessionId: ID! @inputBounds(maxLength: 36)
-}
-
-input SetSyncScheduleInput {
-  connectionId: ID! @inputBounds(maxLength: 64)
-  everyMinutes: Int @inputBounds(min: 5, max: 10080)
 }
 
 input SetWorkspaceAgentWorkInput {
@@ -6864,10 +5911,6 @@ type SetupStateType {
 type SetupVersionsType {
   activeVersionId: ID
   versions: [ContextVersionType!]!
-}
-
-input ShareVideoProjectInput {
-  projectId: ID! @inputBounds(maxLength: 36)
 }
 
 type ShellAgentType {
@@ -6957,16 +6000,6 @@ input StartZaloConnectionInput {
 
 scalar StringMap
 
-input SubmitContentForApprovalInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type SubmitContentForApprovalType {
-  id: ID!
-  status: String!
-  workItemId: ID!
-}
-
 input SubmitTelegramCodeInput {
   code: String! @inputBounds(maxLength: 32)
   connectionId: ID! @inputBounds(maxLength: 64)
@@ -7001,10 +6034,6 @@ type SuggestionDecisionType {
   state: String!
 }
 
-input SyncMcpConnectorInput {
-  key: String! @inputBounds(maxLength: 31)
-}
-
 type TelegramChatChoiceType {
   id: String!
   kind: String!
@@ -7028,6 +6057,7 @@ type TelegramLoginStartedType {
 
 type TelegramPageType {
   agentIds: [ID!]!
+  attention: String
   botUsername: String!
   healthy: Boolean!
   id: ID!
@@ -7066,6 +6096,14 @@ type TelegramUserConfigType {
 
 type TelegramUserReadyType {
   configured: Boolean!
+}
+
+type TemplateNodeRequestType {
+  kind: String!
+  mode: String!
+  nodeKey: String!
+  operation: String!
+  provider: String
 }
 
 type TemplateOrderType {
@@ -7131,6 +6169,13 @@ type TemplateType {
   versions: [TemplateVersionType!]!
 }
 
+input TemplateUpdateAgreedRightInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
+  mode: String! @inputBounds(maxLength: 4)
+  nodeKey: String! @inputBounds(maxLength: 200)
+  operation: String! @inputBounds(maxLength: 200)
+}
+
 input TemplateVersionRefInput {
   templateKey: String! @inputBounds(maxLength: 60)
   version: Int! @inputBounds(min: 1, max: 100000)
@@ -7165,22 +6210,37 @@ input TestImapConnectionInput {
   user: String! @inputBounds(maxLength: 400)
 }
 
-input TestOpenApiOperationInput {
-  auth: OpenApiAuthInput!
-  baseUrl: String! @inputBounds(maxLength: 1000)
-  connectionId: ID @inputBounds(maxLength: 64)
-  fixedQuery: String! @inputBounds(maxLength: 500)
-  itemsPath: String! @inputBounds(maxLength: 200)
-  op: DataJson!
-}
-
 input TestWebhookConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input ToggleHiringOnboardingInput {
-  done: Boolean!
-  id: ID! @inputBounds(maxLength: 36)
+input ToolCallLogInput {
+  limit: Int @inputBounds(min: 1, max: 200)
+}
+
+type ToolCallLogType {
+  agentName: String!
+  approvedBy: String
+  argsMasked: String!
+  at: String!
+  durationMs: Int!
+  errorCode: String
+  id: String!
+  outcome: String!
+  resultSummary: String!
+  tool: String!
+}
+
+type TriggerHolderType {
+  agentId: ID!
+  agentName: String!
+  nodeKey: String
+  role: String!
+  step: String
+  stepTitle: NodeRightWordsType
+  workflowId: ID
+  workflowKey: String
+  workflowName: String
 }
 
 input UndoBrainFactBatchInput {
@@ -7191,8 +6251,35 @@ input UnlinkBrainFactsInput {
   id: ID! @inputBounds(maxLength: 36)
 }
 
-input UpdateAuthorityInput {
-  patch: AuthorityPatchInput!
+input UnlinkContactIdentityInput {
+  contactId: ID! @inputBounds(maxLength: 36)
+  identityId: ID! @inputBounds(maxLength: 36)
+}
+
+input UnsetBrainPolicyInput {
+  factId: ID! @inputBounds(maxLength: 36)
+  note: String @inputBounds(maxLength: 500)
+}
+
+type UnsetBrainPolicyResultType {
+  outcome: String!
+}
+
+input UpdateConnectionFieldInput {
+  key: String! @inputBounds(maxLength: 40)
+  value: String! @inputBounds(maxLength: 500)
+}
+
+input UpdateConnectionInput {
+  connectionId: ID! @inputBounds(maxLength: 64)
+  displayName: String @inputBounds(maxLength: 120)
+  fields: [UpdateConnectionFieldInput!]! @inputBounds(maxItems: 20)
+}
+
+input UpdateContactInput {
+  displayName: String @inputBounds(maxLength: 200)
+  id: ID! @inputBounds(maxLength: 36)
+  tags: [String!] @inputBounds(maxItems: 20, itemMaxLength: 40)
 }
 
 input UpdateKnowledgeSourceInput {
@@ -7241,19 +6328,25 @@ type UpdateUnitType {
   nodeKey: String!
 }
 
-input UpdateVideoProjectInput {
-  aspect: String @inputBounds(maxLength: 5)
-  goal: String @inputBounds(maxLength: 40)
-  inputs: VideoInputsInput
-  projectId: ID! @inputBounds(maxLength: 36)
-  script: [VideoSceneInput!] @inputBounds(maxItems: 12)
-  targetSeconds: Int @inputBounds(min: 10, max: 90)
-  title: String @inputBounds(maxLength: 120)
-}
-
 input UpdateWebhookEventsInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   events: [String!]! @inputBounds(maxItems: 20, itemMaxLength: 40)
+}
+
+input UpdateWorkspaceSettingsInput {
+  logoPath: String @inputBounds(maxLength: 80)
+  name: String @inputBounds(maxLength: 120)
+  timeZone: String @inputBounds(maxLength: 64)
+}
+
+input UpdateWorkspaceThemeInput {
+  base: Float! @inputBounds(min: 0, max: 1)
+  chroma: Float! @inputBounds(min: 0, max: 0.37)
+  font: String! @inputBounds(maxLength: 14)
+  hue: Float! @inputBounds(min: 0, max: 360)
+  lightness: Float! @inputBounds(min: 0.2, max: 0.95)
+  mode: String @inputBounds(maxLength: 14)
+  radius: String! @inputBounds(maxLength: 14)
 }
 
 type UploadAddressType {
@@ -7268,153 +6361,19 @@ input UploadedFileInput {
   name: String! @inputBounds(maxLength: 255)
 }
 
-type VideoBrandType {
-  logoPath: String
-  musicTrack: String
-  primary: String!
-  secondary: String!
-  shopName: String!
-  voice: String!
-}
-
-type VideoFiguresType {
-  approved: Int!
-  credits30: Int!
-  published30: Int!
-  readyToPublish: Int!
-  rendering: Int!
-  scripting: Int!
-}
-
-input VideoInputsInput {
-  auto: Boolean!
-  media: [String!]! @inputBounds(maxItems: 40, itemMaxLength: 300)
-  notes: String! @inputBounds(maxLength: 600)
-  sourceIds: [ID!]! @inputBounds(maxItems: 12)
-}
-
-type VideoInputsType {
-  auto: Boolean!
-  media: [String!]!
-  notes: String!
-  sourceIds: [ID!]!
-}
-
-type VideoMediaType {
-  kind: String!
-  name: String!
-  path: String!
-  url: String
-}
-
-type VideoMediaUploadType {
-  path: String!
-  signedUrl: String!
-  token: String!
-}
-
-type VideoProjectType {
-  approvedAt: String
-  approvedByName: String
-  aspect: String!
-  createdAt: String!
-  goal: String!
-  id: ID!
-  inputs: VideoInputsType!
-  lastErrorCode: String
-  publishedAt: String
-  render: VideoRenderType
-  renderCount: Int!
-  script: [VideoSceneType!]!
-  scriptMs: Int
-  status: String!
-  targetSeconds: Int!
-  title: String!
-  updatedAt: String!
-  version: Int!
-}
-
-input VideoRenderStatusInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type VideoRenderStatusType {
-  durationMs: Int
-  errorCode: String
-  id: ID!
-  outputPath: String
-  posterPath: String
-  progress: Int!
-  sizeBytes: Float
-  stage: String
-  status: String!
-}
-
-type VideoRenderType {
-  captionsLang: String
-  captionsUrl: String
-  downloadUrl: String
-  durationMs: Int
-  errorCode: String
-  id: ID!
-  posterUrl: String
-  progress: Int!
-  sizeBytes: Int
-  stage: String
-  status: String!
-  videoUrl: String
-}
-
-input VideoSceneInput {
-  caption: String! @inputBounds(maxLength: 160)
-  id: String! @inputBounds(maxLength: 60)
-  media: String @inputBounds(maxLength: 300)
-  role: String! @inputBounds(maxLength: 10)
-  visual: String! @inputBounds(maxLength: 240)
-  voiceover: String! @inputBounds(maxLength: 420)
-}
-
-type VideoSceneType {
-  caption: String!
-  id: ID!
-  media: String
-  role: String!
-  visual: String!
-  voiceover: String!
-}
-
-type VideoScopeType {
-  canEdit: Boolean!
-  workspaceId: ID!
-}
-
-input VideoScriptStatusInput {
-  id: String! @inputBounds(maxLength: 36)
-}
-
-type VideoScriptStatusType {
-  errorCode: String
-  id: String!
-  progress: Int!
-  projectId: String!
-  resultId: String
-  status: String!
-}
-
-type VideoShareType {
-  office: Boolean!
-  telegram: Boolean!
-}
-
-type VideoSourceType {
-  excerpt: String!
-  id: ID!
-  title: String!
-  topic: String
-}
-
 input WantConnectorInput {
   connectorId: String! @inputBounds(maxLength: 60)
+}
+
+type WebhookEventOptionType {
+  id: String!
+  label: WebhookEventTextType!
+  summary: WebhookEventTextType
+}
+
+type WebhookEventTextType {
+  en: String!
+  vi: String!
 }
 
 type WebhookEventsType {
@@ -7438,17 +6397,18 @@ type WebsiteSiteType {
   siteKey: String!
 }
 
-type WeeklyReportType {
-  channels: [String!]!
-  days: [ReportDayType!]!
-  engagements: ReportMetricType!
-  messages: ReportMetricType!
-  postCount: Int!
-  posts: [ReportPostType!]!
-  reach: ReportMetricType!
-  suggestion: ReportSuggestionType
-  weekEnd: String!
-  weekStart: String!
+input WebsiteThemeInput {
+  siteKey: String! @inputBounds(maxLength: 40)
+}
+
+type WebsiteThemeType {
+  base: Float!
+  chroma: Float!
+  font: String!
+  hue: Float!
+  lightness: Float!
+  mode: String
+  radius: String!
 }
 
 type WizardConnectionType {
@@ -7470,11 +6430,56 @@ type WizardConnectionType {
 
 input WorkbenchActionInput {
   input: String! @inputBounds(maxLength: 16384)
+  installationId: String @inputBounds(maxLength: 36)
   name: String! @inputBounds(maxLength: 120)
 }
 
 type WorkbenchAnswerType {
   data: String!
+}
+
+input WorkbenchFileConfirmInput {
+  field: String! @inputBounds(maxLength: 64)
+  key: String! @inputBounds(maxLength: 512)
+  name: String! @inputBounds(maxLength: 255)
+  recordId: String! @inputBounds(maxLength: 36)
+  type: String! @inputBounds(maxLength: 120)
+  via: String! @inputBounds(maxLength: 120)
+}
+
+input WorkbenchFileDeleteInput {
+  field: String! @inputBounds(maxLength: 64)
+  key: String @inputBounds(maxLength: 512)
+  recordId: String! @inputBounds(maxLength: 36)
+  type: String! @inputBounds(maxLength: 120)
+  via: String! @inputBounds(maxLength: 120)
+}
+
+input WorkbenchFileLinkInput {
+  field: String! @inputBounds(maxLength: 64)
+  key: String! @inputBounds(maxLength: 512)
+  name: String! @inputBounds(maxLength: 255)
+  recordId: String! @inputBounds(maxLength: 36)
+  type: String! @inputBounds(maxLength: 120)
+  via: String! @inputBounds(maxLength: 120)
+}
+
+input WorkbenchFileUploadInput {
+  field: String! @inputBounds(maxLength: 64)
+  mime: String! @inputBounds(maxLength: 127)
+  name: String! @inputBounds(maxLength: 255)
+  recordId: String! @inputBounds(maxLength: 36)
+  size: Float! @inputBounds(min: 1, max: 5368709120)
+  type: String! @inputBounds(maxLength: 120)
+  via: String! @inputBounds(maxLength: 120)
+}
+
+input WorkbenchFileUrlInput {
+  field: String! @inputBounds(maxLength: 64)
+  key: String @inputBounds(maxLength: 512)
+  recordId: String! @inputBounds(maxLength: 36)
+  type: String! @inputBounds(maxLength: 120)
+  via: String! @inputBounds(maxLength: 120)
 }
 
 input WorkbenchReadInput {
@@ -7533,6 +6538,17 @@ type WorkflowGraphTriggerType {
   sourceLabel: String!
 }
 
+type WorkflowRunIssueType {
+  at: String!
+  code: String!
+}
+
+type WorkflowRunType {
+  issues: [WorkflowRunIssueType!]!
+  refusal: String
+  status: String!
+}
+
 type WorkflowTemplateChangeType {
   lines: [String!]!
   version: Int!
@@ -7576,7 +6592,7 @@ input WorkflowTemplatesInput {
 
 type WorkspaceAgentWorkType {
   agentsOff: Int!
-  backgroundDailyCap: Int!
+  backgroundDailyCap: Int! @deprecated(reason: "No per-day limit on AI work: always 0. The plan's credit pool is the only bound.")
   heldWakes: Int!
   pendingWakes: Int!
   road: String!
@@ -7612,28 +6628,9 @@ type WorkspaceDashboardApprovalsType {
   total: Int!
 }
 
-type WorkspaceDashboardChannelType {
-  channel: String!
-  leads: Int!
-  revenueVnd: Float!
-}
-
 type WorkspaceDashboardComparedType {
   current: Float!
   previous: Float!
-}
-
-type WorkspaceDashboardDayType {
-  day: String!
-  orders: Int!
-  revenueVnd: Float!
-}
-
-type WorkspaceDashboardFunnelType {
-  consulted: Int!
-  ordered: Int!
-  paid: Int!
-  visitors: Int!
 }
 
 input WorkspaceDashboardInput {
@@ -7665,25 +6662,27 @@ type WorkspaceDashboardSavingsType {
   lines: [WorkspaceDashboardSavingLineType!]!
   messagesAnswered: Int!
   minutesSaved: Float!
-  ordersCreated: Int!
-  paymentsMatched: Int!
 }
 
 type WorkspaceDashboardType {
   agentAutoRate: WorkspaceDashboardRateType!
   agents: [WorkspaceDashboardAgentType!]!
   approvals: WorkspaceDashboardApprovalsType!
-  channels: [WorkspaceDashboardChannelType!]!
-  closeRate: WorkspaceDashboardRateType!
-  days: [WorkspaceDashboardDayType!]!
+  conversations: WorkspaceDashboardComparedType!
   from: String!
-  funnel: WorkspaceDashboardFunnelType!
-  newCustomers: WorkspaceDashboardComparedType!
-  orders: WorkspaceDashboardComparedType!
+  newContacts: WorkspaceDashboardComparedType!
   period: WorkspaceDashboardPeriod!
-  revenue: WorkspaceDashboardComparedType!
+  runsDone: WorkspaceDashboardComparedType!
+  runsFailed: WorkspaceDashboardComparedType!
   savings: WorkspaceDashboardSavingsType!
   to: String!
+}
+
+type WorkspaceLogoUploadType {
+  path: String!
+  publicUrl: String!
+  signedUrl: String!
+  token: String!
 }
 
 enum WorkspaceRole {
@@ -7692,10 +6691,26 @@ enum WorkspaceRole {
   Staff
 }
 
+type WorkspaceSettingsType {
+  logoUrl: String
+  name: String!
+  timeZone: String!
+}
+
 type WorkspaceShellType {
   agents: [ShellAgentType!]!
   hasChatbot: Boolean!
   isFoundingMember: Boolean!
+}
+
+type WorkspaceThemeType {
+  base: Float!
+  chroma: Float!
+  font: String!
+  hue: Float!
+  lightness: Float!
+  mode: String
+  radius: String!
 }
 
 type WorkspaceType {
@@ -7737,6 +6752,7 @@ type ZaloPageType {
   agentIds: [ID!]!
   appId: String!
   appSecretMask: String
+  attention: String
   callbackUrl: String!
   checks: [ZaloCheckType!]!
   healthy: Boolean!

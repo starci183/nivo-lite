@@ -1,6 +1,8 @@
 export { useTeamChatRoomState } from "./useTeamChatRoomState"
 export { roomHandlersOf } from "./teamChat.shared"
+export { approvalCardIdOf } from "./teamChat.view"
 export { messagesCopyOf } from "./teamChat.copy"
 export { useTeamChatRoomView } from "./useTeamChatRoomView"
 export { useTeamChatRoomsView } from "./useTeamChatRoomsView"
 export { useTeamChatListState } from "./useTeamChatListState"
+export { useTeamChatRooms } from "./useTeamChatRooms"

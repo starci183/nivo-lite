@@ -1,26 +1,31 @@
-import { zaloInboxEntities } from "@modules/domain/zalo-inbox"
-import { entityOf } from "./entity.builder"
+import type { AccountOwner, PendingRow } from "@modules/domain/account-data"
 
-const ZaloInboxEntity: (typeof zaloInboxEntities)[0] = zaloInboxEntities[0]
-type ZaloInboxEntity = InstanceType<typeof ZaloInboxEntity>
+/** The connection the Zalo rows of a spec belong to unless it names another. */
+export const ZALO_CONNECTION = "0b1d52a4-8f3e-4c8a-9a64-4f0d2f6e7a11"
 
-/** The text message of user-1 the receipt holds unless a spec names another body. */
-export const ZALO_TEXT_BODY: string = JSON.stringify({
+/** The account the Zalo rows of a spec belong to. */
+export const ZALO_OWNER: AccountOwner = { provider: "zalo_oa", connectionId: ZALO_CONNECTION, workspaceId: "w-1" }
+
+/** The text message of user-1 a delivery holds unless a spec names another body. */
+export const ZALO_TEXT_EVENT = {
     app_id: "app-1",
     event_name: "user_send_text",
     sender: { id: "user-1" },
     message: { msg_id: "m-1", text: "Hello" },
-})
+}
 
-/** A Zalo receipt not processed yet, of connection c-1, holding the text message. */
-export const zaloInboxOf: (overrides?: Partial<ZaloInboxEntity>) => ZaloInboxEntity = entityOf(ZaloInboxEntity, {
-    id: "receipt-1",
-    provider: "zalo",
-    payload: { connection: "c-1", rawBody: ZALO_TEXT_BODY },
-})
+/** The text message as the webhook posts it. */
+export const ZALO_TEXT_BODY: string = JSON.stringify(ZALO_TEXT_EVENT)
 
-/** A receipt of connection c-1 holding the given raw body, from the given source when it is not the webhook. */
-export const zaloInboxWith = (rawBody: string, source?: "poll" | "manual_import"): ZaloInboxEntity =>
-    zaloInboxOf({
-        payload: source === undefined ? { connection: "c-1", rawBody } : { connection: "c-1", rawBody, source },
-    })
+/** The pending `zalo_oa.event` row holding the given raw event under the given key, from the given source when it is not the webhook. */
+export const zaloEventPendingOf = (
+    raw: object = ZALO_TEXT_EVENT,
+    key = "m-1",
+    source?: "poll" | "manual_import",
+): PendingRow => ({
+    id: "row-1",
+    type: "zalo_oa.event",
+    key,
+    owner: ZALO_OWNER,
+    value: { eventId: key, event: "user_send_text", ...(source === undefined ? {} : { source }), raw },
+})

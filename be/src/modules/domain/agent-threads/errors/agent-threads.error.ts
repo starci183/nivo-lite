@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the thread runs: every way a drive is refused by name instead of doing nothing. */
 export enum AgentThreadsErrorCode {

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { BrainLessonsError, BrainLessonsErrorCode } from "./errors/brain-lessons.error"
 import { toLessonRecord } from "./lesson-record.mapper"
@@ -49,7 +48,7 @@ export class BrainLessonsService {
             order: { proposedAt: "DESC" },
             take: 500,
         })
-        return rows.map(toLessonRecord)
+        return rows.map((item) => toLessonRecord(item))
     }
 
     /** The active lessons one agent follows: its own and the shared ones. */

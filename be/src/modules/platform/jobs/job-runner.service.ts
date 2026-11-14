@@ -1,8 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { deferSecondsOf, InjectQueueWorkerRegistry, QueueError, QueueErrorCode } from "@modules/platform/queue"
-import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import {
+    deferSecondsOf,
+    InjectQueueWorkerRegistry,
+    QueueError,
+    QueueErrorCode,
+    type QueueDelivery,
+    type QueueHandler,
+    type QueueWorkerRegistry,
+} from "@modules/platform/queue"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { ClaimedJob } from "./jobs.contracts"
 import { InjectJobClaims, InjectJobsOptions } from "./jobs.decorators"
@@ -13,6 +19,12 @@ import { JobRenewalService } from "./job-renewal.service"
 import type { FencedProcessor } from "./fenced.processor"
 
 const isFencedOut = (cause: unknown): boolean => cause instanceof JobsError && cause.code === JobsErrorCode.FencedOut
+
+/** The fair group of a processor's jobs as the queue asks for it (job name and payload), or nothing when it declares none. */
+const groupOfProcessor = (processor: FencedProcessor): QueueHandler["fairGroupOf"] => {
+    const own = processor.fairGroupOf
+    return own === undefined ? undefined : (_job, payload) => own.call(processor, payload)
+}
 
 @Injectable()
 /**
@@ -39,6 +51,8 @@ export class JobRunnerService implements JobProcessorRegistry {
             job: processor.job,
             concurrency: processor.concurrency,
             scheduled: processor.scheduled,
+            workspaceHeadroom: processor.workspaceHeadroom,
+            fairGroupOf: groupOfProcessor(processor),
             handle: (delivery) => this.run(processor, delivery),
             failed: (delivery, cause) => processor.onFailed(delivery, cause),
         })

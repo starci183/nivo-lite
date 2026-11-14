@@ -1,17 +1,14 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
-import { ChatRecordsModule } from "@modules/domain/chat-records"
+import { Module, type DynamicModule } from "@nestjs/common"
+import { AccountDataModule } from "@modules/domain/account-data"
+import { ACCOUNT_DATA_CATALOG } from "@modules/domain/account-data-catalog"
+import { chatRecordsModules } from "./chat-records-modules"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
 import { ZaloCredentialsService, ZaloWebhookGateService } from "@modules/domain/channels"
 import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
-import { ConversationsService } from "@modules/domain/conversations"
 import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
-import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
-import { CustomerHearingService } from "../../modules/domain/conversations/customer-hearing.service"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
@@ -30,8 +27,9 @@ import { ZaloModule } from "@modules/integrations/zalo"
 import { Secret } from "@modules/platform/config"
 import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { QUIET_CUSTOMER_INTAKE, QUIET_INSTALLATIONS } from "./quiet-peers.options"
+import { QUIET_CUSTOMER_FILES, QUIET_PROVIDER_TRIGGERS, QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { ZaloDeliveryQueue } from "../../modules/queues/zalo-delivery/zalo-delivery.queue"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 
 const tokenKey = new Secret(Buffer.alloc(32, 7).toString("base64"))
 const siteUrl = "http://localhost:3000"
@@ -48,9 +46,8 @@ const billingOptions = (): BillingOptions => ({
         ZaloDeliveryQueue,
         ZaloCredentialsService,
         ZaloWebhookGateService,
-        ConversationsService,
-        CustomerHearingService,
-        QUIET_CUSTOMER_INTAKE,
+        QUIET_CUSTOMER_FILES,
+        QUIET_PROVIDER_TRIGGERS,
         QUIET_INSTALLATIONS,
         InboundEventsService,
         PaymentSecretsService,
@@ -59,7 +56,6 @@ const billingOptions = (): BillingOptions => ({
         SepayTransactionsService,
     ],
     exports: [
-        ConversationsService,
         AGENTS_INSTALLATIONS,
         InboundEventsService,
         SepayTransactionsService,
@@ -79,15 +75,16 @@ export class ReceiptDomainProofModule {
 export const RECEIPT_DOMAIN_MODULES: ReadonlyArray<DynamicModule> = [
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey }),
     ConnectionsModule.register({ isGlobal: true, channelTokenKey: tokenKey, siteUrl, publicSiteUrl: undefined }),
+    AccountDataModule.register({ isGlobal: true, types: ACCOUNT_DATA_CATALOG }),
     EntityEngineModule.register({
         isGlobal: true,
         alerts: ReadOnlyEngineAlertsService,
-        entities: FLOW_F_ENTITIES,
-        jobs: MODULE_JOBS,
+        entities: INSTALLED.entities(),
+        jobs: INSTALLED.jobs(),
         cursorKey: tokenKey,
     }),
     ConnectionPollModule.register({ isGlobal: true, schedule: DEFAULT_POLL_SCHEDULE, redis: undefined }),
-    ChatRecordsModule.register({ isGlobal: true }),
+    ...chatRecordsModules(),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     I18nModule.register({ isGlobal: true, bundles: [] }),

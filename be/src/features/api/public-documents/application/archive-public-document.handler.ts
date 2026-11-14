@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { PublicDocumentsService } from "@modules/domain/public-documents"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ArchivePublicDocumentCommand } from "./archive-public-document.command"
 
 @CommandHandler(ArchivePublicDocumentCommand)

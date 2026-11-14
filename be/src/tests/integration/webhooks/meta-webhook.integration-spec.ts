@@ -1,5 +1,4 @@
-import { META_CLIENT } from "@modules/integrations/meta"
-import type { MetaClient } from "@modules/integrations/meta"
+import { META_CLIENT, type MetaClient } from "@modules/integrations/meta"
 import { createHmac } from "node:crypto"
 import { META_INBOUND_QUEUE } from "@modules/domain/meta-inbox"
 import { META_DELIVERY_QUEUE } from "@modules/queues/meta-delivery"
@@ -11,6 +10,8 @@ import {
     cleanupWebhook,
     cleanupWorkspace,
 } from "../../world/proof-database.service"
+import { AccountDataIntakeService } from "@modules/domain/account-data"
+import { ACCOUNT_DATA_PROOF_MODULES } from "../../world/account-data-proof.options"
 import { useTestWorld } from "../../world/use-test-world"
 import type { LiteWorld } from "../../world/lite-world.service"
 import { WEBHOOK_MODULES, signingFixture } from "../../world/test-capabilities.options"
@@ -104,7 +105,7 @@ const assertDownstreamDelivery = async (
 
 const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) => {
     it("webhooks/accepted-delivery-publishes-once: concurrent redeliveries commit one receipt and job", async () => {
-        const { door, connections, conversations, process, close } = await fixture().build()
+        const { door, connections, triggers, process, close } = await fixture().build()
         world.cleanup(close)
         const sent = fixture().delivery()
         cleanupWebhook(world, sent.mid, sent.deliveryId)
@@ -113,7 +114,10 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
         expect(recorded).toEqual([
             {
                 id: anyOf(String),
-                payload: sent.payload,
+                payload: {
+                    eventKey: `dm:${sent.mid}`,
+                    raw: objectLike({ event_key: `dm:${sent.mid}`, mid: sent.mid, text: "Integration delivery" }),
+                },
                 processed_at: null,
             },
         ])
@@ -145,12 +149,38 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
         ])
         await assertDownstreamDelivery(world, fixture(), sent)
         expect(connections.recordEvent).toHaveBeenCalledTimes(1)
-        expect(conversations.acceptMeta).not.toHaveBeenCalled()
+        expect(triggers.deliver).not.toHaveBeenCalled()
+    })
+}
+
+const registerAccountProof = (world: LiteWorld, fixture: () => WebhookFixture) => {
+    it("webhooks/unknown-connection-keeps-nothing: an event no live connection holds keeps no receipt and queues nothing", async () => {
+        const { door, connections, close } = await fixture().build()
+        world.cleanup(close)
+        const sent = fixture().delivery()
+        cleanupWebhook(world, sent.mid, sent.deliveryId)
+        connections.findLiveByMeta.mockResolvedValue(null)
+        await door.receive(sent.rawBody, sent.signature)
+        expect(await receipts(world.db.primary, sent.deliveryId)).toEqual([])
+        expect(await webhookJobs(world.db.primary, sent.deliveryId)).toEqual([])
+    })
+
+    it("webhooks/redelivery-writes-no-second-row: the same signed body twice keeps one account_data row", async () => {
+        const { door, close } = await fixture().build()
+        world.cleanup(close)
+        const sent = fixture().delivery()
+        cleanupWebhook(world, sent.mid, sent.deliveryId)
+        await door.receive(sent.rawBody, sent.signature)
+        const first = await receipts(world.db.primary, sent.deliveryId)
+        await door.receive(sent.rawBody, sent.signature)
+        expect(first).toHaveLength(1)
+        expect(await receipts(world.db.primary, sent.deliveryId)).toEqual(first)
+        expect(await webhookJobs(world.db.primary, sent.deliveryId)).toHaveLength(1)
     })
 }
 
 describe("NIVO Meta webhook (local PostgreSQL integration)", () => {
-    const world = useTestWorld({ modules: [...WEBHOOK_MODULES] })
+    const world = useTestWorld({ modules: [...WEBHOOK_MODULES, ...ACCOUNT_DATA_PROOF_MODULES] })
     let fixture: WebhookFixture
     beforeAll(async () => {
         const userId = world.id()
@@ -161,10 +191,12 @@ describe("NIVO Meta webhook (local PostgreSQL integration)", () => {
             connectionId: world.id(),
             signingFixture,
             nextId: () => world.id(),
+            intake: world.resolve(AccountDataIntakeService),
         }).build()
         cleanupWorkspace(world, userId, workspaceId)
     })
     registerSignatureProof(world, () => fixture)
     registerReplayProof(world, () => fixture)
     registerHandoffProof(world, () => fixture)
+    registerAccountProof(world, () => fixture)
 })

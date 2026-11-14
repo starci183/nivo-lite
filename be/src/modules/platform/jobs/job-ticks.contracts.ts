@@ -27,14 +27,6 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         payload: { silentAfterHours: 72 },
     },
     {
-        name: "content-tick",
-        cron: "*/15 * * * *",
-        timeZone: "UTC",
-        queue: "content_tick",
-        job: "content_tick",
-        payload: {},
-    },
-    {
         name: "data-sync-tick",
         cron: "*/1 * * * *",
         timeZone: "UTC",
@@ -51,22 +43,6 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         payload: {},
     },
     {
-        name: "decisions-expire-approvals",
-        cron: "*/1 * * * *",
-        timeZone: "UTC",
-        queue: "decisions",
-        job: "decisions.expire-approvals",
-        payload: {},
-    },
-    {
-        name: "shifts-tick",
-        cron: "*/1 * * * *",
-        timeZone: "UTC",
-        queue: "shifts_alerts",
-        job: "shifts.tick",
-        payload: { kind: "tick" },
-    },
-    {
         name: "zalo-refresh-tick",
         cron: "0 */6 * * *",
         timeZone: "UTC",
@@ -80,22 +56,6 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         timeZone: "UTC",
         queue: "connection-poll",
         job: "poll-due-connections",
-        payload: {},
-    },
-    {
-        name: "accounting-desk-morning",
-        cron: "30 23 * * *",
-        timeZone: "UTC",
-        queue: "accounting_desk",
-        job: "accounting_desk.morning",
-        payload: {},
-    },
-    {
-        name: "marketing-tick",
-        cron: "*/15 * * * *",
-        timeZone: "UTC",
-        queue: "marketing_tick",
-        job: "marketing_tick",
         payload: {},
     },
     {
@@ -129,5 +89,35 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         queue: "system_history_retention",
         job: "system_history_retention",
         payload: { doneDays: 1, failedDays: 7, batch: 5000 },
+    },
+    {
+        // The retention of account_data (domain account-data): per declared type, its retention days and its time to live, in batches of
+        // `batch` rows. Fifteen minutes after the system history sweep, so the two never overlap.
+        name: "account-data-retention",
+        cron: "45 16 * * *",
+        timeZone: "UTC",
+        queue: "account_data_retention",
+        job: "account_data_retention",
+        payload: { batch: 1000 },
+    },
+    {
+        // The truth graph's timed upkeep (BR1): scheduled facts whose start has come take over, ended facts expire. It rides the brain
+        // command job of the knowledge queue with this literal payload (domain brain `BRAIN_UPKEEP_PAYLOAD`, `isUpkeepTick`).
+        name: "brain-upkeep",
+        cron: "*/5 * * * *",
+        timeZone: "UTC",
+        queue: "knowledge",
+        job: "brain.command",
+        payload: { upkeep: "brain" },
+    },
+    {
+        // The reconcile of the vector index against Postgres: one bounded, resumable run (domain vector-sync). Its own tick, not the
+        // brain upkeep, so an index that is down never fails the truth graph upkeep and each has its own retries.
+        name: "vector-reconcile",
+        cron: "*/5 * * * *",
+        timeZone: "UTC",
+        queue: "vector_sync",
+        job: "vector.reconcile",
+        payload: {},
     },
 ]

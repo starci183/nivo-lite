@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { WorkInHandService } from "@modules/domain/work-items"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MyWorkInHandQuery } from "./my-work-in-hand.query"
 
 @QueryHandler(MyWorkInHandQuery)

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { EntityManager } from "typeorm"
 import type { AfterCommit } from "./after-commit.port"
 import type { RateLimitStore } from "./rate-limit-store.port"

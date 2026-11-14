@@ -1,16 +1,16 @@
-import { WORKFLOW_CALL_MEMBER, WORKFLOW_PARAMS_MEMBER } from "@nivo-lite/agent-sdk/graph"
 import type { AgentWake } from "@modules/domain/agent-work"
 import type { NodeRow } from "@modules/domain/graph-nodes"
 import { agentTurnViewOf } from "../../../fixtures/builders/agent-work.builder"
 import { memoryCheckpointStore } from "../../../fixtures/builders/checkpoint-store.builder"
 import { workflowWorldOf } from "../../../fixtures/builders/workflow-world.builder"
 import { ScriptedModel, TickingClock, type Rights } from "../../thread-world-outside"
+import { ChatWorld } from "../../thread-world-chat"
 import { MemoryRecords, WS } from "../../thread-world-records"
-import { CONV, FRONT, LEAD, ZALO, type Act, type ThreadDb, type ThreadProcess, type Woken } from "../../thread-world"
+import { CONTACT, CONV, FRONT, LEAD, ZALO, type ThreadDb, type ThreadProcess, type Woken } from "../../thread-world"
 
 // THE MONEY WORLD of package P7 (1-8: consult + reconcile on threads). The database and the process of the 0-9 world (`thread-world*.ts`),
 // with three agents (front desk, sales, accounting) and their seeded workflows, the shop's books (orders, bank transactions, claims,
-// catalogue) as the data ports read them, and two outside parts the 0-9 world does not need: the gateway's `nivo.ledger.entry.append` (one line per
+// catalogue) as the data ports read them, and two outside parts the 0-9 world does not need: the gateway's `nivo.tool.ledger.entry.append` (one line per
 // bank transaction, however often it is asked: its own business key) and the bank's settle (the order is paid, the credit tied to it).
 // The process over it is `thread-world-money-process.ts`. Faked: the model (scripted per purpose), the outside acts, the wake and run
 // tables, as in the 0-9 world.
@@ -32,11 +32,15 @@ export const AFTER_SALE_WORKFLOW = "sales.after-sale"
 
 /** The model purposes of the steps (`<node id>:<purpose>`). */
 export const P = {
-    consult: "sales.consult-turn:consult",
+    consult: "sales.consult-turn:agent",
     createOrder: "sales.create-order:create-order",
     sendQr: "payment.request:send-qr",
     orderNotice: "sales.order-notice:order-notice",
     match: "accounting.match-payment:agent",
+    /** The holding line of the reconciliation (`accounting.payment-holding-notice`, an agent that writes the one line its step sends). */
+    hold: "accounting.payment-holding-notice:agent",
+    /** The claim of a customer's words (`accounting.claim-record`, an agent that reads them; the step records the claim). */
+    claim: "accounting.claim-record:agent",
     settle: "payment.settle:agent",
     post: "accounting.post-payment:agent",
     paidNotice: "payment.received-notice:agent",
@@ -71,17 +75,16 @@ const rightsOf = (): Rights => ({
         { id: SHEET, provider: "google" },
     ],
     attachments: [
-        { agentId: FRONT, connectionId: ZALO, provider: "zalo_oa", abilities: { "customer.send": "auto" } },
-        { agentId: SALES, connectionId: ZALO, provider: "zalo_oa", abilities: { "customer.send": "auto" } },
-        { agentId: SALES, connectionId: SEPAY, provider: "sepay", abilities: { "qr.create": "auto" } },
-        { agentId: ACCOUNTING, connectionId: ZALO, provider: "zalo_oa", abilities: { "customer.send": "auto" } },
+        { agentId: FRONT, connectionId: ZALO, provider: "zalo_oa" },
+        { agentId: SALES, connectionId: ZALO, provider: "zalo_oa" },
+        { agentId: SALES, connectionId: SEPAY, provider: "sepay" },
+        { agentId: ACCOUNTING, connectionId: ZALO, provider: "zalo_oa" },
         {
             agentId: ACCOUNTING,
             connectionId: SEPAY,
             provider: "sepay",
-            abilities: { "transactions.read": "auto", "credit.rematch": "auto" },
         },
-        { agentId: ACCOUNTING, connectionId: SHEET, provider: "google", abilities: { "ledger.write": "auto" } },
+        { agentId: ACCOUNTING, connectionId: SHEET, provider: "google" },
     ],
     defaults: new Map(),
 })
@@ -94,12 +97,7 @@ export interface Books {
     readonly "bank-transaction"?: Array<NodeRow>
     /** The customers' payment claims. */
     readonly "payment-claim"?: Array<NodeRow>
-    /** The catalogue. */
-    readonly "catalogue-item"?: Array<NodeRow>
 }
-
-/** The text of a value, or empty. */
-const textOf = (value: unknown): string => (typeof value === "string" ? value : "")
 
 /** A fresh money database: the three agents' workflows seeded from the templates, one customer, one Zalo conversation, the books. */
 export const moneyDbOf = (books: Books = {}): MoneyDb => {
@@ -108,31 +106,37 @@ export const moneyDbOf = (books: Books = {}): MoneyDb => {
     const versions = new Map(
         [...workflows.graphs.entries()].map(([id, flow]) => [id, { number: Number(id.split("@").at(-1)), flow }]),
     )
+    const records = new MemoryRecords(clock)
+    // The books as the ENGINE holds them too (`sales.order`, `payment.transaction`): what the settle's exactness floor reads
+    // (`SettleFactsReader`, `awaitingOrdersOf`), never a stub. A world credit names no direction: it is money in.
+    ;(books.order ?? []).forEach((row) => records.put("sales.order", String(row.id), structuredClone(row)))
+    ;(books["bank-transaction"] ?? []).forEach((row) =>
+        records.put("payment.transaction", String(row.id), { direction: "credit", ...structuredClone(row) }),
+    )
     return {
         clock,
         store: {
             message: [],
             inbox: [],
-            conversation: [{ id: CONV, leadId: LEAD, channel: "zalo", connectionId: ZALO }],
+            conversation: [{ id: CONV, leadId: LEAD, contactId: CONTACT, channel: "zalo", connectionId: ZALO }],
             "sales-lead": [{ id: LEAD, contactName: "Lan" }],
             order: [...(books.order ?? [])],
             "bank-transaction": [...(books["bank-transaction"] ?? [])],
             "payment-claim": [...(books["payment-claim"] ?? [])],
-            "catalogue-item": [...(books["catalogue-item"] ?? [])],
         },
         acts: [],
         lines: [],
         team: [],
         throwOn: new Map(),
         rights: rightsOf(),
-        records: new MemoryRecords(clock),
+        chat: new ChatWorld(),
+        records,
         checkpoints: memoryCheckpointStore(),
         wakes: [],
         runs: new Map(),
         versions,
         workflows,
         model: new ScriptedModel(),
-        released: [],
         forgetTaskWrites: false,
         fence: 10,
         turns: 0,
@@ -179,58 +183,6 @@ export const wake = async (process: ThreadProcess, input: WakeIn): Promise<Woken
     }
 }
 
-/** The front desk's hand-off to the sales consult, as `core.call-workflow` tags it (pinned to the workflow, the inputs as params). */
-export const consultWake = (text: string, eventKey = "call-workflow:turn-0:sales.consult"): WakeIn => {
-    const params = { conversationId: CONV, text, channel: "zalo", leadId: LEAD }
-    return {
-        agentId: SALES,
-        eventKey,
-        scopeKey: `conversation:${CONV}`,
-        context: {
-            text,
-            tagContext: JSON.stringify({
-                [WORKFLOW_CALL_MEMBER]: { workflow: "consult", version: "latest" },
-                [WORKFLOW_PARAMS_MEMBER]: params,
-                caller: { runId: "turn-0" },
-            }),
-            conversationId: CONV,
-            channel: "zalo",
-            leadId: LEAD,
-            locale: "vi",
-            authorAgentId: FRONT,
-        },
-    }
-}
-
-/** A credit from the bank feed, as `BankFeedFlowService.tag` wakes the accounting agent (no lead, no conversation). */
-export const bankFeedWake = (transactionId: string): WakeIn => ({
-    agentId: ACCOUNTING,
-    eventKey: `bank-feed:${SEPAY}:${transactionId}`,
-    scopeKey: `subject:bank-transaction:${transactionId}`,
-    context: {
-        text: "Tien ve",
-        subject: `bank-transaction:${transactionId}`,
-        locale: "vi",
-        tagSource: "bank_feed",
-    },
-})
-
-/** The rematch job's start of the reconciliation for a credit that names an order's new code (`engine.workflow`, keyed per order). */
-export const rematchWake = (transactionId: string, orderId: string): WakeIn => ({
-    agentId: ACCOUNTING,
-    eventKey: `workflow-start:rematch:${transactionId}:${orderId}`,
-    scopeKey: `subject:bank-transaction:${transactionId}`,
-    context: {
-        text: "accounting.reconcile",
-        tagContext: JSON.stringify({
-            [WORKFLOW_CALL_MEMBER]: { workflow: "reconcile", version: "latest" },
-            [WORKFLOW_PARAMS_MEMBER]: { transactionId },
-        }),
-        locale: "vi",
-        tagSource: "engine.workflow",
-    },
-})
-
 /** A tool and its arguments, as the model names them. */
 export type ScriptedCallBody = Readonly<{
     /** The tool. */
@@ -247,30 +199,3 @@ export const calls = (tool: string, args: Readonly<Record<string, unknown>>): Sc
 
 /** The customer lines of the conversation, by text. */
 export const linesOf = (db: MoneyDb): ReadonlyArray<string> => db.lines.map((line) => line.text)
-
-/** The agent of each module the world runs. */
-const AGENT_OF_MODULE: Readonly<Record<string, string>> = { chatbot: FRONT, sales: SALES, accounting: ACCOUNTING }
-
-/**
- * The wake a hand-off (`core.call-workflow`'s `nivo.agent.tag` act) makes for its target, as `AgentTagService` writes it: the target agent of
- * the module, the workflow pin and the mapped inputs as the tag's data, the customer and conversation it names.
- */
-export const handOffWake = (act: Act, fromAgentId: string): WakeIn => {
-    const { payload } = act
-    const conversationId = textOf(payload.conversationId)
-    const leadId = textOf(payload.leadId)
-    return {
-        agentId: AGENT_OF_MODULE[textOf(payload.toModuleKey)] ?? "",
-        eventKey: act.dedupeKey ?? act.key,
-        scopeKey: conversationId === "" ? `lead:${leadId}` : `conversation:${conversationId}`,
-        context: {
-            text: textOf(payload.text),
-            tagContext: JSON.stringify(payload.context ?? {}),
-            ...(conversationId === "" ? {} : { conversationId }),
-            ...(leadId === "" ? {} : { leadId }),
-            ...(typeof payload.channel === "string" ? { channel: payload.channel } : {}),
-            locale: "vi",
-            authorAgentId: fromAgentId,
-        },
-    }
-}

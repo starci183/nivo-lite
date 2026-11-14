@@ -1,7 +1,14 @@
-import { purposeFor } from "@/hooks/connection-access"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
-import { guideKey, placeholdersOf, tokenValue, VERIFY, verifyKey } from "@/hooks/connection-guides"
-import type { GuideContext, GuideStepDef, Token } from "@/hooks/connection-guides"
+import {
+    guideKey,
+    placeholdersOf,
+    tokenValue,
+    VERIFY,
+    verifyKey,
+    type GuideContext,
+    type GuideStepDef,
+    type Token,
+} from "@/hooks/connection-guides"
 import type {
     AgentChoice,
     AgentOption,
@@ -10,6 +17,7 @@ import type {
     GuideField,
     GuideScreen,
     Provider,
+    Purpose,
     VerifyHelpView,
     WizardNote,
     WizardResume,
@@ -40,7 +48,7 @@ export interface GuideBuild {
 const slug = (id: string): string =>
     id
         .normalize("NFD")
-        .replace(/[^A-Za-z0-9]+/gu, "-")
+        .replaceAll(/[^A-Za-z0-9]+/gu, "-")
         .toLowerCase()
 
 /**
@@ -116,18 +124,18 @@ const PURPOSE_KEYS: Readonly<Record<string, string>> = {
     inbound_chat: "purpose_inbound_chat",
     outbound_chat: "purpose_outbound_chat",
     bank_feed: "purpose_bank_feed",
-    lead_source: "purpose_lead_source",
 }
 
-/** The agents the last step offers, each with what it does through this provider (listens, sends, reads transactions or takes leads). */
+/**
+ * The agents the last step offers, each with what it does through this provider (listens, sends or reads transactions) when the
+ * back end named a purpose that has words; the data connectors have none.
+ */
 export const agentChoicesOf = (
-    agents: ReadonlyArray<AgentOption>,
-    provider: Provider,
+    agents: ReadonlyArray<AgentOption & { readonly purpose?: Purpose }>,
     tw: CatalogReader,
 ): ReadonlyArray<AgentChoice> =>
     agents.map((agent) => {
-        const purpose = purposeFor(agent.module, provider)
-        const key = purpose === null ? undefined : PURPOSE_KEYS[purpose]
+        const key = agent.purpose === undefined ? undefined : PURPOSE_KEYS[agent.purpose]
         return { id: agent.id, name: agent.name, description: key === undefined ? undefined : tw(key) }
     })
 

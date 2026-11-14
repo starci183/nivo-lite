@@ -1,6 +1,5 @@
 import { AGENT_IDENTITY_RULES } from "@modules/domain/agents"
-import { isChannelPurpose } from "@modules/domain/agent-connections"
-import type { Purpose } from "@modules/domain/agent-connections"
+import { isChannelPurpose, type Purpose } from "@modules/domain/agent-connections"
 import { AgentInstancesErrorCode } from "./errors/agent-instances.error"
 import type {
     AvatarChoice,

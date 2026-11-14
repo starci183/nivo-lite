@@ -121,7 +121,7 @@ const invalid = (field: string) =>
 
 const AGENT_ROWS = [
     { id: "chat-1", module: "chatbot" },
-    { id: "bank-1", module: "accounting" },
+    { id: "sales-1", module: "sales" },
     { id: "unknown-1", module: "unknown" },
     { id: "booking-1", module: "booking" },
     { id: "chat-2", module: "chatbot" },
@@ -291,14 +291,14 @@ describe("ChannelProvisioningService", () => {
 })
 
 describe("ChannelProvisioningService", () => {
-    it("binds only the agents whose modules can use Telegram, preserving their order", async () => {
+    it("binds only the agents whose modules can use Telegram, preserving their order, with one front door", async () => {
         const { service, agentDirectory, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
 
         await service.run("telegram", { workspace: WORKSPACE, bind: true })
 
         expect(agentDirectory.moduleRefsOf).toHaveBeenCalledWith(WORKSPACE, 500)
         expect(grants.setConnectionAgents.mock.calls).toEqual([
-            [ACTOR, "telegram-1", [{ agentId: "chat-1" }, { agentId: "booking-1" }, { agentId: "chat-2" }]],
+            [ACTOR, "telegram-1", [{ agentId: "chat-1" }, { agentId: "sales-1" }, { agentId: "booking-1" }]],
         ])
         expect(print.mock.calls).toEqual([
             ["telegram connection telegram-1 (Bot Telegram); webhook registered"],
@@ -306,7 +306,7 @@ describe("ChannelProvisioningService", () => {
         ])
     })
 
-    it("uses the supplied SePay name and environment and binds only accounting agents", async () => {
+    it("uses the supplied SePay name and environment and binds only the agents that list SePay (sales)", async () => {
         const { service, agentDirectory, channels, grants, print } = await build({}, scenarioOf(undefined, AGENT_ROWS))
 
         await service.run("sepay", {
@@ -331,7 +331,7 @@ describe("ChannelProvisioningService", () => {
             ],
         ])
         expect(agentDirectory.moduleRefsOf).toHaveBeenCalledWith(WORKSPACE, 500)
-        expect(grants.setConnectionAgents.mock.calls).toEqual([[ACTOR, "sepay-1", [{ agentId: "bank-1" }]]])
+        expect(grants.setConnectionAgents.mock.calls).toEqual([[ACTOR, "sepay-1", [{ agentId: "sales-1" }]]])
         expect(print.mock.calls).toEqual([
             [
                 "sepay connection sepay-1; paste into SePay: url " +
@@ -346,7 +346,7 @@ describe("ChannelProvisioningService", () => {
     it("sets an empty agent wish list and prints zero when no module can use the provider", async () => {
         const { service, grants, print } = await build(
             {},
-            scenarioOf(undefined, [{ id: "bank-1", module: "accounting" }]),
+            scenarioOf(undefined, [{ id: "unknown-1", module: "unknown" }]),
         )
 
         await service.run("telegram", { workspace: WORKSPACE, bind: true })

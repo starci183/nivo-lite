@@ -103,6 +103,9 @@ describe("RemoteFilesClient", () => {
         expect(failure).toMatchObject({ code: RemoteFilesErrorCode.RequestFailed })
     })
 
+})
+
+describe("RemoteFilesClient limits", () => {
     it("lowers a caller's size limit and deadline to the configured limits, and names the redirects a caller may follow", async () => {
         const { client, http } = await build({ maxBytes: 2, timeoutMs: 500, maxRedirects: 5 })
         http.request.mockResolvedValue(answer(Buffer.from([1, 2, 3]), "image/png"))
@@ -110,5 +113,35 @@ describe("RemoteFilesClient", () => {
         await expect(client.read(request())).resolves.toMatchObject({ length: 3, bytes: null })
         expect(http.request).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 500 }))
         expect(client.maxRedirects).toBe(5)
+    })
+    it("leaves the HTTP port's own cap alone for a caller that names no limits", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue(answer(Buffer.from([1, 2, 3]), "image/png"))
+
+        await client.read(request({ maxBytes: 5 }))
+
+        const anyValue: unknown = expect.anything()
+        expect(http.request).toHaveBeenCalledWith(expect.not.objectContaining({ maxBytes: anyValue }))
+    })
+
+    it("lets a caller that names limits raise the configured ceilings, held to its own size and deadline", async () => {
+        const { client, http } = await build({ maxBytes: 2, timeoutMs: 500, maxRedirects: 5 })
+        http.request.mockResolvedValue(answer(Buffer.from([1, 2, 3]), "image/png"))
+
+        await expect(
+            client.read(request({ maxBytes: 5, timeoutMs: 9000, limits: { maxBytes: 100, timeoutMs: 8000 } })),
+        ).resolves.toMatchObject({ length: 3, bytes: Buffer.from([1, 2, 3]) })
+        expect(http.request).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 8000, maxBytes: 5 }))
+    })
+
+    it("keeps out a body the HTTP port cut at the caller's size, answering a length over it", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ ...answer(Buffer.alloc(0), "image/png"), tooLarge: true })
+
+        await expect(client.read(request({ maxBytes: 5, limits: { maxBytes: 100, timeoutMs: 1000 } }))).resolves.toMatchObject({
+            status: 200,
+            length: 6,
+            bytes: null,
+        })
     })
 })

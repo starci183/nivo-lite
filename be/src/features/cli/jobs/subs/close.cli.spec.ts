@@ -8,7 +8,7 @@ const JOB = "2d7314f3-50ce-4c41-820a-2ba6902be647"
 
 const build = async () => {
     const closer = mock<ParkedJobCloseService>()
-    closer.close.mockResolvedValue(true)
+    closer.closeFor.mockResolvedValue(undefined)
     const entityManager = mockEntityManager({})
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -17,49 +17,24 @@ const build = async () => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
         ],
     }).compile()
-    const write = jest.spyOn(process.stdout, "write").mockReturnValue(true)
-    return { cli: moduleRef.get(CloseJobsCli), closer, entityManager, write }
+    return { cli: moduleRef.get(CloseJobsCli), closer, entityManager }
 }
 
 describe("CloseJobsCli", () => {
-    afterEach(() => {
-        process.exitCode = 0
-        jest.restoreAllMocks()
+    it("hands the first argument, the reason, stdout, the process and the primary connection to the closer", async () => {
+        const { cli, closer, entityManager } = await build()
+
+        await cli.run([JOB], { reason: "old test payment" })
+
+        expect(closer.closeFor).toHaveBeenCalledWith(process.stdout, process, entityManager, JOB, "old test payment")
     })
 
-    it("closes the parked job of the id with the reason, on the primary connection, and says so", async () => {
-        const { cli, closer, entityManager, write } = await build()
+    it("hands over no id and no reason when the command line gave none", async () => {
+        const { cli, closer, entityManager } = await build()
 
-        await cli.run([JOB], { reason: "  old test payment  " })
+        await cli.run([])
 
-        expect(closer.close).toHaveBeenCalledWith(entityManager, JOB, "old test payment")
-        expect(write).toHaveBeenCalledWith(`closed ${JOB}\n`)
-        expect(process.exitCode).not.toBe(1)
-    })
-
-    it("fails and says so for a job that is not parked", async () => {
-        const { cli, closer, write } = await build()
-        closer.close.mockResolvedValue(false)
-
-        await cli.run([JOB], { reason: "why" })
-
-        expect(write).toHaveBeenCalledWith(`not a parked job: ${JOB}\n`)
-        expect(process.exitCode).toBe(1)
-    })
-
-    it.each([
-        ["an id that is no job id", ["not-a-uuid"], { reason: "why" }, "not a job id: not-a-uuid\n"],
-        ["no id", [], { reason: "why" }, "not a job id: \n"],
-        ["no reason", [JOB], { reason: "  " }, 'a reason is required: --reason "<why>"\n'],
-        ["no options at all", [JOB], undefined, 'a reason is required: --reason "<why>"\n'],
-    ])("closes nothing and fails for %s", async (_what, params, options, said) => {
-        const { cli, closer, write } = await build()
-
-        await cli.run(params, options)
-
-        expect(closer.close).not.toHaveBeenCalled()
-        expect(write).toHaveBeenCalledWith(said)
-        expect(process.exitCode).toBe(1)
+        expect(closer.closeFor).toHaveBeenCalledWith(process.stdout, process, entityManager, undefined, undefined)
     })
 
     it("answers the reason option as it was typed", async () => {

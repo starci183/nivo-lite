@@ -1,7 +1,18 @@
-import { DATABASE_ENGINES, DATABASE_MAX_COLUMNS, isUsableIdentifier } from "@modules/integrations/data-sources"
-import type { DatabaseSelection, DatabaseTarget } from "@modules/integrations/data-sources"
-import { DATABASE_ENTITIES, DATABASE_MAX_TABLES } from "./database-config.contracts"
-import type { DatabaseConfig, DatabaseEntity, JsonOutcome, TableMapping } from "./database-config.contracts"
+import {
+    DATABASE_ENGINES,
+    DATABASE_MAX_COLUMNS,
+    isUsableIdentifier,
+    type DatabaseSelection,
+    type DatabaseTarget,
+} from "@modules/integrations/data-sources"
+import {
+    DATABASE_ENTITIES,
+    DATABASE_MAX_TABLES,
+    type DatabaseConfig,
+    type DatabaseEntity,
+    type JsonOutcome,
+    type TableMapping,
+} from "./database-config.contracts"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { DATABASE_WIZARD_COPY as COPY } from "./messages/database.messages"
 
@@ -114,7 +125,7 @@ const cleanTable = (raw: unknown): TableOutcome => {
     if (table === "" || idColumn === "") {
         return { ok: false, problem: COPY.needIdColumn(table === "" ? COPY.unnamedTable : table) }
     }
-    const columns = Array.isArray(source.columns) ? source.columns.map(ident).filter((column) => column !== "") : []
+    const columns = Array.isArray(source.columns) ? source.columns.map((item) => ident(item)).filter((column) => column !== "") : []
     const mapping: TableMapping = {
         schema: ident(source.schema),
         table,

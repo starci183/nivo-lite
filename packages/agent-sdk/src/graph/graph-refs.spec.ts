@@ -36,7 +36,6 @@ const node = (
             params: z.object({ limit: z.number().int().default(3), note: z.string().max(200).optional() }),
             input: z.object({ address: z.string().max(200).optional(), total: z.number().optional() }),
             output,
-            rights: [],
             effects: [],
             run: () => Promise.resolve(trusted<never>({})),
             examples: [example],
@@ -64,7 +63,6 @@ const forEach = trusted<NodeDefinition>(
         params: z.object({ items: z.array(ITEM).max(50) }),
         input: z.object({}),
         output: z.object({ results: z.array(ITEM).max(50), okCount: z.number().int(), failed: z.array(ITEM).max(50) }),
-        rights: [],
         effects: [],
         run: () => Promise.resolve(trusted<never>({})),
         examples: [{ ...example, params: { items: [] } }],
@@ -92,7 +90,7 @@ const spec = (nodes: ReadonlyArray<GraphSpecNode>): GraphSpec => ({
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["channel"] },
-    grant: { rights: [], tools: [], effects: [] },
+    grant: { tools: [], effects: [] },
     nodes,
 })
 

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AiService } from "./ai.service"
 import type { AiRunner } from "./ai.contracts"
 import type { AiEndpoint, AiOptions } from "./ai.options"

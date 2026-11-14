@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Drawer } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { SlotRead, AgentOption, DataSlot, Provider, ProviderKind, SlotLabels } from "@/modules/types"
+import { CrmWizard } from "@/components/blocks/CrmWizard"
 import { CsvImportWizard } from "@/components/blocks/CsvImportWizard"
 import { DatabaseWizard } from "@/components/blocks/DatabaseWizard"
 import { DriveWizard } from "@/components/blocks/DriveWizard"
@@ -9,7 +10,6 @@ import { GoogleWizard } from "@/components/blocks/GoogleWizard"
 import { ImapWizard } from "@/components/blocks/ImapWizard"
 import { MetaWizard } from "@/components/blocks/MetaWizard"
 import { MoneyWizard } from "@/components/blocks/MoneyWizard"
-import { OpenApiWizard } from "@/components/blocks/OpenApiWizard"
 import { SmtpWizard } from "@/components/blocks/SmtpWizard"
 import { TelegramUserWizard } from "@/components/blocks/TelegramUserWizard"
 import { TelegramWizard } from "@/components/blocks/TelegramWizard"
@@ -70,7 +70,7 @@ interface DataWizardProps {
 
 /** The data-connector wizard of each data provider. */
 const DATA_WIZARDS: Readonly<Partial<Record<Provider, (props: DataWizardProps) => ReactNode>>> = {
-    openapi: OpenApiWizard,
+    openapi: CrmWizard,
     database: DatabaseWizard,
     csv_import: CsvImportWizard,
     imap: ImapWizard,
@@ -169,7 +169,7 @@ interface WizardBodyProps {
     readonly wizard: KindWizardProps | null
 }
 const WizardBody = (props: WizardBodyProps) =>
-    props.wizard === null ? null : <>{KIND_WIZARDS[props.wizard.target.kind](props.wizard)}</>
+    props.wizard === null ? null : KIND_WIZARDS[props.wizard.target.kind](props.wizard)
 
 /** The wizard drawer of every provider: one Drawer, one wizard chosen by the provider's kind. */
 export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBaseProps) => {

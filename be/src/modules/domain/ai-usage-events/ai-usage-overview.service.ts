@@ -4,13 +4,10 @@ import type { QuotaLookup, UsageSummary } from "./ai-usage-events.contracts"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiWorkUsageService, WORK_REF_LIMIT } from "./ai-work-usage.service"
 import { documentCostOf, workCostOf } from "./work-usage.mapper"
-import type { DailyWorkUsage, DocumentAiCost, WorkCost } from "./work-usage.contracts"
+import type { DocumentAiCost, WorkCost } from "./work-usage.contracts"
 
-/** The roles that see what AI work cost (owner: "model, số credits" for the owner and managers; staff never). */
-const SEES_CREDITS: ReadonlyArray<string> = ["owner", "manager"]
-
-/** The days of the workspace summary by default. */
-const SUMMARY_DAYS = 30
+/** The roles that see what AI work cost (owner: "model, so credits" for the owner and managers; staff never). */
+const SEES_CREDITS: ReadonlySet<string> = new Set(["owner", "manager"])
 
 /** The ids in pages the record read takes at once. */
 const pagesOf = (ids: ReadonlyArray<string>): ReadonlyArray<ReadonlyArray<string>> =>
@@ -46,19 +43,6 @@ export class AiUsageOverviewService {
     }
 
     /**
-     * The workspace's model use per day, module and kind of work over the last days (30 by default, at most 90), exact credits; owner
-     * or manager only (a staff member is refused by the role guard).
-     */
-    async workSummary(
-        userId: string,
-        workspaceId: string,
-        days = SUMMARY_DAYS,
-    ): Promise<ReadonlyArray<DailyWorkUsage>> {
-        await this.members.require(userId, workspaceId, ["owner", "manager"])
-        return this.work.daily(workspaceId, days)
-    }
-
-    /**
      * What each document cost to read, critique and re-read, for an owner or manager; null for any other member of the workspace (the
      * documents list is open to every member, its credits are not). A non-member is refused. One grouped read per 100 documents.
      */
@@ -69,11 +53,16 @@ export class AiUsageOverviewService {
     ): Promise<ReadonlyMap<string, DocumentAiCost> | null> {
         if (!(await this.seesCredits(userId, workspaceId))) return null
         const costs = new Map<string, DocumentAiCost>()
-        for (const page of pagesOf([...new Set(sourceIds)])) {
-            const usage = await this.work.byRefs(
-                workspaceId,
-                page.map((id) => `source:${id}`),
-            )
+        const reads = await Promise.all(
+            pagesOf([...new Set(sourceIds)]).map(async (page) => ({
+                page,
+                usage: await this.work.byRefs(
+                    workspaceId,
+                    page.map((id) => `source:${id}`),
+                ),
+            })),
+        )
+        for (const { page, usage } of reads) {
             for (const id of page) costs.set(id, documentCostOf(usage.get(`source:${id}`) ?? []))
         }
         return costs
@@ -98,6 +87,6 @@ export class AiUsageOverviewService {
     /** True for an active owner or manager; false for another active member; a non-member is refused. */
     private async seesCredits(userId: string, workspaceId: string): Promise<boolean> {
         const member = await this.members.require(userId, workspaceId)
-        return SEES_CREDITS.includes(member.role)
+        return SEES_CREDITS.has(member.role)
     }
 }

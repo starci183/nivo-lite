@@ -1,12 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import { BrainEvalCasesService } from "@modules/domain/brain-eval-cases"
-import { BrainLessonsService } from "@modules/domain/brain-lessons"
-import type { LessonEvidence } from "@modules/domain/brain-lessons"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { BrainLessonsService, type LessonEvidence } from "@modules/domain/brain-lessons"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectCorrectionSource } from "./brain.decorators"
 import type { CorrectionSource, MineResult } from "./brain.contracts"
@@ -79,7 +76,7 @@ export class BrainLearningService {
         if (!answer.ok) return { corrections: list.length, newCases, proposed: 0, reason: "model_unavailable" }
         const known = new Set(list.map((item) => item.decisionId))
         let proposed = 0
-        await eachInOrder(parseLessons(this.json.jsonOf(answer.output)), async (lesson) => {
+        await eachInOrder(parseLessons(this.json.jsonOf(answer.output, workspaceId)), async (lesson) => {
             // A lesson must stand on at least two real corrections.
             const ids = [...new Set(lesson.decisions)].filter((id) => known.has(id))
             if (ids.length < 2) return

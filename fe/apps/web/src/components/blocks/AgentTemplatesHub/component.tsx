@@ -110,7 +110,7 @@ const offerRowsOf = (props: Props, offer: OfferView): ReadonlyArray<ListRowData>
             description: offer.changelog,
             action: {
                 label: view.acceptSafeLabel,
-                intent: "commit",
+                intent: "neutral",
                 isPending: view.isPending,
                 press: () => props.on.accept(offer.installationId, [...offer.safeUnitIds]),
             },

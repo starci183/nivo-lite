@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 import { Button, Cluster, EmptyNotice, Section, Stack, Text } from "@starci/grammar/common"
 import { ChatMessageBubble } from "@/components/composites/ChatMessageBubble"
 import { COLUMN_CLASS } from "./classNames"
@@ -17,8 +17,15 @@ interface GuideMessagesProps {
     }
 }
 
+/** What an answer holds is read from this. */
+interface AnswerBodyProps {
+    readonly message: GuideBubbleMessage
+    readonly stepsLabel: string
+    readonly emptyLabel: string
+}
+
 /** What an answer holds: its words, then the ordered steps. */
-const AnswerBody = (props: { readonly message: GuideBubbleMessage; readonly stepsLabel: string; readonly emptyLabel: string }) => (
+const AnswerBody = (props: AnswerBodyProps) => (
     <Stack gap="inline">
         <Text size="sm">{props.message.text}</Text>
         {props.message.steps.length === 0 ? null : (
@@ -37,50 +44,46 @@ const AnswerBody = (props: { readonly message: GuideBubbleMessage; readonly step
 )
 
 /** Conversation replies: a bubble each, and under an answer the buttons that open the pages it names, in the bubbles' column. */
-export const GuideMessages = (props: GuideMessagesProps) => (
-    <>
-        {props.props.messages.map((message) =>
-            message.isUser ? (
-                <ChatMessageBubble key={message.id} side="outgoing" body={<Text size="sm">{message.text}</Text>} />
-            ) : (
-                <Stack key={message.id} gap="row">
-                    <ChatMessageBubble
-                        side="incoming"
-                        avatar={props.props.avatar}
-                        footer={
-                            message.note === null ? undefined : (
-                                <Text size="xs" tone="muted">
-                                    {message.note}
-                                </Text>
-                            )
-                        }
-                        body={
-                            <AnswerBody
-                                message={message}
-                                stepsLabel={props.props.stepsLabel}
-                                emptyLabel={props.props.emptyLabel}
-                            />
-                        }
-                    />
-                    {message.links.length === 0 ? null : (
-                        <div className={COLUMN_CLASS}>
-                            <Cluster gap="inline">
-                                {message.links.map((link) => (
-                                    <Button
-                                        endArrow
-                                        key={link.id}
-                                        intent="neutral"
-                                        size="sm"
-                                        onPress={() => props.on.go(message.id, link.id)}
-                                    >
-                                        {link.label}
-                                    </Button>
-                                ))}
-                            </Cluster>
-                        </div>
-                    )}
-                </Stack>
-            ),
-        )}
-    </>
-)
+export const GuideMessages = (props: GuideMessagesProps): Array<ReactElement> =>
+    props.props.messages.map((message) =>
+        message.isUser ? (
+            <ChatMessageBubble key={message.id} side="outgoing" body={<Text size="sm">{message.text}</Text>} />
+        ) : (
+            <Stack key={message.id} gap="row">
+                <ChatMessageBubble
+                    side="incoming"
+                    avatar={props.props.avatar}
+                    footer={
+                        message.note === null ? undefined : (
+                            <Text size="xs" tone="muted">
+                                {message.note}
+                            </Text>
+                        )
+                    }
+                    body={
+                        <AnswerBody
+                            message={message}
+                            stepsLabel={props.props.stepsLabel}
+                            emptyLabel={props.props.emptyLabel}
+                        />
+                    }
+                />
+                {message.links.length === 0 ? null : (
+                    <div className={COLUMN_CLASS}>
+                        <Cluster gap="inline">
+                            {message.links.map((link) => (
+                                <Button
+                                    key={link.id}
+                                    intent="neutral"
+                                    size="sm"
+                                    onPress={() => props.on.go(message.id, link.id)}
+                                >
+                                    {link.label}
+                                </Button>
+                            ))}
+                        </Cluster>
+                    </div>
+                )}
+            </Stack>
+        ),
+    )

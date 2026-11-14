@@ -33,7 +33,7 @@ const factOf = (id: string, scope: Scope, status: FactStatus, source?: string): 
     valueNumber: 10,
     unit: "VND",
     scope,
-    modules: scope === "restricted" ? ["accounting"] : [],
+    modules: scope === "restricted" ? ["sales"] : [],
     installationId: null,
     status,
     sourceKind: "document",

@@ -3,12 +3,12 @@ import type { Choice } from "./decision-choices"
 
 const PICK: Choice = {
     command: "assign-order",
-    sends: "accounting.resolve-unmatched-payment",
+    sends: "sales.resolve-unmatched-payment",
     pick: { valueName: "order", title: { key: "t" }, searchLabel: { key: "s" }, emptyBody: { key: "e" } },
 }
 const CONFIRM: Choice = {
     command: "other-income",
-    sends: "accounting.resolve-unmatched-payment",
+    sends: "sales.resolve-unmatched-payment",
     confirm: {
         title: { key: "t" },
         body: { key: "b" },

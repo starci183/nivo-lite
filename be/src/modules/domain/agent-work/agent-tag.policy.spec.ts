@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { TAG_CONTEXT_MAX, TAG_TEXT_MAX, tagContextOf, tagPayloadOf, tagPayloadTextOf } from "./agent-tag.policy"
+import { TAG_TEXT_MAX, tagContextOf, tagPayloadOf } from "./agent-tag.policy"
 
 const SUBJECT = Symbol("agent-tag.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { tagContextOf, tagPayloadOf, tagPayloadTextOf } }],
+        providers: [{ provide: SUBJECT, useValue: { tagContextOf, tagPayloadOf } }],
     }).compile()
     return moduleRef.get<typeof import("./agent-tag.policy")>(SUBJECT)
 }
@@ -73,23 +73,21 @@ describe("tag context names", () => {
 describe("tag payload", () => {
     const base = { workspaceId: "w", toAgentId: "a", text: "hi", source: "feed" }
 
-    it("keeps objects and arrays as JSON text and reads them back", async () => {
-        const { tagContextOf, tagPayloadOf, tagPayloadTextOf } = await build()
+    // Ledger (ROAD Opus-1d, 2026-11-14): the writer side (`tagPayloadTextOf`, the size cap) went with the tag door (ruling R34); the
+    // read side of a tag wake's plain data stays.
+    it("reads objects and arrays back from the JSON text a tag wake carries", async () => {
+        const { tagContextOf, tagPayloadOf } = await build()
 
-        const text = tagPayloadTextOf({ ...base, context: { items: [{ sku: "x", qty: 2 }], address: "12 Le Loi" } })
-
-        expect(text).toBe('{"items":[{"sku":"x","qty":2}],"address":"12 Le Loi"}')
-        expect(tagPayloadOf(tagContextOf({ ...base }, text ?? undefined))).toEqual({
+        const text = '{"items":[{"sku":"x","qty":2}],"address":"12 Le Loi"}'
+        expect(tagPayloadOf(tagContextOf({ ...base }, text))).toEqual({
             items: [{ sku: "x", qty: 2 }],
             address: "12 Le Loi",
         })
     })
 
-    it("has none when none was given, refuses one larger than a wake keeps, and reads a non-object as none", async () => {
-        const { tagPayloadOf, tagPayloadTextOf } = await build()
+    it("has none when none was given and reads a non-object as none", async () => {
+        const { tagPayloadOf } = await build()
 
-        expect(tagPayloadTextOf(base)).toBeUndefined()
-        expect(tagPayloadTextOf({ ...base, context: { blob: "x".repeat(TAG_CONTEXT_MAX) } })).toBeNull()
         expect(tagPayloadOf({})).toEqual({})
         expect(tagPayloadOf({ tagContext: "[1,2]" })).toEqual({})
     })

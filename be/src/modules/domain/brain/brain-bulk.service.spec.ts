@@ -13,7 +13,6 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BrainBulkService } from "./brain-bulk.service"
 import { BrainLogEvent } from "./brain.log-events"
-import { FactEmbeddingsService } from "./fact-embeddings.service"
 import { BrainErrorCode } from "./errors/brain.error"
 
 const WS = "ws-1"
@@ -86,7 +85,6 @@ const build = async () => {
             { provide: BrainFactsService, useValue: facts },
             { provide: BrainFactsReadService, useValue: reads },
             { provide: BrainFactBatchService, useValue: batches },
-            { provide: FactEmbeddingsService, useValue: mock<FactEmbeddingsService>() },
         ],
     }).compile()
     return { service: moduleRef.get(BrainBulkService), members, sources, facts, reads, batches, logger }
@@ -105,13 +103,15 @@ describe("BrainBulkService applyDocument", () => {
         // Applying a batch puts truths in force: the founder's alone.
         expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner"])
         expect(reads.ofSources).toHaveBeenCalledWith(WS, ["s1"], ["proposed"], 2000)
-        expect(facts.apply).toHaveBeenCalledTimes(1)
-        expect(facts.apply).toHaveBeenCalledWith(
+        expect(facts.applyUnannounced).toHaveBeenCalledTimes(1)
+        expect(facts.applyUnannounced).toHaveBeenCalledWith(
             WS,
             "f1",
             "Ada",
             expect.stringContaining(`bulk:${BATCH} - Applied together with the other checked facts of "Rules"`),
         )
+        // The store is told ONCE, with the facts applied: one vector batch and one policy request, never one per fact.
+        expect(facts.announceChanged.mock.calls).toEqual([[WS, ["f1"]]])
     })
 
     it("refuses a document kept public: a bulk path never makes anything public", async () => {
@@ -123,7 +123,8 @@ describe("BrainBulkService applyDocument", () => {
         })
 
         expect(reads.ofSources).not.toHaveBeenCalled()
-        expect(facts.apply).not.toHaveBeenCalled()
+        expect(facts.applyUnannounced).not.toHaveBeenCalled()
+        expect(facts.announceChanged).not.toHaveBeenCalled()
     })
 
     it("leaves a fact for a person when another value waits for its key or one is in force by now", async () => {
@@ -138,7 +139,7 @@ describe("BrainBulkService applyDocument", () => {
 
         await expect(service.applyDocument("u1", WS, "s1")).resolves.toEqual({ batchId: BATCH, applied: 0, skipped: 2 })
 
-        expect(facts.apply).not.toHaveBeenCalled()
+        expect(facts.applyUnannounced).not.toHaveBeenCalled()
     })
 
     it("goes on with the other facts when one write fails, and says which was left", async () => {
@@ -151,12 +152,13 @@ describe("BrainBulkService applyDocument", () => {
             .mockResolvedValueOnce([factOf({ id: "f2" })])
             .mockResolvedValueOnce([])
         const decided = new Error("decided meanwhile")
-        facts.apply.mockRejectedValueOnce(decided)
+        facts.applyUnannounced.mockRejectedValueOnce(decided)
 
         await expect(service.applyDocument("u1", WS, "s1")).resolves.toEqual({ batchId: BATCH, applied: 1, skipped: 1 })
 
         expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.BulkFactSkipped, decided, { factId: "f1" })
-        expect(facts.apply).toHaveBeenCalledTimes(2)
+        expect(facts.applyUnannounced).toHaveBeenCalledTimes(2)
+        expect(facts.announceChanged.mock.calls).toEqual([[WS, ["f2"]]])
     })
 })
 
@@ -164,17 +166,18 @@ describe("BrainBulkService undoBatch", () => {
     it("puts every fact of the batch that is still as it was applied back to review, and keeps the ones changed since", async () => {
         const { service, batches, reads } = await build()
         const note = "bulk:batch-1 - Applied together"
-        reads.list.mockResolvedValue([
+        // Read by the batch's own tag (never out of the newest facts in force); a prefix twin (batch-10) is still told apart.
+        batches.inForce.mockResolvedValue([
             factOf({ id: "a", status: "active", decisionNote: note }),
             factOf({ id: "b", status: "active", decisionNote: note }),
-            factOf({ id: "c", status: "active", decisionNote: "bulk:batch-2 - Applied together" }),
-            factOf({ id: "d", status: "active", decisionNote: "Chosen among several different values" }),
+            factOf({ id: "c", status: "active", decisionNote: "bulk:batch-10 - Applied together" }),
         ])
         batches.reopen.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
 
         await expect(service.undoBatch("u1", WS, "batch-1")).resolves.toEqual({ restored: 1, kept: 1 })
 
-        expect(reads.list).toHaveBeenCalledWith(WS, { statuses: ["active"], limit: 2000 })
+        expect(batches.inForce).toHaveBeenCalledWith(WS, "batch-1")
+        expect(reads.list).not.toHaveBeenCalled()
         expect(batches.reopen.mock.calls).toEqual([
             [WS, "a", "batch-1"],
             [WS, "b", "batch-1"],
@@ -182,12 +185,38 @@ describe("BrainBulkService undoBatch", () => {
     })
 
     it("does nothing for a caller who may not change the brain", async () => {
-        const { service, members, reads } = await build()
+        const { service, members, batches } = await build()
         const refusal = new Error("role")
         members.require.mockRejectedValue(refusal)
 
         await expect(service.undoBatch("u1", WS, "batch-1")).rejects.toBe(refusal)
 
-        expect(reads.list).not.toHaveBeenCalled()
+        expect(batches.inForce).not.toHaveBeenCalled()
+    })
+})
+
+describe("BrainBulkService applyDocument at scale", () => {
+    it("a document of 2,000 safe facts: 2,000 quiet applies and ONE announcement naming all of them (no workspace refresh)", async () => {
+        const { service, facts, reads } = await build()
+        const many = Array.from({ length: 2000 }, (_, index) =>
+            factOf({ id: `f${String(index)}`, subjectKey: `item-${String(index)}` }),
+        )
+        reads.ofSources.mockResolvedValue(many)
+        facts.byKey.mockReset()
+        const none: Array<FactRecord> = []
+        facts.byKey.mockImplementation((_ws, subjectKey, _attribute, status) =>
+            Promise.resolve(status === "proposed" ? many.filter((fact) => fact.subjectKey === subjectKey) : none),
+        )
+
+        await expect(service.applyDocument("u1", WS, "s1")).resolves.toEqual({
+            batchId: BATCH,
+            applied: 2000,
+            skipped: 0,
+        })
+
+        expect(facts.applyUnannounced).toHaveBeenCalledTimes(2000)
+        expect(facts.apply).not.toHaveBeenCalled()
+        expect(facts.announceChanged).toHaveBeenCalledTimes(1)
+        expect(facts.announceChanged.mock.calls[0]?.[1]).toHaveLength(2000)
     })
 })

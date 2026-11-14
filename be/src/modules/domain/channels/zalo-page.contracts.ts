@@ -1,3 +1,4 @@
+import type { ConnectionAttention } from "@modules/domain/connections"
 import type { OptionalZnsRenewal } from "./channels.contracts"
 
 /** Where the OA access token stands. */
@@ -58,6 +59,8 @@ export interface ZaloPageView {
     readonly status: string
     /** True when the connection works and needs no attention. */
     readonly healthy: boolean
+    /** What the connection asks of its owner beyond its status: `needs_reauth` (the provider refused the credential: connect again), `degraded` (connected, yet the provider cannot be read at the moment), or null. */
+    readonly attention: ConnectionAttention | null
     /** The Official Account id, or an empty text. */
     readonly oaId: string
     /** The Zalo app id. */

@@ -1,4 +1,4 @@
-import { creditsOf, priceOf } from "@modules/domain/ai-usage-events"
+import { creditsAtLeast, creditsOf, priceOf } from "@modules/domain/ai-usage-events"
 import type { AiUsage } from "@modules/integrations/ai"
 import type { QuotaStatus, UsageKind } from "./knowledge.contracts"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
@@ -58,6 +58,21 @@ const reportedTokens = (usage: AiUsage): ReportedTokens => {
     return { prompt, completion: usage.completionTokens ?? Math.max(0, total - prompt) }
 }
 
+/** A count the provider reported as a whole number of tokens, else 0. */
+const tokensOf = (value: number | null | undefined): number =>
+    typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.round(value) : 0
+
+/**
+ * The cache and reasoning counts of a call as the knowledge meter's writer (`record_ai_usage_work`, migration 016800) takes them, snake
+ * case: what the provider reported for the try, or 0 for a call booked estimated (a try that reported nothing has no such count). The
+ * writer clamps them to the table's checks.
+ */
+export const tokenFactsOf = (usage: AiUsage | null, estimated: boolean): Record<string, number> => ({
+    cached_tokens: estimated ? 0 : tokensOf(usage?.cachedTokens),
+    cache_write_tokens: estimated ? 0 : tokensOf(usage?.cacheWriteTokens),
+    reasoning_tokens: estimated ? 0 : tokensOf(usage?.reasoningTokens),
+})
+
 /** The figures to record for a call: what the provider reported, else an estimate from the characters. */
 export const figuresOf = (inputs: UsageInputs): UsageFigures => {
     const usage = inputs.usage
@@ -104,7 +119,7 @@ export const quotaStatusOf = (row: QuotaStatusRow): QuotaStatus => {
     const topupBalance = Math.max(0, numberOr(row.topup_balance, 0))
     const messagesExceeded = messagesLimit !== null && ratioOf(messagesUsed, messagesLimit) >= 1
     const tokensExceeded = tokensLimit !== null && ratioOf(tokensUsed, tokensLimit) >= 1
-    const creditsExceeded = creditsLimit !== null && creditsUsed >= creditsLimit && topupBalance <= 0
+    const creditsExceeded = creditsLimit !== null && creditsAtLeast(creditsUsed, creditsLimit) && topupBalance <= 0
     const ratio = Math.max(
         ratioOf(messagesUsed, messagesLimit),
         ratioOf(tokensUsed, tokensLimit),

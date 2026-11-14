@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager, FindOptionsWhere } from "typeorm"
+import { In, type EntityManager, type FindOptionsWhere } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -8,19 +7,16 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { InjectBindingAgents, InjectBindingManagers } from "./agent-connections.decorators"
 import type { BindingAgentsDirectory, BindingManagers } from "./agent-connections.port"
 import {
-    INBOUND_MODULES,
     PURPOSES,
     boundAgentsOf,
     boundConnectionsOf,
     isPurpose,
-    handoversFrom,
     purposesOf,
-    splitRoute,
+    routeOf,
 } from "./agent-bindings.policy"
 import type {
     AgentGrant,
     ConnectionGrant,
-    AgentsForOptions,
     BindingGrant,
     BindingTarget,
     BoundAgent,
@@ -30,8 +26,6 @@ import type {
     ConnectionsForOptions,
     InboundRoute,
     LinkedFacts,
-    ModuleRef,
-    OptionalConnectionId,
     OptionalResumeKeep,
     PurposeSelector,
     ResumeConflict,
@@ -54,7 +48,7 @@ const GRANTS_MAX = 500
 @Injectable()
 /**
  * The one resolver of "which agent listens and speaks on which connection". agent_connections (agent, connection, purpose) is
- * the single source: webhooks, the chat turn, outbound delivery and the shift notifier all ask here and nobody guesses "the first
+ * the single source: webhooks, the chat turn, outbound delivery and the staff notifier all ask here and nobody guesses "the first
  * connected Telegram" on their own. Only active agents count; what an agent may do on a connection is not here but in its attachment's rights. The
  * reads take ids a verified source resolved (a webhook connection, a conversation agent); the grants require a manager.
  */
@@ -72,7 +66,6 @@ export class AgentBindingsService {
     async agentsFor(
         connectionId: string,
         purpose: PurposeSelector,
-        options: AgentsForOptions = {},
     ): Promise<ReadonlyArray<BoundAgent>> {
         const links = await this.entityManager.find(AgentConnectionEntity, {
             where: { connectionId, purpose: In([...purposesOf(purpose)]) },
@@ -80,23 +73,47 @@ export class AgentBindingsService {
         })
         const [first] = links
         if (first === undefined) return []
-        const agents = await this.agents.activeCreatedAmong(
-            first.workspaceId,
-            links.map((link) => link.agentId),
-            BINDINGS_MAX,
+        return boundAgentsOf(await this.agentFactsOf(first.workspaceId, links))
+    }
+
+    /**
+     * The one agent that answers a channel connection of the workspace as its front door: the first of the agents bound inbound to it,
+     * oldest first, or null when none is (the connection is not the workspace's, or nobody answers it). A channel has one inbound agent, so
+     * this is that agent. It is the agent a conversation on that connection belongs to; a conversation without a connection (the website chat) has none here.
+     */
+    async owningAgentOf(workspaceId: string, connectionId: string): Promise<string | null> {
+        const links = await this.entityManager.find(AgentConnectionEntity, {
+            where: { workspaceId, connectionId, purpose: "inbound_chat" },
+            take: BINDINGS_MAX,
+        })
+        if (links.length === 0) return null
+        return routeOf(boundAgentsOf(await this.agentFactsOf(workspaceId, links))).front?.id ?? null
+    }
+
+    /**
+     * The customer channels that would have NO agent answering once the agent is gone: the connected connections it is the inbound front
+     * door of (its `inbound_chat` binding) that no OTHER active agent is bound inbound to; each with the purpose it holds, oldest first.
+     * Changes nothing; the caller has proved the member.
+     */
+    async channelsWithoutOtherFrontDoor(workspaceId: string, agentId: string): Promise<ReadonlyArray<BoundConnection>> {
+        const inbound = await this.entityManager.find(AgentConnectionEntity, {
+            where: { workspaceId, purpose: "inbound_chat" },
+            take: BINDINGS_MAX,
+        })
+        const mine = inbound.filter((link) => link.agentId === agentId)
+        if (mine.length === 0) return []
+        const rest = inbound.filter((link) => link.agentId !== agentId)
+        const active = new Set(
+            rest.length === 0
+                ? []
+                : (await this.agents.activeCreatedAmong(workspaceId, rest.map((link) => link.agentId), BINDINGS_MAX)).map(
+                      (agent) => agent.id,
+                  ),
         )
-        const rows = agents.flatMap((agent) =>
-            links
-                .filter((link) => link.agentId === agent.id)
-                .map((link): BoundAgentFacts => ({
-                    id: agent.id,
-                    module: agent.module,
-                    name: agent.name,
-                    created_at: agent.createdAt.toISOString(),
-                    purpose: link.purpose,
-                })),
-        )
-        return boundAgentsOf(rows, options)
+        const answered = new Set(rest.filter((link) => active.has(link.agentId)).map((link) => link.connectionId))
+        const lone = mine.filter((link) => !answered.has(link.connectionId))
+        if (lone.length === 0) return []
+        return boundConnectionsOf((await this.rowsOfLinks(lone)).map((row) => row.facts), {})
     }
 
     /** The connections an agent is bound to for the purpose(s), oldest first; disconnected ones never count. */
@@ -177,18 +194,9 @@ export class AgentBindingsService {
         })
     }
 
-    /** Inbound chat: the front door agent of a connection and the agents it hands over to. */
+    /** Inbound chat: the one front door agent of a connection. */
     async routeInbound(connectionId: string): Promise<InboundRoute> {
-        return splitRoute(
-            await this.agentsFor(connectionId, "inbound_chat", { modules: INBOUND_MODULES }),
-        )
-    }
-
-    /** The agents a conversation own agent can hand over to; none for a conversation without a connection (website chat). */
-    async handoversOf(connectionId: OptionalConnectionId, agent: ModuleRef): Promise<ReadonlyArray<BoundAgent>> {
-        if (connectionId === null) return []
-        const bound = await this.agentsFor(connectionId, "inbound_chat", { modules: INBOUND_MODULES })
-        return handoversFrom(bound, agent.module)
+        return routeOf(await this.agentsFor(connectionId, "inbound_chat"))
     }
 
     /** Grants a connection to an agent of the same workspace, or changes the grant; a manager only. */
@@ -349,6 +357,29 @@ export class AgentBindingsService {
         const caller = await this.members.require(userId, target.workspaceId, GOVERNORS)
         if (caller.role !== "owner") await this.requireManaged(userId, target.workspaceId, target.agentId)
         await this.removeGrant(target)
+    }
+
+    /** The active agents of the links, one fact row per link (an agent bound twice appears twice), for the bound-agent policies. */
+    private async agentFactsOf(
+        workspaceId: string,
+        links: ReadonlyArray<AgentConnectionEntity>,
+    ): Promise<Array<BoundAgentFacts>> {
+        const agents = await this.agents.activeCreatedAmong(
+            workspaceId,
+            links.map((link) => link.agentId),
+            BINDINGS_MAX,
+        )
+        return agents.flatMap((agent) =>
+            links
+                .filter((link) => link.agentId === agent.id)
+                .map((link): BoundAgentFacts => ({
+                    id: agent.id,
+                    module: agent.module,
+                    name: agent.name,
+                    created_at: agent.createdAt.toISOString(),
+                    purpose: link.purpose,
+                })),
+        )
     }
 
     /** The bindings matching `where` beside the facts of their connections, oldest connection first. */

@@ -1,7 +1,6 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
-import { createAuthApolloClient } from "../clients"
-import type { InputVariables, MutateParams, WireInput } from "../types"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
+import { createAuthApolloClient, type InputVariables, type MutateParams, type WireInput } from "@nivo-lite/api"
+import { webApiTransport } from "@/modules/api-transport"
 import type { SaveBrainFactMutation, SaveBrainFactMutationVariables } from "../__generated__/graphql"
 
 /** The response of the `saveBrainFact` mutation: the typed payload straight from the back end contract. */
@@ -46,7 +45,7 @@ export const mutateSaveBrainFact = async ({
     request,
     signal,
 }: MutateSaveBrainFactParams): Promise<ApolloClient.MutateResult<MutateSaveBrainFactResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient(webApiTransport, { signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],
         variables: { input: request },

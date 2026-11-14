@@ -1,10 +1,10 @@
-import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import type { EntityApi, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import { q } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
 import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import { ORDER_STATUSES } from "../../rules/sales/order-status"
-import { MAX_DISCOUNT_PCT, MAX_REMIND_DAYS } from "../../rules/sales/settings"
-import type { SalesSettings } from "../../rules/sales/settings"
+import { MAX_DISCOUNT_PCT, MAX_REMIND_DAYS, type SalesSettings } from "../../rules/sales/settings"
 import type { OrderBrief } from "../../rules/sales/lead-orders"
 import { LEAD_STAGES, MAX_REASON_CHARS } from "../../rules/sales/stage"
 import type { LeadRow, OrderRow } from "./sales.types"
@@ -24,8 +24,9 @@ const orNull = <T extends z.ZodType>(schema: T) =>
 
 const nullableText = (max: number) => orNull(z.string().max(max))
 
-/** The declared fields of a `sales.lead` record. */
+/** The declared fields of a `blocks-core.sales.lead` record. */
 const leadData = z.object({
+    contactId: nullableText(MAX_ID),
     contactName: z.string().max(MAX_LINE),
     company: nullableText(MAX_LINE),
     channel: z.string().max(MAX_ID),
@@ -45,10 +46,10 @@ const leadData = z.object({
     needs: nullableText(MAX_LINE),
 })
 
-/** The declared fields of a `sales.order` record. */
+/** The declared fields of a `blocks-core.sales.order` record. */
 const orderData = z.object({
     orderNo: z.string().max(MAX_ID),
-    leadId: nullableText(MAX_ID),
+    contactId: nullableText(MAX_ID),
     items: ORDER_ITEMS_SHAPE,
     itemsText: z.string().max(MAX_BODY),
     note: z.string().max(MAX_BODY),
@@ -65,7 +66,7 @@ const orderData = z.object({
     trackingCode: nullableText(MAX_LINE),
 })
 
-/** The declared fields of the `sales.settings` record. */
+/** The declared fields of the `blocks-core.sales.settings` record. */
 const settingsData = z.object({
     approvalThresholdVnd: z.number().int().min(0).max(MAX_VND),
     draftWithoutTotalNeedsApproval: z.boolean(),
@@ -89,6 +90,7 @@ const leadNameData = z.object({ contactName: z.string().max(MAX_LINE) })
 
 /** The fields a query for lead rows selects. */
 export const LEAD_FIELDS: ReadonlyArray<string> = [
+    "contactId",
     "contactName",
     "company",
     "channel",
@@ -111,7 +113,7 @@ export const LEAD_FIELDS: ReadonlyArray<string> = [
 /** The fields a query for order rows selects. */
 export const ORDER_FIELDS: ReadonlyArray<string> = [
     "orderNo",
-    "leadId",
+    "contactId",
     "items",
     "itemsText",
     "note",
@@ -194,4 +196,18 @@ export const settingsRowOf = (record: RecordRow): SalesSettings | null => {
 export const leadNameOf = (data: Readonly<Record<string, unknown>>): string | null => {
     const parsed = leadNameData.safeParse(data)
     return parsed.success ? parsed.data.contactName : null
+}
+
+/**
+ * The sale's record of a person (`blocks-core.sales.lead` by its `contactId`, one per contact) with the fields `select` names (the name
+ * by default); null for no person or none kept yet.
+ */
+export const leadOfContact = async (
+    leads: EntityApi,
+    contactId: string | null,
+    select: ReadonlyArray<string> = LEAD_NAME_FIELDS,
+): Promise<RecordRow | null> => {
+    if (contactId === null) return null
+    const page = await leads.list({ select, where: q.eq("contactId", contactId), order: [["id", "asc"]], page: { size: 1 } })
+    return page.rows[0]?.row ?? null
 }

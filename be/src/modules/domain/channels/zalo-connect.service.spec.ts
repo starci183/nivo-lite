@@ -69,7 +69,7 @@ const build = async () => {
     credentials.accessToken.mockResolvedValue("access-1")
     connections.applyZaloOaName.mockResolvedValue(undefined)
     const zalo = mock<ZaloClient>()
-    zalo.oaProfile.mockResolvedValue({ oaId: "oa-9", name: "Tiệm hoa NIVO" })
+    zalo.oaProfile.mockResolvedValue({ oaId: "oa-9", name: "Ti\u1ec7m hoa NIVO" })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloConnectService,
@@ -254,7 +254,7 @@ describe("ZaloConnectService", () => {
             const firstEvent = { amount: 150000, content: "ACB", at: "2026-10-12T10:00:00.000Z" }
             connections.get.mockResolvedValue(
                 connection({
-                    meta: { authorized: "true", oa_secret_saved: "false", oa_id: "oa-9", oa_name: "Tiệm hoa NIVO" },
+                    meta: { authorized: "true", oa_secret_saved: "false", oa_id: "oa-9", oa_name: "Ti\u1ec7m hoa NIVO" },
                     status: "connected",
                     firstEvent,
                 }),
@@ -294,7 +294,7 @@ describe("ZaloConnectService", () => {
         it("asks Zalo nothing for a connection not authorized yet or one that holds its name", async () => {
             const { service, connections, zalo } = await build()
             connections.get.mockResolvedValueOnce(connection({ meta: { authorized: "false" } }))
-            connections.get.mockResolvedValueOnce(connection({ meta: { authorized: "true", oa_name: "Tiệm hoa NIVO" } }))
+            connections.get.mockResolvedValueOnce(connection({ meta: { authorized: "true", oa_name: "Ti\u1ec7m hoa NIVO" } }))
 
             await service.view(actor, "c-1")
             await service.view(actor, "c-1")
@@ -355,7 +355,7 @@ describe("ZaloConnectService", () => {
             expect(credentials.completeAuthorization.mock.calls).toEqual([["ws-1", returned("c-done.nonce-1")]])
             expect(connections.get.mock.calls).toEqual([["ws-1", "c-done"]])
             await flush()
-            expect(connections.applyZaloOaName.mock.calls).toEqual([["c-done", "Tiệm hoa NIVO"]])
+            expect(connections.applyZaloOaName.mock.calls).toEqual([["c-done", "Ti\u1ec7m hoa NIVO"]])
             expect(logger.error).not.toHaveBeenCalled()
             expect(connections.markFailing).not.toHaveBeenCalled()
         })
@@ -540,7 +540,7 @@ describe("ZaloConnectService", () => {
 
             await expect(service.rememberOaName("c-1")).resolves.toBeUndefined()
 
-            expect(connections.applyZaloOaName.mock.calls).toEqual([["c-1", "Tiệm hoa NIVO"]])
+            expect(connections.applyZaloOaName.mock.calls).toEqual([["c-1", "Ti\u1ec7m hoa NIVO"]])
             expect(logger.warn).not.toHaveBeenCalled()
             expect(logger.error).not.toHaveBeenCalled()
         })

@@ -1,5 +1,4 @@
 import type { FactScope, FactSubjectType } from "./brain"
-import type { FlowRuleMode } from "./flow"
 
 /** The instance whose chat this is, when its type allows several (one Chatbot per branch): a fact may be kept for this instance only. */
 export interface SetupWriteInstance {
@@ -7,31 +6,17 @@ export interface SetupWriteInstance {
     readonly typeName: string
 }
 
-/** What a rule action allows. */
-export interface SetupActionRules {
-    /** The action carries an amount limit. */
-    readonly hasLimit: boolean
-    /** The action may run by itself; false when it must at least ask. */
-    readonly allowsAuto: boolean
-}
-
 /** Every word and small formatter a confirm card of the setup chat needs, in the reader language. */
 export interface SetupWriteWords {
     /** Resolves the localized settled summary; null keeps a proposed card in its editor. */
     readonly decidedOf: (write: SetupWrite) => SetupWriteDecided | null
     readonly factTitle: string
-    readonly ruleTitle: string
     readonly gap: string
     readonly subject: string
     readonly attribute: string
     readonly value: string
     readonly scope: string
     readonly forLabel: string
-    readonly action: string
-    readonly mode: string
-    readonly limit: string
-    readonly now: string
-    readonly nowNone: string
     readonly conflictTitle: string
     readonly situation: string
     readonly confirm: string
@@ -39,7 +24,6 @@ export interface SetupWriteWords {
     readonly editDone: string
     readonly reject: string
     readonly applied: string
-    readonly appliedRule: string
     readonly rejected: string
     readonly kept: string
     readonly replace: string
@@ -47,13 +31,8 @@ export interface SetupWriteWords {
     readonly both: string
     readonly conflictBody: (current: string) => string
     readonly scopeLabel: (scope: FactScope) => string
-    readonly modeLabel: (mode: FlowRuleMode) => string
-    readonly money: (amount: number | null) => string
-    readonly actionLabel: (action: string) => string
-    readonly actionRules: (action: string) => SetupActionRules
     readonly forAll: (typeName: string) => string
     readonly forThis: (name: string) => string
-    readonly ruleShared: (typeName: string) => string
     readonly isSameValue: (a: string, b: string) => boolean
 }
 
@@ -74,11 +53,9 @@ export interface SetupWriteDecided {
 export interface SetupWriteProposal {
     readonly id: string
     readonly head: string
-    readonly isFact: boolean
     readonly hasGap: boolean
     readonly gapLabel: string
     readonly items: ReadonlyArray<{ readonly id: string; readonly term: string; readonly description: string }>
-    readonly sharedNote: string
     readonly isEditing: boolean
     readonly valueLabel: string
     readonly value: string
@@ -88,13 +65,6 @@ export interface SetupWriteProposal {
     readonly forLabel: string
     readonly forValue: string
     readonly forOptions: ReadonlyArray<SetupWriteOption>
-    readonly modeLabel: string
-    readonly mode: string
-    readonly modeOptions: ReadonlyArray<SetupWriteOption>
-    readonly hasLimit: boolean
-    readonly limitLabel: string
-    readonly limit: number | undefined
-    readonly isLimitDisabled: boolean
     readonly isConflict: boolean
     readonly conflictTitle: string
     readonly conflictBody: string
@@ -120,7 +90,6 @@ interface SetupWriteResult {
     readonly outcome: string
     readonly factId?: string
     readonly resolution?: SetupResolution
-    readonly ruleId?: string
 }
 
 /** What every confirm card carries. */
@@ -135,8 +104,8 @@ interface SetupWriteBase {
     readonly createdAt: string
 }
 
-/** A fact the owner is asked to confirm: subject, attribute, value and scope; `gapId` links it to the customer question it answers. */
-export interface SetupFactWrite extends SetupWriteBase {
+/** One confirm card of the setup chat: a fact the owner is asked to confirm: subject, attribute, value and scope; `gapId` links it to the customer question it answers. */
+export interface SetupWrite extends SetupWriteBase {
     readonly kind: "fact"
     readonly payload: {
         readonly subjectType: FactSubjectType
@@ -154,22 +123,6 @@ export interface SetupFactWrite extends SetupWriteBase {
     } | null
 }
 
-/** A rule change the owner is asked to confirm: the complete resulting rule (the unchanged half is copied from the rule in force). */
-export interface SetupRuleWrite extends SetupWriteBase {
-    readonly kind: "rule"
-    readonly payload: {
-        readonly action: string
-        readonly field: "mode" | "limit_vnd"
-        readonly mode: FlowRuleMode
-        readonly limitVnd: number | null
-    }
-    /** The rule in force. */
-    readonly current: { readonly mode: FlowRuleMode; readonly limitVnd: number | null } | null
-}
-
-/** One confirm card of the setup chat. */
-export type SetupWrite = SetupFactWrite | SetupRuleWrite
-
 /** The owner's decision on one card, with their edits. */
 export type SetupWriteDecision =
     | { readonly decision: "reject" }
@@ -181,7 +134,6 @@ export type SetupWriteDecision =
               readonly subjectLabel?: string
               readonly attributeLabel?: string
           }
-          readonly rule?: { readonly mode: FlowRuleMode; readonly limitVnd: number | null }
           readonly resolution?: SetupResolution | undefined
           readonly situation?: string | undefined
           /** Multi-instance agent (one Chatbot per branch): the fact is for this instance only instead of every instance of the type. */

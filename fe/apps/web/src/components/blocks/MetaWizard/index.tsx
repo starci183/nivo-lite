@@ -1,11 +1,10 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { META_STEPS, metaCheckLines, useMetaWizard } from "@/hooks/meta-wizard"
 import type { AgentOption } from "@/modules/types"
 import { MetaWizardBase } from "./component"
@@ -75,7 +74,7 @@ export const MetaWizard = (props: MetaWizardProps) => {
                 agentStep: {
                     title: tw("agentTitleChannel"),
                     notice: null,
-                    agents: agentChoicesOf(props.agents, "meta", tw),
+                    agents: agentChoicesOf(props.agents, tw),
                     value: wizard.agentIds,
                     hint: tw("agentHint"),
                     none: tw("agentNone"),

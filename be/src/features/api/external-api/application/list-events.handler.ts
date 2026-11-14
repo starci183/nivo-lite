@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { PublicEventsService } from "@modules/domain/public-api"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { ListEventsResult } from "./list-events.contracts"
 import { ListEventsQuery } from "./list-events.query"
 

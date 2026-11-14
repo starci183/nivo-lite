@@ -1,9 +1,10 @@
 import { CLOCK } from "@modules/platform/clock"
 import { Test } from "@nestjs/testing"
-import { createHash, createHmac } from "node:crypto"
+import { createHmac } from "node:crypto"
 import { FakeClock, mock, type MockOf } from "@starci/jest-preset"
+import { AccountDataIntakeService } from "@modules/domain/account-data"
 import { ConnectionsService } from "@modules/domain/connections"
-import { ConversationsService } from "@modules/domain/conversations"
+import { ProviderTriggersService } from "@modules/domain/provider-triggers"
 import { MetaCommentsService } from "@modules/domain/meta-comments"
 import {
     MetaInboxErrorCode,
@@ -12,13 +13,12 @@ import {
     MetaReceiptPolicy,
 } from "@modules/domain/meta-inbox"
 import { MetaThreadsService } from "@modules/domain/meta-threads"
-import type { MetaClient } from "@modules/integrations/meta"
+import { type MetaClient, META_CLIENT } from "@modules/integrations/meta"
 import { QUEUE_OUTBOX, QueueOutboxService } from "@modules/platform/queue"
-import { META_CLIENT } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { INBOX, InboxService } from "@modules/platform/inbox"
 import type { EntityManager } from "typeorm"
 import { workspacesEntities } from "@modules/domain/workspaces"
+import { persistReceiptConnection } from "./account-data.builder"
 
 const WorkspaceEntity: (typeof workspacesEntities)[0] = workspacesEntities[0]
 
@@ -29,6 +29,8 @@ export interface WebhookBuilderOptions {
     readonly connectionId: string
     readonly signingFixture: string
     readonly nextId: () => string
+    /** The world's account-data intake the door writes its `meta.event` rows through. */
+    readonly intake: AccountDataIntakeService
 }
 
 const signedDelivery = (options: WebhookBuilderOptions) => {
@@ -51,11 +53,11 @@ const signedDelivery = (options: WebhookBuilderOptions) => {
             ],
         }
         const rawBody = Buffer.from(JSON.stringify(payload))
-        const deliveryId = createHash("sha256").update(rawBody).digest("hex")
+        // Each event is one `meta.event` row of the Page's account, queued under `<connection>:<event key>`.
         return {
             payload,
             mid,
-            deliveryId,
+            deliveryId: `${options.connectionId}:dm:${mid}`,
             rawBody,
             signature: `sha256=${createHmac("sha256", options.signingFixture).update(rawBody).digest("hex")}`,
         }
@@ -72,7 +74,7 @@ type WebhooksBuilderDoorShape = {
     process: (deliveryId: string) => Promise<void>
     close: () => Promise<void>
     connections: MockOf<ConnectionsService>
-    conversations: MockOf<ConversationsService>
+    triggers: MockOf<ProviderTriggersService>
     threads: MockOf<MetaThreadsService>
 }
 
@@ -107,20 +109,27 @@ type WebhooksBuilderBuildShape = {
     signatureInvalidCode: MetaInboxErrorCode
 }
 
-/** Persists the real workspace needed by the transactional inbox/outbox handoff. */
+/** Persists the real workspace and Meta connection needed by the transactional account receipt and outbox handoff. */
 export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, options: WebhookBuilderOptions) => ({
     async build(): Promise<WebhooksBuilderBuildShape> {
         const { userId, workspaceId, connectionId } = options
         await manager.transaction(async (tx) => {
             await tx.insert("auth.users", { id: userId })
             await tx.insert(WorkspaceEntity, { id: workspaceId, ownerId: userId, name: "Meta integration proof" })
+            // The receipt is a row of the Page's account: the connection the (mocked) lookup names must exist.
+            await persistReceiptConnection(tx, {
+                connectionId,
+                workspaceId,
+                provider: "meta",
+                publicMeta: { page_id: "proof-page" },
+            })
         })
         const build = async () => {
             // The actual provider client verifies and parses; business effects are observed at their module boundaries.
             const connections = mock<ConnectionsService>()
             connections.findLiveByMeta.mockResolvedValue({ id: connectionId, workspaceId })
             connections.recordEvent.mockResolvedValue(null)
-            const conversations = mock<ConversationsService>()
+            const triggers = mock<ProviderTriggersService>()
             const threads = mock<MetaThreadsService>()
             threads.touch.mockResolvedValue(undefined)
             const comments = mock<MetaCommentsService>()
@@ -128,14 +137,14 @@ export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, option
             const moduleRef = await Test.createTestingModule({
                 providers: [
                     MetaInboxService,
+                    { provide: PRIMARY_ENTITY_MANAGER, useValue: manager },
+                    { provide: AccountDataIntakeService, useValue: options.intake },
                     MetaReceiptPolicy,
                     { provide: CLOCK, useValue: new FakeClock("2026-10-14T00:00:00.000Z") },
-                    { provide: PRIMARY_ENTITY_MANAGER, useValue: manager },
                     { provide: META_CLIENT, useValue: meta },
-                    { provide: INBOX, useClass: InboxService },
                     { provide: QUEUE_OUTBOX, useValue: outbox },
                     { provide: ConnectionsService, useValue: connections },
-                    { provide: ConversationsService, useValue: conversations },
+                    { provide: ProviderTriggersService, useValue: triggers },
                     { provide: MetaThreadsService, useValue: threads },
                     { provide: MetaCommentsService, useValue: comments },
                 ],
@@ -158,7 +167,7 @@ export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, option
                     await proofModule.close()
                 },
                 connections,
-                conversations,
+                triggers,
                 threads,
             }
         }

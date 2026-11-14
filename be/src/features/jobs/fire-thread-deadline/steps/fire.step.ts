@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ThreadDeadlinesService } from "@modules/domain/agent-threads"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 import { isThreadDeadlinePayload } from "@modules/queues/thread-deadline"
 
 @Injectable()

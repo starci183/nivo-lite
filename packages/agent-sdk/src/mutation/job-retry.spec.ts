@@ -6,10 +6,10 @@ describe("JobRetry", () => {
         expect(retry).toBeInstanceOf(Error)
         expect(retry).toMatchObject({
             code: "JOB_RETRY",
-            at: "chatbot.deliver-reply",
+            params: { at: "chatbot.deliver-reply" },
             status: 503,
             name: "JobRetry",
-            message: "JOB_RETRY: chatbot.deliver-reply",
+            message: "JOB_RETRY",
         })
     })
 })

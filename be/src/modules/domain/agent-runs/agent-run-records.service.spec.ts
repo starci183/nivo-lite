@@ -1,147 +1,99 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { EntityCatalog, Query } from "@nivo-lite/agent-sdk/query"
-import { agentRunEntity, agentRunStepEntity } from "@nivo-lite/blocks-core/entities"
-import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
-import { AgentRunRecordsService } from "./agent-run-records.service"
-import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
+import {
+    AGENT_RUNS,
+    AGENT_RUN_STEPS,
+    MemoryTables,
+    memoryRunStore,
+} from "@tests/fixtures/builders/engine-core-tables.builder"
 import { runRecordOf, runRowOf, stepRecordOf, stepRowOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { AgentRunRecordsService } from "./agent-run-records.service"
+import { AGENT_RUN_TABLE_STORE } from "./agent-run-table-store.port"
+import type { StoredRun, StoredStep } from "./agent-runs-rows.contracts"
 
 const tx = mock<ScopedTx>({ workspaceId: "ws-1" })
 
-const page = (rows: ReadonlyArray<ReturnType<typeof runRowOf>>) => ({
-    rows: rows.map((row) => ({ row, joined: {}, position: [], included: {} })),
-    next: null,
-})
-
-const build = async () => {
-    const engine = mock<EntityEngineService>()
-    const mutations = mock<EntityMutationService>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            AgentRunRecordsService,
-            { provide: EntityEngineService, useValue: engine },
-            { provide: EntityMutationService, useValue: mutations },
-        ],
-    }).compile()
-    return { service: moduleRef.get(AgentRunRecordsService), engine, mutations }
+/** The members of a stored row, as the table double keeps them. */
+const dataOf = (row: StoredRun | StoredStep): Readonly<Record<string, unknown>> => {
+    const { id: _id, workspaceId: _ws, version: _version, createdAt: _created, updatedAt: _updated, ...data } = row
+    return data
 }
 
-const queryOf = (engine: ReturnType<typeof mock<EntityEngineService>>): Query => {
-    const call = engine.list.mock.calls.at(-1)
-    if (call === undefined) throw new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })
-    return call[1]
+const build = async () => {
+    const tables = new MemoryTables()
+    const moduleRef = await Test.createTestingModule({
+        providers: [AgentRunRecordsService, { provide: AGENT_RUN_TABLE_STORE, useValue: memoryRunStore(tables) }],
+    }).compile()
+    return { service: moduleRef.get(AgentRunRecordsService), tables }
 }
 
 describe("AgentRunRecordsService reads", () => {
     it("reads a run by id, or null", async () => {
-        const { service, engine } = await build()
-        engine.get.mockResolvedValueOnce(runRowOf()).mockResolvedValueOnce(null)
+        const { service, tables } = await build()
+        tables.put(AGENT_RUNS, "run-1", dataOf(runRowOf()))
 
         await expect(service.run(tx, "run-1")).resolves.toMatchObject({ id: "run-1", status: "running" })
         await expect(service.run(tx, "run-2")).resolves.toBeNull()
-        expect(engine.get).toHaveBeenCalledWith(tx, "agent.run", "run-1")
     })
 
-    it("reads the run of a wake through the wake index", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValueOnce(page([runRowOf()])).mockResolvedValueOnce(page([]))
+    it("reads the run of a wake", async () => {
+        const { service, tables } = await build()
+        tables.put(AGENT_RUNS, "run-1", dataOf(runRowOf()))
 
         await expect(service.runOfWake(tx, "wake-1")).resolves.toMatchObject({ wakeId: "wake-1" })
-        expect(queryOf(engine)).toMatchObject({
-            from: "agent.run",
-            where: { op: "eq", field: "wakeId", value: "wake-1" },
-            order: [["id", "asc"]],
-        })
         await expect(service.runOfWake(tx, "wake-2")).resolves.toBeNull()
     })
 
     it("reads the steps of a run in order", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValue(page([stepRowOf()]))
+        const { service, tables } = await build()
+        tables.put(AGENT_RUN_STEPS, "s-2", dataOf(stepRowOf({ ordinal: 2, stepKey: "step-2" })))
+        tables.put(AGENT_RUN_STEPS, "s-1", dataOf(stepRowOf()))
+        tables.put(AGENT_RUN_STEPS, "s-9", dataOf(stepRowOf({ runId: "run-9", stepKey: "other" })))
 
-        await expect(service.stepsOf(tx, "run-1")).resolves.toHaveLength(1)
-        expect(queryOf(engine).order).toEqual([
-            ["ordinal", "asc"],
-            ["id", "asc"],
-        ])
-        expect(queryOf(engine).where).toEqual({ op: "eq", field: "runId", value: "run-1" })
+        await expect(service.stepsOf(tx, "run-1")).resolves.toMatchObject([{ stepKey: "step-1" }, { stepKey: "step-2" }])
     })
 })
 
 describe("AgentRunRecordsService writes", () => {
-    it("inserts a run", async () => {
-        const { service, mutations } = await build()
-        mutations.mutate.mockResolvedValue({ ok: true, row: runRowOf(), version: "1" })
+    it("inserts a run, and none for a wake that holds one", async () => {
+        const { service, tables } = await build()
+        const run = { agentId: "agent-1", wakeId: "wake-1", trigger: "tag", graphVersionId: null, context: {} }
 
-        await service.insertRun(tx, { status: "running" })
-
-        expect(mutations.mutate).toHaveBeenCalledWith(
-            tx,
-            { op: "insert", entity: "agent.run", values: { status: "running" } },
-            "job",
-        )
+        await expect(service.insertRun(tx, run)).resolves.toMatchObject({ wakeId: "wake-1", status: "running", engine: "langgraph" })
+        await expect(service.insertRun(tx, run)).resolves.toBeNull()
+        expect(tables.of(AGENT_RUNS)).toHaveLength(1)
     })
 
     it("updates a run under the version read and answers the record after, null when stale", async () => {
-        const { service, mutations } = await build()
-        mutations.mutate
-            .mockResolvedValueOnce({ ok: true, row: runRowOf({ status: "done" }, "run-1", "4"), version: "4" })
-            .mockResolvedValueOnce({ ok: false, reason: "stale" })
+        const { service, tables } = await build()
+        tables.put(AGENT_RUNS, "run-1", dataOf(runRowOf()))
+        const read = runRecordOf({ version: "1" })
 
-        await expect(service.patchRun(tx, runRecordOf(), { status: "done" })).resolves.toMatchObject({
-            status: "done",
-            version: "4",
-        })
-        await expect(service.patchRun(tx, runRecordOf(), { status: "done" })).resolves.toBeNull()
-        expect(mutations.mutate).toHaveBeenCalledWith(
-            tx,
-            { op: "update", entity: "agent.run", key: "run-1", expected: "3", values: { status: "done" } },
-            "job",
-        )
+        await expect(service.patchRun(tx, read, { status: "done" })).resolves.toMatchObject({ status: "done", version: "2" })
+        await expect(service.patchRun(tx, read, { status: "done" })).resolves.toBeNull()
     })
 
-    it("updates a step the same way and refuses any other refusal", async () => {
-        const { service, mutations } = await build()
-        mutations.mutate
-            .mockResolvedValueOnce({ ok: true, row: stepRowOf({ status: "running" }, "s-1", "3"), version: "3" })
-            .mockResolvedValueOnce({ ok: false, reason: "missing" })
+    it("updates a step the same way and refuses a write to a step that is gone", async () => {
+        const { service, tables } = await build()
+        tables.put(AGENT_RUN_STEPS, "s-1", dataOf(stepRowOf()))
 
-        await expect(service.patchStep(tx, stepRecordOf(), { status: "running" })).resolves.toMatchObject({
-            version: "3",
+        await expect(service.patchStep(tx, stepRecordOf({ id: "s-1", version: "1" }), { status: "running" })).resolves.toMatchObject({
+            version: "2",
         })
-        await expect(service.patchStep(tx, stepRecordOf(), { status: "running" })).rejects.toMatchObject({
+        await expect(service.patchStep(tx, stepRecordOf({ id: "s-404", version: "1" }), { status: "running" })).rejects.toMatchObject({
             code: "AGENT_RUNS_RESULT_REJECTED",
         })
     })
 })
 
-describe("AgentRunRecordsService: the engine of a run is read with it, and every list stays index-served", () => {
-    it("reads the engine of a run (legacy when the row names none)", async () => {
-        const { service, engine } = await build()
-        engine.get.mockResolvedValueOnce(runRowOf({ engine: "langgraph" })).mockResolvedValueOnce(runRowOf())
+describe("AgentRunRecordsService: the engine of a run is read with it", () => {
+    it("reads the engine of a run as its row names it", async () => {
+        const { service, tables } = await build()
+        tables.put(AGENT_RUNS, "run-1", dataOf(runRowOf({ engine: "langgraph" })))
+        tables.put(AGENT_RUNS, "run-2", dataOf(runRowOf({ engine: "legacy", wakeId: "wake-2" })))
 
         await expect(service.run(tx, "run-1")).resolves.toMatchObject({ engine: "langgraph" })
-        await expect(service.run(tx, "run-1")).resolves.toMatchObject({ engine: "legacy" })
-    })
-
-    it("selects the engine in the run lists, and the real validator finds no problem in any list it reads", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValue(page([]))
-        await service.runOfWake(tx, "wake-1")
-        await service.runsOfAgent(tx, "agent-1", 20)
-        await service.stepsOf(tx, "run-1")
-        await service.stepRowsOf(tx, "run-1")
-
-        const catalog: EntityCatalog = new Map<string, EntityDefinition>([
-            [agentRunEntity.name, agentRunEntity],
-            [agentRunStepEntity.name, agentRunStepEntity],
-        ])
-        const queries = engine.list.mock.calls.map(([, query]) => query)
-        expect(queries[0]?.select).toContain("engine")
-        expect(queries.flatMap((query) => queryProblems(query, catalog))).toEqual([])
+        await expect(service.run(tx, "run-2")).resolves.toMatchObject({ engine: "legacy" })
     })
 })

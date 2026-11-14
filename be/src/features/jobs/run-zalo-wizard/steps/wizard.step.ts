@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ZaloWizardService } from "@modules/domain/channels"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the wizard step the owner asked for (seal the app keys, seal the OA Secret Key, or build the Zalo permission URL) is done and its result written. */

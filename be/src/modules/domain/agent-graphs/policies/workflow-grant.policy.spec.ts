@@ -1,9 +1,8 @@
 import { Test } from "@nestjs/testing"
 import type { GraphSpecGrant } from "@nivo-lite/agent-sdk/graph"
-import type { DataRight } from "@nivo-lite/agent-sdk/rights"
-import { coreNodes } from "@nivo-lite/blocks-core"
-import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
-import { TOOL } from "@nivo-lite/blocks-core"
+import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { INSTALLED } from "@modules/domain/installed-plugins"
 import { withDefaultReads } from "./agent-tools.policy"
 import { agentToolsOf } from "./flow.policy"
 import { EMPTY_GRANT, effectsBeyond, ownRunGrantOf, workflowRunGrantOf } from "./workflow-grant.policy"
@@ -21,35 +20,25 @@ const build = async () => {
     }>(SUBJECT)
 }
 
-const right = (
-    kind: string,
-    scope: DataRight["scope"],
-    fields: DataRight["fields"],
-    access: DataRight["access"] = "read",
-): DataRight => ({ kind, access, scope, fields })
-
-/** The agent: reads every order of the workspace (id, amount), the customer only for the turn (name), posts to the ledger. */
+/** The agent: posts to the ledger. */
 const AGENT: GraphSpecGrant = {
-    rights: [right("order", "workspace", ["id", "amountVnd"]), right("customer", "turn", ["name"])],
-    tools: ["nivo.ledger.entry.append"],
+    tools: ["nivo.tool.ledger.entry.append"],
     effects: ["ledger.post", "work-item.raise"],
 }
 
 /** The tool set the agent's module declares. */
-const AGENT_TOOLS: ReadonlyArray<string> = ["nivo.ledger.entry.append", "ledger.post", "work-item.raise"]
+const AGENT_TOOLS: ReadonlyArray<string> = ["nivo.tool.ledger.entry.append", "ledger.post", "work-item.raise"]
 
 describe("workflowRunGrantOf", () => {
-    it("keeps the workflow's own rights, and of its tools and effects only those the agent's declared tool set holds", async () => {
+    it("keeps of the workflow's tools and effects only those the agent's declared tool set holds, and carries no data right", async () => {
         const subject = await build()
         const own: GraphSpecGrant = {
-            rights: [right("order", "workspace", ["id", "note"]), right("payment", "workspace", ["id"])],
-            tools: ["nivo.ledger.entry.append", "bank.pull"],
+            tools: ["nivo.tool.ledger.entry.append", "bank.pull"],
             effects: ["ledger.post", "payment.refund"],
         }
 
         expect(subject.workflowRunGrantOf(own, AGENT_TOOLS)).toEqual({
-            rights: own.rights,
-            tools: withDefaultReads(["nivo.ledger.entry.append"]),
+            tools: withDefaultReads(["nivo.tool.ledger.entry.append"]),
             effects: ["ledger.post"],
         })
     })
@@ -58,21 +47,24 @@ describe("workflowRunGrantOf", () => {
         const subject = await build()
 
         expect(subject.workflowRunGrantOf({ ...AGENT, tools: [] }, AGENT_TOOLS).tools).toEqual(withDefaultReads([]))
-        expect(subject.ownRunGrantOf(AGENT).tools).toEqual(withDefaultReads(["nivo.ledger.entry.append"]))
+        expect(subject.ownRunGrantOf(AGENT).tools).toEqual(withDefaultReads(["nivo.tool.ledger.entry.append"]))
         expect(subject.ownRunGrantOf(AGENT).tools).toContain(TOOL.leadOrderList)
     })
 
     it("reaches no tool and no effect for a module that declares no agent", async () => {
         const subject = await build()
-        expect(subject.workflowRunGrantOf(AGENT, null)).toEqual({ rights: AGENT.rights, tools: [], effects: [] })
+        expect(subject.workflowRunGrantOf(AGENT, null)).toEqual({ tools: [], effects: [] })
     })
 })
 
 describe("every workflow template of the three agents, run as a workflow of its agent", () => {
-    const nodes = new Map<string, (typeof coreNodes)[number]>(coreNodes.map((node) => [node.id, node]))
+    // The templates of the three core agents as the installation ships them (each graph of a template agent is one template).
+    const templates = ["sales", "chatbot", "accounting"].flatMap((moduleKey) => INSTALLED.templatesOf(moduleKey))
+    const installedNodes = INSTALLED.nodeInstall().nodes
+    const nodes = new Map<string, (typeof installedNodes)[number]>(installedNodes.map((node) => [node.id, node]))
 
-    it.each(WORKFLOW_TEMPLATES.map((template) => [template.id, template] as const))(
-        "%s: its grant and every step's effects stay inside the agent's declared tool set",
+    it.each(templates.map((template) => [template.id, template] as const))(
+        "%s: its grant and every step's effects and tools stay inside the agent's declared tool set",
         async (_id, template) => {
             const subject = await build()
             const graph = latestTemplateVersion(template).graph
@@ -81,12 +73,15 @@ describe("every workflow template of the three agents, run as a workflow of its 
             expect(grant.tools).toEqual(withDefaultReads(graph.grant.tools))
             for (const node of graph.nodes) {
                 expect(subject.effectsBeyond(nodes.get(node.step)?.effects ?? [], grant)).toEqual([])
+                // A template node acts by tool calls alone (each call is a tool of the grant): every tool it calls is reached.
+                const tools = INSTALLED.templateNodeOf(node.step)?.tools ?? []
+                expect([node.key, tools.filter((tool) => !grant.tools.includes(tool))]).toEqual([node.key, []])
             }
         },
     )
 
     it("covers the secondary workflows that write the customer (after-sale, web-order)", () => {
-        const ids = WORKFLOW_TEMPLATES.filter((template) => !template.primary).map((template) => template.id)
+        const ids = templates.filter((template) => !template.primary).map((template) => template.id)
         expect(ids).toEqual(expect.arrayContaining(["sales.after-sale", "sales.web-order"]))
     })
 })

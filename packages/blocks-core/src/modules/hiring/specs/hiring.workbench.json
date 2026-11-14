@@ -1,0 +1,750 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "hiring",
+  "params": {
+    "stage": {
+      "type": "enum",
+      "of": ["all", "new", "screened", "interview", "offer", "hired", "rejected"],
+      "url": "stage",
+      "default": "all"
+    },
+    "candidate": {
+      "type": "string",
+      "url": "candidate"
+    },
+    "job": {
+      "type": "string",
+      "url": "job"
+    },
+    "pane": {
+      "type": "enum",
+      "of": ["list", "queue"],
+      "url": "pane",
+      "default": "list"
+    }
+  },
+  "views": [
+    {
+      "id": "candidates",
+      "label": {
+        "key": "tab_candidates"
+      },
+      "root": {
+        "id": "candidates-table",
+        "block": "core.table",
+        "props": {
+          "label": {
+            "key": "candidates_label"
+          },
+          "empty": {
+            "key": "candidates_empty"
+          },
+          "idPath": "id",
+          "labels": {
+            "stage": {
+              "new": {
+                "key": "stage_new"
+              },
+              "screened": {
+                "key": "stage_screened"
+              },
+              "interview": {
+                "key": "stage_interview"
+              },
+              "offer": {
+                "key": "stage_offer"
+              },
+              "hired": {
+                "key": "stage_hired"
+              },
+              "rejected": {
+                "key": "stage_rejected"
+              }
+            }
+          },
+          "selectParam": "candidate",
+          "filterParam": "stage",
+          "filterLabel": {
+            "key": "stage_label"
+          },
+          "filterAll": {
+            "key": "filter_all"
+          },
+          "filters": [
+            {
+              "value": "new",
+              "label": {
+                "key": "stage_new"
+              }
+            },
+            {
+              "value": "screened",
+              "label": {
+                "key": "stage_screened"
+              }
+            },
+            {
+              "value": "interview",
+              "label": {
+                "key": "stage_interview"
+              }
+            },
+            {
+              "value": "offer",
+              "label": {
+                "key": "stage_offer"
+              }
+            },
+            {
+              "value": "hired",
+              "label": {
+                "key": "stage_hired"
+              }
+            },
+            {
+              "value": "rejected",
+              "label": {
+                "key": "stage_rejected"
+              }
+            }
+          ],
+          "pageSize": 20,
+          "columns": [
+            {
+              "term": {
+                "key": "col_candidate"
+              },
+              "path": "name",
+              "subPath": "contact",
+              "width": "fill",
+              "minWidth": 180,
+              "truncate": true
+            },
+            {
+              "term": {
+                "key": "col_stage"
+              },
+              "path": "stage",
+              "format": "badge",
+              "width": "fit",
+              "tones": {
+                "new": "warning",
+                "screened": "info",
+                "interview": "info",
+                "offer": "info",
+                "hired": "success",
+                "rejected": "muted"
+              }
+            },
+            {
+              "term": {
+                "key": "col_applied"
+              },
+              "path": "createdAt",
+              "format": "day",
+              "width": "fit",
+              "hideBelow": "tablet"
+            }
+          ]
+        },
+        "bind": {
+          "rows": {
+            "read": "blocks-core.hiring.api.candidate.list",
+            "variables": {
+              "stage": "$stage"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "jobs",
+      "label": {
+        "key": "tab_jobs"
+      },
+      "root": {
+        "id": "jobs-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "jobs-table",
+            "block": "core.table",
+            "props": {
+              "label": {
+                "key": "jobs_label"
+              },
+              "empty": {
+                "key": "jobs_empty"
+              },
+              "idPath": "id",
+              "labels": {
+                "status": {
+                  "open": {
+                    "key": "status_open"
+                  },
+                  "closed": {
+                    "key": "status_closed"
+                  }
+                }
+              },
+              "selectParam": "job",
+              "pageSize": 20,
+              "columns": [
+                {
+                  "term": {
+                    "key": "col_job"
+                  },
+                  "path": "title",
+                  "width": "fill",
+                  "minWidth": 180,
+                  "truncate": true
+                },
+                {
+                  "term": {
+                    "key": "col_status"
+                  },
+                  "path": "status",
+                  "format": "badge",
+                  "width": "fit",
+                  "tones": {
+                    "open": "success",
+                    "closed": "muted"
+                  }
+                },
+                {
+                  "term": {
+                    "key": "col_created"
+                  },
+                  "path": "createdAt",
+                  "format": "day",
+                  "width": "fit",
+                  "hideBelow": "tablet"
+                }
+              ]
+            },
+            "bind": {
+              "rows": {
+                "read": "blocks-core.hiring.api.job.list"
+              }
+            }
+          },
+          {
+            "id": "job-new",
+            "block": "core.form",
+            "props": {
+              "label": {
+                "key": "job_new_title"
+              },
+              "submitLabel": {
+                "key": "job_new_submit"
+              },
+              "successNotice": {
+                "key": "job_saved"
+              },
+              "fields": [
+                {
+                  "name": "title",
+                  "label": {
+                    "key": "field_title"
+                  },
+                  "kind": "text",
+                  "required": true,
+                  "max": 500
+                },
+                {
+                  "name": "description",
+                  "label": {
+                    "key": "field_description"
+                  },
+                  "kind": "textarea",
+                  "max": 20000
+                },
+                {
+                  "name": "requirements",
+                  "label": {
+                    "key": "field_requirements"
+                  },
+                  "hint": {
+                    "key": "field_requirements_hint"
+                  },
+                  "kind": "textarea",
+                  "max": 20000
+                }
+              ],
+              "surface": "section"
+            },
+            "bind": {
+              "submit": {
+                "action": "blocks-core.hiring.job-save"
+              }
+            },
+            "when": {
+              "permission": "hiring.manage"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "aside": {
+    "id": "aside",
+    "block": "core.stack",
+    "props": {
+      "gap": "region"
+    },
+    "children": [
+      {
+        "id": "aside-candidate",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "showWhen": {
+          "param": "candidate",
+          "is": ["*"]
+        },
+        "children": [
+          {
+            "id": "candidate-detail",
+            "block": "core.detail",
+            "props": {
+              "label": {
+                "key": "candidate_detail"
+              },
+              "idle": {
+                "key": "candidate_idle"
+              },
+              "items": [],
+              "sections": [
+                {
+                  "title": {
+                    "key": "section_candidate"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_contact"
+                      },
+                      "path": "contact"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_job"
+                      },
+                      "path": "jobTitle"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_stage"
+                      },
+                      "path": "stage",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_cv"
+                      },
+                      "path": "cvName"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_applied"
+                      },
+                      "path": "createdAt",
+                      "format": "dateTime"
+                    }
+                  ]
+                },
+                {
+                  "title": {
+                    "key": "section_screening"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_profile"
+                      },
+                      "path": "profile"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_summary"
+                      },
+                      "path": "screeningSummary"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_notes"
+                      },
+                      "path": "notes"
+                    }
+                  ]
+                }
+              ],
+              "labels": {
+                "stage": {
+                  "new": {
+                    "key": "stage_new"
+                  },
+                  "screened": {
+                    "key": "stage_screened"
+                  },
+                  "interview": {
+                    "key": "stage_interview"
+                  },
+                  "offer": {
+                    "key": "stage_offer"
+                  },
+                  "hired": {
+                    "key": "stage_hired"
+                  },
+                  "rejected": {
+                    "key": "stage_rejected"
+                  }
+                }
+              },
+              "closeParam": "candidate",
+              "titlePath": "name",
+              "surface": "section"
+            },
+            "bind": {
+              "record": {
+                "read": "blocks-core.hiring.api.candidate.get",
+                "variables": {
+                  "id": "$candidate"
+                }
+              }
+            }
+          },
+          {
+            "id": "candidate-update",
+            "block": "core.form",
+            "props": {
+              "label": {
+                "key": "candidate_update_title"
+              },
+              "submitLabel": {
+                "key": "candidate_update_submit"
+              },
+              "successNotice": {
+                "key": "candidate_saved"
+              },
+              "fields": [
+                {
+                  "name": "stage",
+                  "label": {
+                    "key": "field_stage"
+                  },
+                  "kind": "choice",
+                  "required": true,
+                  "options": [
+                    {
+                      "value": "new",
+                      "label": {
+                        "key": "stage_new"
+                      }
+                    },
+                    {
+                      "value": "screened",
+                      "label": {
+                        "key": "stage_screened"
+                      }
+                    },
+                    {
+                      "value": "interview",
+                      "label": {
+                        "key": "stage_interview"
+                      }
+                    },
+                    {
+                      "value": "offer",
+                      "label": {
+                        "key": "stage_offer"
+                      }
+                    },
+                    {
+                      "value": "hired",
+                      "label": {
+                        "key": "stage_hired"
+                      }
+                    },
+                    {
+                      "value": "rejected",
+                      "label": {
+                        "key": "stage_rejected"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "profile",
+                  "label": {
+                    "key": "field_profile"
+                  },
+                  "hint": {
+                    "key": "field_profile_hint"
+                  },
+                  "kind": "textarea",
+                  "max": 20000
+                },
+                {
+                  "name": "notes",
+                  "label": {
+                    "key": "field_notes"
+                  },
+                  "hint": {
+                    "key": "field_notes_hint"
+                  },
+                  "kind": "textarea",
+                  "max": 20000
+                }
+              ],
+              "requireRecord": true,
+              "idle": {
+                "key": "candidate_idle"
+              },
+              "surface": "section"
+            },
+            "bind": {
+              "record": {
+                "read": "blocks-core.hiring.api.candidate.get",
+                "variables": {
+                  "id": "$candidate"
+                }
+              },
+              "submit": {
+                "action": "blocks-core.hiring.candidate-update"
+              }
+            },
+            "when": {
+              "permission": "hiring.manage"
+            }
+          }
+        ]
+      },
+      {
+        "id": "aside-job",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "showWhen": {
+          "param": "job",
+          "is": ["*"]
+        },
+        "children": [
+          {
+            "id": "job-detail",
+            "block": "core.detail",
+            "props": {
+              "label": {
+                "key": "job_detail"
+              },
+              "idle": {
+                "key": "job_idle"
+              },
+              "items": [
+                {
+                  "term": {
+                    "key": "fact_status"
+                  },
+                  "path": "status",
+                  "format": "badge"
+                },
+                {
+                  "term": {
+                    "key": "fact_description"
+                  },
+                  "path": "description"
+                },
+                {
+                  "term": {
+                    "key": "fact_requirements"
+                  },
+                  "path": "requirements"
+                }
+              ],
+              "labels": {
+                "status": {
+                  "open": {
+                    "key": "status_open"
+                  },
+                  "closed": {
+                    "key": "status_closed"
+                  }
+                }
+              },
+              "closeParam": "job",
+              "titlePath": "title",
+              "surface": "section"
+            },
+            "bind": {
+              "record": {
+                "read": "blocks-core.hiring.api.job.get",
+                "variables": {
+                  "id": "$job"
+                }
+              }
+            }
+          },
+          {
+            "id": "job-edit",
+            "block": "core.form",
+            "props": {
+              "label": {
+                "key": "job_edit_title"
+              },
+              "submitLabel": {
+                "key": "job_edit_submit"
+              },
+              "successNotice": {
+                "key": "job_saved"
+              },
+              "fields": [
+                {
+                  "name": "title",
+                  "label": {
+                    "key": "field_title"
+                  },
+                  "kind": "text",
+                  "required": true,
+                  "max": 500
+                },
+                {
+                  "name": "description",
+                  "label": {
+                    "key": "field_description"
+                  },
+                  "kind": "textarea",
+                  "max": 20000
+                },
+                {
+                  "name": "requirements",
+                  "label": {
+                    "key": "field_requirements"
+                  },
+                  "hint": {
+                    "key": "field_requirements_hint"
+                  },
+                  "kind": "textarea",
+                  "max": 20000
+                },
+                {
+                  "name": "status",
+                  "label": {
+                    "key": "field_status"
+                  },
+                  "kind": "choice",
+                  "required": true,
+                  "options": [
+                    {
+                      "value": "open",
+                      "label": {
+                        "key": "status_open"
+                      }
+                    },
+                    {
+                      "value": "closed",
+                      "label": {
+                        "key": "status_closed"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "requireRecord": true,
+              "idle": {
+                "key": "job_idle"
+              },
+              "surface": "section"
+            },
+            "bind": {
+              "record": {
+                "read": "blocks-core.hiring.api.job.get",
+                "variables": {
+                  "id": "$job"
+                }
+              },
+              "submit": {
+                "action": "blocks-core.hiring.job-save"
+              }
+            },
+            "when": {
+              "permission": "hiring.manage"
+            }
+          },
+          {
+            "id": "candidate-add",
+            "block": "core.form",
+            "props": {
+              "label": {
+                "key": "candidate_add_title"
+              },
+              "submitLabel": {
+                "key": "candidate_add_submit"
+              },
+              "successNotice": {
+                "key": "candidate_added"
+              },
+              "fields": [
+                {
+                  "name": "name",
+                  "label": {
+                    "key": "field_name"
+                  },
+                  "kind": "text",
+                  "required": true,
+                  "max": 500
+                },
+                {
+                  "name": "contact",
+                  "label": {
+                    "key": "field_contact"
+                  },
+                  "hint": {
+                    "key": "field_contact_hint"
+                  },
+                  "kind": "text",
+                  "max": 500
+                },
+                {
+                  "name": "profile",
+                  "label": {
+                    "key": "field_profile"
+                  },
+                  "hint": {
+                    "key": "field_profile_hint"
+                  },
+                  "kind": "textarea",
+                  "max": 20000
+                }
+              ],
+              "requireRecord": true,
+              "idle": {
+                "key": "job_idle"
+              },
+              "surface": "section"
+            },
+            "bind": {
+              "record": {
+                "read": "blocks-core.hiring.api.job.get",
+                "variables": {
+                  "id": "$job"
+                }
+              },
+              "submit": {
+                "action": "blocks-core.hiring.candidate-add"
+              }
+            },
+            "when": {
+              "permission": "hiring.manage"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

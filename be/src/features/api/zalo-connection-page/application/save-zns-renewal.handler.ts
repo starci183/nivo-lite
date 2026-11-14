@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ZaloConnectService } from "@modules/domain/channels"
-import type { OptionalZnsRenewal } from "@modules/domain/channels"
+import { ZaloConnectService, type OptionalZnsRenewal } from "@modules/domain/channels"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveZnsRenewalCommand } from "./save-zns-renewal.command"
 
 @CommandHandler(SaveZnsRenewalCommand)

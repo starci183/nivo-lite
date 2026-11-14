@@ -1,10 +1,8 @@
 import type { ReactNode } from "react"
 import { waitingChipOf } from "../../rows/count-chip"
-import { EmptyNotice, Link, Section, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Link, Section, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import type { DecisionQueueView, DecisionRowView } from "../../views/views.types"
-import { DecisionRow } from "./DecisionRow"
-import type { DecisionEdit } from "./DecisionRow"
+import { DecisionRow, type DecisionEdit } from "./DecisionRow"
 
 /** Where a list of waiting rows stands: a card on a card page, or a section in a pane. */
 type DecisionListSurface = "card" | "section"
@@ -67,7 +65,12 @@ export const DecisionList = (props: DecisionListProps): ReactNode => {
     const rows = props.queue.rows.map((row) => listRowOf(row, props))
     const empty = <EmptyNotice message={props.words.emptyTitle} description={props.words.emptyBody} />
     const more = props.queue.more
-    const morePlain = more === null ? null : <Link href={more.href}>{more.label}</Link>
+    const morePlain =
+        more === null ? null : (
+            <Link href={more.href} variant="plain">
+                {more.label}
+            </Link>
+        )
     if (props.surface === "card") {
         return (
             <SurfaceCard

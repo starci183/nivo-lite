@@ -1,8 +1,7 @@
 import { eventStreamUrl } from "@/modules/config"
 import { openWorkspaceId } from "@/modules/routes"
 import type { EventStreamHandle } from "@starci/event-stream"
-import { eventStream } from "../clients/event-stream"
-import type { StreamReporter } from "../clients/event-stream"
+import { eventStream, type StreamReporter } from "../clients/event-stream"
 
 /** One typing hint the stream pushes (be/src/features/realtime/chat-typing): who, and until when. */
 export interface ChatTypingPush {

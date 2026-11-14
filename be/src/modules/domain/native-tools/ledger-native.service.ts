@@ -1,17 +1,20 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { ledgerEntryOf } from "@nivo-lite/blocks-core/modules/accounting"
-import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
-import type { RunIn } from "@modules/domain/entity-engine"
-import { InjectGraphEffectOnce } from "@modules/domain/graph-nodes"
-import type { EffectOnce } from "@modules/domain/graph-nodes"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
+import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { InjectGraphEffectOnce, type EffectOnce } from "@modules/domain/graph-nodes"
+import {
+    type ToolJson,
+    type NativeToolFamily,
+    type NativeCaller,
+    type ToolManifest,
+    argumentsOf,
+    unknownTool,
+} from "@modules/domain/tools"
 import {
     LedgerRegistryService,
     ProviderRegistryError,
     ProviderRegistryErrorCode,
+    type LedgerPort,
 } from "@modules/domain/provider-registry"
-import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
 import {
     LEDGER_APPEND_INPUT_SCHEMA,
     LEDGER_APPEND_SCHEMA,
@@ -20,34 +23,27 @@ import {
     LEDGER_VOID_INPUT_SCHEMA,
     LEDGER_VOID_SCHEMA,
 } from "./ledger-native.schema"
+import { soleAccountOf } from "./native-account.policy"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 
-const TRANSACTION = "payment.transaction"
-const ORDER = "sales.order"
-const LEAD = "sales.lead"
-
-/** The id of a record. */
-const RECORD_ID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu
-
 /** The ledger capability: named by what it keeps, never by the provider that keeps it. */
-export const LEDGER_MANIFEST: NativeConnectorManifest = {
+export const LEDGER_MANIFEST: ToolManifest = {
     key: "ledger",
-    namespace: "nivo.ledger",
+    namespace: "nivo.tool.ledger",
     name: "Ledger",
-    kind: "native",
     contractVersion: "ledger-native@1",
     tools: [
         {
             name: "entry.append",
             description:
-                "Writes one bank transaction into the business ledger the workspace connected. Give the transaction id alone: the date, amount, order number and customer of the line are read from the records. A transaction is recorded once; nothing already written is changed or removed.",
+                "Writes one bank transaction into the business ledger the workspace connected. Give the whole entry in the domain's words (date, order number, customer, amount, transaction id, status, note). A transaction is recorded once; nothing already written is changed or removed.",
             scope: "write",
             defaultMode: "auto",
             inputSchema: LEDGER_APPEND_INPUT_SCHEMA,
             argumentSchema: LEDGER_APPEND_SCHEMA,
             secretFields: ["customer"],
-            domain: "nivo.ledger.entry.append",
+            domain: TOOL.ledgerEntryAppend,
             internalOnly: true,
         },
         {
@@ -58,7 +54,7 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
             defaultMode: "auto",
             inputSchema: LEDGER_VOID_INPUT_SCHEMA,
             argumentSchema: LEDGER_VOID_SCHEMA,
-            domain: "nivo.ledger.entry.void",
+            domain: TOOL.ledgerEntryVoid,
             internalOnly: true,
         },
         {
@@ -68,7 +64,7 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
             defaultMode: "auto",
             inputSchema: LEDGER_STATUS_INPUT_SCHEMA,
             argumentSchema: LEDGER_STATUS_SCHEMA,
-            domain: "nivo.ledger.status.get",
+            domain: TOOL.ledgerStatusGet,
             internalOnly: true,
         },
     ],
@@ -76,80 +72,60 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
 
 @Injectable()
 /**
- * `nivo.ledger.entry.append`, `nivo.ledger.entry.void` and `nivo.ledger.status.get` for a workspace, for internal callers only: the first registered provider that is
- * ready in the workspace keeps the ledger. The ledger is a copy that only grows. A transaction is written once (the key
+ * `nivo.tool.ledger.entry.append`, `nivo.tool.ledger.entry.void` and `nivo.tool.ledger.status.get` for a workspace, for internal callers only: a write goes to
+ * the provider of the account the tool runner handed, or for the engine's own caller to the ONE provider ready in the workspace (never
+ * a silent pick: `writePort`). The ledger is a copy that only grows. A transaction is written once (the key
  * `ledger:<transactionId>` in the ledger of graph-node effects, so a replay, another run or a retry never adds a second entry); a
  * provider refusing the connection is the refusal `connection_refused`, which only the owner can cure; any other failure of the provider
  * is thrown as it is and the run tries again. The once-per-key ledger is what makes a write happen once, so a write is never made
  * without it: an app that binds none (no graph host) answers the refusal `ledger_key_unavailable` and writes nothing, it never appends
- * unkeyed; `nivo.ledger.status.get` needs no key and answers everywhere.
+ * unkeyed; `nivo.tool.ledger.status.get` needs no key and answers everywhere.
  */
-export class LedgerNativeService implements NativeAdapter {
-    readonly manifest: NativeConnectorManifest = LEDGER_MANIFEST
+export class LedgerNativeService implements NativeToolFamily {
+    readonly manifest: ToolManifest = LEDGER_MANIFEST
 
     constructor(
         private readonly views: NativeViewService,
         private readonly providers: LedgerRegistryService,
         @Optional() @InjectGraphEffectOnce() private readonly once?: EffectOnce,
-        @Optional() private readonly engine?: EntityEngineService,
-        @Optional() private readonly ports?: EntityPortsService,
     ) {}
 
     /** Runs one ledger tool. */
-    async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
+    async invoke(workspaceId: string, tool: string, args: ToolJson, caller: NativeCaller): Promise<ToolJson> {
         await this.views.internalOf(workspaceId, caller)
         if (tool === "status.get") {
             argumentsOf(tool, LEDGER_STATUS_SCHEMA, args)
-            return { connected: (await this.readyPort(workspaceId)) !== undefined }
+            return { connected: (await this.readyPorts(workspaceId, caller)).length > 0 }
         }
         if (tool === "entry.append") {
-            const asked = argumentsOf(tool, LEDGER_APPEND_SCHEMA, args)
-            const entry = "entry" in asked ? asked.entry : await this.entryOf(workspaceId, asked.transactionId)
+            const { entry } = argumentsOf(tool, LEDGER_APPEND_SCHEMA, args)
             const key = `ledger:${entry.transactionId}${entry.status === "void" ? ":void" : ""}`
-            return this.written(workspaceId, key, (port) => port.append(workspaceId, entry))
+            return this.written(workspaceId, caller, key, (port) =>
+                caller.connectionId === undefined
+                    ? port.append(workspaceId, entry)
+                    : port.append(workspaceId, entry, caller.connectionId),
+            )
         }
         if (tool === "entry.void") {
             const { transactionId } = argumentsOf(tool, LEDGER_VOID_SCHEMA, args)
-            return this.written(workspaceId, `ledger:${transactionId}:void`, (port) =>
-                port.void(workspaceId, transactionId),
+            return this.written(workspaceId, caller, `ledger:${transactionId}:void`, (port) =>
+                caller.connectionId === undefined
+                    ? port.void(workspaceId, transactionId)
+                    : port.void(workspaceId, transactionId, caller.connectionId),
             )
         }
         throw unknownTool(tool)
     }
 
-    /**
-     * The entry of a bank transaction named by its id, built from the records (the transaction, the order it paid, the customer): no
-     * figure of the line comes from the caller. A transaction that is not there, or paid nothing yet, is the refusal `not_found`.
-     */
-    private async entryOf(workspaceId: string, transactionId: string): Promise<BusinessLedgerEntry> {
-        if (this.engine === undefined || this.ports === undefined || !RECORD_ID.test(transactionId)) {
-            throw nativeRefusal("not_found")
-        }
-        const { engine, ports } = this
-        const built = await engine.scoped(workspaceId, (tx) => {
-            const runIn: RunIn = (use) => use(tx)
-            return ledgerEntryOf(
-                {
-                    transactions: ports.entityApi(runIn, "action", TRANSACTION),
-                    orders: ports.entityApi(runIn, "action", ORDER),
-                    leads: ports.entityApi(runIn, "action", LEAD),
-                },
-                transactionId,
-            )
-        })
-        if ("refused" in built) throw nativeRefusal("not_found")
-        return built.entry
-    }
-
     private async written(
         workspaceId: string,
+        caller: NativeCaller,
         key: string,
         write: (port: LedgerPort) => Promise<string | undefined>,
-    ): Promise<GatewayJson> {
+    ): Promise<ToolJson> {
         const { once } = this
         if (once === undefined) throw nativeRefusal("ledger_key_unavailable")
-        const port = await this.readyPort(workspaceId)
-        if (port === undefined) throw nativeRefusal("not_connected")
+        const port = await this.writePort(workspaceId, caller)
         const act = async (): Promise<{ readonly kind: string; readonly id: string }> => {
             const ref = await this.guarded(() => write(port), port.provider)
             if (ref === undefined) throw nativeRefusal("not_connected")
@@ -175,10 +151,24 @@ export class LedgerNativeService implements NativeAdapter {
         }
     }
 
-    /** The first registered provider that is ready in the workspace; every provider is asked at once. */
-    private async readyPort(workspaceId: string): Promise<LedgerPort | undefined> {
-        const ports = this.providers.all()
+    /**
+     * The registered providers that are ready in the workspace; every provider is asked at once. A call the tool runner handed an
+     * account goes to that account's provider alone.
+     */
+    private async readyPorts(workspaceId: string, caller: NativeCaller): Promise<ReadonlyArray<LedgerPort>> {
+        const ports = this.providers.all().filter((port) => caller.provider === undefined || port.provider === caller.provider)
         const ready = await Promise.all(ports.map((port) => port.ready(workspaceId)))
-        return ports.find((_port, index) => ready[index] === true)
+        return ports.filter((_port, index) => ready[index] === true)
+    }
+
+    /**
+     * The provider a write goes to, never a silent pick (ARCH-REVIEW 2026-11-12 S7): a call the tool runner handed an account, that
+     * account's provider when it is ready (`not_connected` otherwise); an agent's call with no account handed is refused
+     * `not_connected` (the runner hands the node's books account; none handed means none is bound); the engine's own caller (the
+     * declared job) writes to the ONE ready provider (`soleAccountOf`: several are `not_selected`, none `not_connected`).
+     */
+    private async writePort(workspaceId: string, caller: NativeCaller): Promise<LedgerPort> {
+        if (caller.connectionId === undefined && caller.engine !== true) throw nativeRefusal("not_connected")
+        return soleAccountOf(await this.readyPorts(workspaceId, caller))
     }
 }

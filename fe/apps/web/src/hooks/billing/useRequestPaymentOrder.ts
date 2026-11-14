@@ -5,8 +5,8 @@ import {
     QUERY_PAYMENT_ORDERS_SWR_KEY,
     useMutateRequestPaymentOrderSwr,
     useQueryPaymentOrderRequestStatusSwr,
+    type MutateRequestPaymentOrderRequest,
 } from "@/hooks/swr"
-import type { MutateRequestPaymentOrderRequest } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"

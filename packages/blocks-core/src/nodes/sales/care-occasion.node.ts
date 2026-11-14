@@ -1,238 +1,149 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
+import { PROVIDER, TOOL } from "@nivo-lite/agent-sdk/names"
+import { defineTemplateNode, type TemplateNode } from "@nivo-lite/agent-sdk/template"
 import { z } from "zod"
-import { MAX_ID, MAX_LINE } from "../../bounds"
+import { MAX_ID } from "../../bounds"
 import { bilingualOf } from "../../messages/catalog"
-import { TOOL } from "../../vocabulary/tool-ids"
-import { itemsTextOf, orderLinesOf } from "../payment/payment-request.policy"
-import { nodeGoalOf } from "../node-ui"
 import type { NodeLocale, NodeSchema } from "../node-schema.types"
-import { CARE_RIGHTS, careFactsOfLead, careLeadOf, careMemoryRowOf, carePaidOrdersOf } from "./care.data"
-import { isDue, nextOccurrenceOf, occasionOfSuffix, occasionStandingOf } from "./care.policy"
-import type { CareOccasion, OccasionStanding } from "./care.policy"
-import { CARE_VOICE, agentAnswer, arm } from "./care.steps"
+import { nodeGoalOf } from "../node-ui"
+import { occasionDueSchema, type OccasionDue } from "./care-occasion-wait.node"
+import { PROFILE_AN, SENT_VIA_ZALO } from "./care.examples"
+import { vietnamDayOf } from "./care.policy"
+import { customerNameOf, leadContactOf } from "./care.reads"
+import { CARE_VOICE, careMessageSchema, refusalSchema, sendToContact } from "./care.steps"
+import { answered, refused } from "../tool-answers"
+import { SALES_LEAD_ENTITY } from "../../entities/sales/sales-entity-names"
 
 const ID = "sales.care-occasion"
-const DAY_MS = 86_400_000
 
-/** What the occasion step is given: the customer, which date, and the language. */
+/** What the suggestion is given: the customer, the occasion the wait found due, and the language. */
 export interface CareOccasionInput {
-    /** The customer (`= trigger.ref`). */
+    /** The customer (`= steps.wait.output.leadId`). */
     readonly leadId: string
-    /** Names the date among the customer's (`= trigger.suffix`), or null. */
-    readonly suffix: string | null
-    /**
-     * The moment the run is due (`= trigger.dueAt`), or null/absent. A timer's own wake carries the moment it was armed for, which the
-     * date already reaches; "run now" from the schedule carries the press moment, so the step writes although the date is still ahead.
-     */
-    readonly dueAt?: string | null | undefined
+    /** The occasion (`= steps.wait.output.due`); null only when wired wrongly. */
+    readonly due: OccasionDue | null
     /** The language of the message. */
     readonly locale: NodeLocale
 }
 
-/** What the occasion step did. */
+/** What the suggestion did. */
 export interface CareOccasionOutput {
     /** The customer, echoed. */
     readonly leadId: string
-    /** `sent` the suggestion went out; `later` the date is still far and the timer moved; `closed` nothing to do (no such date, no paid order, opted out). */
-    readonly result: "sent" | "later" | "closed"
+    /** True when the suggestion reached the customer. */
+    readonly sent: boolean
+    /** The send tool's refusal when it did not, else null. */
+    readonly refusal: string | null
 }
-
-/** What the owner sets for the occasion step. */
-export interface CareOccasionParams {
-    /** How many days before a date the customer mentioned the shop writes. */
-    readonly occasionLeadDays: number
-}
-
-const params: z.ZodType<CareOccasionParams, { occasionLeadDays?: number | undefined }> = z.object({
-    occasionLeadDays: z.number().int().min(1).max(30).default(7),
-})
 
 const input: NodeSchema<CareOccasionInput> = z.object({
     leadId: z.string().max(MAX_ID).min(1),
-    suffix: z.string().max(MAX_LINE).nullable(),
-    dueAt: z.string().max(MAX_LINE).nullable().optional(),
+    due: occasionDueSchema.nullable(),
     locale: z.enum(["vi", "en"]),
 })
 
 const output: NodeSchema<CareOccasionOutput> = z.object({
     leadId: z.string().max(MAX_ID).describe("The id of the customer, as given."),
-    result: z
-        .enum(["sent", "later", "closed"])
-        .describe("`sent` when the suggestion was sent to the customer (the agent answers only this)."),
+    sent: z.boolean().describe("True when the suggestion reached the customer."),
+    refusal: refusalSchema,
 })
 
 const GUIDANCE =
     "The customer's date (the occasion) is coming up. Write ONE gentle message: mention the occasion and suggest ordering something like " +
-    "their last order for it. No pressure, no discount, no price. Send it with `customer.leadId` (the tool finds their conversation)."
-
-/**
- * Where the date stands for this run: the clock's standing, except that a run whose own due moment has come (a forced "run now" from the
- * schedule) treats a date still ahead as due. A run with no due moment keeps the clock's standing (the normal path is unchanged).
- */
-const standingFor = (standing: OccasionStanding, dueAt: string | null | undefined, now: Date): OccasionStanding =>
-    standing.kind === "later" && typeof dueAt === "string" && isDue(dueAt, now) ? { kind: "due", on: standing.on } : standing
-
-/** The moment to write about a yearly date after the one just handled: the lead time before its next occurrence. */
-const nextYearsWriteAt = (occasion: CareOccasion, on: string, leadDays: number): string | null => {
-    const following = nextOccurrenceOf(occasion, new Date(Date.parse(on) + DAY_MS))
-    return following === null ? null : new Date(following.getTime() - leadDays * DAY_MS).toISOString()
-}
-
-const EXAMPLE_GRANT: RightsGrant = {
-    rights: [...CARE_RIGHTS, { kind: "message", access: "write", scope: "turn", fields: ["body"] }],
-}
-
-const LEAD = { id: "l1", contactName: "An" }
-
-const ORDER = {
-    id: "o1",
-    orderNo: "DH-1",
-    amountVnd: 2000,
-    status: "paid",
-    items: { lines: [{ name: "roses", qty: 1, unitVnd: 2000, amountVnd: 2000 }] },
-    leadId: "l1",
-    shippedAt: null,
-    confirmedAt: "1969-12-20T00:00:00.000Z",
-}
+    "their last order for it. No pressure, no discount, no price."
 
 const SUGGESTION = "Her birthday is coming up. Would you like to see ideas like the roses you sent last time?"
 
+/** The birthday the wait found due, in the examples. */
+const DUE: OccasionDue = {
+    occasionId: "occ-1",
+    label: "birthday",
+    month: 1,
+    day: 5,
+    year: null,
+    on: "1970-01-04T17:00:00.000Z",
+    recipient: "her",
+    lastOrder: { orderNo: "DH-1", items: "1 x roses" },
+}
+
+/** The read of the person the customer record `l1` names (`c1`). */
+const LEAD_CONTACT = {
+    id: TOOL.recordGet,
+    args: { type: SALES_LEAD_ENTITY, id: "l1" },
+    answer: answered({ record: { id: "l1", values: { contactId: "c1" } } }),
+}
+
 /**
- * `sales.care-occasion` (Gợi ý đặt lại cho dịp): `occasionLeadDays` before a date the customer mentioned (a birthday, an anniversary), the
- * agent writes ONE gentle suggestion to order again, from the occasion and the customer's last paid order (`nivo.lead.message.send`). Timing is code
- * around it: a date still far away moves the timer, a yearly date arms next year once handled, a one-off date that has passed ends.
- * Nothing is written to a customer who asked to be left alone or who never paid an order.
+ * `sales.care-occasion` (Goi y dat lai cho dip): `occasionLeadDays` before a date the customer mentioned, the agent writes ONE gentle
+ * suggestion to order again from the occasion and the last paid order, and the node sends it (`nivo.tool.customer.message.send`). The timing
+ * and the guards are `sales.care-occasion-wait`'s; next year's timer is `sales.care-occasion-rearm`'s.
  */
-export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
+export const salesCareOccasionNode: TemplateNode<typeof input, typeof output> = defineTemplateNode({
     id: ID,
-    role: "output",
     title: bilingualOf("nodeSalesCareOccasionTitle"),
-    params,
+    description: { vi: "Tr\u01b0\u1edbc ng\u00e0y \u0111\u1eb7c bi\u1ec7t c\u1ee7a kh\u00e1ch, g\u1eedi m\u1ed9t l\u1eddi g\u1ee3i \u00fd nh\u1eb9 nh\u00e0ng \u0111\u1eb7t l\u1ea1i theo d\u1ecbp v\u00e0 \u0111\u01a1n \u0111\u00e3 mua g\u1ea7n nh\u1ea5t.", en: "Before a customer's special date, sends one gentle suggestion to order again, based on the occasion and the last paid order." },
+    tools: [TOOL.contactGet, TOOL.customerMessageSend],
+    mode: "auto",
+    accounts: [PROVIDER.zaloOa, PROVIDER.telegram, PROVIDER.meta],
     input,
     output,
-    rights: CARE_RIGHTS,
-    effects: [TOOL.customerMessageSend, TOOL.careSchedule],
-    requires: [TOOL.customerMessageSend],
+    model: "claude-sonnet-5-5",
     run: async (given, context) => {
-        const closed: CareOccasionOutput = { leadId: given.leadId, result: "closed" }
-        const suffix = given.suffix ?? ""
-        const lead = await careLeadOf(context, given.leadId)
-        const facts = await careFactsOfLead(context, lead?.id)
-        const occasion = occasionOfSuffix(facts.occasions, suffix)
-        if (lead === undefined || occasion === undefined || facts.optedOut) return closed
-        const { occasionLeadDays } = context.params
-        const now = context.now()
-        const standing = standingFor(occasionStandingOf(occasion, now, occasionLeadDays), given.dueAt, now)
-        if (standing.kind === "gone") return closed
-        if (standing.kind === "later") {
-            await arm(context, { kind: "occasion", ref: lead.id, suffix, dueAt: standing.writeAt })
-            return { leadId: lead.id, result: "later" }
-        }
-        const [last] = await carePaidOrdersOf(context, lead.id)
-        if (last === undefined) return closed
-        const answer = await agentAnswer(context, {
+        const due = given.due
+        if (due === null)
+            return context.fail({ kind: "cannot", why: "the suggestion was reached with no occasion due" })
+        // The person to write to is the contact the sale's record of the customer names; a record that names none has nobody to write to.
+        const contactId = await leadContactOf(context, given.leadId)
+        if (contactId === null) return { leadId: given.leadId, sent: false, refusal: null }
+        const name = await customerNameOf(context)
+        const message = await context.agent.run({
             goal: `${nodeGoalOf(ID, "en")} ${GUIDANCE} ${CARE_VOICE}`,
             input: {
                 locale: given.locale,
-                occasion: { label: occasion.label, on: standing.on.slice(0, 10) },
-                lastOrder: { orderNo: last.orderNo, items: itemsTextOf(orderLinesOf(last.items)) },
-                customer: { leadId: lead.id, name: lead.contactName, recipient: facts.recipient },
-                careKind: "occasion",
+                occasion: { label: due.label, on: vietnamDayOf(due.on) },
+                lastOrder: due.lastOrder,
+                customer: { name, recipient: due.recipient },
             },
-            output,
-            maxTurns: 3,
-            purpose: "occasion",
+            output: careMessageSchema,
+            tools: [],
+            maxTurns: 1,
         })
-        const next = occasion.year === null ? nextYearsWriteAt(occasion, standing.on, occasionLeadDays) : null
-        if (next !== null) await arm(context, { kind: "occasion", ref: lead.id, suffix, dueAt: next })
-        return answer
+        return { leadId: given.leadId, ...(await sendToContact(context, contactId, message.text)) }
     },
     examples: [
         {
-            name: "inside the lead time of a birthday the agent suggests ordering again, and next year is armed",
-            params: { occasionLeadDays: 7 },
-            input: { leadId: "l1", suffix: "birthday-1-5", locale: "en" },
-            output: { leadId: "l1", result: "sent" },
-            grant: EXAMPLE_GRANT,
-            model: [
-                { call: { tool: TOOL.customerMessageSend, args: { leadId: "l1", text: SUGGESTION } } },
-                { done: { leadId: "l1", result: "sent" } },
-            ],
-            effects: [
-                { kind: TOOL.customerMessageSend, payload: { leadId: "l1", text: SUGGESTION } },
-                {
-                    kind: TOOL.careSchedule,
-                    payload: { kind: "occasion", ref: "l1", dueAt: "1970-12-28T17:00:00.000Z", suffix: "birthday-1-5" },
-                },
-            ],
-            store: {
-                order: [ORDER],
-                "sales-lead": [LEAD],
-                "agent-lead-memory": [careMemoryRowOf("l1", { recipientName: "her", occasions: [{ label: "birthday", date: "01-05" }] })],
-            },
-        },
-        {
-            name: "a date still far away moves the timer to the lead time and sends nothing",
-            params: { occasionLeadDays: 7 },
-            input: { leadId: "l1", suffix: "birthday-6-1", locale: "en" },
-            output: { leadId: "l1", result: "later" },
-            grant: EXAMPLE_GRANT,
-            effects: [
-                {
-                    kind: TOOL.careSchedule,
-                    payload: { kind: "occasion", ref: "l1", dueAt: "1970-05-24T17:00:00.000Z", suffix: "birthday-6-1" },
-                },
-            ],
-            store: { "sales-lead": [LEAD], "agent-lead-memory": [careMemoryRowOf("l1", { occasions: [{ label: "birthday", date: "06-01" }] })] },
-        },
-        {
-            name: "run now from the schedule: a date still far away is written about at once, and next year is armed",
-            params: { occasionLeadDays: 7 },
-            input: { leadId: "l1", suffix: "birthday-6-1", dueAt: "1970-01-01T00:00:00.000Z", locale: "en" },
-            output: { leadId: "l1", result: "sent" },
-            grant: EXAMPLE_GRANT,
-            model: [
-                { call: { tool: TOOL.customerMessageSend, args: { leadId: "l1", text: SUGGESTION } } },
-                { done: { leadId: "l1", result: "sent" } },
-            ],
-            effects: [
-                { kind: TOOL.customerMessageSend, payload: { leadId: "l1", text: SUGGESTION } },
-                {
-                    kind: TOOL.careSchedule,
-                    payload: { kind: "occasion", ref: "l1", dueAt: "1971-05-24T17:00:00.000Z", suffix: "birthday-6-1" },
-                },
-            ],
-            store: {
-                order: [ORDER],
-                "sales-lead": [LEAD],
-                "agent-lead-memory": [careMemoryRowOf("l1", { recipientName: "her", occasions: [{ label: "birthday", date: "06-01" }] })],
-            },
-        },
-        {
-            name: "a customer who asked to be left alone gets no suggestion",
+            name: "a customer record that names no person has nobody to write to: nothing is sent",
             params: {},
-            input: { leadId: "l1", suffix: "birthday-1-5", locale: "en" },
-            output: { leadId: "l1", result: "closed" },
-            grant: EXAMPLE_GRANT,
-            effects: [],
-            store: {
-                "sales-lead": [LEAD],
-                "agent-lead-memory": [careMemoryRowOf("l1", { careOptOut: true, occasions: [{ label: "birthday", date: "01-05" }] })],
-            },
+            input: { leadId: "l1", due: DUE, locale: "en" },
+            tools: [{ ...LEAD_CONTACT, answer: answered({ record: { id: "l1", values: { contactId: null } } }) }],
+            output: { leadId: "l1", sent: false, refusal: null },
         },
         {
-            name: "a customer with no paid order has nothing to order again",
+            name: "inside the lead time of a birthday the agent suggests ordering again",
             params: {},
-            input: { leadId: "l1", suffix: "birthday-1-5", locale: "en" },
-            output: { leadId: "l1", result: "closed" },
-            grant: EXAMPLE_GRANT,
-            effects: [],
-            store: {
-                order: [],
-                "sales-lead": [LEAD], "agent-lead-memory": [careMemoryRowOf("l1", { occasions: [{ label: "birthday", date: "01-05" }] })],
-            },
+            input: { leadId: "l1", due: DUE, locale: "en" },
+            tools: [
+                LEAD_CONTACT,
+                { id: TOOL.contactGet, args: {}, answer: PROFILE_AN },
+                { id: TOOL.customerMessageSend, args: { contactId: "c1", text: SUGGESTION }, answer: SENT_VIA_ZALO },
+            ],
+            agent: [{ answer: { text: SUGGESTION } }],
+            output: { leadId: "l1", sent: true, refusal: null },
+        },
+        {
+            name: "a send the tool refuses is reported in the output",
+            params: {},
+            input: { leadId: "l1", due: DUE, locale: "en" },
+            tools: [
+                LEAD_CONTACT,
+                { id: TOOL.contactGet, args: {}, answer: PROFILE_AN },
+                {
+                    id: TOOL.customerMessageSend,
+                    args: { contactId: "c1", text: SUGGESTION },
+                    answer: refused("customer_opted_out"),
+                },
+            ],
+            agent: [{ answer: { text: SUGGESTION } }],
+            output: { leadId: "l1", sent: false, refusal: "customer_opted_out" },
         },
     ],
 })

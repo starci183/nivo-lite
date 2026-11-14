@@ -42,7 +42,7 @@ export const FactFormDrawer = (props: FactFormDrawerProps) => (
         }
     >
         <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-            <Stack gap="section">
+            <Stack gap="row">
                 {props.props.question === undefined ? null : <Text isStrong>{props.props.question}</Text>}
                 {props.props.context === undefined ? null : <Text tone="muted">{props.props.context}</Text>}
                 {props.props.isEditing ? null : renderFactSubjectFields(props)}
@@ -56,7 +56,7 @@ export const FactFormDrawer = (props: FactFormDrawerProps) => (
                     isDisabled={props.props.isPending}
                     onValueChange={props.on.setValue}
                 />
-                <Stack gap="row">
+                <Stack gap="inline">
                     <ChoiceChips
                         label={props.props.scopeLabel}
                         options={props.props.scopeOptions.map((one) => ({ value: one.id, label: one.label }))}

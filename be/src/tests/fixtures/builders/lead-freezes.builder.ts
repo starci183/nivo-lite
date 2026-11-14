@@ -5,8 +5,8 @@ import type { LeadFreeze, PendingEvent } from "@modules/domain/lead-freezes"
 export const releasedFreezeOf: (overrides?: Partial<LeadFreeze>) => LeadFreeze = builder<LeadFreeze>({
     id: "freeze-1",
     version: "1",
-    key: "lead:lead-1",
-    leadId: "lead-1",
+    key: "contact:lead-1",
+    contactId: "lead-1",
     conversationId: "c-1",
     status: "released",
     frozenRunId: null,
@@ -47,7 +47,7 @@ export const frozenFreezeOf: (overrides?: Partial<LeadFreeze>) => LeadFreeze = b
 export const pendingLineOf: (overrides?: Partial<PendingEvent>) => PendingEvent = builder<PendingEvent>({
     wakeId: "wake-2",
     agentId: "chatbot",
-    source: "customer",
+    source: "trigger",
     eventKey: "msg-2",
     scopeKey: "conversation:c-1",
     context: { conversationId: "c-1", messageId: "m-2" },

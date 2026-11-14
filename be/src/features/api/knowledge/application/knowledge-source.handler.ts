@@ -1,10 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AiUsageOverviewService } from "@modules/domain/ai-usage-events"
-import { KnowledgeDocumentsService } from "@modules/domain/knowledge"
+import { KnowledgeSourceReadService, type KnowledgeSourceRead } from "@modules/domain/knowledge"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { KnowledgeSourceRead } from "./knowledge-source.contracts"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KnowledgeSourceQuery } from "./knowledge-source.query"
 
 @QueryHandler(KnowledgeSourceQuery)
@@ -12,16 +9,12 @@ import { KnowledgeSourceQuery } from "./knowledge-source.query"
 export class KnowledgeSourceHandler extends ICQRSHandler<KnowledgeSourceQuery, KnowledgeSourceRead> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly documents: KnowledgeDocumentsService,
-        private readonly usage: AiUsageOverviewService,
+        private readonly source: KnowledgeSourceReadService,
     ) {
         super(logger)
     }
 
-    protected override async process(query: KnowledgeSourceQuery): Promise<KnowledgeSourceRead> {
-        const { principal, request } = query.params
-        const opened = await this.documents.document(principal.id, request.workspaceId, request.id)
-        const costs = await this.usage.documentCosts(principal.id, request.workspaceId, [request.id])
-        return { ...opened, aiCost: costs?.get(request.id) ?? null }
+    protected override process(query: KnowledgeSourceQuery): Promise<KnowledgeSourceRead> {
+        return this.source.read(query.params.principal.id, query.params.request.workspaceId, query.params.request.id)
     }
 }

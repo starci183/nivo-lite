@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import { mutate } from "@/modules/viewer-cache"
-import { useAvatarUpload, type AvatarProblem } from "@/hooks/avatar"
-import type { AvatarDoors } from "@/hooks/avatar"
+import { useAvatarUpload, type AvatarProblem, type AvatarDoors } from "@/hooks/avatar"
 import {
     QUERY_MODULE_INSTALLATIONS_SWR_KEY,
     useMutateRenameAgentSwr,
@@ -38,7 +37,7 @@ export interface AgentIdentityView {
 
 /**
  * The display identity of an agent a manager edits on its profile, like a person's: the name (free text, the @handle stays) and
- * the picture. Each save is toasted, then the profile and the Office board read the agent again.
+ * the picture. Each save is toasted, then the profile and the agent list read the agent again.
  */
 export const useAgentIdentity = (agentId: string): AgentIdentityView => {
     const t = useTranslations("agentProfile")
@@ -48,7 +47,7 @@ export const useAgentIdentity = (agentId: string): AgentIdentityView => {
     const requestUpload = useMutateRequestAgentAvatarUploadSwr()
     const setAvatar = useMutateSetAgentAvatarSwr()
     const [draft, setDraft] = useState<string | null>(null)
-    const [isNameInvalid, setNameInvalid] = useState(false)
+    const [isNameInvalid, setIsNameInvalid] = useState(false)
     const agent = "items" in slot ? slot.items : undefined
     const name = draft ?? agent?.name ?? ""
 
@@ -72,7 +71,7 @@ export const useAgentIdentity = (agentId: string): AgentIdentityView => {
     const saveName = useCallback(async () => {
         const clean = name.trim()
         const isValid = clean.length >= AGENT_NAME_LIMITS.min && clean.length <= AGENT_NAME_LIMITS.max
-        setNameInvalid(!isValid)
+        setIsNameInvalid(!isValid)
         if (!isValid) return
         const saved = await runGraphQL(() => rename.trigger({ agentId, name: clean }), {
             successMessage: t("identityNameSaved"),
