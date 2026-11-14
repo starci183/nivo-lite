@@ -6,7 +6,8 @@ import type { Request } from "express"
 import { mock } from "@starci/jest-preset"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
 import { MetaConnectionsService } from "@modules/domain/meta-connections"
-import { MetaInboxService, MetaWebhookVerifierService } from "@modules/domain/meta-inbox"
+import { MetaInboxErrorCode, MetaInboxService, MetaWebhookVerifierService } from "@modules/domain/meta-inbox"
+import { ProviderSandboxErrorCode, ProviderSandboxError, SandboxWebhookKeyService } from "@modules/domain/provider-sandbox"
 import { MetaWebhook } from "./meta.webhook"
 
 const RAW = Buffer.from('{\n  "object": "page", "entry": []\n}\n')
@@ -18,6 +19,7 @@ const build = async () => {
     inbox.accept.mockResolvedValue(undefined)
     const signature = mock<MetaWebhookVerifierService>()
     const verifier = mock<MetaConnectionsService>()
+    const sandboxes = mock<SandboxWebhookKeyService>()
     verifier.respondToChallenge.mockResolvedValue(CHALLENGE)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -25,9 +27,10 @@ const build = async () => {
             { provide: MetaWebhookVerifierService, useValue: signature },
             { provide: MetaInboxService, useValue: inbox },
             { provide: MetaConnectionsService, useValue: verifier },
+            { provide: SandboxWebhookKeyService, useValue: sandboxes },
         ],
     }).compile()
-    return { door: moduleRef.get(MetaWebhook), inbox, verifier, signature }
+    return { door: moduleRef.get(MetaWebhook), inbox, verifier, signature, sandboxes }
 }
 
 /** A request whose `rawBody` is present and undefined, which a typed partial cannot spell under exact optional property types. */
@@ -156,5 +159,50 @@ describe("MetaWebhook signature proof", () => {
         await expect(door.receive(mock<RawBodyRequest<Request>>({ rawBody: RAW }), SIGNATURE)).rejects.toBe(refusal)
         expect(signature.verify).toHaveBeenCalledWith(RAW, SIGNATURE)
         expect(inbox.accept).not.toHaveBeenCalled()
+    })
+})
+
+describe("MetaWebhook sandbox door", () => {
+    const SANDBOX_ID = "11111111-1111-4111-8111-111111111111"
+
+    it("sits beside the live route as a POST naming the connection, acknowledged with HTTP 200", () => {
+        expect(Reflect.getMetadata(PATH_METADATA, MetaWebhook.prototype.receiveSandbox)).toBe("webhook/:connectionId")
+        expect(Reflect.getMetadata(METHOD_METADATA, MetaWebhook.prototype.receiveSandbox)).toBe(RequestMethod.POST)
+        expect(Reflect.getMetadata(HTTP_CODE_METADATA, MetaWebhook.prototype.receiveSandbox)).toBe(HttpStatus.OK)
+    })
+
+    it("asks the shared guard first, then hands the raw bytes to the intake as the sandbox account's own, with no app signature proof", async () => {
+        const { door, inbox, signature, sandboxes } = await build()
+        sandboxes.verdictOf.mockResolvedValue({ kind: "sandbox", workspaceId: "ws-1", provider: "meta" })
+        inbox.acceptSandbox.mockResolvedValue(undefined)
+
+        await expect(door.receiveSandbox(mock<RawBodyRequest<Request>>({ rawBody: RAW }), { connectionId: SANDBOX_ID }, "key-1")).resolves.toBeUndefined()
+
+        expect(sandboxes.verdictOf).toHaveBeenCalledWith(SANDBOX_ID, "key-1")
+        expect(inbox.acceptSandbox).toHaveBeenCalledWith(RAW, { id: SANDBOX_ID, workspaceId: "ws-1" })
+        expect(signature.verify).not.toHaveBeenCalled()
+        expect(inbox.accept).not.toHaveBeenCalled()
+    })
+
+    it("refuses a live, removed or unknown account and a sandbox account of another provider: only the live door runs the app signature", async () => {
+        const { door, inbox, sandboxes } = await build()
+        sandboxes.verdictOf.mockResolvedValueOnce({ kind: "live" })
+        await expect(door.receiveSandbox(mock<RawBodyRequest<Request>>({ rawBody: RAW }), { connectionId: SANDBOX_ID }, "key-1")).rejects.toMatchObject({
+            code: MetaInboxErrorCode.SignatureInvalid,
+        })
+        sandboxes.verdictOf.mockResolvedValueOnce({ kind: "sandbox", workspaceId: "ws-1", provider: "zalo_oa" })
+        await expect(door.receiveSandbox(mock<RawBodyRequest<Request>>({ rawBody: RAW }), { connectionId: SANDBOX_ID }, "key-1")).rejects.toMatchObject({
+            code: MetaInboxErrorCode.SignatureInvalid,
+        })
+        expect(inbox.acceptSandbox).not.toHaveBeenCalled()
+    })
+
+    it("lets the guard's refusal of a wrong key reach the caller and accepts nothing", async () => {
+        const { door, inbox, sandboxes } = await build()
+        const refusal = new ProviderSandboxError({ code: ProviderSandboxErrorCode.WebhookKeyRefused, params: { connectionId: SANDBOX_ID } })
+        sandboxes.verdictOf.mockRejectedValue(refusal)
+
+        await expect(door.receiveSandbox(mock<RawBodyRequest<Request>>({ rawBody: RAW }), { connectionId: SANDBOX_ID }, "wrong")).rejects.toBe(refusal)
+        expect(inbox.acceptSandbox).not.toHaveBeenCalled()
     })
 })

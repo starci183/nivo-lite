@@ -158,11 +158,12 @@ export interface StopOpen {
 
 /**
  * How a stop is answered, the value `GraphThreads.resume` carries as its `decision`: the founder's words (a reply to the card on /chat,
- * or the card's box), one of the three buttons, or a NIVO deadline that passed.
+ * or the card's box), one of the three buttons, a person handing a stop they took over back (`handed_back`, rule S-3: it ends the run
+ * as `skip` does, and is kept as its own closing kind), or a NIVO deadline that passed.
  */
 export type StopDecision =
     | { readonly kind: "answer"; readonly text: string; readonly by: string; readonly at: string }
-    | { readonly kind: "retry" | "take_over" | "skip"; readonly by: string; readonly at: string }
+    | { readonly kind: "retry" | "take_over" | "skip" | "handed_back"; readonly by: string; readonly at: string }
     | { readonly kind: "timeout"; readonly at: string }
 
 /** What the gate node hands `scope.stop`: the question of the thread's stop, plain JSON. */

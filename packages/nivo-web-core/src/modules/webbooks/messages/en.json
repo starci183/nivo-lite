@@ -21,6 +21,7 @@
     "node.payment-settle.title": "Match money to the request awaiting payment",
     "node.invoice-draft.title": "Draft the invoice",
     "node.invoice-issue.title": "Issue the invoice",
+    "node.issue-record.title": "Record the issued invoice",
     "node.due.title": "Find what is due",
     "node.round-report.title": "Tell the team the reminder round",
     "node.supplier-report.title": "Tell the team about supplier invoices",

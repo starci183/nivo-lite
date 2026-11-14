@@ -154,6 +154,61 @@ const StepFields = (props: WorkflowStepDrawerProps) => {
     )
 }
 
+/**
+ * How a node step runs: a choice of two (runs on its own / asks first), each row with the muted line of what it does. Only the owner
+ * changes it, and each change writes the next version at once; anybody else reads the mode as words. The line under the block says runs
+ * in progress keep the old setting. Nothing here is a primary action.
+ */
+const StepRunMode = (props: WorkflowStepDrawerProps) => {
+    const mode = props.view.runMode
+    if (mode === null) return null
+    const current = mode.options.find((option) => option.id === mode.value)
+    return (
+        <Stack gap="row">
+            {mode.isEditable ? (
+                <SurfaceCard
+                    kind="select"
+                    sublabel={mode.title}
+                    selectionMode="single"
+                    value={mode.value}
+                    onChange={(value) => {
+                        if (value === "auto" || value === "ask") props.onAction({ kind: "node-mode", mode: value })
+                    }}
+                    items={mode.options.map((option) => ({
+                        id: option.id,
+                        title: option.label,
+                        subtitle: option.description,
+                        isDisabled: mode.isPending,
+                    }))}
+                />
+            ) : (
+                <>
+                    <Sublabel>{mode.title}</Sublabel>
+                    <SurfaceCard
+                        kind="details"
+                        ariaLabel={mode.title}
+                        items={[
+                            {
+                                id: "mode",
+                                term: current?.label ?? mode.value,
+                                description: current?.description ?? "",
+                            },
+                        ]}
+                    />
+                    {mode.ownerNote === "" ? null : (
+                        <Text size="sm" tone="muted">
+                            {mode.ownerNote}
+                        </Text>
+                    )}
+                </>
+            )}
+            <Text size="sm" tone="muted">
+                {mode.keepNote}
+            </Text>
+        </Stack>
+    )
+}
+
 /** The branches of a condition, read only: a bordered list card under its Sublabel, each row the port name as a chip, an outline arrow and the step it leads to. */
 const StepBranches = (props: StepBranchesProps) =>
     props.view.branches.length === 0 ? null : (
@@ -230,6 +285,7 @@ export const WorkflowStepDrawer = (props: WorkflowStepDrawerProps) => {
                     <StepPicker {...props} />
                     <StepTriggers {...props} />
                     <StepCall {...props} />
+                    <StepRunMode {...props} />
                     <StepFields {...props} />
                     {view.accounts === undefined ? null : (
                         <StepAccountsPanel view={view.accounts} onAction={props.onAction} />

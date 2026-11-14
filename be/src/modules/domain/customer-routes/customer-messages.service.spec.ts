@@ -119,6 +119,16 @@ describe("CustomerMessagesService.hear", () => {
         })
     })
 
+    it("keeps a file the entry could NOT keep with its typed reason and NO address (MX-CORE D2-4: never an empty address with no reason)", async () => {
+        const { service, store } = await build()
+        const unread = { id: "unread:refused_400:0", url: "", name: "", contentType: "image/*", notKept: "refused_400" as const }
+
+        await service.hear(mockEntityManager(), lineOf({ key: "msg-pic", text: "", files: [unread] }))
+
+        const [file] = store.rows[0]?.files ?? []
+        expect(file).toEqual({ url: null, name: "", contentType: "image/*", notKept: "refused_400" })
+    })
+
     it("says a line with no channel time, an unreadable one or one ahead of the clock at the time it was received", async () => {
         const { service, store } = await build()
         const tx = mockEntityManager()

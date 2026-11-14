@@ -6,7 +6,7 @@ export { META_INBOX_MESSAGES } from "./messages/meta-inbox.messages"
 
 export { MetaWebhookVerifierService } from "./meta-webhook-verifier.service"
 
-export { MetaInboxErrorCode } from "./errors/meta-inbox.error"
+export { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 export { MetaDeliveryService } from "./meta-delivery.service"
 
 export { MetaReceiptPolicy } from "./meta-receipt.policy"

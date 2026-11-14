@@ -12,9 +12,9 @@ describe("TemplateMessageRegistryService", () => {
     it("starts with no provider and answers undefined for a key nobody registered", async () => {
         const registry = await build()
 
-        expect(registry.all()).toEqual([])
+        expect(registry.providers()).toEqual([])
         expect(registry.has("zalo")).toBe(false)
-        expect(registry.of("zalo")).toBeUndefined()
+        expect(registry.liveOf("zalo")).toBeUndefined()
     })
 
     it("finds a registered provider by its key, and a second registration under the key replaces the first", async () => {
@@ -23,11 +23,11 @@ describe("TemplateMessageRegistryService", () => {
         const second = mock<TemplateMessagePort>({ provider: "zalo" })
 
         registry.register(first)
-        expect(registry.of("zalo")).toBe(first)
+        expect(registry.liveOf("zalo")).toBe(first)
         registry.register(second)
 
-        expect(registry.of("zalo")).toBe(second)
-        expect(registry.all()).toHaveLength(1)
-        expect(registry.all()[0]).toBe(second)
+        expect(registry.liveOf("zalo")).toBe(second)
+        expect(registry.providers()).toHaveLength(1)
+        expect(registry.liveOf(registry.providers()[0] ?? "")).toBe(second)
     })
 })

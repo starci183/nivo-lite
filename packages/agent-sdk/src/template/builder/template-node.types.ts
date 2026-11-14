@@ -205,6 +205,12 @@ export interface TemplateRun {
      * it to keep its answer short or to end the run. 0 when none.
      */
     readonly waiting: number
+    /**
+     * The names of THIS step's routes the engine cannot follow in this installation: a hand-off on the route's road (`callWorkflow`) names
+     * a workflow no agent installed in the workspace holds. A routing node that lets its agent pick the route offers only the others, and
+     * serves an intent with no installed target itself; it never routes into a missing target. Absent or empty: every route can be taken.
+     */
+    readonly unreachable?: ReadonlyArray<string> | undefined
 }
 
 /**
@@ -303,6 +309,8 @@ export type NodeExample<I extends z.ZodType, O extends z.ZodType, P extends z.Zo
     readonly queue?: ReadonlyArray<JsonObject> | undefined
     /** The events waiting for the run (`run.waiting`); 0 when absent. */
     readonly waiting?: number | undefined
+    /** The step's routes the engine cannot follow in the installation (`run.unreachable`); none when absent. */
+    readonly unreachable?: ReadonlyArray<string> | undefined
     /** The subject; null when absent. */
     readonly subject?: SubjectRef | undefined
     /** The workspace's facts (`ctx.workspace`); `EXAMPLE_WORKSPACE` when absent. */

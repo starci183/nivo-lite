@@ -18,8 +18,6 @@ export interface SaveAgentTriggerRequest {
     readonly timeZone: string | null
     /** The internal event, for an event trigger. */
     readonly eventName: string | null
-    /** The probe that decides whether there is work. */
-    readonly probeKey: string | null
     /** Off keeps the trigger and fires nothing. */
     readonly enabled: boolean
 }

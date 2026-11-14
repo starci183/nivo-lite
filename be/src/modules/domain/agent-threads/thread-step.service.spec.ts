@@ -442,7 +442,7 @@ describe("ThreadStepService.run: a step that fails while a member of the shop ho
     const onRoute = () => stateOf({ trigger: { routeId: "conv-1", contactId: "p-1", locale: "vi" } })
     const routeHeld = () => new OtherError({ code: "CUSTOMER_SEND_REFUSED", params: { refusal: "route_held" } })
 
-    it("ends the run quietly: no AI core, no stop card, no lead freeze; the run is `skipped` with code `route_held`", async () => {
+    it("ends the run quietly: no AI core, no stop card, no hold of the subject; the run is `skipped` with code `route_held`", async () => {
         const { steps, host, core, records, cards, projection } = await build({ heldBy: "member-7" })
         host.run.mockRejectedValue(routeHeld())
 

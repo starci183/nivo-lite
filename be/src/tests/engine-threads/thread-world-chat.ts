@@ -78,6 +78,12 @@ export class ChatWorld {
     /** Whether the default customer of the world was met (the seed ran). */
     seeded = false
 
+    /**
+     * How the channel answers the next pushes: `acknowledged` (delivered) by default; `ambiguous` = the provider timed out or failed after
+     * the request left (nothing reaches the person, nobody knows): R74's channel double. Set it back to deliver again.
+     */
+    channelOutcome: "acknowledged" | "ambiguous" = "acknowledged"
+
 
     /** The app's burst defaults (the module's `debounceMs` / `debounceMaxMs`; no env sets them); the settle time a registration asks comes first. */
     app: AgentWorkOptions = {}

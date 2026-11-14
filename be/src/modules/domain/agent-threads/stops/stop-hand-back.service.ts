@@ -21,10 +21,10 @@ const distinctOf = (stops: ReadonlyArray<RunStop>): ReadonlyArray<RunStop> => st
 @Injectable()
 /**
  * The END of a take-over when a person hands the route back to the agents (owner ruling R51 item 3): every stop a person took over on the
- * route (open, its last decision `take_over`) is closed by the thread's own ending decision (`skip`, as the person who hands back), admitted
+ * route (open, its last decision `take_over`) is closed by its own ending decision (`handed_back`, as the person who hands back), admitted
  * through the ONE resume door in the caller's transaction. The drain then applies it under the run's lease: the stop resolves (its card
- * offers no hand-back any more), the run that waited at the gate ends, and the freeze that stop caused releases with its held events
- * replayed once (`LeadFreezeStopHoldsService.threadSettled`), so the hand-back's resume event, delivered in the same transaction, starts
+ * offers no hand-back any more), the run that waited at the gate ends, and the events held behind that run (`waiting:<run>`, rule Q-1)
+ * are pending again (`ThreadSubjectHoldsService.released`), so the hand-back's resume event, delivered in the same transaction, starts
  * the agent's next turn and nothing waits behind a stop nobody can answer. Generic: a route and a stop, nothing of any chat.
  */
 export class StopHandBackService {
@@ -37,8 +37,8 @@ export class StopHandBackService {
 
     /**
      * Ends every take-over left open on the route, as the member who hands it back, in the caller's transaction: answers how many stops'
-     * ending decisions were admitted. A stop whose decision is refused (its thread no longer waits, another decision came first) is logged
-     * by the resume door and not counted.
+     * ending decisions were FRESHLY admitted. A stop whose decision is refused (its thread no longer waits, another decision came first) is
+     * logged by the resume door and not counted; nor is the same ending decision admitted again (a second press before the drain).
      */
     async handedBack(tx: EntityManager, workspaceId: string, routeId: string, contactId: string | null, memberId: string): Promise<number> {
         const [ofPerson, ofWorkspace] = await Promise.all([
@@ -51,10 +51,12 @@ export class StopHandBackService {
         await eachInOrder(taken, async (stop) => {
             const admitted = await this.threads.resume(
                 { workspaceId, runId: stop.runId, stepKey: stop.stepKey },
-                { kind: "skip", by: memberId, at },
+                { kind: "handed_back", by: memberId, at },
                 tx,
             )
-            if (admitted.kind === "admitted") ended += 1
+            // Only a FRESH admission ends a take-over: a repeat of the same ending decision (a second press before the drain applied the
+            // first) is the resume door's once-key answering `admitted, fresh: false`, which ends nothing new (MX-CORE DEF-4).
+            if (admitted.kind === "admitted" && admitted.fresh) ended += 1
         })
         if (taken.length > 0) this.logger.info(AgentThreadsLogEvent.TakeOverHandedBack, { workspaceId, routeId, stops: taken.length, ended })
         return ended

@@ -79,7 +79,7 @@ const MAIL_TEXT =
  * read decides the reach: a contact that carries a NIVO customer id is told with the lead send, a customer known only by a mail
  * address with the mail send (the mail tool raises a draft a person sends); with neither, nothing is sent and the output says `no_contact`.
  * Only price-sheet rows are quotable (an exact filter in code). The agent writes the words; the step sends them, both sends
- * by themselves (mode `auto`; the mail is a draft a person sends). A refused send is said in the output: the graph records nothing for it, the round goes on and its report names the
+ * go by themselves (mode `auto`, R83: a reminder built from the CRM's data). A refused send is said in the output: the graph records nothing for it, the round goes on and its report names the
  * service; never retried another way. A person who declines the send made a decision: the step RETURNS `declined` true, the
  * round's body tells the team (`team.declined-notice`) and ends that item; the round goes on. The record is the next step, only
  * for a reminder sent.
@@ -89,6 +89,7 @@ export const webrenewRemindSendNode: TemplateNode<typeof input, typeof output, t
     title: webrenewText("node.remindSend.title"),
     description: { vi: "So\u1ea1n v\u00e0 g\u1eedi kh\u00e1ch l\u1eddi nh\u1eafc gia h\u1ea1n d\u1ecbch v\u1ee5 s\u1eafp h\u1ebft h\u1ea1n, qua k\u00eanh kh\u00e1ch \u0111ang d\u00f9ng ho\u1eb7c qua th\u01b0.", en: "Writes and sends the customer a reminder to renew a service that is ending, through their chat channel or by email." },
     tools: [CRM_NIVOWEB.get_customers_code, CRM_NIVOWEB.get_prices, TOOL.customerMessageSend, TOOL.mailMessageSend],
+    // R83 (owner, interim, the CEO reviews later): a first reminder is built from the CRM's own data (service, end date, price sheet), so it goes by itself.
     mode: "auto",
     accounts: [PROVIDER.zaloOa, PROVIDER.telegram, PROVIDER.meta, PROVIDER.smtp, CRM_NIVOWEB_PROVIDER],
     params,

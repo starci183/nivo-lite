@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
+import type { ConnectionRecord, CreateConnectionInput } from "@modules/domain/connections"
 import { Secret } from "@modules/platform/config"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
@@ -11,6 +11,13 @@ import type { ProvisionFlags } from "./channel-provisioning.contracts"
 import { CHANNEL_PROVISIONING_OPTIONS } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 import { ChannelProvisioningService } from "./channel-provisioning.service"
+
+/** A create call that must be a live connection: only a live one carries a credential. */
+type LiveConnectionInput = Extract<CreateConnectionInput, { readonly secret: unknown }>
+const liveOf = (input: CreateConnectionInput): LiveConnectionInput => {
+    if (input.sandbox === true) throw new Error("expected a live connection input")
+    return input
+}
 
 const WORKSPACE = "12345678-1234-5678-9abc-123456789abc"
 const ACTOR = { principalId: "owner-1", workspaceId: WORKSPACE }
@@ -25,6 +32,7 @@ const TELEGRAM: ConnectionRecord = {
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -149,10 +157,10 @@ describe("ChannelProvisioningService zalo", () => {
             meta: { app_id: "1234567890", oa_secret_saved: "true" },
             secret: {
                 plain: JSON.stringify({ appId: "1234567890", appSecret: "app-secret-123", oaSecret: "oa-secret-123" }),
-                webhookSecret: connections.create.mock.calls[0]?.[0].secret.webhookSecret,
+                webhookSecret: liveOf(connections.create.mock.calls[0]![0]).secret.webhookSecret,
             },
         })
-        expect(connections.create.mock.calls[0]?.[0].secret.webhookSecret).toMatch(/^[0-9a-f]{64}$/u)
+        expect(liveOf(connections.create.mock.calls[0]![0]).secret.webhookSecret).toMatch(/^[0-9a-f]{64}$/u)
         expect(print.mock.calls[0]?.[0]).toContain("zalo connection zalo-1")
         expect(grants.setConnectionAgents).toHaveBeenCalled()
     })

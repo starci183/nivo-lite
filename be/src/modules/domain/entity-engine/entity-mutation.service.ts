@@ -37,7 +37,7 @@ import type { ScopedTx } from "./policies/scoped-tx.contracts"
 import { recordsOfContacts } from "./policies/records-of-contacts.policy"
 import { requireAgentScope } from "./policies/record-scope.policy"
 import { insertStateRefusal, movesState, updateStateRefusal } from "./policies/state-transition.policy"
-import { patchRecord, updateRecord } from "./policies/update-record.policy"
+import { updateRecord } from "./policies/update-record.policy"
 import type { RecordContactsPort } from "./record-contacts.port"
 import { upsertRecord } from "./policies/upsert-record.policy"
 import { sequenceDateOf } from "./sequence-date.policy"
@@ -78,11 +78,10 @@ export interface ContactRecord {
     readonly id: string
 }
 
-/** A record the erase empties the contact fields of. */
+/** A record the erase keeps as it is (every contact field that points at the person is declared `clear`). */
 interface ClearedRecord {
     readonly entity: string
     readonly id: string
-    readonly fields: ReadonlyArray<string>
 }
 
 /** A successful write: the record after it and its version. */
@@ -155,9 +154,13 @@ export class EntityMutationService {
 
     /**
      * Erases, in ONE transaction of the workspace across every agent, the records whose contact fields point at the contacts (the ids
-     * merged into them included: the caller passes them): a field declared `erase` (the default) SOFT-deletes the record, its cascades with it;
-     * a field declared `clear` empties the field. A `restrict` ref to a record the erase would remove refuses it before anything is written.
-     * No file is handed back to remove: a soft-deleted record keeps its row and its files.
+     * merged into them included: the caller passes them): a field declared `erase` (the default: the record dies with its contact)
+     * SOFT-deletes the record, its cascades with it; a record whose fields are all declared `clear` STAYS AS IT IS, its reference kept
+     * (R31: an erasure never rewrites a record; DEF-6 found the order's `contactId` rewritten to null): the erased contact reads as no live
+     * person wherever a read goes through it (`RecordContactsPort.aliasesOf` answers an erased contact no id, so a filter on it matches
+     * nothing), and a business read decides by the contact's liveness what the kept record still means. `cleared` counts those records.
+     * A `restrict` ref to a record the erase would remove refuses it before anything is written. No file is handed back to remove: a
+     * soft-deleted record keeps its row and its files.
      */
     async eraseForContacts(workspaceId: string, contactIds: ReadonlyArray<string>): Promise<ContactErasure> {
         return await this.engine.scoped(workspaceId, async (tx): Promise<ContactErasure> => {
@@ -170,17 +173,14 @@ export class EntityMutationService {
                 for (const row of rows) {
                     const hit = fields.filter(([name]) => ids.has(String(row.data[name])))
                     if (hit.some(([, field]) => contactRuleOf(field) === "erase")) erase.push({ entity: entity.name, id: row.id })
-                    else clear.push({ entity: entity.name, id: row.id, fields: hit.map(([name]) => name) })
+                    else clear.push({ entity: entity.name, id: row.id })
                 }
             })
             const removed = await deleteRecords(tx, this.engine.catalog, erase, { force: true })
             if (removed.kind === "blocked") return removed
             const gone = new Set(removed.removed.map((record) => `${record.entity}:${record.id}`))
+            // The records a `clear` field ties to the person are kept untouched, the reference with them (never patched to null).
             const cleared = clear.filter((record) => !gone.has(`${record.entity}:${record.id}`))
-            await eachInOrder(cleared, async (record) => {
-                const patch = Object.fromEntries(record.fields.map((name) => [name, null]))
-                await patchRecord(tx, this.engine.catalog, { entity: record.entity, id: record.id, expected: null, patch })
-            })
             // A soft delete keeps the row and so its files: nothing is handed back to remove (owner order: only soft delete).
             return { kind: "erased", erased: removed.removed.length, cleared: cleared.length, files: [] }
         })

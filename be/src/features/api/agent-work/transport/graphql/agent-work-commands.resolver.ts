@@ -5,37 +5,32 @@ import { WorkspaceId } from "@modules/domain/workspace-members"
 import { InjectCommandBus, type Principal } from "@modules/platform/cqrs"
 import { CloseAgentTaskCommand } from "../../application/close-agent-task.command"
 import { RemoveAgentTriggerCommand } from "../../application/remove-agent-trigger.command"
-import { SaveAgentGoalCommand } from "../../application/save-agent-goal.command"
 import { SaveAgentTriggerCommand } from "../../application/save-agent-trigger.command"
 import { SetAgentWorkCommand } from "../../application/set-agent-work.command"
 import { SetWorkspaceAgentWorkCommand } from "../../application/set-workspace-agent-work.command"
 import {
-    toAgentGoalType,
     toAgentTriggerType,
     toAgentWorkAckType,
     toAgentWorkStateType,
     toCloseAgentTaskRequest,
     toRemoveAgentTriggerRequest,
-    toSaveAgentGoalRequest,
     toSaveAgentTriggerRequest,
     toSetAgentWorkRequest,
     toSetWorkspaceAgentWorkRequest,
     toWorkspaceSwitchType,
 } from "./agent-work.mapper"
-import { AgentGoalType } from "./dto/agent-goal.type"
 import { AgentTriggerType } from "./dto/agent-trigger.type"
 import { AgentWorkAckType } from "./dto/agent-work-ack.type"
 import { AgentWorkStateType } from "./dto/agent-work-state.type"
 import { CloseAgentTaskInput } from "./dto/close-agent-task.input"
 import { RemoveAgentTriggerInput } from "./dto/remove-agent-trigger.input"
-import { SaveAgentGoalInput } from "./dto/save-agent-goal.input"
 import { SaveAgentTriggerInput } from "./dto/save-agent-trigger.input"
 import { SetAgentWorkInput } from "./dto/set-agent-work.input"
 import { SetWorkspaceAgentWorkInput } from "./dto/set-workspace-agent-work.input"
 import { WorkspaceAgentWorkType } from "./dto/workspace-agent-work.type"
 
 @Resolver()
-/** GraphQL doors that change the work of an agent: the two switches (owner only), goals, triggers and tasks (owner or manager). */
+/** GraphQL doors that change the work of an agent: the two switches (owner only), triggers and tasks (owner or manager). */
 export class AgentWorkCommandsResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
@@ -66,19 +61,6 @@ export class AgentWorkCommandsResolver {
             }),
         )
         return toWorkspaceSwitchType(result)
-    }
-
-    /** Adds a goal to an agent or changes one. */
-    @Mutation(() => AgentGoalType, { name: "saveAgentGoal" })
-    async saveAgentGoal(
-        @CurrentPrincipal() principal: Principal,
-        @WorkspaceId() workspaceId: string,
-        @Args("input") input: SaveAgentGoalInput,
-    ): Promise<AgentGoalType> {
-        const result = await this.commandBus.execute(
-            new SaveAgentGoalCommand({ request: toSaveAgentGoalRequest(workspaceId, input), principal }),
-        )
-        return toAgentGoalType(result)
     }
 
     /** Adds a trigger to an agent or changes one. */

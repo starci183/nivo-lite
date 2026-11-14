@@ -67,7 +67,7 @@ export const INDEXING_WHOLE_SOURCE_KINDS: Array<[SourceRecord["kind"], number]> 
 
 type IndexingTextWriteDraftsShape = {
     text: string
-    vector: string
+    embedded: boolean
     order: number
 }
 
@@ -89,7 +89,7 @@ export const INDEXING_TEXT_WRITE: IndexingTextWriteShape = {
     visibility: "internal",
     installationId: null,
     model: "m1",
-    drafts: [{ text: "Open 8 to 21", vector: "[0.5,1]", order: 0 }],
+    drafts: [{ text: "Open 8 to 21", embedded: true, order: 0 }],
 }
 
 /** The exact embed progress snapshot of the default text source. */

@@ -147,7 +147,7 @@ export type {
     SepayEventView,
     SepayStepView,
 } from "./sepay-connection"
-export type { AgentWorkGoalView, AgentWorkPreset, AgentWorkStatusView, AgentWorkSwitchView } from "./agentWork"
+export type { AgentWorkPreset, AgentWorkStatusView, AgentWorkSwitchView } from "./agentWork"
 export type { AgentWorkTaskView, AgentWorkTriggerView, AgentWorkTurnView, AgentWorkTurnsView } from "./agentWork"
 export type { AgentWorkView, WorkspaceAgentWorkView } from "./agentWork"
 export type {
@@ -346,6 +346,8 @@ export type {
     StepAccountView,
     StepAccountsView,
     StepAccountsSlotView,
+    StepRunModeView,
+    StepRunModeOptionView,
     StepEffectiveRowView,
 } from "./workflowSteps"
 export type {
@@ -389,8 +391,29 @@ export type {
     RightPlaceView,
 } from "./node-rights"
 export type { ContactConfirmView, ContactDetailView, ContactEditView } from "./contacts"
+export type { ContactHistoryLineView, ContactHistoryTabView, ContactHistoryThread, ContactHistoryView } from "./contacts"
+export type { ContactHistoryOrderView, ContactHistoryOrderWords, ContactHistoryVoice, ContactHistoryWords } from "./contacts"
 export type { ContactFactView, ContactIdentityView, ContactLinkView, ContactListRowView } from "./contacts"
 export type { ContactMergeView, ContactModuleAgentView, ContactNoteView } from "./contacts"
 export type { ContactSuggestionView, ContactWords } from "./contacts"
 export type { ContactsListData, ContactsPanesBaseProps, ContactsPanesCopy } from "./contacts"
 export type { ApiKeyRowView } from "./api-keys"
+export type {
+    SandboxAgentChoice,
+    SandboxAgentRowView,
+    SandboxAgentsData,
+    SandboxAttachView,
+    SandboxAccountsData,
+    SandboxCallRowView,
+    SandboxCallsData,
+    SandboxCaseRowView,
+    SandboxCasesData,
+    SandboxCopy,
+    SandboxGate,
+    SandboxInputView,
+    SandboxKeyView,
+    SandboxOpenView,
+    SandboxPanesBaseProps,
+    SandboxPendingView,
+    SandboxWaitingRowView,
+} from "./sandbox"

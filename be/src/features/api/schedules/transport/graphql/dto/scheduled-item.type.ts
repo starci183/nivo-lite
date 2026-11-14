@@ -41,8 +41,8 @@ export class ScheduledItemType {
     kind!: string
 
     /**
-     * What exactly: the care step (payment-reminder, payment-stale, delivery-check, occasion), the task title, the probe or preset of the
-     * trigger (accounting_close, daily_at), or the kind of the stop (approval, ai_report, ai_error).
+     * What exactly: the care step (payment-reminder, payment-stale, delivery-check, occasion), the task title, the preset of the
+     * trigger (daily_at), or the kind of the stop (approval, ai_report, ai_error).
      */
     @Field(() => String)
     what!: string

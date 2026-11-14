@@ -12,7 +12,13 @@ type Props = ContactsPanesBaseProps
 
 /** The list while it is read: five rows of the same shape as the real ones, drawn as geometry. */
 const LIST_PLACEHOLDER: ContactsListData = {
-    rows: ["a", "b", "c", "d", "e"].map((id) => ({ id: `contact:${id}`, name: " ", time: " ", channels: [], isUnknown: false })),
+    rows: ["a", "b", "c", "d", "e"].map((id) => ({
+        id: `contact:${id}`,
+        name: " ",
+        time: " ",
+        channels: [],
+        isUnknown: false,
+    })),
     hasMore: false,
 }
 
@@ -24,7 +30,7 @@ const DETAIL_PLACEHOLDER: ContactDetailView = {
     line: " ",
     displayName: " ",
     tags: [],
-    identities: [{ id: "identity:a", title: " ", value: " ", proof: " ", logo: null, reason: " " }],
+    identities: [{ id: "identity:a", title: " ", description: " ", logo: null, why: " ", hold: null }],
     facts: [{ name: " ", value: " " }],
     notes: [],
     suggestions: [],
@@ -93,6 +99,8 @@ const DetailColumn = (props: Props) => {
                 <ContactDetail
                     copy={copy}
                     person={person}
+                    history={props.props.history}
+                    historyLabels={props.props.historyLabels}
                     modules={props.props.modules}
                     modulesLabels={props.props.modulesLabels}
                     isLoading={isSkeleton}
@@ -189,12 +197,13 @@ const Drawers = (props: Props) => (
 )
 
 /**
- * Draws the people the agents work with: the list as one card on the well with the open person's cards beside it, so the person the
+ * Draws the people the agents work with: the list as one card in a left column of the well, starting at the well's own padding (the
+ * page takes the full measure, so no gutter stands to its left), with the open person's separate blocks beside it, so the person the
  * address names is the one filled in the list. A phone shows the open person first, and the list when none is open. Staff are told
  * the page is for owners and managers.
  */
 export const ContactsPanesBase = (props: ContactsPanesBaseProps) => (
-    <Page header={headerOf(props)}>
+    <Page measure="full" header={headerOf(props)}>
         <Grid
             kind="main-rail"
             railPosition="leading"

@@ -290,6 +290,7 @@ describe("stopCardStateOf", () => {
         ["open, taken over", "open", "take_over", "answered", true],
         ["open, a deadline answered", "open", "timeout", "timed_out", false],
         ["resolved by a skip", "resolved", "skip", "skipped", false],
+        ["resolved by a take-over handed back (rule S-3)", "resolved", "handed_back", "handed_back", false],
         ["resolved after a deadline", "resolved", "timeout", "timed_out", false],
         ["resolved after an answer", "resolved", "answer", "answered", false],
         ["resolved with no decision", "resolved", null, "resolved", false],

@@ -79,12 +79,12 @@ const NEVER_ROWS: ReadonlyArray<ToolGrantView> = [SETTLE, LEDGER, INVOICE].map((
     constraints: [],
 }))
 
-/** The CRM account's pinned facts: nodes name it by its provider key (`crm.nivoweb`, owner chốt 2026-11-13). */
-const PINNED = { v: 1, connector: "crm.nivoweb", workspaceHeader: "X-Workspace-Id", documentSha256: "0".repeat(64), live: true }
-
-/** The connections reader: the CRM account is pinned to `crm.nivoweb`; no provider lists a connection of its own. */
+/**
+ * The connections reader: no account here is an OpenAPI source (the invoice is issued at the e-invoice provider, MISA meInvoice, owner
+ * ruling R57; before it the invoice rode a CRM account's pinned mark); no provider lists a connection of its own.
+ */
 const CONNECTIONS = {
-    recordOf: () => Promise.resolve({ meta: { agentTools: JSON.stringify(PINNED) } }),
+    recordOf: () => Promise.resolve({ meta: {} }),
     ofProvider: () => Promise.resolve([]),
 }
 
@@ -105,7 +105,7 @@ const build = async (mode: "auto" | "ask", rows: ReadonlyArray<ToolGrantView> = 
     const access = mock<AccountAttachmentsService>()
     access.listOfAgent.mockResolvedValue([
         { agentId: "agent-1", connectionId: "c-google", provider: "google" },
-        { agentId: "agent-1", connectionId: "c-crm", provider: "openapi" },
+        { agentId: "agent-1", connectionId: "c-misa", provider: "misa_meinvoice" },
     ])
     access.listOfWorkspace.mockResolvedValue([])
     const receipts = mock<ToolReceiptsService>()
@@ -118,7 +118,7 @@ const build = async (mode: "auto" | "ask", rows: ReadonlyArray<ToolGrantView> = 
             mode,
             accounts: [
                 { kind: "books", provider: "google", connectionId: null },
-                { kind: "records", provider: "crm.nivoweb", connectionId: null },
+                { kind: "books", provider: "misa_meinvoice", connectionId: null },
             ],
         }),
     }
@@ -220,7 +220,7 @@ describe("a node's declared mode is the only mode (door, runner, gateway)", () =
 
     it.each([
         [LEDGER, "c-google"],
-        [INVOICE, "c-crm"],
+        [INVOICE, "c-misa"],
     ])("`ask`: %s asks ONCE on the tool road (on %s), and runs after the yes", async (tool, account) => {
         const { door, runner } = await build("ask")
 

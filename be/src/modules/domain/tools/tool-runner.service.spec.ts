@@ -13,6 +13,7 @@ import type { CallLogLine } from "@modules/domain/tool-call-log"
 import { TOOL } from "@nivo-lite/agent-sdk/names"
 import type { BoundAccount } from "./agent-accounts.service"
 import type { Logger } from "@modules/platform/logging"
+import { ToolsError, ToolsErrorCode } from "./errors/tools.error"
 import { ToolRunnerService, type ToolRunnerParts } from "./tool-runner.service"
 
 const TURN: NodeTurn = {
@@ -268,6 +269,21 @@ describe("ToolRunnerService", () => {
 
     it("an earlier write at that position whose outcome nobody knows answers that outcome: no machine makes it again", async () => {
         const unknown: KeptRecord = {
+            effect: TOOL.agentTag,
+            args: { orderId: "o-1" },
+            subject: { kind: "outcome-unknown", id: "tool_outcome_unknown" },
+            at: "2026-11-11T23:59:00.000Z",
+        }
+        const world = worldOf({}, [unknown])
+
+        await expect(world.runner.run(effectOf({ orderId: "o-2" }, { effect: TOOL.agentTag }))).rejects.toMatchObject({
+            code: "tool_outcome_unknown",
+        })
+        expect(world.execute).not.toHaveBeenCalled()
+    })
+
+    it("rule Q-3: an earlier write of a tool that declares itself repeatable (the customer send) whose outcome nobody knows is made again", async () => {
+        const unknown: KeptRecord = {
             effect: "nivo.tool.customer.message.send",
             args: { conversationId: "conv-1", text: "x" },
             subject: { kind: "outcome-unknown", id: "delivery_outcome_unknown" },
@@ -275,10 +291,8 @@ describe("ToolRunnerService", () => {
         }
         const world = worldOf({}, [unknown])
 
-        await expect(world.runner.run(effectOf({ conversationId: "conv-1", text: "y" }))).rejects.toMatchObject({
-            code: "delivery_outcome_unknown",
-        })
-        expect(world.execute).not.toHaveBeenCalled()
+        await world.runner.run(effectOf({ conversationId: "conv-1", text: "y" })).catch(() => undefined)
+        expect(world.execute).toHaveBeenCalled()
     })
 
     it("hands the executor the approver of exactly this call, and nobody for an approval of another call", async () => {
@@ -405,13 +419,64 @@ describe("ToolRunnerService accounts", () => {
         const answer = await world.runner.run(toolOf(TOOL.mailMessageSend))
 
         expect(answer).toEqual({ road: "tool", value: { value: 1 }, via: C1 })
-        expect(boundAccountsOf).toHaveBeenCalledWith("ws-1", "agent-1", TOOL.mailMessageSend, {
-            origin: "node",
-            node: STEP,
-        })
+        // The run the call is made in rides along: the account of its trigger and of its earlier calls are read by it.
+        expect(boundAccountsOf).toHaveBeenCalledWith(
+            "ws-1",
+            "agent-1",
+            TOOL.mailMessageSend,
+            { origin: "node", node: STEP },
+            { runId: "run-1" },
+        )
         expect(world.door.call.mock.calls[0]).toEqual([
             expect.objectContaining({ account: { ...C1, attempt: 1, chosenBy: "order" } }),
         ])
+    })
+
+    it("names the choice to make when the agent holds several accounts of a listed provider and none is picked, and never runs the call", async () => {
+        const pickNeeded = jest.fn(() => Promise.resolve({ provider: "bank", connectionIds: ["live", "sandbox"] }))
+        const world = worldOf({
+            accounts: {
+                boundAccountsOf: jest.fn(() => Promise.resolve([])),
+                listsProviders: jest.fn(() => Promise.resolve(true)),
+                pickNeeded,
+            },
+        })
+
+        const refused = await world.runner.run(toolOf(TOOL.mailMessageSend)).catch((cause: unknown) => cause)
+
+        expect(refused).toBeInstanceOf(ToolsError)
+        expect(refused).toMatchObject({
+            code: ToolsErrorCode.AccountNeedsPick,
+            params: { tool: TOOL.mailMessageSend, provider: "bank", connectionIds: "live,sandbox" },
+        })
+        expect(pickNeeded).toHaveBeenCalledWith("ws-1", "agent-1", TOOL.mailMessageSend, { origin: "node", node: STEP }, { runId: "run-1" })
+        expect(world.door.call).not.toHaveBeenCalled()
+    })
+
+    it("keeps the never-sent refusal for a node whose listed provider has no account at all, and asks nothing when an account is bound", async () => {
+        const pickNeeded = jest.fn(() => Promise.resolve(null))
+        const none = worldOf({
+            accounts: {
+                boundAccountsOf: jest.fn(() => Promise.resolve([])),
+                listsProviders: jest.fn(() => Promise.resolve(true)),
+                pickNeeded,
+            },
+        })
+        await expect(none.runner.run(toolOf(TOOL.mailMessageSend))).rejects.toMatchObject({
+            code: GraphNodesErrorCode.ToolNotConnected,
+            params: { tool: TOOL.mailMessageSend },
+        })
+
+        const askedNever = jest.fn(() => Promise.resolve({ provider: "bank", connectionIds: ["live", "sandbox"] }))
+        const bound = worldOf({
+            accounts: {
+                boundAccountsOf: jest.fn(() => Promise.resolve([C1])),
+                listsProviders: jest.fn(() => Promise.resolve(true)),
+                pickNeeded: askedNever,
+            },
+        })
+        await expect(bound.runner.run(toolOf(TOOL.mailMessageSend))).resolves.toEqual({ road: "tool", value: { value: 1 }, via: C1 })
+        expect(askedNever).not.toHaveBeenCalled()
     })
 
     it("goes on to the next account on a write failure proved not_sent, and stops on one whose outcome is unknown", async () => {

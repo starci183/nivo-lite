@@ -1,13 +1,9 @@
 import { nodeListMismatches } from "./node-examples"
 import {
-    flatEffect,
     lookTool,
-    lostEffect,
     pingEffect,
     probeNode,
     swallowNode,
-    unflatEffect,
-    unpingEffect,
 } from "./probe-nodes"
 
 describe("the probe nodes", () => {
@@ -15,18 +11,9 @@ describe("the probe nodes", () => {
         await expect(
             nodeListMismatches(
                 [probeNode, swallowNode],
-                [pingEffect, unpingEffect, lostEffect, flatEffect, unflatEffect],
+                [pingEffect],
                 [lookTool],
             ),
         ).resolves.toEqual({})
-    })
-
-    it("compensate an effect through the effect their definition names", () => {
-        expect([pingEffect.compensation, lostEffect.compensation, flatEffect.compensation]).toEqual([
-            "core.unping",
-            "core.gone",
-            "core.unflat",
-        ])
-        expect(unflatEffect.payload.parse({ id: "a" })).toBe("a")
     })
 })

@@ -61,28 +61,25 @@ export class GoogleLedgerService implements LedgerPort {
         private readonly zones: WorkspaceTimeZoneService,
     ) {}
 
-    /** True when a Google connection of the workspace gave the spreadsheets access and holds the ledger sheet. */
-    async ready(workspaceId: string): Promise<boolean> {
-        return (await this.keeperOf(workspaceId)) !== undefined
+    /** True when the account gave the spreadsheets access and holds the ledger sheet. */
+    async ready(account: ConnectionRecord): Promise<boolean> {
+        return (await this.keeperOf(account)) !== undefined
     }
 
-    /** Appends the row of one entry, on the connection the tool runner handed the call when it handed one. */
-    append(workspaceId: string, entry: BusinessLedgerEntry, connectionId?: string): Promise<string | undefined> {
-        return this.write(workspaceId, ledgerRowOf(entry), connectionId)
+    /** Appends the row of one entry on the account; undefined when the account keeps no ledger. */
+    append(account: ConnectionRecord, entry: BusinessLedgerEntry): Promise<string | undefined> {
+        return this.write(account, ledgerRowOf(entry))
     }
 
-    /** Appends the row that takes one transaction back, on the connection the tool runner handed the call when it handed one. */
-    async void(workspaceId: string, transactionId: string, connectionId?: string): Promise<string | undefined> {
-        const day = dayOf(this.clock.now(), await this.zones.timeZoneOf(workspaceId))
-        return this.write(workspaceId, voidRowOf(transactionId, day), connectionId)
+    /** Appends the row that takes one transaction back, on the account; undefined when the account keeps no ledger. */
+    async void(account: ConnectionRecord, transactionId: string): Promise<string | undefined> {
+        const day = dayOf(this.clock.now(), await this.zones.timeZoneOf(account.workspaceId))
+        return this.write(account, voidRowOf(transactionId, day))
     }
 
-    private async write(
-        workspaceId: string,
-        line: ReadonlyArray<SheetCell>,
-        connectionId?: string,
-    ): Promise<string | undefined> {
-        const keeper = await this.keeperOf(workspaceId, connectionId)
+    private async write(account: ConnectionRecord, line: ReadonlyArray<SheetCell>): Promise<string | undefined> {
+        const { workspaceId } = account
+        const keeper = await this.keeperOf(account)
         if (keeper === undefined) return undefined
         if (!this.google.isConfigured()) throw refusedLedger()
         const { row, sheetId } = keeper
@@ -130,9 +127,9 @@ export class GoogleLedgerService implements LedgerPort {
         )
     }
 
-    /** The connection that keeps the ledger: the one named, when the call names one, else the first that keeps it. */
-    private async keeperOf(workspaceId: string, connectionId?: string): Promise<ReturnType<typeof ledgerKeeperOf>> {
-        const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
-        return ledgerKeeperOf(connectionId === undefined ? rows : rows.filter((row) => row.id === connectionId))
+    /** The account's own row, read afresh, when it keeps the ledger (the sheet and the spreadsheets access); undefined otherwise. */
+    private async keeperOf(account: ConnectionRecord): Promise<ReturnType<typeof ledgerKeeperOf>> {
+        const rows = await this.connections.listByProvider(account.workspaceId, "google", { includeDisconnected: false })
+        return ledgerKeeperOf(rows.filter((row) => row.id === account.id))
     }
 }

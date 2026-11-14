@@ -21,6 +21,8 @@ export enum AgentGraphsLogEvent {
      * timed out): a normal no-op, nothing runs, nobody is told.
      */
     WakeNoWaiter = "agent_graphs.wake_no_waiter",
+    /** The engine gave up on a wake of the flow before any turn ran (dead past its attempts): the team is told (never a silent death). */
+    WakeGivenUp = "agent_graphs.wake_given_up",
     /** A notice about a wake could not reach the team chat. */
     WakeNoticeSkipped = "agent_graphs.wake_notice_skipped",
     /** An agent graph version could not be read while the primary workflow adopted the agent's history, so it was left out. */

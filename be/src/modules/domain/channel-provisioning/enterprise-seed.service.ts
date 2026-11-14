@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { WorkspaceEnterpriseService, WorkspaceLobbyService, WorkspacesService } from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
-import type { EnterpriseSeed } from "./enterprise-seed.contracts"
+import { InjectEnterpriseRoster, type EnterpriseRoster } from "./enterprise-roster.port"
+import type { EnterpriseSeed, EnterpriseSeedPlace } from "./enterprise-seed.contracts"
 import { placeOf, readEnterpriseSeeds, targetIncludes } from "./enterprise-seed.policy"
 import { invalid } from "./management-seed.policy"
 
@@ -24,7 +25,8 @@ interface NamedWorkspace {
  * The seed of the enterprise workspaces: FOUNDATION data only, one document per enterprise (`nivo-web` first), each with its `target`
  * (`off`, `local`, `prod`, `both`; dev is local, production is prod) read on every run. In an environment its target leaves out it reads
  * and writes nothing; in one it includes, it ensures the enterprise's workspace, owned by the owner of the workspace it names, and gives it
- * its string identifier. A rerun finds the workspace and answers `unchanged`. Usage data (the CRM import of customer files, conversations,
+ * its string identifier, then installs its ROSTER (the agents its private plugins declare: `EnterpriseRoster`, when the app binds one). A
+ * rerun finds the workspace and the roster in place and answers `unchanged`. Usage data (the CRM import of customer files, conversations,
  * runs, documents) is never seeded: moving an enterprise to production seeds the same foundation there and runs its own imports again;
  * nothing made on the local stack travels. `remove` takes an enterprise off the local stack, by hand only.
  */
@@ -34,6 +36,7 @@ export class EnterpriseSeedService {
         private readonly workspaces: WorkspacesService,
         private readonly lobby: WorkspaceLobbyService,
         private readonly enterprise: WorkspaceEnterpriseService,
+        @Optional() @InjectEnterpriseRoster() private readonly roster?: EnterpriseRoster,
     ) {}
 
     /** Applies every enterprise read from `text` in the environment; a refused document stops the run before anything is written. */
@@ -46,7 +49,7 @@ export class EnterpriseSeedService {
                 this.options.print(`${seed.identifier}: target is ${seed.target}: nothing seeded on ${environment}`)
                 return
             }
-            isChanged = (await this.apply(seed)) || isChanged
+            isChanged = (await this.apply(seed, place)) || isChanged
         })
         this.options.print(isChanged ? "applied" : UNCHANGED)
     }
@@ -72,8 +75,8 @@ export class EnterpriseSeedService {
         await eachInOrder(seeds, (seed) => this.removeOne(seed, environment, execute))
     }
 
-    /** Ensures the workspace of one enterprise and its identifier; answers whether the workspace had to be created. */
-    private async apply(seed: EnterpriseSeed): Promise<boolean> {
+    /** Ensures the workspace of one enterprise, its identifier and its roster; answers whether anything changed. */
+    private async apply(seed: EnterpriseSeed, place: EnterpriseSeedPlace): Promise<boolean> {
         const named = await this.workspaces.list(WORKSPACE_SCAN_LIMIT)
         const ownerId = await this.ownerOf(named, seed.ownerWorkspace)
         const isHeld = (await this.ownedLive(named, seed.workspaceName, ownerId)).length > 0
@@ -81,7 +84,8 @@ export class EnterpriseSeedService {
         this.options.print(`${seed.identifier}: workspace ${id} ${isHeld ? "kept" : "created"}`)
         const { from, to } = await this.enterprise.set(id, seed.identifier)
         this.options.print(`${seed.identifier}: enterprise identifier ${from === to ? "kept" : "set"}`)
-        return !isHeld || from !== to
+        const rostered = (await this.roster?.install({ workspaceId: id, ownerId, identifier: seed.identifier, place })) ?? false
+        return !isHeld || from !== to || rostered
     }
 
     /** Prints the plan for one enterprise's workspace and, with `execute`, deletes it as its owner. */

@@ -7,6 +7,7 @@ import {
     EntityEngineDoorModule,
 } from "@modules/domain/entity-engine-door"
 import { NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
+import { OpenApiProviderModule } from "@modules/domain/openapi-provider"
 import { VideoComposeNativeService } from "@modules/domain/video-compose"
 import { RecordFileSinkService } from "@modules/domain/media-tools"
 import {
@@ -78,6 +79,8 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     }),
     ConversationsModule.register({ isGlobal: true }),
     // A provider's file (a speech clip, a generated video) is staged in the records' file store, then put into a record by the node.
+    // How an API account is reached (live host or the package's sandbox fixtures), picked per account: the native tools register both.
+    OpenApiProviderModule.register({ isGlobal: true }),
     NativeToolsModule.register({ isGlobal: true, fileSink: RecordFileSinkService }),
     ToolsModule.register({
         isGlobal: true,

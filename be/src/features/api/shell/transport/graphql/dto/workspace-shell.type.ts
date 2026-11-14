@@ -8,10 +8,6 @@ export class WorkspaceShellType {
     @Field(() => [ShellAgentType])
     agents!: Array<ShellAgentType>
 
-    /** Whether a chatbot agent is installed. */
-    @Field()
-    hasChatbot!: boolean
-
     /** Whether the workspace bought a module inside the Founding window. */
     @Field()
     isFoundingMember!: boolean

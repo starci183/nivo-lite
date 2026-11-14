@@ -17,13 +17,13 @@ export interface JudgedFact {
 export interface EmbeddingsRefreshed {
     /** Facts that got a (new) vector from the embedding call. */
     readonly embedded: number
-    /** Facts that took the vector another row holds for the same line and identity: no embedding call. */
-    readonly copied: number
+    /** Facts that adopted the vector of another row's point of the same line and identity: no embedding call. */
+    readonly adopted: number
     /** Facts whose vector was current: same text hash, same identity; nothing was sent for them. */
     readonly unchanged: number
 }
 
-/** What `embedLines` did, and whether an embedding call answered nothing (a sweep then stops: the next tick tries again). */
+/** What `embedLines` did, and whether an embedding call answered nothing (the batches after it are not sent). */
 export interface LinesEmbedded extends EmbeddingsRefreshed {
     /** An embedding call failed or answered the wrong shape; the facts after it were not sent. */
     readonly stopped: boolean

@@ -12,7 +12,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DataSyncQueue } from "@modules/queues/data-sync"
 import { CsvImportSyncService } from "./csv-import-sync.service"
-import { DatabaseSyncService } from "./database-sync.service"
+import type { DatabaseSyncService } from "./database-sync.service"
 import { DATA_PROVIDERS } from "./data-hub.contracts"
 import type { DataConnection, DataProvider } from "./data-hub.contracts"
 import { DataHubLogEvent } from "./data-hub.log-events"
@@ -20,7 +20,8 @@ import { DataHubService } from "./data-hub.service"
 import { DataSyncService } from "./data-sync.service"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { ImapSyncService } from "./imap-sync.service"
-import { TelegramUserSyncService } from "./telegram-user-sync.service"
+import { DataConnectorRegistryService } from "./data-connector-registry.service"
+import type { TelegramUserSyncService } from "./telegram-user-sync.service"
 
 const actor = { principalId: "u-1", workspaceId: "ws-1" }
 const payload = { workspaceId: "ws-1", connectionId: "c-1", runId: "run-1" }
@@ -61,6 +62,10 @@ const buildKit = async (registerCsv = true) => {
     const database = mock<DatabaseSyncService>({ provider: "database" })
     const imap = mock<ImapSyncService>({ provider: "imap" })
     const telegramUser = mock<TelegramUserSyncService>({ provider: "telegram_user" })
+    const mailboxes = new DataConnectorRegistryService()
+    mailboxes.register(imap)
+    mailboxes.register(database)
+    mailboxes.register(telegramUser)
     hub.owner.mockResolvedValue({ role: "owner", displayName: "Owner" })
     hub.own.mockResolvedValue(connectionOf())
     hub.credentialOf.mockResolvedValue("credential")
@@ -83,9 +88,8 @@ const buildKit = async (registerCsv = true) => {
             { provide: DataRecordsService, useValue: records },
             { provide: DataSyncRunsService, useValue: runs },
             { provide: CsvImportSyncService, useValue: csv },
-            { provide: DatabaseSyncService, useValue: database },
             { provide: ImapSyncService, useValue: imap },
-            { provide: TelegramUserSyncService, useValue: telegramUser },
+            { provide: DataConnectorRegistryService, useValue: mailboxes },
         ],
     }).compile()
     return {
@@ -104,6 +108,7 @@ const buildKit = async (registerCsv = true) => {
         database,
         imap,
         telegramUser,
+        mailboxes,
     }
 }
 
@@ -394,5 +399,60 @@ describe("DataSyncService: a mailbox", () => {
         expect(imap.keep).toHaveBeenCalledWith("c-1", mails)
         expect(records.upsert).not.toHaveBeenCalled()
         expect(runs.finish).toHaveBeenCalledWith("run-1", "ok", 1, null)
+    })
+})
+
+describe("DataSyncService: a sandbox mailbox (provider sandbox)", () => {
+    const SANDBOX_CONNECTION: DataConnection = { ...connectionOf("imap"), sandbox: true }
+
+    it("resolves the sandbox connector of a sandbox account through the registry and reads no credential", async () => {
+        const { service, hub, imap, mailboxes, runs } = await buildKit()
+        const sandboxConnector = mock<ImapSyncService>({ provider: "imap" })
+        mailboxes.register({ live: imap, sandbox: sandboxConnector })
+        hub.own.mockResolvedValue(SANDBOX_CONNECTION)
+        sandboxConnector.sync.mockResolvedValue({ rows: 2 })
+
+        await expect(service.run(payload)).resolves.toBeUndefined()
+
+        expect(sandboxConnector.sync).toHaveBeenCalledWith(expect.objectContaining({ connection: SANDBOX_CONNECTION, credential: "" }))
+        expect(imap.sync).not.toHaveBeenCalled()
+        expect(hub.credentialOf).not.toHaveBeenCalled()
+        expect(runs.finish).toHaveBeenCalledWith("run-1", "ok", 2, null)
+    })
+
+    it("keeps a sandbox mailbox's mails through the same keep path as the live pull", async () => {
+        const { service, hub, imap, mailboxes, records } = await buildKit()
+        const sandboxConnector = mock<ImapSyncService>({ provider: "imap" })
+        mailboxes.register({ live: imap, sandbox: sandboxConnector })
+        const mails = [{ externalId: "INBOX:1:1", data: { folder: "INBOX", uid: 1 } }]
+        hub.own.mockResolvedValue(SANDBOX_CONNECTION)
+        imap.keep.mockResolvedValue(1)
+        sandboxConnector.sync.mockImplementation(async (context) => ({ rows: await context.upsert("message", mails) }))
+
+        await service.run(payload)
+
+        expect(imap.keep).toHaveBeenCalledWith("c-1", mails)
+        expect(records.upsert).not.toHaveBeenCalled()
+    })
+
+    it("never answers a live connector for a sandbox account: a mailbox without a sandbox twin fails the run, a live account is unchanged", async () => {
+        const { service, hub, imap, runs, logger } = await buildKit()
+        hub.own.mockResolvedValue(SANDBOX_CONNECTION)
+
+        await expect(service.run(payload)).resolves.toBeUndefined()
+
+        expect(imap.sync).not.toHaveBeenCalled()
+        expect(logger.error).toHaveBeenCalledWith(DataHubLogEvent.SyncFailed, expect.objectContaining({ code: "PROVIDER_SANDBOX_MISSING" }), payload)
+        expect(runs.finish).toHaveBeenCalledWith("run-1", "failed", 0, "Try again")
+    })
+
+    it("never answers a live connector for a sandbox account of any other data provider", async () => {
+        const { service, hub, csv, runs } = await buildKit()
+        hub.own.mockResolvedValue({ ...connectionOf("csv_import"), sandbox: true })
+
+        await service.run(payload)
+
+        expect(csv.sync).not.toHaveBeenCalled()
+        expect(runs.finish).toHaveBeenCalledWith("run-1", "failed", 0, "Try again")
     })
 })

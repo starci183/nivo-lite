@@ -8,7 +8,7 @@ import {
 } from "@modules/domain/agent-connections"
 import { AgentGraphFlowService, AgentWorkflowsService } from "@modules/domain/agent-graphs"
 import { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
-import { AgentAccountsService } from "@modules/domain/tools"
+import { AgentAccountsService, type AttachmentWish } from "@modules/domain/tools"
 import { INSTALLED } from "@modules/domain/installed-plugins"
 import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import { ModulesService, type ModuleDefinition } from "@modules/domain/modules"
@@ -33,10 +33,35 @@ const SEED_LOCALE = "vi"
 /** The most workspaces looked through for the named one. */
 const WORKSPACE_SCAN_LIMIT = 1000
 
-/** The installation that runs a module's graph, with the agent it drives. */
+/** The installation that runs a module's graph, with the agent it drives, and whether this run had to make it. */
 interface Seat {
     readonly installation: InstallationRecord
     readonly agentId: string
+    readonly created: boolean
+}
+
+/** The accounts an agent is attached to where it holds none, or null for its module's own proposal. */
+export type AttachmentWishes = ReadonlyArray<AttachmentWish> | null
+
+/**
+ * One module's graph to seed, with the attachments its agent gets where it holds none: `null` for the module's own proposal (every
+ * working account of each provider its template lists), else exactly these accounts (the roster seed picks them by kind).
+ */
+export interface GraphSeedEntry {
+    /** The graph, read as the seed reads a graph file (its module key names the module). */
+    readonly spec: GraphSpec
+    /** The accounts to attach where the agent holds none; null for the module's proposal. */
+    readonly wishes: AttachmentWishes
+}
+
+/** What seeding one module did. */
+export interface SeededModule {
+    /** The module. */
+    readonly moduleKey: string
+    /** Its agent in the workspace. */
+    readonly agentId: string
+    /** True when anything was written (an installation, an activation or a graph, an attachment, a workflow). */
+    readonly changed: boolean
 }
 
 @Injectable()
@@ -68,25 +93,39 @@ export class GraphSeedService {
      */
     async run(text: string, workspaceName: string): Promise<void> {
         const specs = readGraphSpecs(text)
-        const installed = this.installedNodes()
+        this.installedNodes()
         const workspaceId = await this.workspaceOf(workspaceName)
+        await this.seedInto(workspaceId, specs.map((spec) => ({ spec, wishes: null })))
+    }
+
+    /**
+     * Seeds each graph into its module's agent in a workspace already found (the stack's named workspace, or an enterprise workspace the
+     * roster seed installs into), in order; a refused graph stops the run. Answers what each module came to.
+     */
+    async seedInto(workspaceId: string, entries: ReadonlyArray<GraphSeedEntry>): Promise<ReadonlyArray<SeededModule>> {
+        const installed = this.installedNodes()
         const ownerId = await this.ownerOf(workspaceId)
         // An installation names its module by foreign key: on an empty database the catalogue is not mirrored yet.
         await this.modules.sync()
-        await eachInOrder(specs, (spec) => this.seedGraph({ workspaceId, ownerId, installed }, spec))
+        const seeded: Array<SeededModule> = []
+        await eachInOrder(entries, async (entry) => {
+            seeded.push(await this.seedGraph({ workspaceId, ownerId, installed }, entry))
+        })
+        return seeded
     }
 
     /** Seeds one graph into its module's agent: the rights first, then the activation and the published graph. */
-    private async seedGraph(seat: SeedSeat, spec: GraphSpec): Promise<void> {
+    private async seedGraph(seat: SeedSeat, entry: GraphSeedEntry): Promise<SeededModule> {
         const { workspaceId, ownerId, installed } = seat
+        const { spec } = entry
         const module = await this.modules.find(spec.moduleKey)
         await this.requireOpen(workspaceId, module.key)
-        const { installation, agentId } = await this.seatOf(workspaceId, module)
-        await this.attachProviders(workspaceId, agentId, module.key)
+        const { installation, agentId, created } = await this.seatOf(workspaceId, module)
+        const attached = await this.attachProviders(workspaceId, agentId, module.key, entry.wishes)
         if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
             this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
-            await this.seedWorkflows(workspaceId, module.key, agentId)
-            return
+            const drafts = await this.seedWorkflows(workspaceId, module.key, agentId)
+            return { moduleKey: module.key, agentId, changed: created || attached > 0 || drafts > 0 }
         }
         const statuses = await this.activation.activate({ workspaceId, ownerId }, [
             {
@@ -107,27 +146,36 @@ export class GraphSeedService {
             `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}, ${bound} connections assigned`,
         )
         await this.seedWorkflows(workspaceId, module.key, agentId)
+        return { moduleKey: module.key, agentId, changed: true }
     }
 
     /**
      * Makes the published graph the agent's primary workflow (or brings it up to the graph just published) and adds a draft workflow
      * from each other template of the module, so the workflows tab of a seeded shop has its history and its templates. A rerun adds
-     * nothing; it prints how many drafts it added. An app without workflows does nothing.
+     * nothing; it prints how many drafts it added and answers it. An app without workflows does nothing.
      */
-    private async seedWorkflows(workspaceId: string, moduleKey: string, agentId: string): Promise<void> {
-        if (this.workflows === undefined) return
+    private async seedWorkflows(workspaceId: string, moduleKey: string, agentId: string): Promise<number> {
+        if (this.workflows === undefined) return 0
         const drafts = await this.workflows.seedAgent(workspaceId, agentId, moduleKey)
         this.options.print(`${moduleKey} agent ${agentId} workflows adopted, ${drafts} drafts added`)
+        return drafts
     }
 
     /**
-     * Attaches the agent to the working accounts of the providers its module's template lists, where it holds none: an attachment that
-     * exists is left exactly as the workspace holds it, so a rerun of the seed or a new version of a module never changes a right. Without them the published graph could not send, draw a QR or write the ledger.
+     * Attaches the agent to the accounts it gets (the wishes, else the working accounts of the providers its module's template lists),
+     * where it holds none: an attachment that exists is left exactly as the workspace holds it, so a rerun of the seed or a new version of
+     * a module never changes a right. Without them the published graph could not send, draw a QR or write the ledger. Answers how many it
+     * made; a wish the workspace cannot store is printed by its reason, never fatal.
      */
-    private async attachProviders(workspaceId: string, agentId: string, moduleKey: string): Promise<void> {
-        const made = await this.abilities.attachDefaults({ workspaceId, agentId, moduleKey }, null, null)
-        if (made.ok && made.attached.length > 0)
+    private async attachProviders(workspaceId: string, agentId: string, moduleKey: string, wishes: AttachmentWishes): Promise<number> {
+        const made = await this.abilities.attachDefaults({ workspaceId, agentId, moduleKey }, wishes, null)
+        if (!made.ok) {
+            this.options.print(`${moduleKey} agent ${agentId} attachments refused: ${made.reason}`)
+            return 0
+        }
+        if (made.attached.length > 0)
             this.options.print(`${moduleKey} agent ${agentId} attached to ${made.attached.map((entry) => entry.provider).join(", ")}`)
+        return made.attached.length
     }
 
     /**
@@ -195,7 +243,7 @@ export class GraphSeedService {
     /** The installation of the module and its agent; made, with the agent under the handle of the module, when the workspace has none. */
     private async seatOf(workspaceId: string, module: ModuleDefinition): Promise<Seat> {
         const held = await this.installations.firstOfModule(workspaceId, module.key)
-        if (held !== null) return this.seatOfRecord(held)
+        if (held !== null) return this.seatOfRecord(held, false)
         const agentId = await this.agents.ensureByHandle({
             workspaceId,
             module: module.key,
@@ -212,14 +260,14 @@ export class GraphSeedService {
             agentId,
             operatingMode: module.defaultOperatingMode,
         })
-        return this.seatOfRecord(await this.installations.firstOfModule(workspaceId, module.key))
+        return this.seatOfRecord(await this.installations.firstOfModule(workspaceId, module.key), true)
     }
 
-    private seatOfRecord(installation: InstallationRecord | null): Seat {
+    private seatOfRecord(installation: InstallationRecord | null, created: boolean): Seat {
         const agentId = installation?.agentId ?? null
         if (installation === null || agentId === null) {
             throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.RowMissing })
         }
-        return { installation, agentId }
+        return { installation, agentId, created }
     }
 }

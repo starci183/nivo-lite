@@ -6,6 +6,7 @@ import { KnowledgeSourceCitesService } from "@modules/domain/knowledge-sources"
 import { VECTOR_INDEX } from "@modules/integrations/qdrant"
 import type { VectorIndex } from "@modules/integrations/qdrant"
 import { LOGGER, type Logger } from "@modules/platform/logging"
+import { FakeVectorIndex } from "@tests/fixtures/builders/vector-sync.builder"
 
 import { CHINH_SACH_GIAO_HANG_VI, GIO_MO_CUA_VI, PHI_SHIP_NOI_THANH_VI, PHI_SHIP_NOI_THANH_VI_2, SP_0123_35_000D_VI } from "@tests/fixtures/i18n/knowledge-spec.messages"
 import { EmbeddingService } from "./embedding.service"
@@ -13,12 +14,15 @@ import { PassageRetrievalService } from "./passage-retrieval.service"
 
 /** A hit of the word leg, as the passage search answers it. */
 type WordHit = Awaited<ReturnType<PassageSearchService["byWords"]>>[number]
-/** A hit of the meaning leg, as the passage search answers it. */
-type MeaningHit = Awaited<ReturnType<PassageSearchService["byMeaning"]>>[number]
+/** A hit of the meaning leg: a passage the vector index found, with its cosine distance (lower = nearer). */
+interface MeaningHit extends StoredPassage {
+    readonly distance: number
+}
 /** The cite of one document, as the cites service answers it. */
 type SourceCite = NonNullable<ReturnType<Awaited<ReturnType<KnowledgeSourceCitesService["of"]>>["get"]>>
 
 const WS = "11111111-1111-4111-8111-111111111111"
+const OTHER = "22222222-2222-4222-8222-222222222222"
 const internal: PassageLens = { workspaceId: WS, module: "chatbot", audience: "internal", installationId: null }
 const customer: PassageLens = { ...internal, audience: "customer" }
 const VECTOR = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.01)
@@ -57,7 +61,6 @@ interface Doubles {
 const script = ({ passages, cites, embeddings }: Doubles): void => {
     passages.byIds.mockResolvedValue([])
     passages.byWords.mockResolvedValue([])
-    passages.byMeaning.mockResolvedValue([])
     passages.stretch.mockResolvedValue([])
     passages.one.mockResolvedValue(null)
     cites.of.mockResolvedValue(new Map([["s1", cite("s1", 5)]]))
@@ -66,34 +69,15 @@ const script = ({ passages, cites, embeddings }: Doubles): void => {
     embeddings.embed.mockResolvedValue([VECTOR])
 }
 
-/** The service with no vector index bound: the meaning leg reads the pgvector statement. */
+/** The service over its vector index (the only meaning leg); the index double comes back to be scripted by the case. */
 const build = async () => {
     const passages = mock<PassageSearchService>()
     const cites = mock<KnowledgeSourceCitesService>()
     const embeddings = mock<EmbeddingService>()
     const logger = mock<Logger>()
     script({ passages, cites, embeddings })
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            PassageRetrievalService,
-            { provide: PassageSearchService, useValue: passages },
-            { provide: KnowledgeSourceCitesService, useValue: cites },
-            { provide: EmbeddingService, useValue: embeddings },
-            { provide: VECTOR_INDEX, useValue: null },
-            { provide: LOGGER, useValue: logger },
-        ],
-    }).compile()
-    return { service: moduleRef.get(PassageRetrievalService), passages, cites, embeddings, logger }
-}
-
-/** The service with a vector index bound; the index double comes back to be scripted by the case. */
-const buildWithIndex = async () => {
-    const passages = mock<PassageSearchService>()
-    const cites = mock<KnowledgeSourceCitesService>()
-    const embeddings = mock<EmbeddingService>()
-    const logger = mock<Logger>()
-    script({ passages, cites, embeddings })
     const index = mock<VectorIndex>()
+    index.search.mockResolvedValue([])
     const moduleRef = await Test.createTestingModule({
         providers: [
             PassageRetrievalService,
@@ -107,11 +91,16 @@ const buildWithIndex = async () => {
     return { service: moduleRef.get(PassageRetrievalService), passages, cites, embeddings, logger, index }
 }
 
+/** The world's vector index answers these passages, nearest first, and Postgres serves their rows back in the lens. */
+const near = (world: Awaited<ReturnType<typeof build>>, hits: ReadonlyArray<MeaningHit>): void => {
+    world.index.search.mockResolvedValue(hits.map((hit) => ({ id: hit.id, score: 1 - hit.distance })))
+    world.passages.byIds.mockResolvedValue(hits.map(({ distance: _distance, ...row }) => row))
+}
+
 /** How many statements and model calls one call made. */
 const spentOf = ({ passages, cites, embeddings }: Awaited<ReturnType<typeof build>>) => ({
     statements:
         passages.byWords.mock.calls.length +
-        passages.byMeaning.mock.calls.length +
         passages.stretch.mock.calls.length +
         passages.one.mock.calls.length +
         passages.byIds.mock.calls.length +
@@ -123,7 +112,7 @@ const registerSearchCases = () => {
     it("fuses words and meaning in the caller's lens: both legs first, one embedding booked to the workspace", async () => {
         const world = await build()
         world.passages.byWords.mockResolvedValue([word("code", 0.9), word("both", 0.4)])
-        world.passages.byMeaning.mockResolvedValue([meaning("near", 0.2), meaning("both", 0.3)])
+        near(world, [meaning("near", 0.2), meaning("both", 0.3)])
 
         const found = await world.service.search(customer, {
             query: PHI_SHIP_NOI_THANH_VI,
@@ -154,9 +143,7 @@ const registerSearchCases = () => {
             limit: 40,
             match: "ranked",
         })
-        expect(world.passages.byMeaning).toHaveBeenCalledWith(customer, {
-            vector: `[${VECTOR.join(",")}]`,
-            model: "m1@1536",
+        expect(world.index.search).toHaveBeenCalledWith("passage", { ...customer, model: "m1@1536", standing: "in_force" }, VECTOR, {
             limit: 40,
         })
         expect(world.embeddings.embed).toHaveBeenCalledWith({
@@ -196,7 +183,7 @@ const registerSearchRankingCases = () => {
         const world = await build()
         // A customer's question: the word leg finds one passage holding all its words (complete) and one holding some of them.
         world.passages.byWords.mockResolvedValue([word("partial", 2.4), word("exact", 2.1, true)])
-        world.passages.byMeaning.mockResolvedValue([meaning("near1", 0.2), meaning("near2", 0.25), meaning("near3", 0.3)])
+        near(world, [meaning("near1", 0.2), meaning("near2", 0.25), meaning("near3", 0.3)])
 
         const found = await world.service.search(internal, { query: "mau don nu khong no", mode: "auto", limit: 6, after: 0 })
 
@@ -215,7 +202,7 @@ const registerSearchRankingCases = () => {
         const found = await world.service.search(internal, { query: GIO_MO_CUA_VI, mode: "auto", limit: 6, after: 0 })
 
         expect(found.legs).toEqual(["words"])
-        expect(world.passages.byMeaning).not.toHaveBeenCalled()
+        expect(world.index.search).not.toHaveBeenCalled()
     })
 
     it("does not embed when embeddings are not configured, and uses a vector the caller already made", async () => {
@@ -227,7 +214,7 @@ const registerSearchRankingCases = () => {
         const given = await build()
         given.embeddings.configured.mockReturnValue(false)
         await given.service.search(internal, { query: "ship", mode: "auto", limit: 6, after: 0, vector: VECTOR })
-        expect(given.passages.byMeaning).toHaveBeenCalledTimes(1)
+        expect(given.index.search).toHaveBeenCalledTimes(1)
         expect(given.embeddings.embed).not.toHaveBeenCalled()
     })
 
@@ -238,7 +225,7 @@ const registerSearchPagingCases = () => {
         const world = await build()
         const ids = Array.from({ length: 25 }, (_, index) => `p${String(index).padStart(2, "0")}`)
         world.passages.byWords.mockResolvedValue(ids.map((id, index) => word(id, 1 - index / 100)))
-        world.passages.byMeaning.mockResolvedValue(ids.toReversed().map((id, index) => meaning(id, index / 100)))
+        near(world, ids.toReversed().map((id, index) => meaning(id, index / 100)))
         const page = (after: number) =>
             world.service.search(internal, { query: "ship", mode: "auto", limit: 10, after })
 
@@ -307,9 +294,10 @@ const registerSearchPagingCases = () => {
         world.passages.byWords.mockImplementation((_lens, query) =>
             Promise.resolve(pool(query.limit).map((id, index) => word(id, 1 / (index + 1)))),
         )
-        world.passages.byMeaning.mockImplementation((_lens, query) =>
-            Promise.resolve(pool(query.limit).map((id, index) => meaning(`m${id}`, index / 1000))),
+        world.index.search.mockImplementation((_kind, _scope, _vector, page) =>
+            Promise.resolve(pool(page.limit).map((id, index) => ({ id: `m${id}`, score: 1 - index / 1000 }))),
         )
+        world.passages.byIds.mockImplementation((_lens, ids) => Promise.resolve(ids.map((id) => stored(id))))
         const searches = 50
 
         for (let round = 0; round < searches; round += 1) {
@@ -324,7 +312,7 @@ const registerSearchPagingCases = () => {
 
         expect(spentOf(world)).toEqual({ statements: 3 * searches, embeddings: searches })
         expect(world.passages.byWords.mock.calls.every(([, query]) => query.limit === 40)).toBe(true)
-        expect(world.passages.byMeaning.mock.calls.every(([, query]) => query.limit === 40)).toBe(true)
+        expect(world.index.search.mock.calls.every(([, , , page]) => page.limit === 40)).toBe(true)
         // The cite read names at most the documents of the pool: by primary key, never a listing of the workspace.
         expect(world.cites.of.mock.calls.every(([, ids]) => ids.length <= 80)).toBe(true)
     })
@@ -432,7 +420,7 @@ const registerReadEdgeCases = () => {
 
 const registerIndexCases = () => {
     it("asks the vector index inside the scope of the lens, then reads the rows back from Postgres in the lens", async () => {
-        const world = await buildWithIndex()
+        const world = await build()
         const { index } = world
         index.search.mockResolvedValue([
             { id: "near", score: 0.9 },
@@ -455,14 +443,45 @@ const registerIndexCases = () => {
             { limit: 40 },
         )
         expect(world.passages.byIds).toHaveBeenCalledWith(customer, ["near", "both"])
-        // One index call and one Postgres read by ids for the meaning leg; the pgvector statement is not run.
+        // One index call and one Postgres read by ids for the meaning leg.
         expect(index.search).toHaveBeenCalledTimes(1)
-        expect(world.passages.byMeaning).not.toHaveBeenCalled()
         expect(spentOf(world)).toEqual({ statements: 3, embeddings: 1 })
     })
 
+    it("searches inside the mandatory filters: never a point of another workspace, of another identity, or withheld from a customer", async () => {
+        const index = new FakeVectorIndex()
+        const passages = mock<PassageSearchService>()
+        const cites = mock<KnowledgeSourceCitesService>()
+        const embeddings = mock<EmbeddingService>()
+        script({ passages, cites, embeddings })
+        passages.byIds.mockImplementation((_lens, ids) => Promise.resolve(ids.map((id) => stored(id))))
+        const mirror = { sourceId: "s1", module: null, installationId: null, isPublic: true, customerReady: true, inForce: true }
+        index.put("passage", "mine", VECTOR, { ...mirror, workspaceId: WS, model: "m1@1536", textHash: "h" })
+        index.put("passage", "theirs", VECTOR, { ...mirror, workspaceId: OTHER, model: "m1@1536", textHash: "h" })
+        index.put("passage", "old-model", VECTOR, { ...mirror, workspaceId: WS, model: "old@1536", textHash: "h" })
+        index.put("passage", "withheld", VECTOR, { ...mirror, workspaceId: WS, model: "m1@1536", textHash: "h", customerReady: false })
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                PassageRetrievalService,
+                { provide: PassageSearchService, useValue: passages },
+                { provide: KnowledgeSourceCitesService, useValue: cites },
+                { provide: EmbeddingService, useValue: embeddings },
+                { provide: VECTOR_INDEX, useValue: index },
+                { provide: LOGGER, useValue: mock<Logger>() },
+            ],
+        }).compile()
+        const service = moduleRef.get(PassageRetrievalService)
+
+        const forCustomer = await service.search(customer, { query: "ship", mode: "auto", limit: 6, after: 0 })
+        const forTeam = await service.search(internal, { query: "ship", mode: "auto", limit: 6, after: 0 })
+
+        expect(forCustomer.hits.map((hit) => hit.id)).toEqual(["mine"])
+        expect(forTeam.hits.map((hit) => hit.id).toSorted()).toEqual(["mine", "withheld"])
+        expect(passages.byIds.mock.calls.flatMap(([, ids]) => ids)).not.toContain("theirs")
+    })
+
     it("never shows a point the index still holds but Postgres no longer serves: gone, superseded or withheld from customers", async () => {
-        const world = await buildWithIndex()
+        const world = await build()
         const { index } = world
         // The index lags: it still answers a deleted row, a passage withheld since, and a passage of another lens.
         index.search.mockResolvedValue([
@@ -483,7 +502,7 @@ const registerIndexCases = () => {
 
 const registerIndexFailureCases = () => {
     it("answers by words alone and says so when the vector index does not answer: never an exception", async () => {
-        const world = await buildWithIndex()
+        const world = await build()
         const { index } = world
         index.search.mockRejectedValue(new Error("QDRANT_UNAVAILABLE"))
 
@@ -496,7 +515,7 @@ const registerIndexFailureCases = () => {
     })
 
     it("costs one index call and one read by ids per search whatever the collection holds (200,000 points)", async () => {
-        const world = await buildWithIndex()
+        const world = await build()
         const { index } = world
         index.search.mockImplementation((_kind, _scope, _vector, page) =>
             Promise.resolve(Array.from({ length: page.limit }, (_, at) => ({ id: `p${at}`, score: 1 - at / 100 }))),

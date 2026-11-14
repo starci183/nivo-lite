@@ -67,8 +67,21 @@ export const DOMAIN_REGISTER_SCHEMA: z.ZodType<{ name: string; years: number; na
     })
     .strict()
 
-/** A renewal of a held domain. */
-export const DOMAIN_RENEW_SCHEMA: z.ZodType<{ name: string; years: number; }> = z.object({ name: NAME, years: YEARS }).strict()
+/**
+ * A renewal of a held domain, or of a service the provider sells on it (`service`: `domain` when absent). The years bound is the
+ * registration's (1 to 10).
+ */
+export const DOMAIN_RENEW_SCHEMA: z.ZodType<{ name: string; years: number; service?: "domain" | "hosting" | "ssl" | undefined; }> = z
+    .object({ name: NAME, years: YEARS, service: z.enum(["domain", "hosting", "ssl"]).optional() })
+    .strict()
+
+/** An expiry as a registrar prints it (a date; its own format), kept from the renewal's answer. */
+const EXPIRY = z.string().trim().min(1).max(40)
+
+/** The check of a renewal of a held domain: the domain, the expiry the renewal answered as before it, and its order reference. */
+export const DOMAIN_RENEWAL_GET_SCHEMA: z.ZodType<{ name: string; expiresBefore: string; reference?: string | null | undefined; }> = z
+    .object({ name: NAME, expiresBefore: EXPIRY, reference: z.string().trim().min(1).max(200).nullable().optional() })
+    .strict()
 
 /** An incoming transfer. */
 export const DOMAIN_TRANSFER_SCHEMA: z.ZodType<{ name: string; authCode: string; years: number; }> = z

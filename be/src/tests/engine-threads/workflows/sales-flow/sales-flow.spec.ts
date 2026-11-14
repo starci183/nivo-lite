@@ -79,6 +79,33 @@ describe("the sale as one run: from the hand-off to the recorded order", () => {
     })
 })
 
+/**
+ * R68 (sale v30): the team posts of an unsuccessful ending are the ENGINE's (`report.facts`, under the key `step-ending:<run>:<step>:<attempt>`),
+ * no longer a notice node's catalogue line. A world recognises one by its KIND and its FACTS (the step's declared notice facts, by their label in the
+ * team's language), never by its wording.
+ */
+const ENDING_KEY = "step-ending:"
+type TeamPost = { readonly key: string; readonly versions: ReadonlyArray<Readonly<Record<string, unknown>>> }
+const isEnding = (post: TeamPost): boolean => post.key.startsWith(ENDING_KEY)
+/** The facts of an engine notice by their label. */
+const endingFactsOf = (post: TeamPost | undefined): Readonly<Record<string, string>> => {
+    const facts: unknown = post?.versions.at(-1)?.facts
+    if (!Array.isArray(facts)) return {}
+    return Object.fromEntries(
+        facts.flatMap((fact: unknown) =>
+            typeof fact === "object" && fact !== null && typeof Reflect.get(fact, "name") === "string"
+                ? [[String(Reflect.get(fact, "name")), String(Reflect.get(fact, "value"))]]
+                : [],
+        ),
+    )
+}
+/** The engine notice is a facts card naming the order's code (and, when given, more facts). */
+const expectEndingOf = (post: TeamPost | undefined, facts: Readonly<Record<string, string>> = { "Mã đơn": "DH-20261113-0001" }): void => {
+    expect(post === undefined ? false : isEnding(post)).toBe(true)
+    expect(post?.versions.at(-1)).toMatchObject({ kind: "report.facts" })
+    expect(endingFactsOf(post)).toMatchObject(facts)
+}
+
 /** The credit that names the order and pays its exact total. */
 const PAYS: WorldCredit = { id: "tx-1", amountVnd: 4000, reference: "CK DH-20261113-0001 Lan", occurredAt: "2026-11-13T09:00:00.000Z" }
 /** The credit that names the order with a wrong amount. */
@@ -109,7 +136,7 @@ describe("the sale as one run: the payment wait", () => {
                 toModuleKey: "sales",
                 context: expect.objectContaining({
                     workflowCall: { workflow: "after-sale", version: "latest" },
-                    params: { orderId: "order-1", contactId: CONTACT },
+                    params: { orderId: "order-1", orderNo: "DH-20261113-0001", contactId: CONTACT },
                     caller: { runId },
                 }),
             }),
@@ -223,12 +250,13 @@ describe("the sale as one run: the paid record declined on its card", () => {
         expect(ran.map((one) => one.error)).toEqual([null])
         expect(books.orders.get("order-1")?.values.status).toBe("confirmed")
         const steps = await threadStepsOf(process, runId)
-        expect(steps).toEqual(expect.arrayContaining(["pay[r1].paid-order", "paid-declined", "paid-declined-notice"]))
+        // v30 (R68): `paid-order` declares its ending (end at `declined`): the engine tells the team and goes to the outcome.
+        expect(steps).toEqual(expect.arrayContaining(["pay[r1].paid-order"]))
         expect(steps).not.toContain("to-after-sale")
         expect(actsOf(db, TOOL.agentTag)).toEqual([])
-        // One more post than the card: the declined notice, naming the order's code.
+        // One more post than the card: the engine's notice of the declined step, naming the order's code.
         expect(db.team).toHaveLength(cards + 1)
-        expect(JSON.stringify(db.team.at(-1))).toContain("DH-20261113-0001")
+        expectEndingOf(db.team.at(-1))
         // The run ended on its `declined` outcome (the last step), not parked and not `paid`.
         expect(steps.at(-1)).toBe("declined")
         expect(db.records.get(AGENT_RUNS, runId)?.data).toMatchObject({ status: "done" })
@@ -435,7 +463,7 @@ describe("the sale as one run: the payment loop runs out of rounds", () => {
         }
 
         const steps = await threadStepsOf(process, runId)
-        expect(steps).toEqual(expect.arrayContaining(["pay[r1].remind", `pay[r${rounds}].remind`, "pay", "unpaid-notice"]))
+        expect(steps).toEqual(expect.arrayContaining(["pay[r1].remind", `pay[r${rounds}].remind`, "pay"]))
         expect(steps.at(-1)).toBe("unpaid")
         expect(steps).not.toContain("to-after-sale")
         // The reminder is a courtesy (a refusal is a fact in its output, never a crash): while the Zalo reply window is open it reaches the person, once it has
@@ -445,15 +473,16 @@ describe("the sale as one run: the payment loop runs out of rounds", () => {
         expect(reminders.filter((row) => row.state === "delivered")).toHaveLength(saidOf(db).filter((line) => line.startsWith(REMINDER)).length)
         expect(reminders.filter((row) => row.state === "refused").every((row) => row.reason === "outside_window")).toBe(true)
         expect(reminders[0]).toMatchObject({ state: "delivered" })
-        // R47 (sale v29): a reminder that did not reach the person (refused, other than `route_held`) is never silent: each one posts ONE team notice naming the order's
-        // code (`pay[rN].remind-sent` -> `remind-unsent-notice`), and the run's end adds ONE more (`unpaid-notice`: code and total). A delivered reminder tells nobody.
+        // R47 (sale v29) then R68 (v30): a reminder that did not reach the person (refused, other than `route_held`) is never silent: each one posts ONE team
+        // notice naming the order's code (now the ENGINE's, `remind` declares its ending), and the run's end adds ONE more (the loop out of rounds: code and
+        // total). A delivered reminder tells nobody.
         const refused = reminders.filter((row) => row.state === "refused").length
         expect(refused).toBeGreaterThan(0)
-        expect(steps.filter((step) => step.endsWith(".remind-unsent-notice"))).toHaveLength(refused)
         const posted = db.team.slice(posts)
         expect(posted).toHaveLength(refused + 1)
-        expect(posted.every((post) => JSON.stringify(post).includes("DH-20261113-0001"))).toBe(true)
-        expect(JSON.stringify(posted.at(-1))).toMatch(/4[.,]?000/)
+        expect(posted.filter((post) => post.key.includes(".remind:"))).toHaveLength(refused)
+        for (const post of posted) expectEndingOf(post)
+        expectEndingOf(posted.at(-1), { "Mã đơn": "DH-20261113-0001", "Tổng tiền": "4000" })
         expect(world.books.orders.get("order-1")?.values.status).toBe("confirmed")
         expect(db.records.get(AGENT_RUNS, runId)?.data).toMatchObject({ status: "done" })
         expect(db.records.get(AGENT_RUNS, runId)?.data.waitMatch ?? null).toBeNull()
@@ -480,13 +509,11 @@ describe("the sale as one run: the answer about the order is refused", () => {
 
         expect(ended.map((one) => [one.ending?.status, one.ending?.reason])).toEqual([["done", "wait_took"], ["skipped", "no_waiter"]])
         expect(resumed.map((one) => one.error)).toEqual([null])
-        expect(await threadStepsOf(process, runId)).toEqual(
-            expect.arrayContaining(["pay[r1].order-talk", "pay[r1].order-talk-sent", "pay[r1].order-talk-unsent-notice"]),
-        )
+        expect(await threadStepsOf(process, runId)).toEqual(expect.arrayContaining(["pay[r1].order-talk"]))
         expect(saidOf(db)).toHaveLength(said)
         expect(db.chat.ledger.rows.at(-1)).toMatchObject({ state: "refused", reason: "outside_window" })
         expect(db.team).toHaveLength(posts + 1)
-        expect(JSON.stringify(db.team.at(-1))).toContain("DH-20261113-0001")
+        expectEndingOf(db.team.at(-1))
         // The wait goes on: the credit that comes next pays the order.
         expect(db.records.get(AGENT_RUNS, runId)?.data.waitMatch).not.toEqual(null)
         const paid = await creditArrives(world, { id: PAYS.id, amountVnd: PAYS.amountVnd, content: PAYS.reference })
@@ -518,7 +545,7 @@ describe("the after-sale: the thank-you is refused", () => {
         const wakes = await calledWorkflow(db, {
             agentId: SALES,
             workflow: "after-sale",
-            params: { orderId: "order-1", contactId: CONTACT },
+            params: { orderId: "order-1", orderNo: "DH-20261113-0001", contactId: CONTACT },
             key: `call:sale:after-${String(windowOpen)}-${String(knownCustomer)}`,
             contactId: CONTACT,
             routeId: CONV,
@@ -533,13 +560,13 @@ describe("the after-sale: the thank-you is refused", () => {
 
         expect(ran.map((one) => one.error)).toEqual([null])
         const steps = await threadStepsOf(process, ran[0]?.runId ?? "")
-        expect(steps).toEqual(expect.arrayContaining(["thank", "thanked-them", "thank-unsent", "thank-unsent-notice", "plan-delivery", "plan-occasions"]))
+        expect(steps).toEqual(expect.arrayContaining(["thank", "has-record", "plan-delivery", "plan-occasions"]))
         expect(steps).not.toContain("stage")
         expect(steps.at(-1)).toBe("thanked")
         expect(saidOf(db)).toHaveLength(said)
         expect(db.chat.ledger.rows.at(-1)).toMatchObject({ state: "refused", reason: "outside_window", text: THANKS })
         expect(db.team).toHaveLength(posts + 1)
-        expect(JSON.stringify(db.team.at(-1))).toContain("DH-20261113-0001")
+        expectEndingOf(db.team.at(-1))
     })
 
     it("the control: with the window open the thank-you is delivered, the stage moves, nobody is told", async () => {
@@ -548,8 +575,7 @@ describe("the after-sale: the thank-you is refused", () => {
 
         expect(ran.map((one) => one.error)).toEqual([null])
         const steps = await threadStepsOf(process, ran[0]?.runId ?? "")
-        expect(steps).toEqual(expect.arrayContaining(["thank", "thanked-them", "stage", "plan-delivery", "plan-occasions"]))
-        expect(steps).not.toContain("thank-unsent-notice")
+        expect(steps).toEqual(expect.arrayContaining(["thank", "has-record", "stage", "plan-delivery", "plan-occasions"]))
         expect(saidOf(db).slice(said)).toEqual([THANKS])
         expect(db.team).toHaveLength(posts)
         expect(books.leads.get("lead-1")?.values.consultStage).toBe("after_sale")
@@ -562,10 +588,10 @@ describe("the after-sale: the thank-you is refused", () => {
         const { world, ran } = await afterSaleOf(true, false)
         const steps = await threadStepsOf(world.process, ran[0]?.runId ?? "")
 
-        // R49 (sales.after-sale v16): after a delivered thank-you the new if-step `has-record` reads the sale's record of the person
+        // R49 (sales.after-sale v16; v17 folds the delivered check into it): the if-step `has-record` reads the sale's record of the person
         // (`steps.thank.output.leadId`). A new customer has none (the order is kept under the contact alone), so the stage move is SKIPPED
         // (`stage` is not reached: it would stop on "reached with no customer"), the care steps go on and the run ends `thanked`.
-        expect(steps).toEqual(expect.arrayContaining(["thank", "thanked-them", "has-record", "plan-delivery", "plan-occasions"]))
+        expect(steps).toEqual(expect.arrayContaining(["thank", "has-record", "plan-delivery", "plan-occasions"]))
         expect(steps).not.toContain("stage")
         expect(steps.at(-1)).toBe("thanked")
     })

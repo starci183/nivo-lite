@@ -5,7 +5,7 @@ import { UuidAbstractEntity } from "@modules/platform/database"
 @Entity({ schema: "public", name: "customer_routes" })
 /**
  * One route: the way the engine reaches one person on one entrance. ONE row per (workspace, contact, channel, account), written by an
- * insert-or-nothing; its `id` is the opaque route id that every engine column called `conversation_id` (holds, stops, freezes, the
+ * insert-or-nothing; its `id` is the opaque route id that every engine column called `conversation_id` (holds, stops, the
  * speaker queue, burst scopes) keeps holding. The account is the connection, the website site or the API key the entrance goes through,
  * null when the entrance has none.
  */

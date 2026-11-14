@@ -1,48 +1,21 @@
 import type { FactAudience, FactRecord, InstallationScope } from "./brain-facts.contracts"
 import type { StoredEmbedding } from "./embedding-standard.policy"
 
-/** Which facts in force a sweep page reads: those with no vector, or those whose vector another identity made (the re-index). */
-export type WantingArm = "missing" | "other_identity"
-
-/** One keyset page of a sweep: which facts, after which id, how many. */
-export interface WantingPage {
-    /** No vector yet, or another identity's. */
-    readonly arm: WantingArm
-    /** The last id of the page before (pages go in id order); null for the first page. */
-    readonly afterId: string | null
-    /** At most this many (never above one read's bound). */
-    readonly limit: number
-}
-
-/** A fact whose line needs a vector: its id and the hash of its line. */
-export interface WantedLine {
-    /** The fact. */
-    readonly id: string
-    /** The hash of its embedded line (`factEmbedHashOf`). */
-    readonly hash: string
-}
-
-/** One vector to store: the fact, its vector and the hash of the line it was made from. */
-export interface StoredLine extends WantedLine {
-    /** The vector. */
-    readonly vector: ReadonlyArray<number>
-}
-
-/** A fact in force with what its stored vector says. */
+/** A fact with what Postgres records of its point (the identity and the hash of the line the index accepted). */
 export interface FactEmbeddingState {
     /** The fact. */
     readonly fact: FactRecord
-    /** Its stored vector's identity and hash. */
+    /** The identity and hash of its accepted point. */
     readonly stored: StoredEmbedding
 }
 
 /**
- * The statuses whose rows may hold a vector: facts in force, facts decided for a later start (`scheduled`) and proposals embedded when
+ * The statuses whose rows hold a point: facts in force, facts decided for a later start (`scheduled`) and proposals embedded when
  * they are filed (the last two to find the same fact in other words).
  */
 export type EmbeddedStatus = "active" | "scheduled" | "proposed"
 
-/** Whose view a vector search of facts answers for: the same lens as the word search (`visibleTo`), applied in SQL before the limit. */
+/** Whose view a vector search of facts answers for: the same lens as the word search (`visibleTo`), in the index's filter and on the rows read back. */
 export interface FactLens {
     /** `customer` reads public facts only. */
     readonly audience: FactAudience

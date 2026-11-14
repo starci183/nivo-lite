@@ -33,7 +33,7 @@ import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 import { RunStopsService } from "./stops/run-stops.service"
-import { answerIndexOf, stopAnswerOf } from "./stops/stop-gate.policy"
+import { answerIndexOf, endsTheRun, stopAnswerOf } from "./stops/stop-gate.policy"
 import type { StopDecision } from "./stops/run-stop.contracts"
 import { ThreadGraphsService, type DrivenRun } from "./thread-graphs.service"
 import { ThreadProjectionService } from "./thread-projection.service"
@@ -51,8 +51,8 @@ import {
 export type ThreadStoppedListener = (ref: ThreadRef, stepKey: string) => Promise<void>
 
 /**
- * Told after every drive that settled a thread (it stopped, or it ended): a capability above the threads (the lead freezes, which
- * release a customer's held wakes once the stop closed) registers here, so the threads import nothing of it. It never fails the wake.
+ * Told after every drive that settled a thread (it stopped, or it ended): a capability above the threads (the subject holds, which
+ * release the wakes held behind a finished run) registers here, so the threads import nothing of it. It never fails the wake.
  */
 export type ThreadSettledListener = (ref: ThreadRef) => Promise<void>
 
@@ -236,7 +236,7 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         this.stoppedListeners.push(listener)
     }
 
-    /** Adds a listener told after every drive that left a thread stopped or ended (the lead freezes release their holds here). */
+    /** Adds a listener told after every drive that left a thread stopped or ended (the subject holds release the wakes held behind a finished run here). */
     whenSettled(listener: ThreadSettledListener): void {
         this.settledListeners.push(listener)
     }
@@ -566,7 +566,7 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
     /** The end hook of a thread. A thread that reached its end closes its run as done; a thread a founder skipped was closed by the gate. */
     private async ended(drive: Drive): Promise<void> {
         const { ref } = drive
-        const skippedByFounder = drive.decision?.kind === "skip"
+        const skippedByFounder = endsTheRun(drive.decision)
         this.logger.info(AgentThreadsLogEvent.ThreadEnded, { runId: ref.runId, skipped: skippedByFounder })
         if (skippedByFounder) return
         const wrote = await this.projection.runEnded(ref, { outcome: "done", code: null, by: null, at: this.clock.now() })

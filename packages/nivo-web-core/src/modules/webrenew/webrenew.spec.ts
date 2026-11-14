@@ -37,7 +37,8 @@ const known = (id: string): boolean => tools.has(id) || NATIVE.has(id)
 /** The ids the SDK marks as asking (`ToolNames[K]["asks"]`): exactly the tools that write. */
 type AskingId = { [K in ToolId]: ToolNames[K] extends { readonly asks: true } ? K : never }[ToolId]
 /** NIVO's own writes that no definition or effect carries, each proved asking by tsc (no tool class exists). */
-const OWN_WRITES: ReadonlySet<string> = new Set<AskingId>([TOOL.mailMessageSend, TOOL.contactIdentityLink])
+// R57: + the registrar renewal (NIVO's own tool on the registrar account; no package defines it).
+const OWN_WRITES: ReadonlySet<string> = new Set<AskingId>([TOOL.mailMessageSend, TOOL.contactIdentityLink, TOOL.domainRenewalCreate])
 /** The effects the installation carries: each one writes. */
 const EFFECTS: ReadonlySet<string> = new Set(installed.effects.map((effect) => effect.id))
 /** A tool that changes something: its definition mutates, it is an effect, or it is one of NIVO's own asking writes. */
@@ -74,7 +75,8 @@ describe("the Renewal agent composed with the core package", () => {
         expect(WEBRENEW_TOOLS.filter((id) => id.startsWith(CRM_NAMESPACE)).filter((id) => !tools.has(id))).toEqual([])
     })
 
-    it("writes the customer send, the mail, the team post, a truth proposal and CRM records: no bank, ledger or order tool", () => {
+    // R57: the registrar renews (`nivo.tool.domain.renewal.create`); the CRM records the outcome (its provider renewal op is gone).
+    it("writes the customer send, the mail, the team post, a truth proposal, the registrar renewal and CRM records: no bank, ledger or order tool", () => {
         expect(WEBRENEW_TOOLS.filter(writes).sort()).toEqual(
             [
                 TOOL.customerMessageSend,
@@ -82,7 +84,8 @@ describe("the Renewal agent composed with the core package", () => {
                 TOOL.teamMessagePost,
                 TOOL.brainChangePropose,
                 CRM_NIVOWEB.post_services_code_reminders,
-                CRM_NIVOWEB.post_services_code_renewals,
+                TOOL.domainRenewalCreate,
+                CRM_NIVOWEB.post_renewals_id_outcome,
                 CRM_NIVOWEB.post_renewals,
             ].sort(),
         )

@@ -10,6 +10,19 @@ import { AgentWorkAccessService } from "./agent-work-access.service"
 import { AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTaskEntity } from "./persistence/entities"
 
+
+/** A query builder that records its update: the table, the values set, the where text and its params; it answers `affected`. */
+const updateBuilderOf = (affected: number) => {
+    const seen: { entity?: unknown; set?: Record<string, unknown>; where?: string; params?: Record<string, unknown> } = {}
+    const builder = {
+        update: (entity: unknown) => ((seen.entity = entity), builder),
+        set: (values: Record<string, unknown>) => ((seen.set = values), builder),
+        where: (text: string, params: Record<string, unknown>) => ((seen.where = text), (seen.params = params), builder),
+        execute: () => Promise.resolve({ affected, raw: [], generatedMaps: [] }),
+    }
+    return { builder, seen }
+}
+
 const NOW = "2026-11-10T03:00:00.000Z"
 const AT = (minutes: number): Date => new Date(new Date(NOW).getTime() + minutes * 60_000)
 
@@ -94,7 +107,6 @@ describe("AgentTasksService.apply, opening a task", () => {
                 status: "open",
                 waitingOn: null,
                 nextActionAt: AT(60),
-                goalId: null,
                 originWakeId: "wake-1",
                 workItemId: null,
                 doneAt: null,
@@ -138,7 +150,7 @@ describe("AgentTasksService.apply, parking and closing a task", () => {
         const { service, em } = await build(mockEntityManager({ upsert: [AgentTaskEntity, {}] }))
 
         await service.apply("ws-1", "agent-1", [
-            { op: "wait", key: "approval", waitingOn: "approval", goalId: "goal-1", workItemId: "item-1" },
+            { op: "wait", key: "approval", waitingOn: "approval", workItemId: "item-1" },
             { op: "wait", key: "unnamed" },
         ])
 
@@ -147,7 +159,6 @@ describe("AgentTasksService.apply, parking and closing a task", () => {
                 status: "waiting",
                 waitingOn: "approval",
                 nextActionAt: null,
-                goalId: "goal-1",
                 workItemId: "item-1",
             }),
             expect.objectContaining({ status: "waiting", waitingOn: "event" }),
@@ -290,5 +301,29 @@ describe("AgentTasksService, the generic timer's task", () => {
             { nextActionAt: null, status: "done", doneAt: new Date(NOW) },
         )
         expect(em.update).toHaveBeenCalledWith(AgentTaskEntity, { id: "task-1", nextActionAt: at }, { nextActionAt: AT(60) })
+    })
+})
+
+describe("AgentTasksService.dropOfKeyStarts (R72 Q1: erasing a person ends the timers armed for them)", () => {
+    it("drops every live task of the workspace whose key starts with one of the subject starts, literally (LIKE wildcards escaped)", async () => {
+        const { service } = await build()
+        const { builder, seen } = updateBuilderOf(2)
+        const tx = mockEntityManager()
+        tx.createQueryBuilder.mockReturnValue(builder as never)
+
+        await expect(service.dropOfKeyStarts(tx, "ws-1", ["timer:contact:c-1:", "timer:conversation:r_1%:"])).resolves.toBe(2)
+
+        expect(seen.entity).toBe(AgentTaskEntity)
+        expect(seen.set).toEqual({ status: "dropped", nextActionAt: null, doneAt: new Date(NOW) })
+        expect(seen.where).toBe("workspace_id = :workspaceId AND status IN ('open', 'waiting') AND (dedupe_key LIKE :start0 OR dedupe_key LIKE :start1)")
+        expect(seen.params).toEqual({ workspaceId: "ws-1", start0: "timer:contact:c-1:%", start1: "timer:conversation:r\\_1\\%:%" })
+    })
+
+    it("writes nothing for no start", async () => {
+        const { service } = await build()
+        const tx = mockEntityManager()
+
+        await expect(service.dropOfKeyStarts(tx, "ws-1", [])).resolves.toBe(0)
+        expect(tx.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

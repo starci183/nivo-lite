@@ -47,7 +47,6 @@ const build = async (
     orders.findOpenTopup.mockResolvedValue(null)
     orders.findOpenUpgrade.mockResolvedValue(null)
     orders.findOpenCreditPack.mockResolvedValue(null)
-    orders.findOpenAgentTemplate.mockResolvedValue(null)
     orders.create.mockResolvedValue(ORDER)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -453,46 +452,5 @@ describe("CreditsService", () => {
             )
             expect(orders.create).not.toHaveBeenCalled()
         })
-    })
-})
-
-describe("CreditsService.agentTemplate", () => {
-    const ASK = {
-        workspaceId: "ws-1",
-        listingId: "listing-1",
-        templateKey: "spa-booking-by-linh",
-        version: 2,
-        amountVnd: 990000,
-    }
-
-    it("orders a paid listing of the template marketplace, filed under the plan of the workspace", async () => {
-        const { credits, billing, orders } = await build()
-
-        await expect(credits.agentTemplate("person-1", ASK)).resolves.toEqual(PAYABLE)
-
-        expect(billing.requireManager).toHaveBeenCalledWith("person-1", "ws-1")
-        expect(orders.findOpenAgentTemplate).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            target: "listing-1",
-            amountVnd: 990000,
-        })
-        expect(orders.create).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            userId: "person-1",
-            planCode: "starter",
-            amountVnd: 990000,
-            kind: "agent_template",
-            packCode: null,
-            detail: { listingId: "listing-1", templateKey: "spa-booking-by-linh", version: 2 },
-        })
-        expect(billing.payable).toHaveBeenCalledWith(ORDER)
-    })
-
-    it("answers the order that is already open for the listing, so a double click shows one QR", async () => {
-        const { credits, orders } = await build()
-        orders.findOpenAgentTemplate.mockResolvedValue(ORDER)
-
-        await expect(credits.agentTemplate("person-1", ASK)).resolves.toEqual(PAYABLE)
-        expect(orders.create).not.toHaveBeenCalled()
     })
 })

@@ -23,7 +23,8 @@ const stateOf = (row: CustomerMessageEntity): DeliveryState | null => {
     return "unknown"
 }
 
-const lineOf = (row: CustomerMessageEntity): CustomerLine => ({
+/** One stored row as the line the engine hands out. */
+export const lineOf = (row: CustomerMessageEntity): CustomerLine => ({
     id: row.id,
     seq: row.seq,
     routeId: row.routeId,
@@ -48,6 +49,34 @@ const lineOf = (row: CustomerMessageEntity): CustomerLine => ({
 
 const isIdRow = (value: unknown): value is { readonly id: string } =>
     typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
+
+/**
+ * One page of a read of the lines, newest first (said at, then insertion order): narrows the query by the window's lower limit, its
+ * cursor and its sent-line states, and asks one row more than the page to tell whether an older page follows. The one place the
+ * keyset of a thread is written; every reader of the lines pages through it.
+ */
+export const pageOfLines = async (query: SelectQueryBuilder<CustomerMessageEntity>, ask: LineWindowAsk): Promise<CustomerLineRows> => {
+    if (ask.since !== null) query.andWhere("line.saidAt >= :since", { since: ask.since })
+    if (ask.before !== null)
+        query.andWhere("(line.saidAt < :beforeAt OR (line.saidAt = :beforeAt AND line.seq < :beforeSeq))", {
+            beforeAt: ask.before.saidAt,
+            beforeSeq: ask.before.seq,
+        })
+    if (ask.toldStates?.length === 0) query.andWhere("line.direction = 'from_person'")
+    else if (ask.toldStates !== null)
+        query.andWhere("(line.direction = 'from_person' OR line.state IN (:...toldStates))", { toldStates: [...ask.toldStates] })
+    const rows = await query
+        .orderBy("line.saidAt", "DESC")
+        .addOrderBy("line.seq", "DESC")
+        .limit(ask.limit + 1)
+        .getMany()
+    const kept = rows.slice(0, ask.limit)
+    const last = kept.at(-1)
+    return {
+        rows: kept.map((row) => lineOf(row)),
+        next: rows.length > ask.limit && last !== undefined ? { saidAt: last.saidAt, seq: last.seq } : null,
+    }
+}
 
 @Injectable()
 /**
@@ -135,26 +164,7 @@ export class TypeormCustomerLineStore implements CustomerLineStore {
     }
 
     /** One page, newest first: one row more than asked tells whether an older page follows. */
-    private async page(query: SelectQueryBuilder<CustomerMessageEntity>, ask: LineWindowAsk): Promise<CustomerLineRows> {
-        if (ask.since !== null) query.andWhere("line.saidAt >= :since", { since: ask.since })
-        if (ask.before !== null)
-            query.andWhere("(line.saidAt < :beforeAt OR (line.saidAt = :beforeAt AND line.seq < :beforeSeq))", {
-                beforeAt: ask.before.saidAt,
-                beforeSeq: ask.before.seq,
-            })
-        if (ask.toldStates?.length === 0) query.andWhere("line.direction = 'from_person'")
-        else if (ask.toldStates !== null)
-            query.andWhere("(line.direction = 'from_person' OR line.state IN (:...toldStates))", { toldStates: [...ask.toldStates] })
-        const rows = await query
-            .orderBy("line.saidAt", "DESC")
-            .addOrderBy("line.seq", "DESC")
-            .limit(ask.limit + 1)
-            .getMany()
-        const kept = rows.slice(0, ask.limit)
-        const last = kept.at(-1)
-        return {
-            rows: kept.map((row) => lineOf(row)),
-            next: rows.length > ask.limit && last !== undefined ? { saidAt: last.saidAt, seq: last.seq } : null,
-        }
+    private page(query: SelectQueryBuilder<CustomerMessageEntity>, ask: LineWindowAsk): Promise<CustomerLineRows> {
+        return pageOfLines(query, ask)
     }
 }

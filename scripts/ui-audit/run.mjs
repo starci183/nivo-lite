@@ -21,7 +21,7 @@ const AGENTS = [
   ['chatbot', '1ea3eaee-ace5-46d1-a45d-c892a75252b6'],
   ['sales', '12732e05-8cf1-44da-969b-cf289b2b85fa'],
 ]
-const WORKSPACE_PAGES = ['overview', 'inbox', 'chat', 'team', 'permissions', 'authority', 'billing', 'billing/plan', 'brain', 'account', 'profile', 'developers', 'knowledge', 'knowledge/nivo', 'connections', 'connections/google', 'connections/drive', 'connections/sepay', 'connections/telegram', 'connections/zalo', 'agents', 'agents/marketplace', 'agents/templates', 'agents/accounting', 'agents/chatbot', 'agents/sales']
+const WORKSPACE_PAGES = ['overview', 'inbox', 'chat', 'team', 'permissions', 'authority', 'billing', 'billing/plan', 'brain', 'account', 'profile', 'developers', 'knowledge', 'knowledge/nivo', 'connections', 'connections/google', 'connections/drive', 'connections/sepay', 'connections/telegram', 'connections/zalo', 'agents', 'agents/accounting', 'agents/chatbot', 'agents/sales']
 const AGENT_TABS = ['workbench', 'work', 'work?view=runs', 'chat', 'connections', 'knowledge', 'performance', 'settings', 'setup', 'setup/general', 'setup/workflows']
 
 const { chromium } = loadPlaywright()

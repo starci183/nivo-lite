@@ -3,7 +3,7 @@ import { builder, mock } from "@starci/jest-preset"
 import { BrainCommandsService } from "@modules/domain/brain-commands"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import type { LessonRecord } from "@modules/domain/brain-lessons"
-import { KnowledgeDriveService, KnowledgeReembedService, KnowledgeSearchService } from "@modules/domain/knowledge"
+import { KnowledgeDriveService, KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -88,7 +88,6 @@ const build = async (command: CommandRecord | null = commandOf()) => {
     const sources = mock<KnowledgeSourcesService>()
     const search = mock<KnowledgeSearchService>({ ask: jest.fn(() => Promise.resolve([])) })
     const drive = mock<KnowledgeDriveService>()
-    const reembed = mock<KnowledgeReembedService>()
     const areas = mock<DocumentAreaService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -100,7 +99,6 @@ const build = async (command: CommandRecord | null = commandOf()) => {
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: KnowledgeSearchService, useValue: search },
             { provide: KnowledgeDriveService, useValue: drive },
-            { provide: KnowledgeReembedService, useValue: reembed },
             { provide: DocumentAreaService, useValue: areas },
         ],
     }).compile()
@@ -114,7 +112,6 @@ const build = async (command: CommandRecord | null = commandOf()) => {
         learning,
         sources,
         drive,
-        reembed,
     }
 }
 
@@ -279,16 +276,6 @@ describe("BrainCommandRunnerService run", () => {
         expect(commands.finish.mock.calls).toEqual([["ws-1", "cmd-1", null]])
     })
 
-    it("requests reembedding as the requester and closes without a result", async () => {
-        const { runner, commands, reembed } = await build(commandOf({ kind: "knowledge.reembed", payload: {} }))
-        reembed.request.mockResolvedValue()
-
-        await expect(runner.run(PAYLOAD)).resolves.toBe("done")
-
-        expect(reembed.request.mock.calls).toEqual([["user-1", "ws-1"]])
-        expect(commands.finish.mock.calls).toEqual([["ws-1", "cmd-1", null]])
-    })
-
     it("lists a linked Drive folder and returns its listing", async () => {
         const { runner, commands, drive } = await build(
             commandOf({ kind: "drive.linked", payload: { url: "https://drive.example/folder" } }),
@@ -386,7 +373,7 @@ describe("BrainCommandRunnerService giveUp", () => {
 describe("BrainCommandRunnerService: the timed upkeep tick (BR1)", () => {
     it("answers the tick of the one app scheduler with the upkeep, reading no command row", async () => {
         const { runner, brain, commands } = await build()
-        brain.upkeep.mockResolvedValue({ workspaces: 1, activated: 1, expired: 0, failed: 0, vectors: 0, readingsResumed: 0 })
+        brain.upkeep.mockResolvedValue({ workspaces: 1, activated: 1, expired: 0, failed: 0, readingsResumed: 0 })
 
         await expect(runner.run({ ...BRAIN_UPKEEP_PAYLOAD })).resolves.toBe("done")
 

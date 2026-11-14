@@ -51,9 +51,8 @@ export type {
     ZaloWizardConnectionType,
 } from "./graphql/index"
 export { INPUT_BOUNDS, inputBoundsIssues } from "./graphql/__generated__/input-bounds"
-export type { AcceptInviteMutation, AcceptTemplateUpdateMutation } from "./graphql/__generated__/graphql"
+export type { AcceptInviteMutation } from "./graphql/__generated__/graphql"
 export type { AgentDashboardQuery } from "./graphql/__generated__/graphql"
-export type { DecideLeadFreezeMutation, LeadFreezeQuery } from "./graphql/__generated__/graphql"
 export type { AgentGenerationStatusQuery, AgentGraphCoverageQuery } from "./graphql/__generated__/graphql"
 export type { AgentGraphQuery, AgentGraphRunQuery, AgentGraphVersionsQuery } from "./graphql/__generated__/graphql"
 export type {
@@ -63,7 +62,6 @@ export type {
     AgentPageQuery,
 } from "./graphql/__generated__/graphql"
 export type {
-    AgentTemplatePreviewQuery,
     AgentRunQuery,
     AgentRunsQuery,
     AgentWorkQuery,
@@ -119,9 +117,8 @@ export type { DriveGrantQuery, DriveLinkedFolderQuery, DrivePickedFolderQuery } 
 export type { EnqueueKnowledgeSourceMutation } from "./graphql/__generated__/graphql"
 export type { FinishWebhookConnectionMutation } from "./graphql/__generated__/graphql"
 
-export type { ImportAgentTemplateMutation } from "./graphql/__generated__/graphql"
 export type { SaveWebsiteSiteMutation, SubmitWebsiteLeadMutation, WebsiteSiteQuery } from "./graphql/__generated__/graphql"
-export type { InstallModuleMutation, InstallTemplateListingMutation } from "./graphql/__generated__/graphql"
+export type { InstallModuleMutation } from "./graphql/__generated__/graphql"
 export type { AgentChannelChoicesQuery, CreateAgentInstallationMutation } from "./graphql/__generated__/graphql"
 export type { BindableAgentsQuery } from "./graphql/__generated__/graphql"
 export type { SetAgentAvatarPresetMutation } from "./graphql/__generated__/graphql"
@@ -135,11 +132,10 @@ export type { LoadDatabaseConnectionQuery, LoadImapConnectionQuery } from "./gra
 export type { LoadTelegramUserSetupQuery } from "./graphql/__generated__/graphql"
 export type { LogoutOtherSessionsMutation } from "./graphql/__generated__/graphql"
 export type { MaintainBrainMutation } from "./graphql/__generated__/graphql"
-export type { MarketplaceListingsQuery } from "./graphql/__generated__/graphql"
 export type { MetaConnectionQuery, ModuleInstallationsQuery } from "./graphql/__generated__/graphql"
 export type { ModuleRequirementFactsQuery, MoneyConnectionQuery } from "./graphql/__generated__/graphql"
 export type { MyAccountQuery } from "./graphql/__generated__/graphql"
-export type { MyAgentTemplatesQuery, MyWorkspacesQuery, NivoKnowledgeQuery } from "./graphql/__generated__/graphql"
+export type { MyWorkspacesQuery, NivoKnowledgeQuery } from "./graphql/__generated__/graphql"
 export type {
     DeclineInviteMutation,
     DeleteWorkspaceMutation,
@@ -149,8 +145,8 @@ export type {
     RenameWorkspaceMutation,
     WorkspaceDeclinedInvitesQuery,
 } from "./graphql/__generated__/graphql"
-export type { OpenPlanPaymentOrderQuery, OrderTemplateListingMutation } from "./graphql/__generated__/graphql"
-export type { PackageAgentTemplateMutation, PaymentOrderQuery } from "./graphql/__generated__/graphql"
+export type { OpenPlanPaymentOrderQuery } from "./graphql/__generated__/graphql"
+export type { PaymentOrderQuery } from "./graphql/__generated__/graphql"
 export type { PaymentOrdersQuery } from "./graphql/__generated__/graphql"
 export type { PostSetupMessageMutation } from "./graphql/__generated__/graphql"
 export type { PreviewCsvSourceQuery, PreviewDatabaseTableQuery } from "./graphql/__generated__/graphql"
@@ -180,7 +176,7 @@ export type { RevealSepayKeyMutation } from "./graphql/__generated__/graphql"
 export type { RevokeApiKeyMutation, RevokeInviteMutation, RevokeSessionMutation } from "./graphql/__generated__/graphql"
 export type { RotateSepayKeyMutation } from "./graphql/__generated__/graphql"
 export type { RunCsvImportMutation, RunDocumentImportMutation } from "./graphql/__generated__/graphql"
-export type { SaveAgentGoalMutation, SaveAgentGraphDraftMutation } from "./graphql/__generated__/graphql"
+export type { SaveAgentGraphDraftMutation } from "./graphql/__generated__/graphql"
 export type { SaveAgentTriggerMutation } from "./graphql/__generated__/graphql"
 export type { SaveBrainFactMutation, SaveBrainLessonMutation } from "./graphql/__generated__/graphql"
 export type { SaveDatabaseConnectionMutation } from "./graphql/__generated__/graphql"
@@ -209,9 +205,9 @@ export type { StartMoneyConnectionMutation } from "./graphql/__generated__/graph
 export type { StartSmtpConnectionMutation, StartTelegramLoginMutation } from "./graphql/__generated__/graphql"
 export type { StartWebhookConnectionMutation, StartZaloConnectionMutation } from "./graphql/__generated__/graphql"
 export type { SubmitTelegramCodeMutation } from "./graphql/__generated__/graphql"
-export type { SubmitTelegramPasswordMutation, SubmitTemplateListingMutation } from "./graphql/__generated__/graphql"
+export type { SubmitTelegramPasswordMutation } from "./graphql/__generated__/graphql"
 export type { TelegramConnectionPageQuery } from "./graphql/__generated__/graphql"
-export type { TelegramUserReadyQuery, TemplateUpdateOffersQuery } from "./graphql/__generated__/graphql"
+export type { TelegramUserReadyQuery } from "./graphql/__generated__/graphql"
 export type { TestDatabaseQuery, TestImapConnectionQuery } from "./graphql/__generated__/graphql"
 export type { TestWebhookConnectionMutation } from "./graphql/__generated__/graphql"
 
@@ -255,6 +251,7 @@ export type {
     AgentWorkflowsQuery,
     CreateAgentWorkflowMutation,
     PublishAgentWorkflowVersionMutation,
+    SetAgentNodeModeMutation,
     SaveAgentGraphLayoutMutation,
     RollbackAgentWorkflowMutation,
     SetAgentWorkflowStatusMutation,
@@ -284,7 +281,7 @@ export type { AgentTemplateNodeRequestsQuery } from "./graphql/__generated__/gra
 export type { ConnectionFieldsQuery, UpdateConnectionMutation } from "./graphql/__generated__/graphql"
 export type { RunConnectionActionMutation } from "./graphql/__generated__/graphql"
 export type { AgentDeletionImpactQuery } from "./graphql/__generated__/graphql"
-export type { ContactModuleBlocksQuery, ContactQuery, ContactsQuery } from "./graphql/__generated__/graphql"
+export type { ContactModuleBlocksQuery, ContactQuery, ContactMessagesQuery, ContactsQuery, ContactWorkQuery } from "./graphql/__generated__/graphql"
 export type { DeleteContactMutation, ForgetContactMemoryMutation } from "./graphql/__generated__/graphql"
 export type { LinkContactIdentityMutation, MergeContactsMutation } from "./graphql/__generated__/graphql"
 export type { UnlinkContactIdentityMutation, UpdateContactMutation } from "./graphql/__generated__/graphql"
@@ -297,4 +294,23 @@ export type {
     UpdateWorkspaceThemeMutation,
     WebsiteThemeQuery,
     WorkspaceThemeQuery,
+} from "./graphql/__generated__/graphql"
+export type {
+    AttachSandboxAccountMutation,
+    DetachSandboxAccountMutation,
+    ExpireSandboxWaitMutation,
+    OpenSandboxAccountMutation,
+    ProviderSandboxQuery,
+    ResetSandboxAccountMutation,
+    SandboxAccountsQuery,
+    SandboxCallsQuery,
+    SandboxCasesQuery,
+    SandboxKeyQuery,
+    SandboxLatestRequestQuery,
+    SandboxNextCasesQuery,
+    SandboxProvidersQuery,
+    SandboxWaitingRunsQuery,
+    SendSandboxCaseMutation,
+    SetAgentProviderDefaultMutation,
+    SetSandboxNextCaseMutation,
 } from "./graphql/__generated__/graphql"

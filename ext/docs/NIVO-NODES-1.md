@@ -14,7 +14,7 @@ Code `NIVO_NODE_PROVIDER_LOGIC`, severity error. Engine: ESLint rule `ext/lint/n
 In package node code (`packages/*/src/nodes/**` and any file that calls `defineTemplateNode`, within `packages/*/src`, `.ts`, `.tsx`):
 
 - no `defineTool` / `defineEffect` / `defineNode` call (`defineNode` only in the four engine control nodes of
-  `packages/blocks-core/src/nodes/core/**`);
+  `packages/blocks-core/src/shared/nodes/core/**`);
 - no comparison with a provider constant (`PROVIDER.x`, a generated `*_PROVIDER`): `===`, `!==`, `==`, `!=`, a `switch` on it or a `case`;
 - no property named `dedupeKey` / `onceKey` (the replay ledger keys calls), except in the control nodes;
 - no import from a `vocabulary/*effects*` module, except the core effects in the control nodes.

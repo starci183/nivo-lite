@@ -3,6 +3,7 @@ import { mock } from "@starci/jest-preset"
 import type { StorageAssetsPort, StorageObjectsPort } from "@modules/integrations/object-storage"
 import { REMOTE_FILES } from "@modules/integrations/remote-files"
 import type { RemoteFileRequest, RemoteFiles } from "@modules/integrations/remote-files"
+import { ERROR_REPORTER, type ErrorReporter } from "@modules/platform/errors"
 import { LOGGER } from "@modules/platform/logging"
 import { ok } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
@@ -22,6 +23,7 @@ const build = async (withAssets = true) => {
     const remote = mock<RemoteFiles>()
     const storage = mock<StorageObjectsPort>()
     const assets = mock<StorageAssetsPort>()
+    const errors = mock<ErrorReporter>()
     assets.upload.mockResolvedValue({ error: null })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -30,9 +32,10 @@ const build = async (withAssets = true) => {
             { provide: REMOTE_FILES, useValue: remote },
             { provide: CHAT_FILES_STORAGE, useValue: storage },
             ...(withAssets ? [{ provide: CHAT_FILES_ASSETS, useValue: assets }] : []),
+            { provide: ERROR_REPORTER, useValue: errors },
         ],
     }).compile()
-    return { service: moduleRef.get(CustomerFilesService), logger, remote, storage, assets }
+    return { service: moduleRef.get(CustomerFilesService), logger, remote, storage, assets, errors }
 }
 
 const answering = (bytes: Buffer | null, contentType = "image/jpeg", status = 200) =>
@@ -70,8 +73,10 @@ describe("CustomerFilesService.keep", () => {
         expect(assets.upload.mock.calls[0]?.[1]).toBe(assets.upload.mock.calls[1]?.[1])
     })
 
-    it("keeps a picture it could not read on the line with no address, and logs why", async () => {
-        const { service, remote, logger } = await build()
+    // DEF-7 (MX N-01): a picture-only line was stored `{ url: "", name: "", contentType: "image/*" }` and only a warning said why: the
+    // line did not say the file was not kept nor why, and nobody was told. Now the reason is on the line and each file is reported.
+    it("keeps a file it could not read on the line with no address and WHY in its id, and reports each as an app error", async () => {
+        const { service, remote, logger, errors } = await build()
         remote.read
             .mockImplementationOnce(answering(null, "image/jpeg", 404))
             .mockImplementationOnce(answering(Buffer.from("<html>"), "text/html"))
@@ -83,21 +88,27 @@ describe("CustomerFilesService.keep", () => {
             { kind: "file", url: ZALO_URL, name: "a.pdf" },
         ])
 
-        expect(kept.map((file) => [file.url, file.contentType])).toEqual([
-            ["", "image/*"],
-            ["", "image/*"],
-            ["", "application/octet-stream"],
+        expect(kept.map((file) => [file.id, file.url, file.contentType])).toEqual([
+            ["unread:refused_404:0", "", "image/*"],
+            ["unread:refused_200:1", "", "image/*"],
+            ["unread:fetch_failed:2", "", "application/octet-stream"],
         ])
         expect(logger.warn).toHaveBeenCalledWith(ChatFilesLogEvent.CustomerFileNotKept, expect.any(Object))
+        expect(errors.report.mock.calls.map(([scope, , context]) => [scope, context])).toEqual([
+            ["chat_files.customer_file_not_kept", { workspaceId: "ws-1", event: "zalo:m-2", index: 0, reason: "refused_404" }],
+            ["chat_files.customer_file_not_kept", { workspaceId: "ws-1", event: "zalo:m-2", index: 1, reason: "refused_200" }],
+            ["chat_files.customer_file_not_kept", { workspaceId: "ws-1", event: "zalo:m-2", index: 2, reason: "fetch_failed" }],
+        ])
     })
 
     it("keeps nothing when the app has no whole-file store, and reads nothing", async () => {
-        const { service, remote } = await build(false)
+        const { service, remote, errors } = await build(false)
 
         const kept = await service.keep("ws-1", "zalo:m-3", [{ kind: "image", url: ZALO_URL, name: "" }])
 
-        expect(kept.map((file) => file.url)).toEqual([""])
+        expect(kept.map((file) => [file.id, file.url])).toEqual([["unread:no_store:0", ""]])
         expect(remote.read).not.toHaveBeenCalled()
+        expect(errors.report).toHaveBeenCalledTimes(1)
     })
 })
 

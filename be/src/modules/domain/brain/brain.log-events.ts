@@ -22,16 +22,10 @@ export enum BrainLogEvent {
     PayloadRefused = "brain.job.payload_refused",
     /** Linking the facts of one document into the truth graph failed; the facts stand without edges. */
     RelationsFailed = "brain.relations.link_failed",
-    /** Embedding the facts in force failed; they stay searchable by words and are embedded on the next refresh. */
+    /** Embedding the changed facts failed; they stay searchable by words and the vector reconcile embeds them. */
     EmbeddingsFailed = "brain.embeddings.refresh_failed",
     /** The timed upkeep of one workspace failed (scheduled facts not yet active, ended facts not yet expired); the next tick retries it, the others go on. */
     UpkeepFailed = "brain.upkeep.workspace_failed",
     /** One pass of the timed brain upkeep ended: workspaces kept current, facts that came in force, facts that expired. */
     UpkeepDone = "brain.upkeep.done",
-    /** One timed sweep of the fact vectors ended: workspaces visited, facts embedded, facts copied, workspaces left with more to do. */
-    VectorsSwept = "brain.embeddings.swept",
-    /** The timed sweep of the fact vectors failed as a whole; the facts' own upkeep of the same tick already ran. */
-    VectorsSweepFailed = "brain.embeddings.sweep_failed",
-    /** A workspace's fact vectors wait: its credit pool is empty (bulk embedding); the next tick after credits return goes on. */
-    VectorsBlockedCredits = "brain.embeddings.blocked_credits",
 }

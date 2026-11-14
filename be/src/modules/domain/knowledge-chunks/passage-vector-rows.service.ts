@@ -4,21 +4,12 @@ import type { AcceptedRow, VectorRow, VectorRowCursor, VectorRowSource, WantedRo
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { passageTextHashOf } from "./passage-hash.policy"
 import { KnowledgeChunkEntity } from "./persistence/entities"
-import { storedVectorOf } from "./vector.policy"
 
 /** The most rows one read answers. */
 const READ_MAX = 500
 
 /** The most passages one document's read answers: a document holds at most 120,000 characters, a few hundred passages. */
 const SOURCE_MAX = 2000
-
-/** One line of the read of the vectors Postgres still holds. */
-interface StoredLine {
-    /** The passage. */
-    readonly id: string
-    /** Its vector as the database answers it. */
-    readonly embedding: unknown
-}
 
 /** A passage as the vector sync reads it: every passage wants a point, and it is always in force. */
 const rowOf = (passage: KnowledgeChunkEntity): VectorRow => ({
@@ -93,56 +84,18 @@ export class PassageVectorRowsService implements VectorRowSource {
         return rows.map((row) => ({ id: row.id, workspaceId: row.workspaceId }))
     }
 
-    /**
-     * The vectors the pgvector column still holds for these passages under this identity (the transition): a point is copied from
-     * them with no embedding call. This read goes with the column: the contract migration that drops it removes this body.
-     */
-    async storedVectors(
-        workspaceId: string,
-        ids: ReadonlyArray<string>,
-        model: string,
-    ): Promise<ReadonlyMap<string, ReadonlyArray<number>>> {
-        const unique = [...new Set(ids)].slice(0, READ_MAX)
-        if (unique.length === 0) return new Map()
-        const lines = await this.entityManager
-            .createQueryBuilder(KnowledgeChunkEntity, "c")
-            .select("c.id", "id")
-            .addSelect("c.embedding", "embedding")
-            .where("c.workspaceId = :workspaceId AND c.id IN (:...ids) AND c.embedding IS NOT NULL AND c.embeddingModel = :model", {
-                workspaceId,
-                ids: unique,
-                model,
-            })
-            .limit(unique.length)
-            .getRawMany<StoredLine>()
-        return new Map(
-            lines.flatMap((line): ReadonlyArray<readonly [string, ReadonlyArray<number>]> => {
-                const vector = storedVectorOf(line.embedding)
-                return vector === null ? [] : [[line.id, vector]]
-            }),
-        )
-    }
-
     /** Passages adopt nothing: an unchanged passage keeps its row (and so its point) across a re-upload, by hash, when it is indexed. */
     donors(): Promise<ReadonlyMap<string, string>> {
         return Promise.resolve(new Map())
     }
 
-    /**
-     * Records that the index accepted the vectors of these passages under this identity: `indexed_at` and the identity. A vector of
-     * ANOTHER identity the pgvector column may still hold is cleared in the same write, so the column never carries a vector under a
-     * label that did not make it.
-     */
+    /** Records that the index accepted the vectors of these passages under this identity: `indexed_at` and the identity. */
     async stamp(workspaceId: string, accepted: ReadonlyArray<AcceptedRow>, model: string): Promise<void> {
         if (accepted.length === 0) return
         await this.entityManager
             .createQueryBuilder(KnowledgeChunkEntity, "kc")
             .update()
-            .set({
-                embedding: () => "CASE WHEN embedding_model = :model THEN embedding ELSE NULL END",
-                embeddingModel: model,
-                indexedAt: () => "now()",
-            })
+            .set({ embeddingModel: model, indexedAt: () => "now()" })
             .where("workspace_id = :workspaceId AND id = ANY(CAST(:ids AS uuid[]))")
             .setParameters({ workspaceId, model, ids: accepted.map((row) => row.id) })
             .execute()

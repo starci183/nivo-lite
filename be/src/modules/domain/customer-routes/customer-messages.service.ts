@@ -1,3 +1,4 @@
+import type { FileNotKept } from "@modules/domain/chat-files"
 import { Inject, Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ContactsService } from "@modules/domain/contacts/contacts.service"
@@ -8,9 +9,9 @@ import {
     type CustomerLine,
     type CustomerLineRows,
     type CustomerLineStore,
-    type LineCursor,
     type LineWindowAsk,
 } from "./customer-line-store.port"
+import { cursorOf, cursorTextOf } from "./line-cursor.policy"
 
 /** The most lines one page of a thread holds. */
 export const LINES_PAGE_MAX = 100
@@ -20,9 +21,6 @@ export const HEARD_TEXT_MAX = 20_000
 
 /** The longest once-key of a line (the table's check). */
 const KEY_MAX = 200
-
-/** A cursor of a thread: the said-at instant in milliseconds, a dot, the insertion number. */
-const CURSOR = /^(\d{1,15})\.(\d{1,18})$/u
 
 /** A line the person said, as the engine's delivery hands it over. */
 export interface HearLine {
@@ -42,7 +40,14 @@ export interface HearLine {
     /** When the channel says it was sent (ISO), or null: then when the engine received it. */
     readonly at: string | null
     /** The files the entry kept, by address. */
-    readonly files: ReadonlyArray<{ readonly id?: string | undefined; readonly url: string; readonly name: string; readonly contentType: string }>
+    readonly files: ReadonlyArray<{
+        readonly id?: string | undefined
+        readonly url: string
+        readonly name: string
+        readonly contentType: string
+        /** Why the entry could not keep the file (its typed reason); absent for a kept one. */
+        readonly notKept?: FileNotKept | undefined
+    }>
     /** The canonical event it came in with. */
     readonly eventId: string | null
 }
@@ -68,13 +73,6 @@ export interface LinePage {
 
 const limitOf = (ask: LinePageAsk): number => Math.max(1, Math.min(ask.limit ?? 50, LINES_PAGE_MAX))
 
-const cursorOf = (value: string | null | undefined): LineCursor | null => {
-    const match = value === null || value === undefined ? null : CURSOR.exec(value)
-    if (match === null) return null
-    const [, ms, seq] = match
-    return ms === undefined || seq === undefined ? null : { saidAt: new Date(Number(ms)), seq }
-}
-
 const sinceOf = (value: string | null | undefined): Date | null => {
     const ms = value === null || value === undefined ? Number.NaN : Date.parse(value)
     return Number.isNaN(ms) ? null : new Date(ms)
@@ -89,10 +87,14 @@ const windowAskOf = (ask: LinePageAsk): LineWindowAsk => ({
 
 const pageOf = (rows: CustomerLineRows): LinePage => ({
     rows: rows.rows,
-    next: rows.next === null ? null : `${String(rows.next.saidAt.getTime())}.${rows.next.seq}`,
+    next: rows.next === null ? null : cursorTextOf(rows.next),
 })
 
-const fileOf = (file: HearLine["files"][number]): CustomerLineFile => ({ url: file.url, name: file.name, contentType: file.contentType })
+/** A file of a heard line as the line keeps it: a kept file by its address; a file not kept with its reason and no address. */
+const fileOf = (file: HearLine["files"][number]): CustomerLineFile =>
+    file.notKept === undefined
+        ? { url: file.url, name: file.name, contentType: file.contentType }
+        : { url: null, name: file.name, contentType: file.contentType, notKept: file.notKept }
 
 @Injectable()
 /**

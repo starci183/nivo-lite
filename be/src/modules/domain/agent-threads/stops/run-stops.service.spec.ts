@@ -145,6 +145,7 @@ describe("RunStopsService.stopped: every run that cannot go on gets the same sto
             question: OPEN.question,
         })
 
+        // No listener registered (no freeze in this app): one statement of its own, no transaction.
         expect(records.open).toHaveBeenCalledWith(OPEN, NOW)
         expect(cards.posted).toHaveBeenCalledWith("ws-1", expect.objectContaining({ id: "stop-1" }), OPEN.card, NOW)
         expect(current()?.cardMessageId).toBe("msg-1")

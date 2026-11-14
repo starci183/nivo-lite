@@ -34,7 +34,8 @@ const known = (id: string): boolean => tools.has(id) || NATIVE.has(id)
 /** The ids the SDK marks as asking (`ToolNames[K]["asks"]`): exactly the tools that write. */
 type AskingId = { [K in ToolId]: ToolNames[K] extends { readonly asks: true } ? K : never }[ToolId]
 /** NIVO's own writes that no definition or effect carries, each proved asking by tsc (no tool class exists). */
-const OWN_WRITES: ReadonlySet<string> = new Set<AskingId>([TOOL.mailMessageSend, TOOL.contactIdentityLink])
+// R57: + the invoice issue (NIVO's own tool on the MISA meInvoice account; no package defines it any more).
+const OWN_WRITES: ReadonlySet<string> = new Set<AskingId>([TOOL.mailMessageSend, TOOL.contactIdentityLink, TOOL.invoiceCreate])
 /** The effects the installation carries: each one writes. */
 const EFFECTS: ReadonlySet<string> = new Set(installed.effects.map((effect) => effect.id))
 /** A tool that changes something: its definition mutates, it is an effect, or it is one of NIVO's own asking writes. */
@@ -72,6 +73,8 @@ describe("the Accounting agent composed with the core package", () => {
             [
                 CRM_NIVOWEB.post_invoice_drafts,
                 TOOL.invoiceCreate,
+                // R57: the issued invoice is recorded on its draft.
+                CRM_NIVOWEB.post_invoice_drafts_id_invoice,
                 CRM_NIVOWEB.post_renewals_id_payments,
                 CRM_NIVOWEB.post_purchases_id_payments,
                 CRM_NIVOWEB.post_receivables_code_notices,

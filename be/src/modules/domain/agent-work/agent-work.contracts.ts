@@ -19,12 +19,6 @@ export type AgentTurnStatus = "running" | "proposed" | "settled" | "failed" | "a
 /** Which road a workspace's customer intake takes. */
 export type AgentRoad = "legacy" | "core"
 
-/** Who put a goal on an agent's list. */
-export type AgentGoalSource = "owner" | "module" | "agent"
-
-/** Where a goal stands. */
-export type AgentGoalStatus = "active" | "paused" | "done" | "dropped"
-
 /** Where a task stands. */
 export type AgentTaskStatus = "open" | "waiting" | "done" | "dropped"
 
@@ -64,6 +58,12 @@ export interface AgentWakeContext {
      * agent's active workflows lists the verb, so only a parked run may take it; with none it ends `no_waiter`, never a run.
      */
     readonly waitOnly?: "true"
+    /**
+     * `"true"` on a wait-only wake of an event NO registration of any agent took (the delivery matched every attached agent first): when
+     * no parked run takes it either, the event started nothing anywhere, so the engine reports it like any untaken event about a person,
+     * never a silent `no_waiter`.
+     */
+    readonly unclaimed?: "true"
     /** The customer conversation. */
     readonly conversationId?: string
     /** The message that woke the agent. */
@@ -122,8 +122,6 @@ export interface AgentWakeContext {
     readonly subjectId?: string
     /** The task that is due. */
     readonly taskId?: string
-    /** The probe that decides whether a schedule has work. */
-    readonly probeKey?: string
     /** The intent a follow-up turn is pinned to: set only by the turn that split off an intent with a risk, never by a fact. */
     readonly intent?: string
     /** The normalized event of an inbound adapter, as the JSON text of an `AgentWakeInbound` (a context holds text and flags only); `decodeInbound` reads it. */
@@ -302,56 +300,12 @@ export interface AgentWorkSettingsRecord {
     readonly road: AgentRoad
 }
 
-/** One goal of an agent. */
-export interface AgentGoalRecord {
-    /** The goal. */
-    readonly id: string
-    /** The agent. */
-    readonly agentId: string
-    /** Short title. */
-    readonly title: string
-    /** Longer text. */
-    readonly detail: string
-    /** Where it stands. */
-    readonly status: AgentGoalStatus
-    /** Who put it there. */
-    readonly source: AgentGoalSource
-    /** When it is due, or null. */
-    readonly dueAt: Date | null
-    /** When the agent last reviewed it, or null. */
-    readonly reviewedAt: Date | null
-}
-
-/** What a person or a module writes for a goal. */
-export interface AgentGoalWrite {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The agent. */
-    readonly agentId: string
-    /** The goal to change, or null for a new one. */
-    readonly goalId: string | null
-    /** Short title. */
-    readonly title: string
-    /** Longer text. */
-    readonly detail: string
-    /** Where it stands. */
-    readonly status: AgentGoalStatus
-    /** Who puts it there. */
-    readonly source: AgentGoalSource
-    /** The member who writes it, or null for a module. */
-    readonly memberId: string | null
-    /** When it is due, or null. */
-    readonly dueAt: Date | null
-}
-
 /** One task of an agent. */
 export interface AgentTaskRecord {
     /** The task. */
     readonly id: string
     /** The agent. */
     readonly agentId: string
-    /** The goal it serves, or null. */
-    readonly goalId: string | null
     /** The key the agent named it by. */
     readonly dedupeKey: string
     /** Short title. */
@@ -385,8 +339,6 @@ export interface AgentTaskOp {
     readonly nextActionAt?: Date
     /** What a `wait` waits for. */
     readonly waitingOn?: AgentTaskWaitingOn
-    /** The goal it serves. */
-    readonly goalId?: string
     /** The wake that opened it. */
     readonly originWakeId?: string
     /** The work item it opened. */
@@ -411,8 +363,6 @@ export interface AgentTriggerRecord {
     readonly timeZone: string
     /** The internal event, for an event trigger. */
     readonly eventName: string | null
-    /** The probe that decides whether there is work. */
-    readonly probeKey: string | null
     /** Off means the trigger stays and fires nothing. */
     readonly enabled: boolean
     /** The stable key a module seeded it under, so a graph can name it; null for a trigger an owner wrote. */
@@ -444,8 +394,6 @@ export interface AgentTriggerWrite {
     readonly timeZone: string | null
     /** The internal event, for an event trigger. */
     readonly eventName: string | null
-    /** The probe that decides whether there is work. */
-    readonly probeKey: string | null
     /** Off means the trigger stays and fires nothing. */
     readonly enabled: boolean
     /** The sources (adapter keys) an event trigger answers to; absent or empty answers to every source. */
@@ -484,8 +432,6 @@ export interface AgentTurnRecord {
 export interface AgentWorkView {
     /** The kill switch and the breaker. */
     readonly state: AgentWorkState
-    /** Active and paused goals. */
-    readonly goals: ReadonlyArray<AgentGoalRecord>
     /** Open and waiting tasks. */
     readonly tasks: ReadonlyArray<AgentTaskRecord>
     /** The triggers. */

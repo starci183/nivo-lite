@@ -123,7 +123,7 @@ describe("a template agent installed beside the core (GraphSpec @2)", () => {
         expect(templateFlowProblems(flow)).toEqual([])
         expect(templateFlowProblems(flowOf(TMPL_FOLLOWUP))).toEqual([])
         // A graph changed outside its package is no installed template graph any more.
-        expect(templateFlowProblems({ ...flow, nodes: flow.nodes.slice(0, 2) })).toEqual([{ code: "GRAPH_V2_EDITED", at: "tmpl" }])
+        expect(templateFlowProblems({ ...flow, nodes: flow.nodes.slice(0, 2) })).toEqual([{ code: "GRAPH_TEMPLATE_EDITED", at: "tmpl" }])
         // Since the flip (2026-11-12) a core graph is one of them too (the core's agents are template agents): the shipped front desk is
         // judged by the same @2 checks, and saves as clean.
         expect(isTemplateFlow(flowOf("chatbot.front-desk"))).toBe(true)

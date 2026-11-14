@@ -43,12 +43,6 @@ export interface WordHit extends StoredPassage {
     readonly complete: boolean
 }
 
-/** A passage the meaning leg found, with its cosine distance to the query (lower first). */
-export interface MeaningHit extends StoredPassage {
-    /** The cosine distance, 0 (same direction) to 2. */
-    readonly distance: number
-}
-
 /**
  * How the words of a query must appear: every one of them, at least one, or `ranked`: a passage holding a code of the query or two of
  * its words is a hit, and the more of them it holds the higher it ranks (a code weighs three words).
@@ -61,16 +55,6 @@ export interface WordQuery {
     readonly words: string
     /** all = every word must appear (the default); any = one is enough; ranked = the more of them, the higher. */
     readonly match?: WordMatch
-    /** The most passages wanted. */
-    readonly limit: number
-}
-
-/** What the meaning leg is asked. */
-export interface MeaningQuery {
-    /** The query vector in the pgvector text form. */
-    readonly vector: string
-    /** The model identity the vector comes from; only passages of it are compared. */
-    readonly model: string
     /** The most passages wanted. */
     readonly limit: number
 }

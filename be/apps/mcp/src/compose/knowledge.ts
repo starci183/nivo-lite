@@ -8,11 +8,13 @@ import {
 import { INSTALLED } from "@modules/domain/installed-plugins"
 import { BRAIN_ERROR_KINDS, BRAIN_MESSAGES, BrainModule } from "@modules/domain/brain"
 import { BRAIN_FACTS_ERROR_KINDS, BRAIN_FACTS_MESSAGES, BrainFactsModule } from "@modules/domain/brain-facts"
+import { EMBEDDING_DIMENSIONS } from "@modules/domain/knowledge-chunks"
 import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from "@modules/domain/connections"
 import { CONTACTS_ERROR_KINDS, CONTACTS_MESSAGES, ContactsModule } from "@modules/domain/contacts"
 import { CUSTOMER_ROUTES_ERROR_KINDS, CUSTOMER_ROUTES_MESSAGES, CustomerRoutesModule } from "@modules/domain/customer-routes"
 import { AiModule } from "@modules/integrations/ai"
 import { chatProfileRoutes } from "@modules/integrations/ai-gateway"
+import { QDRANT_ERROR_KINDS, QDRANT_MESSAGES, QdrantModule } from "@modules/integrations/qdrant"
 import { HTTP_ERROR_KINDS, HTTP_MESSAGES, HttpModule } from "@modules/platform/http"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
@@ -23,11 +25,13 @@ import { WorkspaceSettingsModule } from "@modules/domain/workspace-settings"
  * The records and knowledge the data ops read, registered as the api registers them, without the engine: the truths in force read by
  * words (the Brain's graph read alone: no write, no derivation, no vector), the connections a raw-data read opens, the entity engine
  * the workbench door reads and writes records through, the workspace's settings and the contacts. The AI endpoint is the readiness
- * probe's and the setup turn's client; nothing here embeds or searches by meaning.
+ * probe's and the setup turn's client; nothing here embeds or searches by meaning, but the vector index is a required engine piece of
+ * every process that composes the truths (the same index as the api; readiness reports it).
  */
 export const mcpKnowledgeModules = (options: McpAppOptions): Array<DynamicModule> => [
     HttpModule.register({ isGlobal: true }),
     AiModule.register({ isGlobal: true, ...options.ai, profileRoutes: chatProfileRoutes() }),
+    QdrantModule.register({ isGlobal: true, ...options.qdrant, dimensions: EMBEDDING_DIMENSIONS }),
     BrainFactsModule.register({ isGlobal: true }),
     // The truths in force read by words (the data op `nivo.api.nivo.brain.search`): the graph read alone.
     BrainModule.register({ isGlobal: true, graphOnly: true }),
@@ -57,6 +61,7 @@ export const mcpKnowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, Error
     CONTACTS_ERROR_KINDS,
     CUSTOMER_ROUTES_ERROR_KINDS,
     HTTP_ERROR_KINDS,
+    QDRANT_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers. */
@@ -68,4 +73,5 @@ export const mcpKnowledgeMessages: ReadonlyArray<MessageBundle> = [
     CONTACTS_MESSAGES,
     CUSTOMER_ROUTES_MESSAGES,
     HTTP_MESSAGES,
+    QDRANT_MESSAGES,
 ]

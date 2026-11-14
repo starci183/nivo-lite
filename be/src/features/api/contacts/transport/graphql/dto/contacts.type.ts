@@ -237,11 +237,18 @@ export class ContactModuleAgentType {
 }
 
 @ObjectType()
-/** A file of a line of the conversation: an address, never the bytes. */
+/** A file of a line of the conversation: an address, never the bytes; or a file the person sent that could not be fetched, with why. */
 export class CustomerMessageFileType {
-    /** Where the file is served from. */
-    @Field(() => String)
-    url!: string
+    /** Where the file is served from; null for a file that could not be fetched (`notKept` says why). */
+    @Field(() => String, { nullable: true })
+    url!: string | null
+
+    /**
+     * Why a file the person sent could not be fetched and kept (`no_address`, `no_store`, `refused_<status>`, `store_failed`,
+     * `fetch_failed`); null for a kept file. A reader shows the "could not be fetched" state for it.
+     */
+    @Field(() => String, { nullable: true })
+    notKept!: string | null
 
     /** The name of the file, or empty. */
     @Field(() => String)
@@ -330,4 +337,188 @@ export class CustomerMessagePageType {
     /** The cursor of the next (older) page, or null at the end. */
     @Field(() => String, { nullable: true })
     next!: string | null
+}
+
+@ObjectType()
+/** The agent whose workbench holds a route's conversation now. */
+export class ContactRouteWorkbenchType {
+    /** The agent that spoke last on the route. */
+    @Field(() => ID)
+    agentId!: string
+
+    /** The agent's display name. */
+    @Field(() => String)
+    agentName!: string
+
+    /** The key of the agent's module. */
+    @Field(() => String)
+    moduleKey!: string
+
+    /** The installation the agent runs as: with the module it names the workbench page. */
+    @Field(() => ID)
+    installationId!: string
+}
+
+@ObjectType()
+/** The member of the shop who holds a route (the staff hold). */
+export class ContactRouteHolderType {
+    /** The membership id (the seat of the person in the workspace; never a user id). */
+    @Field(() => ID)
+    memberId!: string
+
+    /** The member's display name, or null when the seat is gone. */
+    @Field(() => String, { nullable: true })
+    name!: string | null
+
+    /** When the member took the thread over (ISO 8601). */
+    @Field(() => String)
+    at!: string
+}
+
+@ObjectType()
+/** One route of a contact: this person on one account of one channel. */
+export class ContactRouteType {
+    /** The route. */
+    @Field(() => ID)
+    routeId!: string
+
+    /** The channel (`zalo`, `telegram`, `website`, ...). */
+    @Field(() => String)
+    channel!: string
+
+    /** The connection, site or API key of the entrance, or null. */
+    @Field(() => ID, { nullable: true })
+    accountId!: string | null
+
+    /** The connection's name; null for an entrance that is no connection. */
+    @Field(() => String, { nullable: true })
+    accountName!: string | null
+
+    /** The connection's provider; null for an entrance that is no connection. */
+    @Field(() => String, { nullable: true })
+    provider!: string | null
+
+    /** When the newest line of the route was said (ISO 8601), or null when nothing was said on it. */
+    @Field(() => String, { nullable: true })
+    lastLineAt!: string | null
+
+    /** The workbench of the agent that spoke last, or null when no agent has spoken on the route. */
+    @Field(() => ContactRouteWorkbenchType, { nullable: true })
+    workbench!: ContactRouteWorkbenchType | null
+
+    /** The member who holds the thread, or null when the agents speak on it. */
+    @Field(() => ContactRouteHolderType, { nullable: true })
+    holder!: ContactRouteHolderType | null
+}
+
+@ObjectType()
+/** Who spoke a line, resolved on the server. */
+export class ContactMessageSpeakerType {
+    /** `person` (the contact), `agent` (an agent, or the engine itself) or `staff` (a member of the shop). */
+    @Field(() => String)
+    kind!: string
+
+    /** The name; null when none is known (the person has no name, the agent or the seat is gone, or the engine spoke). */
+    @Field(() => String, { nullable: true })
+    name!: string | null
+}
+
+@ObjectType()
+/** One line of the whole conversation with a person (every route merged by time). */
+export class ContactMessageType {
+    /** The line. */
+    @Field(() => ID)
+    id!: string
+
+    /** The route it was said on. */
+    @Field(() => ID)
+    routeId!: string
+
+    /** The channel of the route. */
+    @Field(() => String)
+    channel!: string
+
+    /** The connection, site or API key of the entrance, or null. */
+    @Field(() => ID, { nullable: true })
+    accountId!: string | null
+
+    /** `from_person` (the person said it) or `to_person` (an agent or a person of the shop told it). */
+    @Field(() => String)
+    direction!: string
+
+    /** When it was said (ISO 8601): the order of the thread. */
+    @Field(() => String)
+    saidAt!: string
+
+    /** The words. */
+    @Field(() => String)
+    text!: string
+
+    /** The files, by address. */
+    @Field(() => [CustomerMessageFileType])
+    files!: Array<CustomerMessageFileType>
+
+    /** The order snapshot a sent line showed, as JSON text, or null. */
+    @Field(() => String, { nullable: true })
+    orderJson!: string | null
+
+    /** A sent line's `claimed`, `delivered`, `refused` or `unknown`; null for what the person said. */
+    @Field(() => String, { nullable: true })
+    state!: string | null
+
+    /** Who spoke it. */
+    @Field(() => ContactMessageSpeakerType)
+    speaker!: ContactMessageSpeakerType
+}
+
+@ObjectType()
+/** A page of the whole conversation with a person, newest first, with the cursor of the older page. */
+export class ContactMessagePageType {
+    /** The lines. */
+    @Field(() => [ContactMessageType])
+    rows!: Array<ContactMessageType>
+
+    /** The cursor of the next (older) page, or null at the end. */
+    @Field(() => String, { nullable: true })
+    next!: string | null
+}
+
+@ObjectType()
+/** One thing an agent did for a person, in the words of the workspace. */
+export class ContactWorkType {
+    /** The memory entry. */
+    @Field(() => ID)
+    id!: string
+
+    /** The workflow's title; null when the workflow no longer exists. */
+    @Field(() => String, { nullable: true })
+    workflowLabel!: string | null
+
+    /** The step's title (the one its installed node declares); null when no installed node declares one. */
+    @Field(() => String, { nullable: true })
+    stepLabel!: string | null
+
+    /** How the step ended: `done`, `failed` or `passed_over`. */
+    @Field(() => String)
+    status!: string
+
+    /** The round of a loop the step ran in (data only, never a label); null for a step outside one. */
+    @Field(() => Int, { nullable: true })
+    round!: number | null
+
+    /** When it ended (ISO 8601). */
+    @Field(() => String)
+    at!: string
+
+    /** The agent that did it, or null. */
+    @Field(() => ID, { nullable: true })
+    agentId!: string | null
+
+    /** The agent's name, or null. */
+    @Field(() => String, { nullable: true })
+    agentName!: string | null
+
+    /** The run, or null. */
+    @Field(() => ID, { nullable: true })
+    runId!: string | null
 }

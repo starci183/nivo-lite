@@ -1,5 +1,5 @@
 import type { z } from "../../schema/zod-entry"
-import type { CompareOp, GraphCatalogue, GraphSpecV2, LoopEvery, Mode, PresenceOp } from "../../graph/graph-spec-v2.types"
+import type { CompareOp, GraphCatalogue, GraphSpecV2, LoopEvery, LoopExitLabels, Mode, PresenceOp, UnsuccessfulThen } from "../../graph/graph-spec-v2.types"
 import type { TriggerCondition } from "../../graph/workflow-contract"
 import type { LeadFact } from "../../node/memory.contracts"
 import type { ProviderKey, TriggerVerb } from "../../names"
@@ -159,6 +159,39 @@ export interface NodeWiring<N> {
     readonly next?: string | undefined
     /** For a routing node: the step of each route name, all of them. */
     readonly routes?: Readonly<Record<RouteOf<N>, string>> | undefined
+    /**
+     * What the ENGINE does when this step ends unsuccessfully (R68: a customer send refused other than `route_held`, an approval declined,
+     * the node's `cannot`): it tells the team itself, with `facts`, then follows `then`. Absent: today's road (nothing reported for it).
+     */
+    readonly unsuccessful?: StepUnsuccessful | undefined
+}
+
+/** One fact the engine's team notice carries: a label in both languages and its value (a ref, or a fixed value). */
+export interface NoticeFact {
+    /** The label a person reads (`{ vi, en }`). */
+    readonly label: SpecText
+    /** The value: a ref read when the step ended (a null value is left out), or a fixed one. */
+    readonly value: RefOrValue
+}
+
+/**
+ * A step's unsuccessful ending (R68). The engine reports it to the team in /chat (the workflow, the step, the typed reason and `facts`)
+ * and the run goes on (`continue`: the step's own `next` or route) or ends (`end`: at the outcome step `outcome`). Graphs draw no notice
+ * node and no "was it refused" `ifNode` for these endings.
+ */
+export interface StepUnsuccessful {
+    /** Absent: `continue` for a step inside a loop body or a side step (`blocking: false`), `end` for any other step. */
+    readonly then?: UnsuccessfulThen | undefined
+    /** With `end` (written or by default): the key of the outcome step, outside every loop, the run ends at. */
+    readonly outcome?: string | undefined
+    /** What the notice says beside the reason (an order code, an amount), at most 6. */
+    readonly facts?: ReadonlyArray<NoticeFact> | undefined
+}
+
+/** An `until` loop's unsuccessful ending (R68): when it runs out of rounds the engine tells the team, then the run takes `exhausted`. */
+export interface LoopUnsuccessful {
+    /** What the notice says beside the rounds, at most 6. */
+    readonly facts?: ReadonlyArray<NoticeFact> | undefined
 }
 
 /** A template node placed in a graph. */
@@ -179,6 +212,8 @@ export interface NodeGraphStep {
     readonly next: string | null
     /** The step of each route name for a routing node; null: the node does not route. */
     readonly routes: Readonly<Record<string, string>> | null
+    /** The step's unsuccessful ending as declared; null or absent: none. */
+    readonly unsuccessful?: StepUnsuccessful | null | undefined
 }
 
 /** An `until` that stops by MEANING: when the body's routing node `route` takes its route `stop`. */
@@ -236,6 +271,8 @@ export interface LoopOverGraphStep {
     readonly body: LoopOverBody
     /** The step after the loop; null: the run ends there. */
     readonly next: string | null
+    /** The words the map shows on this step (SpecText, both languages); null or absent: the generic word. */
+    readonly label?: SpecText | null | undefined
 }
 
 /** A loop until a condition, as the builder returns it. */
@@ -256,6 +293,12 @@ export interface LoopUntilGraphStep {
     readonly next: string
     /** The step after the loop when it ran out of rounds. */
     readonly exhausted: string
+    /** The team notice the engine posts when it runs out of rounds; null or absent: none. */
+    readonly unsuccessful?: LoopUnsuccessful | null | undefined
+    /** The words the map shows on this step (SpecText, both languages); null or absent: the generic word. */
+    readonly label?: SpecText | null | undefined
+    /** The words of its two ways out on the map; null or absent: the generic words. */
+    readonly exits?: LoopExitLabels | null | undefined
 }
 
 /** A loop, as the builder returns it. */
@@ -271,6 +314,8 @@ export interface IfGraphStep {
     readonly yes: string
     /** The step when it does not hold (its `no` route), `endItem` in a body, or null: the ITEM (ROUND) ends in a body, the RUN outside. */
     readonly no: string | null
+    /** The words the map shows on this step (SpecText, both languages); null or absent: the generic word. */
+    readonly label?: SpecText | null | undefined
 }
 
 /** The version a hand-off calls. */
@@ -326,6 +371,8 @@ export interface OutcomeGraphStep {
     readonly output: Readonly<Record<string, RefOrValue>>
     /** The step after the end; null: the run ends there. */
     readonly next: string | null
+    /** The words the map shows on this step (SpecText, both languages); null or absent: the generic word. */
+    readonly label?: SpecText | null | undefined
 }
 
 /** One test a waited event must meet: its member equals (or, `contains`, holds) a value, a fixed one or a ref read when the wait begins. */
@@ -363,6 +410,8 @@ export interface WaitGraphStep {
     readonly timeout: WaitTimeout
     /** The step of each trigger key and of `timeout`. */
     readonly next: Readonly<Record<string, string>>
+    /** The words the map shows on this step (SpecText, both languages); null or absent: the generic word. */
+    readonly label?: SpecText | null | undefined
 }
 
 /** A hand-back, as `handBack` returns it: the wait whose event is offered on, and the step after it. */
@@ -373,6 +422,8 @@ export interface HandBackGraphStep {
     readonly wait: string
     /** The step after the hand-back (or `endRound` in a loop body); null: the round (in a body) or the run ends there. */
     readonly next: string | null
+    /** The words the map shows on this step (SpecText, both languages); null or absent: the generic word. */
+    readonly label?: SpecText | null | undefined
 }
 
 /** One step of a template graph, as the builders return it. */

@@ -72,8 +72,8 @@ const GOAL =
 /**
  * `websales.mail-reply-draft` (Soan thu tra loi): a body step of `websales.mail-enquiries`, split from `websales.mail-intake`; a side
  * step (`blocking: false`, skipped when no mail account is attached). The agent writes the reply (the CRM's quote figures only); the
- * node hands it to the mail send to the sender's address (`mail.message.send`, mode `auto`: the adapter raises the draft a person
- * sends; `ref` = the purchase). A refused send (a person who declined it included) is reported (`drafted: false`, `refusal`):
+ * node hands it to the mail send to the sender's address (`mail.message.send`, mode `ask`: a person approves the mail on the card before it goes, MXW-1;
+ * `ref` = the purchase). A refused send (a person who declined it included) is reported (`drafted: false`, `refusal`):
  * a side step never stops on it. It replaces version 1's `send_email` work item.
  */
 export const websalesMailReplyDraftNode: TemplateNode<typeof input, typeof output> = defineTemplateNode({
@@ -81,7 +81,9 @@ export const websalesMailReplyDraftNode: TemplateNode<typeof input, typeof outpu
     title: websalesText("node.mail-reply-draft.title"),
     description: { vi: "So\u1ea1n th\u01b0 tr\u1ea3 l\u1eddi ng\u01b0\u1eddi g\u1eedi th\u01b0 h\u1ecfi mua, ch\u1ec9 d\u00f9ng s\u1ed1 li\u1ec7u b\u00e1o gi\u00e1 c\u1ee7a h\u1ec7 th\u1ed1ng, \u0111\u1ec3 ng\u01b0\u1eddi xem r\u1ed3i g\u1eedi.", en: "Drafts a reply to the sender of an enquiry email, using only the quote's figures, for a person to review and send." },
     tools: [TOOL.mailMessageSend],
-    mode: "auto",
+    // R83 (owner, interim; the CEO reviews later): AI-written mail about money or a commitment asks, a person approves the whole
+    // message on the approval card before it goes (`ask`), as the package's own words ("a draft a person sends") say.
+    mode: "ask",
     accounts: [PROVIDER.smtp],
     input,
     output,

@@ -374,6 +374,96 @@ describe("AgentWorkflowsService: publishing a hand-off", () => {
     })
 })
 
+/** A workflow's graph as an OLDER version of it stored it: its call input `name` (a member of `data`) not taken yet. */
+const withoutCallInput = (graph: GraphSpec, name: string): GraphSpec => ({
+    ...graph,
+    contract: {
+        inputs: (graph.contract?.inputs ?? []).map((input) =>
+            input.name === "data" ? { ...input, members: (input.members ?? []).filter((member) => member.name !== name) } : input,
+        ),
+    },
+})
+
+/**
+ * E-FIX8 (RESTART-R5: `tools reseed` refused the sales agent of three workspaces `CALL_INPUT_UNKNOWN at to-after-sale.orderNo`).
+ * GENERAL RULE: versions written as ONE change (a re-seed) are judged together: each hand-off against the other end's version in the
+ * set, whichever end is written first. Without the set a caller that passes a new input to a callee still on its older version is
+ * refused, and a callee whose older caller does not fit it is refused: the order of the writes decided, not the result.
+ */
+describe("AgentWorkflowsService.adoptTemplateVersion: a set of versions written together", () => {
+    /** A workspace whose callee runs an OLDER version (without `input`) and whose caller runs the template's current graph. */
+    const olderCallee = async (callee: string, input: string, others: ReadonlyArray<string>) => {
+        const world = await buildWorld()
+        const made = await madeFrom(world, callee)
+        await world.workflows.publish("ws-1", made.id, withoutCallInput(templateGraph(callee), input), OWNER, 1, "older")
+        const views = new Map<string, WorkflowView>([[callee, made]])
+        for (const id of others) views.set(id, await madeFrom(world, id))
+        const idOf = (id: string): string => views.get(id)?.id ?? ""
+        return { world, idOf }
+    }
+    const pickOf = (templateId: string) => ({ templateId, templateVersion: templateNewest(templateId) })
+
+    it("the exposing case: payment hands a paid order on to an after-sale still on its older version (no orderNo)", async () => {
+        const { world, idOf } = await olderCallee("sales.after-sale", "orderNo", [
+            "sales.payment",
+            "sales.consult",
+            "chatbot.front-desk",
+            "booking.book",
+        ])
+        const payment = idOf("sales.payment")
+        const after = idOf("sales.after-sale")
+
+        const alone = await refusalOf(world.workflows.adoptTemplateVersion("ws-1", payment, pickOf("sales.payment"), OWNER, 1, ""))
+        expect(alone?.code).toBe(AgentGraphsErrorCode.ContractRefused)
+        expect(alone?.problems).toContain("CALL_INPUT_UNKNOWN")
+        expect(alone?.problems).toContain("to-after-sale.orderNo")
+
+        const together = new Map([
+            [payment, templateGraph("sales.payment")],
+            [after, templateGraph("sales.after-sale")],
+        ])
+        await expect(
+            world.workflows.adoptTemplateVersion("ws-1", payment, pickOf("sales.payment"), OWNER, 1, "", together),
+        ).resolves.toMatchObject({ number: 2 })
+        await expect(
+            world.workflows.adoptTemplateVersion("ws-1", after, pickOf("sales.after-sale"), OWNER, 2, "", together),
+        ).resolves.toMatchObject({ number: 3 })
+    })
+
+    it("a set that does not hold the callee's new version judges against the stored one: still refused", async () => {
+        const { world, idOf } = await olderCallee("sales.after-sale", "orderNo", [
+            "sales.payment",
+            "sales.consult",
+            "chatbot.front-desk",
+            "booking.book",
+        ])
+        const payment = idOf("sales.payment")
+        const together = new Map([[payment, templateGraph("sales.payment")]])
+
+        const refusal = await refusalOf(
+            world.workflows.adoptTemplateVersion("ws-1", payment, pickOf("sales.payment"), OWNER, 1, "", together),
+        )
+
+        expect(refusal?.problems).toContain("to-after-sale.orderNo")
+    })
+
+    it("a second kind of workflow (R75): a content draft handing its text to a video production, no person, no line", async () => {
+        const { world, idOf } = await olderCallee("video.produce", "text", ["content.draft"])
+        const draft = idOf("content.draft")
+
+        const alone = await refusalOf(world.workflows.adoptTemplateVersion("ws-1", draft, pickOf("content.draft"), OWNER, 1, ""))
+        expect(alone?.problems).toContain("to-video.text")
+
+        const together = new Map([
+            [draft, templateGraph("content.draft")],
+            [idOf("video.produce"), templateGraph("video.produce")],
+        ])
+        await expect(
+            world.workflows.adoptTemplateVersion("ws-1", draft, pickOf("content.draft"), OWNER, 1, "", together),
+        ).resolves.toMatchObject({ number: 2 })
+    })
+})
+
 describe("AgentWorkflowsService.graphOf: the agent's Graph page", () => {
     it("draws each workflow of the agent with its contract and triggers, and names the workflow each hand-off calls", async () => {
         const world = await buildWorld()

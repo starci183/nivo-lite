@@ -89,7 +89,7 @@ export class BankFeedPollService {
     }
 
     private async pollRecord(record: ConnectionRecord, summary: PollSummary): Promise<void> {
-        const poller = this.pollers.of(record.provider)
+        const poller = this.pollers.portFor(record)
         if (poller !== undefined) await this.run.poll(this.withStore(poller), record, summary)
     }
 

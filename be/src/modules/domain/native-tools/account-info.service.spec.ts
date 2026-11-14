@@ -23,6 +23,7 @@ const stored = (provider: StoredRecord["provider"]): StoredRecord => ({
     name: "Account",
     status: "connected",
     environment: "live",
+    sandbox: false,
     isDefault: false,
     firstEvent: null,
     createdBy: null,

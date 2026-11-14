@@ -3,7 +3,6 @@ export {
     KnowledgeJob,
     isDossierReviewPayload,
     isKnowledgeCommandPayload,
-    isKnowledgeReembedPayload,
     isKnowledgeSourcePayload,
     isPolicyDerivePayload,
     isPublicDraftPayload,
@@ -11,7 +10,6 @@ export {
 } from "./knowledge.contracts"
 export type {
     KnowledgeCommandPayload,
-    KnowledgeReembedPayload,
     KnowledgeSourcePayload,
 } from "./knowledge.contracts"
 export { KnowledgeQueueModule } from "./knowledge.module"

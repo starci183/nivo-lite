@@ -21,10 +21,10 @@ describe("the clock's trigger", () => {
 
     it("translates a slot into one event under the slot's old once-key, purely, and fits its schemas", async () => {
         const { clock } = await buildSubject()
-        const slot = { triggerId: "t-1", slot: "1762850000000", probeKey: "accounting_close" }
+        const slot = { triggerId: "t-1", slot: "1762850000000" }
 
         const event = clock.translate(slot, NO_ACCOUNT)
-        expect(event).toEqual({ id: "t-1:1762850000000", data: { triggerId: "t-1", slotMs: 1_762_850_000_000, probeKey: "accounting_close" } })
+        expect(event).toEqual({ id: "t-1:1762850000000", data: { triggerId: "t-1", slotMs: 1_762_850_000_000 } })
         expect(clock.translate(slot, NO_ACCOUNT)).toEqual(event)
         expect(event?.subject).toBeUndefined()
         expect(clock.raw.safeParse(slot).success).toBe(true)

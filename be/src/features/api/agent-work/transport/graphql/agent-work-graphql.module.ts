@@ -11,5 +11,5 @@ import { RunFlowResolver } from "./run-flow.resolver"
     imports: [AgentWorkApiModule.register({})],
     providers: [AgentWorkResolver, AgentRunsResolver, AgentRunDecisionResolver, AgentWorkCommandsResolver, RunFlowResolver],
 })
-/** GraphQL transport for the Work tab: reading it, the two switches, goals, triggers and tasks. */
+/** GraphQL transport for the Work tab: reading it, the two switches, triggers and tasks. */
 export class AgentWorkGraphqlModule extends ConfigurableModuleClass {}

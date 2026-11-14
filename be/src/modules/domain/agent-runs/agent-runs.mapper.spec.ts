@@ -68,20 +68,20 @@ describe("step records", () => {
         const { stepRecordOf } = await buildSubject()
         const step = stepRecordOf(
             stepRowOf({
-                effect: { kind: "compensable", compensation: "undo" },
+                effect: { kind: "write" },
                 result: { ok: true },
                 claimedUntil: WHEN.toISOString(),
             }),
         )
 
-        expect(step).toMatchObject({ stepKey: "step-1", effect: { kind: "compensable", compensation: "undo" } })
+        expect(step).toMatchObject({ stepKey: "step-1", effect: { kind: "write" } })
         expect(step.claimedUntil?.toISOString()).toBe(WHEN.toISOString())
         expect(step).toMatchObject({ ordinal: 1, version: "2", result: { ok: true } })
     })
 
     it.each([
         [{ kind: "read" }, { kind: "read" }],
-        [{ kind: "pivot" }, { kind: "pivot" }],
+        [{ kind: "write" }, { kind: "write" }],
     ])("reads the effect %j", async (effect, expected) => {
         const { stepRecordOf } = await buildSubject()
         expect(stepRecordOf(stepRowOf({ effect })).effect).toEqual(expected)
@@ -98,7 +98,6 @@ describe("step records", () => {
     it.each([
         ["a deadline that is no number", { deadlineMs: "soon" }],
         ["an effect of an unknown kind", { effect: { kind: "other" } }],
-        ["a compensable effect with no handler", { effect: { kind: "compensable" } }],
         ["a step status it does not know", { status: "limbo" }],
         ["an input that is no object", { input: "x" }],
     ])("refuses %s", async (_name, over) => {

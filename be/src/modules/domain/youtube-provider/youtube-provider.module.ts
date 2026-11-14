@@ -2,6 +2,7 @@ import { Module, type DynamicModule } from "@nestjs/common"
 import { YoutubeCredentialService } from "./youtube-credential.service"
 import { YoutubeProviderRegistrationService } from "./youtube-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./youtube-provider.module-definition"
+import { YoutubeSandboxVideoService } from "./youtube-sandbox-video.service"
 import { YoutubeVideoService } from "./youtube-video.service"
 
 const PROVIDERS = [YoutubeCredentialService, YoutubeVideoService]
@@ -18,7 +19,7 @@ export class YoutubeProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, YoutubeProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, YoutubeSandboxVideoService, YoutubeProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

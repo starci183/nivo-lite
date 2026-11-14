@@ -21,7 +21,6 @@ const write = (over: Partial<AgentTriggerWrite> = {}): AgentTriggerWrite => ({
     atTime: "08:30",
     timeZone: null,
     eventName: null,
-    probeKey: "invoices_due",
     enabled: true,
     ...over,
 })
@@ -45,7 +44,6 @@ describe("triggerFields", () => {
             atTime: "08:30",
             timeZone: "Asia/Ho_Chi_Minh",
             eventName: null,
-            probeKey: "invoices_due",
             enabled: true,
             sources: [],
         })
@@ -84,7 +82,6 @@ describe("triggerFields", () => {
             atTime: null,
             timeZone: "Asia/Ho_Chi_Minh",
             eventName: "bank_credit_booked",
-            probeKey: "invoices_due",
             enabled: true,
             sources: [],
         })

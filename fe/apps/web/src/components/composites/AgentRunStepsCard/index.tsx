@@ -22,7 +22,6 @@ const GLYPHS: Readonly<Record<RunStepStatus, IconName>> = {
     waiting: "handRaised",
     done: "complete",
     failed: "failure",
-    undone: "retry",
 }
 
 /** One step as a row: its state mark, its name (led by an arrow inside a group) and how long it took at the end. */

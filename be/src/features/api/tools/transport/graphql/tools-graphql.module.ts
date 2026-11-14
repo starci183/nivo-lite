@@ -7,6 +7,7 @@ import { GetAgentAbilityProposalResolver } from "./get-agent-ability-proposal.re
 import { ListProviderTemplateCandidatesResolver } from "./list-provider-template-candidates.resolver"
 import { AttachAgentProviderResolver } from "./attach-agent-provider.resolver"
 import { DetachAgentProviderResolver } from "./detach-agent-provider.resolver"
+import { SetAgentProviderDefaultResolver } from "./set-agent-provider-default.resolver"
 import { AttachProviderByTemplateResolver } from "./attach-provider-by-template.resolver"
 
 @Module({
@@ -18,6 +19,7 @@ import { AttachProviderByTemplateResolver } from "./attach-provider-by-template.
         ListProviderTemplateCandidatesResolver,
         AttachAgentProviderResolver,
         DetachAgentProviderResolver,
+        SetAgentProviderDefaultResolver,
         AttachProviderByTemplateResolver,
     ],
 })

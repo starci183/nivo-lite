@@ -68,6 +68,16 @@ export class QdrantClient implements VectorIndex {
         return this.reached ? "ok" : "down"
     }
 
+    /** Asks the service now whether it answers an authenticated call (the list of collections): ok, or down for any failure. */
+    async probe(): Promise<VectorHealth> {
+        try {
+            await this.call("GET", "/collections", undefined, "probe")
+            return "ok"
+        } catch {
+            return "down"
+        }
+    }
+
     /**
      * Creates the collection of a kind and its payload indexes when they are missing; safe to repeat. A collection that exists with
      * another vector size or distance than the app embeds with is refused: nothing is created over it and nothing is compared with it.

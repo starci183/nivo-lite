@@ -33,7 +33,6 @@ const PLACEHOLDER: InstanceHeaderView = {
     needs: { lines: [], linkLabel: "-", href: "#" },
     primary: null,
     profileHref: null,
-    packageHref: null,
 }
 
 /** What the layout hands the frame: the type and the instance of the url, and the routed tab. */
@@ -72,7 +71,6 @@ const switcherOf = (
 export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const t = useTranslations("modulesCore")
     const ts = useTranslations("shell")
-    const tt = useTranslations("agentTemplates")
     const tw = useTranslations("agentWork")
     const tr = useTranslations("agentRuns")
     const twf = useTranslations("agentWorkflows")
@@ -131,7 +129,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 tabs: tabs.map((tab) => instanceTabOf(tab, t(`tab_${tab}`), hrefOf(tab), header.counts)),
                 earlyLabel: t("earlyBadge"),
                 profileLabel: t("profileShort"),
-                packageLabel: tt("packageTitle"),
                 notice: query.get("notice") === OWNER_SETUP_NOTICE ? t("ownerSetupNotice") : "",
                 // The Setup tab is where the notice leads: there it would point at itself.
                 setupNotice:
@@ -153,9 +150,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                     t,
                     needs,
                     module: props.module,
-                    installationId: props.installationId,
-                    workspaceId,
-                    canPackage: isManager(member),
                 }),
             }}
             on={{ retry: header.retry, viewTabs: setViewTabs }}

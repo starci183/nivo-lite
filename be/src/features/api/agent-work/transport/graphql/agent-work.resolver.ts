@@ -23,7 +23,7 @@ import { WorkspaceAgentWorkType } from "./dto/workspace-agent-work.type"
 export class AgentWorkResolver {
     constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
-    /** The work of one agent: its switch, goals, open tasks, triggers, the next run and the last 20 turns. */
+    /** The work of one agent: its switch, open tasks, triggers, the next run and the last 20 turns. */
     @Query(() => AgentWorkType, { name: "agentWork" })
     async agentWork(
         @CurrentPrincipal() principal: Principal,

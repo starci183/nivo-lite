@@ -95,7 +95,7 @@ const registerAskCases = () => {
         )
         expect(nivo.search).toHaveBeenCalledWith({
             module: "sales",
-            vector: `[${VECTOR.join(",")}]`,
+            vector: VECTOR,
             model: "m1",
             tsquery: "opening | hours",
             limit: 8,

@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectAi, type AiService } from "@modules/integrations/ai"
 import { InjectVectorIndex, type VectorIndex } from "@modules/integrations/qdrant"
@@ -24,8 +24,10 @@ const release = (cancels: ReadonlyArray<() => void>): void => {
 
 @Injectable()
 /**
- * Checks what the process cannot work without before it accepts traffic: the primary database (through the jobs statistics function)
- * and the AI endpoint. The process boots without `AI_BASE_URL` / `STARCI_AI_KEY`, but it is never ready: every model call would fail.
+ * Checks what the process cannot work without before it accepts traffic: the primary database (through the jobs statistics function),
+ * the AI endpoint and the vector index. The process boots without `AI_BASE_URL` / `STARCI_AI_KEY`, but it is never ready: every model
+ * call would fail. The vector index is a required engine piece (the only home of vectors): an index that does not answer its probe
+ * makes the process unready with `LIVENESS_VECTOR_INDEX_DOWN`, never a silent fallback.
  */
 export class ReadinessService {
     /** Captures the primary connection and logger without probing dependencies at construction. */
@@ -34,10 +36,10 @@ export class ReadinessService {
         @InjectLogger() private readonly logger: Logger,
         @InjectTimer() private readonly timer: Timer,
         @InjectAi() private readonly ai: AiService,
-        @Optional() @InjectVectorIndex() private readonly vectors: VectorIndex | null = null,
+        @InjectVectorIndex() private readonly vectors: VectorIndex,
     ) {}
 
-    /** Reports ready only when the AI endpoint is configured and both database probes answer within three seconds. */
+    /** Reports ready only when the AI endpoint is configured and the database and vector index probes answer within three seconds. */
     async check(): Promise<ReadinessReport> {
         // The executor runs synchronously, so the deadline timer is registered before the probes start.
         const cancels: Array<() => void> = []
@@ -63,13 +65,18 @@ export class ReadinessService {
                 this.logger.error(ReadinessLogEvent.AiUnconfigured, null)
                 throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable })
             }
+            const vectors = await Promise.race([this.vectors.probe(), deadline])
+            if (vectors !== "ok") {
+                this.logger.error(ReadinessLogEvent.VectorIndexDown, null)
+                throw new LivenessError({ code: LivenessErrorCode.VectorIndexDown })
+            }
             release(cancels)
-            // The vector index never makes the process unready: without it the meaning search answers by words. The probe says so.
-            const vectors = this.vectors == null ? "off" : this.vectors.health()
             return { status: "ready", checks: { database: "ok", jobs: "ok", ai: "ok", vectors } }
         } catch (cause) {
             release(cancels)
             this.logger.error(ReadinessLogEvent.CheckFailed, cause)
+            // The typed reason of a missing required piece travels as it is; anything else is the generic unavailability.
+            if (cause instanceof LivenessError && cause.code === LivenessErrorCode.VectorIndexDown) throw cause
             throw new LivenessError({ code: LivenessErrorCode.ReadinessUnavailable, cause })
         }
     }

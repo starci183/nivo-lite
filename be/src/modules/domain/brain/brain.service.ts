@@ -11,7 +11,6 @@ import type { FactDecision, FactForm, KeepCurrentInput, LessonDecision, LessonFo
 import { BrainLogEvent } from "./brain.log-events"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
 import { DocumentFactsService } from "./document-facts.service"
-import { FactVectorsSweepService } from "./fact-vectors-sweep.service"
 import { MANAGERS, rolesToDecide, splitInForce } from "./founder.policy"
 
 /** A note without its edges; undefined when nothing is left. */
@@ -33,8 +32,6 @@ export interface BrainUpkeep {
     readonly expired: number
     /** Workspaces whose upkeep failed (retried at the next tick). */
     readonly failed: number
-    /** Facts in force that got a vector in this tick's sweep (embedded or copied); the rest go on at the next tick. */
-    readonly vectors: number
     /** Document readings that waited for credits and go on now that their workspace has credits again. */
     readonly readingsResumed: number
 }
@@ -56,7 +53,6 @@ export class BrainService {
         private readonly gaps: KnowledgeGapsService,
         private readonly sources: KnowledgeSourcesService,
         private readonly documentFacts: DocumentFactsService,
-        private readonly vectorSweep: FactVectorsSweepService,
         private readonly reads: BrainFactsReadService,
     ) {}
 
@@ -189,8 +185,8 @@ export class BrainService {
      * scheduled value comes in force (the value it replaces is superseded, relations carried), ended values expire, and a fact that came
      * in force gets its vector and answers its gaps, exactly as on the page. Idempotent: `maintain` promotes only rows still
      * `scheduled` and expires only rows still `active`, so a second tick, the page and the change door racing it change nothing twice.
-     * One failing workspace is logged and retried at the next tick; the others go on. Then the vectors' sweep: every fact in force that
-     * has no vector yet (the rest of a bulk apply, a write where no vector listener ran) gets one, within a bounded budget per tick.
+     * One failing workspace is logged and retried at the next tick; the others go on. A fact left with no point (the rest of a bulk
+     * apply, a write where no vector listener ran) is the vector reconcile's (tick `vector-reconcile`), never this tick's.
      */
     async upkeep(): Promise<BrainUpkeep> {
         const due = await this.reads.dueWorkspaces(UPKEEP_WORKSPACES)
@@ -208,7 +204,6 @@ export class BrainService {
                 this.logger.error(BrainLogEvent.UpkeepFailed, cause, { workspaceId })
             }
         })
-        const swept = await this.vectorSweep.sweep()
         // Documents stored word-only for want of credits are indexed again, and readings that waited for credits go on by themselves,
         // once the workspace has credits again (nothing waits for a button).
         await this.documentFacts.resumeIndexing()
@@ -218,7 +213,6 @@ export class BrainService {
             activated,
             expired,
             failed,
-            vectors: swept.embedded + swept.copied,
             readingsResumed,
         }
         this.logger.info(BrainLogEvent.UpkeepDone, { ...result })

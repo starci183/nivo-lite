@@ -7,7 +7,6 @@ import { ModuleListError } from "../module/module-list-error"
 import { JobDefinitionError } from "../mutation/job-definition-error"
 import { JobRefused } from "../mutation/job-door"
 import { JobRetry } from "../mutation/job-retry"
-import { SagaDefinitionError } from "../mutation/saga-definition-error"
 import { NodeBusinessFailure, NodeConfused } from "../node/memory"
 import { NodeRunError } from "../node/node-run-error"
 import { RightsDeniedError } from "../node/rights-denied-error"
@@ -36,7 +35,6 @@ const SDK_ERRORS: ReadonlyArray<
     JobDefinitionError,
     JobRefused,
     JobRetry,
-    SagaDefinitionError,
     NodeBusinessFailure,
     NodeConfused,
     NodeRunError,

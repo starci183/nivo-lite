@@ -3,7 +3,6 @@ export { AGENT_WORK_ERROR_KINDS, AgentWorkError, AgentWorkErrorCode } from "./er
 export { AGENT_WORK_MESSAGES } from "./messages/agent-work.messages"
 export { AgentWorkModule } from "./agent-work.module"
 export { AgentDrainService } from "./agent-drain.service"
-export { AgentGoalsService } from "./agent-goals.service"
 export { AgentTasksService } from "./agent-tasks.service"
 export {
     TIMER_DATA_BYTES_MAX,
@@ -13,12 +12,13 @@ export {
     TIMER_REF_MAX,
     timerDueAtOf,
     timerDueInBounds,
+    timerSubjectKeyStartOf,
     timerTaskKeyOf,
     timerTaskOf,
     timerTaskTitleOf,
     timerWakeAtOf,
 } from "./timer-task.policy"
-export type { TimerTask } from "./timer-task.policy"
+export type { TimerSubject, TimerTask } from "./timer-task.policy"
 export { AgentWorkDoorsService } from "./agent-work-doors.service"
 export { AgentTriggersService } from "./agent-triggers.service"
 export { AgentTurnsService } from "./agent-turns.service"
@@ -35,9 +35,6 @@ export { decidingItemIdOf, decisionOf, verdictOf } from "./agent-run-decision.po
 export type { AgentRunDecision, AgentRunDetail, AgentRunItem, AgentRunsBoard } from "./agent-runs-view.contracts"
 export { ENGINE_THREAD_SOURCE, wakeSources } from "./agent-wake-source.policy"
 export type {
-    AgentGoalRecord,
-    AgentGoalStatus,
-    AgentGoalWrite,
     AgentTaskData,
     AgentTaskRecord,
     AgentTriggerKind,

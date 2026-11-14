@@ -12,7 +12,6 @@ const buildSubject = async () => {
 
 const EMPTY = {
     agents: [],
-    hasChatbot: false,
     isFoundingMember: false,
 }
 
@@ -21,7 +20,6 @@ describe("toShellFacts", () => {
         const subject = await buildSubject()
         expect(
             subject.toShellFacts({
-                has_chatbot: true,
                 is_founding_member: true,
                 agents: [
                     { id: "a-1", name: "Mai", module: "sales", status: "paused" },
@@ -35,7 +33,6 @@ describe("toShellFacts", () => {
                 ],
             }),
         ).toEqual({
-            hasChatbot: true,
             isFoundingMember: true,
             agents: [
                 { id: "a-1", name: "Mai", module: "sales", status: "paused" },
@@ -56,7 +53,6 @@ describe("toShellFacts", () => {
         expect(subject.toShellFacts(true)).toEqual(EMPTY)
         expect(
             subject.toShellFacts({
-                has_chatbot: "yes",
                 is_founding_member: false,
                 agents: "none",
             }),

@@ -1,4 +1,5 @@
 import {
+    isLoopUntil,
     isStoredPresence,
     type GraphNodeAccount,
     type GraphSpec,
@@ -123,6 +124,13 @@ export const accountKindOf = (provider: string): string => KINDS.get(provider) ?
 const accountsOfStep = (step: GraphV2NodeStep): ReadonlyArray<GraphNodeAccount> =>
     step.accounts.map((provider) => ({ kind: accountKindOf(provider), provider, connectionId: null }))
 
+/**
+ * The words the map shows on a control step (R68: an `if`'s question, a wait, a loop, a hand-back, an outcome), carried as written; nothing
+ * when the step has none (the card keeps its generic word). A node step has no label: its node's title names it.
+ */
+const labelOf = (step: { readonly label?: SpecText | undefined }): { readonly label?: SpecText } =>
+    step.label === undefined ? {} : { label: step.label }
+
 /** A step of @2 as a node of the engine's graph (`nivo/agent-graph@1`). */
 const nodeOfStep = (step: GraphV2Step, lookups: GraphAdapterLookups): GraphSpecNode => {
     const roleOf = (fallback: NodeRole): NodeRole => lookups.legacyNodeOf(step.step)?.role ?? fallback
@@ -141,6 +149,8 @@ const nodeOfStep = (step: GraphV2Step, lookups: GraphAdapterLookups): GraphSpecN
                 // The step's ONE mode (the step's, else its node's: the @2 read writes it on every node step): always carried.
                 mode: step.mode,
                 accounts: accountsOfStep(step),
+                // R68: what the ENGINE does when the step ends unsuccessfully (notice, then `continue` or `end` at an outcome), as written.
+                ...(step.unsuccessful === undefined ? {} : { unsuccessful: step.unsuccessful }),
             }
         case "if":
             // A branch with no route (`no` of a compiled `callWorkflows`; either of `endItem` in a body) ends the run, or the item in a body.
@@ -153,6 +163,7 @@ const nodeOfStep = (step: GraphV2Step, lookups: GraphAdapterLookups): GraphSpecN
                     ...(step.routes.yes === undefined ? {} : { yes: step.routes.yes }),
                     ...(step.routes.no === undefined ? {} : { no: step.routes.no }),
                 },
+                ...labelOf(step),
             }
         case "call-workflow":
             return {
@@ -169,6 +180,7 @@ const nodeOfStep = (step: GraphV2Step, lookups: GraphAdapterLookups): GraphSpecN
                 step: step.step,
                 params: { outcome: step.params.outcome, outputs: bindingsJsonOf(step.params.outputs) },
                 ...(step.next === undefined ? {} : { next: step.next }),
+                ...labelOf(step),
             }
         case "wait":
             // Routes on `output.trigger` (the key that came, or `timeout`); a match value's ref is read when the wait begins.
@@ -181,6 +193,7 @@ const nodeOfStep = (step: GraphV2Step, lookups: GraphAdapterLookups): GraphSpecN
                     timeout: untilExprJsonOf(step.params.timeout),
                 },
                 routes: { ...step.routes },
+                ...labelOf(step),
             }
         case "hand-back":
             // `core.hand-back`: offers the event its wait took (same round) on to the next waiter, then to the registrations.
@@ -190,6 +203,7 @@ const nodeOfStep = (step: GraphV2Step, lookups: GraphAdapterLookups): GraphSpecN
                 step: step.step,
                 params: { wait: step.params.wait },
                 ...(step.next === undefined ? {} : { next: step.next }),
+                ...labelOf(step),
             }
         case "loop":
         default:
@@ -207,7 +221,17 @@ type AnyLoopStep = Exclude<GraphV2Step, { readonly kind: "node" | "if" | "call-w
  */
 const loopNodeOf = (step: AnyLoopStep, lookups: GraphAdapterLookups): GraphSpecNode => {
     const until = untilNodeOfStep(step)
-    if (until !== null) return until
+    // R68: an `until` loop that declares its notice carries it: the engine tells the team when it runs out of rounds; its label and the
+    // words of its two ways out (`exits`) are carried for the map.
+    if (until !== null) {
+        if (step.kind !== LOOP_KIND || !isLoopUntil(step)) return until
+        return {
+            ...until,
+            ...(step.unsuccessful === undefined ? {} : { unsuccessful: step.unsuccessful }),
+            ...labelOf(step),
+            ...(step.exits === undefined ? {} : { exits: step.exits }),
+        }
+    }
     const params = new Map<string, unknown>(Object.entries(step.params))
     const exit = step.next === undefined ? {} : { next: step.next }
     const text = (name: string): Readonly<Record<string, string>> => {
@@ -229,6 +253,7 @@ const loopNodeOf = (step: AnyLoopStep, lookups: GraphAdapterLookups): GraphSpecN
         },
         routes: { ...step.routes },
         ...exit,
+        ...(step.kind === LOOP_KIND ? labelOf(step) : {}),
     }
 }
 

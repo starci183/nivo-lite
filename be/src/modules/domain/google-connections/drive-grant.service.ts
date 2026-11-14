@@ -60,7 +60,8 @@ export class DriveGrantService implements DriveAccessSource {
     async disconnect(actor: ConnectionActor): Promise<void> {
         await this.connections.authorize(actor, OWNER)
         const rows = await this.connections.listByProvider(actor.workspaceId, PROVIDER, { includeDisconnected: true })
-        await Promise.all(rows.map((row) => this.connections.remove(actor.workspaceId, row.id)))
+        // The grant is the live one: a sandbox Drive account (the Sandbox page one) is not the owner grant and stays.
+        await Promise.all(rows.filter((row) => row.sandbox !== true).map((row) => this.connections.remove(actor.workspaceId, row.id)))
     }
 
     /**
@@ -93,10 +94,10 @@ export class DriveGrantService implements DriveAccessSource {
         return { state: row.status === "error" ? "lost" : "connected", email: row.meta.email ?? "" }
     }
 
-    /** The oldest live grant connection of the workspace. */
+    /** The oldest live grant connection of the workspace (a sandbox Drive account holds no token and is never the grant). */
     private async loadRow(workspaceId: string): Promise<ConnectionRecord | null> {
         const rows = await this.connections.listByProvider(workspaceId, PROVIDER, { includeDisconnected: false })
-        return rows[0] ?? null
+        return rows.find((row) => row.sandbox !== true) ?? null
     }
 
     /** A valid access token of the grant; a missing grant and a revoked one are the typed documents errors. */

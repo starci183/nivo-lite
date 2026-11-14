@@ -19,6 +19,8 @@ interface StopCardChipWords {
     readonly nivoReports: string
     readonly answered: string
     readonly skipped: string
+    /** The founder gave the conversation back to the AI after a take-over. */
+    readonly handedBack: string
     readonly timedOut: string
     readonly done: string
     readonly takenOver: string
@@ -66,6 +68,8 @@ const chipOf = (stop: TeamChatStop, words: StopCardChipWords): { readonly label:
             return stop.resolvedAt === null ? { label: words.answered, tone: "success" } : { label: words.done, tone: "success" }
         case "skipped":
             return { label: words.skipped, tone: "neutral" }
+        case "handed_back":
+            return { label: words.handedBack, tone: "neutral" }
         case "timed_out":
             return { label: words.timedOut, tone: "neutral" }
         case "resolved":

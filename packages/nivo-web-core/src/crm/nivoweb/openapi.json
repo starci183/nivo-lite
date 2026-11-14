@@ -799,21 +799,6 @@
         ],
         "type": "object"
       },
-      "ExecuteRenewalRequest": {
-        "properties": {
-          "dryRun": {
-            "type": "boolean"
-          },
-          "renewalId": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "renewalId"
-        ],
-        "type": "object"
-      },
       "ExpiringServicePageResponse": {
         "properties": {
           "items": {
@@ -1020,6 +1005,16 @@
             "format": "uuid",
             "type": "string"
           },
+          "invoiceNo": {
+            "maxLength": 40,
+            "nullable": true,
+            "type": "string"
+          },
+          "issuedOn": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
           "lines": {
             "items": {
               "$ref": "#/components/schemas/InvoiceDraftLineResponse"
@@ -1038,6 +1033,11 @@
             ],
             "type": "string"
           },
+          "providerRef": {
+            "maxLength": 200,
+            "nullable": true,
+            "type": "string"
+          },
           "purchaseId": {
             "format": "uuid",
             "nullable": true,
@@ -1050,7 +1050,8 @@
           },
           "state": {
             "enum": [
-              "draft"
+              "draft",
+              "issued"
             ],
             "type": "string"
           },
@@ -1079,7 +1080,10 @@
           "vatVnd",
           "totalVnd",
           "state",
-          "priceSource"
+          "priceSource",
+          "invoiceNo",
+          "providerRef",
+          "issuedOn"
         ],
         "type": "object"
       },
@@ -2111,6 +2115,29 @@
         ],
         "type": "object"
       },
+      "RecordIssuedInvoiceRequest": {
+        "properties": {
+          "invoiceNo": {
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          },
+          "issuedOn": {
+            "format": "date",
+            "type": "string"
+          },
+          "providerRef": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoiceNo",
+          "issuedOn"
+        ],
+        "type": "object"
+      },
       "RecordNoticeRequest": {
         "properties": {
           "channel": {
@@ -2259,8 +2286,14 @@
           "outcome": {
             "enum": [
               "renewed",
-              "failed"
+              "failed",
+              "pending"
             ],
+            "type": "string"
+          },
+          "providerRef": {
+            "maxLength": 200,
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -2372,9 +2405,6 @@
             "maxLength": 80,
             "type": "string"
           },
-          "dryRun": {
-            "type": "boolean"
-          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -2396,14 +2426,6 @@
           },
           "paymentCode": {
             "maxLength": 20,
-            "nullable": true,
-            "type": "string"
-          },
-          "plugin": {
-            "enum": [
-              "manual",
-              "mock"
-            ],
             "nullable": true,
             "type": "string"
           },
@@ -2473,8 +2495,6 @@
           "paymentCode",
           "transactionRef",
           "paidAt",
-          "dryRun",
-          "plugin",
           "providerRef",
           "newExpiresOn",
           "confirmedBy",
@@ -2493,26 +2513,18 @@
       },
       "ServiceStatusResponse": {
         "properties": {
-          "checkedBy": {
-            "enum": [
-              "person",
-              "mock"
-            ],
-            "type": "string"
-          },
           "expiresOn": {
             "format": "date",
             "nullable": true,
             "type": "string"
           },
-          "note": {
-            "maxLength": 200,
-            "type": "string"
-          },
-          "plugin": {
+          "expirySource": {
             "enum": [
-              "manual",
-              "mock"
+              "provider",
+              "estimated",
+              "invoice",
+              "confirmed",
+              "none"
             ],
             "type": "string"
           },
@@ -2527,15 +2539,18 @@
               "unknown"
             ],
             "type": "string"
+          },
+          "status": {
+            "maxLength": 40,
+            "type": "string"
           }
         },
         "required": [
           "serviceCode",
-          "plugin",
+          "status",
           "state",
           "expiresOn",
-          "checkedBy",
-          "note"
+          "expirySource"
         ],
         "type": "object"
       },
@@ -3041,8 +3056,7 @@
     "title": "nivo-web-lite",
     "version": "1.0.0",
     "x-nivo-source": {
-      "basePath": "/v1",
-      "key": "crm"
+      "basePath": "/v1"
     }
   },
   "openapi": "3.0.0",
@@ -3668,8 +3682,7 @@
         "tags": [
           "customer"
         ],
-        "x-crm-effect": "read",
-        "x-nivo-tool": "nivo.tool.crm.customer.find"
+        "x-crm-effect": "read"
       },
       "post": {
         "operationId": "customer.create",
@@ -3716,8 +3729,7 @@
           "purchase"
         ],
         "x-crm-effect": "write",
-        "x-nivo-effect": "irreversible",
-        "x-nivo-tool": "nivo.tool.crm.customer.create"
+        "x-nivo-effect": "irreversible"
       }
     },
     "/v1/customers/{code}": {
@@ -3768,8 +3780,7 @@
         ],
         "x-crm-effect": "read",
         "x-nivo-customer-audience": true,
-        "x-nivo-customer-parameter": "code",
-        "x-nivo-tool": "nivo.tool.crm.customer.get"
+        "x-nivo-customer-parameter": "code"
       }
     },
     "/v1/customers/{code}/balance": {
@@ -3880,8 +3891,7 @@
           "customer"
         ],
         "x-crm-effect": "write",
-        "x-nivo-effect": "none",
-        "x-nivo-tool": "nivo.tool.crm.customer.contact.update"
+        "x-nivo-effect": "none"
       }
     },
     "/v1/customers/{code}/contracts": {
@@ -4320,6 +4330,65 @@
           "invoice"
         ],
         "x-crm-effect": "read"
+      }
+    },
+    "/v1/invoice-drafts/{id}/invoice": {
+      "post": {
+        "operationId": "invoice.issued.record",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordIssuedInvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceDraftResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "serviceKey": []
+          }
+        ],
+        "summary": "Record the e-invoice issued for a draft: its number, the provider's reference and the issue date (issues nothing).",
+        "tags": [
+          "invoice"
+        ],
+        "x-crm-effect": "write",
+        "x-nivo-effect": "none"
       }
     },
     "/v1/invoices": {
@@ -5473,7 +5542,7 @@
             "serviceKey": []
           }
         ],
-        "summary": "List the open renewal requests (awaiting payment, paid, waiting for a person).",
+        "summary": "List the open renewal requests (awaiting payment, paid, a pending provider answer waiting for a person).",
         "tags": [
           "renewal"
         ],
@@ -5581,7 +5650,7 @@
             "serviceKey": []
           }
         ],
-        "summary": "A person confirms the provider outcome: renewed (moves the service's end date) or failed.",
+        "summary": "Record what the provider answered for a paid renewal: renewed (moves the service's end date), failed or pending, with its reference.",
         "tags": [
           "renewal"
         ],
@@ -5807,75 +5876,6 @@
         "x-nivo-effect": "none"
       }
     },
-    "/v1/services/{code}/renewals": {
-      "post": {
-        "operationId": "service.renewal.create",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "code",
-            "required": true,
-            "schema": {
-              "maxLength": 120,
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "Idempotency-Key",
-            "required": true,
-            "schema": {
-              "pattern": "^[A-Za-z0-9._:-]{1,200}$",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExecuteRenewalRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RenewalResponse"
-                }
-              }
-            },
-            "description": ""
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "serviceKey": []
-          }
-        ],
-        "summary": "Renew a service at its provider for a PAID request (COSTS MONEY once a live plugin exists; dryRun defaults to true).",
-        "tags": [
-          "renewal"
-        ],
-        "x-crm-effect": "write",
-        "x-nivo-effect": "money"
-      }
-    },
     "/v1/services/{code}/status": {
       "get": {
         "operationId": "service.status.get",
@@ -5918,7 +5918,7 @@
             "serviceKey": []
           }
         ],
-        "summary": "Get a service's state from its provider plugin (manual: a person checks; fixture: the CRM's own row, nothing called).",
+        "summary": "Get a service's state as the books hold it: status, end date and its source (asks no provider).",
         "tags": [
           "service"
         ],

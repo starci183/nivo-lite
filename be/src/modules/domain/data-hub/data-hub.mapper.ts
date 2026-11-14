@@ -16,4 +16,5 @@ export const toDataConnection = (
     meta: record.meta,
     everyMinutes: schedule.everyMinutes,
     lastSyncAt: schedule.lastSyncAt,
+    ...(record.sandbox ? { sandbox: true as const } : {}),
 })

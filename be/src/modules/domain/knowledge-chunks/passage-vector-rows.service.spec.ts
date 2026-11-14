@@ -54,7 +54,6 @@ describe("PassageVectorRowsService", () => {
 
         await expect(service.byIds(WS, [])).resolves.toEqual([])
         await expect(service.wantedAmong([])).resolves.toEqual([])
-        await expect(service.storedVectors(WS, [], "m1")).resolves.toEqual(new Map())
 
         expect(em.find).not.toHaveBeenCalled()
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
@@ -115,6 +114,8 @@ describe("PassageVectorRowsService (the existing passages and the stamp)", () =>
         await service.stamp(WS, [{ id: "c1", textHash: "h1" }, { id: "c2", textHash: "h2" }], "m1")
 
         expect(update?.callsOf("setParameters")).toEqual([[{ workspaceId: WS, model: "m1", ids: ["c1", "c2"] }]])
+        // Postgres records what the index accepted (the identity and when); it never writes or clears a vector.
+        expect(Object.keys(update?.callsOf("set")[0]?.[0] ?? {})).toEqual(["embeddingModel", "indexedAt"])
         expect(update?.callsOf("execute")).toHaveLength(1)
     })
 })

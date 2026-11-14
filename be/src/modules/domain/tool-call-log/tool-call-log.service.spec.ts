@@ -303,6 +303,25 @@ describe("ToolCallLogService: reading the log", () => {
         expect(fake.callsOf("limit")).toEqual([[100]])
     })
 
+    it("reads the accounts an `ok` call of the run acted on, the most recent first, each once", async () => {
+        const at = new Date("2026-11-14T02:00:00.000Z")
+        const fake = fakeQueryBuilder({
+            getMany: [
+                Object.assign(new ToolCallLogEntity(), { id: "l3", connectionId: "sandbox", createdAt: at }),
+                Object.assign(new ToolCallLogEntity(), { id: "l2", connectionId: "live", createdAt: at }),
+                Object.assign(new ToolCallLogEntity(), { id: "l1", connectionId: "sandbox", createdAt: at }),
+            ],
+        })
+        const em = mockEntityManager()
+        em.createQueryBuilder.mockReturnValue(fake.builder)
+        const log = await build(em)
+
+        await expect(log.connectionsUsedByRun("ws-1", "run-7", 20)).resolves.toEqual(["sandbox", "live"])
+        expect(fake.callsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", runId: "run-7", effectRights: "effect-rights" })
+        expect(fake.callsOf("orderBy")).toEqual([["l.createdAt", "DESC"]])
+        expect(fake.callsOf("limit")).toEqual([[20]])
+    })
+
     it("reads the newest lines of the workspace within the page, each named after its agent", async () => {
         const { agent_name: _name, ...stored } = ROW
         const fake = fakeQueryBuilder({

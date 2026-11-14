@@ -2,7 +2,6 @@ import { wakeOriginOf, type OptionalWakeOrigin } from "./wake-origin.policy"
 import { Injectable } from "@nestjs/common"
 import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTasksService } from "./agent-tasks.service"
 import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -34,7 +33,7 @@ export interface LiveWakeSubject {
 
 @Injectable()
 /**
- * What the work tab reads: the state, goals, tasks, triggers and recent turns of one agent, and the counts of a workspace. A turn is
+ * What the work tab reads: the state, tasks, triggers and recent turns of one agent, and the counts of a workspace. A turn is
  * listed with its source, outcome, usage and time, never its prompt, its proposal or a customer's words. The caller proves the member.
  */
 export class AgentWorkReadService {
@@ -42,7 +41,6 @@ export class AgentWorkReadService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly access: AgentWorkAccessService,
         private readonly settings: AgentWorkSettingsService,
-        private readonly goals: AgentGoalsService,
         private readonly tasks: AgentTasksService,
         private readonly triggers: AgentTriggersService,
     ) {}
@@ -103,15 +101,14 @@ export class AgentWorkReadService {
     /** The work of one agent of the workspace. */
     async agentWork(workspaceId: string, agentId: string): Promise<AgentWorkView> {
         await this.access.agent(workspaceId, agentId)
-        const [state, goals, tasks, triggers, turns, pendingWakes] = await Promise.all([
+        const [state, tasks, triggers, turns, pendingWakes] = await Promise.all([
             this.settings.stateOf(agentId),
-            this.goals.alive(agentId),
             this.tasks.alive(agentId),
             this.triggers.ofAgent(agentId),
             this.recentTurns(agentId),
             this.entityManager.count(AgentWakeEntity, { where: { agentId, status: "pending" } }),
         ])
-        return { state, goals, tasks, triggers, turns, pendingWakes }
+        return { state, tasks, triggers, turns, pendingWakes }
     }
 
     /** The workspace-wide switch with the counts beside it. */

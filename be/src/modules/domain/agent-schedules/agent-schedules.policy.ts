@@ -10,17 +10,8 @@ export const SWEEP_LIMIT = 200
 /** The most wakes one pass removes past retention, of each kind. */
 export const RETENTION_BATCH = 500
 
-/** How long a probe may take before the wake is skipped, in milliseconds. */
-export const PROBE_BUDGET_MS = 2000
-
 /** How late a slot must be before the sweep treats it as missed; the database function uses the same two minutes. */
 export const MISSED_AFTER_MS: number = 2 * MINUTE_MS
-
-/** How far back the probe of documents looks, in milliseconds. */
-export const PROBE_WINDOW_MS: number = 24 * 60 * MINUTE_MS
-
-/** The most items a probe names in its brief. */
-export const BRIEF_ITEMS = 5
 
 /** The triggers the module with this key declares for its agent; none when the catalogue has no such module or it declares none. */
 export const triggersOfModule = (

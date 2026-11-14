@@ -1,3 +1,4 @@
+import type { FileNotKept } from "@modules/domain/chat-files"
 import { Column, Entity } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
@@ -7,8 +8,10 @@ export type CustomerMessageDirection = "from_person" | "to_person"
 
 /** A file of a line as the row keeps it: an address, never the bytes. */
 export interface CustomerMessageFileValue {
-    /** Where the file is served from. */
-    readonly url: string
+    /** Where the file is served from; null for a file the person sent that could not be kept (`notKept` says why). */
+    readonly url: string | null
+    /** Why a file the person sent was not kept (chat-files `FileNotKept`); absent for a kept file. */
+    readonly notKept?: FileNotKept | undefined
     /** The name of the file, or empty. */
     readonly name: string
     /** The media type, or empty when the sender did not say. */

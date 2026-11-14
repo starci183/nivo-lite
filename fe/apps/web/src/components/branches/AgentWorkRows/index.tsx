@@ -50,7 +50,7 @@ const rowOf = (row: AgentWorkRow): ListRowData => ({
     ...(row.control === undefined ? {} : { control: row.control }),
 })
 
-/** Draws one list of the Work tab (goals, tasks, triggers) as a white card: its rows, or one notice saying it is empty. */
+/** Draws one list of the Work tab (tasks, triggers) as a white card: its rows, or one notice saying it is empty. */
 export const AgentWorkRows = (props: AgentWorkRowsProps) => (
     <SurfaceCard
         kind="list"

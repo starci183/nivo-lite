@@ -1,0 +1,215 @@
+import type { ReactNode } from "react"
+import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import {
+    Avatar,
+    Badge,
+    EmptyNotice,
+    ListBox,
+    PaneHeader,
+    PaneSection,
+    RelativeTime,
+    SearchField,
+    Stack,
+    Tabs,
+    type BadgeTone,
+    type FilterFields,
+    type ListBoxItem,
+    type SearchFields,
+} from "@starci/grammar/common"
+import type { inboxBlock } from "../blocks/inbox.block"
+import { countsView, tabEntriesOf, type TabSpec } from "../../../../shared/rows/filter-tabs"
+import { tabCountsOf } from "../../../../shared/rows/list-card"
+import { tabOf, paramsOfTab } from "../rows/inbox-tabs"
+import { INBOX_TABS, threadRowsOf, type ThreadListRow, type ThreadStatus } from "../rows/thread-rows"
+import { chosenRow, recordsView, selectionOf } from "../../../../shared/rows/rows"
+import { queryOf } from "../../../../shared/rows/search"
+import { derivedSlot, parsedSlot } from "../../../../shared/slots/slots"
+import { usePaneSearch } from "../../../../shared/client/composites/usePaneSearch"
+import { useBlockWords, useSlotLabels } from "../../../../shared/client/composites/useBlockWords"
+import type { RenderOf } from "../../../../shared/client/render-props"
+
+/** What the list pane is given: the inbox's own props, slots and params. */
+type InboxListProps = RenderOf<typeof inboxBlock>
+
+/** The look of a status chip: needs a person is a warning, held by a person is info, answered by the AI is neutral. */
+const STATUS_TONE: Readonly<Record<ThreadStatus, BadgeTone>> = {
+    needs: "warning",
+    handled: "info",
+    ai: "neutral",
+}
+
+/** The words of a row's chips. */
+interface RowWords {
+    /** The language of the viewer, for the time at the end of a row. */
+    readonly locale: string
+    readonly status: (row: ThreadListRow) => string
+    readonly channel: (key: string) => string
+}
+
+/** The end of a row: the time over its two chips, the status with its dot and the channel. */
+const trailingOf = (row: ThreadListRow, words: RowWords): ReactNode => (
+    <Stack gap="inline" align="end">
+        {row.at === "" ? null : <RelativeTime dateTime={row.at} locale={words.locale} size="sm" tone="muted" />}
+        {row.status === null ? null : (
+            <Badge tone={STATUS_TONE[row.status]} isDot>
+                {words.status(row)}
+            </Badge>
+        )}
+    </Stack>
+)
+
+/** The row of the Grammar list for one conversation: avatar, name, last words, and the time and chips at the end. */
+const itemOf = (row: ThreadListRow, words: RowWords): ListBoxItem => ({
+    id: row.id,
+    label: row.name,
+    leading: <Avatar name={row.name} {...(row.avatar === "" ? {} : { src: row.avatar })} isDecorative />,
+    ...(row.preview === "" ? {} : { description: row.preview }),
+    trailing: trailingOf(row, words),
+})
+
+/** The tabs of the inbox as the filter zone of its card, with their counts; a counts read that failed or is loading leaves the tabs without them. */
+const filterOf = (props: InboxListProps, words: ReturnType<typeof useBlockWords>): FilterFields => {
+    const specs: ReadonlyArray<TabSpec> = INBOX_TABS.map((value) => ({
+        value,
+        label: words({ key: `inbox_tab_${value}` }),
+        attention: value === "needs",
+    }))
+    const view = tabCountsOf(parsedSlot(props.slots.counts.slot, countsView))
+    return {
+        label: words({ key: "status_filter_label" }),
+        moreLabel: () => words({ key: "filtersOverflow" }),
+        overflowLabel: words({ key: "filtersOverflow" }),
+        selectedKey: tabOf(props.params.value(props.props.statusParam), props.params.value(props.props.periodParam)),
+        items: tabEntriesOf(words({ key: "filter_all" }), specs, view).map((entry) =>
+            view !== null && entry.id === "today" && !("today" in view.counts)
+                ? { id: entry.id, label: entry.label }
+                : entry,
+        ),
+        onSelect: (key) => {
+            const chosen = paramsOfTab(key)
+            props.params.setMany({
+                [props.props.statusParam]: chosen.status,
+                [props.props.periodParam]: chosen.period,
+            })
+        },
+    }
+}
+
+/** What the head of the list pane takes. */
+interface InboxHeadProps {
+    readonly label: string
+    /** How many conversations the inbox holds, as the chip after the title; null while unknown. */
+    readonly total: number | null
+    readonly filter: FilterFields
+    /** The search zone; null draws no search. */
+    readonly search: SearchFields | null
+}
+
+/** What the search band takes. */
+interface InboxSearchProps {
+    readonly search: SearchFields
+}
+
+/** The search band under the heading. */
+const InboxSearch = (props: InboxSearchProps): ReactNode => {
+    const { search } = props
+    return (
+        <PaneSection>
+            <SearchField
+                label={search.label}
+                isLabelHidden
+                {...(search.placeholder === undefined ? {} : { placeholder: search.placeholder })}
+                {...(search.clearLabel === undefined ? {} : { clearLabel: search.clearLabel })}
+                value={search.value}
+                onValueChange={search.onChange}
+                onClear={() => search.onChange("")}
+            />
+        </PaneSection>
+    )
+}
+
+/** The bands over the rows: the heading, the filter tabs with their counts and the search. */
+const InboxHead = (props: InboxHeadProps): ReactNode => {
+    const { filter, search, label } = props
+    return (
+        <>
+            <PaneSection align="center">
+                <PaneHeader
+                    title={label}
+                    {...(props.total === null ? {} : { status: <Badge tone="neutral">{String(props.total)}</Badge> })}
+                />
+            </PaneSection>
+            {search === null ? null : <InboxSearch search={search} />}
+            <PaneSection>
+                <Tabs
+                    kind="filter"
+                    label={filter.label}
+                    selectedKey={filter.selectedKey}
+                    onSelect={filter.onSelect}
+                    items={filter.items}
+                    {...(filter.moreLabel === undefined ? {} : { moreLabel: filter.moreLabel })}
+                    inset="none"
+                />
+            </PaneSection>
+        </>
+    )
+}
+
+/** The list pane of the inbox, as the bands of a white pane: its heading, the filter tabs with their counts, the search, then a row per conversation in the pane's own scroll band. */
+export const InboxList = (props: InboxListProps): ReactNode => {
+    const host = useBlockHost()
+    const words = useBlockWords()
+    const searched = queryOf(props.params.value(props.props.searchParam))
+    const labels = useSlotLabels({ key: searched === null ? "list_empty" : "list_empty_search" })
+    const search = usePaneSearch(props.params, props.props.searchParam, {
+        label: words({ key: "search_label" }),
+        clearLabel: words({ key: "searchClear" }),
+    })
+    const filter = filterOf(props, words)
+    const read = props.slots.threads
+    const rowWords = {
+        untitled: words({ key: "inbox_untitled" }),
+        byPerson: words({ key: "inbox_by_person" }),
+        byAi: words({ key: "inbox_by_ai" }),
+    }
+    const rows = derivedSlot(parsedSlot(read.slot, recordsView), (records) => threadRowsOf(records, rowWords))
+    const chipWords: RowWords = {
+        locale: host.locale(),
+        status: (row) =>
+            row.status === "handled" && row.handledBy !== ""
+                ? `${row.handledBy}${words({ key: "inbox_status_handled_suffix" })}`
+                : words({ key: `row_${row.status ?? "ai"}` }),
+        channel: (key) => words({ key: `channel_${key}` }),
+    }
+    const label = words({ key: "list_label" })
+    const total = tabCountsOf(parsedSlot(props.slots.counts.slot, countsView))?.total ?? null
+    return (
+        <>
+            <InboxHead label={words({ key: "tab_inbox" })} total={total} filter={filter} search={search} />
+            <PaneSection scroll={{ label }}>
+                <SlotView
+                    slot={rows}
+                    labels={labels}
+                    placeholder={[]}
+                    onRetry={read.retry}
+                    frame={(notice: ReactNode) => notice}
+                    render={(items, isLoading) => (
+                        <ListBox
+                            label={label}
+                            items={items.map((row) => itemOf(row, chipWords))}
+                            selectionMode="single"
+                            selectionIndicator="none"
+                            selectedIds={selectionOf(props.params.value(props.props.selectParam))}
+                            onSelectionChange={(ids) => {
+                                const id = chosenRow(ids)
+                                if (id !== null) props.params.set(props.props.selectParam, id)
+                            }}
+                            isLoading={isLoading}
+                            emptyContent={<EmptyNotice frame="frameless" message={labels.empty} />}
+                        />
+                    )}
+                />
+            </PaneSection>
+        </>
+    )
+}

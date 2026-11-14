@@ -114,7 +114,6 @@ const ANSWERS: Readonly<Record<string, FixtureAnswer>> = {
             })),
             approvals: [],
             exceptions: [],
-            hasChatbot: true,
             isFoundingMember: false,
             leadCount: 5,
             openResponsibilityCount: 3,

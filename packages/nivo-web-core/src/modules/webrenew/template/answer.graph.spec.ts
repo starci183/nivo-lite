@@ -1,7 +1,6 @@
 import type { StoredExpr, StoredRef } from "@nivo-lite/agent-sdk/graph"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { exprHolds } from "@nivo-lite/agent-sdk/template"
-import { teamDeclinedNoticeNode } from "@nivo-lite/blocks-core"
 import { webdeskUnderstandSalesNode } from "../../../nodes/webdesk/understand-sales.node"
 import { webrenewReplyAnswerNode } from "../../../nodes/webrenew/reply-answer.node"
 import { webrenewUnderstandOpenNode } from "../../../nodes/webrenew/understand-open.node"
@@ -77,9 +76,13 @@ describe("webrenew.answer v14: the conversation as one run (R53)", () => {
     it("a person declining the reply stops the talk and the run ends declined, as in v13", () => {
         const declined = exampleOutput(webrenewReplyAnswerNode.examples, (output) => output["declined"] === true)
         expect(holds("talk", "until", { steps: { reply: { output: declined }, understand: { output: understood("ask") } } })).toBe(true)
-        const posted = exampleOutput(teamDeclinedNoticeNode.examples, (output) => output["posted"] === true)
-        expect(holds("settled", "when", talkEnded(posted))).toBe(false)
-        expect(holds("declined-said", "when", talkEnded(posted))).toBe(true)
+        // R68: no notice node ends the round any more (the ENGINE tells the team); the round's last node step is the declined reply
+        // itself (`reply-declined` ends the round), and `declined-said` reads its `declined`.
+        expect(holds("settled", "when", talkEnded(declined))).toBe(false)
+        expect(holds("declined-said", "when", talkEnded(declined))).toBe(true)
+        const answered = exampleOutput(webrenewReplyAnswerNode.examples, (output) => output["declined"] === false)
+        expect(holds("declined-said", "when", talkEnded(answered))).toBe(false)
+        expect(steps.find((one) => one.key === "reply")).toMatchObject({ next: "reply-declined", unsuccessful: { then: "continue" } })
     })
 
     it("a day without a message after an answered question ends `answered` (v13's outcome of that message), with no notice", () => {

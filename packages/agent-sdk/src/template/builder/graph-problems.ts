@@ -21,6 +21,7 @@ import type {
     GraphV2WaitOn,
     GraphV2WaitStep,
     LoopEvery,
+    NoticeFactSpec,
     StoredExpr,
     StoredRef,
 } from "../../graph/graph-spec-v2.types"
@@ -31,6 +32,7 @@ import {
     LOOP_OVER_CAP,
     LOOP_UNTIL_CAP,
     LOOP_UNTIL_WAIT_CAP,
+    UNSUCCESSFUL_FACTS_MAX,
     WAIT_ROUTE_MEMBER,
     WAIT_TIMEOUT_ROUTE,
     WAIT_TRIGGERS_MAX,
@@ -152,6 +154,15 @@ const untilEdges = (step: GraphV2LoopUntilStep): ReadonlyArray<string> =>
 const forwardEdgesOf = (step: GraphV2Step): ReadonlyArray<string> =>
     edgesOfStep(step).filter((to) => step.loop === undefined || to !== step.loop)
 
+/**
+ * The outcome step a node step's unsuccessful ending goes to (`then: "end"`, R68), or none. It is no edge of the graph as written (the
+ * ENGINE takes it, never a route): it only makes that outcome step reached, so it is no `GRAPH_NODE_UNREACHABLE`.
+ */
+const unsuccessfulEndOf = (step: GraphV2Step): ReadonlyArray<string> =>
+    step.kind === "node" && step.unsuccessful?.then === "end" && step.unsuccessful.outcome !== undefined
+        ? [step.unsuccessful.outcome]
+        : []
+
 /** The graph's steps by key, and the steps each one comes from. */
 interface Shape {
     /** Every step by its key. */
@@ -197,7 +208,7 @@ const shapeOf = (spec: GraphSpecV2): Shape => {
         const step = byKey.get(key)
         if (step !== undefined && !reached.has(key)) {
             reached.add(key)
-            pending.push(...edgesOfStep(step))
+            pending.push(...edgesOfStep(step), ...unsuccessfulEndOf(step))
         }
     }
     const order = topologicalOrder(byKey)
@@ -226,6 +237,9 @@ const reachedFrom = (
     return reached
 }
 
+/** The member a node's output names its declined form by: the `declined: true` branch a `ToolDeclined` answer forces on the node. */
+const DECLINED_MEMBER = "declined"
+
 /** The route names of a step grouped by the target they lead to, in the order the routes are written. */
 const routeNamesByTarget = (routes: Readonly<Record<string, string>>): Map<string, Array<string>> => {
     const byTarget = new Map<string, Array<string>>()
@@ -236,7 +250,8 @@ const routeNamesByTarget = (routes: Readonly<Record<string, string>>): Map<strin
 /**
  * NARROWING: what the road to each step proves. A branch of a step is its edge to one target: an `if`'s `yes` (when `when` held) or `no`
  * (`ifFacts`; only when the two go to different steps), a routing node's route(s) to one target (`routeFact`: its `routeBy` member is
- * one of the names that lead there; only for a node with no `next`). A step is reached ONLY through a branch when cutting that edge leaves
+ * one of the names that lead there; only for a node with no `next`), a node step whose unsuccessful ending ENDS the run (its exits carry
+ * no `declined: true`, R68). A step is reached ONLY through a branch when cutting that edge leaves
  * it unreached from the start (every path to it takes the edge): the branch's facts hold at that step, and only there. A body step is cut
  * off from the steps after its loop (no edge leaves a body), so nothing proven in a body holds past it. Read from the stored @2 steps
  * (`routeBy`, `routes`, `when`), so a stored graph narrows as its builder does.
@@ -267,6 +282,12 @@ const factsOf = (start: string, byKey: ReadonlyMap<string, GraphV2Step>): ((key:
         ) {
             for (const [to, names] of routeNamesByTarget(step.routes))
                 branch(step.key, to, [routeFact(step.key, step.routeBy, names)])
+        }
+        if (step.kind === "node" && step.unsuccessful?.then === "end") {
+            // R68: a step whose declined approval ENDS the run (the engine tells the team and goes to the step's outcome) never leaves by
+            // its own exits in its declined form (`ToolDeclined` is the node's `declined: true` branch), so those exits read the other.
+            const declined: RefFact = { root: `steps.${step.key}`, path: [DECLINED_MEMBER], test: { kind: "notIn", values: [true] } }
+            for (const to of new Set([step.next, ...Object.values(step.routes ?? {})])) branch(step.key, to, [declined])
         }
     }
     return (key) => branches.flatMap((one) => (one.only.has(key) ? one.facts : []))
@@ -976,6 +997,18 @@ const takesNothingAt = (member: z.ZodType, memberJson: Json, path: ReadonlyArray
     return !(Array.isArray(required) && required.includes(last))
 }
 
+/** The refs of a step's notice facts (R68): any JSON fits a fact, and a fact that reads nothing is left out of the notice. */
+const noticeFactSites = (step: GraphV2Step, facts: ReadonlyArray<NoticeFactSpec> | undefined): ReadonlyArray<RefSite> =>
+    (facts ?? []).flatMap((fact, index) =>
+        refsIn(fact.value, []).map(({ ref, path }) => ({
+            step,
+            at: [`nodes.${step.key}.unsuccessful.facts.${index}`, ...path].join("."),
+            target: UNTYPED,
+            ref,
+            takesNothing: true,
+        })),
+    )
+
 /** The sites of the refs of a step, with the schema each must fit. */
 const sitesOf = (step: GraphV2Step, context: TemplateGraphContext): ReadonlyArray<RefSite> => {
     const at = `nodes.${step.key}.params`
@@ -992,7 +1025,7 @@ const sitesOf = (step: GraphV2Step, context: TemplateGraphContext): ReadonlyArra
     switch (step.kind) {
         case "node": {
             const node = context.nodes.get(step.step)
-            return Object.entries(step.params).flatMap(([member, binding]) => {
+            const params = Object.entries(step.params).flatMap(([member, binding]) => {
                 const schema = node === undefined ? null : memberSchemaOf(node, member)
                 const memberJson = schema === null ? UNTYPED : jsonSchemaOf(schema, "input")
                 return refsIn(binding, []).map(({ ref, path }) => {
@@ -1006,6 +1039,7 @@ const sitesOf = (step: GraphV2Step, context: TemplateGraphContext): ReadonlyArra
                     }
                 })
             })
+            return [...params, ...noticeFactSites(step, step.unsuccessful?.facts)]
         }
         case "if":
             return exprRefsOf(step.params.when).map((ref, index) => ({
@@ -1019,14 +1053,18 @@ const sitesOf = (step: GraphV2Step, context: TemplateGraphContext): ReadonlyArra
             const params = step.params
             if (params.mode === "over")
                 return [{ step, at: `${at}.items`, target: { type: "array" }, ref: params.items, takesNothing: true }]
-            if (isUntilRoute(params.until)) return []
-            return exprRefsOf(params.until).map((ref, index) => ({
-                step,
-                at: `${at}.until.${index}`,
-                target: UNTYPED,
-                ref,
-                takesNothing: true,
-            }))
+            const facts = noticeFactSites(step, isLoopUntil(step) ? step.unsuccessful?.facts : undefined)
+            if (isUntilRoute(params.until)) return facts
+            return [
+                ...exprRefsOf(params.until).map((ref, index) => ({
+                    step,
+                    at: `${at}.until.${index}`,
+                    target: UNTYPED,
+                    ref,
+                    takesNothing: true,
+                })),
+                ...facts,
+            ]
         }
         case "call-workflow":
             return untypedSites(step.params.inputs, "inputs.")
@@ -1458,6 +1496,36 @@ const catalogueProblems = (spec: GraphSpecV2): ReadonlyArray<Problem> => {
     ]
 }
 
+/**
+ * The problems of the unsuccessful endings (R68): too many notice facts; on a node step, an ending that ends the run with no outcome, an
+ * outcome that is not an outcome step outside every loop, an outcome beside `continue`, and `end` inside a body whose items run at once.
+ * A hand-made notice still drawn after such a step is NOT a problem (the package's conversion removes it).
+ */
+const unsuccessfulProblems = (spec: GraphSpecV2, shape: Shape): ReadonlyArray<Problem> =>
+    spec.nodes.flatMap((step): ReadonlyArray<Problem> => {
+        const at = `nodes.${step.key}.unsuccessful`
+        if (step.kind === "loop" && isLoopUntil(step))
+            return (step.unsuccessful?.facts.length ?? 0) > UNSUCCESSFUL_FACTS_MAX
+                ? [{ code: "GRAPH_UNSUCCESSFUL_FACTS_TOO_MANY", at: `${at}.facts` }]
+                : []
+        if (step.kind !== "node" || step.unsuccessful === undefined) return []
+        const { then, outcome, facts } = step.unsuccessful
+        const problems: Array<Problem> = []
+        if (facts.length > UNSUCCESSFUL_FACTS_MAX) problems.push({ code: "GRAPH_UNSUCCESSFUL_FACTS_TOO_MANY", at: `${at}.facts` })
+        if (then === "continue") {
+            if (outcome !== undefined) problems.push({ code: "GRAPH_UNSUCCESSFUL_OUTCOME_UNUSED", at: `${at}.outcome` })
+            return problems
+        }
+        if (outcome === undefined) return [...problems, { code: "GRAPH_UNSUCCESSFUL_OUTCOME_MISSING", at: `${at}.outcome` }]
+        const target = shape.byKey.get(outcome)
+        if (target?.kind !== "outcome" || target.loop !== undefined)
+            problems.push({ code: "GRAPH_UNSUCCESSFUL_OUTCOME_UNKNOWN", at: `${at}.outcome` })
+        const loop = step.loop === undefined ? undefined : shape.byKey.get(step.loop)
+        if (loop?.kind === "loop" && isLoopOver(loop) && loop.params.concurrency > 1)
+            problems.push({ code: "GRAPH_UNSUCCESSFUL_END_IN_FANOUT", at: `${at}.then` })
+        return problems
+    })
+
 /** The problems of the outcome steps against the declared outcomes: an undeclared name, outputs other than the declared ones. */
 const outcomeProblems = (spec: GraphSpecV2): ReadonlyArray<Problem> =>
     spec.nodes.flatMap((step): ReadonlyArray<Problem> => {
@@ -1488,6 +1556,7 @@ export const templateGraphProblems = (spec: GraphSpecV2, context: TemplateGraphC
         ...expressionProblems(spec, shape, context),
         ...waitProblems(spec, context),
         ...handBackProblems(spec, shape),
+        ...unsuccessfulProblems(spec, shape),
 
         ...triggerProblems(spec, context),
         ...handoffProblems(spec, context),

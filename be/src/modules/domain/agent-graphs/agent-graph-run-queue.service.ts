@@ -7,7 +7,6 @@ import { DeliveredWakesService } from "@modules/domain/provider-triggers/deliver
 import { NODE_EFFECT_STORE, type NodeEffectStore, type NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
-import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
 import { AgentGraphRawRowsService } from "./agent-graph-raw-rows.service"
 import type { StepPlace } from "./policies/turn-policy.policy"
 import { pipelineVerbOf } from "./policies/workflow-trigger.policy"
@@ -57,11 +56,11 @@ const eventsOf = (args: Readonly<Record<string, unknown>> | null): ReadonlyArray
 /**
  * THE RUN QUEUE (D5 of the one event pipeline; ROAD-API section 4): an event of a run's key that arrived while the run was in flight is
  * queued on it, and the next step visit of the run TAKES what is queued as a fixed snapshot (`ctx.run.queue`). Queued means: a pending wake
- * of the run's own lock scope and workflow (the lease kept the drain off it while a step ran), or an event the freeze gate held for the run
- * while it waited at a stop. The snapshot is written once per step visit in the effect ledger (`queue:<run>:<step>:<visit>`, the visit
+ * of the run's own lock scope and workflow (the lease kept the drain off it while a step ran), or, for a step that runs again after a
+ * person's decision, an event held behind the run (`waiting:<run>`, rule Q-1) while it waited at its stop. The snapshot is written once per step visit in the effect ledger (`queue:<run>:<step>:<visit>`, the visit
  * being the founder answers the step's turn carries): a re-run of the same visit reads the same events and takes nothing new; a visit
- * after an answer keeps what the step took before and adds what came since. Taking closes the wake (`queued:<run>`) or marks the held
- * event `taken`, so the drain starts no run for it and the release replays none of it; what no step took starts the next run of the key.
+ * after an answer keeps what the step took before and adds what came since. Taking closes the wake (`queued:<run>`), pending or held, so
+ * the drain starts no run for it and the release offers none of it again; what no step took starts the next run of the key.
  */
 export class AgentGraphRunQueueService {
     constructor(
@@ -69,12 +68,11 @@ export class AgentGraphRunQueueService {
         private readonly runs: AgentRunsService,
         private readonly wakes: DeliveredWakesService,
         @Optional() @Inject(NODE_EFFECT_STORE) private readonly ledger?: NodeEffectStore,
-        @Optional() private readonly holds?: AgentGraphFreezeGateService,
         @Optional() private readonly raw?: AgentGraphRawRowsService,
     ) {}
 
     /** The queue snapshot of a step visit: the scopes of the events it took, oldest first; none outside a run or with no ledger. */
-    async snapshotOf(turn: NodeTurn, place: StepPlace | null): Promise<ReadonlyArray<JsonObject>> {
+    async snapshotOf(turn: NodeTurn, place: StepPlace | null, afterDecision = false): Promise<ReadonlyArray<JsonObject>> {
         const { ledger } = this
         if (place === null || ledger === undefined) return []
         const visit = (turn.founderAnswers ?? []).length
@@ -83,12 +81,12 @@ export class AgentGraphRunQueueService {
         if (kept !== null) {
             const events = eventsOf(kept.args)
             // A crash between the snapshot and the claim: the claim is made again (it changes nothing when it was made).
-            await this.claim(turn.workspaceId, place.runId, events, `${place.runId}:${place.stepKey}:${visit}`)
+            await this.claim(turn.workspaceId, place.runId, events)
             return events.map((event) => event.scope)
         }
         const before =
             visit === 0 ? [] : eventsOf((await ledger.byKey(turn.workspaceId, snapshotKeyOf(place.runId, place.stepKey, visit - 1)))?.args ?? null)
-        const fresh = await this.queuedOf(turn.workspaceId, place.runId, await this.isFirstVisit(turn.workspaceId, place.runId))
+        const fresh = await this.queuedOf(turn.workspaceId, place.runId, await this.isFirstVisit(turn.workspaceId, place.runId), afterDecision)
         const taken = new Set(before.map((event) => event.wakeId))
         const events = [...before, ...fresh.filter((event) => !taken.has(event.wakeId))]
         const wrote = await ledger.insert(turn.workspaceId, {
@@ -103,19 +101,20 @@ export class AgentGraphRunQueueService {
         })
         // A lost race: another try of the same visit wrote its snapshot first; that one is the visit's.
         const settled = wrote ? events : eventsOf((await ledger.byKey(turn.workspaceId, key))?.args ?? null)
-        await this.claim(turn.workspaceId, place.runId, settled, `${place.runId}:${place.stepKey}:${visit}`)
+        await this.claim(turn.workspaceId, place.runId, settled)
         return settled.map((event) => event.scope)
     }
 
     /**
-     * What is queued on the run and not taken yet, oldest first: the events the freeze gate held for it while it waited at a stop, then the
+     * What is queued on the run and not taken yet, oldest first: the events held behind it (`waiting:<run>`, rule Q-1) while it waited at a stop, then the
      * pending wakes of its own lock scope that its own workflow's registration took (a wake of another workflow on the same key starts its
      * own run). At most `QUEUE_TAKE_MAX`.
      */
     /**
      * True for the run's FIRST step visit (a run-level ledger row `queue:<run>` written once, insert-or-nothing): only then are the
      * pending wakes of its subject taken (the next run takes the whole waiting list). No event is pushed into a run that has started: a
-     * later visit takes only the events a founder stop held for it (R18). With no ledger, every visit is the first.
+     * step visit after a person's decision on a stop of the run takes the events held behind it while it waited (R18, rule Q-1).
+     * With no ledger, every visit is the first.
      */
     private async isFirstVisit(workspaceId: string, runId: string): Promise<boolean> {
         const { ledger } = this
@@ -160,13 +159,13 @@ export class AgentGraphRunQueueService {
         return typeof settled === "number" ? settled : waiting
     }
 
-    private async queuedOf(workspaceId: string, runId: string, first: boolean): Promise<ReadonlyArray<QueuedEvent>> {
+    private async queuedOf(workspaceId: string, runId: string, first: boolean, afterDecision: boolean): Promise<ReadonlyArray<QueuedEvent>> {
         const run = await this.runs.runOf(workspaceId, runId)
         if (run === null) return []
-        const held = (await this.holds?.untakenOfRun(workspaceId, runId)) ?? []
-        const fromHolds = held.flatMap((event): ReadonlyArray<QueuedEvent> =>
-            event.trigger === undefined ? [] : [{ wakeId: event.wakeId, scope: this.withoutGateMembers(event.trigger) }],
-        )
+        // After a person decided on a stop of the run, its step visits take the events held behind it while it stopped (its work).
+        const held = afterDecision ? await this.wakes.heldBehind(this.entityManager, workspaceId, runId, QUEUE_TAKE_MAX) : []
+        const fromHolds: Array<QueuedEvent> = []
+        for (const wake of held) fromHolds.push({ wakeId: wake.id, scope: await this.scopeOfWake(workspaceId, wake) })
         const scopeKey: unknown = run.context[THREAD_SCOPE]
         const workflowId: unknown = run.context.workflowId
         if (!first || typeof scopeKey !== "string" || typeof workflowId !== "string") return fromHolds.slice(0, QUEUE_TAKE_MAX)
@@ -193,17 +192,10 @@ export class AgentGraphRunQueueService {
         })
     }
 
-    /** A held event's scope as its step reads it: the engine's own gate members (the route under its engine name, the workflow) left out. */
-    private withoutGateMembers(trigger: Readonly<Record<string, unknown>>): JsonObject {
-        const { conversationId: _route, workflowId: _workflow, ...scope } = trigger
-        return jsonObjectOf(scope)
-    }
-
-    /** Takes the events of a snapshot: closes their pending wakes and marks the held ones taken by the visit. Idempotent. */
-    private async claim(workspaceId: string, runId: string, events: ReadonlyArray<QueuedEvent>, visit: string): Promise<void> {
+    /** Takes the events of a snapshot: closes their wakes, pending or held behind the run (`queued:<run>`). Idempotent. */
+    private async claim(workspaceId: string, runId: string, events: ReadonlyArray<QueuedEvent>): Promise<void> {
         const ids = events.map((event) => event.wakeId)
         if (ids.length === 0) return
         await this.wakes.claimQueued(this.entityManager, workspaceId, ids, runId)
-        await this.holds?.markTaken(workspaceId, runId, ids, visit)
     }
 }

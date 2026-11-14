@@ -1,6 +1,12 @@
 import { mapSlot } from "@/hooks/slot"
-import { QUERY_CONTACT_MODULE_BLOCKS_SWR_KEY, QUERY_CONTACT_SWR_KEY, QUERY_CONTACTS_SWR_KEY } from "@/hooks/swr"
-import { detailOf, type ContactDetailWire } from "@/modules/contacts"
+import {
+    QUERY_CONTACT_MODULE_BLOCKS_SWR_KEY,
+    QUERY_CONTACT_SWR_KEY,
+    QUERY_CONTACTS_SWR_KEY,
+    QUERY_CONTACT_MESSAGES_SWR_KEY,
+    QUERY_CONTACT_WORK_SWR_KEY,
+} from "@/hooks/swr"
+import { detailOf, type ContactDetailWire, type ContactWorkWire } from "@/modules/contacts"
 import { mutate } from "@/modules/viewer-cache"
 import type { ContactDetailView, ContactWords, DataSlot } from "@/modules/types"
 
@@ -9,6 +15,8 @@ const CONTACT_KEYS: ReadonlySet<string> = new Set([
     QUERY_CONTACT_SWR_KEY,
     QUERY_CONTACTS_SWR_KEY,
     QUERY_CONTACT_MODULE_BLOCKS_SWR_KEY,
+    QUERY_CONTACT_MESSAGES_SWR_KEY,
+    QUERY_CONTACT_WORK_SWR_KEY,
 ])
 
 /** Revalidates the list and the open person after a change to a person. */
@@ -30,6 +38,8 @@ export const linkOutcomeKeyOf = (outcome: string): (typeof LINK_OUTCOME_KEYS)[ke
 /** What the detail of a person is worded and filtered with. */
 interface DetailSlotOptions {
     readonly canDelete: boolean
+    /** The work the agents did for the person (its own read); undefined until read. */
+    readonly work: ContactWorkWire | undefined
     /** Suggestions the viewer dismissed this visit: they are left out. */
     readonly dismissed: ReadonlySet<string>
 }
@@ -43,6 +53,6 @@ export const detailSlotOf = (
     slot === null
         ? null
         : mapSlot(slot, (raw) => {
-              const view = detailOf(raw, words, { canDelete: options.canDelete })
+              const view = detailOf(raw, words, { canDelete: options.canDelete, work: options.work })
               return { ...view, suggestions: view.suggestions.filter((one) => !options.dismissed.has(one.contactId)) }
           })

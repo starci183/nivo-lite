@@ -120,29 +120,6 @@ describe("PassageSearchService", () => {
             expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
     })
-
-    describe("byMeaning", () => {
-        it("orders by the distance alone (the vector index serves it), compares vectors of the query model only, in the lens", async () => {
-            const em = mockEntityManager()
-            const [fake] = queueQueryBuilders(em, [
-                { getRawMany: [raw("b", { distance: 0.31 }), raw("a", { distance: "0.31" }), raw("far", { distance: 0.93 }), raw("c", { distance: 0.1 })] },
-            ])
-
-            const hits = await (await build(em)).byMeaning(customer, { vector: "[1,2]", model: "m1@1536", limit: 40 })
-
-            // A passage too far to be a hit is left out; ties are settled by id.
-            expect(hits.map((hit) => [hit.id, hit.distance])).toEqual([["c", 0.1], ["a", 0.31], ["b", 0.31]])
-            expect(conditionsOf(fake)).toEqual([...LENS, ...SERVED, ["c.embeddingModel = :model"], ["c.embedding IS NOT NULL"]])
-            expect(fake?.callsOf("setParameters")).toEqual([[{ model: "m1@1536", vector: "[1,2]" }]])
-            expect(fake?.callsOf("addSelect")).toContainEqual([
-                "(c.embedding OPERATOR(extensions.<=>) CAST(:vector AS extensions.vector))",
-                "distance",
-            ])
-            expect(fake?.callsOf("orderBy")).toEqual([["distance", "ASC"]])
-            expect(fake?.callsOf("addOrderBy")).toEqual([])
-            expect(fake?.callsOf("limit")).toEqual([[40]])
-        })
-    })
 })
 
 describe("PassageSearchService reads by place", () => {

@@ -18,6 +18,7 @@ import { StopLearningService } from "./stops/stop-learning.service"
 import { ThreadDeadlineQueueModule } from "@modules/queues/thread-deadline"
 import { ThreadApprovalsService } from "./thread-approvals.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
+import { ThreadWaitExpiryService } from "./thread-wait-expiry.service"
 import { ThreadGraphsService } from "./thread-graphs.service"
 import { ThreadProjectionService } from "./thread-projection.service"
 import { ThreadResumeRequestsService } from "./thread-resume-requests.service"
@@ -27,6 +28,7 @@ import { ThreadSweepService } from "./thread-sweep.service"
 import { UntilRoundTimersService } from "./until-round-timers.service"
 import { UntilRoundWakesService } from "./until-round-wakes.service"
 import { ThreadWaitsService } from "./thread-waits.service"
+import { ThreadSubjectHoldsService } from "./thread-subject-holds.service"
 import { ThreadHandBacksService } from "./thread-hand-backs.service"
 import { ErasedSubjectRunsService } from "./erased-subject-runs.service"
 import { ErasedContactRunsAdapter } from "./erased-contact-runs.adapter"
@@ -76,12 +78,16 @@ export class AgentThreadsModule extends ConfigurableModuleClass {
                 UntilRoundWakesService,
                 ThreadWaitsService,
                 ThreadHandBacksService,
+                // The one holding rule's thread half (rule Q-1): open stops about a person, the release of held wakes, the backstop.
+                ThreadSubjectHoldsService,
                 ErasedSubjectRunsService,
                 // The runs of a contact being deleted, as the contacts see them (R37): ended in the deletion's own transaction.
                 ErasedContactRunsAdapter,
                 { provide: CONTACT_RUNS, useExisting: ErasedContactRunsAdapter },
                 ThreadDeadlinesService,
                 ThreadSweepService,
+                // The dev Sandbox page's parked waits + "expire now" (R62/R66): the real deadline road, nothing else.
+                ThreadWaitExpiryService,
             ],
             exports: [
                 AGENT_THREADS_OPTIONS,
@@ -100,9 +106,11 @@ export class AgentThreadsModule extends ConfigurableModuleClass {
                 UntilRoundWakesService,
                 ThreadWaitsService,
                 ThreadHandBacksService,
+                ThreadSubjectHoldsService,
                 ErasedSubjectRunsService,
                 CONTACT_RUNS,
                 ThreadDeadlinesService,
+                ThreadWaitExpiryService,
                 ThreadSweepService,
             ],
         }

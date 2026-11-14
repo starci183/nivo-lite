@@ -1,5 +1,0 @@
-export { BOOKING_MODULE_KEY, bookingModule } from "./declaration"
-export { BOOKING_FIXTURES } from "./fixtures/booking.fixtures"
-export { BOOKING_MESSAGES } from "./booking-messages"
-export { BOOKING_SERVER } from "./template/booking.template"
-export { bookingAgent } from "./template/booking.agent"

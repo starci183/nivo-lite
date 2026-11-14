@@ -80,7 +80,8 @@ describe("the workbenches of the NIVO Web agents", () => {
                 [`openapi:${CRM_NIVOWEB.get_summary_counts}`, "record"],
             ]),
         )
-        expect(providerReads.map((read) => read.name)).not.toContain(`openapi:${CRM_NIVOWEB.post_services_code_renewals}`)
+        // R57: the CRM's renewal write is now the outcome record (its provider renewal operation is gone); still a write, never a read.
+        expect(providerReads.map((read) => read.name)).not.toContain(`openapi:${CRM_NIVOWEB.post_renewals_id_outcome}`)
         expect(providerReads.every((read) => read.name.startsWith("openapi:nivo.api.crm."))).toBe(true)
     })
 

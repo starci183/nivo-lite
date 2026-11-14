@@ -28,7 +28,6 @@ const stepRow = (data: Record<string, unknown>): StoredStep =>
             notBefore: null,
             waitItemId: null,
             workItemId: null,
-            compAttempts: 0,
             errorCode: "tool_denied",
             startedAt: "2026-11-09T07:59:01.000Z",
             endedAt: "2026-11-09T07:59:03.000Z",

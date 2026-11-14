@@ -2,7 +2,6 @@ import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTasksService } from "./agent-tasks.service"
 import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -10,7 +9,7 @@ import { AgentWorkDoorsService } from "./agent-work-doors.service"
 import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { AgentWorkErrorCode } from "./errors/agent-work.error"
-import type { AgentGoalDraft, AgentTriggerDraft } from "./agent-work-drafts.contracts"
+import type { AgentTriggerDraft } from "./agent-work-drafts.contracts"
 
 const installationOf = (agentId: string | null): InstallationRecord => ({
     id: "inst-1",
@@ -27,16 +26,6 @@ const installationOf = (agentId: string | null): InstallationRecord => ({
     createdAt: "2026-10-31T10:00:00.000Z",
 })
 
-const GOAL: AgentGoalDraft = {
-    workspaceId: "ws-1",
-    installationId: "inst-1",
-    goalId: null,
-    title: "Collect",
-    detail: "",
-    status: "active",
-    dueAt: null,
-}
-
 const TRIGGER: AgentTriggerDraft = {
     workspaceId: "ws-1",
     installationId: "inst-1",
@@ -46,7 +35,6 @@ const TRIGGER: AgentTriggerDraft = {
     atTime: null,
     timeZone: null,
     eventName: null,
-    probeKey: null,
     enabled: true,
 }
 
@@ -64,7 +52,6 @@ const build = async (installation: InstallationRecord | null = installationOf("a
         setAgentWork: jest.fn().mockResolvedValue("state"),
         setWorkspaceWork: jest.fn().mockResolvedValue("settings"),
     })
-    const goals = mock<AgentGoalsService>({ save: jest.fn().mockResolvedValue("goal") })
     const triggers = mock<AgentTriggersService>({
         save: jest.fn().mockResolvedValue("trigger"),
         remove: jest.fn().mockResolvedValue(undefined),
@@ -77,7 +64,6 @@ const build = async (installation: InstallationRecord | null = installationOf("a
             { provide: InstallationRecordsService, useValue: installations },
             { provide: AgentWorkReadService, useValue: read },
             { provide: AgentWorkSettingsService, useValue: settings },
-            { provide: AgentGoalsService, useValue: goals },
             { provide: AgentTriggersService, useValue: triggers },
             { provide: AgentTasksService, useValue: tasks },
         ],
@@ -88,7 +74,6 @@ const build = async (installation: InstallationRecord | null = installationOf("a
         installations,
         read,
         settings,
-        goals,
         triggers,
         tasks,
     }
@@ -176,26 +161,7 @@ describe("AgentWorkDoorsService > switches", () => {
     })
 })
 
-describe("AgentWorkDoorsService > goals, triggers and tasks", () => {
-    it("writes a goal of the agent of the instance with the owner as its source", async () => {
-        const { doors, access, goals } = await build()
-
-        await expect(doors.saveGoal("user-1", GOAL)).resolves.toBe("goal")
-
-        expect(access.manager).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(goals.save).toHaveBeenCalledWith("user-1", {
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            goalId: null,
-            title: "Collect",
-            detail: "",
-            status: "active",
-            source: "owner",
-            memberId: null,
-            dueAt: null,
-        })
-    })
-
+describe("AgentWorkDoorsService > triggers and tasks", () => {
     it("writes a trigger of the agent of the instance", async () => {
         const { doors, triggers } = await build()
 
@@ -218,31 +184,28 @@ describe("AgentWorkDoorsService > goals, triggers and tasks", () => {
     })
 
     it("refuses staff at every one of these doors and writes nothing", async () => {
-        const { doors, access, goals, triggers, tasks } = await build()
+        const { doors, access, triggers, tasks } = await build()
         const refusal = new Error("role refused")
         access.manager.mockRejectedValue(refusal)
 
-        await expect(doors.saveGoal("user-1", GOAL)).rejects.toBe(refusal)
         await expect(doors.saveTrigger("user-1", TRIGGER)).rejects.toBe(refusal)
         await expect(doors.removeTrigger("user-1", "ws-1", "inst-1", "t")).rejects.toBe(refusal)
         await expect(doors.closeTask("user-1", "ws-1", "inst-1", "t")).rejects.toBe(refusal)
 
-        expect(goals.save).not.toHaveBeenCalled()
         expect(triggers.save).not.toHaveBeenCalled()
         expect(triggers.remove).not.toHaveBeenCalled()
         expect(tasks.drop).not.toHaveBeenCalled()
     })
 
     it("treats an instance of another workspace as unknown at every one of these doors", async () => {
-        const { doors, goals, triggers, tasks } = await build(null)
+        const { doors, triggers, tasks } = await build(null)
         const unknown = { code: AgentWorkErrorCode.AgentNotFound }
 
-        await expect(doors.saveGoal("user-1", GOAL)).rejects.toMatchObject(unknown)
         await expect(doors.saveTrigger("user-1", TRIGGER)).rejects.toMatchObject(unknown)
         await expect(doors.removeTrigger("user-1", "ws-1", "x", "t")).rejects.toMatchObject(unknown)
         await expect(doors.closeTask("user-1", "ws-1", "x", "t")).rejects.toMatchObject(unknown)
 
-        expect(goals.save).not.toHaveBeenCalled()
+        expect(triggers.save).not.toHaveBeenCalled()
         expect(triggers.remove).not.toHaveBeenCalled()
         expect(tasks.drop).not.toHaveBeenCalled()
     })

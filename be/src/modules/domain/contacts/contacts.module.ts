@@ -1,6 +1,9 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { CONTACT_MEMORY_STORE } from "./contact-memory-store.port"
 import { TypeormContactMemoryStore } from "./contact-memory-store.typeorm"
+import { CONTACT_WORK_STORE } from "./contact-work-store.port"
+import { TypeormContactWorkStore } from "./contact-work-store.typeorm"
+import { ContactWorkService } from "./contact-work.service"
 import { CONTACTS_STORE } from "./contacts-store.port"
 import { TypeormContactsStore } from "./contacts-store.typeorm"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./contacts.module-definition"
@@ -30,13 +33,17 @@ export class ContactsModule extends ConfigurableModuleClass {
                 // The memory of the contacts (public.contact_memory): the engine's memory service reads and writes it through this store.
                 TypeormContactMemoryStore,
                 { provide: CONTACT_MEMORY_STORE, useExisting: TypeormContactMemoryStore },
+                // What the agents did for a person (the same table, step outcomes only): the contacts page's "work" rows.
+                TypeormContactWorkStore,
+                { provide: CONTACT_WORK_STORE, useExisting: TypeormContactWorkStore },
+                ContactWorkService,
                 ContactsService,
                 ConversationContactsService,
                 // The contacts the records store proves a contact field against (the engine's port, implemented here).
                 RecordContactsAdapter,
                 { provide: RECORD_CONTACTS, useExisting: RecordContactsAdapter },
             ],
-            exports: [ContactsService, ConversationContactsService, CONTACTS_STORE, CONTACT_MEMORY_STORE, RECORD_CONTACTS],
+            exports: [ContactsService, ContactWorkService, ConversationContactsService, CONTACTS_STORE, CONTACT_MEMORY_STORE, CONTACT_WORK_STORE, RECORD_CONTACTS],
         }
     }
 }

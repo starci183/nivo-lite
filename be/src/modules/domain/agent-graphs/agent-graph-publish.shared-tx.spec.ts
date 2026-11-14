@@ -68,8 +68,7 @@ type Road = (
 ) => Promise<GraphVersionView>
 
 const learned: Road = (service, document, agreed) => service.publishLearned("ws-1", "agent-1", document, OWNER, agreed)
-const template: Road = (service, document, agreed) =>
-    service.publishTemplate("ws-1", "agent-1", document, OWNER, agreed)
+const copy: Road = (service, document, agreed) => service.publishCopy("ws-1", "agent-1", document, OWNER, agreed)
 
 const rowKeyOf = (row: NodeAccountPolicyRecord): string =>
     JSON.stringify([row.workflowId, row.nodeKey, row.connectionId, row.operation])
@@ -220,7 +219,7 @@ describe("AgentGraphPublishService: a publish on the real stores writes the vers
 
     it.each([
         ["publishLearned", learned],
-        ["publishTemplate", template],
+        ["publishCopy", copy],
     ] as const)("%s: one more version that decides, mirrored on the primary workflow at its next adoption, with no row", async (_name, road) => {
         const world = await buildWorld()
         const [graphsBefore, , workflowsBefore] = await standingOf(world)

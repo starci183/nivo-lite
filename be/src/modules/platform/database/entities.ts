@@ -41,7 +41,6 @@ import { knowledgeGapsEntities } from "@modules/domain/knowledge-gaps"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { knowledgeSuggestionStateEntities } from "@modules/domain/knowledge-suggestion-state"
 import { customerRoutesEntities } from "@modules/domain/customer-routes"
-import { leadFreezesEntities } from "@modules/domain/lead-freezes"
 import { toolCallLogEntities } from "@modules/domain/tool-call-log"
 import { toolReceiptsEntities } from "@modules/domain/tool-receipts"
 import { toolGrantsEntities } from "@modules/domain/tool-grants"
@@ -60,12 +59,11 @@ import { paymentOrdersEntities } from "@modules/domain/payment-orders"
 import { platformAdminEntities } from "@modules/domain/platform-admin"
 import { platformAuditEntities } from "@modules/domain/platform-audit"
 import { providerTriggersEntities } from "@modules/domain/provider-triggers"
+import { providerSandboxEntities } from "@modules/domain/provider-sandbox"
 import { publicApiEntities } from "@modules/domain/public-api"
 import { publicDocumentsEntities } from "@modules/domain/public-documents"
 import { sepayTransactionsEntities } from "@modules/domain/sepay-transactions"
 import { staffEntities } from "@modules/domain/staff"
-import { agentTemplatesEntities } from "@modules/domain/agent-templates"
-import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { agentWorkEntities } from "@modules/domain/agent-work"
 import { agentCheckpointsEntities } from "@modules/domain/agent-checkpoints"
@@ -129,7 +127,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...knowledgeGapsEntities,
     ...knowledgeSourcesEntities,
     ...knowledgeSuggestionStateEntities,
-    ...leadFreezesEntities,
     ...customerRoutesEntities,
     ...toolCallLogEntities,
     ...toolReceiptsEntities,
@@ -149,12 +146,11 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...platformAdminEntities,
     ...platformAuditEntities,
     ...providerTriggersEntities,
+    ...providerSandboxEntities,
     ...publicApiEntities,
     ...publicDocumentsEntities,
     ...sepayTransactionsEntities,
     ...staffEntities,
-    ...agentTemplatesEntities,
-    ...templateMarketplaceEntities,
     ...entityEngineEntities,
     ...agentWorkEntities,
     ...agentCheckpointsEntities,

@@ -2,13 +2,13 @@
 // ext/manifest.json rule NIVO-TIERS-1 (doc ext/docs/NIVO-TIERS-1.md); loaded by the harness under the plugin `project-ext` as `project-ext/template-tier-homes`.
 // Enforces where each tier is written:
 //   - `defineNode` (the engine's node tier) is imported (or re-exported) under `packages/**` only by its home `packages/agent-sdk/**` and by
-//     the four engine control nodes `packages/blocks-core/src/nodes/core/**`; every other package node is a `defineTemplateNode`;
+//     the four engine control nodes `packages/blocks-core/src/shared/nodes/core/**`; every other package node is a `defineTemplateNode`;
 //   - `defineTemplateNode` / `defineTemplateGraph` / `defineTemplateAgent` (the package tiers) are not imported under `be/src/**`: the engine
 //     holds running nodes as DATA (template id + pinned version), never a template of its own. Allowed there: test fixtures
 //     `be/src/tests/**` and specs `*.spec.ts`.
 // Concept: .starciwork/concepts/templates.md (rule 1: templates live in packages, `defineNode` and the running tier in the engine).
-//   valid   (packages/blocks-core/src/nodes/sales/x.node.ts): import { defineTemplateNode } from "@nivo-lite/agent-sdk/template"
-//   invalid (packages/blocks-core/src/nodes/sales/x.node.ts): import { defineNode } from "@nivo-lite/agent-sdk/node"
+//   valid   (packages/blocks-core/src/agents/sales/nodes/x.node.ts): import { defineTemplateNode } from "@nivo-lite/agent-sdk/template"
+//   invalid (packages/blocks-core/src/agents/sales/nodes/x.node.ts): import { defineNode } from "@nivo-lite/agent-sdk/node"
 //   invalid (be/src/modules/domain/x/x.service.ts):            import { defineTemplateGraph } from "@nivo-lite/agent-sdk/template"
 import { conceptOf, matchesAny, relOf } from "../support/lint-shared.mjs"
 
@@ -16,7 +16,7 @@ const TEMPLATES = conceptOf("templates")
 
 const DEFAULTS = {
     nodeTierScope: ["packages/**"],
-    nodeTierHomes: ["packages/agent-sdk/**", "packages/blocks-core/src/nodes/core/**"],
+    nodeTierHomes: ["packages/agent-sdk/**", "packages/blocks-core/src/shared/nodes/core/**"],
     templateTierScope: ["be/src/**"],
     templateTierHomes: ["be/src/tests/**", "**/*.spec.ts"],
 }

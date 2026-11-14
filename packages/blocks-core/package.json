@@ -9,42 +9,42 @@
       "default": "./dist/index.js"
     },
     "./entities": {
-      "types": "./dist/entities/index.d.ts",
-      "default": "./dist/entities/index.js"
+      "types": "./dist/shared/entities/index.d.ts",
+      "default": "./dist/shared/entities/index.js"
     },
     "./rules/chatbot": {
-      "types": "./dist/rules/chatbot/index.d.ts",
-      "default": "./dist/rules/chatbot/index.js"
+      "types": "./dist/agents/chatbot/rules/index.d.ts",
+      "default": "./dist/agents/chatbot/rules/index.js"
     },
     "./graph": {
-      "types": "./dist/graph-cards.d.ts",
-      "default": "./dist/graph-cards.js"
+      "types": "./dist/shared/graph-cards.d.ts",
+      "default": "./dist/shared/graph-cards.js"
     },
     "./modules": {
-      "types": "./dist/modules/index.d.ts",
-      "default": "./dist/modules/index.js"
+      "types": "./dist/shared/modules/index.d.ts",
+      "default": "./dist/shared/modules/index.js"
     },
     "./modules/sales/ledger": {
-      "types": "./dist/modules/sales/ledger/index.d.ts",
-      "default": "./dist/modules/sales/ledger/index.js"
+      "types": "./dist/agents/sales/ledger/index.d.ts",
+      "default": "./dist/agents/sales/ledger/index.js"
     },
     "./modules/sales": {
-      "types": "./dist/modules/sales/index.d.ts",
-      "default": "./dist/modules/sales/index.js"
+      "types": "./dist/agents/sales/index.d.ts",
+      "default": "./dist/agents/sales/index.js"
     },
     "./rules/sales": {
-      "types": "./dist/rules/sales/index.d.ts",
-      "default": "./dist/rules/sales/index.js"
+      "types": "./dist/agents/sales/rules/index.d.ts",
+      "default": "./dist/agents/sales/rules/index.js"
     },
-    "./messages/vi.json": "./dist/esm/messages/vi.json",
-    "./messages/en.json": "./dist/esm/messages/en.json",
+    "./messages/vi.json": "./dist/esm/shared/messages/vi.json",
+    "./messages/en.json": "./dist/esm/shared/messages/en.json",
     "./fixtures": {
-      "types": "./dist/fixtures.d.ts",
-      "default": "./dist/fixtures.js"
+      "types": "./dist/shared/fixtures.d.ts",
+      "default": "./dist/shared/fixtures.js"
     },
     "./client": {
-      "types": "./dist/esm/client/index.d.ts",
-      "default": "./dist/esm/client/index.js"
+      "types": "./dist/esm/shared/client/index.d.ts",
+      "default": "./dist/esm/shared/client/index.js"
     }
   },
   "scripts": {
@@ -56,7 +56,7 @@
     "@heroui/react": "3.2.6",
     "@nivo-lite/agent-sdk": "*",
     "@starci/common": "1.0.1",
-    "@starci/grammar": "0.39.0",
+    "@starci/grammar": "0.39.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"

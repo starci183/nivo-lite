@@ -57,8 +57,8 @@ const SEND_ARGS = {
 
 /**
  * `webdesk.mail-reply-draft` (Draft the mail reply): a side step split from `webdesk.mail-plan`. One call of the mail send with the reply
- * the plan wrote and the ticket it is about (`ref`); the send never mails by itself: it answers at once with the draft a person reads,
- * sends (the mail tool's own behaviour; it replaces the `send_email` work item), and its mode is `auto`. No AI call.
+ * the plan wrote and the ticket it is about (`ref`); the mail goes only once a person approved it on the card,
+ * (mode `ask`, MXW-1: the mail tool itself sends; it replaces the `send_email` work item). No AI call.
  * A side step (`blocking: false`): without an SMTP account it is skipped and named on the agent page; a refusal is said in its output
  * and the ticket's note still follows; a person's `declined` of the draft is such a refusal (DECLINED rule 3: no notice, no outcome).
  * With no reply written, or no ticket, there is nothing to draft (exact checks).
@@ -72,7 +72,9 @@ export const webdeskMailReplyDraftNode: TemplateNode<
     title: webdeskText("node.mail-reply-draft.title"),
     description: { vi: "So\u1ea1n th\u01b0 tr\u1ea3 l\u1eddi ng\u01b0\u1eddi g\u1eedi \u0111\u1ec3 ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch duy\u1ec7t tr\u01b0\u1edbc khi g\u1eedi.", en: "Drafts the reply to the sender for the person in charge to approve before it is sent." },
     tools: [TOOL.mailMessageSend],
-    mode: "auto",
+    // R83 (owner, interim; the CEO reviews later): AI-written mail about money or a commitment asks, a person approves the whole
+    // message on the approval card before it goes (`ask`), as the package's own words ("a draft a person sends") say.
+    mode: "ask",
     accounts: [PROVIDER.smtp],
     params,
     input,

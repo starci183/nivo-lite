@@ -33,8 +33,6 @@ const ROUTES: ReadonlyArray<GuideEntry> = [
     route("route.brain", KNOWLEDGE_ROUTES.brain),
     route("route.knowledgeNivo", KNOWLEDGE_ROUTES.nivo),
     route("route.agents", "/agents"),
-    route("route.marketplace", "/agents/marketplace", true),
-    route("route.templates", "/agents/templates", true),
     route("route.team", CONSOLE_ROUTES.team, true),
     route("route.connections", CONSOLE_ROUTES.connections, true),
     route("route.sepay", "/connections/sepay", true),

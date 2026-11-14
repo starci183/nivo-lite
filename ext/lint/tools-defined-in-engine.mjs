@@ -5,7 +5,7 @@
 //   - be/src/modules/domain/tool-specs/**   the engine's tool specs (class, args, adapters per provider, owner by data): the one home;
 //   - be/src/tests/**, be/src/**/*.spec.ts  the engine's own fixtures and specs (the engine is the home, its tests probe it);
 //   - packages/agent-sdk/**                 the home of `defineTool` itself (the contract helper and its own specs);
-//   - packages/blocks-core/src/vocabulary/**          the platform purpose contracts the engine still serves (declared before the flip);
+//   - packages/blocks-core/src/shared/vocabulary/**          the platform purpose contracts the engine still serves (declared before the flip);
 //   - packages/nivo-web-core/src/vocabulary/crm-tools.ts  the CRM's declared contract (its OpenAPI operations as tools), likewise.
 // The two vocabulary homes are the declared contracts that exist today; they stay allowed until the engine's specs absorb them. Every
 // other `defineTool` or registry literal (a plugin's own vocabulary file, a package spec defining tools) is a finding.
@@ -22,7 +22,7 @@ const DEFAULTS = {
         "be/src/tests/**",
         "be/src/**/*.spec.ts",
         "packages/agent-sdk/**",
-        "packages/blocks-core/src/vocabulary/**",
+        "packages/blocks-core/src/shared/vocabulary/**",
         "packages/nivo-web-core/src/vocabulary/crm-tools.ts",
     ],
 }

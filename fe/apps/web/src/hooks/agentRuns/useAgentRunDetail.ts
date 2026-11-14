@@ -14,7 +14,6 @@ import { runDetailViewOf, runGraphOf } from "@/modules/agentRuns"
 import { stepsLocaleOf } from "@/modules/workflowSteps"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { DataSlot, RunDetailView } from "@/modules/types"
-import { useLeadFreeze } from "@/hooks/leadFreeze"
 import { useRunContext } from "./useRunContext"
 import { useRunDecision } from "./useRunDecision"
 import { useRunGraphSource } from "./useRunGraphSource"
@@ -48,7 +47,6 @@ export const useAgentRunDetail = (module: string, installationId: string, runId:
     const resumeRun = useMutateResumeAgentRunSwr()
     const cancelRun = useMutateCancelAgentRunSwr()
     const decision = useRunDecision(installationId, runId)
-    const freeze = useLeadFreeze({ leadId: "", runId })
     const [selection, setSelection] = useState("")
     const read = useQueryAgentRunSwr(
         { installationId, runId },
@@ -58,7 +56,6 @@ export const useAgentRunDetail = (module: string, installationId: string, runId:
         },
     )
     const runs = useQueryAgentRunsSwr({ installationId })
-    const context = useMemo(() => ({ ...baseContext, isFrozen: freeze.freeze !== null }), [baseContext, freeze.freeze])
     const pins = useQueryAgentRunWorkflowsSwr({ installationId, runIds: [runId] })
     const pin = pins.data?.[0]
     const source = useRunGraphSource(installationId, pin, pins.data !== undefined)
@@ -73,9 +70,9 @@ export const useAgentRunDetail = (module: string, installationId: string, runId:
                           ...read.data,
                           row: { ...read.data.row, versionNumber: pin.version, workflowName: pin.workflowName },
                       }
-            return runDetailViewOf(detail, nodes, selection, runs.data, context, locale)
+            return runDetailViewOf(detail, nodes, selection, runs.data, baseContext, locale)
         },
-        [read.data, pin, nodes, selection, runs.data, context, locale],
+        [read.data, pin, nodes, selection, runs.data, baseContext, locale],
     )
     const { mutate } = read
     const resume = useCallback(() => {

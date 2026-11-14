@@ -23,8 +23,6 @@ export interface InstanceHeaderView {
     readonly primary: { readonly label: string; readonly href: string } | null
     /** The profile of the agent that drives this instance; null while the instance has no agent. */
     readonly profileHref: string | null
-    /** The packaging page of this agent's workflow; null for a person who may not package. */
-    readonly packageHref: string | null
 }
 
 /** One installed agent the switcher in the header can open. */
@@ -206,7 +204,7 @@ export const workflowSubTabsOf = (input: WorkflowSubTabsInput): FrameSubTabs | n
     }
 }
 
-/** What the header view of an agent needs: the instance read, its placeholder, the words and where the person is. */
+/** What the header view of an agent needs: the instance read, its placeholder, the words and the type of the agent. */
 interface InstanceViewInput {
     readonly resolved: ReturnType<typeof useInstanceHeader>["slot"] extends infer Slot
         ? Slot extends { readonly items: infer Items }
@@ -217,9 +215,6 @@ interface InstanceViewInput {
     readonly t: ReturnType<typeof useTranslations<"modulesCore">>
     readonly needs: ReturnType<typeof useConnectionNeedsCopy>
     readonly module: string
-    readonly installationId: string
-    readonly workspaceId: string
-    readonly canPackage: boolean
 }
 
 /** The header view of an agent: its name, status and facts, what it still needs, and the one command and the links its tab offers. */
@@ -236,9 +231,6 @@ export const instanceViewOf = (input: InstanceViewInput): InstanceHeaderView => 
         needs: { lines: needs.linesOf(resolved.connectionNeeds), linkLabel: needs.linkLabel, href: needs.href },
         primary: null,
         profileHref: resolved.profileHref,
-        packageHref: input.canPackage
-            ? workspaceHref(input.workspaceId, `${AGENTS_ROUTE}/templates/package/${input.installationId}`)
-            : null,
     }
 }
 

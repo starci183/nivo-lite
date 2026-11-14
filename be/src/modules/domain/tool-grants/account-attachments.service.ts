@@ -9,6 +9,9 @@ import { AccountAttachmentEntity } from "./persistence/entities"
 /** The most attachments one read answers. */
 const ACCESS_LIMIT = 500
 
+/** What making an attachment the default came to: it is now the agent's default of its provider, or the agent holds no such attachment. */
+export type DefaultOutcome = "set" | "not_attached"
+
 /** What attaching came to: a row was written, the agent already held one (left as it is), or the agent is not of the workspace. */
 export type AttachOutcome = "attached" | "held" | "unknown_agent"
 
@@ -16,6 +19,7 @@ const viewOf = (row: AccountAttachmentEntity): ProviderAttachmentView => ({
     agentId: row.agentId,
     connectionId: row.connectionId,
     provider: row.provider,
+    ...(row.isDefault === true ? { isDefault: true } : {}),
 })
 
 const pairKey = (agentId: string, connectionId: string): string => `${agentId}:${connectionId}`
@@ -103,6 +107,32 @@ export class AccountAttachmentsService {
             updatedBy,
         })
         return "attached"
+    }
+
+    /**
+     * Makes the agent's attachment to an account the agent's DEFAULT account of its provider: the attachment that held the default of
+     * that provider before loses it, in the same transaction (at most one default per agent and provider: a partial unique index).
+     * Making the default again is a no-op. `not_attached` when the agent holds no attachment to the account (nothing is written).
+     * Detaching the default removes its row, so a detached account is never a default.
+     */
+    async setDefault(
+        workspaceId: string,
+        agentId: string,
+        connectionId: string,
+        updatedBy: string | null,
+    ): Promise<DefaultOutcome> {
+        return this.entityManager.transaction(async (scoped): Promise<DefaultOutcome> => {
+            const held = await scoped.findOne(AccountAttachmentEntity, { where: { workspaceId, agentId, connectionId } })
+            if (held === null) return "not_attached"
+            if (held.isDefault) return "set"
+            await scoped.update(
+                AccountAttachmentEntity,
+                { workspaceId, agentId, provider: held.provider, isDefault: true },
+                { isDefault: false, updatedBy },
+            )
+            await scoped.update(AccountAttachmentEntity, { id: held.id }, { isDefault: true, updatedBy })
+            return "set"
+        })
     }
 
     /** Detaches an agent from an account: the kill switch. False when there was none. */

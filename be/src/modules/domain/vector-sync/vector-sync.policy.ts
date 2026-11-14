@@ -130,7 +130,6 @@ export const batchesOf = <Item>(items: ReadonlyArray<Item>, size: number): Reado
 export const addDone = (left: VectorSyncDone, right: Partial<VectorSyncDone>): VectorSyncDone => ({
     unchanged: left.unchanged + (right.unchanged ?? 0),
     given: left.given + (right.given ?? 0),
-    copied: left.copied + (right.copied ?? 0),
     adopted: left.adopted + (right.adopted ?? 0),
     embedded: left.embedded + (right.embedded ?? 0),
     marked: left.marked + (right.marked ?? 0),
@@ -142,7 +141,7 @@ export const addDone = (left: VectorSyncDone, right: Partial<VectorSyncDone>): V
 
 /** True when a sync changed the index. */
 export const repairedSomething = (done: VectorSyncDone): boolean =>
-    done.given + done.copied + done.adopted + done.embedded + done.marked + done.removed > 0
+    done.given + done.adopted + done.embedded + done.marked + done.removed > 0
 
 /** Nothing done, as a fresh value to add to. */
 export const noneDone = (): VectorSyncDone => ({ ...NOTHING_SYNCED })

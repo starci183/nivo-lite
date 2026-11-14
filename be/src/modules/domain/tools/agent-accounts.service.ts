@@ -1,8 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import { AgentRunsService } from "@modules/domain/agent-runs"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { NodeStepRef } from "@modules/domain/graph-nodes"
 import { INSTALLED } from "@modules/domain/installed-plugins"
+import { ToolCallLogService } from "@modules/domain/tool-call-log"
 import { AccountAttachmentsService, type ProviderAttachmentView } from "@modules/domain/tool-grants"
 import { OPENAPI_PROVIDER } from "@modules/domain/openapi-tools"
 import { ownersOfTool, toolSpecOf } from "@modules/domain/tool-specs"
@@ -19,9 +21,12 @@ import {
     providerSpecOf,
     providersOfDeclaration,
     servesTool,
+    unpickedOf,
     type AccountTarget,
     type AttachmentVerdict,
     type OptionalRightVerdict,
+    type PickNeeded,
+    type RunAccountFacts,
 } from "./provider-abilities.policy"
 import { providersOfTemplateAgent } from "./template-agent-providers.policy"
 import { keyUnder, nodeKeysOf, type OptionalNodeProviderKey } from "./node-provider-keys.policy"
@@ -43,6 +48,9 @@ import { workflowStepOf, type NodeRequestsGate, type OptionalNodeRequest } from 
 /** The most connections of one provider a workspace is read for. */
 const CONNECTIONS_MAX = 20
 
+/** The most earlier calls of a run read for the accounts the run already used. */
+const RUN_CALLS_MAX = 200
+
 /** The most agents of a workspace looked through for a template. */
 const AGENTS_MAX = 200
 
@@ -52,6 +60,29 @@ export interface BoundAccount {
     readonly provider: string
     /** The connection. */
     readonly connectionId: string
+}
+
+/** The run a call is made in, as far as choosing its account needs it. */
+export interface RunRef {
+    /** The run (its trigger's context and its earlier calls are read by this id). */
+    readonly runId: string
+}
+
+/** An account a call may act on, with whether it is the agent's default account of its provider (read from its attachment). */
+interface ServingAccount extends BoundAccount {
+    /** True when the attachment is the agent's default of its provider. */
+    readonly isDefault: boolean
+}
+
+/** The account a call is handed: its provider and its connection only. */
+const plainOf = ({ provider, connectionId }: BoundAccount): BoundAccount => ({ provider, connectionId })
+
+/** The accounts a node binds, and the first listed provider of which the agent holds several accounts and no rule picks one. */
+interface NodeBinding {
+    /** The bound accounts, in the node's order of providers. */
+    readonly bound: ReadonlyArray<BoundAccount>
+    /** The first listed provider still to pick, or null. */
+    readonly unpicked: PickNeeded | null
 }
 
 /**
@@ -160,6 +191,8 @@ export class AgentAccountsService {
         @Optional() private readonly connections?: ConnectionBindingsReadService,
         @Optional() @InjectNodeRequestsGate() private readonly nodeRequests: NodeRequestsGate | null = null,
         @Optional() private readonly effectAudit?: EffectRightAuditService,
+        @Optional() private readonly callLog?: ToolCallLogService,
+        @Optional() private readonly runs?: AgentRunsService,
     ) {}
 
     /**
@@ -243,20 +276,43 @@ export class AgentAccountsService {
      * The accounts one call of the tool may act on, in order (the ToolRunner hands the first and falls back along the rest): at a
      * workflow step, for each provider the step's node lists, IN THE NODE'S ORDER, the agent's attached account of it serving the tool
      * (`bindNodeProviders`: one account per provider; of several, none: never a guess, the node names one); outside a step, every
-     * attached account serving the tool, in the store's order.
+     * attached account serving the tool, in the store's order. Of several attached accounts of one provider, the order `pickAccountOf`
+     * names one: the account the RUN's trigger came in on, an account the run already used, then the agent's default account of the
+     * provider (`run` names the run; without it only the default can be read).
      */
     async boundAccountsOf(
         workspaceId: string,
         agentId: string,
         tool: string,
         seen?: RightSeen,
+        run?: RunRef,
     ): Promise<ReadonlyArray<BoundAccount>> {
         const step = workflowStepOf(seen)
         // A tool no registry places is served only by the providers a node lists: none outside a step.
         const placed = isNodePlacedTool(tool)
         if (placed && step === null) return []
         const named = await this.servingOf(workspaceId, agentId, tool, placed)
-        return step === null ? named : this.ofNode(workspaceId, agentId, step, named)
+        if (step === null) return named.map(plainOf)
+        return (await this.bindingOf(workspaceId, agentId, step, named, run)).bound
+    }
+
+    /**
+     * The choice the owner still has to make for a call at a workflow step: the first provider its node lists, serving the tool, of which
+     * the agent holds several attached accounts and no rule of the order picks one (`pickAccountOf`: the run's trigger, the run's earlier
+     * calls, the agent's default account). Null when every listed provider binds or none has several accounts, outside a step, and when
+     * the node's request cannot be read. It is what the typed `TOOLS_ACCOUNT_NEEDS_PICK` refusal names.
+     */
+    async pickNeeded(
+        workspaceId: string,
+        agentId: string,
+        tool: string,
+        seen?: RightSeen,
+        run?: RunRef,
+    ): Promise<PickNeeded | null> {
+        const step = workflowStepOf(seen)
+        if (step === null) return null
+        const named = await this.servingOf(workspaceId, agentId, tool, isNodePlacedTool(tool))
+        return (await this.bindingOf(workspaceId, agentId, step, named, run)).unpicked
     }
 
     /**
@@ -282,32 +338,55 @@ export class AgentAccountsService {
         agentId: string,
         tool: string,
         placed: boolean,
-    ): Promise<ReadonlyArray<BoundAccount>> {
+    ): Promise<ReadonlyArray<ServingAccount>> {
         const rows = await this.rows.listOfAgent(workspaceId, agentId)
         const keys = await this.nodeKeys(workspaceId, rows)
         return rows.flatMap((row) => {
             const provider = keyUnder(row, keys)
             return provider !== null && (placed || servesTool(provider, row.provider, tool))
-                ? [{ provider, connectionId: row.connectionId }]
+                ? [{ provider, connectionId: row.connectionId, isDefault: row.isDefault === true }]
                 : []
         })
     }
 
-    /** The attached accounts a step's node binds, in the node's order of providers (none when its request cannot be read). */
-    private async ofNode(
+    /**
+     * The attached accounts a step's node binds, in the node's order of providers (none when its request cannot be read), and the first
+     * listed provider still to pick. Of several attached accounts of one provider the order `pickAccountOf` names one (never a guess):
+     * the run's trigger, the run's earlier calls, the agent's default account of the provider. The run's facts are read only when a
+     * listed provider has several accounts, so the single-account path reads nothing more than before.
+     */
+    private async bindingOf(
         workspaceId: string,
         agentId: string,
         step: NodeStepRef,
-        named: ReadonlyArray<BoundAccount>,
-    ): Promise<ReadonlyArray<BoundAccount>> {
+        named: ReadonlyArray<ServingAccount>,
+        run: RunRef | undefined,
+    ): Promise<NodeBinding> {
         const request = await this.readRequest(workspaceId, agentId)(step)
-        if (request === null) return []
-        // Of several attached accounts of one provider none is chosen for the node (never a guess): the node names one.
-        return bindNodeProviders(
-            request.accounts.map((account) => account.provider),
-            named,
-            () => null,
-        )
+        if (request === null) return { bound: [], unpicked: null }
+        const providers = request.accounts.map((account) => account.provider)
+        const several = providers.some((provider) => named.filter((account) => account.provider === provider).length > 1)
+        const facts = several && run !== undefined ? await this.runFactsOf(workspaceId, run) : undefined
+        const defaultOf = (provider: string): string | null =>
+            named.find((account) => account.provider === provider && account.isDefault)?.connectionId ?? null
+        return {
+            bound: bindNodeProviders(providers, named, defaultOf, facts).map(plainOf),
+            unpicked: unpickedOf(providers, named, defaultOf, facts)[0] ?? null,
+        }
+    }
+
+    /**
+     * What the run tells about its accounts, from what the engine already records: the account its triggering event came in on (the
+     * `connectionId` of the run's stored trigger context) and the accounts its earlier `ok` calls acted on (the tool call log of the
+     * run, the most recent first). A reader that is not bound tells nothing.
+     */
+    private async runFactsOf(workspaceId: string, run: RunRef): Promise<RunAccountFacts> {
+        const [started, used] = await Promise.all([
+            this.runs?.runOf(workspaceId, run.runId) ?? Promise.resolve(null),
+            this.callLog?.connectionsUsedByRun(workspaceId, run.runId, RUN_CALLS_MAX) ?? Promise.resolve([]),
+        ])
+        const trigger = started?.context.connectionId
+        return { triggerConnectionId: typeof trigger === "string" && trigger !== "" ? trigger : null, usedConnectionIds: used }
     }
 
     /**
@@ -433,6 +512,17 @@ export class AgentAccountsService {
     async detach(workspaceId: string, agentId: string, connectionId: string): Promise<AttachmentChangeResult> {
         if (!(await this.rows.detach(workspaceId, agentId, connectionId))) return refused("not_attached")
         return { ok: true }
+    }
+
+    /**
+     * Makes the agent's attachment to an account the agent's DEFAULT account of its provider: what a step's call uses when the agent holds
+     * several accounts of the provider and neither the run's trigger nor the run's earlier calls name one. The default it replaces
+     * loses the flag (at most one per agent and provider). Refused `not_attached` when the agent holds no attachment to the account;
+     * detaching the default clears it with its row.
+     */
+    async setDefault(target: AgentTarget, connectionId: string, updatedBy: string): Promise<AttachmentChangeResult> {
+        const outcome = await this.rows.setDefault(target.workspaceId, target.agentId, connectionId, updatedBy)
+        return outcome === "set" ? { ok: true } : refused("not_attached")
     }
 
     /**

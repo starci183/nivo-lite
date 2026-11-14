@@ -13,7 +13,7 @@ import {
     threadDbOf,
     type ThreadDb,
 } from "./thread-world"
-import { coreProcessOf, coreStarted, holdProvidersOf, holdsOf, noteActsOf, threadOf } from "./thread-world-core"
+import { coreProcessOf, coreStarted, heldWakesOf, holdProvidersOf, noteActsOf, threadOf } from "./thread-world-core"
 
 // ENGINE CORE: INTERRUPT + CHECKPOINT + RESUME ON THE SAME THREAD (frame `nivo-frame.engineCoreFirst` and `layers` (1): an edge is
 // reported to /chat, the run freezes with the three decisions Thu lai / Tiep quan / Bo qua, and the next event resumes THAT thread), on
@@ -211,9 +211,13 @@ describe("the next event for the same subject while its run waits at a stop (fra
 
         expect(second.error).toBeNull()
         expect([...db.runs.keys()]).toEqual([runId])
-        expect(holdsOf(db).map((hold) => hold.status)).toEqual(["frozen"])
+        // Rule Q-1: the second line waits as a held wake behind the stopped run, and starts nothing.
+        expect(heldWakesOf(db).map((wake) => wake.reason)).toEqual([`waiting:${runId}`])
     })
 
+    // RULE Q-1 (QB-HOLD-SPECS): FAILS TODAY, a suspected source bug: a Retry carries no words, so `turn.founderAnswers` stays empty, the queue visit
+    // stays 0 (`agent-graph-run-queue.service.ts`, `visit = founderAnswers.length`) and the wake held behind the run is never taken by the re-run:
+    // it is released pending when the run ends and starts a SECOND run (the line never reaches this run).
     it("after Th\u1eed l\u1ea1i the second event is part of THAT thread: still one run, and its line reaches the resumed run", async () => {
         const { db, process, runId } = await inboxStopped()
         await customerWrites(process, "Them dong nay nua")

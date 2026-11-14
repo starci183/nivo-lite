@@ -1,13 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
-import {
-    InjectWebhookDeliveryClient,
-    WebhookDeliveryError,
-    type WebhookDeliveryClient,
-} from "@modules/integrations/webhook-delivery"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { DomainError } from "@modules/platform/errors"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -18,23 +14,26 @@ import { InjectWebhookConnectionsOptions } from "./webhook-connections.decorator
 import { WebhookConnectionsLogEvent } from "./webhook-connections.log-events"
 import type { WebhookConnectionsOptions } from "./webhook-connections.options"
 import { installedWebhookEvents } from "./webhook-events.catalogue"
+import { WebhookSendRegistryService } from "./webhook-send-registry.service"
+import type { WebhookSendResult } from "./webhook-send.port"
 import { deliveryVerdict, eventsOf, signDelivery, workspaceSigningSecret } from "./webhook-signing.policy"
 
 @Injectable()
 /**
  * The business events leaving NIVO through the webhook connections: every connected webhook of the workspace that picked the event
  * gets one signed delivery job (once per connection and occurrence), and the job posts it with the per-workspace signing key and
- * the same headers and signature as the wizard's test.
+ * the same headers and signature as the wizard's test, through the account's outgoing webhook port (`portFor`: the receiver of a live
+ * account, the hardcoded cases of a sandbox one).
  */
 export class WebhookEventsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
-        @InjectWebhookDeliveryClient() private readonly delivery: WebhookDeliveryClient,
         @InjectWebhookConnectionsOptions() private readonly options: WebhookConnectionsOptions,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly connections: ConnectionsService,
+        private readonly sends: WebhookSendRegistryService,
     ) {}
 
     /**
@@ -73,13 +72,10 @@ export class WebhookEventsService {
         if (!isN8nWebhookPayload(job)) return
         const connection = await this.connections.find(job.workspaceId, job.connectionId)
         const shared = this.options.signingSecret
-        const url = connection === null ? null : await this.urlOf(connection)
-        if (connection?.status !== "connected" || shared === undefined || url === null) {
+        if (connection?.status !== "connected" || shared === undefined) {
             this.logger.warn(WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: job.connectionId })
             return
         }
-        const target = await this.target(connection, url)
-        if (target === null) return
         const body = JSON.stringify({
             id: job.deliveryId,
             event: job.event,
@@ -89,8 +85,7 @@ export class WebhookEventsService {
         })
         const timestamp = String(job.occurredAtMs)
         const key = workspaceSigningSecret(shared.reveal(), job.workspaceId)
-        const result = await this.delivery.post({
-            url: target,
+        const result = await this.post(connection, {
             body,
             headers: {
                 "x-nivo-event": job.event,
@@ -99,6 +94,7 @@ export class WebhookEventsService {
                 "x-nivo-signature": signDelivery(key, timestamp, body),
             },
         })
+        if (result === null) return
         await this.settle(connection, result.status)
     }
 
@@ -120,26 +116,32 @@ export class WebhookEventsService {
         await this.connections.patch(connection.workspaceId, connection.id, { lastError: `HTTP ${String(status)}` })
     }
 
-    private async target(connection: ConnectionRecord, url: string): Promise<URL | null> {
-        try {
-            return await this.delivery.resolveTarget(url, this.connections.publicOrigin() !== null)
-        } catch (error) {
-            if (!(error instanceof WebhookDeliveryError)) throw error
-            this.logger.warn(WebhookConnectionsLogEvent.DeliveryRefused, { connectionId: connection.id })
-            await this.connections.patch(connection.workspaceId, connection.id, { lastError: error.code })
+    /**
+     * Posts one signed delivery through the account's port. An account holding no address is dropped (logged); an address that cannot be
+     * a delivery target is recorded on the connection and not retried. Either way the answer is null; so is it when the app composed no port for the provider (a wiring defect, logged).
+     */
+    private async post(
+        connection: ConnectionRecord,
+        request: { readonly body: string; readonly headers: Readonly<Record<string, string>> },
+    ): Promise<WebhookSendResult | null> {
+        const port = this.sends.portFor(connection)
+        if (port === undefined) {
+            this.logger.warn(WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: connection.id })
             return null
         }
-    }
-
-    private async urlOf(connection: ConnectionRecord): Promise<string | null> {
-        const secret = await this.connections.readSecret(connection.id)
-        if (secret === null) return null
         try {
-            const parsed: unknown = JSON.parse(secret.plain)
-            const url = typeof parsed === "object" && parsed !== null && "url" in parsed ? parsed.url : null
-            return typeof url === "string" && url !== "" ? url : null
-        } catch (cause) {
-            this.logger.error(WebhookConnectionsLogEvent.AddressUnreadable, cause, { connectionId: connection.id })
+            return await port.post(connection, request)
+        } catch (error) {
+            if (!(error instanceof WebhookConnectionsError)) throw error
+            if (error.code === WebhookConnectionsErrorCode.NoUrl) {
+                this.logger.warn(WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: connection.id })
+                return null
+            }
+            if (error.code !== WebhookConnectionsErrorCode.UrlRefused) throw error
+            this.logger.warn(WebhookConnectionsLogEvent.DeliveryRefused, { connectionId: connection.id })
+            const cause = error.cause
+            const reason = cause instanceof DomainError ? cause.code : error.code
+            await this.connections.patch(connection.workspaceId, connection.id, { lastError: reason })
             return null
         }
     }

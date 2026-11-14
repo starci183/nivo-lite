@@ -2,6 +2,7 @@ import { STOP_STEP, type GraphSpec, type GraphSpecNode, type GraphSpecWait } fro
 import { BRANCH_FIELD, LOOP_BODY_ROUTE, LOOP_STEP, type NodeRole } from "@nivo-lite/agent-sdk/node"
 import { THREAD_END } from "@modules/integrations/langgraph"
 import { isFanoutLoop, loopProblemsOf, loopShapesOf, type LoopShapes } from "./compiler-loop.policy"
+import { endingTargetsOf } from "./step-ending.policy"
 
 /**
  * The name of the engine node every compiled graph carries: a step that cannot complete goes there, it stops the thread and the
@@ -218,7 +219,7 @@ const shapeProblems = (spec: GraphSpec, nodes: ReadonlyMap<string, GraphSpecNode
         ),
         ...keys.filter((key) => isReserved(key)).map((at): TemplateProblem => ({ code: "TEMPLATE_KEY_RESERVED", at })),
         ...spec.nodes.flatMap((node) =>
-            [...(node.next === undefined ? [] : [node.next]), ...Object.values(node.routes ?? {})]
+            [...(node.next === undefined ? [] : [node.next]), ...Object.values(node.routes ?? {}), ...endingTargetsOf(node)]
                 .filter((target) => !nodes.has(target))
                 .map((target): TemplateProblem => ({ code: "TEMPLATE_TARGET_UNKNOWN", at: `${node.key}->${target}` })),
         ),
@@ -262,7 +263,16 @@ const nodeOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode, 
         ...(node.blocking === undefined ? {} : { blocking: node.blocking }),
         ...(node.wait === undefined ? {} : { wait: node.wait }),
         exit,
-        ends: [...new Set([...(entry === null ? [] : [entry]), ...resent, ...targetsOf(exit)]), FREEZE_NODE],
+        // R68: a step whose unsuccessful ending ends the run goes to its outcome step (the engine takes that way, never a route).
+        ends: [
+            ...new Set([
+                ...(entry === null ? [] : [entry]),
+                ...resent,
+                ...targetsOf(exit),
+                ...endingTargetsOf(node).map((key) => targetOf(nodes, key)),
+            ]),
+            FREEZE_NODE,
+        ],
         ...(isLoop ? { loop: { body: entry } } : {}),
         ...(inLoop === undefined ? {} : { inLoop }),
     }

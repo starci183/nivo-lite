@@ -1,4 +1,5 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { SANDBOX_KEY_HEADER } from "@modules/domain/provider-sandbox"
 import type { Request } from "express"
 import { GENERIC_WEBHOOK, GenericWebhookIntakeService } from "@modules/domain/agent-inbound"
 import { Public, PublicReason } from "@modules/domain/identity"
@@ -29,6 +30,7 @@ export class GenericWebhook {
         @Headers("x-signature") signature?: string,
         @Headers("x-event-type") eventType?: string,
         @Headers("x-idempotency-key") deliveryKey?: string,
+        @Headers(SANDBOX_KEY_HEADER) sandboxKey?: string,
     ): Promise<void> {
         await this.signature.verify({
             provider: GENERIC_WEBHOOK,
@@ -36,6 +38,7 @@ export class GenericWebhook {
             rawBody: request.rawBody,
             signature,
             timestamp: undefined,
+            sandboxKey,
         })
         await this.intake.accept({
             endpoint: route.connectionId,

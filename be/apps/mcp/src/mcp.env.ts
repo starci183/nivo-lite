@@ -1,6 +1,7 @@
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
 import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
 import { parseAiConfig } from "@modules/integrations/ai"
+import { parseQdrantConfig } from "@modules/integrations/qdrant"
 import { parseObjectStorageConfig } from "@modules/integrations/object-storage"
 import { parseBillingConfig } from "@modules/domain/billing"
 import { parseServerConfig, type EnvSource } from "@modules/platform/config"
@@ -32,6 +33,8 @@ export interface McpAppOptions {
     readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
     /** The AI endpoint (the readiness probe's and the setup chat's generation client); every key is optional. */
     readonly ai: ReturnType<typeof parseAiConfig>
+    /** The vector index (`QDRANT_URL` required, `QDRANT_API_KEY`): a required engine piece of every process that reads truths. */
+    readonly qdrant: ReturnType<typeof parseQdrantConfig>
     /** The object store the file ops keep a record's files in. */
     readonly storage: ReturnType<typeof parseObjectStorageConfig>
     /** The plan limits a file upload is checked against (the storage room of the workspace's plan). */
@@ -57,6 +60,7 @@ export const readMcpEnv = (env: EnvSource): McpAppOptions => ({
     connectionSecrets: parseConnectionSecretsConfig(env),
     entityEngine: parseEntityEngineConfig(env),
     ai: parseAiConfig(env),
+    qdrant: parseQdrantConfig(env),
     storage: parseObjectStorageConfig(env),
     billing: parseBillingConfig(env),
     realtime: parseRealtimeConfig(env),

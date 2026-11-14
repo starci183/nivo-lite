@@ -1,12 +1,15 @@
-/** What a vector point is of: a passage of a document, or a truth of the truth graph. One collection each. */
-export type VectorKind = "passage" | "truth"
+/**
+ * What a vector point is of: a kind of Postgres row that declares it is embedded. One collection each: a passage of a workspace's
+ * document, a truth of a workspace's truth graph, an item of the platform's base knowledge (tenant `PLATFORM_TENANT`).
+ */
+export type VectorKind = "passage" | "truth" | "base"
 
 /**
  * WHO a vector search answers for. Every member is required: a search that names no workspace, no audience or no model cannot be
  * written. The index turns it into the filter itself; a caller never hands a filter over.
  */
 export interface VectorScope {
-    /** The tenant: every search and every count is inside it. */
+    /** The tenant: every search and every count is inside it (a workspace, or `PLATFORM_TENANT` for the platform's own rows). */
     readonly workspaceId: string
     /** customer = only points marked public and customer-ready; internal = every point of the lens. */
     readonly audience: "customer" | "internal"
@@ -143,4 +146,6 @@ export interface VectorIndex {
     ensure(kind: VectorKind): Promise<void>
     /** Whether the index answered its last call. */
     health(): VectorHealth
+    /** Asks the service now whether it answers an authenticated call (the list of collections): ok or down; never throws. */
+    probe(): Promise<VectorHealth>
 }

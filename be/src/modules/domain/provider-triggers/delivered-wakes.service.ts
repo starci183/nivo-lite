@@ -39,6 +39,16 @@ export class DeliveredWakesService {
         return this.wakes.claimQueued(manager, workspaceId, wakeIds, runId)
     }
 
+    /** The wakes held behind the run (`waiting:<run>`), oldest first, at most `limit`. */
+    heldBehind(manager: EntityManager, workspaceId: string, runId: string, limit: number): Promise<ReadonlyArray<PendingScopeWake>> {
+        return this.wakes.heldBehind(manager, workspaceId, runId, limit)
+    }
+
+    /** The runs wakes are held behind in the workspace, at most `limit` (the sweep's backstop). */
+    runsHeldBehind(manager: EntityManager, workspaceId: string, limit: number): Promise<ReadonlyArray<string>> {
+        return this.wakes.runsHeldBehind(manager, workspaceId, limit)
+    }
+
     /** How many wakes are held behind the run (`waiting:<run>`). */
     waitingCountOf(manager: EntityManager, workspaceId: string, runId: string): Promise<number> {
         return this.wakes.waitingCountOf(manager, workspaceId, runId)
@@ -52,6 +62,11 @@ export class DeliveredWakesService {
     /** Offers again every wake of an event a run's wait took and handed back, never to that run again; how many. */
     reoffer(tx: EntityManager, workspaceId: string, event: DeliveredEventRef, runId: string): Promise<number> {
         return this.wakes.reoffer(tx, workspaceId, event, runId)
+    }
+
+    /** Drops every wake still waiting to run in the lock scopes of an erased subject (pending or held, of any agent); how many. */
+    dropOfScopes(tx: EntityManager, workspaceId: string, scopeKeys: ReadonlyArray<string>, reason: string): Promise<number> {
+        return this.wakes.dropOfScopes(tx, workspaceId, scopeKeys, reason)
     }
 
     /** Drops the wakes held behind a run that ended because its subject was erased; how many. */

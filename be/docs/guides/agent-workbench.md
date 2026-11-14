@@ -8,7 +8,7 @@ from the repository root.
 ## The present architecture
 
 - A workbench is a spec, not a page. A module declares its workbench as data in `packages/blocks-core` (the generic blocks in
-  `packages/blocks-core/src/blocks`, the module declarations, fixtures and messages in `packages/blocks-core/src/modules/<module>`).
+  `packages/blocks-core/src/shared/blocks`, the module declarations, fixtures and messages in `packages/blocks-core/src/agents/<agent>`).
 - One route draws every spec: the agent workbench slot `fe/apps/web/src/features/pages/AgentWorkbenchPage`, mounted at
   `/workspaces/<workspaceId>/agents/<module>/<installation>/workbench` by
   `fe/apps/web/src/app/[locale]/workspaces/[workspaceId]/(console)/agents/[module]/[installation]/workbench/page.tsx`, inside the agent

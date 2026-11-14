@@ -196,7 +196,12 @@ export interface DomainChange {
  * - `not_found`: the account holds no such domain;
  * - `already_exists`: the provider answered the resource exists (HTTP 409);
  * - `rejected`: the provider refused the request as asked (HTTP 400 / its business error body); `providerCode` carries its own code;
- * - `contacts_required` / `contacts_unsupported`: the registration's contact data does not fit what this provider takes.
+ * - `contacts_required` / `contacts_unsupported`: the registration's contact data does not fit what this provider takes;
+ * - `insufficient_balance`: the provider refused a charged order (a renewal, a registration) for the account's balance: nothing was
+ *   ordered, a person tops the balance up and asks again;
+ * - `domain_locked`: the provider refused the operation because the domain (or the service) is locked at it: nothing was done.
+ * The last two are said only where the provider STATES the cause in a documented, typed member of its answer (or its sandbox case is
+ * that cause); a refusal whose cause the provider does not state is `rejected` with its own code.
  */
 export type DomainRefusalReason =
     | "not_available"
@@ -205,6 +210,8 @@ export type DomainRefusalReason =
     | "rejected"
     | "contacts_required"
     | "contacts_unsupported"
+    | "insufficient_balance"
+    | "domain_locked"
 
 /**
  * Every refusal a generic domain tool answers (`nivo.tool.domain.*`): the providers' reasons (`DomainRefusalReason`) and the tools' own,
@@ -212,13 +219,15 @@ export type DomainRefusalReason =
  * use) and `not_selected` (several could take a name not held yet, and none was handed). A leaf list, so the engine's tool registry
  * states it without importing the tools (which import the gateway, which imports the registry).
  */
-export const DOMAIN_TOOL_REFUSALS: readonly ["not_available", "not_found", "already_exists", "rejected", "contacts_required", "contacts_unsupported", "domain_not_held", "not_connected", "not_selected"] = [
+export const DOMAIN_TOOL_REFUSALS: readonly ["not_available", "not_found", "already_exists", "rejected", "contacts_required", "contacts_unsupported", "insufficient_balance", "domain_locked", "domain_not_held", "not_connected", "not_selected"] = [
     "not_available",
     "not_found",
     "already_exists",
     "rejected",
     "contacts_required",
     "contacts_unsupported",
+    "insufficient_balance",
+    "domain_locked",
     "domain_not_held",
     "not_connected",
     "not_selected",
@@ -232,14 +241,44 @@ export type DomainToolRefusal = (typeof DOMAIN_TOOL_REFUSALS)[number]
  * holds the two equal): the engine's tool registry lists exactly these; the others (the setup: `not_available`, `not_connected`,
  * `not_selected`) freeze the step.
  */
-export const DOMAIN_TOOL_BUSINESS_REFUSALS: readonly ["not_found", "already_exists", "rejected", "contacts_required", "contacts_unsupported", "domain_not_held"] = [
+export const DOMAIN_TOOL_BUSINESS_REFUSALS: readonly ["not_found", "already_exists", "rejected", "contacts_required", "contacts_unsupported", "insufficient_balance", "domain_locked", "domain_not_held"] = [
     "not_found",
     "already_exists",
     "rejected",
     "contacts_required",
     "contacts_unsupported",
+    "insufficient_balance",
+    "domain_locked",
     "domain_not_held",
 ] as const satisfies ReadonlyArray<DomainToolRefusal>
+
+/**
+ * What a renewal renews (`nivo.tool.domain.renewal.create` `service`): the domain itself, or a service a provider sells ON a domain name
+ * (its web hosting, its SSL certificate). The port is per domain name either way: a service is found by the domain name it serves.
+ */
+export type RenewableService = "domain" | "hosting" | "ssl"
+
+/** The services that are not the domain itself, renewed through `renewService`. */
+export type DomainService = Exclude<RenewableService, "domain">
+
+/** What the renewal of a service on a domain name asks (`renewService`). */
+export interface ServiceRenewalRequest {
+    /** The service. */
+    readonly service: DomainService
+    /** The domain name the service serves (how the account finds it). */
+    readonly name: string
+    /** The years to add. */
+    readonly years: number
+}
+
+/**
+ * What a service renewal answered: the receipt, and the service's new end date when the provider states it in the answer (null
+ * otherwise: the renewal is then `pending` until a read proves it).
+ */
+export interface ServiceRenewalReceipt extends DomainOrderReceipt {
+    /** The service's end date after the renewal, as the provider printed it, or null when its answer does not state it. */
+    readonly expiresOn: string | null
+}
 
 /**
  * The domain purposes of one registrar provider, on one connected account. A refusal is a `registrarRefusal` (a `ProviderRegistryError`); a failure of the
@@ -274,4 +313,10 @@ export interface DomainRegistrarPort {
     deleteDnsRecord(connection: ConnectionRecord, domain: DomainRecord, recordId: string): Promise<DomainChange>
     /** Replaces the nameservers of a domain. */
     updateNameservers(connection: ConnectionRecord, domain: DomainRecord, nameservers: ReadonlyArray<string>): Promise<DomainChange>
+    /**
+     * Renews a SERVICE the account holds on a domain name (its hosting, its SSL certificate), when the provider's documentation states
+     * the operation; a provider that does not implement it answers every service renewal `not_available` (the tool refuses it so,
+     * nothing tried). A service the account does not hold is refused `not_found`. Failures and refusals as `renew`.
+     */
+    renewService?(connection: ConnectionRecord, request: ServiceRenewalRequest): Promise<ServiceRenewalReceipt>
 }

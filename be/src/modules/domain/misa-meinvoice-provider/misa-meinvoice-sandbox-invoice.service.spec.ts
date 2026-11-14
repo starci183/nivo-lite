@@ -1,19 +1,16 @@
 import * as fs from "node:fs"
 import type { ConnectionRecord } from "@modules/domain/connections"
-import { proofOf, ProviderRegistryErrorCode, providerRefusalDetail, providerRefusalReason } from "@modules/domain/provider-registry"
+import { proofOf, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
 import { ProviderSandboxErrorCode } from "@modules/domain/provider-sandbox"
 import { connectionRecord } from "@tests/fixtures/builders/connection-records.builder"
-import { sandboxAccount, sandboxServiceOf } from "@tests/fixtures/builders/provider-sandbox.builder"
-import { MISA_MEINVOICE_PROVIDER } from "./misa-meinvoice-invoice.service"
+import { sandboxAccount, sandboxServiceOf, sandboxServiceOff } from "@tests/fixtures/builders/provider-sandbox.builder"
+import { MISA_MEINVOICE_SANDBOX_CATALOGUE, MISA_SANDBOX_CASE } from "./misa-meinvoice-sandbox.catalogue"
 import { MisaMeinvoiceSandboxInvoiceService } from "./misa-meinvoice-sandbox-invoice.service"
 
-const ACCOUNT = sandboxAccount({ id: "conn-m", workspaceId: "ws-1", provider: MISA_MEINVOICE_PROVIDER })
-/** The sandbox connection as the engine hands it: a stored connection plus its creation-time `sandbox` flag (lands on `ConnectionRecord` after RESTART-R4). */
-const CONNECTION: ConnectionRecord = {
-    ...connectionRecord({ id: "conn-m", workspaceId: "ws-1", provider: MISA_MEINVOICE_PROVIDER, meta: {} }),
-    sandbox: true,
-} as ConnectionRecord
-const REQUEST = { draftId: "d-1", renewalId: "r-1" }
+const ACCOUNT = sandboxAccount({ id: "conn-m", workspaceId: "ws-1", provider: "misa_meinvoice" })
+const CONNECTION: ConnectionRecord = connectionRecord({ id: "conn-m", workspaceId: "ws-1", provider: "misa_meinvoice", sandbox: true })
+const LIVE_CONNECTION: ConnectionRecord = connectionRecord({ id: "conn-live", workspaceId: "ws-1", provider: "misa_meinvoice" })
+const draft = (draftId: string) => ({ draftId, renewalId: "r-1" })
 
 /** The sandbox invoice service over a memory store that knows the sandbox account. */
 const setup = () => {
@@ -29,129 +26,166 @@ describe("MisaMeinvoiceSandboxInvoiceService", () => {
         expect(setup().service.provider).toBe("misa_meinvoice")
     })
 
-    it("issues a deterministic invoice by default and logs exactly one issue call with the request", async () => {
+    it("MISA-1 (default): issues invoice 1 of the series with no case picked, and logs exactly one issue call", async () => {
         const { sandbox, service } = setup()
 
-        const invoice = await service.issue(CONNECTION, REQUEST)
+        const invoice = await service.issue(CONNECTION, draft("d-1"))
 
-        expect(invoice).toMatchObject({ id: "sbx-inv-d-1", state: "issued" })
-        expect(invoice.invoiceNo).toMatch(/^SBX\d{7}$/)
-        const calls = await sandbox.calls(ACCOUNT)
+        expect(invoice).toEqual({ id: "sbx-inv-00000001", state: "issued", invoiceNo: "C26TSB/00000001", issuedOn: "2026-11-14" })
+        const calls = await sandbox.calls(ACCOUNT, "issue")
         expect(calls).toHaveLength(1)
-        expect(calls[0]).toMatchObject({
-            operation: "issue",
-            key: "d-1",
-            request: REQUEST,
-            result: { outcome: "answered", by: "default", value: invoice },
-        })
+        expect(calls[0]).toMatchObject({ operation: "issue", key: "d-1", request: draft("d-1"), result: { outcome: "answered", value: invoice } })
     })
 
-    it("numbers the same draft the same and another draft differently", async () => {
+    it("the request's draft id never picks the case: a draft named like an old case still issues", async () => {
         const { service } = setup()
-
-        const first = await service.issue(CONNECTION, REQUEST)
-        const again = await service.issue(CONNECTION, REQUEST)
-        const other = await service.issue(CONNECTION, { draftId: "d-2", renewalId: null })
-
-        expect(again).toEqual(first)
-        expect(other.invoiceNo).not.toBe(first.invoiceNo)
+        expect((await service.issue(CONNECTION, draft("draft-rejected"))).invoiceNo).toBe("C26TSB/00000001")
     })
 
-    it("answers the fixture kept for the draft before the default", async () => {
+    it("MISA-1 picked explicitly issues the same", async () => {
         const { sandbox, service } = setup()
-        await sandbox.fixture(ACCOUNT, { operation: "issue", key: "d-1", value: { id: "inv-9", state: "issued", invoiceNo: "00000042" } })
-
-        await expect(service.issue(CONNECTION, REQUEST)).resolves.toEqual({ id: "inv-9", state: "issued", invoiceNo: "00000042" })
-        await expect(service.issue(CONNECTION, { draftId: "d-2", renewalId: null })).resolves.toMatchObject({ id: "sbx-inv-d-2" })
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.issued)
+        expect((await service.issue(CONNECTION, draft("d-1"))).invoiceNo).toBe("C26TSB/00000001")
     })
 
-    it("refuses a malformed fixture as rejected, proved not_sent, and logs the call as thrown", async () => {
+    it("numbers gaplessly, keeps each invoice by draft and by id, and issues a SECOND invoice for the same draft", async () => {
         const { sandbox, service } = setup()
-        await sandbox.fixture(ACCOUNT, { operation: "issue", value: { state: 5 } })
 
-        const thrown = await thrownOf(service.issue(CONNECTION, REQUEST))
+        const first = await service.issue(CONNECTION, draft("d-1"))
+        const second = await service.issue(CONNECTION, draft("d-1"))
 
-        expect(providerRefusalReason(thrown)).toBe("rejected")
-        expect(proofOf(thrown)).toBe("not_sent")
-        expect((await sandbox.calls(ACCOUNT))[0]?.result.outcome).toBe("threw")
-    })
-
-    it("fails a scripted refusal as the live refusal rejected, with the reason word, and logs a failed call", async () => {
-        const { sandbox, service } = setup()
-        await sandbox.script(ACCOUNT, {
-            operation: "issue",
-            script: { outcome: "fail", failure: { kind: "refused", reason: "tax_code_invalid" } },
+        expect([first.invoiceNo, second.invoiceNo]).toEqual(["C26TSB/00000001", "C26TSB/00000002"])
+        const kept = await sandbox.call(ACCOUNT, "probe", {}, {
+            answer: async (state) => [await state.read("invoice", "d-1"), await state.read("invoice", "invoice:sbx-inv-00000001"), await state.read("next", "")],
         })
+        expect(kept).toEqual([second, first, 3])
+    })
 
-        const thrown = await thrownOf(service.issue(CONNECTION, REQUEST))
+    it("MISA-2: refuses an invalid buyer tax code as rejected, not sent, and consumes no number", async () => {
+        const { sandbox, service } = setup()
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.rejected)
 
-        expect(thrown).toMatchObject({ code: ProviderRegistryErrorCode.RefusedRejected })
-        expect(providerRefusalDetail(thrown)).toBe("tax_code_invalid")
+        const thrown = await thrownOf(service.issue(CONNECTION, draft("d-1")))
+
+        expect(thrown).toMatchObject({ code: ProviderRegistryErrorCode.RefusedRejected, params: { provider: "misa_meinvoice", detail: "invalid buyer tax code" } })
         expect(proofOf(thrown)).toBe("not_sent")
-        expect((await sandbox.calls(ACCOUNT))[0]?.result).toMatchObject({ outcome: "failed", failure: { kind: "refused" } })
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.issued)
+        expect((await service.issue(CONNECTION, draft("d-2"))).invoiceNo).toBe("C26TSB/00000001")
+        expect((await sandbox.calls(ACCOUNT, "issue")).map((call) => call.result.outcome)).toEqual(["threw", "answered"])
     })
 
-    it("fails an unavailable provider as not sent and a timeout as effect unknown", async () => {
+    it("MISA-3: no answer is the unknown-outcome call failure and consumes no number", async () => {
         const { sandbox, service } = setup()
-        await sandbox.script(ACCOUNT, { operation: "issue", script: { outcome: "fail", failure: { kind: "unavailable" } }, times: 1 })
-        await sandbox.script(ACCOUNT, { operation: "issue", key: "d-2", script: { outcome: "fail", failure: { kind: "timeout" } }, times: 1 })
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.noAnswer)
 
-        const unavailable = await thrownOf(service.issue(CONNECTION, REQUEST))
-        const timeout = await thrownOf(service.issue(CONNECTION, { draftId: "d-2", renewalId: null }))
+        const thrown = await thrownOf(service.issue(CONNECTION, draft("d-1")))
 
-        expect(proofOf(unavailable)).toBe("not_sent")
-        expect(proofOf(timeout)).toBe("unknown")
-        expect(providerRefusalReason(timeout)).toBeNull()
+        expect(thrown).toMatchObject({ code: ProviderRegistryErrorCode.CallUnknown })
+        expect(proofOf(thrown)).toBe("unknown")
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.issued)
+        expect((await service.issue(CONNECTION, draft("d-2"))).invoiceNo).toBe("C26TSB/00000001")
     })
 
-    it("fails an expired credential as the auth refusal and a missing thing as not found", async () => {
+    it("MISA-4: a server failure is a call failure proved not sent, and consumes no number", async () => {
         const { sandbox, service } = setup()
-        await sandbox.script(ACCOUNT, { operation: "issue", script: { outcome: "fail", failure: { kind: "auth_expired" } }, times: 1 })
-        await sandbox.script(ACCOUNT, { operation: "issue", key: "d-2", script: { outcome: "fail", failure: { kind: "not_found" } }, times: 1 })
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.unavailable)
 
-        const auth = await thrownOf(service.issue(CONNECTION, REQUEST))
-        const missing = await thrownOf(service.issue(CONNECTION, { draftId: "d-2", renewalId: null }))
+        const thrown = await thrownOf(service.issue(CONNECTION, draft("d-1")))
 
-        expect(providerRefusalReason(auth)).toBe("auth_refused")
-        expect(proofOf(auth)).toBe("not_sent")
-        expect(providerRefusalReason(missing)).toBe("not_found")
-        expect(proofOf(missing)).toBe("not_sent")
+        expect(thrown).toMatchObject({ code: ProviderRegistryErrorCode.CallNotSent })
+        expect(proofOf(thrown)).toBe("not_sent")
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.issued)
+        expect((await service.issue(CONNECTION, draft("d-2"))).invoiceNo).toBe("C26TSB/00000001")
     })
 
-    it("fails once when scripted once, then issues", async () => {
+    it("MISA-5: a refused credential is auth refused, not sent", async () => {
         const { sandbox, service } = setup()
-        await sandbox.script(ACCOUNT, { operation: "issue", script: { outcome: "fail", failure: { kind: "unavailable" } }, times: 1 })
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.authRefused)
 
-        await expect(service.issue(CONNECTION, REQUEST)).rejects.toMatchObject({ code: ProviderRegistryErrorCode.CallNotSent })
-        await expect(service.issue(CONNECTION, REQUEST)).resolves.toMatchObject({ state: "issued" })
+        const thrown = await thrownOf(service.issue(CONNECTION, draft("d-1")))
+
+        expect(thrown).toMatchObject({ code: ProviderRegistryErrorCode.RefusedAuth })
+        expect(proofOf(thrown)).toBe("not_sent")
+    })
+
+    it("MISA-6: a timeout with the effect applied keeps the invoice and consumes its number, then throws unknown", async () => {
+        const { sandbox, service } = setup()
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.timeoutApplied)
+
+        const thrown = await thrownOf(service.issue(CONNECTION, draft("d-1")))
+
+        expect(thrown).toMatchObject({ code: ProviderRegistryErrorCode.CallUnknown })
+        expect(proofOf(thrown)).toBe("unknown")
+        const kept = await sandbox.call(ACCOUNT, "probe", {}, { answer: (state) => state.read("invoice", "d-1") })
+        expect(kept).toEqual({ id: "sbx-inv-00000001", state: "issued", invoiceNo: "C26TSB/00000001", issuedOn: "2026-11-14" })
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.issued)
+        expect((await service.issue(CONNECTION, draft("d-2"))).invoiceNo).toBe("C26TSB/00000002")
+    })
+
+    it("is sticky: a picked case answers every later call until changed, one logged call per request", async () => {
+        const { sandbox, service } = setup()
+        await sandbox.setNextCase(ACCOUNT, "issue", MISA_SANDBOX_CASE.rejected)
+        const first = await thrownOf(service.issue(CONNECTION, draft("d-1")))
+        const second = await thrownOf(service.issue(CONNECTION, draft("d-1")))
+        expect(first).toMatchObject({ code: ProviderRegistryErrorCode.RefusedRejected })
+        expect(second).toMatchObject({ code: ProviderRegistryErrorCode.RefusedRejected })
         expect(await sandbox.calls(ACCOUNT, "issue")).toHaveLength(2)
     })
 
-    it("answers a scripted answer as the invoice", async () => {
+    it("numbers gaplessly across a mix of cases: only invoices that exist take a number", async () => {
         const { sandbox, service } = setup()
-        await sandbox.script(ACCOUNT, {
-            operation: "issue",
-            script: { outcome: "answer", value: { id: "i-1", state: "draft", invoiceNo: null } },
-            times: 1,
-        })
-
-        await expect(service.issue(CONNECTION, REQUEST)).resolves.toEqual({ id: "i-1", state: "draft", invoiceNo: null })
+        const numbers: Array<string | null> = []
+        const picks = [
+            MISA_SANDBOX_CASE.issued,
+            MISA_SANDBOX_CASE.rejected,
+            MISA_SANDBOX_CASE.noAnswer,
+            MISA_SANDBOX_CASE.issued,
+            MISA_SANDBOX_CASE.timeoutApplied,
+            MISA_SANDBOX_CASE.unavailable,
+            MISA_SANDBOX_CASE.issued,
+        ]
+        for (const id of picks) {
+            await sandbox.setNextCase(ACCOUNT, "issue", id)
+            numbers.push(await service.issue(CONNECTION, draft("d")).then((invoice) => invoice.invoiceNo, () => null))
+        }
+        expect(numbers).toEqual(["C26TSB/00000001", null, null, "C26TSB/00000002", null, null, "C26TSB/00000004"])
+        expect(await sandbox.calls(ACCOUNT, "issue")).toHaveLength(7)
     })
 
-    it("reaches no network: one constructor argument and no client or host in the source", () => {
-        const source = fs.readFileSync(__filename.replace(".spec.ts", ".ts"), "utf8")
+    it("is deterministic: two fresh accounts answer the same sequence", async () => {
+        const run = async () => {
+            const { sandbox, service } = setup()
+            const out: Array<unknown> = []
+            for (const id of [MISA_SANDBOX_CASE.issued, MISA_SANDBOX_CASE.rejected, MISA_SANDBOX_CASE.issued]) {
+                await sandbox.setNextCase(ACCOUNT, "issue", id)
+                out.push(await service.issue(CONNECTION, draft("a")).catch((cause: unknown) => String((cause as Error).name)))
+            }
+            return out
+        }
+        expect(await run()).toEqual(await run())
+    })
 
+    it("refuses a live account and a switched-off sandbox", async () => {
+        const { service } = setup()
+        expect(await thrownOf(service.issue(LIVE_CONNECTION, draft("d-1")))).toMatchObject({ code: ProviderSandboxErrorCode.LiveAccount })
+        const off = sandboxServiceOff(ACCOUNT)
+        expect(await thrownOf(new MisaMeinvoiceSandboxInvoiceService(off.sandbox).issue(CONNECTION, draft("d-1")))).toMatchObject({ code: ProviderSandboxErrorCode.Off })
+    })
+
+    it("has a catalogue of unique MISA-<n> ids that all answer issue, exactly one of them the default", () => {
+        const ids = MISA_MEINVOICE_SANDBOX_CATALOGUE.cases.map((one) => one.id)
+        expect(new Set(ids).size).toBe(ids.length)
+        expect(ids).toEqual(["MISA-1", "MISA-2", "MISA-3", "MISA-4", "MISA-5", "MISA-6"])
+        expect(ids.every((id) => /^MISA-\d+$/.test(id))).toBe(true)
+        expect(MISA_MEINVOICE_SANDBOX_CATALOGUE.cases.filter((one) => one.default === true).map((one) => one.id)).toEqual(["MISA-1"])
+        expect(MISA_MEINVOICE_SANDBOX_CATALOGUE.provider).toBe("misa_meinvoice")
+        expect(MISA_MEINVOICE_SANDBOX_CATALOGUE.cases.every((one) => one.operation === "issue" && one.inbound === undefined)).toBe(true)
+    })
+
+    it("reaches no network: one constructor argument, no integration import, no web address in the source", () => {
         expect(MisaMeinvoiceSandboxInvoiceService.length).toBe(1)
+        const source = fs.readFileSync(__filename.replace(".spec.ts", ".ts"), "utf8")
         expect(source).not.toContain("@modules/integrations")
         expect(source).not.toContain("http")
-    })
-
-    it("refuses a LIVE account through the frame", async () => {
-        const live = sandboxAccount({ id: "conn-live", provider: MISA_MEINVOICE_PROVIDER, sandbox: false })
-        const { sandbox } = sandboxServiceOf(live)
-        const service = new MisaMeinvoiceSandboxInvoiceService(sandbox)
-        const liveConnection = connectionRecord({ id: "conn-live", workspaceId: "ws-1", provider: MISA_MEINVOICE_PROVIDER })
-
-        await expect(service.issue(liveConnection, REQUEST)).rejects.toMatchObject({ code: ProviderSandboxErrorCode.LiveAccount })
     })
 })

@@ -37,10 +37,6 @@ export class AgentTriggerEntity extends UuidAbstractEntity {
     @Column({ name: "sources", type: "text", array: true, default: () => "'{}'" })
     sources!: Array<string>
 
-    /** The probe that decides whether a wake has work, or null for always. */
-    @Column({ name: "probe_key", type: "text", nullable: true })
-    probeKey!: string | null
-
     /** Off keeps the row and fires nothing. */
     @Column({ name: "enabled", type: "boolean", default: true })
     enabled!: boolean

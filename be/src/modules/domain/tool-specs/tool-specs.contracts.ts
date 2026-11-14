@@ -45,24 +45,10 @@ export interface TypedRefusals<R extends string> extends ToolRefusals {
 }
 
 /**
- * The adapter slot of a PLATFORM purpose (TOOLS-LEAD §1c): `openapi`, an OpenAPI source may serve the purpose by marking one operation of
- * its document `x-nivo-tool: <purpose id>`, run by the generic OpenAPI executor on the source's account. WHICH source serves it is its
- * owners (`ToolSpec.owners`, a source key such as `crm`): a purpose with the slot that NIVO still owns is served by no source yet.
- */
-export type ToolAdapterSlot = "openapi"
-
-/**
- * When a bound owner account serves the tool (flipDecisions2026_11_13: a slotted purpose no source serves yet is UNAVAILABLE):
- * - `bound`: any account of an owner that binds the node serves it (every tool but the ones below);
- * - `pinned-mark`: only an account whose PINNED OpenAPI document marks the purpose (`x-nivo-tool: <id>`); a bound account whose document
- *   marks none does not serve it, and readiness hides a graph that needs it (`tool_unavailable`) instead of letting its step fail.
- */
-export type ToolAvailability = "bound" | "pinned-mark"
-
-/**
  * What the engine knows of one tool: generic facts only (nivo-frame `engineNoBusiness`): whether it writes, who serves its purpose, how
- * its account is found, its data kind, its adapter slot, its availability and its refusals. No class, no money mark, no default mode:
- * the node's declared mode is the only mode.
+ * its account is found, its data kind, its refusals and whether it may be sent again on an unknown outcome. No class, no money mark, no
+ * default mode: the node's declared mode is the only mode. A platform purpose is served by its PROVIDERS (its owners), never by a CRM's
+ * document marking it (owner ruling R57: a CRM serves its own generated operations only).
  */
 export interface ToolSpec {
     /** False for a read (only looks: it never asks, and on any failure it may go on to the next account); true for a write. */
@@ -81,12 +67,13 @@ export interface ToolSpec {
     /** Its business refusals. */
     readonly refusals: ToolRefusals
     /**
-     * The adapter slot of a platform purpose (`ToolAdapterSlot`), or null for every other tool: a purpose an OpenAPI source may serve
-     * even when its id lies outside the source's own `nivo.tool.<key>.` (the pin accepts its mark only then).
+     * Whether the engine may make the SAME call again (same call key) when its outcome is UNKNOWN (a timeout or a broken answer after the
+     * request left), under its bounded retry (rulings R73, R74). DECLARED by the tool, never guessed by the engine: true for a read and for a
+     * write whose worst case of a second effect is acceptable (the customer send: at most a duplicate line); false for a write that moves
+     * money or writes at a provider (a renewal, an invoice, an order at a third party): on an unknown outcome such a call stops for a person
+     * at once and is never sent again by itself.
      */
-    readonly adapter: ToolAdapterSlot | null
-    /** When a bound owner account serves it (`ToolAvailability`): `bound` for every tool but a slotted purpose served by a pinned mark. */
-    readonly availability: ToolAvailability
+    readonly repeatable: boolean
     /**
      * The members of the arguments that are the CONTENT a person approves (the customer send: its `text` and its `images`): the approval
      * card carries them in full, read by shape (a string is words, a list of `{ url }` is addresses), beyond the short facts. Absent or

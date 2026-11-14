@@ -167,7 +167,7 @@ const specOf = (key: string): StepSpec => ({
     stepKey: key,
     nodeKey: key,
     kind: "graph_node",
-    effect: { kind: "pivot" },
+    effect: { kind: "write" },
     input: { versionId: "v-1", nodeKey: key, trigger: { text: "hi" }, skipped: undefined },
 })
 
@@ -377,6 +377,50 @@ describe("ThreadProjectionService run ends and races", () => {
 
             expect(store.get(RUN, "run-1")?.data).toMatchObject({ ...expected, endedAt: at(9).toISOString() })
         }
+    })
+
+    it("closes, with the run's end, the step rows it left open (a loop step and the wait inside it), with the run's terminal reason", async () => {
+        const cases = [
+            [{ outcome: "skipped", code: "skipped_by_founder", by: "member-1" }, "skipped_by_founder"],
+            [{ outcome: "skipped", code: "route_held", by: null }, "route_held"],
+            [{ outcome: "failed", code: "thread_redrive_exhausted", by: null }, "thread_redrive_exhausted"],
+            [{ outcome: "done", code: null, by: null }, "run_ended"],
+        ] as const
+        for (const [end, code] of cases) {
+            const store = new Store()
+            openRun(store)
+            const service = await build(store)
+            await service.stepStarted(REF, step("talk", 1, 1, 0))
+            await service.stepStarted(REF, step("talk[r1].consult", 2, 1, 1))
+            await service.stepEnded(REF, ended("talk[r1].consult", 2, 1, 2))
+            await service.stepStarted(REF, step("talk[r2].hear", 3, 1, 3))
+
+            await expect(service.runEnded(REF, { ...end, at: at(9) })).resolves.toBe("written")
+
+            expect(store.stepsOf("run-1").map((row) => [row.data.stepKey, row.data.status, row.data.errorCode])).toEqual([
+                ["talk", "failed", code],
+                ["talk[r1].consult", "done", null],
+                ["talk[r2].hear", "failed", code],
+            ])
+            expect(store.stepsOf("run-1")[0]?.data).toMatchObject({ endedAt: at(9).toISOString(), durationMs: 9000, error: { code } })
+            // A late start of a step of the closed run keeps the closed row (a lower rank of the same try).
+            await expect(service.stepStarted(REF, step("talk[r2].hear", 3, 1, 10))).resolves.toBe("kept")
+            expect(store.stepsOf("run-1")[2]?.data.status).toBe("failed")
+        }
+    })
+
+    it("closes the open steps of a run that was already closed before this rule (a replay of its end catches it up)", async () => {
+        const store = new Store()
+        openRun(store)
+        const service = await build(store)
+        await service.stepStarted(REF, step("talk", 1, 1, 0))
+        const run = store.get(RUN, "run-1")
+        store.put(RUN, "run-1", { ...run?.data, status: "cancelled", error: { code: "subject_erased" }, endedAt: at(5).toISOString() })
+
+        await expect(service.runEnded(REF, { outcome: "done", code: null, by: null, at: at(9) })).resolves.toBe("written")
+        expect(store.get(RUN, "run-1")?.data).toMatchObject({ status: "cancelled", error: { code: "subject_erased" } })
+        expect(store.stepsOf("run-1")[0]?.data).toMatchObject({ status: "failed", errorCode: "subject_erased" })
+        await expect(service.runEnded(REF, { outcome: "done", code: null, by: null, at: at(12) })).resolves.toBe("kept")
     })
 
     it("writes the step but leaves a run an owner cancelled as it is", async () => {

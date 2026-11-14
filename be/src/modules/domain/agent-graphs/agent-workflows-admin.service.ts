@@ -3,6 +3,7 @@ import { graphSpecSchema, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { AgentRightsAgreed } from "./agent-workflow-rights.contracts"
 import type { WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
 import { INSTALLED } from "@modules/domain/installed-plugins"
+import { isNodeMode } from "@modules/domain/tools"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { WorkspaceEnterpriseService } from "@modules/domain/workspaces"
@@ -39,12 +40,14 @@ import type {
     WorkflowRequest,
     WorkflowRollbackRequest,
     WorkflowStatusRequest,
+    WorkflowNodeModeRequest,
     WorkflowTemplateVersionRequest,
     WorkflowsRequest,
 } from "./agent-workflows-door.contracts"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type { GraphLayoutPosition } from "./policies/graph-layout.policy"
 import { agreedRightsOf, type AgreedRight } from "./policies/node-rights-gate.policy"
+import { graphWithNodeMode } from "./policies/node-mode-override.policy"
 import { requireNoWidening } from "./policies/workflow-widening.policy"
 import {
     diffAgainstOf,
@@ -282,6 +285,38 @@ export class AgentWorkflowsAdminService {
                 expected,
                 request.note,
                 ...agreedOf(request),
+            ),
+        )
+    }
+
+    /**
+     * Sets ONE node of the workflow's running graph to `auto` or `ask`, for the OWNER alone (nivo-frame `rights`: account attachments + one
+     * mode per node are the hard rights; rule 5: a shop overrides a node's mode on its own graph copy, and a template update keeps it). It
+     * writes a NEW version of the workflow (the running graph with that node's mode replaced) through the same road as every edit, so the
+     * history shows it and a run pins it; the tool door reads the mode from the version a run is pinned to: `ask` raises the approval stop
+     * with the whole content of the call (rule 11 h) on the next run, while runs in flight keep the version they started on. A node already
+     * in that mode writes nothing and answers the running version. Refused, typed: a manager or staff (`FORBIDDEN`), a mode that is not
+     * `auto` / `ask` (`mode`), a key no node has (`node`), an engine control step (`node-control`), a newer version than the one read.
+     */
+    async setNodeMode(actor: GraphActor, request: WorkflowNodeModeRequest): Promise<WorkflowVersionWire> {
+        const author = await this.editorOf(actor)
+        if (author.role !== "owner") throw new AgentGraphsError({ code: AgentGraphsErrorCode.Forbidden })
+        if (!isNodeMode(request.mode)) throw workflowRefused("mode")
+        const detail = await this.owned(actor, request)
+        const graph = graphWithNodeMode(detail.graph, request.nodeKey, request.mode, (step) => INSTALLED.stepOf(step)?.control === true)
+        if (graph === null) {
+            const running = detail.versions.find((version) => version.active)
+            if (running === undefined) throw workflowRefused("version")
+            return workflowVersionWireOf(running)
+        }
+        return workflowVersionWireOf(
+            await this.workflows.publish(
+                actor.workspaceId,
+                request.workflowId,
+                graph,
+                author,
+                request.expectedLatest ?? null,
+                `${request.nodeKey}: ${request.mode}`,
             ),
         )
     }

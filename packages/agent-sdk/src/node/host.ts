@@ -151,6 +151,30 @@ const agentTurnSchema: z.ZodType<AgentTurn> = z.union([
     z.object({ done: z.unknown() }),
 ])
 
+/** The JSON Schema of a turn, as the model is shown it: the three shapes, nothing else. */
+const { $schema: _turnDialect, ...agentTurnShown } = z.toJSONSchema(agentTurnSchema, { io: "input" })
+
+/**
+ * A turn as the JSON loop asks the model port for it: any JSON object, shown to the model as the three shapes of `agentTurnSchema`
+ * (a host appends this schema's JSON Schema to the instructions). The port parses with the schema it is given and may throw when the
+ * answer does not fit; an answer that is a JSON object but none of the three shapes is the loop's to judge (a refused turn, never a
+ * crash of the step), so the port is given a schema every JSON object fits and the loop checks the shape itself (MX-CORE DEF-2).
+ */
+const agentTurnAsked: z.ZodType<Readonly<Record<string, unknown>>> = z.record(z.string(), z.unknown()).meta(agentTurnShown)
+
+/** The code of the refusal a turn that fits none of the three shapes is answered with: it costs a turn, like any refusal. */
+const TURN_INVALID = "TURN_INVALID"
+
+/** What a turn that fits none of the three shapes is told: the shapes, and what did not fit. */
+const turnRefusalOf = (error: z.ZodError): NodeAgentRefusal => ({
+    code: TURN_INVALID,
+    message:
+        `The answer was none of the three shapes {"call": ...}, {"done": <the output>} or {"confused": ...}: ${error.message}`.slice(
+            0,
+            REFUSAL_MAX,
+        ),
+})
+
 /** How an agent takes its turns: part of the agent's craft, the same words for every step of every agent. */
 const AGENT_RULE =
     "You act by calling tools; you never claim an action you did not call a tool for. Each turn answer ONLY with JSON, one of three shapes. " +
@@ -497,6 +521,8 @@ const agentRun = async <S extends z.ZodType>(
     if (ports.agent !== undefined) {
         // The host takes the turns (a native tool-calling loop); the closures above stay the only way a call acts or an output stands.
         const ended: HostLoopEnd<z.output<S>> = { decision: null }
+        // The last output or confusion the closures refused: named in the confusion when the host's turns run out (as the JSON loop does).
+        const lastRefused: { refused: NodeAgentRefusal | null } = { refused: null }
         const over: NodeAgentRefusal = { code: "STEP_ENDED", message: "The step's agent has already ended." }
         await ports.agent({
             purpose,
@@ -521,7 +547,10 @@ const agentRun = async <S extends z.ZodType>(
             done: (offered) => {
                 if (ended.decision !== null) return { ok: false, refused: over }
                 const judged = done(offered)
-                if (!judged.ok) return judged
+                if (!judged.ok) {
+                    lastRefused.refused = judged.refused
+                    return judged
+                }
                 ended.decision = { kind: "answer", value: judged.value }
                 return { ok: true }
             },
@@ -529,22 +558,23 @@ const agentRun = async <S extends z.ZodType>(
                 if (ended.decision !== null) return { ok: false, refused: over }
                 const said = confusionSchema.safeParse(confusion)
                 if (!said.success) {
-                    return {
-                        ok: false,
-                        refused: { code: "CONFUSION_INVALID", message: said.error.message.slice(0, REFUSAL_MAX) },
-                    }
+                    lastRefused.refused = { code: "CONFUSION_INVALID", message: said.error.message.slice(0, REFUSAL_MAX) }
+                    return { ok: false, refused: lastRefused.refused }
                 }
                 ended.decision = { kind: "confused", confusion: said.data }
                 return { ok: true }
             },
         })
-        return ended.decision ?? exhausted
+        return ended.decision ?? (lastRefused.refused === null ? exhausted : exhaustedAfter(turns, lastRefused.refused))
     }
     const { instructions, sharedLength } = stableOf(request, own, true, step)
     const calls: Array<unknown> = []
+    // The last answer the loop refused (a turn of no shape, an output that did not fit): named in the confusion when the turns run out,
+    // so the person the engine reports to reads why, not only that the turns ended.
+    const ended: { refused: NodeAgentRefusal | null } = { refused: null }
     const take = async (left: number): Promise<NodeModelDecision<z.output<S>>> => {
-        if (left === 0) return exhausted
-        const turn = await ports.model.json(agentTurnSchema, {
+        if (left === 0) return ended.refused === null ? exhausted : exhaustedAfter(turns, ended.refused)
+        const answered = await ports.model.json(agentTurnAsked, {
             purpose,
             instructions,
             ...(sharedLength === undefined ? {} : { sharedLength }),
@@ -554,6 +584,15 @@ const agentRun = async <S extends z.ZodType>(
             ...(asked.images === undefined ? {} : { images: asked.images }),
             ...(asked.reasoning === undefined ? {} : { reasoning: asked.reasoning }),
         })
+        // A JSON object that is none of the three shapes is a refused turn the model reads next (it costs a turn); when the turns run
+        // out the step ends confused, as every exhausted loop does: never a throw out of the step.
+        const read = agentTurnSchema.safeParse(answered)
+        if (!read.success) {
+            ended.refused = turnRefusalOf(read.error)
+            calls.push({ turn: "refused", refused: ended.refused })
+            return take(left - 1)
+        }
+        const turn = read.data
         if ("confused" in turn) return { kind: "confused", confusion: turn.confused }
         if ("call" in turn) {
             const { tool, args } = turn.call
@@ -562,6 +601,7 @@ const agentRun = async <S extends z.ZodType>(
         }
         const judged = done(turn.done)
         if (!judged.ok) {
+            ended.refused = judged.refused
             calls.push({ done: "refused", refused: judged.refused })
             return take(left - 1)
         }
@@ -569,6 +609,18 @@ const agentRun = async <S extends z.ZodType>(
     }
     return take(turns)
 }
+
+/** The confusion of a JSON loop whose turns ran out after a refused answer: the turns, and the last refusal's code and words. */
+const exhaustedAfter = <T>(turns: number, refused: NodeAgentRefusal): NodeModelDecision<T> => ({
+    kind: "confused",
+    confusion: {
+        reason: `AGENT_TURNS_EXHAUSTED after ${turns} turns; the last answer was refused ${refused.code}: ${refused.message}`.slice(
+            0,
+            CONFUSION_MAX,
+        ),
+        question: null,
+    },
+})
 
 /** The context a node runs with: every call checked, every effect counted. */
 const contextOf = (

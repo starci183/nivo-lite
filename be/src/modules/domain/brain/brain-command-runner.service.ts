@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { BrainCommandsService, type BrainCommandResult } from "@modules/domain/brain-commands"
-import { KnowledgeDriveService, KnowledgeReembedService, KnowledgeSearchService } from "@modules/domain/knowledge"
+import { KnowledgeDriveService, KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { isDomainError } from "@modules/platform/errors"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
@@ -30,7 +30,6 @@ export class BrainCommandRunnerService {
         private readonly sources: KnowledgeSourcesService,
         private readonly search: KnowledgeSearchService,
         private readonly drive: KnowledgeDriveService,
-        private readonly reembed: KnowledgeReembedService,
         private readonly areas: DocumentAreaService,
     ) {}
 
@@ -111,9 +110,6 @@ export class BrainCommandRunnerService {
             case "source.update":
                 // One door for a change of metadata: a change of area moves the document's truths too (`DocumentAreaService`).
                 await this.areas.update(userId, workspaceId, command.update)
-                return null
-            case "knowledge.reembed":
-                await this.reembed.request(userId, workspaceId)
                 return null
             case "knowledge.ask":
                 return { passages: await this.search.ask(userId, workspaceId, command.ask) }

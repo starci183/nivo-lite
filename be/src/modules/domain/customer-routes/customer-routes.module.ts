@@ -1,4 +1,7 @@
 import { Module, type DynamicModule } from "@nestjs/common"
+import { CONTACT_CONVERSATION_STORE } from "./contact-conversation-store.port"
+import { TypeormContactConversationStore } from "./contact-conversation-store.typeorm"
+import { ContactConversationService } from "./contact-conversation.service"
 import { CHANNEL_DELIVERY_STORE } from "./channel-delivery-store.port"
 import { TypeormChannelDeliveryStore } from "./channel-delivery-store.typeorm"
 import { ChannelDeliveriesService } from "./channel-deliveries.service"
@@ -34,11 +37,15 @@ export class CustomerRoutesModule extends ConfigurableModuleClass {
                 TypeormCustomerLineStore,
                 { provide: CUSTOMER_LINE_STORE, useExisting: TypeormCustomerLineStore },
                 CustomerMessagesService,
+                TypeormContactConversationStore,
+                { provide: CONTACT_CONVERSATION_STORE, useExisting: TypeormContactConversationStore },
+                ContactConversationService,
             ],
             exports: [
                 CustomerRoutesService,
                 ChannelDeliveriesService,
                 CustomerMessagesService,
+                ContactConversationService,
                 CUSTOMER_ROUTE_STORE,
                 CHANNEL_DELIVERY_STORE,
                 CUSTOMER_LINE_STORE,

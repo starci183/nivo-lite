@@ -84,10 +84,6 @@ const repointed = (status: string, column: string) => [
     { [column]: "f2" },
 ]
 
-/** The vector column of the old row, copied in SQL. */
-const copiedOf = (column: string) =>
-    `(SELECT o.${column} FROM public.brain_facts o WHERE o.workspace_id = :workspaceId AND o.id = :oldId)`
-
 /** The audience columns a reach switch writes onto the values of the key not yet in force. */
 const reached = (scope: Scope, modules: ReadonlyArray<string>) => ({ scope, modules: [...modules] })
 
@@ -143,15 +139,11 @@ const registerReachNextVersion = () => {
             validFrom: "coalesce(:validFrom::timestamptz, now())",
             validTo: "coalesce(:validTo::timestamptz, coalesce(:validFrom::timestamptz, now()) + interval '1 year')",
             evidence: ":evidence::jsonb",
-            embedding: copiedOf("embedding"),
-            embeddingModel: copiedOf("embedding_model"),
-            embeddingHash: copiedOf("embedding_hash"),
         })
         expect(insert?.callsOf("setParameters")).toEqual([
             [
                 {
                     workspaceId: facts.WS,
-                    oldId: "f1",
                     validFrom: null,
                     validTo: facts.LATER,
                     evidence: JSON.stringify([facts.PROOF]),

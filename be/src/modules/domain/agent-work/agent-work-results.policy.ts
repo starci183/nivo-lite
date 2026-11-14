@@ -46,7 +46,6 @@ const CONTEXT_TEXT_KEY_SET: Readonly<Record<Exclude<ContextTextKey, "locale">, t
     eventName: true,
     subjectId: true,
     taskId: true,
-    probeKey: true,
     intent: true,
     inbound: true,
     verb: true,
@@ -59,6 +58,7 @@ const CONTEXT_TEXT_KEY_SET: Readonly<Record<Exclude<ContextTextKey, "locale">, t
     dataJson: true,
     handedBackJson: true,
     waitOnly: true,
+    unclaimed: true,
 }
 
 const isContextTextKey = (key: string): key is Exclude<ContextTextKey, "locale"> => key in CONTEXT_TEXT_KEY_SET

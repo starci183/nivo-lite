@@ -4,7 +4,7 @@ import type { BadgeTone, FlowGraphEdge, FlowGraphLegendItem, FlowGraphNode, Flow
 export type RunStatus = "queued" | "scheduled" | "running" | "waiting" | "done" | "failed" | "cancelled"
 
 /** Where a step stands as a person tells it. */
-export type RunStepStatus = "pending" | "running" | "waiting" | "done" | "failed" | "undone"
+export type RunStepStatus = "pending" | "running" | "waiting" | "done" | "failed"
 
 /** The status tabs of the list: each stands for one or more statuses. */
 export type RunTab = "all" | "running" | "queued" | "waiting" | "done" | "failed"
@@ -184,7 +184,7 @@ export interface RunHeadView {
     /** Where the workflow opens, or empty for a run with none. */
     readonly workflowHref: string
     readonly canResume: boolean
-    /** Another command of the page is the one primary (a decision the run waits on, a frozen customer): the retry is then a neutral button. */
+    /** Another command of the page is the one primary (a decision the run waits on): the retry is then a neutral button. */
     readonly isRetryNeutral: boolean
     /** The run is queued, running or waiting and a person may stop it. */
     readonly canCancel: boolean

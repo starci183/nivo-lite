@@ -1,12 +1,15 @@
+import { timingSafeEqual } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { IsNull, Not, Raw, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import { ConnectionSecretsService, type OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
+import type { Secret } from "@modules/platform/config"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { cleanConnectionName } from "./connection-name.policy"
+import { sandboxKeyFor } from "./connection-sandbox-key.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
 import { publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
 import type {
@@ -59,6 +62,7 @@ const RECOVERED_STATUS = "CASE WHEN status IN ('pending', 'error') THEN 'connect
 export class ConnectionsService {
     private readonly siteUrl: string
     private readonly providerUrl: string | undefined
+    private readonly channelKey: Secret
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -72,6 +76,7 @@ export class ConnectionsService {
     ) {
         this.siteUrl = options.publicSiteUrl ?? options.siteUrl
         this.providerUrl = options.publicApiUrl ?? options.publicSiteUrl
+        this.channelKey = options.channelTokenKey
     }
 
     /**
@@ -206,6 +211,23 @@ export class ConnectionsService {
         return rows.map((row) => toConnectionRecord(row))
     }
 
+    /**
+     * The sandbox key of a SANDBOX account of the workspace (rulings R58 + R60: what its webhook calls present), or null for a live,
+     * removed or unknown one. Derived, stored nowhere.
+     */
+    async sandboxKeyOf(workspaceId: string, id: string): Promise<string | null> {
+        const found = await this.find(workspaceId, id)
+        return found?.sandbox === true ? sandboxKeyFor(this.channelKey.reveal(), found.id) : null
+    }
+
+    /** Whether a key is the sandbox key of the account (constant time); false for a live account or any other key. */
+    isSandboxKey(connectionId: string, presented: string | undefined): boolean {
+        if (presented === undefined || presented.length === 0) return false
+        const wanted = Buffer.from(sandboxKeyFor(this.channelKey.reveal(), connectionId), "utf8")
+        const given = Buffer.from(presented, "utf8")
+        return wanted.length === given.length && timingSafeEqual(wanted, given)
+    }
+
     /** Creates a connection and its sealed secret in one transaction (the caller's when handed in); answers the id. */
     create(input: CreateConnectionInput, manager?: EntityManager): Promise<string> {
         const name = cleanConnectionName(input.name)
@@ -223,13 +245,15 @@ export class ConnectionsService {
                     environment: input.environment,
                     createdBy: input.createdBy,
                     publicMeta: () => ":meta::jsonb",
+                    ...(input.sandbox === true ? { sandbox: true } : {}),
                 })
                 .setParameter("meta", JSON.stringify(input.meta))
                 .returning("id")
                 .execute()
             const [id] = returnedIds(inserted.raw)
             if (id === undefined) throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound })
-            await this.secrets.create(id, input.secret.plain, input.secret.webhookSecret, tx)
+            // A sandbox account holds NO secret (ruling R56): its provider's sandbox implementation needs none, its webhook proves its key.
+            if (input.sandbox !== true) await this.secrets.create(id, input.secret.plain, input.secret.webhookSecret, tx)
             return id
         }
         return manager === undefined ? this.entityManager.transaction(write) : write(manager)

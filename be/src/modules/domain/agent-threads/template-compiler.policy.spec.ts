@@ -161,14 +161,13 @@ describe("compileTemplate on every blocks-core template", () => {
             otherwise: THREAD_END,
         })
         expect(nodeNamed(graph, "to-consult")?.exit).toEqual({ kind: "next", to: THREAD_END })
-        // A declined send is a decision (the owner's rule of 2026-11-12): the reply goes through the `complaint-declined` check first.
-        expect(nodeNamed(graph, "complaint-reply")?.ends).toEqual(["complaint-declined", FREEZE_NODE])
-        expect(nodeNamed(graph, "complaint-declined")?.exit).toEqual({
-            kind: "branch",
-            field: "branch",
-            routes: { yes: "complaint-declined-notice", no: "complaint-notify" },
-            otherwise: THREAD_END,
-        })
+        // A declined send is a decision (the owner's rule of 2026-11-12). R68 moved the design (G-SLIM, front desk v26): the hand-made
+        // `complaint-declined` check + its notice are gone; the reply declares `unsuccessful: { then: "end", outcome: "declined" }`, so the
+        // ENGINE tells the team and the outcome `declined` is one of the reply's own routes beside its `next` (E-FIX7).
+        expect(nodeNamed(graph, "complaint-reply")?.exit).toEqual({ kind: "next", to: "complaint-notify" })
+        expect(nodeNamed(graph, "complaint-reply")?.ends).toEqual(["complaint-notify", "declined", FREEZE_NODE])
+        expect(nodeNamed(graph, "complaint-declined")).toBeUndefined()
+        expect(nodeNamed(graph, "declined")?.step).toBe("core.outcome")
         expect(nodeNamed(graph, "complaint-notify")?.ends).toEqual(["to-owner", FREEZE_NODE])
         expect(nodeNamed(graph, "to-owner")?.step).toBe("core.outcome")
     })
@@ -262,13 +261,10 @@ describe("stepExitOf", () => {
         expect(exitOf("understand", { branch: "paid", summary: "x" })).toBe("to-payment")
         expect(exitOf("understand", { branch: "elsewhere" })).toBe(THREAD_END)
         expect(exitOf("understand", null)).toBe(THREAD_END)
-        // The reply and the answer go to their `*-declined` check (the owner's rule of 2026-11-12); the check's branch picks the way on.
-        expect(exitOf("complaint-reply", { summary: "x" })).toBe("complaint-declined")
-        expect(exitOf("complaint-declined", { branch: "no" })).toBe("complaint-notify")
-        expect(exitOf("complaint-declined", { branch: "yes" })).toBe("complaint-declined-notice")
+        // R68 moved the design (G-SLIM, front desk v26): the `*-declined` checks are gone; a completed reply / answer follows its own exit
+        // (a declined one goes to `declined` by the engine's ending, never by the output's branch: `step-endings` world covers that road).
+        expect(exitOf("complaint-reply", { summary: "x" })).toBe("complaint-notify")
         expect(exitOf("complaint-notify", { summary: "x" })).toBe("to-owner")
-        expect(exitOf("answer", {})).toBe("answer-declined")
-        expect(exitOf("answer-declined", { branch: "no" })).toBe(THREAD_END)
-        expect(exitOf("answer-declined", { branch: "yes" })).toBe("answer-declined-notice")
+        expect(exitOf("answer", {})).toBe(THREAD_END)
     })
 })

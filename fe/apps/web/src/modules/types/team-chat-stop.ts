@@ -6,7 +6,7 @@ import type { TeamChatMarkView } from "./team-chat-room"
 export type TeamChatStopKind = "ai_report" | "ai_error" | "approval"
 
 /** Where a stop card stands in its life; the engine rewrites the same card in place. */
-export type TeamChatStopState = "open" | "answered" | "skipped" | "timed_out" | "resolved"
+export type TeamChatStopState = "open" | "answered" | "skipped" | "handed_back" | "timed_out" | "resolved"
 
 /** What a person may do with an open AI stop besides answering it. */
 export type TeamChatStopDecision = "retry" | "take_over" | "skip"
@@ -15,7 +15,7 @@ export type TeamChatStopDecision = "retry" | "take_over" | "skip"
 export type TeamChatStopVerdict = "approve" | "refuse"
 
 /** One reply on a stop card, as the door reads it. */
-export type TeamChatStopReplyKind = "answer" | "approve" | "refuse" | "retry" | "skip" | "take_over" | "timeout"
+export type TeamChatStopReplyKind = "answer" | "approve" | "refuse" | "retry" | "skip" | "handed_back" | "take_over" | "timeout"
 
 /** One name/value line of a stop (an engine fact, an argument of a leave request). */
 export interface TeamChatStopFact {

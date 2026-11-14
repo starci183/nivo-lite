@@ -32,6 +32,7 @@ export const CRM_NIVOWEB = {
     post_customers: "nivo.api.crm.nivoweb.post.customers",
     post_customers_code_contacts: "nivo.api.crm.nivoweb.post.customers.code.contacts",
     post_invoice_drafts: "nivo.api.crm.nivoweb.post.invoice-drafts",
+    post_invoice_drafts_id_invoice: "nivo.api.crm.nivoweb.post.invoice-drafts.id.invoice",
     post_payables_party_code_notes: "nivo.api.crm.nivoweb.post.payables.party-code.notes",
     post_purchases: "nivo.api.crm.nivoweb.post.purchases",
     post_purchases_id_acceptance: "nivo.api.crm.nivoweb.post.purchases.id.acceptance",
@@ -45,7 +46,6 @@ export const CRM_NIVOWEB = {
     post_renewals_id_outcome: "nivo.api.crm.nivoweb.post.renewals.id.outcome",
     post_renewals_id_payments: "nivo.api.crm.nivoweb.post.renewals.id.payments",
     post_services_code_reminders: "nivo.api.crm.nivoweb.post.services.code.reminders",
-    post_services_code_renewals: "nivo.api.crm.nivoweb.post.services.code.renewals",
     post_tickets: "nivo.api.crm.nivoweb.post.tickets",
 } as const
 
@@ -82,6 +82,7 @@ declare module "@nivo-lite/agent-sdk/names" {
         "nivo.api.crm.nivoweb.post.customers": Asking
         "nivo.api.crm.nivoweb.post.customers.code.contacts": Asking
         "nivo.api.crm.nivoweb.post.invoice-drafts": Asking
+        "nivo.api.crm.nivoweb.post.invoice-drafts.id.invoice": Asking
         "nivo.api.crm.nivoweb.post.payables.party-code.notes": Asking
         "nivo.api.crm.nivoweb.post.purchases": Asking
         "nivo.api.crm.nivoweb.post.purchases.id.acceptance": Asking
@@ -95,7 +96,6 @@ declare module "@nivo-lite/agent-sdk/names" {
         "nivo.api.crm.nivoweb.post.renewals.id.outcome": Asking
         "nivo.api.crm.nivoweb.post.renewals.id.payments": Asking
         "nivo.api.crm.nivoweb.post.services.code.reminders": Asking
-        "nivo.api.crm.nivoweb.post.services.code.renewals": Asking
         "nivo.api.crm.nivoweb.post.tickets": Asking
     }
     interface ApiNames {
@@ -127,6 +127,7 @@ declare module "@nivo-lite/agent-sdk/names" {
         "nivo.api.crm.nivoweb.post.customers": ApiSignature
         "nivo.api.crm.nivoweb.post.customers.code.contacts": ApiSignature
         "nivo.api.crm.nivoweb.post.invoice-drafts": ApiSignature
+        "nivo.api.crm.nivoweb.post.invoice-drafts.id.invoice": ApiSignature
         "nivo.api.crm.nivoweb.post.payables.party-code.notes": ApiSignature
         "nivo.api.crm.nivoweb.post.purchases": ApiSignature
         "nivo.api.crm.nivoweb.post.purchases.id.acceptance": ApiSignature
@@ -140,7 +141,6 @@ declare module "@nivo-lite/agent-sdk/names" {
         "nivo.api.crm.nivoweb.post.renewals.id.outcome": ApiSignature
         "nivo.api.crm.nivoweb.post.renewals.id.payments": ApiSignature
         "nivo.api.crm.nivoweb.post.services.code.reminders": ApiSignature
-        "nivo.api.crm.nivoweb.post.services.code.renewals": ApiSignature
         "nivo.api.crm.nivoweb.post.tickets": ApiSignature
     }
     interface ProviderNames {

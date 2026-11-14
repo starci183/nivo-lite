@@ -26,14 +26,13 @@ describe("sourceToolSpecOf: the spec of a source's operation, from the pinned do
             dataKind: "customers",
             onceBy: [],
             refusals: { closed: false, codes: [] },
-            adapter: null,
-            availability: "bound",
+            repeatable: true,
         })
     })
 
     it("makes every other method a write on ONE account, its effect mark changing nothing (display only)", () => {
         const plain = of("POST", "none")
-        expect(plain).toEqual({ ...of("GET", null), mutates: true, account: "any" })
+        expect(plain).toEqual({ ...of("GET", null), mutates: true, account: "any", repeatable: false })
         expect(of("POST", "money")).toEqual(plain)
         expect(of("POST", null)).toEqual(plain)
         expect(of("PATCH", "irreversible")).toEqual(plain)

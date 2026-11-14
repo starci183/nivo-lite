@@ -18,6 +18,9 @@ import type {
     GraphV2Step,
     GraphV2Trigger,
     LoopEvery,
+    LoopUnsuccessfulSpec,
+    NoticeFactSpec,
+    StepUnsuccessfulSpec,
     LoopUntilRoute,
     Mode,
     ModelChoice,
@@ -81,6 +84,21 @@ const bindings = z.record(keyText, binding).refine(entriesAtMost(200))
 
 const valueOrRef: z.ZodType<JsonValue | StoredRef> = z.union([storedRef, jsonValue])
 
+/** The notice facts of an unsuccessful ending (R68): how many a step may declare is judged at save (`GRAPH_UNSUCCESSFUL_FACTS_TOO_MANY`). */
+const noticeFacts: z.ZodType<ReadonlyArray<NoticeFactSpec>> = z
+    .array(z.strictObject({ label: specTextSchema, value: binding }))
+    .max(20)
+
+/** A step's unsuccessful ending as stored: `then` always written; the outcome and its place are judged at save. */
+const stepUnsuccessful: z.ZodType<StepUnsuccessfulSpec> = z.strictObject({
+    then: z.enum(["continue", "end"]),
+    outcome: stepKey.optional(),
+    facts: noticeFacts,
+})
+
+/** An `until` loop's unsuccessful ending as stored: the facts of the notice when it runs out of rounds. */
+const loopUnsuccessful: z.ZodType<LoopUnsuccessfulSpec> = z.strictObject({ facts: noticeFacts })
+
 const leaf: z.ZodType<StoredLeaf> = z.union([
     z.strictObject({ op: z.enum(["eq", "ne", "lt", "lte", "gt", "gte"]), ref: storedRef, value: valueOrRef }),
     z.strictObject({ op: z.literal("contains"), ref: storedRef, value: valueOrRef, caseFold: z.literal(true).optional() }),
@@ -128,6 +146,7 @@ const nodeStepBase = {
     next: stepKey.optional(),
     routeBy: keyText.min(1).optional(),
     routes: z.record(keyText, stepKey).refine(entriesAtMost(50)).optional(),
+    unsuccessful: stepUnsuccessful.optional(),
 }
 
 /** A node step as written: ONE mode and the providers in priority order (`nivo-frame.rights`). */
@@ -179,6 +198,7 @@ const loopOverStep: z.ZodType<GraphV2LoopOverStep> = z.strictObject({
     }),
     routes: z.strictObject({ body: stepKey }),
     next: stepKey.optional(),
+    label: specTextSchema.optional(),
 })
 
 /** The old loop of stored drafts, read as a `loop` / `over`: `concurrency` 1, sequential, as it ran. */
@@ -234,6 +254,7 @@ const outcomeStep = z.strictObject({
     step: z.literal(OUTCOME_STEP_V2),
     params: z.strictObject({ outcome: stepKey, outputs: bindings }),
     next: stepKey.optional(),
+    label: specTextSchema.optional(),
 })
 
 /** One trigger of a wait as stored. */
@@ -264,6 +285,7 @@ const waitStep: z.ZodType<GraphV2WaitStep> = z.strictObject({
         timeout: every,
     }),
     routes: z.record(keyText, stepKey).refine(entriesAtMost(21)),
+    label: specTextSchema.optional(),
 })
 
 /** A hand-back: where it may sit (a trigger route of its wait) is judged by `templateGraphProblems` (`GRAPH_HAND_BACK_NO_EVENT`). */
@@ -273,6 +295,7 @@ const handBackStep: z.ZodType<GraphV2HandBackStep> = z.strictObject({
     step: z.literal(HAND_BACK_STEP),
     params: z.strictObject({ wait: stepKey }),
     next: stepKey.optional(),
+    label: specTextSchema.optional(),
 })
 
 /** The members every form of a trigger shares. */
@@ -338,6 +361,7 @@ const documentSchemaOf = (legacy: boolean): z.ZodType<GraphSpecV2> => {
         step: z.literal(IF_STEP),
         params: z.strictObject({ when: expr }),
         routes: z.strictObject({ yes: stepKey.optional(), no: stepKey.optional() }),
+        label: specTextSchema.optional(),
     })
     const loopUntilStep: z.ZodType<GraphV2LoopUntilStep> = z.strictObject({
         ...base,
@@ -350,7 +374,10 @@ const documentSchemaOf = (legacy: boolean): z.ZodType<GraphSpecV2> => {
             every: every.optional(),
         }),
         routes: z.strictObject({ body: stepKey, exhausted: stepKey }),
+        unsuccessful: loopUnsuccessful.optional(),
         next: stepKey,
+        label: specTextSchema.optional(),
+        exits: z.strictObject({ until: specTextSchema.optional(), exhausted: specTextSchema.optional() }).optional(),
     })
     const current = [nodeStep, ifStep, loopOverStep, loopUntilStep, callWorkflowStep, outcomeStep, waitStep, handBackStep] as const
     const step: z.ZodType<GraphV2Step> = legacy

@@ -1,5 +1,7 @@
 import { Module, type DynamicModule } from "@nestjs/common"
+import { ENTERPRISE_ROSTER } from "@modules/domain/channel-provisioning"
 import { GraphSeedService } from "./graph-seed.service"
+import { RosterSeedService } from "./roster-seed.service"
 import { SeedActivationService } from "./seed-activation.service"
 import { SEED_AGENTS, SEED_AUTH } from "./workspace-seed.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspace-seed.module-definition"
@@ -25,10 +27,13 @@ export class WorkspaceSeedModule extends ConfigurableModuleClass {
                 SeedActivationService,
                 WorkspaceSeedService,
                 GraphSeedService,
+                RosterSeedService,
+                // The enterprise seed's roster step (ruling R17): the enterprise seed of channel-provisioning calls it after the identifier is set.
+                { provide: ENTERPRISE_ROSTER, useExisting: RosterSeedService },
                 WorkflowResetService,
                 WorkflowResetCommandService,
             ],
-            exports: [WorkspaceSeedService, GraphSeedService, WorkflowResetService, WorkflowResetCommandService],
+            exports: [WorkspaceSeedService, GraphSeedService, RosterSeedService, ENTERPRISE_ROSTER, WorkflowResetService, WorkflowResetCommandService],
         }
     }
 }

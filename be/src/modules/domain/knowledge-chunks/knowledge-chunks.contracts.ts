@@ -15,9 +15,6 @@ export type MaybePlaceText = string | null
 /** The place of a passage, or null when it has none. */
 export type MaybePassagePlace = PassagePlace | null
 
-/** A stored vector of the pgvector size, or null when the stored value is no such vector. */
-export type MaybeStoredVector = ReadonlyArray<number> | null
-
 /** A stretch of a document, or a passage cut from it, with the place it sits at, or null when the file names no places. */
 export interface LocatedText {
     /** The place, or null. */
@@ -44,12 +41,12 @@ export interface PlaceWrite {
     readonly places: ReadonlyArray<PlacedOrder>
 }
 
-/** One passage to store: its text and its vector in the pgvector text form, or null when it has none. */
+/** One passage to store: its text, and whether its vector was made (the caller hands it to the vector index under the stored id). */
 export interface ChunkDraft {
     /** The text. */
     readonly text: string
-    /** The vector as `[a,b,...]`, or null for a passage found by keyword only. */
-    readonly vector: string | null
+    /** True when the passage's vector was made with the model in use; false for a passage found by words only (no credits). */
+    readonly embedded: boolean
     /** Where it sits in its document, or absent when the file names no places. */
     readonly place?: PassagePlace | null
 }
@@ -66,13 +63,11 @@ export interface ChunkWrite {
     readonly visibility: string
     /** The agent instance the source is kept for, or null for every instance. */
     readonly installationId: string | null
-    /** The model that made the vectors. */
-    readonly model: string
     /**
-     * True when the deployment keeps vectors in the vector index: the row records the model and the hash of an embedded passage but NO
-     * vector, and `indexed_at` stays empty until the index accepts the vector. Absent or false: the vector is stored in the row.
+     * The model that made the vectors. The row records it and the hash of an embedded passage but never the vector (the vector index
+     * holds it); `indexed_at` stays empty until the index accepts the vector.
      */
-    readonly vectorsInIndex?: boolean
+    readonly model: string
     /** The passages in order. */
     readonly drafts: ReadonlyArray<ChunkDraft>
 }
@@ -150,28 +145,6 @@ export interface ChunkArrangement {
     readonly count: number
 }
 
-/** One stored passage that needs a vector. */
-export interface StaleChunk {
-    /** The passage id. */
-    readonly id: string
-    /** The text. */
-    readonly text: string
-}
-
-/** Vectors to give to stored passages. */
-export interface VectorWrite {
-    /** The workspace that owns the passages. */
-    readonly workspaceId: string
-    /** The model that made the vectors. */
-    readonly model: string
-    /** The passage ids. */
-    readonly ids: ReadonlyArray<string>
-    /** One vector per id, in the pgvector text form. */
-    readonly vectors: ReadonlyArray<string>
-    /** One passage hash per id, of its text and this model. */
-    readonly hashes: ReadonlyArray<string>
-}
-
 /** One stored passage of a source as the Knowledge page shows it. */
 export interface PassageView {
     /** The passage id. */
@@ -180,7 +153,7 @@ export interface PassageView {
     readonly order: number
     /** The text. */
     readonly content: string
-    /** Whether the passage has a vector. */
+    /** Whether the vector index accepted the passage's vector (`indexed_at`): it is found by meaning. */
     readonly hasEmbedding: boolean
 }
 
@@ -196,7 +169,7 @@ export interface SourcePassage {
     readonly text: string
 }
 
-/** The dimensions of every stored vector (the pgvector column size); the embeddings provider is asked for exactly this many. */
+/** The dimensions of every vector (the vector index's collection size); the embeddings provider is asked for exactly this many. */
 export const EMBEDDING_DIMENSIONS = 1536
 
 /** What triage says of a passage: `rule` (it states a rule of the shop, read into truths), `data` (shop records, never truths) or `none`. */

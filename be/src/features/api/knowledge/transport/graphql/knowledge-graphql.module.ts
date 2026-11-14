@@ -20,7 +20,6 @@ import { UpdateKnowledgeSourceResolver } from "./update-knowledge-source.resolve
 import { DeleteKnowledgeSourceResolver } from "./delete-knowledge-source.resolver"
 import { SetKnowledgeSuggestionStateResolver } from "./set-knowledge-suggestion-state.resolver"
 import { CreateKnowledgeUploadResolver } from "./create-knowledge-upload.resolver"
-import { ReembedKnowledgeResolver } from "./reembed-knowledge.resolver"
 import { GetBrainResolver } from "./get-brain.resolver"
 import { SaveBrainFactResolver } from "./save-brain-fact.resolver"
 import { DecideBrainFactResolver } from "./decide-brain-fact.resolver"
@@ -60,7 +59,6 @@ import { AgentKnowledgeLensesResolver } from "./agent-knowledge-lenses.resolver"
         DeleteKnowledgeSourceResolver,
         SetKnowledgeSuggestionStateResolver,
         CreateKnowledgeUploadResolver,
-        ReembedKnowledgeResolver,
         GetBrainResolver,
         SaveBrainFactResolver,
         DecideBrainFactResolver,

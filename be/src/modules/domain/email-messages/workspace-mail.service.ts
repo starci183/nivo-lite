@@ -1,7 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AccountDataIntakeService } from "@modules/domain/account-data"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
 import {
     InjectMailRelay,
     MailError,
@@ -27,6 +27,7 @@ import type {
     SendEmailStatus,
 } from "./email-messages.contracts"
 import { chooseSmtp, smtpConfigOf } from "./smtp-config.policy"
+import { SmtpSendRegistryService } from "./smtp-send-registry.service"
 import { SMTP_MAIL_TYPE } from "./smtp.data-types"
 
 /** Messages a workspace may send per hour: protects the owner's mailbox and NIVO's name. */
@@ -57,6 +58,7 @@ export class WorkspaceMailService {
         @InjectLogger() private readonly logger: Logger,
         private readonly log: EmailMessagesService,
         private readonly connections: ConnectionsService,
+        private readonly senders: SmtpSendRegistryService,
         @Optional() @InjectPrimaryEntityManager() private readonly entityManager?: EntityManager,
         @Optional() private readonly intake?: AccountDataIntakeService,
     ) {}
@@ -80,7 +82,7 @@ export class WorkspaceMailService {
             return this.done(input, to, "blocked", "none", { failure: "attachment", error: this.text("attachment") })
         }
         const smtp = await this.smtpOf(input.workspaceId, input.connectionId)
-        if (smtp !== null) return this.viaWorkspace(input, to, smtp.id, smtp.config, files)
+        if (smtp !== null) return this.viaWorkspace(input, to, smtp.account, smtp.config, files)
         if (audience === "owner") return this.viaPlatform(input, to, files)
         return this.done(input, to, "no_smtp", "none", { failure: "no_smtp", error: this.text("no_smtp") })
     }
@@ -93,12 +95,18 @@ export class WorkspaceMailService {
     private async viaWorkspace(
         input: SendEmailInput,
         to: string,
-        connectionId: string,
+        account: ConnectionRecord,
         config: SmtpConfig,
         files: ReadonlyArray<MailAttachment>,
     ): Promise<SendEmailResult> {
+        const connectionId = account.id
         try {
-            const sent = await this.mail.sendThroughSmtp(config, { to, message: this.messageOf(input, files) })
+            // THE ONE SWITCH: a live account sends through its own mail server, a sandbox account is only recorded.
+            const port = this.senders.portFor(account)
+            if (port === undefined) {
+                return await this.done(input, to, "no_smtp", "none", { failure: "no_smtp", error: this.text("no_smtp") })
+            }
+            const sent = await port.send(account, config, { to, message: this.messageOf(input, files) })
             return await this.done(input, to, "sent", "workspace", { connectionId, messageId: sent.messageId })
         } catch (cause) {
             return this.done(input, to, "failed", "workspace", {
@@ -142,14 +150,16 @@ export class WorkspaceMailService {
     private async smtpOf(
         workspaceId: string,
         connectionId: string | undefined,
-    ): Promise<{ id: string; config: SmtpConfig } | null> {
+    ): Promise<{ account: ConnectionRecord; config: SmtpConfig } | null> {
         const records = await this.connections.listByProvider(workspaceId, "smtp", { includeDisconnected: false })
         const connection = chooseSmtp(records, connectionId)
         if (connection === null) return null
+        // A sandbox account holds no secret: its settings alone, with no password.
+        if (connection.sandbox) return { account: connection, config: smtpConfigOf(connection.meta, "") }
         const secret = await this.connections.readSecret(connection.id)
         if (secret === null) return null
         const password = this.passwordOf(connection.id, secret.plain)
-        return password === null ? null : { id: connection.id, config: smtpConfigOf(connection.meta, password) }
+        return password === null ? null : { account: connection, config: smtpConfigOf(connection.meta, password) }
     }
 
     private async done(

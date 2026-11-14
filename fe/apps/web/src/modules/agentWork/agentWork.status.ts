@@ -1,6 +1,6 @@
 import { isSetupPending } from "@/modules/installations"
 import type { AgentWorkStatusView, AgentWorkView } from "@/modules/types"
-import { toGoalView, toTaskView, toTriggerView } from "./agentWork.rows"
+import { toTaskView, toTriggerView } from "./agentWork.rows"
 import { toTurnsView } from "./agentWork.turns"
 import {
     DEFAULT_TIME_ZONE,
@@ -79,7 +79,6 @@ export const toStatusView = (wire: AgentWorkWire, context: AgentWorkContext): Ag
 /** Everything the Work tab draws, from the answer of the back end. */
 export const toWorkView = (wire: AgentWorkWire, context: AgentWorkContext): AgentWorkView => ({
     status: toStatusView(wire, context),
-    goals: wire.goals.map((goal) => toGoalView(goal, context)),
     tasks: wire.tasks.map((task) => toTaskView(task, context)),
     triggers: wire.triggers.map((trigger) => toTriggerView(trigger, context)),
     turns: toTurnsView(wire.turns, context),
@@ -89,7 +88,6 @@ export const toWorkView = (wire: AgentWorkWire, context: AgentWorkContext): Agen
 /** The view the tab draws while the answer is on its way: the same shape, one placeholder row in each list. */
 export const WORK_PLACEHOLDER: AgentWorkView = {
     status: { kind: "idle", label: "-", tone: "neutral", nextRunLabel: "-", queueLabel: "-", stopNotice: "" },
-    goals: [{ id: "goal", title: "-", detail: "-", statusLabel: "-", dueLabel: "", isOpen: true, source: "-" }],
     tasks: [{ id: "task", title: "-", detail: "-", statusLabel: "-", waitLabel: "", workItemHref: null }],
     triggers: [
         {
@@ -103,7 +101,6 @@ export const WORK_PLACEHOLDER: AgentWorkView = {
             atTime: "",
             timeZone: DEFAULT_TIME_ZONE,
             eventName: "",
-            probeKey: "",
         },
     ],
     turns: {

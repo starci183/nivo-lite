@@ -6,12 +6,12 @@ import {
     guidedModelRequest,
     runNode,
     runTemplateNode,
+    toolAnswerOf,
     type EffectPayload,
     type NodeAgentLoop,
     type NodeHostPorts,
     type NodeIndex,
     type NodeModelRequest,
-    type NodeRun,
     type SubjectRef,
     type ToolDefinition,
 } from "@nivo-lite/agent-sdk/node"
@@ -24,15 +24,16 @@ import { withPicturesNotSeen } from "@modules/domain/chat-files"
 import { WorkspaceTimeZoneService } from "@modules/domain/workspace-settings"
 import { DEFAULT_TIME_ZONE } from "@nivo-lite/agent-sdk/port"
 import { InjectClock, type Clock } from "@modules/platform/clock"
-import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
+import { EffectOutcomeUnknownError, GraphNodesError, GraphNodesErrorCode, isOutcomeUnknownCode } from "./errors/graph-nodes.error"
 import { coreModelOf, declaredModelOf, declaredWorkOf } from "./node-model.policy"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
-import type { NodeAnswerSchema } from "./graph-node-host.schema"
+import { fittedAnswerOf, type NodeAnswerSchema } from "./graph-node-host.schema"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
 import { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
 import {
     InjectGraphNodeAgentLoops,
     InjectGraphNodeModel,
+    InjectGraphNodeRoutes,
     InjectGraphNodeToolDoor,
     InjectGraphNodesOptions,
 } from "./graph-nodes.decorators"
@@ -40,6 +41,7 @@ import type {
     NodeAgentLoops,
     NodeModelDoor,
     NodeModelScope,
+    NodeRouteReach,
     NodeRunInput,
     NodeSubjectResolver,
     NodeToolAnswer,
@@ -53,8 +55,13 @@ import { withWorkScope } from "@modules/platform/logging"
 import { nodeWorkOf } from "./node-work.policy"
 import { conditionBranchOf } from "./template-condition.policy"
 import { runDayOf, runIdOfKey, runItemOf, splitTemplateBindings } from "./template-run.policy"
+import { missOfAnswer, withMiss, type HostedNodeRun, type StepMiss } from "./step-misses.policy"
+import { failureAfterWrites, writesNotedOf } from "./node-writes.policy"
 
 /** The ledger entry that holds a template node's run step instant (`ctx.run.at`): written once per run step, read on every re-run. */
+/** What stops a node whatever it does with the throw: a call that waits for a person's approval, or a call whose outcome nobody knows. */
+type StopsTheNode = GraphNodesError | EffectOutcomeUnknownError
+
 const STEP_INSTANT = "engine.step-instant"
 
 /** The ledger entry that holds a template node's run step day (`ctx.run.day`): fixed with the instant, so a re-run never moves it. */
@@ -95,7 +102,7 @@ interface AskDecisions {
 /** What the ports of one node turn are built from: the approval it carries, the asks it collects, its attempt, step and decisions. */
 interface PortsContext {
     readonly approval: NodeToolApproval | null
-    readonly asks: Array<GraphNodesError>
+    readonly asks: Array<StopsTheNode>
     readonly attempt: Attempt
     readonly step: NodeStepRef | undefined
     readonly approved: ApprovedOf
@@ -152,6 +159,7 @@ export class GraphNodeHostService implements OnModuleInit {
         @Optional() @InjectGraphNodesOptions() private readonly options?: GraphNodesOptions,
         @Optional() @InjectGraphNodeAgentLoops() private readonly agentLoops?: NodeAgentLoops,
         @Optional() private readonly zones?: WorkspaceTimeZoneService,
+        @Optional() @InjectGraphNodeRoutes() private readonly routes?: NodeRouteReach,
     ) {}
 
     /**
@@ -175,7 +183,7 @@ export class GraphNodeHostService implements OnModuleInit {
      * cannot swallow the ask, and no write or effect runs after it, so the step always waits for the person instead of acting on a refusal
      * it misread.
      */
-    async run(input: NodeRunInput): Promise<NodeRun> {
+    async run(input: NodeRunInput): Promise<HostedNodeRun> {
         // Two forms run in one install while the nodes are converted: the engine's own `if` of a @2 graph, a template node
         // (`defineTemplateNode`, chosen by the definition's `entry`), and the `defineNode` node below.
         if (input.nodeId === TEMPLATE_IF_STEP) return { output: conditionBranchOf(input.params), effects: [] }
@@ -184,7 +192,8 @@ export class GraphNodeHostService implements OnModuleInit {
         const installed = this.registry.installed()
         const node = this.registry.nodeOf(input.nodeId)
         const turn = await this.withSubject(input.turn)
-        const asks: Array<GraphNodesError> = []
+        const asks: Array<StopsTheNode> = []
+        const wrote: Array<string> = []
         const attempt: Attempt = { step: input.key, startedAt: this.clock.now().toISOString() }
         // The model of every AI call of this node: the graph's node's own, else blocks-core's for its step, else the default.
         const scope: NodeModelScope = {
@@ -216,10 +225,11 @@ export class GraphNodeHostService implements OnModuleInit {
                     tools: installed.tools,
                     key: input.key,
                 },
-                input.replay === undefined ? ports : input.replay(ports),
+                // Rule Q-2 / R79: the answered non-repeatable writes of this run, so a failure after one is an unknown outcome.
+                writesNotedOf(input.replay === undefined ? ports : input.replay(ports), wrote),
             ),
         ).catch((cause: unknown) => {
-            throw asks[0] ?? cause
+            throw asks[0] ?? failureAfterWrites(cause, wrote)
         })
         const [ask] = asks
         if (ask !== undefined) throw ask
@@ -232,10 +242,13 @@ export class GraphNodeHostService implements OnModuleInit {
      * run step's instant, kept in the ledger at the first attempt so every re-run reads the same one; every call is a tool call, made by
      * `templateCall`. A call that waits for a person's approval stops the node whatever it does with the refusal.
      */
-    private async runTemplate(node: AnyTemplateNode, input: NodeRunInput): Promise<NodeRun> {
+    private async runTemplate(node: AnyTemplateNode, input: NodeRunInput): Promise<HostedNodeRun> {
         const installed = this.registry.installed()
+        // The calls of this run that missed (R68: the customer send refused, an approval declined), read from their answers.
+        const misses: Array<StepMiss> = []
         const turn = await this.withSubject(input.turn)
-        const asks: Array<GraphNodesError> = []
+        const asks: Array<StopsTheNode> = []
+        const wrote: Array<string> = []
         const attempt: Attempt = { step: input.key, startedAt: this.clock.now().toISOString() }
         const scope: NodeModelScope = {
             workspaceId: turn.workspaceId,
@@ -252,11 +265,12 @@ export class GraphNodeHostService implements OnModuleInit {
             road,
         })
         const withAgent = this.takesTurns(input.nodeId) ? { ...own, agent: this.agentOf(scope, input.record) } : own
-        const ports = input.replay === undefined ? withAgent : input.replay(withAgent)
+        const ports = writesNotedOf(input.replay === undefined ? withAgent : input.replay(withAgent), wrote)
         const bound = splitTemplateBindings(node, input.params, input.input)
         const at = await this.stepInstantOf(turn.workspaceId, input.key)
         const day = await this.stepDayOf(turn.workspaceId, input.key, at)
         const workspace = await this.workspaceOf(turn.workspaceId)
+        const unreachable = await this.closedRoutesOf(node, turn, input.step)
         const work = nodeWorkOf(input.key, turn.agentId, declaredWorkOf(input.nodeId), bound.input)
         const ran = await withWorkScope(work, () =>
             runTemplateNode(
@@ -265,7 +279,15 @@ export class GraphNodeHostService implements OnModuleInit {
                     params: bound.params,
                     input: bound.input,
                     turn,
-                    run: { id: runIdOfKey(input.key), at, day, item: runItemOf(input.item), queue: turn.queue ?? [], waiting: turn.waiting ?? 0 },
+                    run: {
+                        id: runIdOfKey(input.key),
+                        at,
+                        day,
+                        item: runItemOf(input.item),
+                        queue: turn.queue ?? [],
+                        waiting: turn.waiting ?? 0,
+                        ...(unreachable.length === 0 ? {} : { unreachable }),
+                    },
                     workspace,
                     key: input.key,
                     tools: installed.tools,
@@ -273,18 +295,39 @@ export class GraphNodeHostService implements OnModuleInit {
                     words: (key) => this.registry.wordsOf(key),
                 },
                 {
-                    callTool: (id, args, key) => this.templateCall(ports, installed, asks, id, args, key),
+                    callTool: async (id, args, key) => {
+                        const answer = await this.templateCall(ports, installed, asks, id, args, key)
+                        // A call answered as a refusal fact whose code says its outcome is unknown stops the node like a thrown one (R74).
+                        const told = toolAnswerOf(answer)
+                        if (!told.ok && isOutcomeUnknownCode(told.refusal))
+                            asks.push(new EffectOutcomeUnknownError({ code: told.refusal, params: { effect: id } }))
+                        withMiss(misses, missOfAnswer(id, answer))
+                        return answer
+                    },
                     model: ports.model,
                     now: ports.now,
                     ...(ports.agent === undefined ? {} : { agent: ports.agent }),
                 },
             ),
         ).catch((cause: unknown) => {
-            throw asks[0] ?? cause
+            throw asks[0] ?? failureAfterWrites(cause, wrote)
         })
         const [ask] = asks
         if (ask !== undefined) throw ask
-        return ran
+        return misses.length === 0 ? ran : { ...ran, misses }
+    }
+
+    /**
+     * The routes of a ROUTING node (one that declares `routes`) the engine cannot follow in this workspace (`ctx.run.unreachable`), as the
+     * bound reader answers them for the step; none for a node that does not route, a run that names no step, or an app that binds no reader.
+     */
+    private async closedRoutesOf(
+        node: AnyTemplateNode,
+        turn: NodeTurn,
+        step: NodeStepRef | undefined,
+    ): Promise<ReadonlyArray<string>> {
+        if (node.routes === undefined || step === undefined || this.routes === undefined) return []
+        return this.routes.closedRoutesOf(turn, step)
     }
 
     /**
@@ -299,7 +342,7 @@ export class GraphNodeHostService implements OnModuleInit {
     private templateCall(
         ports: NodeHostPorts,
         installed: NodeIndex,
-        asks: ReadonlyArray<GraphNodesError>,
+        asks: ReadonlyArray<StopsTheNode>,
         id: ToolId,
         args: JsonObject,
         key: string,
@@ -378,7 +421,7 @@ export class GraphNodeHostService implements OnModuleInit {
                 schema,
             ),
         )
-        return schema.parse(answer)
+        return fittedAnswerOf(schema, answer)
     }
 
     /** The turn with the subject of the first resolver that knows one, asked one after the other; the turn as it was when none does. */
@@ -399,7 +442,7 @@ export class GraphNodeHostService implements OnModuleInit {
         effect: string,
         payload: EffectPayload,
         approval: NodeToolApproval | null,
-        asks: Array<GraphNodesError>,
+        asks: Array<StopsTheNode>,
         step: NodeStepRef | undefined,
         road: TemplateRoad | undefined,
     ): Promise<SubjectRef | null> {
@@ -469,7 +512,7 @@ export class GraphNodeHostService implements OnModuleInit {
      */
     private asked<T>(
         answer: Promise<T>,
-        asks: Array<GraphNodesError>,
+        asks: Array<StopsTheNode>,
         tool: string,
         decisions: AskDecisions,
         again?: (approval: NodeToolApproval) => Promise<T>,
@@ -477,6 +520,9 @@ export class GraphNodeHostService implements OnModuleInit {
         const { road } = decisions
         const kept = (cause: unknown): never => {
             if (cause instanceof GraphNodesError && cause.code === GraphNodesErrorCode.ToolApprovalRequired) asks.push(cause)
+            // A call whose outcome nobody knows (R74, item 6) stops the node too, whatever it does with the throw: an agent loop would
+            // read it as a refused turn and go on as if nothing had left. The step then stops for a person (`OUTCOME_UNKNOWN`).
+            if (cause instanceof EffectOutcomeUnknownError) asks.push(cause)
             throw cause
         }
         return answer.catch(async (cause: unknown) => {
@@ -570,7 +616,7 @@ export class GraphNodeHostService implements OnModuleInit {
             },
             model: {
                 text: (ask) => this.ai.nodeText(scope, ask),
-                json: async (schema, ask) => schema.parse(await this.ai.nodeJson(scope, ask, schema)),
+                json: async (schema, ask) => fittedAnswerOf(schema, await this.ai.nodeJson(scope, ask, schema)),
             },
             now: () => this.clock.now(),
         }

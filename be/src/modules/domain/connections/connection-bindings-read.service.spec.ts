@@ -177,6 +177,7 @@ describe("ConnectionBindingsReadService > recordOf", () => {
             status: "pending",
             lastError: null,
             environment: "live",
+            sandbox: false,
             isDefault: false,
             lastEventAt: null,
             firstEvent: null,

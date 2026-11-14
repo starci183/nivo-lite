@@ -221,6 +221,42 @@
             "minLength": 1,
             "maxLength": 200
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "key"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "vi": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "en": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "vi",
+                  "en"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
           "outputs": {
             "maxItems": 40,
             "type": "array",
@@ -499,6 +535,194 @@
               ],
               "additionalProperties": false
             }
+          },
+          "unsuccessful": {
+            "type": "object",
+            "properties": {
+              "then": {
+                "type": "string",
+                "enum": [
+                  "continue",
+                  "end"
+                ]
+              },
+              "outcome": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "facts": {
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            }
+                          },
+                          "required": [
+                            "key"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "vi": {
+                              "type": "string",
+                              "maxLength": 4000
+                            },
+                            "en": {
+                              "type": "string",
+                              "maxLength": 4000
+                            }
+                          },
+                          "required": [
+                            "vi",
+                            "en"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "value": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "facts"
+            ],
+            "additionalProperties": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "key"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "vi": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "en": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "vi",
+                  "en"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "exits": {
+            "type": "object",
+            "properties": {
+              "until": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "vi": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "en": {
+                        "type": "string",
+                        "maxLength": 4000
+                      }
+                    },
+                    "required": [
+                      "vi",
+                      "en"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "exhausted": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "vi": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "en": {
+                        "type": "string",
+                        "maxLength": 4000
+                      }
+                    },
+                    "required": [
+                      "vi",
+                      "en"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": [

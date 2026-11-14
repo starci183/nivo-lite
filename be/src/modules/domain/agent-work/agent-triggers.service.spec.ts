@@ -102,7 +102,6 @@ describe("AgentTriggersService.save", () => {
             atTime: "08:30",
             timeZone: "Asia/Ho_Chi_Minh",
             eventName: null,
-            probeKey: "invoices_due",
             enabled: true,
             sources: [],
             seedKey: null,

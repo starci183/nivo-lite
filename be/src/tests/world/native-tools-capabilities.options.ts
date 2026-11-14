@@ -14,12 +14,18 @@ import { ToolsModule } from "@modules/domain/tools"
 import { NativeToolsModule, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { AiModule } from "@modules/integrations/ai"
+import { VECTOR_INDEX } from "@modules/integrations/qdrant"
+import { FakeVectorIndex } from "@tests/fixtures/builders/vector-sync.builder"
 import { MCP_CREDENTIAL_MODULES } from "./mcp-credential-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
 
 @Module({ providers: [QUIET_INSTALLATIONS], exports: [AGENTS_INSTALLATIONS] })
 /** No proof installs a module, so no agent has an installation for the chat records to read. */
 class NativeToolsProofInstallationsModule {}
+
+@Module({ providers: [{ provide: VECTOR_INDEX, useValue: new FakeVectorIndex() }], exports: [VECTOR_INDEX] })
+/** The vector index of the proof (a required engine piece): in memory, empty, searched inside the mandatory filters. */
+class NativeToolsProofVectorIndexModule {}
 
 /** True for the gateway the credential composition registers, which the native-tools composition replaces with one that has natives. */
 const isGateway = (entry: DynamicModule): boolean => entry.module === ToolsModule
@@ -45,6 +51,7 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     BrainFactsModule.register({ isGlobal: true }),
     ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     { module: NativeToolsProofInstallationsModule, global: true },
+    { module: NativeToolsProofVectorIndexModule, global: true },
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     ...chatRecordsModules(),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),

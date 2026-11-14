@@ -66,6 +66,7 @@ export const stopCardStateOf = (stop: StopCardSource): StopCardRead => {
     const decision = stop.decision?.kind ?? null
     if (stop.state === "resolved") {
         if (decision === "skip") return { state: "skipped", needs: NO_NEEDS, takenOver: false }
+        if (decision === "handed_back") return { state: "handed_back", needs: NO_NEEDS, takenOver: false }
         if (decision === "timeout") return { state: "timed_out", needs: NO_NEEDS, takenOver: false }
         return { state: decision === null ? "resolved" : "answered", needs: NO_NEEDS, takenOver: false }
     }
@@ -82,6 +83,7 @@ const headlineKeyOf = (stop: RunStop, state: StopCardState, takenOver: boolean):
     if (state === "answered")
         return stop.resolvedAt === null ? "teamChat.stopCard.answered" : "teamChat.stopCard.answeredDone"
     if (state === "skipped") return "teamChat.stopCard.skipped"
+    if (state === "handed_back") return "teamChat.stopCard.handedBack"
     if (state === "timed_out") return "teamChat.stopCard.timedOut"
     return "teamChat.stopCard.resolved"
 }

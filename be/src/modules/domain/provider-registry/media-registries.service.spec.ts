@@ -30,9 +30,9 @@ describe("the registries of the media and invoice purposes", () => {
 
         speech.register(port)
 
-        expect(speech.of("elevenlabs")).toBe(port)
+        expect(speech.liveOf("elevenlabs")).toBe(port)
         expect(invoices.has("elevenlabs")).toBe(false)
-        expect(invoices.all()).toEqual([])
+        expect(invoices.providers()).toEqual([])
     })
 
     it("replaces a registration made twice under one key", async () => {
@@ -44,6 +44,6 @@ describe("the registries of the media and invoice purposes", () => {
         invoices.register(first)
         invoices.register(second)
 
-        expect(invoices.of("misa")).toBe(second)
+        expect(invoices.liveOf("misa")).toBe(second)
     })
 })

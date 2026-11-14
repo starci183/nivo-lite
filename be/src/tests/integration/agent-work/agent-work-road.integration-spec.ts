@@ -10,7 +10,7 @@ import {
 import type { AgentTurnView, AgentWakeSource } from "../../../modules/domain/agent-work/agent-work.contracts"
 import { QUEUE_SCHEDULES, type QueueDelivery, type QueueSchedules } from "@modules/platform/queue"
 import { AGENT_SCHEDULE_FIRE_JOB, AGENT_SCHEDULE_FIRE_QUEUE, agentTriggerSchedulerId } from "@modules/queues/agent-turn"
-import { agentWakeOf, dueTaskOf } from "../../fixtures/builders/agent-work.builder"
+import { agentWakeOf } from "../../fixtures/builders/agent-work.builder"
 import { persistOfficeRows, type OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
 import { RoadWork, agentRoadModules } from "../../world/agent-road-capabilities.options"
 import { lateTrigger, sweepDrainsOf, wakesOfSource } from "../../world/agent-road-database.service"
@@ -133,7 +133,6 @@ describe("agent-work/road: the clock", () => {
             atTime: null,
             timeZone: null,
             eventName: null,
-            probeKey: null,
             enabled: true,
         })
         const schedulerId = agentTriggerSchedulerId(trigger.id)
@@ -154,19 +153,6 @@ describe("agent-work/road: the clock", () => {
 })
 
 describe("agent-work/road: the work", () => {
-    it("agent-work/no-work-no-model: a schedule whose probe finds nothing is skipped with no model call, and runs once there is work", async () => {
-        await post("quiet", "schedule", { probeKey: "tasks_due" })
-        await drain()
-        expect(await wakeOf("schedule", "quiet")).toMatchObject({ status: "skipped", reason: "no_work" })
-        expect(road().ran).toHaveLength(0)
-
-        await dueTaskOf(em(), WS, AGENT, world.key("chase"))
-        await post("busy", "schedule", { probeKey: "tasks_due" })
-        await drain()
-        expect(await wakeOf("schedule", "busy")).toMatchObject({ status: "done" })
-        expect(road().ran).toHaveLength(1)
-    })
-
     it("agent-work/crash-resume: a turn whose worker died is driven by the sweep and served once by the next drain", async () => {
         await post("crash", "internal", { taskId: world.id() })
         const dead = await world.resolve(AgentTurnsService).begin(AGENT, "agent", "worker-dead")

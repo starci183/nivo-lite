@@ -10,6 +10,7 @@ export {
     GRAPH_EFFECT_ONCE,
     GRAPH_NODE_AGENT_LOOPS,
     GRAPH_NODE_MODEL,
+    GRAPH_NODE_ROUTES,
     GRAPH_NODE_TOOL_DOOR,
     GRAPH_NODES_OPTIONS,
     InjectGraphEffectOnce,
@@ -17,7 +18,7 @@ export {
 export { GraphNodesModule } from "./graph-nodes.module"
 export { parseAgentLoopConfig } from "./graph-nodes.config"
 export { GraphNodeHostService } from "./graph-node-host.service"
-export { GraphNodeEffectsService, OUTCOME_UNKNOWN_KIND, ledgerKeyOf } from "./graph-node-effects.service"
+export { GraphNodeEffectsService, OUTCOME_UNKNOWN_KIND, ledgerKeyOf, placeOf as callPlaceOf } from "./graph-node-effects.service"
 export { NODE_EFFECT_STORE } from "./node-effect-store.port"
 export type { NodeEffectStore, StoredEffect } from "./node-effect-store.port"
 
@@ -42,6 +43,7 @@ export type {
     NodeEffectPayload,
     NodeInstall,
     NodeModelDoor,
+    NodeRouteReach,
     NodeRow,
     NodeEffectRightCall,
     NodeEffectRun,
@@ -59,10 +61,10 @@ export {
     PROBE_LOOK_RESULT,
     PROBE_NOTHING,
     PROBE_OUTPUT,
-    PROBE_PING_PAYLOAD,
     PROBE_RECORD_FIELDS,
     PROBE_SWALLOW_OUTPUT,
-    PROBE_UNPING_PAYLOAD,
 } from "./graph-node-probe.schema"
 export type { ProbeSchema } from "./graph-node-probe.schema"
 export { resolvedConditionHolds, storedExprProblems } from "./template-condition.policy"
+export { missOfAnswer } from "./step-misses.policy"
+export type { HostedNodeRun, StepMiss } from "./step-misses.policy"

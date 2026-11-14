@@ -15,6 +15,7 @@ const connection = builder<ConnectionRecord>({
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: "2026-10-28T09:00:00.000Z",
     createdAt: "2026-10-01T00:00:00.000Z",

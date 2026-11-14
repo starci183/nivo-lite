@@ -28,6 +28,8 @@ import {
     ProviderRegistryModule,
 } from "@modules/domain/provider-registry"
 import { RedisModule } from "@modules/integrations/redis"
+import { PROVIDER_SANDBOX_ERROR_KINDS, PROVIDER_SANDBOX_MESSAGES, ProviderSandboxModule } from "@modules/domain/provider-sandbox"
+import { CassoProviderModule } from "@modules/domain/casso-provider"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { TeamChatNoticesService } from "@modules/domain/team-chat"
@@ -42,10 +44,12 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     PaymentOrdersModule.register({ isGlobal: true }),
     ProviderRegistryModule.register({ isGlobal: true }),
+    ProviderSandboxModule.register({ isGlobal: true, sandbox: options.providerSandbox, loopbackPort: options.server.port }),
     RedisModule.register({ isGlobal: true, ...options.redis }),
     ConnectionPollModule.register({ isGlobal: true, ...options.connectionPoll }),
     BankFeedInboxModule.register({ isGlobal: true }),
     SepayProviderModule.register({ isGlobal: true, feedWebhook: true }),
+    CassoProviderModule.register({ isGlobal: true }),
     BillingModule.register({ isGlobal: true, ...options.billing }),
     ProviderTriggersModule.register({ isGlobal: true, ports: { agentNames: AgentDirectoryService } }),
     BillingGraphqlModule.register({}),
@@ -68,6 +72,7 @@ export const billingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>
     PAYMENT_ORDERS_ERROR_KINDS,
     CONNECTION_POLL_ERROR_KINDS,
     PROVIDER_REGISTRY_ERROR_KINDS,
+    PROVIDER_SANDBOX_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
@@ -78,4 +83,5 @@ export const billingMessages: ReadonlyArray<MessageBundle> = [
     PAYMENT_ORDERS_MESSAGES,
     CONNECTION_POLL_MESSAGES,
     PROVIDER_REGISTRY_MESSAGES,
+    PROVIDER_SANDBOX_MESSAGES,
 ]

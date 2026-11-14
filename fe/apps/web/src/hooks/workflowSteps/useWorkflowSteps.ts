@@ -33,12 +33,14 @@ import {
 } from "@/modules/workflowSteps"
 import type {
     AgentRightAccountView,
+    NodeRightMode,
     StepAccountsSlotView,
     StepAction,
     StepDrawerView,
     StepsMapView,
 } from "@/modules/types"
 import { useStepAccounts } from "./useStepAccounts"
+import { useStepRunMode } from "./useStepRunMode"
 
 /** The workflow a save writes to: its id and the newest version number the page read. */
 interface StepsWorkflow {
@@ -221,7 +223,7 @@ const editedState = (current: StepState, spec: GraphSpec, action: StepAction): S
     }
 }
 
-/** The state after an edit of the open step's rights (the node's mode, an account joining or leaving); anything else is left as it is. */
+/** The state after an edit of the open step's rights (an account joining or leaving); anything else is left as it is. */
 const accountEditedState = (
     current: StepState,
     spec: GraphSpec,
@@ -236,12 +238,11 @@ const accountEditedState = (
         }
         case "account-remove":
             return draft(withAccountRemoved(spec, current.openKey, action.index))
-        case "node-mode":
-            return draft(withNodeMode(spec, current.openKey, action.mode))
         case "add":
         case "bind":
         case "change":
         case "close":
+        case "node-mode":
         case "open":
         case "pick-step":
         case "save":
@@ -315,6 +316,22 @@ export const useWorkflowSteps = (input: WorkflowStepsInput): WorkflowSteps => {
         },
         words,
     )
+    const onModeChanged = useCallback(
+        (mode: NodeRightMode) =>
+            setState((current) =>
+                current.draft === null ? current : { ...current, draft: withNodeMode(current.draft, current.openKey, mode) },
+            ),
+        [],
+    )
+    const runMode = useStepRunMode({
+        installationId: input.installationId,
+        spec,
+        nodeKey: state.openKey,
+        workflow: input.workflow,
+        isRun: input.isReadOnly === true,
+        reload: async () => input.onSaved?.(),
+        onChanged: onModeChanged,
+    })
     const hasStep = spec?.nodes.some((node) => node.key === state.openKey) === true
     const accountsView: StepAccountsSlotView | undefined =
         accounts.isKnown && hasStep
@@ -332,6 +349,7 @@ export const useWorkflowSteps = (input: WorkflowStepsInput): WorkflowSteps => {
             : undefined
     const drawer: StepDrawerView = {
         ...base,
+        runMode: runMode.view,
         ...(accountsView === undefined ? {} : { accounts: accountsView }),
     }
     return {
@@ -354,7 +372,8 @@ export const useWorkflowSteps = (input: WorkflowStepsInput): WorkflowSteps => {
                 }))
             }
             if (spec === null || input.isReadOnly === true) return undefined
-            if (action.kind.startsWith("account-") || action.kind === "node-mode")
+            if (action.kind === "node-mode") return runMode.choose(action.mode)
+            if (action.kind.startsWith("account-"))
                 return setState((current) => accountEditedState(current, spec, action, attached))
             return setState((current) => editedState(current, spec, action))
         },

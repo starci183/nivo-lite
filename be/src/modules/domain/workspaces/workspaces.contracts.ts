@@ -185,8 +185,6 @@ export interface ShellAgent {
 export interface ShellFacts {
     /** The installed agents. */
     readonly agents: ReadonlyArray<ShellAgent>
-    /** Whether a chatbot agent is installed. */
-    readonly hasChatbot: boolean
     /** Whether the workspace bought a module inside the founding window. */
     readonly isFoundingMember: boolean
 }

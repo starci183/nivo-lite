@@ -6,8 +6,6 @@ export enum KnowledgeJob {
     Index = "knowledge.index",
     /** Reads facts out of a ready source into brain_facts proposals (conflicts surfaced); chained after the index job. */
     Facts = "knowledge.facts",
-    /** Re-embeds the chunks of a workspace made by another model than the one in use. */
-    Reembed = "knowledge.reembed",
     /** Carries out a command an owner or manager asked for on the Second Brain or Knowledge page (row in brain_commands). */
     BrainCommand = "brain.command",
     /** Carries out a run row (dossier_review_runs): one batch of the shop-document critiques that wait. */
@@ -30,14 +28,6 @@ export interface KnowledgeSourcePayload {
      * or in the middle of a settle that read the verdict before the change.
      */
     readonly settleAgain?: boolean | undefined
-}
-
-/** The payload of the reembed job. */
-export interface KnowledgeReembedPayload {
-    /** The workspace whose chunks are re-embedded. */
-    readonly workspaceId: string
-    /** The model to re-embed with; the model in use when absent. */
-    readonly model?: string
 }
 
 /** The payload of the brain command job: the command row to carry out, ids only (the handler re-reads the current state). */
@@ -106,12 +96,6 @@ export const isPublicDraftPayload = (value: unknown): value is PublicDraftPayloa
 /** True when a job payload is the payload of a policy derive job. */
 export const isPolicyDerivePayload = (value: unknown): value is PolicyDerivePayload =>
     isRecord(value) && typeof value.workspaceId === "string"
-
-/** True when a job payload is the payload of a reembed job. */
-export const isKnowledgeReembedPayload = (value: unknown): value is KnowledgeReembedPayload =>
-    isRecord(value) &&
-    typeof value.workspaceId === "string" &&
-    (value.model === undefined || typeof value.model === "string")
 
 /**
  * The dedupe key of a knowledge job: `<job>:<subject>` plus an optional suffix for a deliberate re-run (`retry:<ms>`). The same key

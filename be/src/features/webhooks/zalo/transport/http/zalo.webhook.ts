@@ -1,4 +1,5 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { SANDBOX_KEY_HEADER } from "@modules/domain/provider-sandbox"
 import type { Request } from "express"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { ZaloDeliveryIntakeService } from "@modules/domain/zalo-inbox"
@@ -26,6 +27,7 @@ export class ZaloWebhook {
         @Req() request: RawBodyRequest<Request>,
         @Param() route: ConnectionRequest,
         @Headers("x-zevent-signature") mac?: string,
+        @Headers(SANDBOX_KEY_HEADER) sandboxKey?: string,
     ): Promise<void> {
         await this.signature.verify({
             provider: "zalo",
@@ -33,6 +35,7 @@ export class ZaloWebhook {
             rawBody: request.rawBody,
             signature: mac,
             timestamp: undefined,
+            sandboxKey,
         })
         await this.deliveries.accept(request.rawBody, route.connectionId)
     }

@@ -57,7 +57,7 @@ export class CustomerProfileNativeService implements NativeToolFamily {
             if (cause instanceof ConnectionsError && cause.code === ConnectionsErrorCode.NotFound) throw nativeRefusal("not_found", cause)
             throw cause
         })
-        const port = this.profiles.of(connection.provider)
+        const port = this.profiles.portFor(connection)
         const profile = port === undefined ? null : await port.profileOf(connection.id, asked.personId)
         return { name: profile?.name ?? "", picture: profile?.picture ?? "" }
     }

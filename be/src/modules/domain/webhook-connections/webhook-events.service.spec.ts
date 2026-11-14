@@ -3,7 +3,6 @@ import { builder, FakeClock, mock, mockEntityManager, recordingQueueOutbox } fro
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import {
-    WEBHOOK_DELIVERY_CLIENT,
     WebhookDeliveryError,
     WebhookDeliveryErrorCode,
 } from "@modules/integrations/webhook-delivery"
@@ -16,12 +15,17 @@ import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { N8N_QUEUE, N8N_WEBHOOK_JOB } from "@modules/queues/n8n"
 import type { N8nWebhookPayload } from "@modules/queues/n8n"
+import type { ProviderSandboxService } from "@modules/domain/provider-sandbox"
+import { sandboxAccount, sandboxServiceOf } from "@tests/fixtures/builders/provider-sandbox.builder"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
 import { WEBHOOK_CONNECTIONS_OPTIONS } from "./webhook-connections.decorators"
 import { WebhookConnectionsLogEvent } from "./webhook-connections.log-events"
 import type { WebhookConnectionsOptions } from "./webhook-connections.options"
 import { signDelivery, workspaceSigningSecret } from "./webhook-signing.policy"
 import { WebhookEventsService } from "./webhook-events.service"
+import { WebhookLiveSendService } from "./webhook-live-send.service"
+import { WebhookSandboxSendService } from "./webhook-sandbox-send.service"
+import { WebhookSendRegistryService } from "./webhook-send-registry.service"
 
 const NOW = new Date("2026-10-13T03:00:00.000Z")
 const TARGET = "https://receiver.test/hook"
@@ -53,6 +57,7 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -60,6 +65,24 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
     createdAt: "2026-10-01T00:00:00.000Z",
     ...overrides,
 })
+
+/** The outgoing port as the app registers it: the live twin over the doubles of the spec, the sandbox twin over a memory store. */
+const sendsOf = (
+    connections: ConnectionsService,
+    delivery: WebhookDeliveryClient,
+    logger: Logger,
+    sandbox: ProviderSandboxService,
+): WebhookSendRegistryService => {
+    const registry = new WebhookSendRegistryService()
+    registry.register({
+        live: new WebhookLiveSendService(connections, delivery, logger),
+        sandbox: new WebhookSandboxSendService(sandbox),
+    })
+    return registry
+}
+
+/** The account of the sandbox webhook connection of the spec. */
+const SANDBOX_ACCOUNT = sandboxAccount({ id: "sbx-c1", workspaceId: "ws-1", provider: "webhook" })
 
 const build = async (options: WebhookConnectionsOptions = OPTIONS) => {
     const settings = builder<WebhookConnectionsOptions>(OPTIONS)(options)
@@ -79,19 +102,20 @@ const build = async (options: WebhookConnectionsOptions = OPTIONS) => {
     const outbox = recordingQueueOutbox()
     const logger = mock<Logger>()
     const em = mockEntityManager()
+    const { sandbox } = sandboxServiceOf(SANDBOX_ACCOUNT)
     const moduleRef = await Test.createTestingModule({
         providers: [
             WebhookEventsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
-            { provide: WEBHOOK_DELIVERY_CLIENT, useValue: delivery },
             { provide: WEBHOOK_CONNECTIONS_OPTIONS, useValue: settings },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ConnectionsService, useValue: connections },
+            { provide: WebhookSendRegistryService, useValue: sendsOf(connections, delivery, logger, sandbox) },
         ],
     }).compile()
-    return { service: moduleRef.get(WebhookEventsService), connections, delivery, outbox, logger, em }
+    return { service: moduleRef.get(WebhookEventsService), connections, delivery, outbox, logger, em, sandbox }
 }
 
 /** The service on a deployment without a signing key: every other collaborator is an empty double. */
@@ -109,8 +133,8 @@ const buildWithoutSigning = async () => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
-            { provide: WEBHOOK_DELIVERY_CLIENT, useValue: delivery },
             { provide: ConnectionsService, useValue: connections },
+            { provide: WebhookSendRegistryService, useValue: sendsOf(connections, delivery, logger, sandboxServiceOf().sandbox) },
         ],
     }).compile()
     return { service: moduleRef.get(WebhookEventsService), outbox }
@@ -258,7 +282,8 @@ describe("WebhookEventsService deliver", () => {
 
         await expect(service.deliver(JOB)).resolves.toBeUndefined()
 
-        expect(connections.readSecret.mock.calls).toEqual([["c1"]])
+        // The address is not even read: with no signing key nothing could be signed, so the port is never asked.
+        expect(connections.readSecret).not.toHaveBeenCalled()
         expect(delivery.resolveTarget.mock.calls).toEqual([])
         expect(logger.warn.mock.calls).toEqual([[WebhookConnectionsLogEvent.DeliveryDropped, { connectionId: "c1" }]])
     })
@@ -349,5 +374,39 @@ describe("WebhookEventsService deliver", () => {
         await expect(service.deliver(JOB)).resolves.toBeUndefined()
 
         expect(connections.patch.mock.calls).toEqual([["ws-1", "c1", { lastError: null }]])
+    })
+})
+
+describe("WebhookEventsService deliver to a SANDBOX webhook account (the outgoing port's one switch)", () => {
+    const sandboxRecord = (): ConnectionRecord => record({ id: "sbx-c1", sandbox: true })
+
+    it("answers from the sandbox's default case (HTTP 200), reads no address, reaches no delivery client and logs ONE deliver call", async () => {
+        const { service, delivery, connections, sandbox } = await build()
+        connections.find.mockResolvedValue(sandboxRecord())
+
+        await expect(service.deliver({ ...JOB, connectionId: "sbx-c1" })).resolves.toBeUndefined()
+
+        expect(delivery.resolveTarget).not.toHaveBeenCalled()
+        expect(delivery.post).not.toHaveBeenCalled()
+        expect(connections.readSecret).not.toHaveBeenCalled()
+        const calls = await sandbox.calls(SANDBOX_ACCOUNT, "deliver")
+        expect(calls).toHaveLength(1)
+        expect(calls[0]).toMatchObject({ key: JOB.deliveryId, result: { outcome: "answered", value: { status: 200 } } })
+    })
+
+    it("the account's picked case decides the verdict: 400 is recorded and not retried, 429 / 503 / no answer are retried", async () => {
+        const { service, connections, sandbox } = await build()
+        connections.find.mockResolvedValue(sandboxRecord())
+        const job = { ...JOB, connectionId: "sbx-c1" }
+
+        await sandbox.setNextCase(SANDBOX_ACCOUNT, "deliver", "WEBHOOK-8")
+        await expect(service.deliver(job)).resolves.toBeUndefined()
+        expect(connections.patch.mock.calls).toEqual([["ws-1", "sbx-c1", { lastError: "HTTP 400" }]])
+        for (const [caseId, status] of [["WEBHOOK-9", "429"], ["WEBHOOK-10", "503"], ["WEBHOOK-11", "none"], ["WEBHOOK-12", "none"]] as const) {
+            await sandbox.setNextCase(SANDBOX_ACCOUNT, "deliver", caseId)
+            await expect(service.deliver(job)).rejects.toEqual(
+                new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.DeliveryFailed, params: { status } }),
+            )
+        }
     })
 })

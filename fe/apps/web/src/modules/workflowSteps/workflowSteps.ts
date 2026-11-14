@@ -11,6 +11,7 @@ import type {
     StepsMapView,
 } from "@/modules/types"
 
+import { dressedGraphOf, framedFlowOf, legendOf } from "./workflowMap"
 import { bindingRowsOf, callRowOf, outputRowsOf, pickerOf, triggerRowsOf } from "./workflowContractDrawer"
 import { localContractProblems } from "./workflowEdits"
 
@@ -32,17 +33,20 @@ export const specOf = (source: unknown): GraphSpec | null => {
     }
 }
 
-/** The graph view of a spec in one language, with the trigger card first: every title, line, port and setting in words. */
+/**
+ * The graph view of a spec in one language, with the trigger card first: every title, line, port and setting in words. The control
+ * steps (condition, wait, loop, hand-back) carry the graph's own words; a wait is dressed with its events and time.
+ */
 export const graphOfSpec = (spec: GraphSpec | null, locale: StepsLocale): GraphView =>
-    spec === null ? { nodes: [], edges: [] } : graphViewOfSpec(spec, { locale, withTrigger: true })
+    spec === null ? { nodes: [], edges: [] } : dressedGraphOf(graphViewOfSpec(spec, { locale, withTrigger: true }), locale)
 
 /** The card map of a graph view: the step cards, the edges, the kind legend and the status words. */
 export const stepsMapOf = (graph: GraphView, locale: StepsLocale): StepsMapView => {
-    const flow = stepsFlowOf(graph, locale)
+    const flow = framedFlowOf(stepsFlowOf(graph, locale), graph, locale)
     return {
         nodes: flow.nodes,
         edges: flow.edges,
-        legend: stepsLegendOf(locale),
+        legend: legendOf(stepsLegendOf(locale), flow.nodes, locale),
         statusLabels: stepsStatusLabelsOf(locale),
     }
 }
@@ -254,7 +258,7 @@ export interface StepDrawerInput {
 }
 
 /** The drawer of the open step: its title and line, the form of its shown settings, its branches and the save command. */
-export const stepDrawerOf = (input: StepDrawerInput, words: StepWords): StepDrawerView => {
+export const stepDrawerOf = (input: StepDrawerInput, words: StepWords): Omit<StepDrawerView, "runMode"> => {
     const node = input.graph.nodes.find((entry) => entry.id === input.nodeKey)
     const card = input.map.nodes.find((entry) => entry.id === input.nodeKey)
     const fields = shownOf(node).map((field) => fieldViewOf(field, input.form, words))

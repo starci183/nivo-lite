@@ -1,6 +1,7 @@
 export { WorkspaceSeedModule } from "./workspace-seed.module"
 export { WorkspaceSeedService } from "./workspace-seed.service"
 export { GraphSeedService } from "./graph-seed.service"
+export { RosterSeedService } from "./roster-seed.service"
 export { WorkflowResetCommandService } from "./workflow-reset-command.service"
 export type { ResetWorkflowsCommand } from "./workflow-reset-command.contracts"
 export { parseWorkspaceSeedConfig } from "./workspace-seed.config"

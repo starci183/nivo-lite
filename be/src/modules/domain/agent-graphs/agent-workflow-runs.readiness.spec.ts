@@ -199,16 +199,14 @@ describe("AgentWorkflowRunsService: readiness at runningOf", () => {
         expect([...readiness.values()]).toEqual([{ hidden: false, skipped: [lastKey] }])
     })
 
-    it("two accounts of the provider: no guess (no workspace default account any more), hidden, the page names the pick (`needs_pick`)", async () => {
+    it("two accounts of the provider and no default: shown and routed (the CALL picks its account or refuses TOOLS_ACCOUNT_NEEDS_PICK; readiness never hides for it)", async () => {
         const world = await accounted()
         world.access.listOfAgent.mockResolvedValue([sepay("s1"), sepay("s2")])
 
-        await expect(credit(world)).resolves.toBeNull()
+        await expect(credit(world)).resolves.toMatchObject({ agentId: "agent-1" })
         const [workflow] = world.memory.rows(AGENT_WORKFLOWS)
         const readiness = await world.runs.readinessOf("ws-1", [workflow?.id ?? ""])
-        expect([...readiness.values()]).toEqual([
-            { hidden: true, waitingFor: ["sepay"], blocked: [{ provider: "sepay", reason: "needs_pick" }] },
-        ])
+        expect([...readiness.values()]).toEqual([{ hidden: false, skipped: [accountedGraph().nodes.at(-1)?.key ?? ""] }])
     })
 
     it("names an attached account whose provider refused the credential (`needs_reauth`) and hides nothing for it: a shown graph stays shown", async () => {
@@ -373,6 +371,7 @@ const crmPinned = (id: string, without: ReadonlyArray<string> = [], unsupported:
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -495,6 +494,7 @@ describe("AgentWorkflowRunsService: one source per stream (owner key triggerOneS
         status: "connected",
         lastError: null,
         environment: "live",
+        sandbox: false,
         isDefault: false,
         lastEventAt: null,
         firstEvent: null,

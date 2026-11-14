@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeSourceCitesService, KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourceCitesService } from "@modules/domain/knowledge-sources"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
-import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import { KnowledgeIndexingService } from "./knowledge-indexing.service"
-import { reembedPayloadOf, sourcePayloadOf } from "./knowledge-payload.policy"
-import { KnowledgeReembedService } from "./knowledge-reembed.service"
+import { sourcePayloadOf } from "./knowledge-payload.policy"
 import type { OptionalFairGroup } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
 
@@ -23,8 +21,6 @@ export class KnowledgeJobsService {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         private readonly indexing: KnowledgeIndexingService,
-        private readonly reembedding: KnowledgeReembedService,
-        private readonly sources: KnowledgeSourcesService,
         private readonly cites: KnowledgeSourceCitesService,
     ) {}
 
@@ -77,23 +73,4 @@ export class KnowledgeJobsService {
         if (run !== null) await this.indexing.failSource(run.workspaceId, run.sourceId, cause)
     }
 
-    /**
-     * Embeds the stale passages of the workspace. A job that reaches its batch limit queues its own follow-up; a workspace with no
-     * credits left waits (the owner tops up and asks again); a provider that fails makes the job retry; a model this deployment does
-     * not embed with is logged and dropped.
-     */
-    async reembed(payload: object): Promise<void> {
-        const run = reembedPayloadOf(payload)
-        if (run === null) {
-            this.logger.warn(KnowledgeLogEvent.PayloadRefused, { job: "reembed" })
-            return
-        }
-        const model = run.model ?? ""
-        const outcome = await this.reembedding.reembed(run.workspaceId, model)
-        if (outcome === "more") await this.sources.continueReembed(run.workspaceId, model)
-        if (outcome === "mismatch") {
-            this.logger.warn(KnowledgeLogEvent.ModelMismatch, { workspaceId: run.workspaceId, model })
-        }
-        if (outcome === "unavailable") throw new KnowledgeError({ code: KnowledgeErrorCode.EmbeddingUnavailable })
-    }
 }

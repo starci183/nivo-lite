@@ -19,7 +19,6 @@ const mutation1: TypedDocumentNode<MutateSaveAgentTriggerResponse, InputVariable
             lastFiredAt
             nextRunAt
             preset
-            probeKey
             seedKey
             timeZone
         }

@@ -93,11 +93,11 @@ export class TypeormChannelDeliveryStore implements ChannelDeliveryStore {
         return Array.isArray(returned) && returned.length > 0
     }
 
-    /** Takes a refused row back to claimed: true when this call moved it. */
-    async reclaim(workspaceId: string, sendKey: string): Promise<boolean> {
+    /** Takes a row in one of the `from` states back to claimed: true when this call moved it. */
+    async reclaim(workspaceId: string, sendKey: string, from: ReadonlyArray<"refused" | "unknown">): Promise<boolean> {
         const result = await this.entityManager.update(
             CustomerMessageEntity,
-            { workspaceId, direction: TOLD, lineKey: sendKey, state: "refused" },
+            { workspaceId, direction: TOLD, lineKey: sendKey, state: In([...from]) },
             { state: "claimed", reason: null },
         )
         return (result.affected ?? 0) > 0

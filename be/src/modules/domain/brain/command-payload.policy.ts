@@ -15,7 +15,6 @@ export type BrainCommandKind =
     | "source.delete"
     | "source.reindex"
     | "source.update"
-    | "knowledge.reembed"
     | "knowledge.ask"
     | "drive.linked"
     | "drive.picked"
@@ -78,7 +77,6 @@ export type BrainCommand =
     | { readonly kind: "source.delete"; readonly sourceId: string }
     | { readonly kind: "source.reindex"; readonly reindex: ReindexCommand }
     | { readonly kind: "source.update"; readonly update: UpdateCommand }
-    | { readonly kind: "knowledge.reembed" }
     | { readonly kind: "knowledge.ask"; readonly ask: AskCommand }
     | { readonly kind: "drive.linked"; readonly url: string }
     | { readonly kind: "drive.picked"; readonly picked: PickedCommand }
@@ -239,8 +237,6 @@ const read = (kind: BrainCommandKind, payload: Payload): BrainCommand | null => 
             return drivePicked(payload)
         case "brain.maintain":
             return { kind }
-        case "knowledge.reembed":
-            return { kind }
     }
 }
 
@@ -257,7 +253,6 @@ export const COMMAND_KINDS: ReadonlyArray<BrainCommandKind> = [
     "source.delete",
     "source.reindex",
     "source.update",
-    "knowledge.reembed",
     "knowledge.ask",
     "drive.linked",
     "drive.picked",

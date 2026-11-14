@@ -8,8 +8,11 @@ import type {
     GraphV2Trigger,
     GraphV2WaitOn,
     GraphV2WaitStep,
+    LoopExitLabels,
     LoopEvery,
     LoopUntil,
+    NoticeFactSpec,
+    StepUnsuccessfulSpec,
     StoredExpr,
     StoredLeaf,
     StoredRef,
@@ -18,7 +21,7 @@ import { TRIGGER_DATA_MEMBER, type ContractType, type OutcomeOutput, type Workfl
 import { TRIGGER } from "../../names"
 import { isParamRef } from "../../node/memory"
 import type { ParamBinding, ParamBindings } from "../../node/memory.contracts"
-import type { JsonValue } from "../../schema/schema.types"
+import type { JsonValue, SpecText } from "../../schema/schema.types"
 import { canonicalJson } from "../canonical"
 import type {
     CompiledGraph,
@@ -27,6 +30,7 @@ import type {
     ListedCall,
     LoopGraphStep,
     NodeGraphStep,
+    NoticeFact,
     RefOrValue,
     TemplateCatalogue,
     TemplateGraph,
@@ -65,6 +69,34 @@ const bindingsOf = (record: Readonly<Record<string, RefOrValue>>): ParamBindings
 const conditionRef = (value: RefOrValue): StoredRef | JsonValue => {
     if (!isParamRef(value)) return value
     return { $ref: value.$ref, default: value.default ?? null }
+}
+
+/** Notice facts as stored: a ref reads null when its source holds nothing (a fact that is not there is left out of the notice). */
+const noticeFactsOf = (facts: ReadonlyArray<NoticeFact> | undefined): ReadonlyArray<NoticeFactSpec> =>
+    (facts ?? []).map((fact) => ({
+        label: fact.label,
+        value: isParamRef(fact.value)
+            ? {
+                  $ref: fact.value.$ref,
+                  default: fact.value.default ?? null,
+                  ...(fact.value.round === undefined ? {} : { round: fact.value.round }),
+              }
+            : fact.value,
+    }))
+
+/**
+ * A node step's unsuccessful ending as stored (R68), its policy resolved: as written, else `continue` for a step inside a loop body or a
+ * side step (`blocking: false`: its failure is passed over already), else `end` (a main step whose business did not happen ends the run).
+ */
+const stepUnsuccessfulOf = (step: NodeGraphStep, loop: string | null): StepUnsuccessfulSpec | null => {
+    const declared = step.unsuccessful ?? null
+    if (declared === null) return null
+    const then = declared.then ?? (loop !== null || step.node.blocking === false ? "continue" : "end")
+    return {
+        then,
+        ...(declared.outcome === undefined ? {} : { outcome: declared.outcome }),
+        facts: noticeFactsOf(declared.facts),
+    }
 }
 
 /** A ref as a condition writes it: its path and an optional default. */
@@ -139,6 +171,7 @@ const loopStepsOf = (key: string, step: LoopGraphStep, loop: string | null): Rea
                   },
                   routes: { body: step.body.start },
                   ...nextOf(step.next),
+                  ...labelOf(step.label),
               }
             : {
                   kind: "loop",
@@ -152,7 +185,12 @@ const loopStepsOf = (key: string, step: LoopGraphStep, loop: string | null): Rea
                       ...(step.every === null ? {} : { every: { ...step.every } }),
                   },
                   routes: { body: step.body.start, exhausted: step.exhausted },
+                  ...(step.unsuccessful === null || step.unsuccessful === undefined
+                      ? {}
+                      : { unsuccessful: { facts: noticeFactsOf(step.unsuccessful.facts) } }),
                   next: step.next,
+                  ...labelOf(step.label),
+                  ...exitsOf(step.exits),
               }
     return [
         head,
@@ -161,6 +199,20 @@ const loopStepsOf = (key: string, step: LoopGraphStep, loop: string | null): Rea
         ),
     ]
 }
+/** The `label` member of a control step as stored: absent when the graph gives none. */
+const labelOf = (label: SpecText | null | undefined): { readonly label?: SpecText } =>
+    label === null || label === undefined ? {} : { label }
+
+/** The `exits` member of an `until` loop as stored: the words given, absent when none is. */
+const exitsOf = (exits: LoopExitLabels | null | undefined): { readonly exits?: LoopExitLabels } => {
+    if (exits === null || exits === undefined) return {}
+    const kept: LoopExitLabels = {
+        ...(exits.until === undefined ? {} : { until: exits.until }),
+        ...(exits.exhausted === undefined ? {} : { exhausted: exits.exhausted }),
+    }
+    return Object.keys(kept).length === 0 ? {} : { exits: kept }
+}
+
 /** A target as stored: `endItem` is left out (the engine's loop reads a missing `next`, branch or route as the end of the item). */
 const keptTarget = (target: string | null): string | null => (target === null || target === endItem ? null : target)
 
@@ -184,6 +236,7 @@ const nextOf = (target: string | null): NextMember => {
 const nodeStepOf = (key: string, step: NodeGraphStep, loop: string | null): GraphV2Step => {
     const node = step.node
     const routes = node.routes
+    const unsuccessful = stepUnsuccessfulOf(step, loop)
     return {
         kind: "node",
         key,
@@ -195,6 +248,7 @@ const nodeStepOf = (key: string, step: NodeGraphStep, loop: string | null): Grap
         accounts: [...(step.accounts ?? node.accounts)],
         ...(node.blocking === false ? { blocking: false } : {}),
         ...(routes === undefined ? nextOf(step.next) : { routeBy: routes.by, routes: keptRoutes(step.routes ?? {}) }),
+        ...(unsuccessful === null ? {} : { unsuccessful }),
     }
 }
 
@@ -218,6 +272,7 @@ const stepsOf = (key: string, step: GraphStep, loop: string | null): ReadonlyArr
                     step: "core.if",
                     params: { when: storedExprOf(step.when) },
                     routes: { ...(yes === null ? {} : { yes }), ...(no === null ? {} : { no }) },
+                    ...labelOf(step.label),
                 },
             ]
         }
@@ -276,12 +331,23 @@ const stepsOf = (key: string, step: GraphStep, loop: string | null): ReadonlyArr
                     step: "core.outcome",
                     params: { outcome: step.name, outputs: bindingsOf(step.output) },
                     ...nextOf(step.next),
+                    ...labelOf(step.label),
                 },
             ]
         case "wait":
             return [waitStepOf(key, step, loop)]
         case "hand-back":
-            return [{ kind: "hand-back", key, ...inLoop, step: HAND_BACK_STEP, params: { wait: step.wait }, ...nextOf(step.next) }]
+            return [
+                {
+                    kind: "hand-back",
+                    key,
+                    ...inLoop,
+                    step: HAND_BACK_STEP,
+                    params: { wait: step.wait },
+                    ...nextOf(step.next),
+                    ...labelOf(step.label),
+                },
+            ]
     }
 }
 
@@ -327,6 +393,7 @@ const waitStepOf = (key: string, step: WaitGraphStep, loop: string | null): Grap
         routes: keptRoutes(
             Object.fromEntries(Object.entries(step.next).filter((entry): entry is [string, string] => typeof entry[1] === "string")),
         ),
+        ...labelOf(step.label),
     }
 }
 
@@ -463,7 +530,12 @@ const outcomesOf = (draft: GraphSpecV2, nodes: ReadonlyMap<string, AnyTemplateNo
                 problems.push({ code: "GRAPH_OUTCOME_UNTYPED", at: `nodes.${step.key}.params.outputs.${name}` })
             return type === null ? [] : [{ name, type }]
         })
-        outcomes.set(step.params.outcome, { key: step.params.outcome, label: step.params.outcome, outputs })
+        outcomes.set(step.params.outcome, {
+            key: step.params.outcome,
+            label: step.params.outcome,
+            ...(step.label === undefined ? {} : { title: step.label }),
+            outputs,
+        })
     }
     return { outcomes: [...outcomes.values()], problems }
 }

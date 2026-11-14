@@ -1,0 +1,24 @@
+{
+  "customerMessages": "Customer writes",
+  "waitLine": "{events} · {limit}",
+  "limitMinute": "up to {amount} min",
+  "limitHour": "up to {amount} h",
+  "limitDay": "up to {amount} d",
+  "rounds": "repeats up to {max} rounds",
+  "repeat": "Starts again at the first step until a way out holds",
+  "legendLoop": "Loop",
+  "verbs": {
+    "nivo.trigger.zalo.message.received": "Zalo message",
+    "nivo.trigger.telegram.message.received": "Telegram message",
+    "nivo.trigger.facebook.message.received": "Facebook message",
+    "nivo.trigger.instagram.message.received": "Instagram message",
+    "nivo.trigger.website.message.received": "Website message",
+    "nivo.trigger.payment.credit.received": "Money received",
+    "nivo.trigger.mail.message.received": "New mail",
+    "nivo.trigger.video.render.completed": "Video rendered",
+    "nivo.trigger.clock.tick": "Scheduled time",
+    "nivo.trigger.timer.due": "Timer due",
+    "nivo.trigger.chat.message.received": "Team chat message",
+    "nivo.trigger.workflow.called": "Called by another workflow"
+  }
+}

@@ -149,7 +149,7 @@ export class TiktokNativeService implements NativeToolFamily {
     ): Promise<{ readonly connection: ConnectionRecord; readonly port: TiktokPublishPort }> {
         if (caller.connectionId === undefined) throw socialRefusal("not_connected")
         const connection = await this.connections.find(workspaceId, caller.connectionId)
-        const port = connection === null ? undefined : this.tiktok.of(connection.provider)
+        const port = connection === null ? undefined : this.tiktok.portFor(connection)
         if (connection === null || port === undefined) throw socialRefusal("not_connected")
         return { connection, port }
     }

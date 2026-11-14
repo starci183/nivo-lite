@@ -392,6 +392,68 @@ describe("context.agent.run", () => {
     })
 })
 
+// MX-CORE DEF-2 (dev 2026-11-14, run 22c340e1 `talk[r1].consult`): the real model answered one JSON object that was none of the three
+// turn shapes, and the step died `handler_threw` on the port's ZodError `invalid_union` (`call` / `confused` / `done` all undefined). The
+// engine's JSON port parses with the schema it is handed (`graph-node-host.service.ts`: `schema.parse(...)`), as this fake does. The
+// shapes below are the ones that error admits (an object with none of the three members): the step's output bare, a call bare, the
+// `decide` wrapper. The step's raw answer is not kept in `agent_run_steps`, so the exact object of that run is not among them.
+describe("context.agent.run: a JSON answer that is none of the three turn shapes", () => {
+    const BARE_OUTPUT = { result: "paid", orderId: "o-1" }
+    const BARE_CALL = { tool: "nivo.tool.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } }
+    const WRAPPED_AS_DECIDE = { answer: { result: "paid", orderId: "o-1" } }
+
+    it.each([
+        ["the output bare", BARE_OUTPUT],
+        ["a call bare", BARE_CALL],
+        ["the decide wrapper", WRAPPED_AS_DECIDE],
+    ] as const)("is a refused turn the model reads next, never a throw: %s", async (_what, malformed) => {
+        const { ran, json } = run({ model: [malformed, PAY, DONE] })
+
+        await expect(ran).resolves.toMatchObject({ output: { result: "paid", orderId: "o-1" } })
+        expect(json.mock.calls[1]?.[1].input).toMatchObject({
+            calls: [{ turn: "refused", refused: { code: "TURN_INVALID" } }],
+            turnsLeft: 2,
+        })
+    })
+
+    it("ends the step confused, naming the refusal, when every turn fits none of the shapes: the engine's typed confusion, not handler_threw", async () => {
+        const { ran } = run({ model: [BARE_OUTPUT, BARE_OUTPUT, BARE_CALL, WRAPPED_AS_DECIDE] })
+
+        const cause = await ran.then(
+            () => null,
+            (thrown: unknown) => thrown,
+        )
+
+        expect(isNodeConfused(cause)).toBe(true)
+        expect(isNodeConfused(cause) ? cause.confusion.reason : "").toMatch(/^AGENT_TURNS_EXHAUSTED after 4 turns; the last answer was refused TURN_INVALID: /)
+    })
+
+    it("asks the model port for any JSON object, and shows the model exactly the three shapes as the answer's JSON Schema", async () => {
+        const { ran, json } = run({ model: [PAY, DONE] })
+        await ran
+
+        const asked = json.mock.calls[0]?.[0]
+        expect(asked?.safeParse(BARE_OUTPUT).success).toBe(true)
+        // What an engine appends to the instructions (`node-prompt.policy.ts`: `toJSONSchema({ io: "input", unrepresentable: "any" })`).
+        const shown = asked?.toJSONSchema({ io: "input", unrepresentable: "any" })
+        expect(shown).toMatchObject({
+            type: "object",
+            anyOf: [{ required: ["call"] }, { required: ["confused"] }, { required: ["done"] }],
+        })
+    })
+
+    it("names the last refused output when the turns run out after one", async () => {
+        const { ran } = run({ model: [PAY, { done: { result: "maybe" } }, { call: { tool: "agent-message.post", args: { text: "x" } } }, { done: { result: "maybe" } }] })
+
+        const cause = await ran.then(
+            () => null,
+            (thrown: unknown) => thrown,
+        )
+
+        expect(isNodeConfused(cause) ? cause.confusion.reason : "").toMatch(/^AGENT_TURNS_EXHAUSTED after 4 turns; the last answer was refused OUTPUT_INVALID: /)
+    })
+})
+
 describe("an agent of a turn whose customer has something waiting for the founder", () => {
     it("is told what waits and the one limit that goes with it; an ordinary turn is told nothing of the kind", async () => {
         const fake = scriptedNodePorts({ model: [PAY, DONE] })
@@ -496,6 +558,7 @@ describe("context.agent.run on a host that takes the turns itself (`ports.agent`
             },
         ],
         ["turns run out", { model: [TELL, TELL, TELL, TELL] }],
+        ["turns run out after a refused output (the confusion names it)", { model: [PAY, { done: { result: "maybe" } }, TELL, TELL] }],
     ] as const)("ends as the runner's own loop does: %s", async (_what, script) => {
         const own = await outcomeOf(run({ ...script }))
         const host = await outcomeOf(run({ ...script, agentLoop: true }))

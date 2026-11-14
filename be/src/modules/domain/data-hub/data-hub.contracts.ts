@@ -47,6 +47,8 @@ export interface DataConnection {
     readonly everyMinutes: number | null
     /** When the last sync finished, ISO 8601; null when none did. */
     readonly lastSyncAt: string | null
+    /** True for a SANDBOX account (lane concept provider-sandbox): its sandbox connector reads it and it holds no credential; absent for a live one. */
+    readonly sandbox?: true
 }
 
 /** What a sync run is given. */

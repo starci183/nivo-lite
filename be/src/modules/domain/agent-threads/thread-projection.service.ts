@@ -3,6 +3,7 @@ import type { EntityManager } from "typeorm"
 import {
     AgentRunRecordsService,
     DEFAULT_DEADLINE_MS,
+    RUN_ENDED,
     type RunValues,
     type StepJson,
     type StepValues,
@@ -75,7 +76,7 @@ const rankOfRow = (data: StoredStep): Rank | -1 => {
     const status = data.status
     if (status === "running") return data.waitItemId === null ? RANK.started : RANK.stopped
     if (status === "failed") return RANK.stopped
-    if (status === "done" || status === "compensating" || status === "compensated") return RANK.ended
+    if (status === "done") return RANK.ended
     return -1
 }
 
@@ -215,6 +216,12 @@ const runValuesOfEnd = (run: StoredRun, end: ThreadRunEndParams): RunValues | nu
     return { status: "failed", error: { code: end.code ?? "failed" }, endedAt: at, deadLetteredAt: at }
 }
 
+/** The terminal reason a closed run gives the step rows it left open: its own error code, or `run_ended` for a run that ended done. */
+const endCodeOf = (run: StoredRun): string => {
+    const code = run.error === null ? null : run.error["code"]
+    return typeof code === "string" && code !== "" ? code : RUN_ENDED
+}
+
 /** The members of an object that JSON keeps, by name. */
 const membersOf = (value: object): ReadonlyMap<string, unknown> =>
     new Map(Object.entries(value).filter(([, member]) => member !== undefined))
@@ -330,13 +337,24 @@ export class ThreadProjectionService {
         )
     }
 
-    /** The thread ended: done, skipped by a founder (the run reads as cancelled by them) or failed. A closed run is left as it is. */
+    /**
+     * The thread ended: done, skipped by a founder (the run reads as cancelled by them) or failed. A closed run is left as it is. In the
+     * same transaction the run's step rows still open (a loop step around the step it ended in, a stop's step waiting on its approval)
+     * are closed with the run's terminal reason (`closeOpenSteps`): also on a replay, so a run closed before this rule catches up.
+     */
     runEnded(
         ref: ThreadRunRefParams,
         end: ThreadRunEndParams,
         manager?: EntityManager,
     ): Promise<ThreadProjectionOutcome> {
-        return this.tried(ref, manager, (tx) => this.patchRun(tx, ref.runId, (run) => runValuesOfEnd(run, end)))
+        return this.tried(ref, manager, async (tx) => {
+            const moved = await this.patchRun(tx, ref.runId, (run) => runValuesOfEnd(run, end))
+            if (moved === "stale" || moved === "missing" || moved === "refused") return moved
+            const run = await this.records.runRow(tx, ref.runId)
+            if (run === null || OPEN_RUN.has(run.status)) return moved
+            const closed = await this.records.closeOpenSteps(tx, ref.runId, endCodeOf(run), iso(end.at))
+            return closed > 0 ? "written" : moved
+        })
     }
 
     /**
@@ -394,7 +412,6 @@ export class ThreadProjectionService {
                 runId,
                 ordinal: fact.ordinal,
                 stepKey: fact.spec.stepKey,
-                compAttempts: 0,
                 claimedUntil: null,
                 notBefore: null,
             }),

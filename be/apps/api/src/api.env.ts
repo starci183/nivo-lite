@@ -38,6 +38,7 @@ import { parseObjectStorageConfig } from "@modules/integrations/object-storage"
 import { parseIdentityAuthConfig } from "@modules/domain/identity"
 import { parsePassportConfig } from "@modules/integrations/passport"
 import { parseConnectionsConfig } from "@modules/domain/connections"
+import { parseProviderSandboxConfig } from "@modules/domain/provider-sandbox"
 import { parseWebhookConnectionsConfig } from "@modules/domain/webhook-connections"
 import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
 import { parseGoogleConfig } from "@modules/integrations/google"
@@ -127,6 +128,8 @@ export interface ApiOptions {
     readonly jobsAlert: ReturnType<typeof parseJobsAlertConfig>
     /** The channel token key that seals provider credentials, and the public site address; the ports are bound by `compose/connections.ts`. */
     readonly connections: ReturnType<typeof parseConnectionsConfig>
+    /** The provider sandbox's dev switch (`PROVIDER_SANDBOX_ENABLED`, ruling R60): read here once, off unless `true`. */
+    readonly providerSandbox: ReturnType<typeof parseProviderSandboxConfig>
     /** The signing key behind outgoing webhooks. */
     readonly webhookConnections: ReturnType<typeof parseWebhookConnectionsConfig>
     /** Google OAuth and Sheets. */
@@ -139,7 +142,7 @@ export interface ApiOptions {
     readonly webhookDelivery: ReturnType<typeof parseWebhookDeliveryConfig>
     /** The knowledge capability: the demo pacing knob of indexing (`KNOWLEDGE_INDEX_CHUNK_DELAY_MS`, 0 unless a demo asks). */
     readonly knowledge: ReturnType<typeof parseKnowledgeConfig>
-    /** The vector index (`QDRANT_URL`, `QDRANT_API_KEY`); without the address vectors stay in Postgres. */
+    /** The vector index (`QDRANT_URL` required, `QDRANT_API_KEY`): the only home of vectors. */
     readonly qdrant: ReturnType<typeof parseQdrantConfig>
     /** iNET's API host and call limit (the domain registrar; the key is per connection, sealed). */
     readonly inet: ReturnType<typeof parseInetConfig>
@@ -218,6 +221,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     jobs: parseJobsConfig(env),
     jobsAlert: parseJobsAlertConfig(env),
     connections: parseConnectionsConfig(env),
+    providerSandbox: parseProviderSandboxConfig(env),
     webhookConnections: parseWebhookConnectionsConfig(env),
     google: parseGoogleConfig(env),
     meta: parseMetaConfig(env),

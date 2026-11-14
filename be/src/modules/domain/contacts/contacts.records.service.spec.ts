@@ -73,4 +73,25 @@ describe("RecordContactsAdapter: the contacts the records store proves a contact
             ]),
         )
     })
+
+    // DEF-6 (MX D-01, R31): the records that keep a reference to an erased person (a `clear` field) are not reached through that person:
+    // a filter on the contact field naming them matches nothing (the erase no longer rewrites the record's field to null).
+    it("maps an erased contact, and an id merged into a contact that was then erased, to NO id: a read through them finds nothing", async () => {
+        const { contacts, store } = build()
+        const lan = await contacts.meetChannel(WS, zaloOf("z-1"))
+        const twin = await contacts.meetChannel(WS, zaloOf("z-2"))
+        const live = await contacts.meetChannel(WS, zaloOf("z-3"))
+        await contacts.merge(WS, { into: lan, from: twin, by: APPROVED })
+        await contacts.delete(WS, lan, MEMBER)
+        const adapter = new RecordContactsAdapter(store)
+
+        await expect(adapter.aliasesOf(WS, [lan, twin, live, "not-a-uuid"])).resolves.toEqual(
+            new Map([
+                [lan, []],
+                [twin, []],
+                [live, [live]],
+                ["not-a-uuid", ["not-a-uuid"]],
+            ]),
+        )
+    })
 })

@@ -1,8 +1,8 @@
 import type { AgentWorkTranslator } from "./agentWork.wire"
 
 /**
- * The one table of the plain words of the Work tab: every kind the back end names (what woke a turn, why a wake was skipped, a goal's
- * state, what a task waits for, an event, a tool) says a phrase of the catalog in Vietnamese and English, under the group's prefix and
+ * The one table of the plain words of the Work tab: every kind the back end names (what woke a turn, why a wake was skipped, what a
+ * task waits for, an event, a tool) says a phrase of the catalog in Vietnamese and English, under the group's prefix and
  * the kind written in lower case with dots as underscores. A kind outside the group says the group's fallback phrase, or nothing when
  * the group has none, so a raw key never reaches the screen.
  */
@@ -22,8 +22,6 @@ const group = (prefix: string, kinds: string, fallback: string | null): Words =>
 
 const SOURCE = group("source_", "customer tag schedule internal", "internal")
 const REASON = group("reason_", "quota killed breaker daily_cap not_applied agent_paused stale over_limit_vnd", null)
-const GOAL_STATUS = group("goal_", "paused done dropped", null)
-const GOAL_SOURCE = group("goalBy_", "owner module agent", "agent")
 const TASK_STATUS = group("task_", "waiting", null)
 const WAITING_ON = group("wait_", "approval member event", null)
 const EVENT = group(
@@ -51,12 +49,6 @@ export const sourceWord = (t: AgentWorkTranslator, source: string): string => wo
 /** Why a wake was held or skipped; empty when the table has no plain reason. */
 export const reasonWord = (t: AgentWorkTranslator, reason: string | null | undefined): string =>
     wordOf(REASON, t, reason)
-
-/** A goal's state; empty for an active one, the row is the goal. */
-export const goalStatusWord = (t: AgentWorkTranslator, status: string): string => wordOf(GOAL_STATUS, t, status)
-
-/** Who set a goal. */
-export const goalSourceWord = (t: AgentWorkTranslator, source: string): string => wordOf(GOAL_SOURCE, t, source)
 
 /** A task's state; empty for an open one, it is in the list. */
 export const taskStatusWord = (t: AgentWorkTranslator, status: string): string => wordOf(TASK_STATUS, t, status)

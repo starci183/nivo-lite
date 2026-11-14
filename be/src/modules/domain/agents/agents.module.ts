@@ -1,5 +1,6 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
+import { WorkflowCallReachService } from "./workflow-call-reach.service"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentDirectoryModule } from "./agent-directory.module"
 import { AgentCreationService } from "./agent-creation.service"
@@ -69,9 +70,10 @@ export class AgentsModule extends ConfigurableModuleClass {
                           { provide: AGENTS_KNOWLEDGE, useClass: options.ports.knowledge },
                           AgentCatalogService,
                           AgentLensesService,
+                          WorkflowCallReachService,
                           AgentTagEffectService,
                       ],
-                      exports: [AGENTS_KNOWLEDGE, AgentCatalogService, AgentLensesService],
+                      exports: [AGENTS_KNOWLEDGE, AgentCatalogService, AgentLensesService, WorkflowCallReachService],
                   }
         return {
             ...base,

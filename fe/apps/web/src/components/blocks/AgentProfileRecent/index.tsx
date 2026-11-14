@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl"
 import { groupRecent, useAgentPages, useProfileRegion } from "@/hooks/agentProfile"
 import { mapSlot } from "@/hooks/slot"
 import { AgentProfileRecentBase } from "./component"
-import { actionWordOf } from "@/hooks/actionWord"
 
 /** The agent whose recent work the card lists. */
 type AgentProfileRecentProps = {
@@ -22,10 +21,8 @@ const TONE: Readonly<Record<string, "neutral" | "success" | "accent" | "danger">
 /** The connected "Viec gan day" list: the latest work of the agent, identical lines folded into one with their count. */
 export const AgentProfileRecent = (props: AgentProfileRecentProps) => {
     const t = useTranslations("agentProfile")
-    const g = useTranslations("governance")
     const pages = useAgentPages(props.agentId)
     const region = useProfileRegion(props.agentId, (agent) => agent.recent)
-    const actionLabel = (action: string): string => actionWordOf(g, action)
     return (
         <AgentProfileRecentBase
             props={{
@@ -34,7 +31,7 @@ export const AgentProfileRecent = (props: AgentProfileRecentProps) => {
                     slot: mapSlot(region.slot, (items) =>
                         groupRecent(items).map(({ work, times }) => ({
                             id: work.id,
-                            title: work.title === "" ? actionLabel(work.action) : work.title,
+                            title: work.title === "" ? t("recentUntitled") : work.title,
                             description: work.customer,
                             mark: null,
                             badges: [{ label: t(`workStatus_${work.status}`), tone: TONE[work.status] ?? "neutral" }],

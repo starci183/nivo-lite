@@ -33,11 +33,11 @@ const CATALOGUE: TemplateCatalogue = {
         vi: "Nh\u1eadn m\u1ed9t y\u00eau c\u1ea7u so\u1ea1n gi\u1ea5y t\u1edd, t\u00ecm t\u00e0i li\u1ec7u trong Second Brain v\u00e0 h\u1ed3 s\u01a1 kh\u00e1ch trong CRM, so\u1ea1n b\u1ea3n nh\u00e1p k\u00e8m ngu\u1ed3n v\u00e0 g\u1eedi l\u1ea1i \u0111\u1ed9i \u0111\u1ec3 ng\u01b0\u1eddi xem v\u00e0 k\u00fd tay",
         en: "Takes a request for paperwork, finds the documents in the Second Brain and the customer records in the CRM, drafts with the sources and hands the draft to the team to check and sign by hand",
     },
-    version: 8,
-    publishedAt: "2026-11-14T04:15:00.000Z",
+    version: 9,
+    publishedAt: "2026-11-14T22:00:00.000Z",
     notes: {
-        vi: "Nhận tham số của bước gọi trong dữ liệu của sự kiện (trigger.data)",
-        en: "Takes its caller's params in the event's data (trigger.data)",
+        vi: "R68: các bước điều kiện và kết quả mang tên theo lời của workspace; nghiệp vụ không đổi",
+        en: "R68: the conditions and the outcomes carry the workspace's words; the business is unchanged",
     },
 }
 
@@ -83,11 +83,12 @@ export const webdocsDraftGraph: TemplateGraph = defineTemplateGraph({
             next: "post-declined",
         }),
         "post-declined": ifNode({
+            label: { vi: "Bị từ chối đăng bản nháp?", en: "Draft post declined?" },
             when: equals(ref("steps.post.output.declined"), true),
             yes: "declined",
             no: "drafted",
         }),
-        drafted: outcome({ name: "drafted" }),
-        declined: outcome({ name: "declined" }),
+        drafted: outcome({ name: "drafted", label: { vi: "Đã soạn", en: "Drafted" } }),
+        declined: outcome({ name: "declined", label: { vi: "Bị từ chối", en: "Declined" } }),
     },
 })

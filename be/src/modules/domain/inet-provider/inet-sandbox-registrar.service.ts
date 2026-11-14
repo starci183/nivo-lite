@@ -1,11 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { z } from "zod"
 import type { ConnectionRecord } from "@modules/domain/connections"
-import { ProviderSandboxError, ProviderSandboxErrorCode, ProviderSandboxService, type SandboxCallPlan, type SandboxFailure } from "@modules/domain/provider-sandbox"
 import {
-    providerCallFailure,
     registrarRefusal,
-    type DnsRecord,
     type DnsRecordInput,
     type DnsRecordList,
     type DomainAvailability,
@@ -14,319 +10,317 @@ import {
     type DomainOrderReceipt,
     type DomainPage,
     type DomainRecord,
-    type DomainRefusalReason,
     type DomainRegistrarPort,
     type DomainRegistrationRequest,
     type DomainRenewalRequest,
     type DomainTransferRequest,
 } from "@modules/domain/provider-registry"
+import { ProviderSandboxService, type SandboxState } from "@modules/domain/provider-sandbox"
 import { INET_PROVIDER } from "./inet-connection-fields.policy"
+import { familyOf } from "./inet-domain-registrar.service"
+import {
+    INET_CASE,
+    INET_RENEW_OPERATION,
+    INET_SANDBOX_DOMAINS,
+    INET_SANDBOX_NAMESERVERS,
+    INET_SANDBOX_RENEWAL_PRICE,
+    inetSandboxDomainOf,
+    type InetSandboxDomain,
+} from "./inet-sandbox.catalogue"
+import {
+    inetAuthRefused,
+    inetConflict,
+    inetRateLimited,
+        inetServerError,
+    inetUnreachable,
+} from "./inet-sandbox.failures"
 
-/** The fixed date a renewal counts from when the held domain states no expiry (a sandbox answer is deterministic, never the clock). */
-const SANDBOX_BASE_DATE = "2026-11-14"
+/** State name: the expiry a renewal moved (key = domain name, value = `YYYY-MM-DD`); without it the catalogue's expiry applies. */
+const EXPIRY = "expiry"
 
-const optionalString = z
-    .string()
-    .nullish()
-    .transform((value) => value ?? null)
-const optionalNumber = z
-    .number()
-    .nullish()
-    .transform((value) => value ?? null)
-const optionalData = z
-    .record(z.string(), z.unknown())
-    .nullish()
-    .transform((value) => value ?? null)
-const dnsRecordFixture = z.looseObject({
-    id: optionalString,
-    name: z.string(),
-    type: z.string(),
-    value: z.string(),
-    ttl: optionalNumber,
-    priority: optionalNumber,
-})
-const recordFixture = z.looseObject({
-    name: z.string(),
-    providerId: z.string().optional(),
-    status: optionalString,
-    expiresOn: optionalString,
-    nameservers: z
-        .array(z.string())
-        .nullish()
-        .transform((value) => value ?? null),
-    autoRenew: z
-        .boolean()
-        .nullish()
-        .transform((value) => value ?? null),
-})
-const pageFixture = z.looseObject({
-    domains: z.array(recordFixture),
-    page: z.number().optional(),
-    totalPages: optionalNumber,
-})
-const availabilityFixture = z.looseObject({
-    name: z.string().optional(),
-    available: z.boolean(),
-    prices: z
-        .array(z.looseObject({ years: z.number(), register: optionalNumber, renew: optionalNumber, transfer: optionalNumber }))
-        .optional(),
-})
-const receiptFixture = z.looseObject({
-    name: z.string().optional(),
-    reference: optionalString,
-    total: optionalNumber,
-    providerData: optionalData,
-})
-const changeFixture = z.looseObject({
-    records: z
-        .array(dnsRecordFixture)
-        .nullish()
-        .transform((value) => value ?? null),
-    providerData: optionalData,
-})
-const dnsListFixture = z.looseObject({ records: z.array(dnsRecordFixture) })
+/** State name: the expiry a renewal accepted but not finished will move to (key = domain name, value = `YYYY-MM-DD`, "" = none). */
+const PENDING = "pending-expiry"
 
-/** The sandbox's own typed error for a fixture that does not read as the port's shape (never a crash of the engine). */
-const badFixture = (operation: string, issue: string): ProviderSandboxError =>
-    new ProviderSandboxError({ code: ProviderSandboxErrorCode.EntryInvalid, params: { why: `fixture ${operation}: ${issue}` } })
+/** The prices `availability` quotes (the live portal answer states none). */
+const NO_PRICES: DomainAvailability["prices"] = []
 
-/** Reads a fixture or scripted value with a schema; a value that does not parse is a thrown `ProviderSandboxError`. */
-const readAs = <Schema extends z.ZodType>(schema: Schema, operation: string, value: unknown): z.output<Schema> => {
-    const parsed = schema.safeParse(value)
-    if (!parsed.success) throw badFixture(operation, parsed.error.issues[0]?.message ?? "invalid")
-    return parsed.data
-}
+/** The record a held domain answers to a DNS read (one fixed `A` record). */
+const DNS_RECORD = { id: "1", name: "@", type: "A", value: "203.0.113.10", ttl: 3600, priority: null } as const
 
-/** The reason words a scripted refusal names, as the live iNET answers them: a conflict (409) is `already_exists`, the rest are the request refused (`rejected`). */
-const REFUSAL_OF_REASON: Readonly<Record<string, DomainRefusalReason>> = {
-    insufficient_balance: "rejected",
-    domain_locked: "rejected",
-    rejected: "rejected",
-    already_renewed: "already_exists",
-    already_exists: "already_exists",
-    not_found: "not_found",
-    not_available: "not_available",
-    contacts_required: "contacts_required",
-    contacts_unsupported: "contacts_unsupported",
-}
+/** A running reference of an order: `SBX-INET-` and the call's running number (calls of the operation before it, plus one) on six digits. */
+const referenceOf = (seq: number): string => `SBX-INET-${String(seq + 1).padStart(6, "0")}`
+
+/** The date `years` years after an ISO date (`YYYY-MM-DD`), by the year only. */
+const addYears = (date: string, years: number): string => `${String(Number(date.slice(0, 4)) + years)}${date.slice(4)}`
+
+/** The receipt of a priced order: reference from the running number, total = years x the fixed price. */
+const receiptOf = (name: string, years: number, seq: number, expiresOn: string | null): DomainOrderReceipt => ({
+    name,
+    reference: referenceOf(seq),
+    total: years * INET_SANDBOX_RENEWAL_PRICE,
+    providerData: { sandbox: true, period: years, ...(expiresOn === null ? {} : { expiresOn }) },
+})
+
+/** State name: how many reads of a domain followed a renewal accepted but not finished (key = domain name, an integer; absent = none). */
+const PENDING_READS = "pending-reads"
 
 /**
- * A scripted failure as the error the LIVE iNET adapter throws for the same case (`inetFailureOf`): a refusal names its reason word as
- * the provider code (`rejected` 400, `already_exists` 409); `unavailable` (5xx) and `timeout` prove `unknown`; a refused credential
- * (401 / 403) proves `not_sent`; `not_found` is the registrar's not-found refusal.
+ * The expiry a domain has now: the one a renewal kept, else the catalogue's. A renewal accepted but not finished (the pending case)
+ * finishes with the SECOND read of the domain after it (the sandbox's deterministic "later"): the first read, which is the renewal
+ * tool's own proof read right after the order, still reports the old expiry, so the order is `pending`; the second read keeps the
+ * pending expiry and clears the mark before it answers.
  */
-export const inetSandboxFailureOf = (failure: SandboxFailure): Error => {
-    const code = failure.reason ?? null
-    switch (failure.kind) {
-        case "refused":
-            return registrarRefusal(REFUSAL_OF_REASON[code ?? ""] ?? "rejected", code)
-        case "not_found":
-            return registrarRefusal("not_found", code)
-        case "unavailable":
-        case "timeout":
-            return providerCallFailure("unknown")
-        case "auth_expired":
-            return providerCallFailure("not_sent")
+const expiryOf = async (state: SandboxState, domain: InetSandboxDomain): Promise<string> => {
+    const pending = await state.read(PENDING, domain.name)
+    if (typeof pending === "string" && pending !== "") {
+        const seen = await state.read(PENDING_READS, domain.name)
+        const reads = (typeof seen === "number" ? seen : 0) + 1
+        if (reads >= 2) {
+            await state.write(EXPIRY, domain.name, pending)
+            await state.write(PENDING, domain.name, "")
+            await state.write(PENDING_READS, domain.name, 0)
+        } else {
+            await state.write(PENDING_READS, domain.name, reads)
+        }
     }
+    return await settledExpiryOf(state, domain)
 }
 
-/** Adds whole years to a `yyyy-mm-dd` date (UTC), or to the base date when there is none or the text is no date. */
-const addYears = (from: string | null, years: number): string => {
-    const start = new Date(from === null ? SANDBOX_BASE_DATE : from)
-    const base = Number.isNaN(start.getTime()) ? new Date(SANDBOX_BASE_DATE) : start
-    base.setUTCFullYear(base.getUTCFullYear() + years)
-    return base.toISOString().slice(0, 10)
+/** The expiry a domain holds without any read counting toward a pending renewal: the one a renewal kept, else the catalogue's. */
+const settledExpiryOf = async (state: SandboxState, domain: InetSandboxDomain): Promise<string> => {
+    const kept = await state.read(EXPIRY, domain.name)
+    return typeof kept === "string" ? kept : domain.expiresOn
 }
 
-/** A domain record of a fixture, in the port's words (the provider id defaults to a sandbox id of the name). */
-const recordOf = (parsed: z.output<typeof recordFixture>): DomainRecord => ({
-    name: parsed.name,
-    providerId: parsed.providerId ?? `sbx-${parsed.name.toLowerCase()}`,
-    status: parsed.status,
-    expiresOn: parsed.expiresOn,
-    nameservers: parsed.nameservers,
-    autoRenew: parsed.autoRenew,
-})
+/** Keeps the expiry a renewal applied and drops any pending renewal of the domain (the applied one is the newest word). */
+const settle = async (state: SandboxState, name: string, expiresOn: string): Promise<void> => {
+    await state.write(EXPIRY, name, expiresOn)
+    await state.write(PENDING, name, "")
+    await state.write(PENDING_READS, name, 0)
+}
 
-/** A DNS record of a fixture, in the port's words. */
-const dnsOf = (parsed: z.output<typeof dnsRecordFixture>): DnsRecord => ({
-    id: parsed.id,
-    name: parsed.name,
-    type: parsed.type,
-    value: parsed.value,
-    ttl: parsed.ttl,
-    priority: parsed.priority,
-})
-
-/** The lower-case key of a domain name. */
-const keyOf = (name: string): string => name.trim().toLowerCase()
-
-/** The plan of one call: its key, its answer from the given fixture, and the live error of a scripted failure. */
-const planOf = <Answer>(key: string, answer: (given: unknown) => Answer): SandboxCallPlan<Answer> => ({
-    key,
-    answer,
-    fail: (failure) => inetSandboxFailureOf(failure),
-})
+/** The expiry a renewal starts from (not a read: it does not count toward a pending renewal): the one kept, else the catalogue's, else the one the request's record states, else none. */
+const renewalBaseOf = async (state: SandboxState, name: string, stated: string | null): Promise<string | null> => {
+    const held = inetSandboxDomainOf(name)
+    if (held !== null) return await settledExpiryOf(state, held)
+    const kept = await state.read(EXPIRY, name)
+    return typeof kept === "string" ? kept : stated
+}
 
 @Injectable()
 /**
- * iNET's SANDBOX implementation of the domain registrar port (owner rulings R56 / R57): used when the provider account is a sandbox
- * account, it answers every purpose through the generic sandbox frame, from the account's fixtures and scripted outcomes, with
- * deterministic defaults, and logs every call. It holds no client and no secret: it never reaches a host. A scripted failure becomes
- * the error the live adapter throws for the same case.
+ * iNET's SANDBOX implementation of the domain registrar port (owner rulings R56, R58, R59, R60, R62), used when the provider account is
+ * a sandbox account. Every method answers through ONE sandbox call keyed by the domain name; it reaches no host, and the frame logs the call.
+ *
+ * `renew` is the one operation with cases (`INET_SANDBOX_CASES`): the account's sticky NEXT CASE (`state.nextCase`) picks the outcome, never
+ * the domain name; nothing picked answers `INET-1`. A portal-family account (api_context not reseller) is refused `not_available` whatever
+ * the case, as live. Success (`INET-1`) moves the domain's expiry in the account's state by the years (from the state's expiry, else the
+ * catalogue's, else the one the request's record states: no clock) and answers a receipt `SBX-INET-<n>` (n = calls of `renew` before this
+ * one, plus one: a refused call also counts), total = years x the fixed price. `INET-3` (pending) answers the same receipt with status
+ * `pending` and no new expiry: live iNET publishes no pending answer, so this is the closest truthful shape (an accepted order, not
+ * finished); it FINISHES with the next read of that domain (`find`, `details` or `list`), which answers the new expiry (no iNET webhook
+ * exists on NIVO: the read is how a registrar order is followed). Failing cases throw what the live adapter throws for the same iNET
+ * failure (`./inet-sandbox.failures`); `INET-6` applies the renewal and then times out. `find` and `details` answer the catalogue domain
+ * with the state's expiry in full (live answers an expiry only for portal accounts: the sandbox always states it, because a renewal is
+ * proven by it) and `find` answers null for a name the catalogue does not hold; `list` pages the catalogue. Other methods answer
+ * documented defaults in the live shapes; the registration of a name the catalogue holds is refused `already_exists`.
  */
 export class InetSandboxRegistrarService implements DomainRegistrarPort {
+    /** The provider key. */
     readonly provider: typeof INET_PROVIDER = INET_PROVIDER
 
     constructor(private readonly sandbox: ProviderSandboxService) {}
 
-    /** Whether a name can be registered: the fixture, else available. */
-    availability(connection: ConnectionRecord, name: string): Promise<DomainAvailability> {
-        return this.sandbox.call(
+    /** Whether a name can be registered: not when the catalogue holds it. */
+    async availability(connection: ConnectionRecord, name: string): Promise<DomainAvailability> {
+        return await this.sandbox.call(
             connection,
             "availability",
             { name },
-            planOf(keyOf(name), (given) => {
-                if (given === null) return { name, available: true, prices: [] }
-                const parsed = readAs(availabilityFixture, "availability", given)
-                return { name: parsed.name ?? name, available: parsed.available, prices: parsed.prices ?? [] }
-            }),
+            { key: name, answer: () => ({ name, available: inetSandboxDomainOf(name) === null, prices: NO_PRICES }) },
         )
     }
 
-    /** The held domain of this name: the fixture, else null (not held). */
-    find(connection: ConnectionRecord, name: string): Promise<DomainRecord | null> {
-        return this.sandbox.call(
+    /** The catalogue domain by this name with the state's expiry; null when the catalogue does not name it. */
+    async find(connection: ConnectionRecord, name: string): Promise<DomainRecord | null> {
+        return await this.sandbox.call(
             connection,
             "find",
             { name },
-            planOf(keyOf(name), (given) => (given === null ? null : recordOf(readAs(recordFixture, "find", given)))),
+            {
+                key: name,
+                answer: async (state) => {
+                    const held = inetSandboxDomainOf(name)
+                    return held === null ? null : await this.recordOf(state, held)
+                },
+            },
         )
     }
 
-    /** The detail of a held domain: the fixture, else the refusal `not_found` as the live answers for a domain it does not hold. */
-    details(connection: ConnectionRecord, domain: DomainRecord): Promise<DomainRecord> {
-        return this.sandbox.call(
+    /** The record of one held domain, as `find` answers it. */
+    async details(connection: ConnectionRecord, domain: DomainRecord): Promise<DomainRecord> {
+        return await this.sandbox.call(
             connection,
             "details",
             { domain },
-            planOf(keyOf(domain.name), (given) => {
-                if (given === null) throw registrarRefusal("not_found")
-                return recordOf(readAs(recordFixture, "details", given))
-            }),
+            { key: domain.name, answer: async (state) => await this.recordOf(state, this.held(domain.name)) },
         )
     }
 
-    /** A page of held domains: the fixture, else an empty first page. */
-    list(connection: ConnectionRecord, query: DomainListQuery): Promise<DomainPage> {
-        return this.sandbox.call(
-            connection,
-            "list",
-            { query },
-            planOf("", (given) => {
-                if (given === null) return { domains: [], page: query.page, totalPages: 1 }
-                const parsed = readAs(pageFixture, "list", given)
-                return { domains: parsed.domains.map((domain) => recordOf(domain)), page: parsed.page ?? query.page, totalPages: parsed.totalPages }
-            }),
-        )
+    /** A page of the catalogue domains (page from 1). */
+    async list(connection: ConnectionRecord, query: DomainListQuery): Promise<DomainPage> {
+        return await this.sandbox.call(connection, "list", query, {
+            key: String(query.page),
+            answer: async (state) => {
+                const start = (query.page - 1) * query.pageSize
+                const rows = INET_SANDBOX_DOMAINS.slice(start, start + query.pageSize)
+                const domains = await Promise.all(rows.map((row) => this.recordOf(state, row)))
+                return { domains, page: query.page, totalPages: Math.ceil(INET_SANDBOX_DOMAINS.length / query.pageSize) }
+            },
+        })
     }
 
-    /** Registers a name: the fixture receipt, else a receipt `sbx-register-<name>-<years>`. */
-    register(connection: ConnectionRecord, request: DomainRegistrationRequest): Promise<DomainOrderReceipt> {
-        const reference = `sbx-register-${keyOf(request.name)}-${String(request.years)}`
-        return this.sandbox.call(
-            connection,
-            "register",
-            request,
-            planOf(keyOf(request.name), (given) => this.receiptOf("register", request.name, reference, given, null)),
-        )
+    /** Registers a new domain: refused like live without contacts or nameservers, `already_exists` for a catalogue name; else a receipt. */
+    async register(connection: ConnectionRecord, request: DomainRegistrationRequest): Promise<DomainOrderReceipt> {
+        return await this.sandbox.call(connection, "register", request, {
+            key: request.name,
+            answer: (state) => {
+                if (familyOf(connection) !== "reseller") throw registrarRefusal("not_available", "portal registration undocumented")
+                if (request.contacts.length === 0) throw registrarRefusal("contacts_required")
+                if (request.nameservers.length === 0) throw registrarRefusal("rejected", "nsList required")
+                if (inetSandboxDomainOf(request.name) !== null) throw inetConflict()
+                return receiptOf(request.name, request.years, state.seq, null)
+            },
+        })
     }
 
-    /**
-     * Renews a held domain: a fixture or scripted string is the new end date, an object is the receipt; else the new end date is the
-     * domain's stated expiry (or the fixed base date) plus the years, with the reference `sbx-renew-<name>-<years>`.
-     */
-    renew(connection: ConnectionRecord, request: DomainRenewalRequest): Promise<DomainOrderReceipt> {
-        const name = request.domain.name
-        const reference = `sbx-renew-${keyOf(name)}-${String(request.years)}`
-        const expiresOn = addYears(request.domain.expiresOn, request.years)
-        return this.sandbox.call(
-            connection,
-            "renew",
-            request,
-            planOf(keyOf(name), (given) => {
-                if (typeof given === "string") return { name, reference, total: null, providerData: { expiresOn: given } }
-                return this.receiptOf("renew", name, reference, given, { expiresOn })
-            }),
-        )
-    }
-
-    /** Starts a transfer in: the fixture receipt, else a receipt `sbx-transfer-<name>-<years>`. */
-    transfer(connection: ConnectionRecord, request: DomainTransferRequest): Promise<DomainOrderReceipt> {
-        const reference = `sbx-transfer-${keyOf(request.name)}-${String(request.years)}`
-        return this.sandbox.call(
-            connection,
-            "transfer",
-            request,
-            planOf(keyOf(request.name), (given) => this.receiptOf("transfer", request.name, reference, given, null)),
-        )
-    }
-
-    /** The DNS records of a held domain: the fixture, else an empty parsed list. */
-    dnsRecords(connection: ConnectionRecord, domain: DomainRecord): Promise<DnsRecordList> {
-        return this.sandbox.call(
-            connection,
-            "dnsRecords",
-            { domain },
-            planOf(keyOf(domain.name), (given): DnsRecordList => {
-                if (given === null) return { kind: "parsed", records: [] }
-                return { kind: "parsed", records: readAs(dnsListFixture, "dnsRecords", given).records.map((record) => dnsOf(record)) }
-            }),
-        )
-    }
-
-    /** Adds one DNS record: the fixture change, else an accepted change with no records stated. */
-    createDnsRecord(connection: ConnectionRecord, domain: DomainRecord, record: DnsRecordInput): Promise<DomainChange> {
-        return this.change(connection, "createDnsRecord", domain, { domain, record })
-    }
-
-    /** Replaces one DNS record: the fixture change, else an accepted change. */
-    updateDnsRecord(connection: ConnectionRecord, domain: DomainRecord, recordId: string, record: DnsRecordInput): Promise<DomainChange> {
-        return this.change(connection, "updateDnsRecord", domain, { domain, recordId, record })
-    }
-
-    /** Removes one DNS record: the fixture change, else an accepted change. */
-    deleteDnsRecord(connection: ConnectionRecord, domain: DomainRecord, recordId: string): Promise<DomainChange> {
-        return this.change(connection, "deleteDnsRecord", domain, { domain, recordId })
-    }
-
-    /** Replaces the nameservers: the fixture change, else an accepted change. */
-    updateNameservers(connection: ConnectionRecord, domain: DomainRecord, nameservers: ReadonlyArray<string>): Promise<DomainChange> {
-        return this.change(connection, "updateNameservers", domain, { domain, nameservers })
-    }
-
-    /** One write on a held domain through exactly one sandbox call. */
-    private change(connection: ConnectionRecord, operation: string, domain: DomainRecord, request: unknown): Promise<DomainChange> {
-        return this.sandbox.call(
-            connection,
-            operation,
-            request,
-            planOf(keyOf(domain.name), (given): DomainChange => {
-                if (given === null) return { name: domain.name, records: null, providerData: null }
-                const parsed = readAs(changeFixture, operation, given)
-                return {
-                    name: domain.name,
-                    records: parsed.records === null ? null : parsed.records.map((record) => dnsOf(record)),
-                    providerData: parsed.providerData,
+    /** Renews a domain by the account's next case of `renew` (default `INET-1`: renewed); see the class. */
+    async renew(connection: ConnectionRecord, request: DomainRenewalRequest): Promise<DomainOrderReceipt> {
+        return await this.sandbox.call(connection, INET_RENEW_OPERATION, request, {
+            key: request.domain.name,
+            answer: async (state) => {
+                if (familyOf(connection) !== "reseller" || state.nextCase === INET_CASE.portal) {
+                    throw registrarRefusal("not_available", "portal renewal undocumented")
                 }
-            }),
-        )
+                const name = request.domain.name.trim().toLowerCase()
+                switch (state.nextCase) {
+                    case INET_CASE.insufficientBalance:
+                        throw registrarRefusal("insufficient_balance", "insufficient_balance")
+                    case INET_CASE.locked:
+                        throw registrarRefusal("domain_locked", "domain_locked")
+                    case INET_CASE.alreadyRenewed:
+                        throw inetConflict()
+                    case INET_CASE.flaky:
+                        throw inetServerError()
+                    case INET_CASE.unreachable:
+                        throw inetUnreachable()
+                    case INET_CASE.auth:
+                        throw inetAuthRefused()
+                    case INET_CASE.rate:
+                        throw inetRateLimited()
+                    case INET_CASE.notFound:
+                        throw registrarRefusal("not_found", "domain")
+                }
+                const base = await renewalBaseOf(state, name, request.domain.expiresOn)
+                const moved = base === null ? null : addYears(base, request.years)
+                if (state.nextCase === INET_CASE.appliedTimedOut) {
+                    if (moved !== null) await settle(state, name, moved)
+                    throw inetUnreachable()
+                }
+                if (state.nextCase === INET_CASE.pending) {
+                    if (moved !== null) {
+                        await state.write(PENDING, name, moved)
+                        await state.write(PENDING_READS, name, 0)
+                    }
+                    return { ...receiptOf(request.domain.name, request.years, state.seq, null), providerData: { sandbox: true, period: request.years, status: "pending" } }
+                }
+                if (moved !== null) await settle(state, name, moved)
+                return receiptOf(request.domain.name, request.years, state.seq, moved)
+            },
+        })
     }
 
-    /** A receipt from a fixture, or the deterministic default with its reference and what the sandbox says in `providerData`. */
-    private receiptOf(operation: string, name: string, reference: string, given: unknown, data: Record<string, unknown> | null): DomainOrderReceipt {
-        if (given === null) return { name, reference, total: null, providerData: data }
-        const parsed = readAs(receiptFixture, operation, given)
-        return { name: parsed.name ?? name, reference: parsed.reference ?? reference, total: parsed.total, providerData: parsed.providerData ?? data }
+    /** Starts the transfer of a name into the account: a receipt (a catalogue name is already held: `already_exists`). */
+    async transfer(connection: ConnectionRecord, request: DomainTransferRequest): Promise<DomainOrderReceipt> {
+        return await this.sandbox.call(connection, "transfer", request, {
+            key: request.name,
+            answer: (state) => {
+                if (familyOf(connection) !== "reseller") throw registrarRefusal("not_available", "portal transfer undocumented")
+                if (inetSandboxDomainOf(request.name) !== null) throw inetConflict()
+                return receiptOf(request.name, request.years, state.seq, null)
+            },
+        })
+    }
+
+    /** The DNS records of a held domain: parsed for a portal account, the undocumented answer for a reseller one (as live). */
+    async dnsRecords(connection: ConnectionRecord, domain: DomainRecord): Promise<DnsRecordList> {
+        return await this.sandbox.call(connection, "dnsRecords", { domain }, {
+            key: domain.name,
+            answer: (): DnsRecordList => {
+                this.held(domain.name)
+                return familyOf(connection) === "reseller"
+                    ? { kind: "undocumented", providerData: { records: [DNS_RECORD] } }
+                    : { kind: "parsed", records: [DNS_RECORD] }
+            },
+        })
+    }
+
+    /** Accepts a DNS record of a held domain. */
+    async createDnsRecord(connection: ConnectionRecord, domain: DomainRecord, record: DnsRecordInput): Promise<DomainChange> {
+        return await this.changed(connection, "createDnsRecord", domain, { domain, record })
+    }
+
+    /** Accepts the change of a DNS record of a held domain. */
+    async updateDnsRecord(
+        connection: ConnectionRecord,
+        domain: DomainRecord,
+        recordId: string,
+        record: DnsRecordInput,
+    ): Promise<DomainChange> {
+        return await this.changed(connection, "updateDnsRecord", domain, { domain, recordId, record })
+    }
+
+    /** Accepts the removal of a DNS record of a held domain. */
+    async deleteDnsRecord(connection: ConnectionRecord, domain: DomainRecord, recordId: string): Promise<DomainChange> {
+        return await this.changed(connection, "deleteDnsRecord", domain, { domain, recordId })
+    }
+
+    /** Accepts new nameservers of a held domain. */
+    async updateNameservers(
+        connection: ConnectionRecord,
+        domain: DomainRecord,
+        nameservers: ReadonlyArray<string>,
+    ): Promise<DomainChange> {
+        return await this.changed(connection, "updateNameservers", domain, { domain, nameservers })
+    }
+
+    /** One write the sandbox only accepts (it keeps no records): the change of a held domain, `not_found` for any other. */
+    private async changed(connection: ConnectionRecord, operation: string, domain: DomainRecord, request: unknown): Promise<DomainChange> {
+        return await this.sandbox.call(connection, operation, request, {
+            key: domain.name,
+            answer: () => {
+                this.held(domain.name)
+                return { name: domain.name, records: null, providerData: { sandbox: true } }
+            },
+        })
+    }
+
+    /** The catalogue domain of a name, or the refusal `not_found`. */
+    private held(name: string): InetSandboxDomain {
+        const held = inetSandboxDomainOf(name)
+        if (held === null) throw registrarRefusal("not_found", "domain")
+        return held
+    }
+
+    /** A catalogue domain in the port's words with the state's expiry. */
+    private async recordOf(state: SandboxState, held: InetSandboxDomain): Promise<DomainRecord> {
+        return {
+            name: held.name,
+            providerId: held.id,
+            status: "active",
+            expiresOn: await expiryOf(state, held),
+            nameservers: INET_SANDBOX_NAMESERVERS,
+            autoRenew: null,
+        }
     }
 }

@@ -36,6 +36,10 @@ export const sentOn = (channel: string, messageId: string, routeId = "c1"): Tool
 export const draftedVia = (provider: ProviderKey, emailMessageId: string): ToolAnswer<JsonObject> =>
     answered({ emailMessageId, status: "sent" }, { provider, connectionId: `conn-${provider}-1` })
 
+/** A domain registrar's answer (`nivo.tool.domain.renewal.create`), through the registrar account of `provider`. */
+export const registrarAnswered = (provider: ProviderKey, value: JsonObject): ToolAnswer<JsonObject> =>
+    answered(value, { provider, connectionId: `conn-${provider}-1` })
+
 /** A team post's answer. */
 export const posted = (messageId: string): ToolAnswer<JsonObject> => answered({ messageId })
 

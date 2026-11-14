@@ -77,7 +77,7 @@ describe("DashboardRecordsReadService > read", () => {
         expect(deliveries.routesTold).toHaveBeenCalledWith("ws-1", window.from, window.to)
         expect(deliveries.routesTold).toHaveBeenCalledWith("ws-1", window.previousFrom, window.from)
         expect(deliveries.countDelivered).toHaveBeenCalledWith("ws-1", window.from, window.to)
-        const statuses = ["done", "compensated", "failed", "dead"]
+        const statuses = ["done", "failed", "dead"]
         expect(counted).toEqual([
             { statuses, started: { from: window.from.toISOString(), to: window.to.toISOString() } },
             { statuses, started: { from: window.previousFrom.toISOString(), to: window.from.toISOString() } },

@@ -58,7 +58,7 @@ const REGISTRAR_ABILITIES: ReadonlyArray<ProviderAbility> = [
     {
         id: "domain.read",
         scope: "read",
-        tools: [TOOL.domainAvailabilityGet, TOOL.domainGet, TOOL.domainList, TOOL.domainDnsRecordList],
+        tools: [TOOL.domainAvailabilityGet, TOOL.domainGet, TOOL.domainList, TOOL.domainDnsRecordList, TOOL.domainRenewalGet],
     },
     {
         id: "domain.register",
@@ -215,10 +215,11 @@ export const PROVIDER_CATALOGUE: ReadonlyArray<ProviderSpec> = [
             { id: "tiktok.publish", scope: "write", tools: [TOOL.tiktokVideoPublish] },
         ],
     },
-    // MISA AMIS and MISA meInvoice: connectable accounts whose public documentation could not be read, so no operation is built and
-    // they own no purpose (`ledger.entry.append`, `invoice.create` stay with their current owners until an adapter is real).
+    // MISA AMIS: a connectable account whose public documentation could not be read, so no operation is built and it owns no purpose.
     { provider: "misa_amis", kind: "books", abilities: [] },
-    { provider: "misa_meinvoice", kind: "books", abilities: [] },
+    // MISA meInvoice: the e-invoice provider that serves the issue purpose (owner ruling R57: the invoice is issued AT the provider; NIVO
+    // keeps no invoice tool of its own). Its live issue is `not_available` until its documentation is read; a sandbox account answers.
+    { provider: "misa_meinvoice", kind: "books", abilities: [{ id: "invoice.issue", scope: "write", tools: [TOOL.invoiceCreate] }] },
 ]
 
 /** The spec of a provider, or null for a key the catalogue does not know. */
@@ -384,25 +385,103 @@ export interface NamedAccount {
     readonly connectionId: string
 }
 
+/** What a run tells about the accounts of its agent: where its trigger came in, and which accounts its earlier calls used. */
+export interface RunAccountFacts {
+    /** The connected account the run's triggering event came in on, or null/absent when the event names none. */
+    readonly triggerConnectionId?: string | null | undefined
+    /** The connected accounts the run's earlier calls used, the most recent first (the tool call log of the run). */
+    readonly usedConnectionIds?: ReadonlyArray<string> | undefined
+}
+
+/** Why one account was picked among the agent's accounts of one provider: it is the only one, or the first rule of the order that names one. */
+export type AccountPickedBy = "only" | "trigger" | "run" | "default"
+
+/** The account a call uses among the agent's attached accounts of ONE provider, or why none is. */
+export type AccountPick<A extends NamedAccount> =
+    | { readonly kind: "none" }
+    | { readonly kind: "picked"; readonly account: A; readonly by: AccountPickedBy }
+    | { readonly kind: "needs_pick"; readonly candidates: ReadonlyArray<A> }
+
+/**
+ * THE ONE ORDER (generic, nivo-frame `rights`): which of an agent's attached accounts of ONE provider a step's call uses. None attached:
+ * `none` (the kill switch). One attached: it, exactly as before (`only`). Several, the first rule that names one of them wins:
+ * (1) the account the run's triggering event came in on (`run.triggerConnectionId`); (2) an account the run already used earlier
+ * (`run.usedConnectionIds`, the most recent first); (3) the agent's DEFAULT account of the provider, the one the owner set
+ * (`defaultConnectionId`); else `needs_pick` with the candidates (never a guess: the owner picks a default). A fact naming an account
+ * that is not among the candidates names nothing. Pure.
+ */
+export const pickAccountOf = <A extends NamedAccount>(
+    own: ReadonlyArray<A>,
+    defaultConnectionId: string | null,
+    run: RunAccountFacts = {},
+): AccountPick<A> => {
+    const [only, ...more] = own
+    if (only === undefined) return { kind: "none" }
+    if (more.length === 0) return { kind: "picked", account: only, by: "only" }
+    const named = (connectionId: string | null | undefined): A | undefined =>
+        connectionId === null || connectionId === undefined ? undefined : own.find((account) => account.connectionId === connectionId)
+    const byTrigger = named(run.triggerConnectionId)
+    if (byTrigger !== undefined) return { kind: "picked", account: byTrigger, by: "trigger" }
+    for (const used of run.usedConnectionIds ?? []) {
+        const byRun = named(used)
+        if (byRun !== undefined) return { kind: "picked", account: byRun, by: "run" }
+    }
+    const byDefault = named(defaultConnectionId)
+    if (byDefault !== undefined) return { kind: "picked", account: byDefault, by: "default" }
+    return { kind: "needs_pick", candidates: own }
+}
+
+/** One provider the agent holds several accounts of and no rule of the order names one: the choice the owner has to make. */
+export interface PickNeeded {
+    /** The provider (as nodes name it). */
+    readonly provider: string
+    /** The attached accounts of it, one of which the owner picks as the default. */
+    readonly connectionIds: ReadonlyArray<string>
+}
+
+/** The pick of each provider a node lists, in the node's order, each once. */
+const picksOf = <A extends NamedAccount>(
+    providers: ReadonlyArray<string>,
+    attached: ReadonlyArray<A>,
+    defaultOf: (provider: string) => string | null,
+    run: RunAccountFacts | undefined,
+): ReadonlyArray<{ readonly provider: string; readonly pick: AccountPick<A> }> =>
+    [...new Set(providers)].map((provider) => ({
+        provider,
+        pick: pickAccountOf(
+            attached.filter((account) => account.provider === provider),
+            defaultOf(provider),
+            run,
+        ),
+    }))
+
 /**
  * THE BINDING (nivo-frame `rights`, `templates`): the accounts a node's call may act on, in the NODE'S order of providers. Each provider
- * the node lists binds the agent's ONE attached account of it; of several, the workspace's default account of the provider's kind
- * (`defaultOf`) when it is one of them, else none (never a guess: readiness names it `needs_pick`). A provider the agent has no account
- * of binds nothing (the kill switch). Pure.
+ * the node lists binds the agent's ONE attached account of it; of several, the account `pickAccountOf` names (the run's trigger, then the
+ * run's earlier calls, then the agent's default account of the provider, `defaultOf`), else none (never a guess: readiness names it
+ * `needs_pick`, and `unpickedOf` the choice). A provider the agent has no account of binds nothing (the kill switch). Pure.
  */
 export const bindNodeProviders = <A extends NamedAccount>(
     providers: ReadonlyArray<string>,
     attached: ReadonlyArray<A>,
     defaultOf: (provider: string) => string | null,
+    run?: RunAccountFacts,
 ): ReadonlyArray<A> =>
-    [...new Set(providers)].flatMap((provider) => {
-        const own = attached.filter((account) => account.provider === provider)
-        const [only, ...more] = own
-        if (only === undefined) return []
-        if (more.length === 0) return [only]
-        const picked = own.find((account) => account.connectionId === defaultOf(provider))
-        return picked === undefined ? [] : [picked]
-    })
+    picksOf(providers, attached, defaultOf, run).flatMap(({ pick }) => (pick.kind === "picked" ? [pick.account] : []))
+
+/**
+ * The providers of a node whose several attached accounts no rule of the order picks from (`bindNodeProviders` binds nothing for them),
+ * in the node's order, each with its candidate accounts: what the typed refusal names. Pure.
+ */
+export const unpickedOf = <A extends NamedAccount>(
+    providers: ReadonlyArray<string>,
+    attached: ReadonlyArray<A>,
+    defaultOf: (provider: string) => string | null,
+    run?: RunAccountFacts,
+): ReadonlyArray<PickNeeded> =>
+    picksOf(providers, attached, defaultOf, run).flatMap(({ provider, pick }) =>
+        pick.kind === "needs_pick" ? [{ provider, connectionIds: pick.candidates.map((account) => account.connectionId) }] : [],
+    )
 
 /** What a module that ships no template agent still declares (`agent.abilities`), or undefined when it declares nothing. */
 export type OptionalModuleDeclaration = ModuleAgentAbilities | undefined

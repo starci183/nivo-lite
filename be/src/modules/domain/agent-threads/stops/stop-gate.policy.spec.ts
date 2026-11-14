@@ -1,9 +1,11 @@
 import type { RunStop } from "./run-stop.contracts"
 import {
     STOP_END,
+    endsTheRun,
     founderAnswersOf,
     stopAnswerOf,
     stopDecisionOf,
+    stopEndCodeOf,
     stopQuestionOf,
     stopRouteOf,
     stopToldOf,
@@ -82,6 +84,23 @@ describe("stopRouteOf: where the gate sends the thread", () => {
             resolves: false,
         })
         expect(stopRouteOf(STOP, { kind: "skip", by: "u1", at: "t" }, GATE)).toMatchObject({ goto: STOP_END, resolves: true })
+        // Rule S-3: a take-over handed back ends the run as a skip does, and is its own closing kind.
+        expect(stopRouteOf(STOP, { kind: "handed_back", by: "u1", at: "t" }, GATE)).toMatchObject({ goto: STOP_END, resolves: true })
+    })
+
+    it("rule S-3: a hand-back is read as its own decision and ends the run with its own code; every other ending is the founder's skip", () => {
+        expect(stopDecisionOf({ kind: "handed_back", by: "u1", at: "t" })).toEqual({ kind: "handed_back", by: "u1", at: "t" })
+        expect(stopEndCodeOf({ kind: "handed_back" })).toBe("handed_back")
+        expect(stopEndCodeOf({ kind: "skip" })).toBe("skipped_by_founder")
+        expect(stopEndCodeOf(null)).toBe("skipped_by_founder")
+        expect(["skip", "handed_back", "retry", "take_over", "answer", "timeout"].map((kind) => endsTheRun({ kind } as never))).toEqual([
+            true,
+            true,
+            false,
+            false,
+            false,
+            false,
+        ])
     })
 
     it("keeps the founder's words only, oldest first", () => {

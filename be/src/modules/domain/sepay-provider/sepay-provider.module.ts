@@ -3,9 +3,13 @@ import { SepayBankTransactionsService } from "./sepay-bank-transactions.service"
 import { SepayFeedWebhookService } from "./sepay-feed-webhook.service"
 import { SepayFeedPollerService } from "./sepay-feed-poller.service"
 import { SepayPaymentInstructionService } from "./sepay-payment-instruction.service"
+import { SepaySandboxBankTransactionsService } from "./sepay-sandbox-bank-transactions.service"
+import { SepaySandboxFeedPollerService } from "./sepay-sandbox-feed-poller.service"
+import { SepaySandboxPaymentInstructionService } from "./sepay-sandbox-payment-instruction.service"
 import { SepayProviderRegistrationService } from "./sepay-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-provider.module-definition"
 
+const SANDBOXES = [SepaySandboxFeedPollerService, SepaySandboxBankTransactionsService, SepaySandboxPaymentInstructionService]
 const PROVIDERS = [SepayFeedPollerService, SepayBankTransactionsService, SepayPaymentInstructionService]
 
 @Module({})
@@ -21,7 +25,7 @@ export class SepayProviderModule extends ConfigurableModuleClass {
         const providers = options.feedWebhook === true ? [...PROVIDERS, SepayFeedWebhookService] : PROVIDERS
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...providers, SepayProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...providers, ...SANDBOXES, SepayProviderRegistrationService],
             exports: providers,
         }
     }

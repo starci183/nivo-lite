@@ -1,6 +1,7 @@
 import { mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { BOUND } from "./agent-access-log.contracts"
 import { AgentAccessLogService } from "./agent-access-log.service"
 import { AgentAccessLogEntity } from "./persistence/entities"
 
@@ -11,7 +12,7 @@ const CHANGE = {
     connectionName: "Bank",
     agentName: "Sales",
     before: null,
-    after: "ask",
+    after: BOUND,
     changedBy: "u-1",
     changedByName: "An",
 }
@@ -33,7 +34,7 @@ describe("AgentAccessLogService", () => {
             connectionName: "Bank",
             agentName: "Sales",
             beforeAccess: null,
-            afterAccess: "ask",
+            afterAccess: "bound",
             changedBy: "u-1",
             changedByName: "An",
         })

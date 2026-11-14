@@ -1,1 +1,0 @@
-export { actionWordOf } from "./actionWord"

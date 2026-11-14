@@ -243,21 +243,6 @@ describe("PaymentOrdersService", () => {
             expect(hit.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", kind: "upgrade" })
             await expect(orders.findOpenUpgrade(query)).resolves.toBeNull()
         })
-
-        it("finds the pending order of a paid listing for the listing and amount, or none", async () => {
-            const em = mockEntityManager()
-            const hit = fakeQueryBuilder({ getOne: ROW })
-            answerQueryBuilders(em, hit, fakeQueryBuilder({ getOne: null }))
-            const orders = await build(em)
-
-            await expect(orders.findOpenAgentTemplate(query)).resolves.toMatchObject({ id: "order-1" })
-            expect(hit.argsOf("andWhere")[1]).toEqual([
-                "o.detail ->> 'listingId' = :target",
-                { target: "credits_1000" },
-            ])
-            expect(hit.argsOf("where")[0]?.[1]).toEqual({ workspaceId: "ws-1", kind: "agent_template" })
-            await expect(orders.findOpenAgentTemplate(query)).resolves.toBeNull()
-        })
     })
 })
 

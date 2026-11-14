@@ -175,7 +175,7 @@ export class PaymentLinkNativeService implements NativeToolFamily {
     private async portOf(workspaceId: string, caller: NativeCaller): Promise<{ readonly connection: ConnectionRecord; readonly port: PaymentLinkPort }> {
         if (caller.connectionId === undefined) throw paymentRefusal("not_connected")
         const connection = await this.connections.find(workspaceId, caller.connectionId)
-        const port = connection === null ? undefined : this.links.of(connection.provider)
+        const port = connection === null ? undefined : this.links.portFor(connection)
         if (connection === null || port === undefined) throw paymentRefusal("not_connected")
         return { connection, port }
     }

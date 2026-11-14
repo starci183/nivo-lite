@@ -202,3 +202,57 @@ export class CustomerMessagesInput {
     @Max(100)
     limit?: number
 }
+
+@InputType()
+/** What a person asks of the whole conversation with a contact: one route or all, a page before a cursor. */
+export class ContactMessagesInput {
+    /** The contact. */
+    @Field(() => ID)
+    @IsUUID("4")
+    @MaxLength(36)
+    contactId!: string
+
+    /** One route of the contact; absent reads every route, merged by time. */
+    @Field(() => ID, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsUUID("4")
+    @MaxLength(36)
+    routeId?: string
+
+    /** The cursor the previous (newer) page answered: only older lines come back. */
+    @Field(() => String, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsString()
+    @MaxLength(40)
+    before?: string
+
+    /** The most lines of the page, 1 to 50. */
+    @Field(() => Int, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Max(50)
+    limit?: number
+}
+
+@InputType()
+/** What a person asks of the work the agents did for a contact. */
+export class ContactWorkInput {
+    /** The contact. */
+    @Field(() => ID)
+    @IsUUID("4")
+    @MaxLength(36)
+    contactId!: string
+
+    /** The most rows, 1 to 50. */
+    @Field(() => Int, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Max(50)
+    limit?: number
+}

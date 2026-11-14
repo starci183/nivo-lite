@@ -1,5 +1,5 @@
 import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
-import type { EffectOnce, NodeAgentLoops, NodeModelDoor, NodeToolDoor } from "./graph-nodes.contracts"
+import type { EffectOnce, NodeAgentLoops, NodeModelDoor, NodeRouteReach, NodeToolDoor } from "./graph-nodes.contracts"
 import type { GraphNodesOptions } from "./graph-nodes.options"
 import { NODE_EFFECT_STORE, type NodeEffectStore } from "./node-effect-store.port"
 
@@ -43,3 +43,9 @@ export const InjectGraphNodeAgentLoops = (): TypedParameterDecorator<NodeAgentLo
 /** Injects the store of node effect rows. Parameter type: NodeEffectStore. */
 export const InjectNodeEffectStore = (): TypedParameterDecorator<NodeEffectStore> =>
     injector<NodeEffectStore>(NODE_EFFECT_STORE)
+
+/** Token of the engine's reader of the routes a step cannot follow here. Absent in an app that binds none: every route is open. */
+export const GRAPH_NODE_ROUTES: unique symbol = Symbol("domain.graph-nodes.routes")
+
+/** Injects the reader of closed routes. Parameter type: NodeRouteReach. */
+export const InjectGraphNodeRoutes = (): TypedParameterDecorator<NodeRouteReach> => injector<NodeRouteReach>(GRAPH_NODE_ROUTES)

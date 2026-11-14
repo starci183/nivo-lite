@@ -45,7 +45,7 @@ export class AgentRunStepType {
     @Field(() => Int)
     ordinal!: number
 
-    /** pending, running, waiting, done, failed or undone. */
+    /** pending, running, waiting, done or failed. */
     @Field()
     status!: string
 

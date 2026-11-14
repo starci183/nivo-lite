@@ -13,6 +13,10 @@ export type { ContactRunsPort } from "./contact-runs.port"
 export type { ContactRecordRef, ContactRecordsErasure, ContactRecordsPort } from "./contact-records.port"
 export { CONTACTS_STORE } from "./contacts-store.port"
 export { CONTACT_MEMORY_STORE } from "./contact-memory-store.port"
+export { CONTACT_WORK_STORE } from "./contact-work-store.port"
+export type { ContactWorkRow, ContactWorkStore } from "./contact-work-store.port"
+export { CONTACT_WORK_MAX, ContactWorkService } from "./contact-work.service"
+export type { ContactWorkStep } from "./contact-work.service"
 export type {
     ContactMemoryEntry,
     ContactMemoryStore,

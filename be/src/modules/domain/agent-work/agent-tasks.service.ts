@@ -28,6 +28,9 @@ export interface TimerArm {
     readonly data: AgentTaskData | null
 }
 
+/** A text matched literally by `LIKE` (its `%`, `_` and `\` escaped). */
+const likeLiteralOf = (text: string): string => text.replace(/[\\%_]/g, (found) => `\\${found}`)
+
 @Injectable()
 /**
  * The agent's own to-do. The agent asks for changes through its proposal, one operation per task key: the key is the dedupe key, so the
@@ -92,6 +95,24 @@ export class AgentTasksService {
         )
     }
 
+    /**
+     * Drops, in `tx`, every task of any agent of the workspace still alive (`open` or `waiting`) whose key starts with one of `starts`
+     * (`timerSubjectKeyStartOf`: every timer armed for an erased person or one of their conversations, R72 Q1): `dropped`, its wake time
+     * cleared, so the sweep never fires it. Answers how many it dropped.
+     */
+    async dropOfKeyStarts(tx: EntityManager, workspaceId: string, starts: ReadonlyArray<string>): Promise<number> {
+        if (starts.length === 0) return 0
+        const params = Object.fromEntries(starts.map((start, at) => [`start${String(at)}`, `${likeLiteralOf(start)}%`]))
+        const anyStart = starts.map((_start, at) => `dedupe_key LIKE :start${String(at)}`).join(" OR ")
+        const dropped = await tx
+            .createQueryBuilder()
+            .update(AgentTaskEntity)
+            .set({ status: "dropped", nextActionAt: null, doneAt: this.clock.now() })
+            .where(`workspace_id = :workspaceId AND status IN ('open', 'waiting') AND (${anyStart})`, { workspaceId, ...params })
+            .execute()
+        return dropped.affected ?? 0
+    }
+
     /** Cancels an armed timer of the agent by its key: true when one was armed (open and waiting for its time), false when none was. */
     async cancelTimer(agentId: string, key: string): Promise<boolean> {
         const cancelled = await this.entityManager.update(
@@ -152,7 +173,6 @@ export class AgentTasksService {
                 status: parked ? "waiting" : "open",
                 waitingOn: parked ? (op.waitingOn ?? "event") : null,
                 nextActionAt: wakeAt,
-                goalId: op.goalId ?? null,
                 originWakeId: op.originWakeId ?? null,
                 workItemId: op.workItemId ?? null,
                 doneAt: null,

@@ -23,7 +23,6 @@ const STEP_TONES: Readonly<Record<RunStepStatus, BadgeTone>> = {
     waiting: "warning",
     done: "success",
     failed: "danger",
-    undone: "neutral",
 }
 
 /** The tone of the badge of a run status. */
@@ -40,7 +39,7 @@ export const runStatusOf = (status: string): RunStatus => {
 
 /** The statuses of a step the wire may carry, narrowed; an unknown one reads as pending. */
 export const stepStatusOf = (status: string): RunStepStatus => {
-    const known: ReadonlyArray<RunStepStatus> = ["pending", "running", "waiting", "done", "failed", "undone"]
+    const known: ReadonlyArray<RunStepStatus> = ["pending", "running", "waiting", "done", "failed"]
     return known.find((entry) => entry === status) ?? "pending"
 }
 

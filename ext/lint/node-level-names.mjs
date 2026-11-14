@@ -1,7 +1,7 @@
 // project-ext/node-level-names
 // ext/manifest.json rule NIVO-NAMES-2 (doc ext/docs/NIVO-NAMES-2.md); loaded by the harness under the plugin `project-ext` as `project-ext/node-level-names`.
 // Enforces the level of each NIVO name by where it is used:
-//   (1) node code (`packages/*/src/nodes/**` and any file that calls `defineTemplateNode`) imports no `API` from the names entry and no
+//   (1) node code (`packages/*/src/**/nodes/**` and any file that calls `defineTemplateNode`) imports no `API` from the names entry and no
 //       generated `*_API` map: a node calls tools (`TOOL`), never a provider's raw API;
 //   (2) in a file that calls `defineTemplateGraph`, the verb of every `trigger(...)` is a member of `TRIGGER` (`trigger(TRIGGER.x, …)`);
 //   (3) interfaces (`fe/**`, workbench specs `packages/*/src/**/specs/**`, `**/workbench/**`) import no `TOOL` from the names entry and no
@@ -30,7 +30,7 @@ const LEVELS = conceptOf("tools")
 const TRIGGERS = conceptOf("triggers")
 
 const DEFAULTS = {
-    nodeFiles: ["packages/*/src/nodes/**"],
+    nodeFiles: ["packages/*/src/**/nodes/**"],
     interfaceFiles: ["fe/**", "packages/*/src/**/specs/**", "**/workbench/**"],
 }
 

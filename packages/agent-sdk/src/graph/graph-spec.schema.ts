@@ -15,6 +15,9 @@ import type { GraphSpec } from "./graph-spec.types"
 
 const key = keyText.regex(/^[a-z][a-z0-9-]*$/)
 
+/** A label in both languages, or a catalogue key (`SpecText`). */
+const specText = z.union([z.strictObject({ key: keyText.min(1) }), z.strictObject({ vi: prose, en: prose })])
+
 /** A wait as a graph view shows it: a whole number of minutes, hours or days ("30m", "2h", "1d"). */
 const waitDuration = keyText.regex(/^\d{1,4}[dhm]$/)
 
@@ -61,6 +64,16 @@ const node = z.strictObject({
     model: keyText.regex(/^[a-z0-9][a-z0-9./:-]{0,79}$/).optional(),
     mode: z.enum(["auto", "ask"]).optional(),
     accounts: z.array(account).max(50).optional(),
+    // R68: a node step's `{ then, outcome?, facts }`, an `until` loop's `{ facts }`; what they mean is judged on the @2 document at save.
+    unsuccessful: z
+        .strictObject({
+            then: z.enum(["continue", "end"]).optional(),
+            outcome: key.optional(),
+            facts: z.array(z.strictObject({ label: specText, value: jsonValue })).max(20),
+        })
+        .optional(),    // The words of an engine control step on the map, and an `until` loop's two ways out (carried from the @2 step).
+    label: specText.optional(),
+    exits: z.strictObject({ until: specText.optional(), exhausted: specText.optional() }).optional(),
 })
 
 const source = z.enum(["channel", "chats-group", "agent", "system-event", "schedule"])

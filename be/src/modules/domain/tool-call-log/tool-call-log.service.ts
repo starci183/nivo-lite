@@ -88,6 +88,25 @@ export class ToolCallLogService {
     }
 
     /**
+     * The connected accounts the `ok` calls of one run acted on, the most recent first, each once, at most `limit`: what the run already
+     * used (the account a call ran on is recorded per call by the tool runner), read on `mcp_call_log_run`. A call that handed no account
+     * and the effect-rights verdict lines name none.
+     */
+    async connectionsUsedByRun(workspaceId: string, runId: string, limit: number): Promise<ReadonlyArray<string>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(ToolCallLogEntity, "l")
+            .select(["l.id", "l.connectionId", "l.createdAt"])
+            .where(
+                "l.workspaceId = :workspaceId AND l.runId = :runId AND l.connectionId IS NOT NULL AND l.outcome = 'ok' AND l.connector <> :effectRights",
+                { workspaceId, runId, effectRights: EFFECT_RIGHTS },
+            )
+            .orderBy("l.createdAt", "DESC")
+            .limit(limit)
+            .getMany()
+        return [...new Set(rows.flatMap((row) => (row.connectionId === null ? [] : [row.connectionId])))]
+    }
+
+    /**
      * The records the `ok` calls of each run touched, one tally per run that made a call (at most `RUNS_MAX` runs): the sums of the counts
      * their adapters stated, on `mcp_call_log_run` (migration 20261112021900). The effect-rights verdict lines are no calls.
      */

@@ -24,6 +24,8 @@ export interface ConnectionProjection {
     readonly lastError: string | null
     /** `test` or `live`; null reads as live. */
     readonly environment: string | null
+    /** Whether the account is a sandbox account (ruling R56). */
+    readonly sandbox: boolean | null
     /** Whether this is the workspace default of its provider. */
     readonly isDefault: boolean | null
     /** When the provider last delivered an event, ISO text; null when it never has. */
@@ -47,6 +49,7 @@ export const projectConnections = (query: SelectQueryBuilder<ConnectionEntity>):
         .addSelect("c.status", "status")
         .addSelect("c.last_error", "lastError")
         .addSelect("c.environment", "environment")
+        .addSelect("c.sandbox", "sandbox")
         .addSelect("c.is_default", "isDefault")
         .addSelect(isoText("c.last_event_at"), "lastEventAt")
         .addSelect("c.first_event", "firstEvent")

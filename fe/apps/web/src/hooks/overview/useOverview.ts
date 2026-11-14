@@ -62,7 +62,6 @@ const saveTextFile = (name: string, text: string): void => {
 export const useOverview = (enabled = true): OverviewHookView => {
     const workspaceId = useWorkspaceId()
     const t = useTranslations("overview")
-    const g = useTranslations("governance")
     const format = useFormatter()
     const now = useNow({ updateInterval: CLOCK_TICK_MS })
     const pathname = navigation.usePathname()
@@ -70,7 +69,7 @@ export const useOverview = (enabled = true): OverviewHookView => {
     const period = periodOfWord(useSearchParams().get(PERIOD_PARAM))
     const read = useQueryWorkspaceDashboardSwr(enabled ? workspaceId : undefined, period)
     const { mutate } = read
-    const tools: OverviewTools = { t, g, format, now }
+    const tools: OverviewTools = { t, format, now }
     const range = rangeOfPeriod(period, now)
     const dayText = (day: Date): string =>
         format.dateTime(day, { day: "2-digit", month: "2-digit", timeZone: BUSINESS_TIME_ZONE })

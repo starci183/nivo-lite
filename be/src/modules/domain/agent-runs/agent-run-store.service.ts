@@ -52,6 +52,13 @@ export interface RunSubject {
     readonly id: string
 }
 
+/** A run that holds a subject: its id, its workflow (null for an agent's own graph) and when it started. */
+export interface SubjectHolder {
+    readonly id: string
+    readonly workflowId: string | null
+    readonly startedAt: string
+}
+
 /** The most parked runs of ONE subject read (one per workflow of the agent in practice; a bound, never a page of the agent's runs). */
 const SUBJECT_RUNS_MAX = 20
 
@@ -93,6 +100,23 @@ export class AgentRunStoreService {
     }
 
     /**
+     * The thread runs IN FLIGHT for one subject, whatever the workflow and the agent, oldest first (at most `SUBJECT_RUNS_MAX`): the runs
+     * that hold the subject (rule Q-1). Exact, through the subject columns and the in-flight subject index.
+     */
+    inFlightOfSubject(workspaceId: string, subject: RunSubject): Promise<ReadonlyArray<SubjectHolder>> {
+        return this.at(workspaceId, undefined, async (scoped) => {
+            const rows = await this.records.runRows(
+                scoped,
+                { subject, statuses: IN_FLIGHT_STATUSES, engine: THREAD_ENGINE, order: "started" },
+                SUBJECT_RUNS_MAX,
+            )
+            return [...rows]
+                .map((row) => ({ id: row.id, workflowId: row.workflowId, startedAt: row.startedAt }))
+                .sort((left, right) => left.startedAt.localeCompare(right.startedAt) || left.id.localeCompare(right.id))
+        })
+    }
+
+    /**
      * The thread runs of an agent PARKED (waiting) for one subject, whatever the workflow, oldest first: where a wait of the subject is
      * looked for first (exact, through the subject columns; no page of the agent's runs decides who is found).
      */
@@ -105,6 +129,26 @@ export class AgentRunStoreService {
             )
             const views: Array<RunView> = []
             await eachInOrder([...rows].reverse(), async (row) => {
+                const run = await this.records.run(scoped, row.id)
+                if (run !== null) views.push(runViewOf(run))
+            })
+            return views
+        })
+    }
+
+    /**
+     * The workspace's thread runs PARKED AT A `wait` (status `running` WITH a wait mark: the runs `waitersOf` offers events to), newest
+     * start first, at most `limit`: the dev Sandbox page's "Run đang chờ" list (R66). Exact, through the wait mark; no page decides.
+     */
+    parkedAtWait(workspaceId: string, limit: number): Promise<ReadonlyArray<RunView>> {
+        return this.at(workspaceId, undefined, async (scoped) => {
+            const rows = await this.records.runRows(
+                scoped,
+                { statuses: ["running"], waitMarked: true, engine: THREAD_ENGINE, order: "started" },
+                limit,
+            )
+            const views: Array<RunView> = []
+            await eachInOrder(rows, async (row) => {
                 const run = await this.records.run(scoped, row.id)
                 if (run !== null) views.push(runViewOf(run))
             })
@@ -147,8 +191,8 @@ export class AgentRunStoreService {
     }
 
     /**
-     * Stops a run that is running or waiting, once: the run is marked cancelled with who and when, and its steps still running are failed
-     * with `run_cancelled` and give back their claim and their wait. Steps already done are left as they are: nothing is undone. Only a
+     * Stops a run that is running or waiting, once: the run is marked cancelled with who and when, and its steps still open are closed
+     * failed with `run_cancelled` in the same transaction (`closeOpenSteps`). Steps already done are left as they are: nothing is undone. Only a
      * history row of the old engine comes here (a thread run is cancelled by its stop's skip).
      */
     cancel(workspaceId: string, runId: string, actor: string, manager?: EntityManager): Promise<RunCancelResult> {
@@ -171,19 +215,7 @@ export class AgentRunStoreService {
                     : null,
             )
             if (moved === null) return { kind: "not_cancellable" }
-            const steps = await this.records.stepsOf(scoped, runId)
-            await eachInOrder(
-                steps.filter((step) => step.status === "running"),
-                async (step) => {
-                    await this.records.patchStep(scoped, step, {
-                        status: "failed",
-                        errorCode: RUN_CANCELLED,
-                        claimedUntil: null,
-                        waitItemId: null,
-                        endedAt: at,
-                    })
-                },
-            )
+            await this.records.closeOpenSteps(scoped, runId, RUN_CANCELLED, at)
             return { kind: "cancelled" }
         })
     }
@@ -191,8 +223,9 @@ export class AgentRunStoreService {
     /**
      * ENDS, in `tx`, every thread run of any agent PARKED on one of these subjects, once: at a stop (`waiting`), parked, or at a `wait`
      * (status `running` WITH a wait mark: the same runs `waitersOf` offers events to). The run is marked cancelled with the typed reason
-     * `code` and the moment, its deadline and its wait mark are cleared (no event finds it, no deadline fires it), so the
-     * one-run-per-subject slot is free. A run running a step now (`running`, no wait mark) is left to end on its own. What the erasure of
+     * `code` and the moment, its deadline and its wait mark are cleared (no event finds it, no deadline fires it), and its open step rows
+     * (the parked `wait` step and the loop step around it) are closed with the same `code` in the same transaction (`closeOpenSteps`), so
+     * the one-run-per-subject slot is free and nothing of the run reads as running. A run running a step now (`running`, no wait mark) is left to end on its own. What the erasure of
      * a subject (a contact and its routes, owner ruling R31 / coordinator ruling R37) calls; answers the runs it ended.
      */
     endParkedOfSubjects(
@@ -231,6 +264,7 @@ export class AgentRunStoreService {
                     )
                     if (moved === null) return
                     await this.records.markWait(scoped, row.id, null)
+                    await this.records.closeOpenSteps(scoped, row.id, code, at)
                     ended.push(runViewOf(moved))
                 })
             })

@@ -14,7 +14,7 @@ export interface VectorEmbedder {
     configured(): boolean
     /** The embedding identity new vectors are made with (`<model>@<dimensions>`). */
     model(): string
-    /** One vector per text, in order, for the workspace that pays; at most one provider call's worth of texts. */
+    /** One vector per text, in order, for the tenant (a workspace pays; the platform tenant is not metered); one call's worth of texts. */
     embed(workspaceId: string, texts: ReadonlyArray<string>): Promise<VectorsEmbedded>
 }
 
@@ -46,8 +46,6 @@ export interface VectorSyncDone {
     readonly unchanged: number
     /** Points written with a vector the caller handed over (the embedding the writer just paid for). */
     readonly given: number
-    /** Points written with the vector Postgres still held (the transition): no embedding call. */
-    readonly copied: number
     /** Points written with the vector of another row's point of the same text: no embedding call, nothing booked. */
     readonly adopted: number
     /** Points written with a vector embedded now. */
@@ -68,7 +66,6 @@ export interface VectorSyncDone {
 export const NOTHING_SYNCED: VectorSyncDone = {
     unchanged: 0,
     given: 0,
-    copied: 0,
     adopted: 0,
     embedded: 0,
     marked: 0,
@@ -100,8 +97,8 @@ export interface VectorReconcileKindDone extends VectorSyncDone {
 
 /** What one run of the reconcile did. */
 export interface VectorReconcileDone {
-    /** off = the deployment has no vector index; ran = the run finished; stopped = the index or an embedding call failed mid-run. */
-    readonly outcome: "off" | "ran" | "stopped"
+    /** ran = the run finished; stopped = the index or an embedding call failed mid-run (or could not be reached). */
+    readonly outcome: "ran" | "stopped"
     /** What was done per kind. */
     readonly kinds: Readonly<Partial<Record<VectorKind, VectorReconcileKindDone>>>
     /** True when a follow-up run was queued: the run repaired something and used its whole budget. */

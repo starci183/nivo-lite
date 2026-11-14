@@ -8,8 +8,8 @@ import { crmTools } from "./vocabulary/crm-tools"
 /*
  * The providers and the mode each node of the NIVO Web agents declares (`nivo-frame.rights`: the agent attaches ACCOUNTS only; each node
  * step lists the providers it may act through, in order, and carries ONE mode): every node step of every graph of every template agent
- * lists only providers its agent attaches (NIVO itself is never listed), the CRM exactly when its node calls a CRM tool, and `ask` only on the one step
- * a person must legally sign (the invoice issue); the plugin declares no per-tool mode. The engine judges the providers at save (`templateGraphProblems`:
+ * lists only providers its agent attaches (NIVO itself is never listed), the CRM exactly when its node calls a CRM tool, and `ask` only on the steps
+ * a person must sign (the invoice issue; R57: the registrar renewal, NIVO Web's money); the plugin declares no per-tool mode. The engine judges the providers at save (`templateGraphProblems`:
  * `GRAPH_ACCOUNT_WIDER`, `NODE_ACCOUNT_NOT_OF_AGENT`); this pins the plugin's own design on top.
  */
 
@@ -32,8 +32,8 @@ const steps: ReadonlyArray<Placed> = (plugin.templateAgents ?? []).flatMap((agen
 const at = (one: Placed): string => `${one.graph.key}#${one.step.key}`
 
 /**
- * Every CRM tool id, as the CRM's document gives them, and the platform purposes the CRM serves outside its namespace (the plugin's CRM
- * tools that are no `nivo.api.crm.` id: the invoice purpose, owned by the CRM source since flipDecisions2026_11_13).
+ * Every CRM tool id, as the CRM's document gives them, and any plugin CRM tool outside its namespace (none since R57: the invoice issue
+ * is MISA meInvoice's tool, no CRM's).
  */
 const CRM_IDS: ReadonlySet<string> = new Set([
     ...Object.values(CRM_NIVOWEB),
@@ -72,14 +72,41 @@ describe("the accounts the nodes of the NIVO Web agents declare", () => {
         }
     })
 
-    it("keeps `ask` only on the step a person must legally sign: the invoice issue", () => {
-        expect(steps.filter((one) => one.step.mode === "ask").map((one) => at(one))).toEqual(["webbooks.invoice#issue"])
+    // R57 (owner ruling): the registrar renewal spends NIVO Web's balance at the registrar, so it asks too (owner money rule).
+    // R83 (owner, interim): of the ten customer mail steps the first renewal reminder (`webrenew.round#send`) and the "renewed" notice
+    // (`webrenew.renew#renewed-tell`) go by themselves (CRM data); every AI-written mail about money or a commitment asks.
+    it("keeps `ask` only on the steps a person must sign: the registrar renewal, the invoice issue and the eight customer mails of R83 (four of them split by channel: one write per asked step)", () => {
+        expect(steps.filter((one) => one.step.mode === "ask").map((one) => at(one)).sort()).toEqual(
+            [
+                "webbooks.invoice#issue",
+                "webrenew.renew#renew",
+                "webbooks.invoice#mail",
+                "webbooks.debt-round#draft",
+                "webdesk.mail-tickets#mail-reply-draft",
+                "webrenew.answer#tell",
+                "webrenew.answer#tell-mail",
+                "websales.round#follow",
+                "websales.round#follow-mail",
+                "websales.close#pay",
+                "websales.close#pay-mail",
+                "websales.won#tell",
+                "websales.won#tell-mail",
+                "websales.mail-enquiries#draft",
+            ].sort(),
+        )
     })
 
-    it("lets the provider renewal, the customer's acceptance and the customer sends run on their own", () => {
+    it("runs the registrar renewal and the invoice issue on their registrar and e-invoice accounts (R57)", () => {
+        const of = (key: string): ReadonlyArray<string> => steps.find((one) => at(one) === key)?.step.accounts ?? []
+        expect(of("webrenew.renew#renew")).toEqual([PROVIDER.inet, PROVIDER.tino])
+        expect(of("webbooks.invoice#issue")).toEqual([PROVIDER.misaMeinvoice])
+    })
+
+    // R57: the CRM no longer renews (`post services/{code}/renewals` is gone); its outcome record runs on its own like the acceptance.
+    it("lets the renewal's outcome record, the customer's acceptance and the customer sends run on their own", () => {
         const auto = steps.filter((one) =>
             one.node.tools.some(
-                (tool) => tool === CRM_NIVOWEB.post_services_code_renewals || tool === CRM_NIVOWEB.post_purchases_id_acceptance || tool === CRM_NIVOWEB.post_customers,
+                (tool) => tool === CRM_NIVOWEB.post_renewals_id_outcome || tool === CRM_NIVOWEB.post_purchases_id_acceptance || tool === CRM_NIVOWEB.post_customers,
             ),
         )
         expect(auto.map((one) => one.step.mode)).toEqual(auto.map(() => "auto"))

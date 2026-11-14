@@ -156,7 +156,7 @@ const servedEffects = (): ReadonlySet<string> => {
     return served
 }
 
-/** Every effect a seeded graph's nodes may run, and the undo of each that has one. */
+/** Every effect a seeded graph's nodes may run. */
 const seededEffects = (): ReadonlySet<string> => {
     // A step runs effects two ways since the flip: a control node (`defineNode`) declares them; a template node's tool call of an
     // effect id is run by that effect's executor (the node host's `templateCall`).
@@ -168,16 +168,11 @@ const seededEffects = (): ReadonlySet<string> => {
             node.tools.filter((tool) => effectIds.has(tool)),
         ]),
     ])
-    const compensations = new Map<string, string | undefined>(
-        INSTALLED.nodeInstall().effects.map((effect) => [effect.id, effect.compensation]),
-    )
     const effects = new Set<string>()
     for (const name of SEEDED) {
         for (const node of seededGraphOf(name).nodes) {
             for (const effect of nodes.get(node.step) ?? []) {
                 effects.add(effect)
-                const undo = compensations.get(effect)
-                if (undo !== undefined) effects.add(undo)
             }
         }
     }
@@ -193,7 +188,7 @@ describe("the effects of the seeded graphs are served", () => {
         expect(servedEffects()).toContain(TOOL.customerMessageSend)
     })
 
-    it("has an executor for every effect a seeded graph may run, and for its undo", () => {
+    it("has an executor for every effect a seeded graph may run", () => {
         const served = servedEffects()
         expect([...seededEffects()].filter((effect) => !served.has(effect)).sort()).toEqual([])
     })

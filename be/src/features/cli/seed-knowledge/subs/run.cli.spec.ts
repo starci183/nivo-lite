@@ -20,7 +20,7 @@ describe("RunSeedKnowledgeCli", () => {
     }
 
     it("publishes the default folder and logs what was written", async () => {
-        const report = { inserted: 3, updated: 1, removed: 0, embedded: 2 }
+        const report = { inserted: 3, updated: 1, removed: 0, queued: 4 }
         const { cli, seed, logger } = await build()
         seed.seedFolder.mockResolvedValue(report)
 
@@ -31,7 +31,7 @@ describe("RunSeedKnowledgeCli", () => {
     })
 
     it("publishes the folder the option names", async () => {
-        const report = { inserted: 0, updated: 4, removed: 1, embedded: 4 }
+        const report = { inserted: 0, updated: 4, removed: 1, queued: 5 }
         const { cli, seed, logger } = await build()
         seed.seedFolder.mockResolvedValue(report)
 

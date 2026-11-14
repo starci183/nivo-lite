@@ -3,6 +3,7 @@ import { VeoConnectionFieldsService } from "./veo-connection-fields.service"
 import { VeoCredentialService } from "./veo-credential.service"
 import { VeoProviderRegistrationService } from "./veo-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./veo-provider.module-definition"
+import { VeoSandboxVideoService } from "./veo-sandbox-video.service"
 import { VeoVideoService } from "./veo-video.service"
 
 const PROVIDERS = [VeoCredentialService, VeoVideoService, VeoConnectionFieldsService]
@@ -19,7 +20,7 @@ export class VeoProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, VeoProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, VeoSandboxVideoService, VeoProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

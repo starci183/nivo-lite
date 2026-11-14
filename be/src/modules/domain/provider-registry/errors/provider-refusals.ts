@@ -18,6 +18,8 @@ const DOMAIN_CODE: Readonly<Record<DomainRefusalReason, ProviderRegistryErrorCod
     rejected: ProviderRegistryErrorCode.DomainRejected,
     contacts_required: ProviderRegistryErrorCode.DomainContactsRequired,
     contacts_unsupported: ProviderRegistryErrorCode.DomainContactsUnsupported,
+    insufficient_balance: ProviderRegistryErrorCode.DomainInsufficientBalance,
+    domain_locked: ProviderRegistryErrorCode.DomainLocked,
 }
 
 const CALL_CODE: Readonly<Record<ProviderCallProof, ProviderRegistryErrorCode>> = {
@@ -33,6 +35,8 @@ const DOMAIN_REASONS: ReadonlyArray<DomainRefusalReason> = [
     "rejected",
     "contacts_required",
     "contacts_unsupported",
+    "insufficient_balance",
+    "domain_locked",
 ]
 const PROOFS: ReadonlyArray<ProviderCallProof> = ["not_sent", "unknown"]
 

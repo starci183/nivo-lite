@@ -18,7 +18,7 @@ const INTERNAL_SOURCE: AgentWakeSource = "internal"
 /**
  * What the internal events of the business do to the agents. A fact (money in, a new document, a payment) wakes only the agents of its
  * workspace that hold an enabled event trigger for its name, once per agent and fact: the wake is keyed by the event and its dedupe key,
- * so a replay is one wake, and the probe of the trigger decides later whether the model is needed. A changed installation seeds the
+ * so a replay is one wake. A changed installation seeds the
  * triggers its module declares, one row per key, so installing or applying again writes nothing new. Each delivery is claimed in the
  * inbox in the transaction of its effect.
  */
@@ -49,11 +49,7 @@ export class AgentEventWakesService {
                     agentId: trigger.agentId,
                     source: "internal",
                     eventKey: wakeKeyOf(fact.eventName, fact.dedupeKey),
-                    context: {
-                        eventName: fact.eventName,
-                        subjectId: fact.subjectId,
-                        ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
-                    },
+                    context: { eventName: fact.eventName, subjectId: fact.subjectId },
                     actorMemberId: null,
                 }),
             )
@@ -61,8 +57,7 @@ export class AgentEventWakesService {
     }
 
     /**
-     * The agents of the workspace that hold an enabled event trigger for this event type and answer to this source, each once, with the probe of
-     * the first trigger that matched. The one matcher of events: an internal fact and an inbound adapter's event both ask here.
+     * The agents of the workspace that hold an enabled event trigger for this event type and answer to this source, each once. The one matcher of events: an internal fact and an inbound adapter's event both ask here.
      */
     async agentsFor(
         workspaceId: string,
@@ -70,7 +65,7 @@ export class AgentEventWakesService {
         source: AgentWakeSource,
     ): Promise<ReadonlyArray<EventTarget>> {
         const rows = await this.triggers.enabledForSource(workspaceId, eventType, EVENT_WAKE_AGENTS_MAX, source)
-        return firstPerAgent(rows).map((row) => ({ agentId: row.agentId, probeKey: row.probeKey }))
+        return firstPerAgent(rows).map((row) => ({ agentId: row.agentId }))
     }
 
     /** Seeds the triggers the module of a changed installation declares for its agent; a change of the whole workspace seeds nothing. */

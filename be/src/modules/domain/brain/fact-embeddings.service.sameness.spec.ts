@@ -8,6 +8,7 @@ import { AI } from "@modules/integrations/ai"
 import type { AiService } from "@modules/integrations/ai"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { VectorSyncService } from "@modules/domain/vector-sync"
 import { FactEmbeddingsService } from "./fact-embeddings.service"
 import { FactReadingLogEvent } from "./fact-reading.log-events"
 import { ModelJsonService } from "./model-json.service"
@@ -28,7 +29,8 @@ const build = async (states: ReadonlyArray<FactEmbeddingState>) => {
     const facts = mock<BrainFactsService>()
     const json = mock<ModelJsonService>()
     const reads = mock<BrainFactsReadService>()
-    scriptEmbeddingDoubles({ ai, vectors, reads }, states)
+    const sync = mock<VectorSyncService>()
+    scriptEmbeddingDoubles({ ai, vectors, reads, sync }, states)
     const moduleRef = await Test.createTestingModule({
         providers: [
             FactEmbeddingsService,
@@ -39,9 +41,10 @@ const build = async (states: ReadonlyArray<FactEmbeddingState>) => {
             { provide: BrainFactsService, useValue: facts },
             { provide: ModelJsonService, useValue: json },
             { provide: BrainFactsReadService, useValue: reads },
+            { provide: VectorSyncService, useValue: sync },
         ],
     }).compile()
-    return { service: moduleRef.get(FactEmbeddingsService), ai, logger, usage, vectors, facts, json, reads }
+    return { service: moduleRef.get(FactEmbeddingsService), ai, logger, usage, vectors, facts, json, reads, sync }
 }
 
 /** What the judge answers: the number of the candidate that is the same truth, or none. */
@@ -104,13 +107,13 @@ const scripted = async (verdict: object = { same: 2, sameValue: false }) => {
 }
 
 describe("FactEmbeddingsService: the same fact in other words (BG2 P4b), scripted vectors and judgement", () => {
-    it("embeds the new proposal once (stored, so its approval sends nothing) and reads its candidates by its own vector", async () => {
-        const { service, ai, vectors } = await scripted({ same: null })
+    it("embeds the new proposal once (its point kept, so its approval sends nothing) and reads its candidates by its own point", async () => {
+        const { service, ai, vectors, sync } = await scripted({ same: null })
 
         await service.checkSameMeaning(WS, [filed])
 
         expect(ai.embed).toHaveBeenCalledTimes(1)
-        expect(vectors.storeMany.mock.calls.map((call) => [call[0], call[1].map((one) => one.id)])).toEqual([[WS, ["new"]]])
+        expect(sync.accept.mock.calls.map((call) => [call[0], call[1], [...call[2].keys()]])).toEqual([["truth", WS, ["new"]]])
         expect(vectors.nearestTo.mock.calls[0]?.slice(1, 3)).toEqual(["new", { model: PROFILE, dimensions: EMBEDDING_DIMENSIONS }])
     })
 

@@ -11,7 +11,6 @@ const WINDOW = { from: "2026-09-28T17:00:00.000Z", to: "2026-10-31T16:59:59.000Z
 
 const EMPTY = {
     agents: [],
-    hasChatbot: false,
     isFoundingMember: false,
 }
 
@@ -48,7 +47,6 @@ describe("WorkspaceShellService", () => {
                         {
                             shell_data: {
                                 agents: [{ id: "a-1", name: "Mai", module: "sales", status: "paused" }],
-                                has_chatbot: true,
                                 is_founding_member: false,
                             },
                         },
@@ -59,7 +57,6 @@ describe("WorkspaceShellService", () => {
 
             await expect(service.read("user-1", "ws-1", WINDOW)).resolves.toEqual({
                 agents: [{ id: "a-1", name: "Mai", module: "sales", status: "paused" }],
-                hasChatbot: true,
                 isFoundingMember: false,
             })
             expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")

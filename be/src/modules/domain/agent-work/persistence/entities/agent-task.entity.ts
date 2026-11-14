@@ -13,9 +13,6 @@ export class AgentTaskEntity extends UuidAbstractEntity {
     @Column({ name: "agent_id", type: "uuid" })
     agentId!: string
 
-    /** The goal it serves, or null. */
-    @Column({ name: "goal_id", type: "uuid", nullable: true })
-    goalId!: string | null
 
     /** The agent's key for the task: unique per agent. */
     @Column({ name: "dedupe_key", type: "text" })

@@ -91,7 +91,7 @@ export const TOOL = {
     driveStatusGet: "nivo.tool.drive.status.get",
     /** The documents of a connected drive the shop chose as sources. */
     driveSourceList: "nivo.tool.drive.source.list",
-    /** Issues an e-invoice: a platform purpose (class money). */
+    /** Issues an e-invoice AT the e-invoice provider (MISA meInvoice today) on the seller account the step is bound to; NIVO keeps no invoice tool of its own (R57). */
     invoiceCreate: "nivo.tool.invoice.create",
     /** The e-invoices issued, a bounded page. A read. */
     einvoiceList: "nivo.tool.einvoice.list",
@@ -143,8 +143,10 @@ export const TOOL = {
     domainList: "nivo.tool.domain.list",
     /** Registers a new domain name for some years; the registrar charges the account. */
     domainRegistrationCreate: "nivo.tool.domain.registration.create",
-    /** Renews a domain the workspace holds for some years, at the account that holds it. */
+    /** Renews a domain the workspace holds (or a service on it: hosting, ssl) for some years, at the provider account that holds it. */
     domainRenewalCreate: "nivo.tool.domain.renewal.create",
+    /** Whether a renewal of a held domain took effect: its expiry read now against the one before the renewal (renewed or pending). A read. */
+    domainRenewalGet: "nivo.tool.domain.renewal.get",
     /** Asks a domain held at another registrar to be transferred in, with the transfer code that registrar issued. */
     domainTransferCreate: "nivo.tool.domain.transfer.create",
     /** The DNS records of a domain the workspace holds. A read. */

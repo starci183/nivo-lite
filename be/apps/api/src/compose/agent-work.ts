@@ -28,7 +28,7 @@ import {
     CHAT_NODE_PORTS_MESSAGES,
     ChatNodePortsModule,
 } from "@modules/domain/chat-node-ports"
-import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
+import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES, AgentNodeRoutesService } from "@modules/domain/agent-graphs"
 import { AgentCheckpointsModule } from "@modules/domain/agent-checkpoints"
 import { AgentDoorsModule } from "@modules/domain/agent-doors"
 import { AGENT_THREADS_ERROR_KINDS, AgentThreadsModule, RUN_STOPS_ERROR_KINDS } from "@modules/domain/agent-threads"
@@ -71,6 +71,8 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
         tools: NodeToolDoorService,
         // `AGENT_LOOP` unset names no node: every step's agent then runs the SDK's JSON loop, as before.
         agentLoop: { nodes: options.agentLoop?.nodes ?? [], loops: AGENT_LOOPS },
+        // The routes a routing step cannot follow in the workspace (`ctx.run.unreachable`): read from the pinned graph.
+        routes: AgentNodeRoutesService,
     }),
     ChatNodePortsModule.register({ isGlobal: true }),
     AgentInboundModule.register({ isGlobal: true, stopReporter: TeamChatChainStopReporterService }),

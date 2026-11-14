@@ -87,8 +87,6 @@ export interface StepRecord {
     readonly waitItemId: string | null
     /** The work item it is about, kept after the wait, or null. */
     readonly workItemId: string | null
-    /** The compensation tries made. */
-    readonly compAttempts: number
     /** Why it last failed, or null. */
     readonly errorCode: string | null
 }

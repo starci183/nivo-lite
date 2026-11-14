@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { EMBEDDING_DIMENSIONS, toVector } from "@modules/domain/knowledge-chunks"
+import { EMBEDDING_DIMENSIONS } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { catalogAudienceOf } from "@modules/domain/module-audiences"
 import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
@@ -127,7 +127,7 @@ export class KnowledgeSearchService {
             }),
             this.nivo.search({
                 module: lens.module,
-                vector: vector === null ? null : toVector(vector),
+                vector,
                 model: vector === null ? null : this.embeddings.model(),
                 tsquery: tsqueryOf(folded?.knowledge_fold ?? ""),
                 limit,

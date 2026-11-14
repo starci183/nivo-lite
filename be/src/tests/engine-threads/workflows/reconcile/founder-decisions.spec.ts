@@ -4,9 +4,9 @@ import { AgentGraphTurnPolicyService } from "@modules/domain/agent-graphs"
 import { AgentGraphRunQueueService } from "@modules/domain/agent-graphs/agent-graph-run-queue.service"
 import { RunStopRecordsService } from "@modules/domain/agent-threads"
 import { chatServicesOf } from "../../thread-world-intake"
-import { ANSWER, UNDERSTAND, answer, button, customerWrites, drain, founderDecides, refOf, stopsOf } from "../../thread-world"
+import { ANSWER, UNDERSTAND, answer, button, customerWrites, drain, founderDecides, refOf, runTurns, stopsOf } from "../../thread-world"
 import { linesOf, moneyDbOf, type MoneyDb } from "./thread-world-money"
-import { freezesOf, holdProvidersOf } from "./thread-world-money-holds"
+import { heldWakesOf, holdProvidersOf } from "./thread-world-money-holds"
 import { moneyProcessOf } from "./thread-world-money-process"
 
 // D-MX-1 (matrix walk S1, dev 2026-11-11, runs 640f1005 + c0491dcf): the customer asked "Shop co xuat hoa don VAT cho cong ty khong?";
@@ -60,16 +60,19 @@ describe("a customer's held line joins the run the founder answers (D-MX-1)", ()
         expect((await stopsOf(process, runId)).map((stop) => [stop.stepKey, stop.state])).toEqual([["answer", "open"]])
         expect(linesOf(db)).toEqual([HOLDING])
 
-        // The customer writes again while the stop is open: held, as before.
+        // The customer writes again while the stop is open: held behind the stopped run (rule Q-1).
         const again = await customerWrites(process, AGAIN)
-        expect(again.ending).toMatchObject({ status: "held" })
+        expect(again.ending).toMatchObject({ status: "held", reason: `waiting:${runId}` })
+        expect(heldWakesOf(db).map((wake) => wake.reason)).toEqual([`waiting:${runId}`])
 
         // The founder answers; the resumed step answers the question right. The held line JOINED this run (`layers` (1): the next event of
         // the subject resumes THAT thread, never a new run): the re-run step reads it with the founder's answer.
         db.model.script(ANSWER, { done: { reply: VAT_ANSWER } })
         const resumed = await founderDecides(process, runId, answer(db, FOUNDER))
         expect(resumed.map((one) => [one.error, one.runId])).toEqual([[null, runId]])
-        expect(freezesOf(db)).toEqual([expect.objectContaining({ status: "released", releaseReason: "stop_closed" })])
+        // The re-run step took the held line into its queue (`queued:<run>`): nothing stays held.
+        expect(heldWakesOf(db)).toEqual([])
+        expect(db.chat.wakes.map((wake) => [wake.state, wake.reason])).toContainEqual(["queued", `queued:${runId}`])
 
         // The held line wrote no wake of its own (only the founder's resume is a wake): no fresh run reads it.
         expect(db.wakes.map((wake) => wake.context.eventName)).toEqual(["engine.thread.resume"])
@@ -104,10 +107,10 @@ describe("a customer's held line joins the run the founder answers (D-MX-1)", ()
         await founderDecides(process, runId, button(db, "skip"))
 
         expect((await process.threads.stateOf(refOf(runId)))?.status).toBe("ended")
-        expect(freezesOf(db)).toEqual([expect.objectContaining({ status: "released" })])
-        // The held line is written again as a wake of its own, and a FRESH run (not the skipped one) reads it.
-        const replay = await drain(process, from)
-        // (the first drive is the skip's own resume of the skipped run; the held line's wake is the last)
+        // The skipped run is finished: the line held behind it is pending again (rule Q-1), and a FRESH run (not the skipped one) reads it.
+        expect(heldWakesOf(db)).toEqual([])
+        await drain(process, from)
+        const replay = await runTurns(process, db.chat.wakes)
         expect(replay.at(-1)?.runId).not.toBe(runId)
         expect([...db.runs.keys()]).toHaveLength(2)
         expect(JSON.stringify(db.model.askedOf(UNDERSTAND).at(-1)?.request)).toContain(AGAIN)

@@ -55,6 +55,7 @@ export const seededRecordOf = (id: string, provider: ConnectionRecord["provider"
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

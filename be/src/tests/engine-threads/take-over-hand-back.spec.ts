@@ -6,13 +6,12 @@ import { DoorPressesService } from "@modules/domain/agent-doors/door-presses.ser
 import { HoldReleaseDoorService } from "@modules/domain/agent-doors/hold-release-door.service"
 import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { Logger } from "@modules/platform/logging"
-import { holdProvidersOf } from "./thread-world-core"
+import { heldWakesOf, holdProvidersOf } from "./thread-world-core"
 import { chatServicesOf, transactionalManager } from "./thread-world-intake"
 import { WS } from "./thread-world-records"
 import { worldRunStopStore } from "./thread-world-tables"
 import {
     ANSWER,
-    CONTACT,
     CONV,
     CORE,
     UNDERSTAND,
@@ -31,14 +30,14 @@ import {
 } from "./thread-world"
 
 // OWNER RULING R51 ITEM 3, the whole road on the world (dev 2026-11-14, RESTART-R2: after a Take over, "Trả lại cho agent" cleared the
-// route hold, but the resume event was held by the freeze the SAME stop caused, the run never resumed, and the stop stayed taken over so
+// route hold, but the resume event was held behind the SAME stop's run, the run never resumed, and the stop stayed taken over so
 // the card kept its hand-back button). The REAL hand-back door (`HoldReleaseDoorService.handAs`, what the GraphQL door and the
 // `platform.route-holds` port run) over the REAL route store, the REAL stop records and resume door, the REAL release door
-// (`HeldLinesService`: the one resume event through the REAL `deliver`), and the REAL freezes of the stops (`holdProvidersOf`).
+// (`HeldLinesService`: the one resume event through the REAL `deliver`), and the REAL subject hold of the stops (`holdProvidersOf`, rule Q-1).
 //
 // Why no test caught it: the door's own spec mocks the release door and counts its wakes as the answer (`answered: 1` is "released" though
 // the wake is then held); the R45 hand-back worlds (`sale-edges.spec.ts`) hold the route over a sale PARKED AT A WAIT, never over a STOP a
-// person took over, so no freeze stood between the resume event and the agent; and the take-over world (`take-over.spec.ts`) ends its
+// person took over, so no hold stood between the resume event and the agent; and the take-over world (`take-over.spec.ts`) ends its
 // take-over by a `skip` pressed on the card, never by a hand-back.
 
 const QUESTION = "Shop mo cua may gio?"
@@ -82,7 +81,7 @@ const takenOver = async () => {
 }
 
 describe("R51 item 3: 'hand back to the agent' ends the take-over completely", () => {
-    it("clears the hold, closes the taken-over stop, lifts its freeze, and the ONE resume event makes the agent answer once", async () => {
+    it("clears the hold, closes the taken-over stop, releases the event held behind it, and the ONE resume event makes the agent answer once", async () => {
         const { db, process, runId } = await takenOver()
         // A line during the hold is kept and wakes nothing (R45).
         await expect(customersSay(process, [{ text: DURING, key: "m-during" }])).resolves.toEqual([])
@@ -98,41 +97,73 @@ describe("R51 item 3: 'hand back to the agent' ends the take-over completely", (
         expect(resumeEvents).toHaveLength(1)
         expect(db.wakes.slice(fromWakes).map((wake) => wake.context.subjectId)).toEqual([runId])
 
-        // The drain, in the order dev saw it: the resume event first. While the stop is still open its freeze holds the event (as on dev) ...
+        // The drain, in the order dev saw it: the resume event first. While the stop is still open its run holds the event: held `waiting:<run>` (rule Q-1) ...
         const first = await runTurns(process, resumeEvents)
         expect(first.map((one) => one.ending?.status)).toEqual(["held"])
         // ... then the run's ending decision: the stop resolves (decided by the person who handed back), the run that waited at the gate ends.
         await expect(drain(process, fromWakes)).resolves.toEqual([expect.objectContaining({ error: null })])
         const [stop] = await stopsOf(process, runId)
-        expect(stop).toMatchObject({ state: "resolved", decision: { kind: "skip", by: "owner-1" } })
+        // Rule S-3 (E-SMALL): the closing kind is the hand-back's own, never a skip: on the stop, on its card and on the run's record.
+        expect(stop).toMatchObject({ state: "resolved", decision: { kind: "handed_back", by: "owner-1" } })
         // The card reads the stop as closed: no "taken over", nothing it still takes (no hand-back button: the card's own rule).
-        expect(stop === undefined ? null : stopCardStateOf(stop)).toMatchObject({ takenOver: false, needs: { answer: false, decisions: [] } })
-        expect(rowsOf(db, runId).run).toMatchObject({ status: "cancelled" })
+        expect(stop === undefined ? null : stopCardStateOf(stop)).toMatchObject({
+            state: "handed_back",
+            takenOver: false,
+            needs: { answer: false, decisions: [] },
+        })
+        expect(rowsOf(db, runId).run).toMatchObject({ status: "cancelled", error: { code: "handed_back" } })
 
-        // The freeze that stop caused is released (`stop_closed`) and the held resume event is written again ONCE (the only wake after the
-        // ending decision): it starts the agent's next turn, which reads the thread and answers once.
-        const [freeze] = db.records.of("contact_freezes").map((row) => row.data)
-        expect(freeze).toMatchObject({ status: "released", releaseReason: "stop_closed", frozenRunId: runId, contactId: CONTACT })
-        const replays = db.wakes.slice(fromWakes + 1)
-        expect(replays.map((wake) => wake.context.eventId)).toEqual([resumeEvents[0]?.context.eventId])
+        // The run is finished, so the event held behind it is pending again (the SAME wake, once: nothing is written anew): it starts the
+        // agent's next turn, which reads the thread and answers once.
+        expect(resumeEvents[0]).toMatchObject({ state: "pending" })
+        expect(db.wakes.slice(fromWakes + 1)).toEqual([])
+        expect(heldWakesOf(db)).toEqual([])
         db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
         db.model.script(ANSWER, sends(REPLY), { done: { reply: REPLY } })
-        const replayed = await drain(process, fromWakes + 1)
+        const replayed = await runTurns(process, resumeEvents)
         expect(replayed.map((one) => one.error)).toEqual([null])
         expect(db.lines.slice(lines).map((line) => line.text)).toEqual([REPLY])
         expect([...db.runs.keys()]).toHaveLength(2)
     })
 
-    it("a second press before the drain applied the first writes no second ending decision (the resume door's once-key)", async () => {
+    it("a second press before the drain applied the first writes no second ending decision and delivers no second resume event", async () => {
         const { db, process, runId } = await takenOver()
         const door = handBackDoorOf(db, process)
         await door.handAs(WS, "owner-1", CONV)
         const fromWakes = db.wakes.length
+        const fromChat = db.chat.wakes.length
 
         // The ending decision of the first press is not applied yet (the drain has not run): the stop is still open, its decision recorded.
-        await door.handAs(WS, "owner-1", CONV)
+        // Nothing is held any more (the hold was cleared) and the take-over's ending was admitted once: the press ends nothing (DEF-4).
+        await expect(door.handAs(WS, "owner-1", CONV)).resolves.toEqual({ outcome: "nothing_held", answered: 0 })
 
         expect(db.wakes.slice(fromWakes).filter((wake) => wake.context.subjectId === runId)).toEqual([])
+        expect(db.chat.wakes.slice(fromChat)).toEqual([])
+    })
+
+    // MX-CORE DEF-4 (dev 2026-11-14, row H-03): after a hand-back that released (hold cleared, stop resolved, freeze released, the agent
+    // answered), a SECOND press answered `released, answered 1`, delivered a second resume event, a parked wait took it and the agent sent a
+    // second real message with no new line of the person. Why this world missed it: it never pressed again after the road had run.
+    it("DEF-4: a second press after the whole hand-back road ran answers nothing_held, delivers nothing, and the agent says nothing more", async () => {
+        const { db, process } = await takenOver()
+        const door = handBackDoorOf(db, process)
+        const fromWakes = db.wakes.length
+        await expect(door.handAs(WS, "owner-1", CONV)).resolves.toMatchObject({ outcome: "released", answered: 1 })
+        await runTurns(process, db.chat.wakes)
+        await drain(process, fromWakes)
+        db.model.script(UNDERSTAND, { done: { branch: "question", summary: "Lan: gio mo cua" } })
+        db.model.script(ANSWER, sends(REPLY), { done: { reply: REPLY } })
+        // The run ended, so the held resume event is pending again (rule Q-1): the agent answers it.
+        await runTurns(process, db.chat.wakes)
+        const lines = db.lines.length
+        const wakes = db.wakes.length
+        const fromChat = db.chat.wakes.length
+
+        await expect(door.handAs(WS, "owner-1", CONV)).resolves.toEqual({ outcome: "nothing_held", answered: 0 })
+
+        expect(db.chat.wakes.slice(fromChat)).toEqual([])
+        expect(db.wakes).toHaveLength(wakes)
+        expect(db.lines).toHaveLength(lines)
     })
 })
 
@@ -149,8 +180,10 @@ describe("R52: a Skip on a taken-over stop ends the route's hold", () => {
         await expect(chatServicesOf(db).routes.holdOf(WS, CONV)).resolves.toBeNull()
         const [stop] = await stopsOf(process, runId)
         expect(stop).toMatchObject({ state: "resolved", decision: { kind: "skip" } })
-        expect(rowsOf(db, runId).run).toMatchObject({ status: "cancelled" })
-        // Whatever the stop's freeze replays on its release is drained first.
+        // A Skip stays a skip (rule S-3's control): the run's record names the founder's skip, the card reads "skipped".
+        expect(stop === undefined ? null : stopCardStateOf(stop)).toMatchObject({ state: "skipped" })
+        expect(rowsOf(db, runId).run).toMatchObject({ status: "cancelled", error: { code: "skipped_by_founder" } })
+        // Whatever the run's end releases (the events held behind it) is drained first.
         await drain(process, db.wakes.length)
 
         const lines = db.lines.length

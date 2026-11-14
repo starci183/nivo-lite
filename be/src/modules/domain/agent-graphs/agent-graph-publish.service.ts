@@ -34,9 +34,8 @@ interface Publication {
 }
 
 /**
- * What a template's or a copy's publish does with rights the owner has not agreed: `refuse` (the default: the refusal lists them and
- * the same call with the list passes), or `wait` for the road that made the agent in the same call (a template install, a setup
- * copy), where a refusal would leave a made agent nobody can finish: the version is published and the entries wait for the owner.
+ * What a copy's publish does with rights the owner has not agreed: `refuse` (the default: the refusal lists them and
+ * the same call with the list passes), or `wait` for the road that made the agent in the same call (a setup copy), where a refusal would leave a made agent nobody can finish: the version is published and the entries wait for the owner.
  */
 export type UnagreedRights = "refuse" | "wait"
 
@@ -129,26 +128,6 @@ export class AgentGraphPublishService {
     ): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)
         return this.publishDocument(state, document, { by, note: "", kind: "conflict", agreed })
-    }
-
-    /**
-     * Publishes the graph a template made as the next version, under the same checks as any change, and a widening only by the
-     * owner. The first version a template gives an agent (the agent is
-     * still on its seed or has no version) is the owner's alone, even when it widens nothing, since it hands the agent a process a
-     * stranger wrote.
-     */
-    async publishTemplate(
-        workspaceId: string,
-        agentId: string,
-        document: GraphDocument,
-        by: Publisher,
-        agreed: ReadonlyArray<AgreedRight> = NOTHING_AGREED,
-        unagreed: UnagreedRights = "refuse",
-    ): Promise<GraphVersionView> {
-        const state = await this.requireState(workspaceId, agentId)
-        const first = state.activeKind === null || state.activeKind === "seed"
-        if (first && by.role !== "owner") throw new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner })
-        return this.publishDocument(state, document, { by, note: "", kind: "template", agreed, unagreed })
     }
 
     /**

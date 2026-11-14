@@ -25,38 +25,6 @@ export interface ViewRequest {
     readonly installationId?: string | null
 }
 
-/** What the reply of one customer turn says about the knowledge, so a gap can be noted without spending credits. */
-export interface GapSignals {
-    /** The gap the reply itself named, or null. */
-    readonly knowledgeGap: GapClaim | null
-    /** True when the reply asked for a person. */
-    readonly needsHuman: boolean
-    /** The answer the reply proposed for a person, or null. */
-    readonly proposedAnswer: string | null
-    /** True for an order, a payment claim, an application or a redeem request: a person is needed for that, not for missing knowledge. */
-    readonly isTransaction: boolean
-}
-
-/** A gap the reply named. */
-export interface GapClaim {
-    /** The customer's question in one short sentence. */
-    readonly question: string
-    /** `subject | attribute` the answer would be filed under. */
-    readonly topic: string
-}
-
-/** One customer turn whose gap may be noted. */
-export interface GapNote {
-    /** The view of the agent that answered. */
-    readonly view: KnowledgeView
-    /** The conversation. */
-    readonly conversationId: string
-    /** What the customer asked. */
-    readonly question: string
-    /** What the reply said. */
-    readonly signals: GapSignals
-}
-
 /** What a task the system runs for an agent asks of the business notes: the lane of the agent and a question. */
 export interface AgentNotesRequest extends KnowledgeView {
     /** What the notes are looked up for. */

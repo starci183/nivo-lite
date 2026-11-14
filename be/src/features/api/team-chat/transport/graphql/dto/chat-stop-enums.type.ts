@@ -10,6 +10,7 @@ export const ChatStopState = {
     open: "open",
     answered: "answered",
     skipped: "skipped",
+    handed_back: "handed_back",
     timed_out: "timed_out",
     resolved: "resolved",
 }
@@ -32,6 +33,7 @@ export const ChatStopReplyKind = {
     retry: "retry",
     take_over: "take_over",
     skip: "skip",
+    handed_back: "handed_back",
     timeout: "timeout",
     approve: "approve",
     refuse: "refuse",

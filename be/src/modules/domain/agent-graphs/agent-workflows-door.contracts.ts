@@ -70,6 +70,19 @@ export interface WorkflowPublishRequest extends WorkflowChangeRequest {
     readonly graphJson: string
 }
 
+/**
+ * What setting ONE node's mode names (nivo-frame `rights` rule 5: a shop overrides a node's mode on its own graph copy): the node by its
+ * key in the workflow's running graph, the mode (`auto` | `ask`), and the newest version the caller read. Owner only.
+ */
+export interface WorkflowNodeModeRequest extends WorkflowRequest {
+    /** The node, by its key in the running graph. */
+    readonly nodeKey: string
+    /** `auto` or `ask`. */
+    readonly mode: string
+    /** The newest version number the caller read; a newer one refuses the change. */
+    readonly expectedLatest?: number | null | undefined
+}
+
 /** What a rollback names. */
 export interface WorkflowRollbackRequest extends WorkflowChangeRequest {
     /** The version to go back to. */

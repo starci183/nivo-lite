@@ -79,7 +79,6 @@ export class AgentTriggerSyncService {
                     atTime: seed.atTime ?? null,
                     timeZone: null,
                     eventName: null,
-                    probeKey: seed.probeKey ?? null,
                     enabled: true,
                 },
                 seed.key,

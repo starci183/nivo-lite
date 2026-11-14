@@ -5,7 +5,6 @@ import { In } from "typeorm"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { agentTurnRowOf, agentWakeRowOf } from "@tests/fixtures/builders/agent-work.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTasksService } from "./agent-tasks.service"
 import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -38,7 +37,6 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
             .fn()
             .mockResolvedValue({ workspaceId: "ws-1", workEnabled: true, road: "core" }),
     })
-    const goals = mock<AgentGoalsService>({ alive: jest.fn().mockResolvedValue([]) })
     const tasks = mock<AgentTasksService>({ alive: jest.fn().mockResolvedValue([]) })
     const triggers = mock<AgentTriggersService>({ ofAgent: jest.fn().mockResolvedValue([]) })
     const container = await Test.createTestingModule({
@@ -47,7 +45,6 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: AgentWorkAccessService, useValue: access },
             { provide: AgentWorkSettingsService, useValue: settings },
-            { provide: AgentGoalsService, useValue: goals },
             { provide: AgentTasksService, useValue: tasks },
             { provide: AgentTriggersService, useValue: triggers },
         ],
@@ -70,7 +67,7 @@ describe("AgentWorkReadService.agentWork", () => {
         const view = await service.agentWork("ws-1", "agent-1")
 
         expect(access.agent).toHaveBeenCalledWith("ws-1", "agent-1")
-        expect(view).toMatchObject({ state: STATE, goals: [], tasks: [], triggers: [], pendingWakes: 3 })
+        expect(view).toMatchObject({ state: STATE, tasks: [], triggers: [], pendingWakes: 3 })
         expect(view.turns).toEqual([
             {
                 id: "turn-1",

@@ -74,7 +74,6 @@ describe("FactVectorRowsService", () => {
 
         await expect(service.byIds(WS, [])).resolves.toEqual([])
         await expect(service.wantedAmong([])).resolves.toEqual([])
-        await expect(service.storedVectors(WS, [], "m1")).resolves.toEqual(new Map())
         await expect(service.donors(WS, [], "m1", [])).resolves.toEqual(new Map())
 
         expect(em.find).not.toHaveBeenCalled()
@@ -159,6 +158,8 @@ describe("FactVectorRowsService, pages, donors and stamps", () => {
         expect(update?.callsOf("setParameters")).toEqual([
             [{ workspaceId: WS, model: "m1", ids: ["f1", "f2"], hashes: ["h1", "h2"] }],
         ])
+        // Postgres records what the index accepted (identity, hash, when); it never writes or clears a vector.
+        expect(Object.keys(update?.callsOf("set")[0]?.[0] ?? {})).toEqual(["embeddingModel", "embeddingHash", "indexedAt"])
         expect(update?.callsOf("execute")).toHaveLength(1)
     })
 })

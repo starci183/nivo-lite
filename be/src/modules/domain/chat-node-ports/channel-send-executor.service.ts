@@ -2,6 +2,7 @@ import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { EffectCall } from "@nivo-lite/agent-sdk/node"
 import { HOLDING_LINE_KEY_PREFIX } from "@nivo-lite/agent-sdk/customer-send"
 import { TOOL } from "@nivo-lite/agent-sdk/names"
+import { repeatableBySpec } from "@modules/domain/tool-specs"
 import { refusalOf, type EffectFact, type EffectFacts } from "@nivo-lite/agent-sdk/node"
 import {
     ChannelDeliveryService,
@@ -18,8 +19,11 @@ import {
     type CustomerRoute,
     type StoredDelivery,
 } from "@modules/domain/customer-routes"
+// The error file, not the barrel: the barrel is half loaded here at decoration (an import ring), its enum read undefined.
+import { EffectOutcomeUnknownCode, EffectOutcomeUnknownError } from "@modules/domain/graph-nodes/errors/graph-nodes.error"
 import {
     GraphNodeRegistryService,
+    callPlaceOf,
     type NodeEffectExecutor,
     type NodeEffectPayload,
     type NodeTurn,
@@ -97,6 +101,12 @@ interface Outgoing {
     readonly key: string
     /** The words as the ledger keeps them. */
     readonly text: string
+    /**
+     * The step of the run the send was made in, as the run names it (`talk[r2].consult` inside a loop round, the node key elsewhere): read
+     * from the step's call key (`<run>:<step>:<digest>`, the key the effect ledger files the same send under), else the node's key. The
+     * step's "already told" read (`listByStep`) asks by the run's step key, so a round's sends are found in that round.
+     */
+    readonly stepKey: string | null
 }
 
 /** The rights verdict of a send as the channel's policy reads it (`ChannelVerdict`): the right concerned is the send tool itself. */
@@ -117,6 +127,12 @@ const factsOf = (receipt: CustomerMessageReceipt): EffectFacts => ({
     at: receipt.at,
     sendKey: receipt.sendKey,
 })
+
+/**
+ * Rule Q-3 (R74): the customer send declares itself `repeatable`, so a key whose attempt ENDED with an unknown outcome is claimed again
+ * and sent under the same key when the step runs again (the worst case is a duplicate line); a key still in flight stays unknown.
+ */
+const sendRepeatable = (): boolean => repeatableBySpec(TOOL.customerMessageSend) === true
 
 @Injectable()
 /**
@@ -189,20 +205,23 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         if ("refused" in found) return this.refuse(turn, found.refused)
         const key = call.dedupeKey ?? call.key
         const prior = await this.deliveries.byKey(turn.workspaceId, key)
-        if (prior !== null && prior.state !== "refused") return this.settledAnswer(turn, prior)
+        // A key that ended unknown is sent again (rule Q-3: the send is repeatable); delivered or still in flight answers its row.
+        if (prior !== null && prior.state !== "refused" && !(prior.state === "unknown" && sendRepeatable()))
+            return this.settledAnswer(turn, prior)
         const send: ChannelSend = {
             text: asked.text,
             ...(asked.order === undefined ? {} : { order: asked.order }),
             ...(asked.images === undefined || asked.images.length === 0 ? {} : { images: asked.images }),
         }
-        return this.say(turn, found, { send, key, text: asked.text }, call.key.startsWith(HOLDING_LINE_KEY_PREFIX))
+        const stepKey = stepKeyOf(turn, call)
+        return this.say(turn, found, { send, key, text: asked.text, stepKey }, call.key.startsWith(HOLDING_LINE_KEY_PREFIX))
     }
 
     /**
-     * The person, the channel identity and the route a payload addresses. The person is the one named, else the one the run serves (the
-     * trigger's contact, else the one the woken route belongs to); the identity is picked by the channel and account named, else the
-     * route the run was woken on, else the newest. The route is made when the person has none on that entrance yet (`make`; a check
-     * that must write nothing only looks it up).
+     * The person, the channel identity and the route a payload addresses. A payload that names a ROUTE is addressed by it
+     * (`addressedByRoute`). Else the person is the one named, else the one the run serves (the trigger's contact, else the one the woken
+     * route belongs to); the identity is picked by the channel and account named, else the route the run was woken on, else the newest.
+     * The route is made when the person has none on that entrance yet (`make`; a check that must write nothing only looks it up).
      */
     private async addressed(
         turn: NodeTurn,
@@ -210,6 +229,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         make: boolean,
     ): Promise<Addressed | { readonly refused: EffectFact }> {
         const woken = turn.conversationId === null ? null : await this.routes.get(turn.workspaceId, turn.conversationId)
+        if (asked.routeId !== undefined) return this.addressedByRoute(turn, asked.routeId, woken)
         const contactId = asked.contactId ?? turn.contactId ?? woken?.contactId ?? null
         if (contactId === null) return { refused: refusalOf(SEND_REFUSAL.noRecipient) }
         const contact = await this.contacts.get(turn.workspaceId, contactId)
@@ -242,6 +262,46 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         }
     }
 
+    /**
+     * A send addressed by a ROUTE (rule S-2): the route's person (a merged person answers its survivor), on the identity of the route's
+     * own entrance (channel and account), on that very route. Everything after the address is the one send: holds, consent (an
+     * unprompted message unless it is the run's woken route), rights, window, ledger. An unknown route, or one whose person is erased,
+     * answers `no_recipient`; a person no longer known on the route's entrance, `no_channel_identity`.
+     */
+    private async addressedByRoute(
+        turn: NodeTurn,
+        routeId: string,
+        woken: CustomerRoute | null,
+    ): Promise<Addressed | { readonly refused: EffectFact }> {
+        const route = await this.routes.get(turn.workspaceId, routeId)
+        if (route === null) return { refused: refusalOf(SEND_REFUSAL.noRecipient, { routeId }) }
+        const contact = await this.contacts.get(turn.workspaceId, route.contactId)
+        if (contact === null) return { refused: refusalOf(SEND_REFUSAL.noRecipient, { routeId, contactId: route.contactId }) }
+        const entrance = { channel: route.channel, accountId: route.accountId }
+        const picked = reachPicked(contact.identities, {
+            channel: route.channel,
+            accountId: route.accountId ?? undefined,
+            woken: entrance,
+        })
+        if (picked.kind !== "picked")
+            return {
+                refused: refusalOf(picked.reason, {
+                    routeId,
+                    contactId: contact.id,
+                    channel: route.channel,
+                    accountId: route.accountId,
+                    channels: [...picked.channels],
+                }),
+            }
+        return {
+            contactId: contact.id,
+            name: contact.displayName,
+            reach: picked.reach,
+            routeId: route.id,
+            speech: this.isWoken(turn, woken, route.id) ? "reply" : "proactive",
+        }
+    }
+
     /** True when the route is the one the run was woken on. */
     private isWoken(turn: NodeTurn, woken: CustomerRoute | null, routeId: string): boolean {
         return turn.conversationId === routeId || woken?.id === routeId
@@ -251,7 +311,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     private async say(turn: NodeTurn, at: Addressed, out: Outgoing, engineLine: boolean): Promise<EffectFact> {
         const stop = await this.stopOf(turn, at, engineLine, true)
         if (stop !== null) return this.refusedOnRoute(turn, at, out, stop.reason, stop.facts)
-        const claimed = await this.deliveries.claim(turn.workspaceId, this.claimOf(turn, at, out))
+        const claimed = await this.deliveries.claim(turn.workspaceId, this.claimOf(turn, at, out), sendRepeatable())
         if (claimed.verdict !== "send") return this.settledAnswer(turn, claimed.row)
         return this.pushed(turn, at, out)
     }
@@ -389,7 +449,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         ledger: LedgerMode = "fresh",
     ): Promise<EffectFact> {
         if (ledger === "fresh") {
-            const claimed = await this.deliveries.claim(turn.workspaceId, this.claimOf(turn, at, out))
+            const claimed = await this.deliveries.claim(turn.workspaceId, this.claimOf(turn, at, out), sendRepeatable())
             if (claimed.verdict !== "send") return this.settledAnswer(turn, claimed.row)
         }
         await this.deliveries.mark(turn.workspaceId, out.key, { state: "refused", reason })
@@ -403,8 +463,19 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         return this.message(receiptOfRow(row))
     }
 
-    /** A message answer: the receipt is the fact. */
+    /**
+     * A message answer: the receipt is the fact. A receipt whose outcome nobody knows (the channel timed out or failed after the request
+     * left, or the key is in flight or ended uncertain) is NEVER an answer (R74, item 6: it was handed back as a success and the node
+     * went on as if it had spoken): the call ends in the typed outcome-unknown failure `delivery_outcome_unknown`, which the effect
+     * ledger keeps (no machine calls again) and the step stops on for a person at once (`OUTCOME_UNKNOWN`). The ledger row keeps
+     * `unknown`, so the line reads "outcome unknown".
+     */
     private message(receipt: CustomerMessageReceipt): EffectFact {
+        if (receipt.state === "unknown")
+            throw new EffectOutcomeUnknownError({
+                code: EffectOutcomeUnknownCode.Delivery,
+                params: { effect: TOOL.customerMessageSend, sendKey: receipt.sendKey },
+            })
         return { kind: MESSAGE, id: receipt.sendKey, facts: factsOf(receipt) }
     }
 
@@ -417,7 +488,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
             agentId: turn.agentId,
             // A reply typed by a person (a job turn, no workflow step) has no run: only a step's send names its run.
             runId: turn.step === undefined ? null : turn.turnId,
-            stepKey: turn.step?.nodeKey ?? null,
+            stepKey: out.stepKey,
             text: out.text,
             channel: at.reach.channel,
             accountId: at.reach.accountId,
@@ -482,6 +553,17 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
 }
 
 /** Where a message goes, for a receipt. */
+/**
+ * The run's step key of a step's send (MX-CORE observation (b): `customer_messages.step_key` held the node key `consult` while the run's step
+ * is `talk[r2].consult`, so the step's own delivered-lines read never found a loop round's sends): the step of the call key when the key is
+ * this run's step call key, else the node's key; null for a send of no workflow step (a person's typed reply).
+ */
+const stepKeyOf = (turn: NodeTurn, call: EffectCall): string | null => {
+    if (turn.step === undefined) return null
+    const place = callPlaceOf(call.key)
+    return place !== null && place.runId === turn.turnId ? place.stepKey : turn.step.nodeKey
+}
+
 const placeOf = (at: Addressed): ReceiptPlace => ({
     contactId: at.contactId,
     channel: at.reach.channel,

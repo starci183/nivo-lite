@@ -9,7 +9,7 @@ import { NodeRightsSwitchService } from "./node-rights-switch.service"
 /**
  * The per-agent grants of gateway tools (default deny), the per-agent access to provider connectors and the node-level rights kept in
  * shadow: the one owner of public.mcp_tool_grants, public.mcp_connector_access,
- * public.node_account_policies, public.node_policy_shadow_tallies and public.node_rights_switches.
+ * public.node_account_policies and public.node_rights_switches.
  */
 export class ToolGrantsModule extends ConfigurableModuleClass {
     /** Registers the capability under the capability (or the app) that reads and writes through it. */

@@ -6,6 +6,7 @@ import { CHANNEL_PROVISIONING_OPTIONS } from "./channel-provisioning.decorators"
 import { ENTERPRISE_SEED_SCHEMA } from "./enterprise-seed.contracts"
 import type { EnterpriseSeedTarget } from "./enterprise-seed.contracts"
 import { EnterpriseSeedService } from "./enterprise-seed.service"
+import { ENTERPRISE_ROSTER, type EnterpriseRoster } from "./enterprise-roster.port"
 
 const documentOf = (target: EnterpriseSeedTarget) => ({
     schema: ENTERPRISE_SEED_SCHEMA,
@@ -21,7 +22,11 @@ const envelope = (target: EnterpriseSeedTarget): string =>
 const NIVO = { id: "ws-nivo", name: "NIVO" }
 const WEB = { id: "ws-web", name: "NIVO Web" }
 
-const build = async (named: ReadonlyArray<{ id: string; name: string }> = [NIVO], dead: ReadonlyArray<string> = []) => {
+const build = async (
+    named: ReadonlyArray<{ id: string; name: string }> = [NIVO],
+    dead: ReadonlyArray<string> = [],
+    roster?: EnterpriseRoster,
+) => {
     const workspaces = mock<WorkspacesService>()
     workspaces.list.mockResolvedValue([...named])
     workspaces.isLive.mockImplementation((id) => Promise.resolve(!dead.includes(id)))
@@ -39,6 +44,7 @@ const build = async (named: ReadonlyArray<{ id: string; name: string }> = [NIVO]
             { provide: WorkspacesService, useValue: workspaces },
             { provide: WorkspaceLobbyService, useValue: lobby },
             { provide: WorkspaceEnterpriseService, useValue: enterprise },
+            ...(roster === undefined ? [] : [{ provide: ENTERPRISE_ROSTER, useValue: roster }]),
         ],
     }).compile()
     return { service: moduleRef.get(EnterpriseSeedService), workspaces, lobby, enterprise, print }
@@ -229,5 +235,31 @@ describe("EnterpriseSeedService > remove", () => {
 
         expect(lobby.remove).not.toHaveBeenCalled()
         expect(print.mock.calls).toEqual([['nivo-web: nothing to remove on dev: no live workspace "NIVO Web"']])
+    })
+})
+
+describe("EnterpriseSeedService > the roster step (ruling R17)", () => {
+    it("installs the roster into the enterprise workspace after its identifier is set, with the place of the environment", async () => {
+        const install = jest.fn<Promise<boolean>, Parameters<EnterpriseRoster["install"]>>().mockResolvedValue(true)
+        const { service, print } = await build([NIVO, WEB], [], { install })
+
+        await service.run(envelope("both"), "dev")
+
+        expect(install.mock.calls).toEqual([[{ workspaceId: "ws-web", ownerId: "owner-1", identifier: "nivo-web", place: "local" }]])
+        expect(print.mock.calls.at(-1)).toEqual(["applied"])
+    })
+
+    it("a roster that changed nothing on a held workspace and a kept identifier leaves the run unchanged; one that changed makes it applied", async () => {
+        const unchanged = await build([NIVO, WEB], [], { install: jest.fn().mockResolvedValue(false) })
+        unchanged.enterprise.set.mockResolvedValue({ from: "nivo-web", to: "nivo-web" })
+        await unchanged.service.run(envelope("prod"), "production")
+        expect(unchanged.print.mock.calls.at(-1)).toEqual(["unchanged"])
+
+        const install = jest.fn().mockResolvedValue(true)
+        const changed = await build([NIVO, WEB], [], { install })
+        changed.enterprise.set.mockResolvedValue({ from: "nivo-web", to: "nivo-web" })
+        await changed.service.run(envelope("prod"), "production")
+        expect(install.mock.calls[0]?.[0]).toMatchObject({ place: "prod" })
+        expect(changed.print.mock.calls.at(-1)).toEqual(["applied"])
     })
 })

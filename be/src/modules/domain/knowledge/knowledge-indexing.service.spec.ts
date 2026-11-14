@@ -32,6 +32,7 @@ import { KNOWLEDGE_OPTIONS } from "./knowledge.decorators"
 import { SourceReaderService } from "./source-reader.service"
 import { UnchangedSourceService } from "./unchanged-source.service"
 import { UsageMeterService } from "./usage-meter.service"
+import { VectorSyncService } from "@modules/domain/vector-sync"
 
 const WS = INDEXING_WS
 const run = { sourceId: "s1", workspaceId: WS }
@@ -47,6 +48,7 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
     const unchanged = mock<UnchangedSourceService>()
     const logger = mock<Logger>()
     const timer = mock<Timer>()
+    const vectorSync = mock<VectorSyncService>()
     const waiting: Array<{ readonly callback: () => void; readonly delayMs: number }> = []
     timer.schedule.mockImplementation((callback: () => void, delayMs: number): CancelTimer => {
         waiting.push({ callback, delayMs })
@@ -58,6 +60,8 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
     embeddings.model.mockReturnValue("m1")
     embeddings.embed.mockResolvedValue([[0.5, 1]])
     chunks.embeddedOf.mockResolvedValue([])
+    // Each stored passage answers the id it was stored under (the point id of its vector).
+    chunks.keep.mockImplementation((write) => Promise.resolve(write.drafts.map((draft) => ({ order: draft.order, id: `c${String(draft.order)}` }))))
     unchanged.holdsWhole.mockResolvedValue(false)
     unchanged.keep.mockResolvedValue("skipped")
     usage.blockedBy.mockResolvedValue(false)
@@ -75,10 +79,11 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
             { provide: LOGGER, useValue: logger },
             { provide: KNOWLEDGE_OPTIONS, useValue: { driveAccess: Symbol("drive"), indexChunkDelayMs } },
             { provide: TIMER, useValue: timer },
+            { provide: VectorSyncService, useValue: vectorSync },
         ],
     }).compile()
     const service = moduleRef.get(KnowledgeIndexingService)
-    return { service, sources, blocked, parts, chunks, reader, unchanged, embeddings, usage, logger, held: { waiting } }
+    return { service, sources, blocked, parts, chunks, reader, unchanged, embeddings, usage, logger, vectorSync, held: { waiting } }
 }
 
 const registerSourceReadingCases = () => {
@@ -117,9 +122,20 @@ const registerSourceReadingCases = () => {
         })
         expect(chunks.keep).toHaveBeenCalledWith(
             expect.objectContaining({
-                drafts: [{ text: "Open 8 to 21", vector: "[0.5,1]", order: 0, place }],
+                drafts: [{ text: "Open 8 to 21", embedded: true, order: 0, place }],
             }),
         )
+    })
+
+    it("hands each embedded batch's vectors to the vector index under the ids the passages were stored with; Postgres keeps none", async () => {
+        const { service, chunks, vectorSync } = await build()
+
+        await expect(service.index(run)).resolves.toBe("indexed")
+
+        expect(chunks.keep.mock.calls.flatMap(([write]) => Object.keys(write))).not.toContain("vectorsInIndex")
+        expect(vectorSync.accept).toHaveBeenCalledWith("passage", WS, new Map([["c0", [0.5, 1]]]))
+        // The document's sync job follows the finish, so a lost hand-over is repaired.
+        expect(vectorSync.changedSource).toHaveBeenCalledWith(WS, "s1")
     })
 
     it("skips a source that is gone and one that is past indexing or closed", async () => {
@@ -218,7 +234,7 @@ const registerEmbeddingAndReuseCases = () => {
         await service.index(run)
 
         expect(chunks.keep).toHaveBeenCalledWith(
-            expect.objectContaining({ drafts: [{ text: "Open 8 to 21", vector: null, order: 0 }] }),
+            expect.objectContaining({ drafts: [{ text: "Open 8 to 21", embedded: false, order: 0 }] }),
         )
     })
 
@@ -250,7 +266,7 @@ const registerEmbeddingAndReuseCases = () => {
 
         expect(chunks.embeddedOf).not.toHaveBeenCalled()
         expect(chunks.replace).toHaveBeenCalledWith(
-            expect.objectContaining({ drafts: [{ text: "Open 8 to 21", vector: null }] }),
+            expect.objectContaining({ drafts: [{ text: "Open 8 to 21", embedded: false }] }),
         )
         expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.KeywordOnly, 1)
     })
@@ -269,7 +285,7 @@ const registerCreditBoundaryCases = () => {
         expect(chunks.replace).not.toHaveBeenCalled()
         const drafts = chunks.keep.mock.calls.flatMap(([write]) => write.drafts)
         expect(drafts.length).toBe(chunkPassages(content).length)
-        expect(drafts.every((draft) => draft.vector === null)).toBe(true)
+        expect(drafts.every((draft) => !draft.embedded)).toBe(true)
         expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
         expect(sources.finishIndexing).not.toHaveBeenCalled()
     })
@@ -296,7 +312,7 @@ const registerCreditBoundaryCases = () => {
 
         expect(usage.blockedBy).toHaveBeenCalledWith(WS, "embedding", true)
         expect(embeddings.embed).not.toHaveBeenCalled()
-        expect(chunks.keep.mock.calls.flatMap(([write]) => write.drafts)).toEqual([{ text: "Open 8 to 21", vector: null, order: 0 }])
+        expect(chunks.keep.mock.calls.flatMap(([write]) => write.drafts)).toEqual([{ text: "Open 8 to 21", embedded: false, order: 0 }])
         expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, 1)
         expect(sources.fail).not.toHaveBeenCalled()
         expect(sources.finishIndexing).not.toHaveBeenCalled()
@@ -313,8 +329,8 @@ const registerCreditBoundaryCases = () => {
 
         const drafts = chunks.keep.mock.calls.flatMap(([write]) => write.drafts)
         expect(drafts.length).toBe(pieces.length)
-        expect(drafts.slice(0, EMBED_BATCH).every((draft) => draft.vector !== null)).toBe(true)
-        expect(drafts.slice(EMBED_BATCH).every((draft) => draft.vector === null)).toBe(true)
+        expect(drafts.slice(0, EMBED_BATCH).every((draft) => draft.embedded)).toBe(true)
+        expect(drafts.slice(EMBED_BATCH).every((draft) => !draft.embedded)).toBe(true)
         // The provider is asked once more only; the pool is asked once at the start and once when a batch came back empty.
         expect(embeddings.embed).toHaveBeenCalledTimes(2)
         expect(usage.blockedBy).toHaveBeenCalledTimes(2)

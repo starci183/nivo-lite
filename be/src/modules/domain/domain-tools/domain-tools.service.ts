@@ -17,9 +17,11 @@ import {
     type DomainOrderReceipt,
     type DomainRecord,
     type DomainRegistrarPort,
+    type ServiceRenewalRequest,
 } from "@modules/domain/provider-registry"
 import { accountForNew, candidatesOf, holderOf, type HeldDomain } from "./domain-owner.policy"
 import { domainRefusal } from "./domain-refusal.policy"
+import { renewalOutcomeOf, serviceRenewalOutcomeOf } from "./renewal-outcome.policy"
 import {
     DNS_CREATE_SCHEMA,
     DNS_DELETE_SCHEMA,
@@ -28,6 +30,7 @@ import {
     DOMAIN_NAME_SCHEMA,
     DOMAIN_REGISTER_SCHEMA,
     DOMAIN_RENEW_SCHEMA,
+    DOMAIN_RENEWAL_GET_SCHEMA,
     DOMAIN_TRANSFER_SCHEMA,
     NAMESERVER_UPDATE_SCHEMA,
     inputSchemaOf,
@@ -40,6 +43,7 @@ interface DomainToolIds {
     readonly list: typeof TOOL.domainList
     readonly registrationCreate: typeof TOOL.domainRegistrationCreate
     readonly renewalCreate: typeof TOOL.domainRenewalCreate
+    readonly renewalGet: typeof TOOL.domainRenewalGet
     readonly transferCreate: typeof TOOL.domainTransferCreate
     readonly dnsRecordList: typeof TOOL.domainDnsRecordList
     readonly dnsRecordCreate: typeof TOOL.domainDnsRecordCreate
@@ -55,6 +59,7 @@ export const DOMAIN_TOOL: DomainToolIds = {
     list: TOOL.domainList,
     registrationCreate: TOOL.domainRegistrationCreate,
     renewalCreate: TOOL.domainRenewalCreate,
+    renewalGet: TOOL.domainRenewalGet,
     transferCreate: TOOL.domainTransferCreate,
     dnsRecordList: TOOL.domainDnsRecordList,
     dnsRecordCreate: TOOL.domainDnsRecordCreate,
@@ -66,6 +71,9 @@ export const DOMAIN_TOOL: DomainToolIds = {
 /** The connector's own tool name of each purpose (its id after the namespace `nivo.tool.domain.`), the id itself for `get` / `list`. */
 const NAMESPACE = "nivo.tool.domain"
 const local = (id: string): string => (id.startsWith(`${NAMESPACE}.`) ? id.slice(NAMESPACE.length + 1) : id)
+
+/** The connector's own name of the renewal check (its id after the namespace). */
+const RENEWAL_GET = "renewal.get"
 
 /** The members of a registration the audit masks: contact data is personal, the transfer code is a secret. */
 const PERSONAL = ["contacts", "authCode"]
@@ -120,12 +128,24 @@ export const DOMAIN_MANIFEST: ToolManifest = {
         },
         {
             name: local(DOMAIN_TOOL.renewalCreate),
-            description: "Renews a domain the workspace holds for the given years, at the account that holds it; the registrar charges it.",
+            description:
+                "Renews a domain the workspace holds for the given years at the provider account that holds it (the provider charges it), or, with `service` `hosting` / `ssl`, that service on the domain name at the account that sells it. Answers the order (`reference`, `total`) and `outcome`: `renewed` when the provider's expiry moved (`expiresOn` is the new end date, `expiresBefore` the old one), `pending` when the order was accepted but its effect is not proved yet (check it later with the renewal check). A provider refusal is answered as a refusal (`insufficient_balance`, `domain_locked`, `rejected`, `already_exists`, `domain_not_held`, ...): nothing was renewed. It moves money at a provider: never sent again by itself when its outcome is unknown.",
             scope: "write",
             defaultMode: "ask",
             inputSchema: inputSchemaOf(DOMAIN_RENEW_SCHEMA),
             argumentSchema: DOMAIN_RENEW_SCHEMA,
             domain: DOMAIN_TOOL.renewalCreate,
+            internalOnly: true,
+        },
+        {
+            name: RENEWAL_GET,
+            description:
+                "Checks whether a renewal of a held domain took effect: reads the domain's expiry at the account that holds it now and answers `outcome` `renewed` when it differs from `expiresBefore` (the one the renewal answered), else `pending`, with both expiries and the order `reference` as given.",
+            scope: "read",
+            defaultMode: "auto",
+            inputSchema: inputSchemaOf(DOMAIN_RENEWAL_GET_SCHEMA),
+            argumentSchema: DOMAIN_RENEWAL_GET_SCHEMA,
+            domain: DOMAIN_TOOL.renewalGet,
             internalOnly: true,
         },
         {
@@ -287,9 +307,9 @@ export class DomainToolsService implements NativeToolFamily {
                 return receiptAnswer(port.provider, receipt)
             }
             case local(DOMAIN_TOOL.renewalCreate): {
-                const { name, years } = argumentsOf(tool, DOMAIN_RENEW_SCHEMA, args)
-                const held = await this.held(workspaceId, caller, name)
-                return receiptAnswer(held.port.provider, await held.port.renew(held.connection, { domain: held.domain, years }))
+                const { name, years, service } = argumentsOf(tool, DOMAIN_RENEW_SCHEMA, args)
+                if (service === undefined || service === "domain") return await this.renewDomain(workspaceId, caller, name, years)
+                return await this.renewService(workspaceId, caller, { service, name, years })
             }
             case local(DOMAIN_TOOL.transferCreate): {
                 const asked = argumentsOf(tool, DOMAIN_TRANSFER_SCHEMA, args)
@@ -322,8 +342,73 @@ export class DomainToolsService implements NativeToolFamily {
                 const held = await this.held(workspaceId, caller, name)
                 return changeAnswer(held.port.provider, await held.port.updateNameservers(held.connection, held.domain, nameservers))
             }
+            case RENEWAL_GET: {
+                const { name, expiresBefore, reference } = argumentsOf(tool, DOMAIN_RENEWAL_GET_SCHEMA, args)
+                const held = await this.held(workspaceId, caller, name)
+                const now = (await held.port.details(held.connection, held.domain)).expiresOn
+                return {
+                    provider: held.port.provider,
+                    name: held.domain.name,
+                    reference: reference ?? null,
+                    outcome: renewalOutcomeOf(expiresBefore, now),
+                    expiresBefore,
+                    expiresOn: now,
+                }
+            }
             default:
                 throw unknownTool(tool)
+        }
+    }
+
+    /**
+     * Renews a held domain at the account that holds it and proves its effect by the provider's own expiry: the one stated before (the
+     * holder's answer, else its detail read) against the detail read right after. A failed read after the charge never throws: the
+     * renewal is then `pending` (its reference kept), checked later by the renewal check.
+     */
+    private async renewDomain(workspaceId: string, caller: NativeCaller, name: string, years: number): Promise<ToolJson> {
+        const held = await this.held(workspaceId, caller, name)
+        const before = held.domain.expiresOn ?? (await this.expiryOf(held.port, held.connection, held.domain))
+        const receipt = await held.port.renew(held.connection, { domain: held.domain, years })
+        const after = await this.expiryOf(held.port, held.connection, held.domain)
+        return {
+            ...receiptAnswer(held.port.provider, receipt),
+            service: "domain",
+            outcome: renewalOutcomeOf(before, after),
+            expiresBefore: before,
+            expiresOn: after,
+        }
+    }
+
+    /**
+     * Renews a service on a domain name (hosting, ssl) at the registrar account whose provider implements service renewal: the handed one
+     * among them, else the only one; none implementing it is `not_available` (nothing tried), several and none handed `not_selected`.
+     * `renewed` only when the provider's answer states the new end date.
+     */
+    private async renewService(workspaceId: string, caller: NativeCaller, request: ServiceRenewalRequest): Promise<ToolJson> {
+        const candidates = await this.candidates(workspaceId, caller)
+        if (candidates.length === 0) throw domainRefusal("not_connected")
+        const renewing = candidates.filter((connection) => this.portOf(connection).renewService !== undefined)
+        const picked = accountForNew(renewing, caller.connectionId)
+        if (picked === "none") throw domainRefusal("not_available")
+        if (picked === "ambiguous") throw domainRefusal("not_selected")
+        const port = this.portOf(picked)
+        if (port.renewService === undefined) throw domainRefusal("not_available")
+        const receipt = await port.renewService(picked, request)
+        return {
+            ...receiptAnswer(port.provider, receipt),
+            service: request.service,
+            outcome: serviceRenewalOutcomeOf(receipt.expiresOn),
+            expiresBefore: null,
+            expiresOn: receipt.expiresOn,
+        }
+    }
+
+    /** The expiry the provider states for a held domain now (its detail read), or null when the read states none or fails. */
+    private async expiryOf(port: DomainRegistrarPort, connection: ConnectionRecord, domain: DomainRecord): Promise<string | null> {
+        try {
+            return (await port.details(connection, domain)).expiresOn
+        } catch {
+            return null
         }
     }
 
@@ -335,7 +420,7 @@ export class DomainToolsService implements NativeToolFamily {
 
     /** The port of an account (registered, since `candidatesOf` kept only served providers). */
     private portOf(connection: ConnectionRecord): DomainRegistrarPort {
-        const port = this.registrars.of(connection.provider)
+        const port = this.registrars.portFor(connection)
         if (port === undefined) throw domainRefusal("not_connected")
         return port
     }

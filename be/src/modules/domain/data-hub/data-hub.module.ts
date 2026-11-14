@@ -5,16 +5,22 @@ import { CsvImportSyncService } from "./csv-import-sync.service"
 import { CsvImportWizardService } from "./csv-import-wizard.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./data-hub.module-definition"
 import { DataHubService } from "./data-hub.service"
+import { DataConnectorRegistrationService } from "./data-connector-registration.service"
 import { DataSyncService } from "./data-sync.service"
 import { DataSyncTriggerService } from "./data-sync-trigger.service"
+import { DatabaseSandboxSyncService } from "./database-sandbox-sync.service"
 import { DatabaseSyncService } from "./database-sync.service"
 import { DatabaseWizardService } from "./database-wizard.service"
+import { ImapConnectorRegistrationService } from "./imap-connector-registration.service"
+import { ImapSandboxSyncService } from "./imap-sandbox-sync.service"
 import { ImapSyncService } from "./imap-sync.service"
+import { DataConnectorRegistryService } from "./data-connector-registry.service"
 import { IMAP_MAIL_TRIGGER } from "./imap-mail.trigger"
 import { ImapWizardService } from "./imap-wizard.service"
 import { OpenApiToolsOperatorService } from "./openapi-tools-operator.service"
 import { CrmConnectService } from "./crm-connect.service"
 import { OpenApiToolsPinService } from "./openapi-tools-pin.service"
+import { TelegramUserSandboxSyncService } from "./telegram-user-sandbox-sync.service"
 import { TelegramUserSyncService } from "./telegram-user-sync.service"
 import { TelegramUserWizardService } from "./telegram-user-wizard.service"
 
@@ -36,12 +42,18 @@ export class DataHubModule extends ConfigurableModuleClass implements OnModuleIn
                 CsvImportSyncService,
                 DatabaseWizardService,
                 DatabaseSyncService,
+                DatabaseSandboxSyncService,
+                DataConnectorRegistrationService,
                 ImapWizardService,
                 ImapSyncService,
+                ImapSandboxSyncService,
+                DataConnectorRegistryService,
+                ImapConnectorRegistrationService,
                 OpenApiToolsPinService,
                 CrmConnectService,
                 TelegramUserWizardService,
                 TelegramUserSyncService,
+                TelegramUserSandboxSyncService,
             ],
             exports: [
                 DataHubService,

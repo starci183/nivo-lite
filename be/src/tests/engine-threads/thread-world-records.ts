@@ -26,7 +26,6 @@ export class WorldError extends DomainError<string> {}
 const UNIQUE: Readonly<Record<string, ReadonlyArray<ReadonlyArray<string>>>> = {
     ...CORE_TABLE_KEYS,
     run_stops: [["runId", "stepKey"]],
-    contact_freezes: [["key"]],
 }
 
 /** Which write the process dies at. */

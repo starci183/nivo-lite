@@ -4,9 +4,14 @@ import {
     BankTransactionsRegistryService,
     PaymentInstructionRegistryService,
 } from "@modules/domain/provider-registry"
+import { SandboxCatalogueRegistryService } from "@modules/domain/provider-sandbox"
 import { SepayBankTransactionsService } from "./sepay-bank-transactions.service"
 import { SepayFeedPollerService } from "./sepay-feed-poller.service"
 import { SepayPaymentInstructionService } from "./sepay-payment-instruction.service"
+import { SEPAY_SANDBOX_CATALOGUE } from "./sepay-sandbox.catalogue"
+import { SepaySandboxBankTransactionsService } from "./sepay-sandbox-bank-transactions.service"
+import { SepaySandboxFeedPollerService } from "./sepay-sandbox-feed-poller.service"
+import { SepaySandboxPaymentInstructionService } from "./sepay-sandbox-payment-instruction.service"
 
 @Injectable()
 /**
@@ -22,12 +27,17 @@ export class SepayProviderRegistrationService implements OnModuleInit {
         private readonly poller: SepayFeedPollerService,
         private readonly lister: SepayBankTransactionsService,
         private readonly instruction: SepayPaymentInstructionService,
+        private readonly pollerSandbox: SepaySandboxFeedPollerService,
+        private readonly listerSandbox: SepaySandboxBankTransactionsService,
+        private readonly instructionSandbox: SepaySandboxPaymentInstructionService,
+        private readonly catalogues: SandboxCatalogueRegistryService,
     ) {}
 
-    /** Hands each capability to its registry. */
+    /** Hands each capability to its registry with its sandbox twin, and the sandbox catalogue to the catalogue registry. */
     onModuleInit(): void {
-        this.pollers.register(this.poller)
-        this.transactions.register(this.lister)
-        this.instructions.register(this.instruction)
+        this.pollers.register({ live: this.poller, sandbox: this.pollerSandbox })
+        this.transactions.register({ live: this.lister, sandbox: this.listerSandbox })
+        this.instructions.register({ live: this.instruction, sandbox: this.instructionSandbox })
+        this.catalogues.register(SEPAY_SANDBOX_CATALOGUE)
     }
 }

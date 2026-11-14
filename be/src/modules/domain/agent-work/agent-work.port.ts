@@ -81,6 +81,12 @@ export interface AgentWorkFlow {
     run(turn: AgentTurnView, signal: AbortSignal): Promise<AgentHandlerEnding>
     /** Told when a wake the flow takes failed for good (`code`): the flow tells the people who must know, in place of any handler. */
     stuck(turn: AgentTurnView, code: string): Promise<void>
+    /**
+     * Told when the engine GAVE UP on a wake before any turn ran (`begin` found it dead past its attempts: `code`): answers true when the
+     * wake is the flow's (an event of the one pipeline, or a workflow call) and the flow reported it to the team, in place of any handler.
+     * A wake the engine gives up on never dies silently.
+     */
+    gaveUp(wake: AgentWakeView, code: string): Promise<boolean>
 }
 
 /** The flow, or undefined while no capability set one. */

@@ -26,7 +26,11 @@ export class RecordContactsAdapter implements RecordContactsPort {
         })
     }
 
-    /** Each id to the contact it stands for now and every id merged into it; an id of no contact maps to itself. */
+    /**
+     * Each id to the contact it stands for now and every id merged into it; an id of no contact maps to itself. An id whose contact
+     * (or the survivor it was merged into) is ERASED maps to NO id (R31, DEF-6): a read that goes through an erased person (a filter on a
+     * contact field naming them) finds nothing, while the records keep their reference.
+     */
     async aliasesOf(
         workspaceId: string,
         contactIds: ReadonlyArray<string>,
@@ -35,9 +39,16 @@ export class RecordContactsAdapter implements RecordContactsPort {
         const shaped = ids.filter(isContactId)
         return await this.store.transaction(async (tx) => {
             const redirects = shaped.length === 0 ? new Map<string, string>() : await tx.redirectsOf(workspaceId, shaped)
+            const nowOf = (id: string): string => redirects.get(id) ?? id
+            const held = shaped.length === 0 ? [] : await tx.contactsOf(workspaceId, [...new Set(shaped.map((id) => nowOf(id)))])
+            const erased = new Set(held.filter((contact) => contact.state === "erased").map((contact) => contact.id))
             const answered = new Map<string, ReadonlyArray<string>>()
             await eachInOrder(ids, async (id) => {
-                const now = redirects.get(id) ?? id
+                const now = nowOf(id)
+                if (erased.has(now)) {
+                    answered.set(id, [])
+                    return
+                }
                 const merged = isContactId(id) ? await tx.aliasesOf(workspaceId, now) : []
                 answered.set(id, [...new Set([now, id, ...merged])])
             })

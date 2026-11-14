@@ -12,7 +12,6 @@ const CARD_STATUSES: Readonly<Record<RunStepStatus, FlowGraphRunStatus | undefin
     waiting: "waiting",
     done: "done",
     failed: "failed",
-    undone: "skipped",
 }
 
 /** The id of the trigger card `graphViewOfSpec` puts first. */

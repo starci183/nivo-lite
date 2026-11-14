@@ -14,8 +14,9 @@ import { websalesAcceptNode } from "../../../nodes/websales/accept.node"
 import { websalesCloseFindNode } from "../../../nodes/websales/close-find.node"
 import { websalesCloseNotifyNode } from "../../../nodes/websales/close-notify.node"
 import { websalesCustomerProposeNode } from "../../../nodes/websales/customer-propose.node"
-import { websalesPayInstructNode } from "../../../nodes/websales/pay-instruct.node"
-import { DECLINED_END, declinedCheck, declinedEnd, declinedNotice } from "./declined"
+import { websalesPayInstructMailNode, websalesPayInstructNode } from "../../../nodes/websales/pay-instruct.node"
+import { websalesPayInstructToldNode } from "../../../nodes/websales/pay-instruct-told.node"
+import { DECLINED_END, declinedEnd, endsDeclined, purchaseFact } from "./declined"
 
 /** The language the team reads (version 1's constant param). */
 const LOCALE = "vi"
@@ -37,20 +38,20 @@ const ACCEPTED = {
     firstInstalmentVnd: ref("steps.accept.output.firstInstalmentVnd"),
 }
 
-/** What the template catalogue shows of `websales.close` version 4: the texts of version 3, the change note of 4 (rights: one mode per node). */
+/** What the template catalogue shows of `websales.close` version 10: the texts of version 3, the change note of 10. */
 const CATALOGUE: TemplateCatalogue = {
     name: { vi: "Ch\u1ed1t \u0111\u01a1n m\u1edbi", en: "Close a new sale" },
     summary: {
         vi: "Khi ng\u01b0\u1eddi trong \u0111\u1ed9i nh\u1edd Kinh doanh ch\u1ed1t m\u1ed9t \u0111\u01a1n mua theo m\u00e3 trong chat \u0111\u1ed9i (l\u01b0\u1ee3t tr\u1ea3 l\u1eddi \u0111\u1ed9i chuy\u1ec3n y\u00eau c\u1ea7u sang): t\u00ecm \u0111\u01a1n v\u00e0 kh\u00e1ch trong CRM, x\u00e1c \u0111\u1ecbnh kh\u00e1ch, l\u1eadp h\u1ed3 s\u01a1 mua, b\u00e1o kh\u00e1ch c\u00e1ch thanh to\u00e1n \u0111\u1ee3t 1 (m\u1ecdi b\u01b0\u1edbc t\u1ef1 ch\u1ea1y) r\u1ed3i chuy\u1ec3n H\u1ed3 s\u01a1 so\u1ea1n h\u1ee3p \u0111\u1ed3ng",
         en: "When a person of the team asks Sales in the team chat to close a purchase by its code (the chat turn hands the request on): finds the purchase and the customer in the CRM, settles the customer, records the purchase, tells the customer how to pay the first instalment (every step runs by itself), then hands the contract to Records",
     },
-    version: 8,
+    version: 10,
     // The old JSON template had `seedActive: true`: the seed makes an ACTIVE workflow from it.
     seedActive: true,
-    publishedAt: "2026-11-14T04:50:00.000Z",
+    publishedAt: "2026-11-14T22:00:00.000Z",
     notes: {
-        vi: "Thời gian gom tin nhắn do khai báo của trigger quyết định, đồ thị không còn tự khai báo",
-        en: "How long a burst of messages settles is the trigger declaration's, no longer the graph's",
+        vi: "R68: bước bị từ chối duyệt thì hệ thống tự báo đội kèm mã đơn mua rồi dừng ở kết quả Bị từ chối; quy trình chỉ còn các bước kinh doanh. Tin hướng dẫn thanh toán gửi theo kênh (cuộc trò chuyện hoặc thư), mỗi bước một lần gửi",
+        en: "R68: a declined step is told to the team by the engine with the purchase code and the run ends declined; the workflow keeps only its business steps. The payment message is sent by channel (conversation or mail), one send per step",
     },
 }
 /**
@@ -59,9 +60,11 @@ const CATALOGUE: TemplateCatalogue = {
  * purchase by that exact code and the customers it may be, `propose` settles the customer (opening one when none fits),
  * `accept` records the purchase the customer accepted (only while its quote holds), `pay` tells the customer how to pay the first instalment (the reach is the purchase's data), `notify` tells the team and writes the request to Ho so, `to-draft` hands it to Documents'
  * `draft` (the old end hand-off, now a `callWorkflow`), outcome `awaiting-payment`. Declined (a person declined a write or
- * send a shop set to `ask`, a decision): after each blocking step (`propose`, `accept`, `pay`) an `ifNode` `<step>-declined` on its `declined`
- * member goes to that step's notice `<step>-notice` (`team.declined-notice`, the step's own title and the purchase code), then outcome
- * `declined`; the close goes no further. Change from version 1: `pay-ask` is split into
+ * send set to `ask`, a decision) or unsuccessful (`pay`'s customer send refused, a step's `cannot`): each blocking step (`propose`,
+ * `accept`, `pay`) declares its `unsuccessful` ending (R68): the ENGINE tells the team (the step, the reason, the purchase code) and the
+ * run ends `declined`; the close goes no further. Change from version 8: the `<step>-declined` checks and their notices are gone (the
+ * engine reports). Change from version 9 (ask ONE write): the send is split by channel: `pay` (the conversation), `pay-mail` (the mail) and
+ * `pay-told` (the merge: the later steps read ONE step). Change from version 1: `pay-ask` is split into
  * `pay` and `notify`; `accept` is a plain call with the quote's exact checks; the hand-off is the graph's own step. Hidden without the
  * CRM, or without both every messaging account and the sending mailbox.
  */
@@ -83,26 +86,36 @@ export const closeGraph: TemplateGraph = defineTemplateGraph({
                 candidates: ref("steps.find.output.candidates"),
                 locale: LOCALE,
             },
-            next: "propose-declined",
+            next: "accept",
+            unsuccessful: endsDeclined([purchaseFact(ref("steps.find.output.purchaseCode"))]),
         }),
-        "propose-declined": declinedCheck("propose", "propose-notice", "accept"),
-        "propose-notice": declinedNotice("node.customer-propose.title", ref("steps.propose.output.purchaseCode"), DECLINED_END),
         accept: node(websalesAcceptNode, {
             input: {
                 purchaseId: ref("steps.propose.output.purchaseId"),
                 purchaseCode: ref("steps.propose.output.purchaseCode"),
-                // Null only when opening the customer was declined, a branch that never reaches this step.
+                // Null only when opening the customer was declined, an ending that never reaches this step.
                 customerCode: ref("steps.propose.output.customerCode", { default: null }),
             },
-            next: "accept-declined",
+            next: "pay",
+            unsuccessful: endsDeclined([purchaseFact(ref("steps.propose.output.purchaseCode"))]),
         }),
-        "accept-declined": declinedCheck("accept", "accept-notice", "pay"),
-        "accept-notice": declinedNotice("node.accept.title", ref("steps.propose.output.purchaseCode"), DECLINED_END),
-        pay: node(websalesPayInstructNode, { input: Object.assign(Object.assign({}, ACCEPTED), { locale: LOCALE }), next: "pay-declined" }),
-        "pay-declined": declinedCheck("pay", "pay-notice", "notify"),
-        "pay-notice": declinedNotice("node.pay-instruct.title", ref("steps.pay.output.purchaseCode"), DECLINED_END),
+        pay: node(websalesPayInstructNode, {
+            input: Object.assign(Object.assign({}, ACCEPTED), { locale: LOCALE }),
+            next: "pay-mail",
+            unsuccessful: endsDeclined([purchaseFact(ref("steps.accept.output.purchaseCode"))]),
+        }),
+        "pay-mail": node(websalesPayInstructMailNode, {
+            input: Object.assign(Object.assign({}, ACCEPTED), { locale: LOCALE }),
+            next: "pay-told",
+            unsuccessful: endsDeclined([purchaseFact(ref("steps.accept.output.purchaseCode"))]),
+        }),
+        // The merge: the output of the variant that was not skipped, so the later steps read ONE step.
+        "pay-told": node(websalesPayInstructToldNode, {
+            input: { chat: ref("steps.pay.output"), mail: ref("steps.pay-mail.output") },
+            next: "notify",
+        }),
         notify: node(websalesCloseNotifyNode, {
-            input: Object.assign(Object.assign({}, ACCEPTED), { by: ref("steps.pay.output.by"), channel: ref("steps.pay.output.channel", { default: null }), locale: LOCALE }),
+            input: Object.assign(Object.assign({}, ACCEPTED), { by: ref("steps.pay-told.output.by"), channel: ref("steps.pay-told.output.channel", { default: null }), locale: LOCALE }),
             next: "to-draft",
         }),
         "to-draft": callWorkflow({
@@ -118,6 +131,7 @@ export const closeGraph: TemplateGraph = defineTemplateGraph({
         }),
         "awaiting-payment": outcome({
             name: "awaiting-payment",
+            label: { vi: "Chờ khách thanh toán", en: "Awaiting payment" },
             output: {
                 purchaseId: ref("steps.notify.output.purchaseId"),
                 customerCode: ref("steps.notify.output.customerCode"),

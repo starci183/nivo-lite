@@ -82,7 +82,13 @@ export class AgentGraphTurnPolicyService {
      */
     private async queueOf(turn: NodeTurn, place: StepPlace | null): Promise<NonNullable<NodeTurn["queue"]>> {
         if (this.queue === undefined) return []
-        return this.queue.snapshotOf(turn, place)
+        // Once a person decided on a stop of the run (Retry included, not only answers in words), the run's next step visits take the
+        // events held behind it while it stopped (rule Q-1; R18 kept generic).
+        const decided =
+            place !== null &&
+            this.stops !== undefined &&
+            (await this.stops.ofRun(turn.workspaceId, place.runId)).some((stop) => stop.answers.length > 0)
+        return this.queue.snapshotOf(turn, place, decided)
     }
 
     /**

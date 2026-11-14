@@ -20,13 +20,14 @@ const build = async (em: ReturnType<typeof mockEntityManager>) => {
     return moduleRef.get(KnowledgeChunksService)
 }
 
-const drafts = (count: number, vector: string | null): Array<ChunkDraft> =>
-    Array.from({ length: count }, (_, index) => ({ text: `p${index}`, vector }))
+const drafts = (count: number, embedded: boolean): Array<ChunkDraft> =>
+    Array.from({ length: count }, (_, index) => ({ text: `p${index}`, embedded }))
 
-/** Any statement function a row carries as its index time. */
-const anyIndexTime: unknown = expect.any(Function)
-
-const passage = (ord: number, embedding: string | null, embeddingModel: string | null, content = "") => ({
+/**
+ * The row a passage is stored as: the model and hash of an embedded passage, never a vector (the vector index holds it), and no
+ * `indexed_at` until the index accepts the vector.
+ */
+const passage = (ord: number, embeddingModel: string | null, content = "") => ({
     workspaceId: WS,
     sourceId: "s1",
     module: "chatbot",
@@ -34,11 +35,10 @@ const passage = (ord: number, embedding: string | null, embeddingModel: string |
     installationId: null,
     ord,
     content,
-    embedding,
     embeddingModel,
     contentHash: embeddingModel === null ? null : passageHashOf(content, embeddingModel),
     textHash: passageTextHashOf(content),
-    indexedAt: embedding === null ? null : anyIndexTime,
+    indexedAt: null,
     placeKind: null,
     placeLabel: null,
 })
@@ -60,7 +60,7 @@ const write = (list: ReadonlyArray<ChunkDraft>) => ({
 })
 
 const registerReplacementCases = () => {
-    it("removes the old passages and stores the new ones with their vectors in one transaction", async () => {
+    it("removes the old passages and stores the new ones in one transaction: the model of an embedded one, never its vector", async () => {
         const tx = fakeTransaction(
             mockEntityManager({
                 delete: [KnowledgeChunkEntity, { affected: 3 }],
@@ -71,15 +71,15 @@ const registerReplacementCases = () => {
 
         await service.replace(
             write([
-                { text: "p0", vector: "[1]", place: { kind: "page", label: "2" } },
-                { text: "p1", vector: "[1]" },
+                { text: "p0", embedded: true, place: { kind: "page", label: "2" } },
+                { text: "p1", embedded: true },
             ]),
         )
 
         expect(tx.em.delete).toHaveBeenCalledWith(KnowledgeChunkEntity, { sourceId: "s1", workspaceId: WS })
         expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [
-            { ...passage(0, "[1]", "m1", "p0"), placeKind: "page", placeLabel: "2" },
-            passage(1, "[1]", "m1", "p1"),
+            { ...passage(0, "m1", "p0"), placeKind: "page", placeLabel: "2" },
+            passage(1, "m1", "p1"),
         ])
         expect(tx.commits).toBe(1)
     })
@@ -93,9 +93,10 @@ const registerReplacementCases = () => {
         )
         const service = await build(tx.em)
 
-        await service.replace(write(drafts(1, null)))
+        await service.replace(write(drafts(1, false)))
 
-        expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [passage(0, null, null, "p0")])
+        expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [passage(0, null, "p0")])
+        expect(Object.keys(tx.em.insert.mock.calls[0]?.[1]?.[0] ?? {})).not.toContain("embedding")
     })
     it("inserts a long document in batches that keep the order", async () => {
         const tx = fakeTransaction(
@@ -106,7 +107,7 @@ const registerReplacementCases = () => {
         )
         const service = await build(tx.em)
 
-        await service.replace(write(drafts(120, "[1]")))
+        await service.replace(write(drafts(120, true)))
 
         expect(tx.em.insert).toHaveBeenCalledTimes(3)
         const orders = tx.em.insert.mock.calls.map(([, rows]) => ordsOf(rows))
@@ -149,55 +150,25 @@ describe("KnowledgeChunksService", () => {
             expect(list?.callsOf("where")).toEqual([
                 ["c.workspaceId = :workspaceId AND c.sourceId = :sourceId", { workspaceId: WS, sourceId: "s1" }],
             ])
+            // A passage "has its vector" when the index accepted it: Postgres holds no vector to ask about.
+            expect(list?.callsOf("addSelect")).toContainEqual(["(c.indexedAt IS NOT NULL)", "hasEmbedding"])
             expect(list?.callsOf("limit")).toEqual([[500]])
         })
     })
 
     describe("embeddedOf", () => {
-        it("names the columns of the stored passages", async () => {
+        it("names the columns of the stored passages whose vector the index accepted (indexed_at), and nothing else", async () => {
             const em = mockEntityManager()
-            queueQueryBuilders(em, [
+            const read = queueQueryBuilders(em, [
                 { getMany: [Object.assign(knowledgeChunkOf(), { embeddingModel: "m1", contentHash: "h" })] },
-            ])
+            ])[0]
             const service = await build(em)
 
             await expect(service.embeddedOf(WS, "s1")).resolves.toEqual([
                 { id: "c1", order: 0, text: "a", hash: "h", model: "m1" },
             ])
-        })
-    })
-    describe("stale", () => {
-        it("names the passages that need a vector of the model", async () => {
-            const em = mockEntityManager()
-            const read = queueQueryBuilders(em, [{ getMany: [knowledgeChunkOf()] }])[0]
-            const service = await build(em)
-
-            await expect(service.stale(WS, "m1", 32)).resolves.toEqual([{ id: "c1", text: "a" }])
-
-            expect(read?.callsOf("where")[0]?.[1]).toEqual({ workspaceId: WS, model: "m1" })
-            expect(read?.callsOf("limit")).toEqual([[32]])
-        })
-    })
-
-    describe("setVectors", () => {
-        it("gives the passages their vectors", async () => {
-            const em = mockEntityManager()
-            const write = queueQueryBuilders(em, [{ execute: {} }])[0]
-            const service = await build(em)
-
-            await service.setVectors({ workspaceId: WS, model: "m1", ids: ["c1"], vectors: ["[1]"], hashes: ["h"] })
-
-            expect(write?.callsOf("update")).toEqual([[]])
-            expect(evaluatedValues(write?.callsOf("set")[0]?.[0])).toEqual({
-                embedding:
-                    '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "knowledge_chunks"."id")',
-                embeddingModel: "m1",
-                contentHash:
-                    '(SELECT t.hash FROM unnest(CAST(:ids AS uuid[]), CAST(:hashes AS text[])) AS t(id, hash) WHERE t.id = "knowledge_chunks"."id")',
-                indexedAt: "now()",
-            })
-            expect(write?.callsOf("setParameters")).toEqual([
-                [{ workspaceId: WS, ids: ["c1"], vectors: ["[1]"], hashes: ["h"] }],
+            expect(read?.callsOf("where")).toEqual([
+                ["c.sourceId = :sourceId AND c.workspaceId = :workspaceId AND c.indexedAt IS NOT NULL", { sourceId: "s1", workspaceId: WS }],
             ])
         })
     })
@@ -273,8 +244,8 @@ describe("KnowledgeChunksService passagesOfSources", () => {
 describe("KnowledgeChunksService keep", () => {
     const anyOrder: unknown = expect.anything()
 
-    const placed = (orders: ReadonlyArray<number>, vector: string | null) =>
-        orders.map((order) => ({ text: `p${order}`, vector, order }))
+    const placed = (orders: ReadonlyArray<number>, embedded: boolean) =>
+        orders.map((order) => ({ text: `p${order}`, embedded, order }))
 
     it("replaces only the passages of the orders it is given and leaves the others", async () => {
         const tx = fakeTransaction(
@@ -282,7 +253,7 @@ describe("KnowledgeChunksService keep", () => {
         )
         const service = await build(tx.em)
 
-        await service.keep({ ...write([]), drafts: placed([32, 33], "[1]") })
+        await service.keep({ ...write([]), drafts: placed([32, 33], true) })
 
         expect(tx.em.delete).toHaveBeenCalledTimes(1)
         expect(tx.em.delete).toHaveBeenCalledWith(KnowledgeChunkEntity, {
@@ -291,8 +262,8 @@ describe("KnowledgeChunksService keep", () => {
             ord: anyOrder,
         })
         expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [
-            passage(32, "[1]", "m1", "p32"),
-            passage(33, "[1]", "m1", "p33"),
+            passage(32, "m1", "p32"),
+            passage(33, "m1", "p33"),
         ])
         expect(tx.commits).toBe(1)
     })
@@ -303,9 +274,9 @@ describe("KnowledgeChunksService keep", () => {
         )
         const service = await build(tx.em)
 
-        await service.keep({ ...write([]), drafts: placed([4], null) })
+        await service.keep({ ...write([]), drafts: placed([4], false) })
 
-        expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [passage(4, null, null, "p4")])
+        expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [passage(4, null, "p4")])
     })
 
     it("writes nothing for no passage", async () => {
@@ -324,7 +295,7 @@ describe("KnowledgeChunksService keep", () => {
         )
         const service = await build(tx.em)
 
-        await service.keep({ ...write([]), drafts: [...placed([1], "[1]"), ...placed([2], null)] })
+        await service.keep({ ...write([]), drafts: [...placed([1], true), ...placed([2], false)] })
 
         expect(tx.em.insert).toHaveBeenCalledWith(KnowledgeChunkEntity, [
             expect.objectContaining({ ord: 1, contentHash: passageHashOf("p1", "m1") }),

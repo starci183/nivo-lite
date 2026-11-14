@@ -125,6 +125,25 @@ export class AgentWakeService {
     }
 
     /**
+     * Drops, in `tx`, every wake of any agent still WAITING to run in one of the lock scopes (`pending`, or `held`: behind a run, by a
+     * freeze, out of hours): each is `skipped` with the reason given and never runs. What the erasure of a subject does to the events of
+     * that subject that no run took yet (R72 Q1). A wake running now is left to its drive. Answers how many it dropped.
+     */
+    async dropOfScopes(tx: EntityManager, workspaceId: string, scopeKeys: ReadonlyArray<string>, reason: string): Promise<number> {
+        if (scopeKeys.length === 0) return 0
+        const dropped = await tx
+            .createQueryBuilder()
+            .update(AgentWakeEntity)
+            .set({ status: "skipped", reason, finishedAt: () => "now()" })
+            .where("workspace_id = :workspaceId AND status IN ('pending', 'held') AND scope_key IN (:...scopeKeys)", {
+                workspaceId,
+                scopeKeys: [...scopeKeys],
+            })
+            .execute()
+        return dropped.affected ?? 0
+    }
+
+    /**
      * The wakes of one lock scope of an agent still waiting to run, oldest first, at most `limit`: what a run of that scope finds QUEUED for
      * it while it is in flight (the lease keeps the drain off the scope while a step runs). Read on the primary connection.
      */
@@ -159,7 +178,7 @@ export class AgentWakeService {
             .createQueryBuilder()
             .update(AgentWakeEntity)
             .set({ status: "skipped", reason: `${QUEUED_REASON}${runId}`, finishedAt: () => "now()" })
-            .where("workspace_id = :workspaceId AND status = 'pending' AND id IN (:...wakeIds)", {
+            .where("workspace_id = :workspaceId AND status IN ('pending', 'held') AND id IN (:...wakeIds)", {
                 workspaceId,
                 wakeIds: [...wakeIds],
             })
@@ -168,6 +187,37 @@ export class AgentWakeService {
     }
 
     /** How many wakes wait behind a run (`waiting:<run>`): what the run's `run.waiting` counts. */
+    /**
+     * The wakes held behind a run (`waiting:<run>`), oldest first, at most `limit`: what a step of that run that runs again after a
+     * person's decision takes as its queue (rule Q-1, R18 kept generic: the events held behind a stopped run are its work).
+     */
+    async heldBehind(manager: EntityManager, workspaceId: string, runId: string, limit: number): Promise<ReadonlyArray<PendingScopeWake>> {
+        const rows = await manager.find(AgentWakeEntity, {
+            where: { workspaceId, status: "held", reason: `${WAITING_REASON}${runId}` },
+            order: { createdAt: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => ({ id: row.id, context: row.context, createdAt: row.createdAt }))
+    }
+
+    /**
+     * The runs that wakes are held behind in the workspace (`waiting:<run>`), at most `limit`: the sweep releases those of a run that
+     * finished without its release (a crash between the run's end and the release).
+     */
+    async runsHeldBehind(manager: EntityManager, workspaceId: string, limit: number): Promise<ReadonlyArray<string>> {
+        const rows: unknown = await manager.query(
+            `SELECT DISTINCT substr(reason, ${String(WAITING_REASON.length + 1)}) AS run_id FROM public.agent_wakes
+             WHERE workspace_id = $1 AND status = 'held' AND reason LIKE $2 LIMIT $3`,
+            [workspaceId, `${WAITING_REASON}%`, limit],
+        )
+        return Array.isArray(rows)
+            ? rows.flatMap((row: unknown) => {
+                  const id: unknown = isRecord(row) ? row.run_id : null
+                  return typeof id === "string" && id !== "" ? [id] : []
+              })
+            : []
+    }
+
     waitingCountOf(manager: EntityManager, workspaceId: string, runId: string): Promise<number> {
         return manager.count(AgentWakeEntity, {
             where: { workspaceId, status: "held", reason: `${WAITING_REASON}${runId}` },
@@ -175,9 +225,12 @@ export class AgentWakeService {
     }
 
     /**
-     * When the run a subject's events waited behind has ENDED: every wake held `waiting:<run>` is pending again, in the order it came, with
-     * its drain job, in `tx`. The oldest begins the next run of the subject and that run's first step takes the rest as its queue (the
-     * next run takes the whole list). Answers how many it released.
+     * When the run a subject's events waited behind has ENDED, or PARKS on a wait (its waits are offered them first): every wake held
+     * `waiting:<run>` is pending again, in the order it came, with a drain job of its own, in `tx`. The oldest begins the next run of the
+     * subject and that run's first step takes the rest as its queue (the next run takes the whole list). Its tries start again from
+     * zero: waiting behind a run is no failed try, and `begin` counts every begin (a wake held behind a run that parked three times was
+     * dead `attempts` before it ever ran: DEF-5). The drain job has a fresh identity (`enqueueAgainDrain`): the wake's first job holds its
+     * fact's key, so writing that key again wrote no job and the wake waited for the minute sweep. Answers how many it released.
      */
     async releaseWaiting(tx: EntityManager, workspaceId: string, runId: string): Promise<number> {
         const held = await tx.find(AgentWakeEntity, {
@@ -188,15 +241,9 @@ export class AgentWakeService {
             await tx.update(
                 AgentWakeEntity,
                 { id: wake.id, status: "held" },
-                { status: "pending", reason: null, notBefore: () => "now()" },
+                { status: "pending", reason: null, attempts: 0, notBefore: () => "now()" },
             )
-            await this.queue.enqueueDrain(
-                { workspaceId, agentId: wake.agentId, scopeKey: wake.scopeKey },
-                wake.source,
-                wake.eventKey,
-                tx,
-                0,
-            )
+            await this.queue.enqueueAgainDrain({ workspaceId, agentId: wake.agentId, scopeKey: wake.scopeKey }, tx)
         })
         return held.length
     }
@@ -206,7 +253,9 @@ export class AgentWakeService {
      * event was delivered to) that ended because a wait took it (`reason`) is pending again with its drain job, and names `runId` among
      * the runs that handed it back (`handedBackJson`), so the next drain offers it to the next waiter and, after the last, to the graphs
      * registered on it (the routing its delivery already matched), and never to this run again. A wake already re-offered by this run is
-     * left as it is (a replay of the step changes nothing). Answers how many wakes it re-offered.
+     * left as it is (a replay of the step changes nothing). Each re-offered wake gets a drain job of its own (`enqueueAgainDrain`): its
+     * first job holds the fact's key, so the same key wrote no job and a handed-back line waited ~90 s for the minute sweep (DEF-5).
+     * Answers how many wakes it re-offered.
      */
     async reoffer(tx: EntityManager, workspaceId: string, event: ReofferedEvent, runId: string): Promise<number> {
         const taken = await tx.find(AgentWakeEntity, {
@@ -230,13 +279,7 @@ export class AgentWakeService {
                 { status: "pending", reason: null, attempts: 0, finishedAt: null, notBefore: () => "now()", context },
             )
             if ((moved.affected ?? 0) === 0) return
-            await this.queue.enqueueDrain(
-                { workspaceId, agentId: wake.agentId, scopeKey: wake.scopeKey },
-                wake.source,
-                wake.eventKey,
-                tx,
-                0,
-            )
+            await this.queue.enqueueAgainDrain({ workspaceId, agentId: wake.agentId, scopeKey: wake.scopeKey }, tx)
             reoffered += 1
         })
         return reoffered

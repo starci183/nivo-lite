@@ -16,6 +16,12 @@ export enum ToolsErrorCode {
     NativeRefused = "TOOLS_NATIVE_REFUSED",
     /** An agent's attachment to a provider, or an ability on it, cannot be changed as asked; `reason` says why. */
     AttachmentRefused = "TOOLS_ATTACHMENT_REFUSED",
+    /**
+     * A step's call needs an account of a provider of which the agent holds several, and neither the run's trigger, nor the run's earlier
+     * calls, nor the agent's default account of the provider names one: the owner picks a default. `provider` and `connectionIds` (the
+     * candidate accounts, comma separated) ride in the params; nothing was sent.
+     */
+    AccountNeedsPick = "TOOLS_ACCOUNT_NEEDS_PICK",
 }
 
 /** How each code travels. */
@@ -27,6 +33,7 @@ export const TOOLS_ERROR_KINDS: Record<ToolsErrorCode, ErrorKind> = {
     [ToolsErrorCode.Timeout]: "unavailable",
     [ToolsErrorCode.NativeRefused]: "forbidden",
     [ToolsErrorCode.AttachmentRefused]: "invalid",
+    [ToolsErrorCode.AccountNeedsPick]: "conflict",
 }
 
 /** The one error class of the gateway. */

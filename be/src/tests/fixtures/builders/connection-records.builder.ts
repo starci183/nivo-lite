@@ -10,6 +10,7 @@ export const connectionRecord = (overrides: Partial<ConnectionRecord> = {}): Con
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

@@ -158,7 +158,7 @@ export interface ToolNames {
     "nivo.tool.drive.status.get": ToolSignature
     /** The documents of a connected drive the shop chose as sources. */
     "nivo.tool.drive.source.list": ToolSignature
-    /** Issues an e-invoice: a platform purpose (class money). */
+    /** Issues an e-invoice AT the e-invoice provider (MISA meInvoice today) on the seller account the step is bound to; NIVO keeps no invoice tool of its own (R57). */
     "nivo.tool.invoice.create": Asking
     /** The e-invoices issued, a bounded page. A read. */
     "nivo.tool.einvoice.list": ToolSignature
@@ -209,8 +209,10 @@ export interface ToolNames {
     "nivo.tool.domain.list": ToolSignature
     /** Registers a new domain name for some years; the registrar charges the account. */
     "nivo.tool.domain.registration.create": Asking
-    /** Renews a domain the workspace holds for some years, at the account that holds it. */
+    /** Renews a domain the workspace holds (or a service on it: hosting, ssl) for some years, at the provider account that holds it. */
     "nivo.tool.domain.renewal.create": Asking
+    /** Whether a renewal of a held domain took effect: its expiry read now against the one before the renewal (renewed or pending). A read. */
+    "nivo.tool.domain.renewal.get": ToolSignature
     /** Asks a domain held at another registrar to be transferred in, with the transfer code that registrar issued. */
     "nivo.tool.domain.transfer.create": Asking
     /** The DNS records of a domain the workspace holds. A read. */

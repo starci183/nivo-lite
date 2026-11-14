@@ -1,7 +1,6 @@
 import type { StoredExpr, StoredRef } from "@nivo-lite/agent-sdk/graph"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { exprHolds } from "@nivo-lite/agent-sdk/template"
-import { teamDeclinedNoticeNode } from "@nivo-lite/blocks-core"
 import { webdeskUnderstandSalesNode } from "../../../nodes/webdesk/understand-sales.node"
 import { websalesAskNode } from "../../../nodes/websales/ask.node"
 import { websalesPurchaseOpenNode } from "../../../nodes/websales/purchase-open.node"
@@ -50,7 +49,6 @@ const understood = (branch: string) => exampleOutput(websalesUnderstandNode.exam
 // The understand step's examples answer ask, quote and agree; `paid` and `no` are the same shape on another route of its enum.
 const paidOrNo = (branch: "paid" | "no") => ({ ...understood("agree"), branch })
 const opened = (quoted: boolean) => exampleOutput(websalesPurchaseOpenNode.examples, (output) => output["quoted"] === quoted)
-const posted = exampleOutput(teamDeclinedNoticeNode.examples, (output) => output["posted"] === true)
 const talkEnded = (last: JsonValue) => ({ steps: { talk: { output: { rounds: 2, stopped: true, last } } } })
 
 describe("websales.enquiry v8: the conversation as one run (R53)", () => {
@@ -107,8 +105,10 @@ describe("websales.enquiry v8: the conversation as one run (R53)", () => {
     it("a person declining a blocking step of a round stops the talk, as it stopped the run in v7, and the run ends declined", () => {
         const declinedAsk = exampleOutput(websalesAskNode.examples, (output) => output["declined"] === true)
         expect(ends({ steps: { ask: { output: declinedAsk }, understand: { output: understood("ask") } } })).toBe(true)
-        expect(exprHolds(conditionOf("settled", "when"), readerOf(talkEnded(posted)))).toBe(false)
-        expect(exprHolds(conditionOf("declined-said", "when"), readerOf(talkEnded(posted)))).toBe(true)
+        // R68 (v9): no notice step ends the round any more; the declined step's OWN output is the loop's `last` (the engine told the team).
+        expect(exprHolds(conditionOf("settled", "when"), readerOf(talkEnded(declinedAsk)))).toBe(false)
+        expect(exprHolds(conditionOf("declined-said", "when"), readerOf(talkEnded(declinedAsk)))).toBe(true)
+        expect(steps.find((one) => one.key === "ask")).toMatchObject({ unsuccessful: { then: "continue" } })
         expect(steps.find((one) => one.key === "declined-said")).toMatchObject({ routes: { yes: "declined", no: "quiet" } })
     })
 

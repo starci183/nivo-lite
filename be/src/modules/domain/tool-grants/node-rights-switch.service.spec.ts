@@ -8,7 +8,7 @@ import { ToolGrantsLogEvent } from "./tool-grants.log-events"
 import { NodeRightsSwitchService } from "./node-rights-switch.service"
 import { toolGrantsEntities } from "./persistence/entities"
 
-const NodeRightsSwitchEntity = toolGrantsEntities[4]
+const NodeRightsSwitchEntity = toolGrantsEntities[3]
 const WS = "ws-1"
 const NOW = new Date("2026-11-12T03:00:00.000Z")
 

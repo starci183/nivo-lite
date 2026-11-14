@@ -13,5 +13,19 @@ export const WEBRENEW_MESSAGING: readonly [ProviderKey, ProviderKey, ProviderKey
     PROVIDER.meta,
 ]
 
-/** The providers the Renewal agent works with, in priority order (census §7, the CRM's source key `crm` for `openapi`). */
-export const WEBRENEW_PROVIDERS: ReadonlyArray<ProviderKey> = [CRM_NIVOWEB_PROVIDER, ...WEBRENEW_MESSAGING, PROVIDER.smtp]
+/**
+ * The domain registrars the provider renewal renews at (R57): alternatives, in order. The renewal spends NIVO Web's balance at the
+ * registrar that holds the domain (`nivo.tool.domain.renewal.create`).
+ */
+export const WEBRENEW_REGISTRARS: readonly [ProviderKey, ProviderKey] = [PROVIDER.inet, PROVIDER.tino]
+
+/**
+ * The providers the Renewal agent works with, in priority order (census §7, the CRM's source key `crm` for `openapi`; R57: the
+ * registrars after the mailbox).
+ */
+export const WEBRENEW_PROVIDERS: ReadonlyArray<ProviderKey> = [
+    CRM_NIVOWEB_PROVIDER,
+    ...WEBRENEW_MESSAGING,
+    PROVIDER.smtp,
+    ...WEBRENEW_REGISTRARS,
+]

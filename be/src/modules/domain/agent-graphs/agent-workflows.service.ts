@@ -419,7 +419,8 @@ export class AgentWorkflowsService {
      * Puts a workflow on a template version AS SHIPPED, with no merge: a NEW version holding that version's graph exactly, and the
      * provenance moved to it (`templateId` may name the successor of the workflow's own template). The re-seed's road: after it, the
      * workflow's link names a version the installation still ships, so a later template update merges from a base that exists. The
-     * gate judges it as a template's version (`byTemplate`).
+     * gate judges it as a template's version (`byTemplate`). `together`: the graphs, by workflow id, of every version written with it as
+     * one change; its hand-offs are judged against them (`AgentWorkflowStoreService.requireCallsSound`).
      */
     adoptTemplateVersion(
         workspaceId: string,
@@ -428,6 +429,7 @@ export class AgentWorkflowsService {
         author: WorkflowAuthor,
         expected: ExpectedLatest,
         note: string,
+        together: ReadonlyMap<string, GraphSpec> = new Map(),
     ): Promise<WorkflowVersionView> {
         // Read when asked, so a version the installation does not ship is a refused promise like every other refusal here.
         const shipped = (): GraphSpec => {
@@ -438,7 +440,7 @@ export class AgentWorkflowsService {
         const asked = { afterOf: () => Promise.resolve().then(shipped), consent: consentOfAuthor(author, undefined), byTemplate: true }
         return this.version(workspaceId, workflowId, asked, async (tx, workflow) => {
             const graph = shipped()
-            await this.store.requireCallsSound(tx, workflow, graph)
+            await this.store.requireCallsSound(tx, workflow, graph, together)
             return {
                 graph,
                 kind: "accept_template",

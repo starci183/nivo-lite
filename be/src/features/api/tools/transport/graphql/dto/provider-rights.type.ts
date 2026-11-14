@@ -82,6 +82,10 @@ export class AgentAttachmentType {
     /** The provider of that account. */
     @Field(() => String)
     provider!: string
+
+    /** True when it is the agent's default account of that provider: the account a step's call uses when nothing else picks one. */
+    @Field(() => Boolean)
+    isDefault!: boolean
 }
 
 @ObjectType()

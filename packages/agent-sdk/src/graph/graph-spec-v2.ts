@@ -46,6 +46,9 @@ export const LOOP_BODY_ROUTE = "body"
 /** The route of an `until` loop when its rounds ran out without the condition. */
 export const LOOP_EXHAUSTED_ROUTE = "exhausted"
 
+/** The most notice facts one step (or one `until` loop) declares on its `unsuccessful` ending (R68). */
+export const UNSUCCESSFUL_FACTS_MAX = 6
+
 /** The bounds of a timed checkpoint between two rounds, per unit (whole numbers). */
 export const LOOP_EVERY_BOUNDS: { readonly minutes: number; readonly hours: number; readonly days: number } = {
     minutes: 1440,

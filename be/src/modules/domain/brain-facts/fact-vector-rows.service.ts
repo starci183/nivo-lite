@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import { In, type EntityManager } from "typeorm"
-import { storedVectorOf } from "@modules/domain/knowledge-chunks"
 import type { AcceptedRow, VectorRow, VectorRowCursor, VectorRowSource, WantedRow } from "@modules/integrations/qdrant"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { factEmbedHashOf, factEmbedTextOf } from "./embedding-standard.policy"
@@ -20,14 +19,6 @@ const WANTED: ReadonlySet<string> = new Set(["active", "scheduled", "proposed"])
 /** The hash of each id, picked from the two arrays one write carries. */
 const HASH_OF_ID =
     '(SELECT t.hash FROM unnest(CAST(:ids AS uuid[]), CAST(:hashes AS text[])) AS t(id, hash) WHERE t.id = "brain_facts"."id")'
-
-/** One line of the read of the vectors Postgres still holds. */
-interface StoredLine {
-    /** The truth. */
-    readonly id: string
-    /** Its vector as the database answers it. */
-    readonly embedding: unknown
-}
 
 /** One line of the read of the rows another row may adopt a vector from. */
 interface DonorLine {
@@ -116,36 +107,6 @@ export class FactVectorRowsService implements VectorRowSource {
     }
 
     /**
-     * The vectors the pgvector column still holds for these truths under this identity (the transition): a point is copied from
-     * them with no embedding call. This read goes with the column: the contract migration that drops it removes this body.
-     */
-    async storedVectors(
-        workspaceId: string,
-        ids: ReadonlyArray<string>,
-        model: string,
-    ): Promise<ReadonlyMap<string, ReadonlyArray<number>>> {
-        const unique = [...new Set(ids)].slice(0, READ_MAX)
-        if (unique.length === 0) return new Map()
-        const lines = await this.entityManager
-            .createQueryBuilder(BrainFactEntity, "f")
-            .select("f.id", "id")
-            .addSelect("f.embedding", "embedding")
-            .where("f.workspaceId = :workspaceId AND f.id IN (:...ids) AND f.embedding IS NOT NULL AND f.embeddingModel = :model", {
-                workspaceId,
-                ids: unique,
-                model,
-            })
-            .limit(unique.length)
-            .getRawMany<StoredLine>()
-        return new Map(
-            lines.flatMap((line): ReadonlyArray<readonly [string, ReadonlyArray<number>]> => {
-                const vector = storedVectorOf(line.embedding)
-                return vector === null ? [] : [[line.id, vector]]
-            }),
-        )
-    }
-
-    /**
      * For each of these line hashes, another row of the workspace whose point the index accepted for the SAME line under this
      * identity (a version that keeps its value, a proposal of a line already known): its vector is adopted with no embedding call.
      * One statement, on `brain_facts_indexed_hash (workspace_id, embedding_hash) WHERE indexed_at IS NOT NULL`.
@@ -175,21 +136,13 @@ export class FactVectorRowsService implements VectorRowSource {
         return donors
     }
 
-    /**
-     * Records that the index accepted the vectors of these truths under this identity: the identity, the hash of each line and
-     * `indexed_at`. A vector of ANOTHER identity the pgvector column may still hold is cleared in the same write.
-     */
+    /** Records that the index accepted the vectors of these truths under this identity: the identity, the hash of each line and `indexed_at`. */
     async stamp(workspaceId: string, accepted: ReadonlyArray<AcceptedRow>, model: string): Promise<void> {
         if (accepted.length === 0) return
         await this.entityManager
             .createQueryBuilder(BrainFactEntity, "bf")
             .update()
-            .set({
-                embedding: () => "CASE WHEN embedding_model = :model THEN embedding ELSE NULL END",
-                embeddingModel: model,
-                embeddingHash: () => HASH_OF_ID,
-                indexedAt: () => "now()",
-            })
+            .set({ embeddingModel: model, embeddingHash: () => HASH_OF_ID, indexedAt: () => "now()" })
             .where("workspace_id = :workspaceId AND id = ANY(CAST(:ids AS uuid[]))")
             .setParameters({
                 workspaceId,

@@ -3,32 +3,6 @@ import type { AgentTriggerPreset } from "@modules/domain/agent-work"
 /** The next slot a scheduler holds, or none. */
 export type NextSlot = Date | null
 
-/** The agent a probe looks at: ids only. */
-export interface ProbeAgent {
-    /** The workspace of the agent. */
-    readonly workspaceId: string
-    /** The agent. */
-    readonly agentId: string
-}
-
-/** What a probe found: nothing to do, or work with the brief the turn starts from. */
-export type ProbeAnswer =
-    | { readonly work: false }
-    | { readonly work: true; readonly brief: string; readonly subjectIds: ReadonlyArray<string> }
-
-/** A read-only check of whether a schedule or an event has work for the agent; it is the reason a quiet clock costs no model call. */
-export interface AgentProbe {
-    /** The key a trigger names it by. */
-    readonly key: string
-    /** Looks and answers; it writes nothing. */
-    check(agent: ProbeAgent): Promise<ProbeAnswer>
-}
-
-/** What the probes decided for one wake. */
-export type ProbeDecision =
-    | { readonly kind: "run"; readonly brief: string | null; readonly subjectIds: ReadonlyArray<string> }
-    | { readonly kind: "skip"; readonly reason: "no_work" | "no_probe" | "probe_failed" }
-
 /** A trigger a module wants on its agent: seeded once per key. */
 export interface TriggerSeed {
     /** The stable key. */
@@ -37,8 +11,6 @@ export interface TriggerSeed {
     readonly preset: AgentTriggerPreset
     /** The time of day (`HH:MM`) of a daily preset. */
     readonly atTime?: string | undefined
-    /** The probe that decides whether a fire has work. */
-    readonly probeKey?: string | undefined
 }
 
 /** What one pass of the minute sweep did. */
@@ -91,12 +63,10 @@ export interface InstallationChange {
     readonly installationId?: string
 }
 
-/** An agent an event wakes, and the probe of the trigger that matched. */
+/** An agent an event wakes. */
 export interface EventTarget {
     /** The agent. */
     readonly agentId: string
-    /** The probe of the trigger, or null. */
-    readonly probeKey: string | null
 }
 
 /** A person who pressed "run now" on a timer, and when. */

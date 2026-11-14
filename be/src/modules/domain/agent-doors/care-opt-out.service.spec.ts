@@ -155,7 +155,8 @@ describe("CareOptOutService (the shop's door to a customer's care opt-out)", () 
 // resume event delivered for the route), so the cases about which hold is cleared (`person` / `agent` / `both`) are gone with it.
 describe("HoldReleaseDoorService (hand back to the agent)", () => {
     it("delivers exactly one resume event for the route, as an owner or manager, and records who and when", async () => {
-        const { door, heldLines, presses } = await build([])
+        const { door, heldLines, presses, routes } = await build([])
+        routes.release.mockResolvedValue({ memberId: "m-staff", at: "2026-11-14T08:00:00.000Z" })
 
         await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "released", answered: 1 })
 
@@ -171,15 +172,30 @@ describe("HoldReleaseDoorService (hand back to the agent)", () => {
         )
     })
 
-    it("records nothing when no graph took the resume event, and answers not_found for a route the workspace does not hold", async () => {
+    // MX-CORE DEF-4 (dev 2026-11-14, row H-03): a SECOND "hand back" with nothing held answered `released, answered 1`, delivered a second
+    // resume event and the agent sent a second real message with no new line of the person. The old spec asserted that very call (a press
+    // with no hold and no take-over still delivered the resume event: `answerHeld` called once), so the double-delivery was the spec's own
+    // expectation. One resume event per hand-back: a press that ends nothing delivers nothing.
+    it("a press with nothing held (no staff hold, no take-over) delivers NO resume event, answers nothing_held and records nothing", async () => {
         const { door, heldLines, presses, routes } = await build([])
-        heldLines.answerHeld.mockResolvedValue(0)
 
         await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "nothing_held", answered: 0 })
         routes.get.mockResolvedValue(null)
         await expect(door.hand("user-1", "ws-1", "route-x")).resolves.toEqual({ outcome: "not_found", answered: 0 })
-        expect(heldLines.answerHeld).toHaveBeenCalledTimes(1)
+        expect(heldLines.answerHeld).not.toHaveBeenCalled()
         expect(presses.record).not.toHaveBeenCalled()
+    })
+
+    it("DEF-4: the second press after a hand-back that released answers nothing_held and delivers no second resume event", async () => {
+        const { door, heldLines, presses, routes } = await build([])
+        // The route store as Postgres answers it: the first release clears the hold and answers who held it, the second finds none.
+        routes.release.mockResolvedValueOnce({ memberId: "m-staff", at: "2026-11-14T08:00:00.000Z" }).mockResolvedValue(null)
+
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "released", answered: 1 })
+        await expect(door.hand("user-1", "ws-1", "route-1")).resolves.toEqual({ outcome: "nothing_held", answered: 0 })
+
+        expect(heldLines.answerHeld).toHaveBeenCalledTimes(1)
+        expect(presses.record).toHaveBeenCalledTimes(1)
     })
 
     it("refuses a seat that is not an owner or manager before it delivers anything", async () => {
@@ -302,9 +318,8 @@ describe("HoldReleaseDoorService.handAs (the hand-back of a workbench action, as
         expect(heldLines.answerHeld).not.toHaveBeenCalled()
     })
 
-    it("answers not_found for a route the workspace does not hold, and nothing_held when there was nothing to give back", async () => {
+    it("answers not_found for a route the workspace does not hold, and nothing_held (no event delivered) when there was nothing to give back", async () => {
         const { door, heldLines, presses, routes } = await build([])
-        heldLines.answerHeld.mockResolvedValue(0)
 
         await expect(door.handAs("ws-1", "m-staff", "route-1")).resolves.toEqual({
             outcome: "nothing_held",
@@ -312,6 +327,7 @@ describe("HoldReleaseDoorService.handAs (the hand-back of a workbench action, as
         })
         routes.get.mockResolvedValue(null)
         await expect(door.handAs("ws-1", "m-staff", "route-x")).resolves.toEqual({ outcome: "not_found", answered: 0 })
+        expect(heldLines.answerHeld).not.toHaveBeenCalled()
         expect(presses.record).not.toHaveBeenCalled()
     })
 })

@@ -4,16 +4,19 @@ import { OPENAPI_PROVIDER } from "@modules/domain/openapi-tools"
 import { ABILITY_LABELS, KIND_LABELS, PROVIDER_LABELS } from "./messages/provider-abilities.labels"
 import {
     PROVIDER_CATALOGUE,
+    bindNodeProviders,
     holdsTool,
     isChannelBound,
     isProviderBound,
     isProviderParted,
     isProviderTool,
     judgeAttachment,
+    pickAccountOf,
     providerOfChannel,
     providerSpecOf,
     providersHolding,
     providersOfDeclaration,
+    unpickedOf,
 } from "./provider-abilities.policy"
 import { moduleProvidersOf } from "./agent-accounts.service"
 
@@ -148,5 +151,96 @@ describe("the providers a fresh agent is attached to", () => {
             "smtp",
         ])
         expect(providersOfDeclaration(undefined)).toEqual([])
+    })
+})
+
+describe("which of several accounts of one provider a step's call uses (pickAccountOf)", () => {
+    const live = { provider: "bank", connectionId: "live" }
+    const sandbox = { provider: "bank", connectionId: "sandbox" }
+    const both = [live, sandbox]
+
+    it("binds nothing when the agent holds no account of the provider (the kill switch)", () => {
+        expect(pickAccountOf([], null)).toEqual({ kind: "none" })
+        expect(pickAccountOf([], "live", { triggerConnectionId: "live", usedConnectionIds: ["live"] })).toEqual({ kind: "none" })
+    })
+
+    it("binds the one account exactly as before, whatever the run or a default says", () => {
+        expect(pickAccountOf([live], null)).toEqual({ kind: "picked", account: live, by: "only" })
+        expect(pickAccountOf([live], "sandbox", { triggerConnectionId: "sandbox", usedConnectionIds: ["sandbox"] })).toEqual({
+            kind: "picked",
+            account: live,
+            by: "only",
+        })
+    })
+
+    it("(1) the account the run's trigger came in on wins over the run's earlier calls and the default", () => {
+        expect(pickAccountOf(both, "live", { triggerConnectionId: "sandbox", usedConnectionIds: ["live"] })).toEqual({
+            kind: "picked",
+            account: sandbox,
+            by: "trigger",
+        })
+    })
+
+    it("(2) an account the run already used wins over the default, the most recent use first", () => {
+        expect(pickAccountOf(both, "live", { usedConnectionIds: ["sandbox", "live"] })).toEqual({
+            kind: "picked",
+            account: sandbox,
+            by: "run",
+        })
+        expect(pickAccountOf(both, "live", { triggerConnectionId: null, usedConnectionIds: ["elsewhere", "sandbox"] })).toEqual({
+            kind: "picked",
+            account: sandbox,
+            by: "run",
+        })
+    })
+
+    it("(3) the agent's default account decides when the run names none", () => {
+        expect(pickAccountOf(both, "sandbox")).toEqual({ kind: "picked", account: sandbox, by: "default" })
+        expect(pickAccountOf(both, "live", { usedConnectionIds: [] })).toEqual({ kind: "picked", account: live, by: "default" })
+    })
+
+    it("(4) names the choice to make when nothing picks: the candidates, never a guess", () => {
+        expect(pickAccountOf(both, null)).toEqual({ kind: "needs_pick", candidates: both })
+        expect(pickAccountOf(both, null, { triggerConnectionId: undefined, usedConnectionIds: [] })).toEqual({
+            kind: "needs_pick",
+            candidates: both,
+        })
+    })
+
+    it("reads a fact that names an account outside the candidates as naming nothing", () => {
+        expect(pickAccountOf(both, "gone", { triggerConnectionId: "gone", usedConnectionIds: ["gone"] })).toEqual({
+            kind: "needs_pick",
+            candidates: both,
+        })
+        expect(pickAccountOf(both, "gone", { triggerConnectionId: "gone", usedConnectionIds: ["sandbox"] })).toEqual({
+            kind: "picked",
+            account: sandbox,
+            by: "run",
+        })
+    })
+})
+
+describe("the binding of a node's providers (bindNodeProviders, unpickedOf)", () => {
+    const live = { provider: "bank", connectionId: "live" }
+    const sandbox = { provider: "bank", connectionId: "sandbox" }
+    const mail = { provider: "mail", connectionId: "mail-1" }
+    const none = (): null => null
+
+    it("binds, in the node's order, each provider's one account; a provider with none binds nothing", () => {
+        expect(bindNodeProviders(["mail", "bank", "mail", "chat"], [live, mail], none)).toEqual([mail, live])
+    })
+
+    it("of several accounts of one provider binds the one the order picks, and nothing when none is picked", () => {
+        expect(bindNodeProviders(["bank"], [live, sandbox], none)).toEqual([])
+        expect(bindNodeProviders(["bank"], [live, sandbox], () => "sandbox")).toEqual([sandbox])
+        expect(bindNodeProviders(["bank"], [live, sandbox], () => "live", { triggerConnectionId: "sandbox" })).toEqual([sandbox])
+        expect(bindNodeProviders(["bank", "mail"], [live, sandbox, mail], none, { usedConnectionIds: ["live"] })).toEqual([live, mail])
+    })
+
+    it("lists the providers still to pick, in the node's order, with their candidate accounts", () => {
+        expect(unpickedOf(["mail", "bank"], [live, sandbox, mail], none)).toEqual([{ provider: "bank", connectionIds: ["live", "sandbox"] }])
+        expect(unpickedOf(["bank"], [live, sandbox], () => "live")).toEqual([])
+        expect(unpickedOf(["bank"], [live], none)).toEqual([])
+        expect(unpickedOf(["bank"], [live, sandbox], none, { triggerConnectionId: "live" })).toEqual([])
     })
 })

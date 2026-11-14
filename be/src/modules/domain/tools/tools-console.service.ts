@@ -62,6 +62,15 @@ export class ToolsConsoleService {
         attachmentDone(await this.accounts.attach({ workspaceId: actor.workspaceId, agentId }, wish, actor.principalId))
     }
 
+    /**
+     * Makes the agent's attachment to an account its DEFAULT account of that provider (the owner's pick when the agent holds several
+     * accounts of one provider); the default it replaces loses the flag. Refused (`not_attached`) when the agent holds no such attachment.
+     */
+    async setProviderDefault(actor: ConnectionActor, agentId: string, connectionId: string): Promise<void> {
+        await this.connections.authorize(actor, MANAGER)
+        attachmentDone(await this.accounts.setDefault({ workspaceId: actor.workspaceId, agentId }, connectionId, actor.principalId))
+    }
+
     /** Detaches an agent from an account: the kill switch (every tool of that account becomes unavailable to the agent). */
     async detachProvider(actor: ConnectionActor, agentId: string, connectionId: string): Promise<void> {
         await this.connections.authorize(actor, MANAGER)

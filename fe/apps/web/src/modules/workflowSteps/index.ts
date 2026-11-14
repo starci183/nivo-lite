@@ -23,5 +23,6 @@ export {
     withAccountAdded,
     withAccountRemoved,
     withNodeMode,
+    nodeModeOf,
 } from "./workflowAccounts"
 export type { StepAccountsWords } from "./workflowAccounts"

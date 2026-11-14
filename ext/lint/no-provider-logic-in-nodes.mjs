@@ -1,13 +1,13 @@
 // project-ext/no-provider-logic-in-nodes
 // ext/manifest.json rule NIVO-NODES-1 (doc ext/docs/NIVO-NODES-1.md); loaded by the harness under the plugin `project-ext` as `project-ext/no-provider-logic-in-nodes`.
-// Enforces the node frame in package node code (`packages/*/src/nodes/**` and any file that calls `defineTemplateNode`):
+// Enforces the node frame in package node code (`packages/*/src/**/nodes/**` and any file that calls `defineTemplateNode`):
 //   - no `defineTool` / `defineEffect` / `defineNode` call: the engine alone defines tools and effects, and `defineNode` belongs only to
-//     the four engine control nodes of `packages/blocks-core/src/nodes/core/**`;
+//     the four engine control nodes of `packages/blocks-core/src/shared/nodes/core/**`;
 //   - no comparison of a value with a provider constant (`PROVIDER.x` of the names entry, or a generated `*_PROVIDER`): `===`, `!==`,
 //     `==`, `!=`, a `switch` on it or a `case` of it. Providers are adapters the ToolRunner picks; a node never branches on one;
 //   - no object property named `dedupeKey` / `onceKey`: the replay ledger keys calls, a node never types a dedupe key;
 //   - no import from a `vocabulary/*effects*` module: effect payloads are the engine's.
-// The engine's control nodes (`controlNodeFiles`, `packages/blocks-core/src/nodes/core/**`: call-workflow, for-each, if, outcome and
+// The engine's control nodes (`controlNodeFiles`, `packages/blocks-core/src/shared/nodes/core/**`: call-workflow, for-each, if, outcome and
 // their specs) are the engine's own legacy `defineNode` code, not a package's feature: there `defineNode` is allowed, a hand-off may key
 // its effect (`dedupeKey` / `onceKey`: the tag of the target agent is written once per run and target) and a file may import the
 // core effects (`vocabulary/effects`, what a control node runs and its spec installs). `defineTool` / `defineEffect` and every
@@ -32,8 +32,8 @@ import {
 const CONCEPT = conceptOf("tools")
 
 const DEFAULTS = {
-    nodeFiles: ["packages/*/src/nodes/**"],
-    controlNodeFiles: ["packages/blocks-core/src/nodes/core/**"],
+    nodeFiles: ["packages/*/src/**/nodes/**"],
+    controlNodeFiles: ["packages/blocks-core/src/shared/nodes/core/**"],
 }
 
 /** The SDK's definition helpers a node file never calls (defineNode: only the control nodes). */

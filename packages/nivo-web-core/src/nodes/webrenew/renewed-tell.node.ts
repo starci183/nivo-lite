@@ -57,20 +57,23 @@ const output: z.ZodType<RenewedTellOutput> = z.object({
 })
 
 const GOAL =
-    "Tell the customer where their renewal stands, in ONE message of the given `form`. Say the service is renewed only when `state` is " +
-    "`renewed`; for `pending_person` say the payment is received and the renewal is being done; never write a date the input does not " +
-    "give. Write the words only: the step sends them."
+    "Tell the customer their service is renewed, in ONE message of the given `form`: the step runs only when `outcome` is `renewed`. " +
+    "Name the new end date only as `newExpiresOn` gives it; never write a date the input does not give. Write the words only: the step " +
+    "sends them."
 
-const TEXT = "Da ben em da nhan duoc tien gia han ten mien example.vn va dang gia han, xong em bao anh ngay a."
+const TEXT = "Da ben em da gia han ten mien example.vn 12 thang, han moi den 12/12/2027. Cam on anh a."
 const SUBJECT = "Gia han ten mien example.vn"
 
 const RENEWAL: RenewOutput = {
     renewalId: RENEWAL_ID,
     serviceCode: "EXAMPLE-TM",
     termMonths: 12,
-    state: "pending_person",
-    dryRun: true,
-    newExpiresOn: null,
+    outcome: "renewed",
+    reason: null,
+    reference: "INET-ORD-7781",
+    provider: "inet",
+    newExpiresOn: "2027-12-12",
+    expiresBefore: "2026-12-12",
 }
 
 /** The answer of a step that told nobody, with the reason. */
@@ -82,10 +85,11 @@ const notTold = (refusal: string): RenewedTellOutput => ({
 })
 
 /**
- * `webrenew.renewed-tell` (Tell the customer where the renewal stands): a side step (`blocking: false`) after the team is told.
+ * `webrenew.renewed-tell` (Tell the customer the renewal is done): a side step (`blocking: false`) after the team is told, reached ONLY
+ * when the registrar renewed (R57: a pending, refused or not renewable renewal tells the customer nothing).
  * The run serves no conversation (the money chain starts at the bank), so the reach is the data's: the lead Accounting named,
  * else the CRM customer's contact read here (a lead contact, else a mail address: a draft a person sends). The agent writes the
- * words only as the CRM's state says; the step sends them, by itself, mode `auto` (the mail is a draft a person sends). No way to reach the customer, the CRM's refusal of the
+ * words only as the renewal's outcome says; the step sends them by itself (mode `auto`, R83). No way to reach the customer, the CRM's refusal of the
  * customer read, or a refused send, is said in the output.
  */
 export const webrenewRenewedTellNode: TemplateNode<typeof input, typeof output, typeof params> = defineTemplateNode({
@@ -93,6 +97,7 @@ export const webrenewRenewedTellNode: TemplateNode<typeof input, typeof output, 
     title: webrenewText("node.renewedTell.title"),
     description: { vi: "B\u00e1o kh\u00e1ch t\u00ecnh tr\u1ea1ng gia h\u1ea1n d\u1ecbch v\u1ee5 \u0111\u00fang nh\u01b0 h\u1ec7 th\u1ed1ng kh\u00e1ch h\u00e0ng ghi.", en: "Tells the customer where their service renewal stands, exactly as the customer system records it." },
     tools: [CRM_NIVOWEB.get_customers_code, TOOL.customerMessageSend, TOOL.mailMessageSend],
+    // R83 (owner, interim, the CEO reviews later): a notice of data the CRM already holds (the renewal is recorded) goes by itself.
     mode: "auto",
     accounts: [PROVIDER.zaloOa, PROVIDER.telegram, PROVIDER.meta, PROVIDER.smtp, CRM_NIVOWEB_PROVIDER],
     params,
@@ -123,7 +128,7 @@ export const webrenewRenewedTellNode: TemplateNode<typeof input, typeof output, 
     },
     examples: [
         {
-            name: "a dry-run renewal waiting for a person: tells the customer it is being done, by the lead Accounting named",
+            name: "a renewed domain: tells the customer the new end date, by the lead Accounting named",
             params: {},
             input: { customerCode: "KH-001", contactId: LEAD_ID, renewal: RENEWAL, locale: "vi" },
             agent: [{ answer: { subject: null, text: TEXT } }],

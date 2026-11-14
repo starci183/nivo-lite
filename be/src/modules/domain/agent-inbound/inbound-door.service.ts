@@ -60,7 +60,7 @@ export class InboundDoorService {
     private async targetsOf(event: InboundEvent, adapter: InboundAdapter): Promise<ReadonlyArray<EventTarget>> {
         if (event.agentId === null) return this.events.agentsFor(event.workspaceId, event.eventType, adapter.key)
         await this.access.agent(event.workspaceId, event.agentId)
-        return [{ agentId: event.agentId, probeKey: null }]
+        return [{ agentId: event.agentId }]
     }
 
     /** Writes the wake and opens its run for one agent; false when the chain stopped or the wake already existed. */
@@ -85,7 +85,6 @@ export class InboundDoorService {
                 ...adapter.wakeContextOf?.(event),
                 eventName: event.eventType,
                 inbound: encodeInbound(inbound),
-                ...(target.probeKey === null ? {} : { probeKey: target.probeKey }),
             },
             actorMemberId: memberOf(event),
             ...(event.scopeKey === null ? {} : { scopeKey: event.scopeKey }),

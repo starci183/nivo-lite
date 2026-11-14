@@ -15,6 +15,7 @@ import {
     type PublicHostClient,
 } from "@modules/integrations/data-sources"
 import { OPENAPI_SOURCE_KEYS } from "@modules/domain/openapi-tools"
+import { OpenApiReachRegistryService } from "@modules/domain/openapi-provider"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import {
     OpenApiConnectorService,
@@ -70,6 +71,7 @@ export class OpenApiNativeService implements NativeToolFamily {
         @Optional() abilities?: AgentAccountsService,
         @Optional() conversations?: ConversationContactsService,
         @Optional() contacts?: ContactsService,
+        @Optional() reaches?: OpenApiReachRegistryService,
     ) {
         this.connector = new OpenApiConnectorService(SOURCE, installedSourcesOf(SOURCE), {
             bindings,
@@ -79,6 +81,7 @@ export class OpenApiNativeService implements NativeToolFamily {
             host,
             abilities,
             customerLinks: conversationLinksOf(conversations, contacts),
+            reaches,
         })
         this.manifest = this.connector.manifest
     }

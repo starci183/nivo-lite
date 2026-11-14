@@ -64,16 +64,8 @@ export class MetaInboxService {
      */
     accept(rawBody: RawDelivery, signature: DeliverySignature): Promise<void> {
         return this.entityManager.transaction(async (manager) => {
-            const read = parseJsonText(rawBody?.toString("utf8") ?? "")
-            if (
-                rawBody === undefined ||
-                signature === undefined ||
-                !read.ok ||
-                !isRecord(read.value) ||
-                Array.isArray(read.value)
-            )
-                throw new MetaInboxError({ code: MetaInboxErrorCode.DeliveryInvalid })
-            const events = this.receipts.parse(read.value)
+            if (signature === undefined) throw new MetaInboxError({ code: MetaInboxErrorCode.DeliveryInvalid })
+            const events = this.eventsOf(rawBody)
             const owners = await this.ownersOf(events, manager)
             await eachInOrder(events, (event) => {
                 const surface = surfaceOf(event)
@@ -81,6 +73,26 @@ export class MetaInboxService {
                 return owner === null ? Promise.resolve() : this.receive(event, owner, manager)
             })
         })
+    }
+
+    /**
+     * Records the delivery of a SANDBOX account (the sandbox door of the Meta webhook, whose route names the account and whose sandbox key
+     * the door proved): every event of the body belongs to that account, whatever Page or Instagram id the body names (a sandbox account
+     * holds none), and is written once as a `meta.event` row of it exactly as a signed live delivery is.
+     */
+    acceptSandbox(rawBody: RawDelivery, owner: MetaSurfaceOwner): Promise<void> {
+        return this.entityManager.transaction(async (manager) => {
+            const events = this.eventsOf(rawBody)
+            await eachInOrder(events, (event) => this.receive(event, owner, manager))
+        })
+    }
+
+    /** The events of a receipt's raw body; a missing body, or one that is no JSON object, is an invalid delivery. */
+    private eventsOf(rawBody: RawDelivery): Array<MetaEvent> {
+        const read = parseJsonText(rawBody?.toString("utf8") ?? "")
+        if (rawBody === undefined || !read.ok || !isRecord(read.value) || Array.isArray(read.value))
+            throw new MetaInboxError({ code: MetaInboxErrorCode.DeliveryInvalid })
+        return this.receipts.parse(read.value)
     }
 
     /**

@@ -1,4 +1,5 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { SANDBOX_KEY_HEADER } from "@modules/domain/provider-sandbox"
 import type { Request } from "express"
 import { BankFeedReceiptsService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
@@ -27,6 +28,7 @@ export class CassoWebhook {
         @Param("connectionId") connectionId: string,
         @Headers("x-casso-signature") signature: string | undefined,
         @Headers("secure-token") secureToken: string | undefined,
+        @Headers(SANDBOX_KEY_HEADER) sandboxKey?: string,
     ): Promise<void> {
         await this.signature.verify({
             provider: "casso",
@@ -35,6 +37,7 @@ export class CassoWebhook {
             signature,
             // The V1 token rides the timestamp slot because the proof request has no second header slot.
             timestamp: secureToken,
+            sandboxKey,
         })
         await this.feed.acceptCassoDelivery(request.rawBody, connectionId)
     }

@@ -12,7 +12,7 @@
       "@nivo-lite/agent-sdk": ["../../../packages/agent-sdk/src/index.ts"],
       "@nivo-lite/agent-sdk/*": ["../../../packages/agent-sdk/src/*"],
       "@nivo-lite/blocks-core": ["../../../packages/blocks-core/src/index.ts"],
-      "@nivo-lite/blocks-core/graph": ["../../../packages/blocks-core/src/graph-cards.ts"],
+      "@nivo-lite/blocks-core/graph": ["../../../packages/blocks-core/src/shared/graph-cards.ts"],
       "@nivo-lite/blocks-core/*": ["../../../packages/blocks-core/src/*"],
       "@nivo-lite/plugin-registry": ["../../../packages/plugin-registry/src/index.ts"],
       "@nivo-lite/plugin-registry/*": ["../../../packages/plugin-registry/src/*"]

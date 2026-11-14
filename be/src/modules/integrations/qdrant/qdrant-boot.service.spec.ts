@@ -21,14 +21,14 @@ const build = async () => {
 }
 
 describe("QdrantBootService", () => {
-    it("prepares both collections once when the app starts", async () => {
+    it("prepares the collection of every kind once when the app starts", async () => {
         const { boot, client, logger } = await build()
 
         await boot.onApplicationBootstrap()
         await expect(boot.prepare()).resolves.toBe(true)
 
-        expect(client.ensure.mock.calls.map(([kind]) => kind)).toEqual(["passage", "truth"])
-        expect(logger.info).toHaveBeenCalledWith(QdrantLogEvent.Prepared, { kinds: 2 })
+        expect(client.ensure.mock.calls.map(([kind]) => kind)).toEqual(["passage", "truth", "base"])
+        expect(logger.info).toHaveBeenCalledWith(QdrantLogEvent.Prepared, { kinds: 3 })
     })
 
     it("refuses to start on a collection of another vector size: the mismatch is thrown, never swallowed", async () => {
@@ -50,6 +50,7 @@ describe("QdrantBootService", () => {
         expect(logger.warn).toHaveBeenCalledWith(QdrantLogEvent.Unreachable, { reason: QdrantErrorCode.Unavailable })
 
         await expect(boot.prepare()).resolves.toBe(true)
-        expect(client.ensure).toHaveBeenCalledTimes(3)
+        // The failed boot stopped at the first kind; the next ask prepares all three.
+        expect(client.ensure).toHaveBeenCalledTimes(4)
     })
 })

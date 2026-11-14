@@ -128,6 +128,11 @@ export type {
     StoredOr,
     StoredPresence,
     StoredRef,
+    LoopExitLabels,
+    LoopUnsuccessfulSpec,
+    NoticeFactSpec,
+    StepUnsuccessfulSpec,
+    UnsuccessfulThen,
 } from "./graph-spec-v2.types"
 export {
     CALL_WORKFLOW_STEP_V2,
@@ -148,6 +153,7 @@ export {
     LOOP_UNTIL_CAP,
     LOOP_UNTIL_WAIT_CAP,
     OUTCOME_STEP_V2,
+    UNSUCCESSFUL_FACTS_MAX,
     WAIT_ROUTE_MEMBER,
     WAIT_STEP,
     WAIT_TIMEOUT_ROUTE,

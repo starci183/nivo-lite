@@ -43,8 +43,6 @@ export type {
     EmbeddedStatus,
     FactEmbeddingState,
     NearRead,
-    WantingArm,
-    WantingPage,
 } from "./brain-fact-embeddings.contracts"
 export { factEmbedHashOf, factEmbedTextOf, needsEmbedding } from "./embedding-standard.policy"
 export type { EmbeddingIdentity } from "./embedding-standard.policy"

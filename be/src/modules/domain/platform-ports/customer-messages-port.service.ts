@@ -9,7 +9,9 @@ const lineOf = (line: CustomerLine): PortLine => ({
     direction: line.direction,
     saidAt: line.saidAt,
     text: line.text,
-    files: line.files,
+    // The SDK's line file has an address only (NEED posted: `notKept` and a nullable address on the SDK's `CustomerLineFile`); until it
+    // carries the reason, a file the shop could not keep reaches a package with no address, as before.
+    files: line.files.map((file) => ({ ...file, url: file.url ?? "" })),
     order: line.order,
     agentId: line.agentId,
     memberId: line.memberId,

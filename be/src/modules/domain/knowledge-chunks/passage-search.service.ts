@@ -3,9 +3,7 @@ import { Brackets, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { customerReadySelect, customerTrustWhere } from "./customer-trust.policy"
 import type {
-    MeaningHit,
     OptionalStoredPassage,
-    MeaningQuery,
     PassageLens,
     PassageStretch,
     StoredPassage,
@@ -17,8 +15,6 @@ import {
     STRETCH_MAX,
     boundedOf,
     isComplete,
-    meaningDistance,
-    meaningHitsOf,
     rankedWordsOf,
     storedPassageOf,
     wordHit,
@@ -32,8 +28,8 @@ import { KnowledgeChunkEntity } from "./persistence/entities"
 @Injectable()
 /**
  * The READ side of the passage store, the way a code assistant reads a big repository: find passages by words (the GIN index on
- * `fts`) or by meaning (the HNSW index on `embedding`), each leg ONE bounded statement that answers its own best passages, then read a
- * stretch of a document in order (the index on `(source_id, ord)`). Nothing here reads a whole workspace, and no statement scores
+ * `fts`, ONE bounded statement that answers its own best passages), read back by id what the vector index found by meaning, then read
+ * a stretch of a document in order (the index on `(source_id, ord)`). Nothing here reads a whole workspace, and no statement scores
  * every row. EVERY statement carries the lens: the workspace, the reader's module and instance, and for a customer audience
  * `visibility = 'public'` with the trust gate (`customerTrustWhere`); a caller cannot ask for more than its lens.
  */
@@ -76,22 +72,6 @@ export class PassageSearchService {
             .limit(boundedOf(query.limit, LEG_MAX))
             .getRawMany<PassageRawRow>()
         return wordHitsOf(rows, (coverage) => isComplete(coverage, ranked.total))
-    }
-
-    /**
-     * The passages of the lens nearest in meaning to a query vector, nearest first, then by id: only passages whose vector comes
-     * from the query's model are compared, and the statement orders by the distance alone so the vector index serves it.
-     */
-    async byMeaning(lens: PassageLens, query: MeaningQuery): Promise<ReadonlyArray<MeaningHit>> {
-        const rows = await this.inLens(lens)
-            .addSelect(meaningDistance("c"), "distance")
-            .andWhere("c.embeddingModel = :model")
-            .andWhere("c.embedding IS NOT NULL")
-            .setParameters({ model: query.model, vector: query.vector })
-            .orderBy("distance", "ASC")
-            .limit(boundedOf(query.limit, LEG_MAX))
-            .getRawMany<PassageRawRow>()
-        return meaningHitsOf(rows)
     }
 
     /**

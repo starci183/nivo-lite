@@ -6,7 +6,7 @@ import { CRM_NIVOWEB } from "./crm/nivoweb/api.generated"
 /*
  * The chat turns of the NIVO Web agents read the CRM, each only its own part (AGENTS-GRAPHS §9.1 decision 2, §9.5), through ONE shared
  * step factory (`nodes/team-answer`); no customer-facing node searches the CRM; a customer mail is a `nivo.tool.mail.message.send` of the
- * step that writes it, on the mail account, in mode `auto` (the `send_email` work item of the old steps is gone).
+ * step that writes it, on the mail account, in the R83 mode (`auto` for a notice of data the CRM holds, `ask` for AI-written mail about money or a commitment; the `send_email` work item is gone).
  */
 
 const graphs = new Map<string, TemplateGraph>(
@@ -115,7 +115,10 @@ describe("the chat turns of the NIVO Web agents", () => {
 })
 
 describe("the mail-writing steps", () => {
-    it("declare the mail send on the mail account, in mode `auto`, on the ten graphs that mail a customer", () => {
+    // R83 (owner, interim): AUTO = a notice of data the CRM holds (the first renewal reminder, the "renewed" notice); ASK = every other.
+    // WEBCORE-4b (ask ONE write): the four sends that chose chat or mail are split; the MAIL variant (`*-mail`) holds the mail send alone.
+    it("declare the mail send on the mail account, in the R83 mode, on the ten graphs that mail a customer", () => {
+        const AUTO = new Set(["webrenew.round send", "webrenew.renew renewed-tell"])
         // The step's one mode is what the send runs under (`nivo-frame.rights`), and the mail account is among its providers.
         const rows = [...graphs.values()].flatMap((graph) =>
             graph.spec.nodes.flatMap((step) =>
@@ -142,14 +145,14 @@ describe("the mail-writing steps", () => {
                 "webbooks.debt-round draft",
                 "webdesk.mail-tickets mail-reply-draft",
                 "webrenew.round send",
-                "webrenew.answer tell",
+                "webrenew.answer tell-mail",
                 "webrenew.renew renewed-tell",
-                "websales.round follow",
-                "websales.close pay",
-                "websales.won tell",
+                "websales.round follow-mail",
+                "websales.close pay-mail",
+                "websales.won tell-mail",
                 "websales.mail-enquiries draft",
             ]
-                .map((row) => `${row} ${PROVIDER.smtp} auto`)
+                .map((row) => `${row} ${PROVIDER.smtp} ${AUTO.has(row) ? "auto" : "ask"}`)
                 .sort(),
         )
         expect(callers.sort()).toEqual(rows.map((row) => row.split(" ").slice(0, 2).join(" ")).sort())

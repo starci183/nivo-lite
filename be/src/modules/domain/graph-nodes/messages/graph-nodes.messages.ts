@@ -18,6 +18,7 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_TOOL_FAILED": "Công cụ {{tool}} không chạy được: {{reason}}.",
         "errors.GRAPH_NODES_EFFECT_NOT_RECORDED": "Việc {{effect}} đã chạy nhưng chưa ghi được vào sổ.",
         "errors.GRAPH_NODES_EFFECT_KEY_TAKEN": "Khóa của việc {{effect}} đang do việc {{heldBy}} giữ nên không chạy.",
+        "errors.GRAPH_NODES_MODEL_ANSWER_INVALID": "Câu trả lời của AI không đúng dạng bước này cần: {{issues}}.",
     },
     en: {
         "errors.GRAPH_NODES_NODE_UNKNOWN": "The step {{node}} is not installed.",
@@ -35,5 +36,6 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_TOOL_FAILED": "The tool {{tool}} could not run: {{reason}}.",
         "errors.GRAPH_NODES_EFFECT_NOT_RECORDED": "The effect {{effect}} ran but could not be written to the ledger.",
         "errors.GRAPH_NODES_EFFECT_KEY_TAKEN": "The key of the effect {{effect}} is held by {{heldBy}}, so it did not run.",
+        "errors.GRAPH_NODES_MODEL_ANSWER_INVALID": "The AI answer did not fit what this step needs: {{issues}}.",
     },
 }

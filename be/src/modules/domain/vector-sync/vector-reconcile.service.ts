@@ -3,6 +3,7 @@ import { In, type EntityManager } from "typeorm"
 import {
     InjectVectorIndex,
     InjectVectorIndexBoot,
+    PLATFORM_TENANT,
     VECTOR_KINDS,
     type VectorIndex,
     type VectorIndexBoot,
@@ -81,9 +82,9 @@ interface WalkState {
     page: ReadonlyArray<VectorRow>
 }
 
-/** The distinct workspaces of some rows, at most the report's bound. */
+/** The distinct workspaces of some rows, at most the report's bound; the platform tenant has no founder to tell (its drift is logged). */
 const workspacesOf = (rows: ReadonlyArray<VectorRow>): ReadonlyArray<string> =>
-    [...new Set(rows.map((row) => row.workspaceId))].slice(0, REPORT_WORKSPACES_MAX)
+    [...new Set(rows.map((row) => row.workspaceId))].filter((tenant) => tenant !== PLATFORM_TENANT).slice(0, REPORT_WORKSPACES_MAX)
 
 @Injectable()
 /**
@@ -101,8 +102,8 @@ const workspacesOf = (rows: ReadonlyArray<VectorRow>): ReadonlyArray<string> =>
  */
 export class VectorReconcileService {
     constructor(
-        @Optional() @InjectVectorIndex() private readonly index: VectorIndex | null,
-        @Optional() @InjectVectorIndexBoot() private readonly boot: VectorIndexBoot | null,
+        @InjectVectorIndex() private readonly index: VectorIndex,
+        @InjectVectorIndexBoot() private readonly boot: VectorIndexBoot,
         @InjectVectorRowSources() private readonly sources: VectorRowSources,
         private readonly sync: VectorSyncService,
         private readonly queue: VectorSyncQueue,
@@ -114,9 +115,8 @@ export class VectorReconcileService {
 
     /** One run: every kind, inside its budget. Never throws for the index: a failure is counted, logged and tried again by the next run. */
     async run(): Promise<VectorReconcileDone> {
-        if (this.index == null) return { outcome: "off", kinds: {}, continued: false, driftRuns: 0, reported: 0 }
         const index = this.index
-        const prepared = await this.prepared()
+        const prepared = await this.boot.prepare()
         const tally = { stopped: false, repaired: false, unfinished: false, driftRuns: 0, reported: 0 }
         const kinds: Partial<Record<VectorKind, VectorReconcileKindDone>> = {}
         const now = this.clock.now()
@@ -166,11 +166,6 @@ export class VectorReconcileService {
         }
         this.logger.info(VectorSyncLogEvent.Reconciled, { ...done })
         return done
-    }
-
-    /** Whether the collections are prepared; an index that cannot be reached answers false (a size mismatch still throws: it must be seen). */
-    private prepared(): Promise<boolean> {
-        return this.boot == null ? Promise.resolve(true) : this.boot.prepare()
     }
 
     /** A run that could not reach the index: nothing walked, the cursors kept, the first rows' workspaces named as unserved. */

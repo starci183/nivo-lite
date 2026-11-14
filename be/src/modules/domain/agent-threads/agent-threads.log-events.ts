@@ -32,9 +32,22 @@ export enum AgentThreadsLogEvent {
     CustomerLineRefused = "agent_threads.customer_line_refused",
     /**
      * A step failed while a member of the shop holds the run's route (ruling R45): the run ended `skipped` with code `route_held`, no stop
-     * card and no lead freeze (`runId`, `stepKey`, `code`, `routeId`). The hand-back's resume event answers the person.
+     * card and no subject hold (`runId`, `stepKey`, `code`, `routeId`). The hand-back's resume event answers the person.
      */
     RouteHeldEnded = "agent_threads.route_held_ended",
+    /** A step failed in a class that runs again by itself (rule Q-2): the run parks on it until its retry timer. */
+    StepRetryParked = "agent_threads.step_retry_parked",
+    /** The wakes held behind a finished run are pending again (rule Q-1). */
+    HeldWakesReleased = "agent_threads.held_wakes_released",
+    /** The release of the wakes held behind a run failed; the sweep tries again. */
+    HeldWakesReleaseFailed = "agent_threads.held_wakes_release_failed",
+    /**
+     * R68: a step that declares its unsuccessful ending ended so (a customer send refused, an approval declined, the node's `cannot`, a loop
+     * out of rounds) and the engine told the team (`runId`, `stepKey`, `kind`, `then`). Never the words of the notice.
+     */
+    StepEndingTold = "agent_threads.step_ending_told",
+    /** R68: the team notice of an unsuccessful step could not be posted (`runId`, `stepKey`): the post door recorded the app error; the run follows its policy. */
+    StepEndingNotTold = "agent_threads.step_ending_not_told",
     /** A read a stop only adds to failed (`read`: given, memory, workflow_name, lead); the stop goes on without it. */
     StepReadFailed = "agent_threads.step_read_failed",
     /** The work engine refused to withdraw an approval stop's item (decided meanwhile, or gone); the stop no longer waits on it. */
@@ -61,6 +74,8 @@ export enum AgentThreadsLogEvent {
     ThreadAbandoned = "agent_threads.thread_abandoned",
     /** A run parked on an erased subject was ended (`subject_erased`), with the count of wakes held behind it that were dropped. */
     SubjectErasedRunEnded = "agent_threads.subject_erased_run_ended",
+    /** The erasure of subjects ended everything pending for them: parked runs, waiting wakes and armed timers, with the counts (R72 Q1). */
+    SubjectErasedWorkEnded = "agent_threads.subject_erased_work_ended",
     /** One pass of the thread sweep ended, with its counts. */
     SweepDone = "agent_threads.sweep_done",
     /** A reply in the team chat to the card of a stop was handed to the stop door (`runId`, `outcome`); never the reply's words. */

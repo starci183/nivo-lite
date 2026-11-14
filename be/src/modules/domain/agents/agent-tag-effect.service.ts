@@ -13,8 +13,7 @@ import {
     type NodeTurn,
 } from "@modules/domain/graph-nodes"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import { InjectChannelOwners, InjectInstallations } from "./agents.decorators"
-import type { ConversationChannelOwners, InstallationDirectory } from "./agents.port"
+import { WorkflowCallReachService } from "./workflow-call-reach.service"
 
 /** The effect this executor runs. */
 const AGENT_TAG = agentTagEffect.id
@@ -63,8 +62,7 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
     readonly effect: string = AGENT_TAG
 
     constructor(
-        @InjectInstallations() private readonly installations: InstallationDirectory,
-        @InjectChannelOwners() private readonly channelOwners: ConversationChannelOwners,
+        private readonly reach: WorkflowCallReachService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
         @Optional() @InjectPrimaryEntityManager() private readonly entityManager?: EntityManager,
         @Optional() private readonly triggers?: ProviderTriggersService,
@@ -81,7 +79,7 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
         const toAgentId =
             tag.toModuleKey === undefined
                 ? tag.toAgentId
-                : await this.agentOfModule(turn.workspaceId, tag.conversationId ?? turn.conversationId, tag.toModuleKey)
+                : await this.reach.agentOf(turn.workspaceId, tag.conversationId ?? turn.conversationId ?? null, tag.toModuleKey)
         if (toAgentId == null) throw refusalOf(AgentsErrorCode.TagTargetMissing, "EFFECT_PAYLOAD_INVALID")
         const eventKey = ledgerKeyOf(call)
         // A workflow call (`core.call-workflow`) is an event of the one pipeline: `workflow.called`, pinned, with its provenance.
@@ -133,28 +131,5 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
         if (woken !== undefined) return { kind: WAKE, id: woken.wakeId }
         if (result.repeats > 0) return { kind: WAKE, id: eventKey }
         throw refusalOf(AgentsErrorCode.TagRefused, "EFFECT_PAYLOAD_INVALID")
-    }
-
-    /**
-     * The agent of a module a tag goes to: the one that answers the channel of the turn's conversation (one role, many agents: each
-     * channel has one agent per role), else the oldest agent the workspace runs for the module.
-     */
-    private async agentOfModule(
-        workspaceId: string,
-        conversationId: string | null,
-        moduleKey: string,
-    ): Promise<string | null> {
-        const owner = await this.channelOwnerOf(workspaceId, conversationId, moduleKey)
-        return owner ?? (await this.installations.firstOfModule(workspaceId, moduleKey))?.agentId ?? null
-    }
-
-    /** The owner of the channel of the turn's conversation; none for a tag outside any conversation. */
-    private channelOwnerOf(
-        workspaceId: string,
-        conversationId: string | null,
-        moduleKey: string,
-    ): Promise<string | null> {
-        if (conversationId === null) return Promise.resolve(null)
-        return this.channelOwners.ownerAgentOf(workspaceId, conversationId, moduleKey)
     }
 }

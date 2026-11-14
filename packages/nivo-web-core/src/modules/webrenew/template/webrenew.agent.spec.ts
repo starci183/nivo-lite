@@ -7,7 +7,6 @@ import {
     templateGraphProblems,
 } from "@nivo-lite/agent-sdk/template"
 import { CRM_NIVOWEB_PROVIDER } from "../../../crm/nivoweb/api.generated"
-import { webrenewText } from "../copy"
 import { WEBRENEW_PROVIDERS } from "../webrenew.accounts"
 import { answerGraph } from "./answer.graph"
 import { mailRepliesGraph } from "./mail-replies.graph"
@@ -47,9 +46,6 @@ const stepsOf = (graph: TemplateGraph): ReadonlyArray<readonly [string, string]>
 /** The trigger verbs of a graph. */
 const verbsOf = (graph: TemplateGraph): ReadonlyArray<string> => graph.spec.triggers.map((one) => one.verb)
 
-/** The shared notice of a declined approval (blocks-core `team.declined-notice`). */
-const NOTICE = "team.declined-notice"
-
 /** A graph's compiled step by key, or a failed expectation. */
 const stepOf = (graph: TemplateGraph, key: string): GraphV2Step => {
     const step = graph.spec.nodes.find((one) => one.key === key)
@@ -57,56 +53,38 @@ const stepOf = (graph: TemplateGraph, key: string): GraphV2Step => {
     return step
 }
 
-/** What a blocking ask step's declined wiring names: the check, the notice (with the step's vi title) and the end. */
-interface DeclinedWiring {
+/** What a step's unsuccessful ending declares (R68): the policy, the outcome it ends at (or null) and its facts' labels and refs. */
+interface Unsuccessful {
     readonly step: string
-    readonly check: string
-    readonly notice: string
-    /** The `declined` outcome's key, or null: inside a loop body the item ends after the notice. */
-    readonly end: string | null
+    readonly then: "continue" | "end"
+    readonly outcome: string | null
     /** The loop whose body holds the step, or null outside a loop. */
     readonly loop: string | null
-    /** The plain (vi) title of the declined step, bound into the notice. */
-    readonly title: string
+    /** Each fact: its vi label and the ref it reads. */
+    readonly facts: ReadonlyArray<readonly [string, string]>
 }
 
 /**
- * The declined wiring of a blocking ask step, as compiled data: the step goes to an `if` that holds exactly when its `declined` is
- * true, whose yes is the shared notice (`team.declined-notice`, the step's vi title bound), which goes on to the `declined` outcome
- * or, in a loop body, nowhere (the item ends, the loop goes on).
+ * R68 (the engine reports): a declined approval (or the step's `cannot`) is the step's unsuccessful ending: the ENGINE posts the team
+ * notice with the declared facts and follows `then`. No graph of the agent draws `team.declined-notice` any more.
  */
-const expectDeclinedWiring = (graph: TemplateGraph, wiring: DeclinedWiring): void => {
+const expectUnsuccessful = (graph: TemplateGraph, wiring: Unsuccessful): void => {
     const step = stepOf(graph, wiring.step)
-    expect(step.kind === "node" ? step.next : undefined).toBe(wiring.check)
+    expect(step.kind).toBe("node")
+    if (step.kind !== "node") return
     expect(step.loop ?? null).toBe(wiring.loop)
-    const check = stepOf(graph, wiring.check)
-    expect(check.kind).toBe("if")
-    if (check.kind !== "if") return
-    expect(check.params.when).toEqual({
-        op: "eq",
-        ref: { $ref: `steps.${wiring.step}.output.declined`, default: null },
-        value: true,
-    })
-    expect(check.routes.yes).toBe(wiring.notice)
-    const notice = stepOf(graph, wiring.notice)
-    expect(notice.kind).toBe("node")
-    if (notice.kind !== "node") return
-    expect(notice.step).toBe(NOTICE)
-    expect(notice.loop ?? null).toBe(wiring.loop)
-    expect(notice.params["step"]).toEqual(wiring.title)
-    expect(notice.params["locale"]).toBe("vi")
-    // a notice inside a loop body says only that ITEM stopped; outside a loop, the run (the default, unbound)
-    expect(notice.params["scope"]).toBe(wiring.loop === null ? undefined : "item")
-    expect(notice.next ?? null).toBe(wiring.end)
-    if (wiring.end === null) return
-    const end = stepOf(graph, wiring.end)
-    expect(end.kind).toBe("outcome")
-    if (end.kind !== "outcome") return
-    expect(end.params.outcome).toBe("declined")
+    expect(step.unsuccessful?.then).toBe(wiring.then)
+    expect(step.unsuccessful?.outcome ?? null).toBe(wiring.outcome)
+    expect(step.unsuccessful?.facts.map((fact) => ["vi" in fact.label ? fact.label.vi : null, fact.value])).toEqual(
+        wiring.facts.map(([label, at]) => [label, objectLike({ $ref: at })]),
+    )
+    if (wiring.outcome === null) return
+    const end = stepOf(graph, wiring.outcome)
+    expect(end.kind === "outcome" ? end.params.outcome : undefined).toBe("declined")
 }
 
-/** The vi title of a Renewal step, as the notice binds it. */
-const titleOf = (key: Parameters<typeof webrenewText>[0]): string => webrenewText(key).vi
+/** The notice node the graphs drew before R68. */
+const NOTICE = "team.declined-notice"
 
 /** `expect.objectContaining` as the `unknown` a matcher slot takes. */
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -126,7 +104,8 @@ describe("the Renewal agent template (webrenew)", () => {
         }
     })
 
-    it("works with the CRM, the messaging accounts and the sending mailbox; the round is primary", () => {
+    // R57: + the domain registrars (iNET, Tino) the renewal renews at.
+    it("works with the CRM, the messaging accounts, the sending mailbox and the registrars; the round is primary", () => {
         expect(webrenewAgent.key).toBe("webrenew")
         expect(webrenewAgent.accounts).toEqual(WEBRENEW_PROVIDERS)
         expect(WEBRENEW_PROVIDERS).toEqual([
@@ -135,6 +114,8 @@ describe("the Renewal agent template (webrenew)", () => {
             PROVIDER.telegram,
             PROVIDER.meta,
             PROVIDER.smtp,
+            PROVIDER.inet,
+            PROVIDER.tino,
         ])
         expect(webrenewAgent.accounts).not.toContain(PROVIDER.nivo)
         expect(webrenewAgent.primary).toBe(roundGraph.key)
@@ -154,14 +135,19 @@ describe("the Renewal agent template (webrenew)", () => {
             // 2026-11-14 (one event pipeline): round + 1 (the generic trigger scope); answer, mail replies and renew + 1 (the caller's params
             // in `trigger.data`), answer and renew after one more bump of the same day.
             // 2026-11-14 04:50 (design moved): answer, mail replies and renew + 1, their trigger carries no `burst` (settle is the declaration's).
-            [roundGraph, 7],
+            // 2026-11-14 (R68, the engine reports): round, answer and mail replies + 1 (notice pairs gone, labels); renew stays 13 (never
+            // shipped: R68 folded into its notes).
+            [roundGraph, 8],
             // 2026-11-13: answer 7 and renew 6, the declined approval's outcome renamed `declined` (flipDecisions2026_11_13); then + 1 each
             // 2026-11-13: answer + 1 again (NW-1: the customer sends without a mail path, `close-thank`, `reply-answer`, `paid-ack`, declare `auto`)
             // 2026-11-14 (R53, the conversation as one run): the answer is a talk loop, version 14.
-            [answerGraph, 14],
-            [mailRepliesGraph, 7],
+            // 2026-11-14 (ask ONE write): answer 16, the quote send is split by channel (`tell`, `tell-mail`, `tell-told`).
+            [answerGraph, 16],
+            [mailRepliesGraph, 8],
             // 2026-11-14 (EF-G): renew + 1 (a declined team post ends `declined`)
-            [renewGraph, 12],
+            // 2026-11-14 (R57): renew 13, the registrar renews and the CRM records; only a renewed service tells the customer and invoices.
+            // 2026-11-14 (E-R57): renew 14, a pending order is read again (`settle`, `settled`).
+            [renewGraph, 14],
             // 2026-11-14 (EF-G): the chat turn + 1 (a declined answer post ends the turn `declined`)
             [teamChatGraph, 5],
         ] as const
@@ -177,13 +163,10 @@ describe("the Renewal agent template (webrenew)", () => {
         expect(stepsOf(roundGraph)).toEqual([
             ["due", "webrenew.due"],
             ["each", "loop"],
+            // R68: the declined send / record pairs (if + notice) are the steps' unsuccessful endings now.
             ["send", "webrenew.remind-send"],
-            ["send-declined", "if"],
-            ["send-notice", NOTICE],
             ["sent", "if"],
             ["record", "webrenew.remind-record"],
-            ["record-declined", "if"],
-            ["record-notice", NOTICE],
             ["report", "webrenew.round-report"],
             ["rounded", "outcome"],
         ])
@@ -202,9 +185,10 @@ describe("the Renewal agent template (webrenew)", () => {
             ["give-back", "hand-back"],
             ["message", "webrenew.round-message"],
             ["understand", "webrenew.understand-open"],
+            // R68: `reply-notice`, `open-declined` + `open-notice`, `tell-notice`, `record-declined` + `record-notice`,
+            // `close-declined` + `close-notice`, `paid-declined` + `paid-notice` are gone (the steps' unsuccessful endings).
             ["reply", "webrenew.reply-answer"],
             ["reply-declined", "if"],
-            ["reply-notice", NOTICE],
             ["linked", "if"],
             ["unlinked-tell", "webrenew.unlinked-tell"],
             ["settled", "if"],
@@ -213,27 +197,21 @@ describe("the Renewal agent template (webrenew)", () => {
             ["paid-said", "if"],
             ["open-each", "loop"],
             ["open", "webrenew.quote-open"],
-            ["open-declined", "if"],
-            ["open-notice", NOTICE],
             ["tell", "webrenew.quote-tell"],
+            // v16 (ask ONE write): the quote send is split by channel; `tell-told` merges the two for the steps after.
+            ["tell-mail", "webrenew.quote-tell-mail"],
+            ["tell-told", "webrenew.quote-told"],
             ["tell-declined", "if"],
-            ["tell-notice", NOTICE],
             ["record-each", "loop"],
             ["record", "webrenew.quote-record"],
-            ["record-declined", "if"],
-            ["record-notice", NOTICE],
             ["close-each", "loop"],
             ["close-record", "webrenew.close-record"],
-            ["close-declined", "if"],
-            ["close-notice", NOTICE],
             ["close-team", "webrenew.close-team"],
             ["close-thank", "webrenew.close-thank"],
             ["declined", "outcome"],
             ["answered", "outcome"],
             ["paid-team", "webrenew.paid-team"],
             ["paid-ack", "webrenew.paid-ack"],
-            ["paid-declined", "if"],
-            ["paid-notice", NOTICE],
         ])
     })
 
@@ -241,23 +219,31 @@ describe("the Renewal agent template (webrenew)", () => {
         expect(verbsOf(mailRepliesGraph)).toEqual([TRIGGER.workflowCalled])
         expect(stepsOf(mailRepliesGraph)).toEqual([
             ["each", "loop"],
+            // R68: `record-notice` is the record's unsuccessful ending; `record-declined` stays (it ends the mail with no team line).
             ["record", "webrenew.mail-reply-record"],
             ["record-declined", "if"],
-            ["record-notice", NOTICE],
             ["team", "webrenew.mail-reply-team"],
             ["recorded", "outcome"],
         ])
         expect(verbsOf(renewGraph)).toEqual([TRIGGER.workflowCalled])
+        // R57: check -> renew (registrar) -> record (CRM) -> team; only `renewed` tells the customer and invoices, else `not-renewed`.
         expect(stepsOf(renewGraph)).toEqual([
+            ["check", "webrenew.renew-check"],
+            // R68: `renew-declined` + `renew-notice` are the renewal's unsuccessful ending (end at `declined`).
             ["renew", "webrenew.renew"],
-            ["renew-declined", "if"],
-            ["renew-notice", NOTICE],
             ["declined", "outcome"],
+            // E-R57: a pending order is read again by the `settle` loop (its body step `recheck` is inside the loop).
+            ["settle", "loop"],
+            ["recheck", "webrenew.renew-recheck"],
+            ["settled", "if"],
+            ["record", "webrenew.renew-record"],
             ["renewed-team", "webrenew.renewed-team"],
             ["renewed-team-declined", "if"],
+            ["renewed-check", "if"],
             ["renewed-tell", "webrenew.renewed-tell"],
             ["to-invoice", "call-workflow"],
             ["renewed", "outcome"],
+            ["not-renewed", "outcome"],
         ])
         expect(verbsOf(teamChatGraph)).toEqual([TRIGGER.workflowCalled])
         expect(stepsOf(teamChatGraph)).toEqual([
@@ -271,98 +257,68 @@ describe("the Renewal agent template (webrenew)", () => {
     })
 })
 
-describe("a declined approval in the Renewal graphs (the owner's rule: a decision, never a failure)", () => {
-    it("the round: a declined send or record tells the team and ends that service's item; the round goes on", () => {
-        const loop = "each"
-        expectDeclinedWiring(roundGraph, {
-            step: "send",
-            check: "send-declined",
-            notice: "send-notice",
-            end: null,
-            loop,
-            title: titleOf("node.remindSend.title"),
-        })
-        expectDeclinedWiring(roundGraph, {
-            step: "record",
-            check: "record-declined",
-            notice: "record-notice",
-            end: null,
-            loop,
-            title: titleOf("node.remindRecord.title"),
-        })
-        // the send's other branch is the round's `sent` check; the record's has none (the item ends after the record)
-        const sendCheck = stepOf(roundGraph, "send-declined")
-        expect(sendCheck.kind === "if" ? sendCheck.routes.no : undefined).toBe("sent")
-        const recordCheck = stepOf(roundGraph, "record-declined")
-        expect(recordCheck.kind === "if" ? recordCheck.routes.no : undefined).toBeUndefined()
+describe("a declined approval in the Renewal graphs (the owner's rule: a decision, never a failure; R68: the engine reports it)", () => {
+    it("no graph of the agent draws the declined notice node any more", () => {
+        for (const graph of [roundGraph, answerGraph, mailRepliesGraph, renewGraph]) {
+            expect(stepsOf(graph).filter(([, step]) => step === NOTICE)).toEqual([])
+        }
+    })
+
+    it("the round: a declined send or record is told by the engine with the service's code and ends that item; the round goes on", () => {
+        expectUnsuccessful(roundGraph, { step: "send", then: "continue", outcome: null, loop: "each", facts: [["Mã dịch vụ", "item.serviceCode"]] })
+        expectUnsuccessful(roundGraph, { step: "record", then: "continue", outcome: null, loop: "each", facts: [["Mã dịch vụ", "item.serviceCode"]] })
+        // a declined send answers `sent: false`: the `sent` check ends the item; the record has no `next` (the item ends after it)
+        const send = stepOf(roundGraph, "send")
+        expect(send.kind === "node" ? send.next : undefined).toBe("sent")
+        const record = stepOf(roundGraph, "record")
+        expect(record.kind === "node" ? record.next ?? null : undefined).toBeNull()
         // the loop still collects the record, so the report names a declined record as not recorded
         const each = stepOf(roundGraph, "each")
         expect(each.kind === "loop" ? each.params : undefined).toMatchObject({ collect: "record" })
     })
 
     it("the answer: the three loops end the declined item; tell, reply and paid-ack end the run `declined`", () => {
-        expectDeclinedWiring(answerGraph, {
-            step: "open",
-            check: "open-declined",
-            notice: "open-notice",
-            end: null,
-            loop: "open-each",
-            title: titleOf("node.quoteOpen.title"),
-        })
-        expectDeclinedWiring(answerGraph, {
-            step: "record",
-            check: "record-declined",
-            notice: "record-notice",
-            end: null,
-            loop: "record-each",
-            title: titleOf("node.quoteRecord.title"),
-        })
-        expectDeclinedWiring(answerGraph, {
-            step: "close-record",
-            check: "close-declined",
-            notice: "close-notice",
-            end: null,
-            loop: "close-each",
-            title: titleOf("node.close.title"),
-        })
-        expectDeclinedWiring(answerGraph, {
+        expectUnsuccessful(answerGraph, { step: "open", then: "continue", outcome: null, loop: "open-each", facts: [["Mã dịch vụ", "item"]] })
+        expectUnsuccessful(answerGraph, { step: "record", then: "continue", outcome: null, loop: "record-each", facts: [["Mã dịch vụ", "item"]] })
+        expectUnsuccessful(answerGraph, { step: "close-record", then: "continue", outcome: null, loop: "close-each", facts: [["Mã dịch vụ", "item"]] })
+        expectUnsuccessful(answerGraph, {
             step: "tell",
-            check: "tell-declined",
-            notice: "tell-notice",
-            end: "declined",
+            then: "end",
+            outcome: "declined",
             loop: null,
-            title: titleOf("node.quoteTell.title"),
+            facts: [["Mã khách hàng", "steps.talk.output.last.customerCode"]],
         })
-        // R53: `reply` sits in the talk; a person's decline stops the conversation as it stopped the run of v13: its notice is the
-        // run's (no `scope: item`) and ends the round (no `next`), the talk's `until` then ends the talk and `declined-said` reaches
-        // `declined`.
-        const reply = stepOf(answerGraph, "reply")
-        expect(reply.kind === "node" ? [reply.next, reply.loop] : undefined).toEqual(["reply-declined", "talk"])
-        const replyNotice = stepOf(answerGraph, "reply-notice")
-        expect(replyNotice.kind === "node" ? [replyNotice.step, replyNotice.params["scope"], replyNotice.next ?? null] : undefined).toEqual([
-            NOTICE,
-            undefined,
-            null,
-        ])
-        expect(replyNotice.kind === "node" ? replyNotice.params["step"] : undefined).toEqual(titleOf("node.reply.title"))
-        expect(stepOf(answerGraph, "declined-said")).toMatchObject({ routes: { yes: "declined", no: "answered" } })
-        expectDeclinedWiring(answerGraph, {
+        expectUnsuccessful(answerGraph, {
             step: "paid-ack",
-            check: "paid-declined",
-            notice: "paid-notice",
-            end: "declined",
+            then: "end",
+            outcome: "declined",
             loop: null,
-            title: titleOf("node.paidAck.title"),
+            facts: [["Mã khách hàng", "steps.talk.output.last.customerCode"]],
         })
-        const tellCheck = stepOf(answerGraph, "tell-declined")
-        expect(tellCheck.kind === "if" ? tellCheck.routes.no : undefined).toBe("record-each")
-        // ledger 2026-11-13 (flipDecisions2026_11_13: a declined approval ends with outcome `declined`): the one outcome `declined`
-        // is reached by the customer's no (close-thank) and by the three notices of a person's decline outside a loop
-        const declinedEnds = answerGraph.spec.nodes.filter((one) => one.kind === "node" && one.next === "declined")
-        // R53: `reply-notice` now ends its round inside the talk (see above); the other three still end at `declined`.
-        expect(declinedEnds.map((one) => one.key)).toEqual(["tell-notice", "close-thank", "paid-notice"])
+        // R53 + R68: `reply` sits in the talk (an `until` body, where an `end` is not taken): the engine tells the team and the step goes on
+        // to `reply-declined`, which ends the round; the talk's `until` ends the talk and `declined-said` reaches `declined` on the reply's
+        // own `declined`.
+        expectUnsuccessful(answerGraph, {
+            step: "reply",
+            then: "continue",
+            outcome: null,
+            loop: "talk",
+            facts: [["Mã khách hàng", "steps.understand.output.customerCode"]],
+        })
+        const reply = stepOf(answerGraph, "reply")
+        expect(reply.kind === "node" ? reply.next : undefined).toBe("reply-declined")
         const replyCheck = stepOf(answerGraph, "reply-declined")
-        expect(replyCheck.kind === "if" ? replyCheck.routes.no : undefined).toBe("linked")
+        expect(replyCheck.kind === "if" ? [replyCheck.routes.yes ?? null, replyCheck.routes.no] : undefined).toEqual([null, "linked"])
+        expect(stepOf(answerGraph, "declined-said")).toMatchObject({
+            params: { when: { op: "eq", ref: objectLike({ $ref: "steps.talk.output.last.declined" }), value: true } },
+            routes: { yes: "declined", no: "answered" },
+        })
+        // `tell-declined` is business, kept: every request declined (each told by the engine) leaves nothing to quote -> `declined`
+        const tellCheck = stepOf(answerGraph, "tell-declined")
+        expect(tellCheck.kind === "if" ? [tellCheck.routes.yes, tellCheck.routes.no] : undefined).toEqual(["declined", "record-each"])
+        // the one outcome `declined` is reached by the customer's no (close-thank); a declined step reaches it through its option
+        const declinedEnds = answerGraph.spec.nodes.filter((one) => one.kind === "node" && one.next === "declined")
+        expect(declinedEnds.map((one) => one.key)).toEqual(["close-thank"])
     })
 
     it("the renewal: a declined team post ends `declined` with no notice; the customer is not told and Accounting is not called", () => {
@@ -377,35 +333,38 @@ describe("a declined approval in the Renewal graphs (the owner's rule: a decisio
             value: true,
         })
         expect(check.routes.yes).toBe("declined")
-        expect(check.routes.no).toBe("renewed-tell")
+        // R57: past the team line the `renewed-check` decides whether the customer is told (was: straight to `renewed-tell`).
+        expect(check.routes.no).toBe("renewed-check")
         const end = stepOf(renewGraph, "declined")
         expect(end.kind === "outcome" ? end.params.outcome : undefined).toBe("declined")
     })
 
-    it("the mail replies: a declined record tells the team and ends that mail; the team line runs only otherwise", () => {
-        expectDeclinedWiring(mailRepliesGraph, {
+    it("the mail replies: a declined record is told by the engine and ends that mail; the team line runs only otherwise", () => {
+        expectUnsuccessful(mailRepliesGraph, {
             step: "record",
-            check: "record-declined",
-            notice: "record-notice",
-            end: null,
+            then: "continue",
+            outcome: null,
             loop: "each",
-            title: titleOf("node.mailReply.title"),
+            facts: [
+                ["Mã dịch vụ", "item.serviceCode"],
+                ["Mã khách hàng", "item.customerCode"],
+            ],
         })
         const check = stepOf(mailRepliesGraph, "record-declined")
-        expect(check.kind === "if" ? check.routes.no : undefined).toBe("team")
+        expect(check.kind === "if" ? [check.routes.yes ?? null, check.routes.no] : undefined).toEqual([null, "team"])
     })
 
-    it("the renewal (money): a declined renewal tells the team and ends `declined`; the customer and Accounting hear nothing", () => {
-        expectDeclinedWiring(renewGraph, {
+    it("the renewal (money): a declined renewal is told by the engine and ends `declined`; the customer and Accounting hear nothing", () => {
+        expectUnsuccessful(renewGraph, {
             step: "renew",
-            check: "renew-declined",
-            notice: "renew-notice",
-            end: "declined",
+            then: "end",
+            outcome: "declined",
             loop: null,
-            title: titleOf("node.renew.title"),
+            facts: [["Mã dịch vụ", "trigger.data.serviceCode"]],
         })
-        const check = stepOf(renewGraph, "renew-declined")
-        expect(check.kind === "if" ? check.routes.no : undefined).toBe("renewed-team")
+        // R57 / E-R57: a pending order is read again (`settle`), then the registrar's answer is recorded in the CRM before the team line.
+        const renew = stepOf(renewGraph, "renew")
+        expect(renew.kind === "node" ? renew.next : undefined).toBe("settle")
     })
 })
 

@@ -7,7 +7,6 @@ import {
     templateGraphProblems,
 } from "@nivo-lite/agent-sdk/template"
 import { CRM_NIVOWEB_PROVIDER } from "../../../crm/nivoweb/api.generated"
-import { webbooksText } from "../copy"
 import { WEBBOOKS_PROVIDERS } from "../webbooks.accounts"
 import { debtRoundGraph } from "./debt-round.graph"
 import { invoiceGraph } from "./invoice.graph"
@@ -38,9 +37,6 @@ const triggers: TemplateTriggerLookup = {
     },
 }
 
-/** The shared notice of a declined approval (blocks-core `team.declined-notice`). */
-const NOTICE = "team.declined-notice"
-
 /** A graph's steps by key, each with its kind and, for a node step, its node id; a body step names its loop. */
 const stepsOf = (graph: TemplateGraph): ReadonlyArray<readonly [string, string]> =>
     graph.spec.nodes.map(
@@ -58,46 +54,43 @@ const stepOf = (graph: TemplateGraph, key: string): GraphV2Step => {
     return step
 }
 
-/** What a blocking ask step's declined wiring names: the check, the notice (with the step's title) and the end. */
-interface DeclinedWiring {
+/** What a blocking ask step's unsuccessful ending declares (R68): its exit, the policy, the outcome and the notice's facts. */
+interface UnsuccessfulWiring {
     readonly step: string
-    readonly check: string
-    readonly notice: string
-    /** The `declined` outcome's key, or null: inside a loop body the item ends after the notice. */
-    readonly end: string | null
-    /** The plain (vi) title of the declined step, bound into the notice. */
-    readonly title: string
-    /** The notice's scope: `item` inside a loop body (only the item is skipped), absent (the default `run`) outside one. */
-    readonly scope: "run" | "item"
+    /** The step's own exit (null: the item ends there, inside a loop body). */
+    readonly next: string | null
+    readonly then: "continue" | "end"
+    /** With `end`: the `declined` outcome's key. */
+    readonly outcome?: string
+    /** The facts: label (vi) and the ref read. */
+    readonly facts: ReadonlyArray<readonly [string, string]>
 }
 
 /**
- * The declined wiring of a blocking ask step, as compiled data: the step goes to an `if` that holds exactly when its `declined` is
- * true, whose yes is the shared notice (`team.declined-notice`, the step's title bound), which goes on to the `declined` outcome or,
- * in a loop body, nowhere (the item ends).
+ * R68: a declined (or refused) ask step is the step's stored `unsuccessful` ending: the ENGINE posts the team notice (the step, the typed
+ * reason, the facts the old hand-drawn `team.declined-notice` carried) and follows the policy; no `if` + notice pair is drawn any more.
  */
-const expectDeclinedWiring = (graph: TemplateGraph, wiring: DeclinedWiring): void => {
+const expectUnsuccessful = (graph: TemplateGraph, wiring: UnsuccessfulWiring): void => {
     const step = stepOf(graph, wiring.step)
-    expect(step.kind === "node" ? step.next : undefined).toBe(wiring.check)
-    const check = stepOf(graph, wiring.check)
-    if (check.kind !== "if") throw new Error(`${wiring.check} is no if`)
-    expect(check.params.when).toEqual({
-        op: "eq",
-        ref: expect.objectContaining({ $ref: `steps.${wiring.step}.output.declined` }),
-        value: true,
+    if (step.kind !== "node") throw new Error(`${wiring.step} is no node step`)
+    expect(step.next ?? null).toBe(wiring.next)
+    expect(step.unsuccessful).toEqual({
+        then: wiring.then,
+        ...(wiring.outcome === undefined ? {} : { outcome: wiring.outcome }),
+        facts: wiring.facts.map(([vi, at]) => ({
+            label: expect.objectContaining({ vi }),
+            value: expect.objectContaining({ $ref: at }),
+        })),
     })
-    expect(check.routes.yes).toBe(wiring.notice)
-    const notice = stepOf(graph, wiring.notice)
-    if (notice.kind !== "node") throw new Error(`${wiring.notice} is no node step`)
-    expect(notice.step).toBe(NOTICE)
-    expect(notice.params["step"]).toEqual(wiring.title)
-    if (wiring.scope === "item") expect(notice.params["scope"]).toEqual("item")
-    else expect(notice.params["scope"] ?? "run").toEqual("run")
-    expect(notice.next ?? null).toBe(wiring.end)
-    if (wiring.end === null) return
-    const end = stepOf(graph, wiring.end)
-    if (end.kind !== "outcome") throw new Error(`${wiring.end} is no outcome`)
+    if (wiring.outcome === undefined) return
+    const end = stepOf(graph, wiring.outcome)
+    if (end.kind !== "outcome") throw new Error(`${wiring.outcome} is no outcome`)
     expect(end.params.outcome).toBe("declined")
+}
+
+/** R68: no graph draws the shared declined notice any more (the engine reports). */
+const expectNoNotice = (graph: TemplateGraph): void => {
+    expect(graph.spec.nodes.filter((step) => step.kind === "node" && step.step === "team.declined-notice")).toEqual([])
 }
 
 /**
@@ -143,10 +136,17 @@ describe("the Accounting agent template (webbooks)", () => {
         }
     })
 
-    it("works with the CRM, the bank feeds and the sending mailbox; the invoice is primary", () => {
+    // R57: + MISA meInvoice, the e-invoice service the invoice is issued on.
+    it("works with the CRM, the bank feeds, the sending mailbox and the e-invoice service; the invoice is primary", () => {
         expect(webbooksAgent.key).toBe("webbooks")
         expect(webbooksAgent.accounts).toEqual(WEBBOOKS_PROVIDERS)
-        expect(WEBBOOKS_PROVIDERS).toEqual([CRM_NIVOWEB_PROVIDER, PROVIDER.sepay, PROVIDER.casso, PROVIDER.smtp])
+        expect(WEBBOOKS_PROVIDERS).toEqual([
+            CRM_NIVOWEB_PROVIDER,
+            PROVIDER.sepay,
+            PROVIDER.casso,
+            PROVIDER.smtp,
+            PROVIDER.misaMeinvoice,
+        ])
         expect(webbooksAgent.graphs.map((graph) => graph.key)).toEqual([
             "webbooks.invoice",
             "webbooks.payment",
@@ -159,61 +159,53 @@ describe("the Accounting agent template (webbooks)", () => {
 })
 
 describe("webbooks.invoice", () => {
-    it("is version 9, reached by a call, open to any caller", () => {
+    it("is version 12, reached by a call, open to any caller", () => {
         // ledger 2026-11-13 (`nivo-frame.rights`): every graph's catalogue version + 1 (one mode per node changed every compiled document).
-        expect(invoiceGraph.spec.catalogue?.version).toBe(9)
+        // 2026-11-14 (R57): 10, the issue on the MISA account, the issued invoice recorded in the CRM.
+        // 2026-11-14 (R68): 11, the declined draft / issue are the steps' unsuccessful ending (the engine tells the team).
+        // 2026-11-14 (E-R57): 12, the invoice is recorded with MISA's own `issuedOn`.
+        expect(invoiceGraph.spec.catalogue?.version).toBe(12)
         expect(invoiceGraph.key).toBe("webbooks.invoice")
         expect(invoiceGraph.spec.triggers).toEqual([{ verb: TRIGGER.workflowCalled }])
         expect(invoiceGraph.spec.entry.openTo).toBe("any")
     })
 
-    it("drafts, issues, mails a real invoice only, tells the team on both paths", () => {
+    // R57: an issued invoice with a number is recorded in the CRM first; `invoiced` needs that record, else `not-invoiced`.
+    it("drafts, issues, records and mails an issued invoice only, tells the team on every path", () => {
         expect(stepsOf(invoiceGraph)).toEqual([
             ["draft", "webbooks.invoice-draft"],
-            ["draft-declined", "if"],
-            ["draft-notice", NOTICE],
             ["issue", "webbooks.invoice-issue"],
-            ["issue-declined", "if"],
-            ["issue-notice", NOTICE],
             ["issued", "if"],
+            ["record", "webbooks.issue-record"],
             ["mail", "webbooks.invoice-mail"],
             ["team", "webbooks.invoice-team"],
             ["team-declined", "if"],
+            ["recorded", "if"],
             ["invoiced", "outcome"],
+            ["not-invoiced", "outcome"],
             ["declined", "outcome"],
         ])
     })
 
+    // R68: the `draft-declined`/`draft-notice` and `issue-declined`/`issue-notice` pairs became the steps' unsuccessful ending.
     it("a declined draft or a declined issue tells the team and ends declined; nothing after it runs", () => {
-        expectDeclinedWiring(invoiceGraph, {
-            step: "draft",
-            check: "draft-declined",
-            notice: "draft-notice",
-            end: "declined",
-            scope: "run",
-            title: webbooksText("node.invoice-draft.title").vi,
-        })
-        expect(stepOf(invoiceGraph, "draft-declined")).toMatchObject({ routes: { no: "issue" } })
-        expectDeclinedWiring(invoiceGraph, {
-            step: "issue",
-            check: "issue-declined",
-            notice: "issue-notice",
-            end: "declined",
-            scope: "run",
-            title: webbooksText("node.invoice-issue.title").vi,
-        })
-        expect(stepOf(invoiceGraph, "issue-declined")).toMatchObject({ routes: { no: "issued" } })
+        const facts = [["Mã dịch vụ", "trigger.data.serviceCode"]] as const
+        expectUnsuccessful(invoiceGraph, { step: "draft", next: "issue", then: "end", outcome: "declined", facts })
+        expectUnsuccessful(invoiceGraph, { step: "issue", next: "issued", then: "end", outcome: "declined", facts })
+        expectNoNotice(invoiceGraph)
     })
 
     it("a declined team post ends declined with no notice (the declined write is itself a team post)", () => {
-        expectTeamDeclined(invoiceGraph, { step: "team", check: "team-declined", yes: "declined", no: "invoiced" })
+        // R57: past the team line `recorded` decides `invoiced` / `not-invoiced` (was: straight to `invoiced`).
+        expectTeamDeclined(invoiceGraph, { step: "team", check: "team-declined", yes: "declined", no: "recorded" })
     })
 })
 
 describe("webbooks.payment", () => {
-    it("is version 11, woken by a bank credit on SePay or Casso, open to any caller", () => {
+    it("is version 12, woken by a bank credit on SePay or Casso, open to any caller", () => {
         // 2026-11-14: version 11 reads the credit's row id from the event's data (`trigger.data.transactionId`, the one event pipeline).
-        expect(paymentGraph.spec.catalogue?.version).toBe(11)
+        // 2026-11-14 (R68): 12, a declined record of money is the record step's unsuccessful ending.
+        expect(paymentGraph.spec.catalogue?.version).toBe(12)
         expect(paymentGraph.key).toBe("webbooks.payment")
         // Ledger (owner key triggerOneSource2026_11_12, CORRECTED 2026-11-12: one source per STREAM): the trigger lists its providers
         // again (`accounts`); Casso, cut by the single-account shape, is restored (two bank accounts = two sources, one = the founder's pick).
@@ -237,36 +229,31 @@ describe("webbooks.payment", () => {
                 ["purchase-team", "webbooks.purchase-paid-team"],
                 ["to-sales", "call-workflow"],
                 ["purchase-paid", "outcome"],
-                ["record-declined", "if"],
-                ["record-notice", NOTICE],
-                ["purchase-declined", "if"],
-                ["purchase-notice", NOTICE],
                 ["declined", "outcome"],
             ]),
         )
-        expect(paymentGraph.spec.nodes).toHaveLength(16)
+        // R68: 16 -> 12 (the two declined ifs and their notices are gone).
+        expect(paymentGraph.spec.nodes).toHaveLength(12)
         expect(paymentGraph.spec.nodes[0].key).toBe("credit")
     })
 
+    // R68: the `record-`/`purchase-declined` ifs and their notices became the record steps' unsuccessful ending.
     it("a declined record of money tells the team and ends declined: no team line, no hand-off", () => {
-        expectDeclinedWiring(paymentGraph, {
+        expectUnsuccessful(paymentGraph, {
             step: "record",
-            check: "record-declined",
-            notice: "record-notice",
-            end: "declined",
-            scope: "run",
-            title: webbooksText("node.renewal-paid.title").vi,
+            next: "record-team",
+            then: "end",
+            outcome: "declined",
+            facts: [["Mã dịch vụ", "steps.match.output.serviceCode"]],
         })
-        expect(stepOf(paymentGraph, "record-declined")).toMatchObject({ routes: { no: "record-team" } })
-        expectDeclinedWiring(paymentGraph, {
+        expectUnsuccessful(paymentGraph, {
             step: "purchase",
-            check: "purchase-declined",
-            notice: "purchase-notice",
-            end: "declined",
-            scope: "run",
-            title: webbooksText("node.purchase-paid.title").vi,
+            next: "purchase-team",
+            then: "end",
+            outcome: "declined",
+            facts: [["Mã đơn mua", "steps.match.output.purchaseCode"]],
         })
-        expect(stepOf(paymentGraph, "purchase-declined")).toMatchObject({ routes: { no: "purchase-team" } })
+        expectNoNotice(paymentGraph)
     })
 
     it("a declined team line is a side line: it skips that line only and the hand-off runs (the money is recorded)", () => {
@@ -278,9 +265,10 @@ describe("webbooks.payment", () => {
 })
 
 describe("webbooks.debt-round", () => {
-    it("is version 7, woken by the weekday 09:00 clock, open to the agent only", () => {
+    it("is version 8, woken by the weekday 09:00 clock, open to the agent only", () => {
         // ledger 2026-11-13 (`nivo-frame.rights`): every graph's catalogue version + 1 (one mode per node changed every compiled document).
-        expect(debtRoundGraph.spec.catalogue?.version).toBe(7)
+        // 2026-11-14 (R68): 8, a declined notice record is the record step's unsuccessful ending.
+        expect(debtRoundGraph.spec.catalogue?.version).toBe(8)
         expect(debtRoundGraph.key).toBe("webbooks.debt-round")
         expect(debtRoundGraph.spec.triggers).toEqual([
             { verb: TRIGGER.clockTick, args: { preset: "weekdays_at", at: "09:00" } },
@@ -298,8 +286,6 @@ describe("webbooks.debt-round", () => {
                 ["each/draft", "webbooks.notice-draft"],
                 ["each/drafted", "if"],
                 ["each/record", "webbooks.notice-record"],
-                ["each/record-declined", "if"],
-                ["each/record-notice", NOTICE],
                 ["report", "webbooks.round-report"],
                 ["report-declined", "if"],
                 ["reminded", "outcome"],
@@ -307,20 +293,15 @@ describe("webbooks.debt-round", () => {
                 ["declined", "outcome"],
             ]),
         )
-        expect(debtRoundGraph.spec.nodes).toHaveLength(14)
+        // R68: 14 -> 12 (the declined if and its notice are gone).
+        expect(debtRoundGraph.spec.nodes).toHaveLength(12)
     })
 
+    // R68: the `record-declined`/`record-notice` pair became the record step's unsuccessful ending (continue: the item ends there).
     it("a declined record tells the team and ends its item only; the round goes on to the report", () => {
-        expectDeclinedWiring(debtRoundGraph, {
-            step: "record",
-            check: "record-declined",
-            notice: "record-notice",
-            end: null,
-            scope: "item",
-            title: webbooksText("node.notice-record.title").vi,
-        })
-        expect(stepOf(debtRoundGraph, "record-declined")).toMatchObject({ loop: "each", routes: {} })
-        expect(stepOf(debtRoundGraph, "record-declined")).not.toHaveProperty("routes.no")
+        expectUnsuccessful(debtRoundGraph, { step: "record", next: null, then: "continue", facts: [["Mã dự án", "item.projectCode"]] })
+        expect(stepOf(debtRoundGraph, "record")).toMatchObject({ loop: "each" })
+        expectNoNotice(debtRoundGraph)
         expect(stepOf(debtRoundGraph, "each")).toMatchObject({ params: { collect: "record" }, next: "report" })
     })
 
@@ -337,9 +318,10 @@ describe("webbooks.debt-round", () => {
 })
 
 describe("webbooks.supplier-invoices", () => {
-    it("is version 7, reached by a call, open to any caller", () => {
+    it("is version 8, reached by a call, open to any caller", () => {
         // ledger 2026-11-13 (`nivo-frame.rights`): every graph's catalogue version + 1 (one mode per node changed every compiled document).
-        expect(supplierInvoicesGraph.spec.catalogue?.version).toBe(7)
+        // 2026-11-14 (R68): 8, a declined note is the note step's unsuccessful ending.
+        expect(supplierInvoicesGraph.spec.catalogue?.version).toBe(8)
         expect(supplierInvoicesGraph.key).toBe("webbooks.supplier-invoices")
         expect(supplierInvoicesGraph.spec.triggers).toEqual([{ verb: TRIGGER.workflowCalled }])
         expect(supplierInvoicesGraph.spec.entry.openTo).toBe("any")
@@ -352,27 +334,25 @@ describe("webbooks.supplier-invoices", () => {
                 ["each", "loop"],
                 ["each/check", "webbooks.supplier-check"],
                 ["each/note", "webbooks.supplier-note"],
-                ["each/note-declined", "if"],
-                ["each/note-notice", NOTICE],
                 ["report", "webbooks.supplier-report"],
                 ["report-declined", "if"],
                 ["checked", "outcome"],
                 ["declined", "outcome"],
             ]),
         )
-        expect(supplierInvoicesGraph.spec.nodes).toHaveLength(10)
+        // R68: 10 -> 8 (the declined if and its notice are gone).
+        expect(supplierInvoicesGraph.spec.nodes).toHaveLength(8)
     })
 
+    // R68: the `note-declined`/`note-notice` pair became the note step's unsuccessful ending (continue: the item ends there).
     it("a declined note tells the team and ends its item only; the report reads every item from the note", () => {
-        expectDeclinedWiring(supplierInvoicesGraph, {
+        expectUnsuccessful(supplierInvoicesGraph, {
             step: "note",
-            check: "note-declined",
-            notice: "note-notice",
-            end: null,
-            scope: "item",
-            title: webbooksText("node.supplier-note.title").vi,
+            next: null,
+            then: "continue",
+            facts: [["Số hoá đơn", "steps.check.output.invoiceNo"]],
         })
-        expect(stepOf(supplierInvoicesGraph, "note-declined")).not.toHaveProperty("routes.no")
+        expectNoNotice(supplierInvoicesGraph)
         expect(stepOf(supplierInvoicesGraph, "each")).toMatchObject({ params: { collect: "note" }, next: "report" })
     })
 

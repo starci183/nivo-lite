@@ -107,16 +107,24 @@ describe("ChannelSendExecutorService sending", () => {
         expect(ledger.rows).toEqual([])
     })
 
-    it("answers an unknown verdict as sent with state unknown, settled unknown in the ledger, so a retry never says it twice", async () => {
+    // R74 (QUEUE-DESIGN A.6 (a)): a Zalo timeout / 5xx after the request left was answered as a SENT message with state unknown, so the
+    // node went on as if it had spoken: no card, nothing re-sent. An outcome nobody knows is never a success: a typed failure.
+    it("an unknown verdict (timeout, 5xx after the request left) is the typed outcome-unknown failure, never a message; the ledger keeps `unknown`", async () => {
         const { executor, delivery, ledger } = await build()
         delivery.deliverToPerson.mockResolvedValue({ delivered: false, failure: null, outcome: "ambiguous" })
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
-            kind: "message",
-            id: "run:1",
-            facts: { delivered: false, state: "unknown", reason: "delivery_outcome_unknown", ...WHERE },
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: "delivery_outcome_unknown",
+            params: { effect: "nivo.tool.customer.message.send", sendKey: "run:1" },
         })
         expect(ledger.rows[0]?.state).toBe("unknown")
+        // Rule Q-3 (R74): the send declares itself repeatable, so asked again (the step's retry) the key that ENDED unknown is claimed
+        // again and sent under the same key: the provider is asked a second time, ONE ledger row, now delivered.
+        delivery.deliverToPerson.mockResolvedValue({ delivered: true, failure: null, outcome: "acknowledged" })
+        await executor.execute(TURN, SEND, CALL)
+        expect(delivery.deliverToPerson).toHaveBeenCalledTimes(2)
+        expect(ledger.rows).toHaveLength(1)
+        expect(ledger.rows[0]?.state).toBe("delivered")
     })
 })
 
@@ -132,7 +140,7 @@ describe("ChannelSendExecutorService the delivery ledger", () => {
         expect(ledger.rows).toHaveLength(1)
     })
 
-    it("answers a key in flight (claimed, never settled) as unknown and never sends it again (engine-core rule 9)", async () => {
+    it("a key in flight (claimed, never settled) is the typed outcome-unknown failure and is never sent again (engine-core rule 9)", async () => {
         const { executor, delivery, ledger, deliveries } = await build()
         await deliveries.claim("ws-1", {
             sendKey: "run:1",
@@ -148,10 +156,7 @@ describe("ChannelSendExecutorService the delivery ledger", () => {
             accountId: TELEGRAM_ACCOUNT,
         })
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({
-            kind: "message",
-            facts: { delivered: false, state: "unknown", reason: "delivery_outcome_unknown" },
-        })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({ code: "delivery_outcome_unknown" })
         expect(delivery.deliverToPerson).not.toHaveBeenCalled()
         expect(ledger.rows).toHaveLength(1)
     })
@@ -532,6 +537,23 @@ describe("ChannelSendExecutorService keeps the line whole in the core store", ()
 
         expect(claim.mock.calls[0]?.[1]).toMatchObject({ runId: null, stepKey: null, memberId: "m-1" })
         expect(claim.mock.calls[1]?.[1]).toMatchObject({ runId: "t", stepKey: "tell", memberId: null })
+    })
+
+    // MX-CORE observation (b): `customer_messages.step_key` of a loop round held the node key (`consult`) while the run's step is
+    // `talk[r2].consult`; the step's own delivered-lines read (`listByStep` by the run's step key) then never found a round's sends. The
+    // step key is the run's, read from the step call key the runner gives every send (`<run>:<step>:<digest>`), as the effect ledger reads it.
+    it("files a loop round's send under the run's step key (`talk[r2].consult`), read from the step's call key", async () => {
+        const { executor, deliveries } = await build()
+        const claim = jest.spyOn(deliveries, "claim")
+        const run = "0d7b02ea-1111-4222-8333-944f6094aaaa"
+        const step = { nodeKey: "consult", versionId: "v-1", workflowId: "wf-consult" }
+
+        await executor.execute({ ...TURN, turnId: run, step }, SEND, { key: `${run}:talk[r2].consult:5f3a9c`, dedupeKey: null })
+        // A key of another run, or of no step shape, keeps the node's key.
+        await executor.execute({ ...TURN, turnId: run, step }, SEND, { key: "run:2", dedupeKey: null })
+
+        expect(claim.mock.calls[0]?.[1]).toMatchObject({ runId: run, stepKey: "talk[r2].consult" })
+        expect(claim.mock.calls[1]?.[1]).toMatchObject({ runId: run, stepKey: "consult" })
     })
 
     it("claims a plain send with no files, no order and no member", async () => {

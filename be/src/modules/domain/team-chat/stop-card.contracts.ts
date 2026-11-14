@@ -18,7 +18,7 @@ export type StopCardKind = (typeof STOP_CARD_KINDS)[number]
  * the step is running again, once set the run went on. `skipped`: the founder skipped the step (the run ended). `timed_out`: a NIVO
  * deadline answered for the founder. `resolved`: the run went on or was closed with no decision of the founder.
  */
-export const STOP_CARD_STATES = ["open", "answered", "skipped", "timed_out", "resolved"] as const
+export const STOP_CARD_STATES = ["open", "answered", "skipped", "handed_back", "timed_out", "resolved"] as const
 
 /** Where the stop stands. */
 export type StopCardState = (typeof STOP_CARD_STATES)[number]
@@ -36,7 +36,7 @@ export const STOP_CARD_VERDICTS = ["approve", "refuse"] as const
 export type StopCardVerdict = (typeof STOP_CARD_VERDICTS)[number]
 
 /** What a reply on the card was: the founder's words, a button, a verdict, or a NIVO deadline. */
-export const STOP_CARD_REPLY_KINDS = ["answer", "retry", "take_over", "skip", "timeout", "approve", "refuse"] as const
+export const STOP_CARD_REPLY_KINDS = ["answer", "retry", "take_over", "skip", "handed_back", "timeout", "approve", "refuse"] as const
 
 /** What a reply was. */
 export type StopCardReplyKind = (typeof STOP_CARD_REPLY_KINDS)[number]

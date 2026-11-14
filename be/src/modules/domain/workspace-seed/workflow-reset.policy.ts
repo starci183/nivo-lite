@@ -1,5 +1,5 @@
 /**
- * What a workflow reset leaves of the runs it deletes, beyond what it always cleared (runs, steps, workflows, holds, memory, freezes):
+ * What a workflow reset leaves of the runs it deletes, beyond what it always cleared (runs, steps, workflows, holds, memory):
  * the run state of the LangGraph engine and of the work around a run. Each kind is one statement over one table, keyed by "a run that is
  * gone": a run of a reset agent (deleted in the same transaction) or a run no row of `public.agent_runs` names any more (left by an earlier reset). The same
  * condition counts it (the dry run) and clears it, so a dry run after a reset reads zero for every kind here.
@@ -25,9 +25,6 @@ export const RESET_OPEN_WAKE_STATES: ReadonlyArray<string> = ["pending", "held",
 
 /** The states of an owner's work item that still waits for someone. */
 export const RESET_OPEN_ITEM_STATES: ReadonlyArray<string> = ["queued", "waiting_decision"]
-
-/** The old engine's lead-freeze item: every lead freeze of the workspace goes with the reset, so every such item is orphaned. */
-export const RESET_FREEZE_ITEM_ACTION = "lead_frozen"
 
 /** The states of a care timer that will still fire. */
 export const RESET_OPEN_TASK_STATES: ReadonlyArray<string> = ["open", "waiting"]
@@ -131,14 +128,14 @@ export const RESET_RUN_STATE: ReadonlyArray<ResetKind> = [
         setExtra: [RESET_REASON],
     },
     {
-        what: "open work items of gone runs and lead freezes (closed rejected)",
+        what: "open work items of gone runs (closed rejected)",
         ...closing(
             "public.work_items i",
-            "status = 'rejected', error = $5, completed_at = now()",
-            `i.workspace_id = $1 AND i.status = ANY($3) AND (i.action = $4 OR ${goneRun(ITEM_RUN)})`,
+            "status = 'rejected', error = $4, completed_at = now()",
+            `i.workspace_id = $1 AND i.status = ANY($3) AND ${goneRun(ITEM_RUN)}`,
         ),
         key: "runs",
-        extra: [RESET_OPEN_ITEM_STATES, RESET_FREEZE_ITEM_ACTION],
+        extra: [RESET_OPEN_ITEM_STATES],
         setExtra: [RESET_REASON],
     },
     {

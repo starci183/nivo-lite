@@ -22,7 +22,7 @@ import { calledWorkflow, type HeardWake } from "./thread-world-intake"
 // Package FX1 (D-P10-6, D-P10-7): the LIVE sequence of run 3355daf0 on dev (restart FOURTEEN), with the REAL run reader (records +
 // mapper, `AgentRunsViewService`) and the REAL tries policy (`AiTasksService.nodeJson`) over a scripted AI endpoint. The consult's first
 // try times out, the second answers, the step tells the customer one holding line, and the process dies right after that send with the
-// step still `running` (its row: `graph_node`, consult, running, effect pivot, result null, deadline null). A new process then runs the
+// step still `running` (its row: `graph_node`, consult, running, effect write, result null, deadline null). A new process then runs the
 // SAME wake again (the work core's retry) or the sweep's re-drive. Live, both failed in 0.1 s with `AGENT_RUNS_RESULT_REJECTED`: the
 // thread runs read the run's engine through the run page's reader, whose step mapper refused the projection's `deadlineMs: null`. The
 // world faked that reader, so no spec saw it. Now: the step continues (the ledger answers the send), ONE customer line, the run ends.
@@ -182,7 +182,7 @@ const killedAfterTheSend = async () => {
 }
 
 describe("FX1: the api is killed right after a step told the customer (D-P10-6, run 3355daf0)", () => {
-    it("leaves the live state: one holding line, the step row running at a pivot with no result", async () => {
+    it("leaves the live state: one holding line, the step row running as a write with no result", async () => {
         const { db, endpoint, died, runId } = await killedAfterTheSend()
 
         expect(String(died)).toContain("WORLD_PROCESS_DIED")
@@ -194,7 +194,7 @@ describe("FX1: the api is killed right after a step told the customer (D-P10-6, 
             kind: "graph_node",
             stepKey: CONSULT_STEP,
             status: "running",
-            effect: { kind: "pivot" },
+            effect: { kind: "write" },
             result: null,
         })
         expect(rowsOf(db, runId).run).toMatchObject({ engine: "langgraph", status: "running" })

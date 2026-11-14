@@ -5,15 +5,17 @@ import type { TriggerVerb } from "@nivo-lite/agent-sdk/names"
 import { nodeSagaOf, type NodeIndex, type NodeSaga } from "@nivo-lite/agent-sdk/node"
 import { installedStepIn, type InstalledStep } from "@modules/domain/installed-plugins"
 import { mutatesBySpec } from "@modules/domain/tool-specs"
-import { declaredPayloadOf, subjectOfEvent, triggerSpecOf } from "@modules/domain/trigger-specs"
+import { declaredPayloadOf, triggerSpecOf } from "@modules/domain/trigger-specs"
 import { KEY_SCOPE_PREFIX } from "@modules/domain/provider-triggers/trigger-delivery.policy"
 import { AgentRunsService, type StepSpec } from "@modules/domain/agent-runs"
 import {
     AgentWorkHandlersService,
     type AgentHandlerEnding,
     type AgentTurnView,
+    type AgentWakeView,
     type AgentWorkFlow,
     WAITING_REASON,
+    handedBackOf,
     tagPayloadOf,
 } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
@@ -26,7 +28,7 @@ import { AgentGraphRawRowsService } from "./agent-graph-raw-rows.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import { AgentWorkflowRunsService, type HiddenTarget } from "./agent-workflow-runs.service"
-import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
+import { AgentGraphSubjectHoldsService, type HoldingRun } from "./agent-graph-subject-holds.service"
 import { AgentGraphCallGuardService, callerRunIdOf } from "./agent-graph-call-guard.service"
 import { AgentGraphHoursGateService } from "./agent-graph-hours-gate.service"
 import type { WorkflowRoute } from "./agent-workflows.contracts"
@@ -58,9 +60,6 @@ const NO_WORKFLOW = "no_workflow"
 const takenBy = (active: ActiveFlow | null, turn: AgentTurnView): active is ActiveFlow =>
     active !== null && (active.route !== null || active.flow.trigger.sources.includes(tagSourceOf(turn)))
 
-/** Why a wake started no run: its customer is frozen until the owner deals with a run that failed; the wake waits as a pending event. */
-const LEAD_FROZEN = "lead_frozen"
-
 /** Why a customer's wake started no run: the agent is off duty and does not answer after hours; it waits for the next working hour. */
 const OUTSIDE_HOURS = "outside_hours"
 
@@ -68,7 +67,28 @@ const OUTSIDE_HOURS = "outside_hours"
 const TARGET_HIDDEN: CallRefusal = "call_target_hidden"
 
 /** The workflow a wake's plain data pins (an end hand-off, a founder's tag routed by the chat), or null for a wake no pin names. */
-const pinOf = (turn: AgentTurnView) => workflowCallOf(tagPayloadOf(turn.context))
+const pinOf = (turn: Pick<AgentWakeView, "context">) => workflowCallOf(tagPayloadOf(turn.context))
+
+/**
+ * Why a workflow call started no run and waits behind nothing (DEF-5): the run of its workflow in flight for its subject is the VERY run
+ * that handed this line back (the line the call carries on). Queued behind it, the call would only run after that run ended, hours
+ * later or never: it is ended at once and reported to the team instead.
+ */
+export const CALL_HANDED_BACK = "call_handed_back"
+
+/** The id of the event a run's or a wake's context names: the key its intake stored it under, else the event's id; null for none. */
+const eventIdOf = (context: object): string | null => {
+    const key: unknown = Reflect.get(context, "messageKey")
+    if (typeof key === "string" && key !== "") return key
+    const id: unknown = Reflect.get(context, "eventId")
+    return typeof id === "string" && id !== "" ? id : null
+}
+
+/** The runs that handed the event of a run's (or a wake's) context back (`handedBackJson`, written by the re-offer). */
+const handersOf = (context: object): ReadonlyArray<string> => {
+    const text: unknown = Reflect.get(context, "handedBackJson")
+    return typeof text === "string" ? handedBackOf({ handedBackJson: text }) : []
+}
 
 /** A run the flow opened for a thread: everything the thread needs to start, or to go on when the wake is tried again. */
 export interface FlowThreadRun {
@@ -138,6 +158,10 @@ export const subjectOfScope = (turn: Pick<AgentTurnView, "scopeKey" | "context">
     return at <= 0 || at === rest.length - 1 ? null : { kind: rest.slice(0, at), id: rest.slice(at + 1) }
 }
 
+/** The subject kinds of a person the pipeline met (the scope paths a trigger keyed by subject or by contact declares). */
+const ROUTE_SUBJECT = "routeId"
+const CONTACT_SUBJECT = "contactId"
+
 /** The member of a thread run's context that keeps the lock scope its wake ran under: every later drive of the thread takes that scope. */
 export const THREAD_SCOPE_MEMBER = "threadScope"
 
@@ -162,9 +186,8 @@ const untakenReasonOf = (standing: {
 }
 
 /**
- * The saga kind of a template node, by `nodeSagaOf`'s rule over its calls: a pivot when a call that is no effect mutates (an installed
- * tool that does not say `mutates: false`; a core tool the engine's registry says writes); a read when it runs no effect;
- * compensable when every effect it runs can be undone; else a pivot.
+ * The saga kind of a template node, by `nodeSagaOf`'s rule over its calls (forward only, R81): a write when it runs an effect or a call
+ * that mutates (an installed tool that does not say `mutates: false`; a core tool the engine's registry says writes), else a read.
  */
 const templateSagaOf = (step: InstalledStep, index: NodeIndex): NodeSaga => {
     const mutates = (call: string): boolean => {
@@ -172,15 +195,13 @@ const templateSagaOf = (step: InstalledStep, index: NodeIndex): NodeSaga => {
         return tool === undefined ? mutatesBySpec(call) !== false : tool.mutates !== false
     }
     const mutatingTool = step.tools.some((call) => !step.effects.includes(call) && mutates(call))
-    if (mutatingTool) return "pivot"
-    if (step.effects.length === 0) return "read"
-    return step.effects.every((effect) => index.effects.get(effect)?.compensation !== undefined) ? "compensable" : "pivot"
+    return mutatingTool || step.effects.length > 0 ? "write" : "read"
 }
 
 @Injectable()
 /**
  * Runs the wakes of an agent whose published graph is a node graph, with no model turn. It takes a wake when the active version holds a
- * flow whose tag trigger names where the wake came from, passes the gates (hours, freezes, call guard), opens the
+ * flow whose tag trigger names where the wake came from, passes the gates (hours, the subject hold, call guard), opens the
  * wake's run and hands it to the thread runs, which drive it under the wake's lease.
  */
 export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
@@ -195,7 +216,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         private readonly nodes: GraphNodeRegistryService,
         @Optional() private readonly workflows?: AgentWorkflowRunsService,
         @Optional() @InjectLogger() private readonly logger: Logger | null = null,
-        @Optional() private readonly freezes?: AgentGraphFreezeGateService,
+        @Optional() private readonly holds?: AgentGraphSubjectHoldsService,
         @Optional() private readonly calls?: AgentGraphCallGuardService,
         @Optional() private readonly hours?: AgentGraphHoursGateService,
         @Optional() private readonly wakeNotices?: AgentGraphWakeNoticesService,
@@ -287,7 +308,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
 
     /**
      * A wake of this flow that failed for good (its tries are spent, or it could never run): the founder is told with the facts, in
-     * place of any handler's own words. No workflow step exists to hand to the AI core or to freeze on.
+     * place of any handler's own words. No workflow step exists to hand to the AI core or to stop on.
      */
     async stuck(turn: AgentTurnView, code: string): Promise<void> {
         // A hand-off to a workflow readiness hides is taken by nothing, so the drain asks for its common report: the founder is told the
@@ -359,7 +380,12 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         if (await this.waitTook(turn, verb)) return { status: "done", reason: WAIT_TOOK, outcome: null }
         // A pipeline wake no registration took (delivered only because a `wait` of the agent lists its verb) that no parked run took: a
         // normal no-op, never a run and never a report (the registered graphs of the event have their own wakes).
-        if (turn.context.waitOnly === "true") return this.noWaiter(turn, verb)
+        if (turn.context.waitOnly === "true") {
+            // An event about a person that NO agent's registration took and no parked wait took started nothing anywhere: reported as
+            // untaken (once per conversation), never a silent `no_waiter`. An event another agent's registration took stays a no-op here.
+            if (turn.context.unclaimed === "true" && this.aboutAPerson(turn)) return this.untaken(turn)
+            return this.noWaiter(turn, verb)
+        }
         const active = await this.flowOf(turn)
         // A customer line is never dropped untold, whatever its agent waits on: no workflow taking it is reported.
         if (!takenBy(active, turn) && this.aboutAPerson(turn)) return this.untaken(turn)
@@ -377,17 +403,14 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
             ...(await this.triggerKeyOf(active, turn)),
         })
         if (await this.hours?.deferred(turn)) return { status: "held", reason: OUTSIDE_HOURS, outcome: null }
-        // A freeze holds one workflow of the subject: only a wake of that workflow waits (it JOINS the run that waits at a stop), every
-        // other one runs. Only an event whose verb declares a subject (`TriggerSpec.subject`, the registry's data) can join a run.
-        const gated = this.gateViewOf(turn, trigger)
-        const pinned = { ...gated, workflowId: active.route?.workflowId ?? null }
-        const joinable = subjectOfEvent(verb, pinned) !== null
-        if (joinable && (await this.freezes?.hold(turn, pinned))) return { status: "held", reason: LEAD_FROZEN, outcome: null }
-        // ONE RUN IN FLIGHT per (graph, subject) (the final rule): an event whose subject's run is still in flight, and that no wait of
-        // it took above, waits behind it as a held wake; the next run takes it when that run has ended. Never pushed into a started run.
-        const behind = await this.inFlightBehind(turn, active)
+        // THE ONE HOLDING RULE (rule Q-1): a run that is not finished keeps its subject for EVERY workflow; an event of that subject, that
+        // no wait took above, waits behind the oldest such run as a held wake and starts nothing. Never pushed into a started run.
+        const holder = await this.holderOf(turn)
+        const behind = holder?.id ?? (await this.inFlightBehind(turn, active))
+        const handedBack = behind === null ? null : await this.handedBackBy(turn, behind)
+        if (behind !== null && handedBack !== null) return this.callHandedBack(turn, active, behind, handedBack)
         if (behind !== null) return { status: "held", reason: `${WAITING_REASON}${behind}`, outcome: null }
-        const waiting = (await this.freezes?.waitingOf(turn.workspaceId, gated)) ?? []
+        const waiting = (await this.holds?.waitingOf(turn.workspaceId, this.personOf(turn))) ?? []
         const told: FlowTriggerScope = waiting.length === 0 ? trigger : { ...trigger, [WAITING_MEMBER]: waiting }
         const refused = (await this.calls?.refusalOf(turn, trigger, active)) ?? null
         if (refused !== null) {
@@ -400,6 +423,49 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         }
         const namespace = namespaceOf(active.flow.moduleKey, active.route?.workflowKey)
         return this.threadRun(this.threadsOf(), turn, active, namespace, told, signal)
+    }
+
+    /**
+     * True when the run `behind` (the subject's run of the wake's workflow, in flight) is the run that HANDED BACK the line this wake
+     * carries: the wake's own event (a line re-offered by that run), or, for a workflow call, the event of the calling run (the run the
+     * re-offered line started: its context keeps the hand-back list). Answers the context that names the hand-back (its event ids name the
+     * line), or null. Ids of the engine's own records only, nothing of the line is read.
+     */
+    private async handedBackBy(turn: AgentTurnView, behind: string): Promise<object | null> {
+        if (handersOf(turn.context).includes(behind)) return turn.context
+        const callerRunId = callerRunIdOf(turn.context)
+        if (callerRunId === null) return null
+        const caller = await this.runs.runOf(turn.workspaceId, callerRunId)
+        return caller !== null && handersOf(caller.context).includes(behind) ? caller.context : null
+    }
+
+    /**
+     * Ends a call that would wait behind the run that handed its line back (DEF-5): no run, no hold, the team told once (the person, the
+     * workflow it was for, the line's event, why). Never a wake that waits for a run that already said "not mine".
+     */
+    private async callHandedBack(turn: AgentTurnView, active: ActiveFlow, behind: string, line: object): Promise<AgentHandlerEnding> {
+        this.logger?.warn(AgentGraphsLogEvent.CallRefused, { agentId: turn.agentId, wakeId: turn.wakeId, code: CALL_HANDED_BACK, behind })
+        await this.wakeNotices?.lost(turn, {
+            code: CALL_HANDED_BACK,
+            workflow: active.route?.workflowKey ?? null,
+            heldBy: behind,
+            event: eventIdOf(line),
+        })
+        return { status: "skipped", reason: CALL_HANDED_BACK, outcome: null }
+    }
+
+    /**
+     * The engine GAVE UP on a wake before any turn ran (`begin` found it dead past its attempts): a wake of the one pipeline or a workflow
+     * call is the flow's, and the team is told (the person, the workflow it was for, the line's event, why); answers false for any other
+     * wake (its handler tells) and in an app with no notices. Never a silent death (DEF-5).
+     */
+    async gaveUp(wake: AgentWakeView, code: string): Promise<boolean> {
+        const pin = pinOf(wake)
+        if (pipelineVerbOf(wake.context) === null && pin === null) return false
+        if (this.wakeNotices === undefined) return false
+        this.logger?.warn(AgentGraphsLogEvent.WakeGivenUp, { agentId: wake.agentId, wakeId: wake.wakeId, code })
+        await this.wakeNotices.lost(wake, { code, workflow: pin?.workflow ?? null, heldBy: null, event: eventIdOf(wake.context) })
+        return true
     }
 
     /** The thread runs; a workflow wake with none registered fails, so it is tried again and, at the end, told to the founder. */
@@ -425,7 +491,9 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
                 workspaceId: turn.workspaceId,
                 agentId: turn.agentId,
                 wakeId: turn.wakeId,
-                trigger: GRAPH_FLOW_TRIGGER,
+                // The run is labelled by the trigger id its delivered scope names (the pipeline verb, e.g. a channel's message trigger);
+                // a wake of no pipeline (a tag) keeps the graph-flow label.
+                trigger: pipelineVerbOf(turn.context) ?? GRAPH_FLOW_TRIGGER,
                 versionId: active.versionId,
                 context: { ...turn.context, [THREAD_SCOPE_MEMBER]: turn.scopeKey },
                 subject: subjectOfScope(turn),
@@ -462,6 +530,35 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
     /** True for a wake about a person that nobody may drop untold (triggers rule 12): a pipeline event about a person on an account. */
     private aboutAPerson(turn: AgentTurnView): boolean {
         return personEventOf(turn.context)
+    }
+
+    /** The person a wake is about, as the pipeline met them: its contact and its route; none for a wake of another road. */
+    private personOf(turn: AgentTurnView): { readonly contactId: string | null; readonly routeId: string | null } {
+        const { contactId, conversationId } = turn.context
+        return {
+            contactId: typeof contactId === "string" && contactId !== "" ? contactId : null,
+            routeId: typeof conversationId === "string" && conversationId !== "" ? conversationId : null,
+        }
+    }
+
+    /**
+     * The run that holds the wake's event (rule Q-1), or null. Its subjects: the wake's own key (its lock scope), its route and its contact.
+     * Never the run the wake itself opened (a replay), nor a run that handed this very event back (it reaches the next waiter and the
+     * registered graphs; a same-workflow run that handed it back is found by `inFlightBehind` and the call is ended there, DEF-5).
+     */
+    private async holderOf(turn: AgentTurnView): Promise<HoldingRun | null> {
+        if (this.holds === undefined) return null
+        const own = subjectOfScope(turn)
+        const person = this.personOf(turn)
+        const subjects = [
+            ...(own === null ? [] : [own]),
+            ...(person.routeId === null ? [] : [{ kind: ROUTE_SUBJECT, id: person.routeId }]),
+            ...(person.contactId === null ? [] : [{ kind: CONTACT_SUBJECT, id: person.contactId }]),
+        ].filter((one, at, all) => all.findIndex((other) => other.kind === one.kind && other.id === one.id) === at)
+        if (subjects.length === 0) return null
+        const replayed = turn.attempts > 1 ? await this.runs.runIdOfWake(turn.workspaceId, turn.wakeId) : null
+        const skipped = new Set([...handersOf(turn.context), ...(replayed === null ? [] : [replayed])])
+        return this.holds.holderOf(turn.workspaceId, subjects, person, skipped)
     }
 
     /**
@@ -522,15 +619,6 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
     private async routingScopeOf(turn: AgentTurnView): Promise<Readonly<Record<string, unknown>>> {
         if (!this.isPipeline(turn)) return triggerScopeOf(turn)
         return { ...(await this.pipelineScopeOf(turn)), [VERB_MEMBER]: turn.context.verb }
-    }
-
-    /**
-     * What the engine's own gates of a run (the freezes, the call guard) read of a pipeline wake beside its scope: the route under the
-     * engine's own name (`conversationId`), which holds, stops and freezes are keyed by. Never handed to a node.
-     */
-    private gateViewOf(turn: AgentTurnView, trigger: FlowTriggerScope): FlowTriggerScope {
-        if (!this.isPipeline(turn) || turn.context.conversationId === undefined) return trigger
-        return { ...trigger, conversationId: turn.context.conversationId }
     }
 
     /**

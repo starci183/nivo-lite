@@ -14,10 +14,8 @@ import type {
     PassageVerdict,
     PlaceWrite,
     SourcePassage,
-    StaleChunk,
     StoredAt,
     TruthPassage,
-    VectorWrite,
 } from "./knowledge-chunks.contracts"
 import { passageHashOf, passageTextHashOf } from "./passage-hash.policy"
 import { placeOfRow } from "./passage-place.policy"
@@ -29,14 +27,6 @@ const PASSAGE_LIMIT = 500
 
 /** The most passages one read of several sources answers. */
 const SOURCES_PASSAGE_LIMIT = 10_000
-
-/** The vector of each id, picked from the two arrays the write carries. */
-const VECTOR_OF_ID =
-    '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "knowledge_chunks"."id")'
-
-/** The hash of each id, picked from the two arrays the write carries. */
-const HASH_OF_ID =
-    '(SELECT t.hash FROM unnest(CAST(:ids AS uuid[]), CAST(:hashes AS text[])) AS t(id, hash) WHERE t.id = "knowledge_chunks"."id")'
 
 /** The new order of each id, picked from the two arrays the write carries. */
 const ORDER_OF_ID =
@@ -50,9 +40,6 @@ const KIND_OF_ORD =
 const LABEL_OF_ORD =
     '(SELECT t.label FROM unnest(CAST(:orders AS integer[]), CAST(:kinds AS text[]), CAST(:labels AS text[])) AS t(ord, kind, label) WHERE t.ord = "knowledge_chunks"."ord")'
 
-/** The database's own clock, for the time a vector is stored. */
-const NOW = (): string => "now()"
-
 /** The verdict of each id, picked from the two arrays the write carries. */
 const TRIAGE_OF_ID =
     '(SELECT t.verdict FROM unnest(CAST(:ids AS uuid[]), CAST(:verdicts AS text[])) AS t(id, verdict) WHERE t.id = "knowledge_chunks"."id")'
@@ -60,7 +47,7 @@ const TRIAGE_OF_ID =
 /** The most passages the truths work of one document reads: a document holds at most 120,000 characters, a few hundred passages. */
 const TRUTH_PASSAGE_LIMIT = 2000
 
-/** The row of a passage at its order, with the vector it was given. */
+/** The row of a passage at its order: the model and hash of a vector made for it, never the vector (the index holds it). */
 const rowOf = (write: Omit<ChunkWrite, "drafts">, draft: ChunkDraft, order: number) => ({
     workspaceId: write.workspaceId,
     sourceId: write.sourceId,
@@ -69,11 +56,10 @@ const rowOf = (write: Omit<ChunkWrite, "drafts">, draft: ChunkDraft, order: numb
     installationId: write.installationId,
     ord: order,
     content: draft.text,
-    embedding: write.vectorsInIndex === true ? null : draft.vector,
-    embeddingModel: draft.vector === null ? null : write.model,
-    contentHash: draft.vector === null ? null : passageHashOf(draft.text, write.model),
+    embeddingModel: draft.embedded ? write.model : null,
+    contentHash: draft.embedded ? passageHashOf(draft.text, write.model) : null,
     textHash: passageTextHashOf(draft.text),
-    indexedAt: draft.vector === null || write.vectorsInIndex === true ? null : NOW,
+    indexedAt: null,
     placeKind: draft.place?.kind ?? null,
     placeLabel: draft.place?.label ?? null,
 })
@@ -89,7 +75,7 @@ const storedIdsOf = (inserted: unknown): ReadonlyArray<unknown> => {
 const INSERT_BATCH = 50
 
 @Injectable()
-/** The passages of a source: stored in place of the earlier ones, and given vectors when the model changes. */
+/** The passages of a source: stored in place of the earlier ones; their vectors live in the vector index. */
 export class KnowledgeChunksService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
@@ -113,8 +99,8 @@ export class KnowledgeChunksService {
 
     /**
      * Stores these passages in place of the passages at the same orders in one transaction; the passages of other orders stay, so a
-     * retry keeps what is already stored. Answers the id each order was stored under: with `vectorsInIndex` the caller hands the
-     * vectors to the vector index under those ids (the point id is the row id) and Postgres keeps no vector.
+     * retry keeps what is already stored. Answers the id each order was stored under: the caller hands the vectors to the vector
+     * index under those ids (the point id is the row id); Postgres keeps no vector.
      */
     keep(write: ChunkBatchWrite): Promise<ReadonlyArray<StoredAt>> {
         if (write.drafts.length === 0) return Promise.resolve([])
@@ -207,7 +193,7 @@ export class KnowledgeChunksService {
             .select("c.id", "id")
             .addSelect("c.ord", "ord")
             .addSelect("c.content", "content")
-            .addSelect("(c.embedding IS NOT NULL OR c.indexedAt IS NOT NULL)", "hasEmbedding")
+            .addSelect("(c.indexedAt IS NOT NULL)", "hasEmbedding")
             .where("c.workspaceId = :workspaceId AND c.sourceId = :sourceId", { workspaceId, sourceId })
             .orderBy("c.ord", "ASC")
             .limit(PASSAGE_LIMIT)
@@ -242,12 +228,12 @@ export class KnowledgeChunksService {
         return rows.map((row) => ({ id: row.id, sourceId: row.sourceId, order: row.ord, text: row.content }))
     }
 
-    /** The stored passages of a source that have a vector, in order. */
+    /** The stored passages of a source whose vector the index accepted, in order. */
     async embeddedOf(workspaceId: string, sourceId: string): Promise<ReadonlyArray<EmbeddedChunk>> {
         const rows = await this.entityManager
             .createQueryBuilder(KnowledgeChunkEntity, "c")
             .select(["c.id", "c.ord", "c.content", "c.contentHash", "c.embeddingModel"])
-            .where("c.sourceId = :sourceId AND c.workspaceId = :workspaceId AND (c.embedding IS NOT NULL OR c.indexedAt IS NOT NULL)", {
+            .where("c.sourceId = :sourceId AND c.workspaceId = :workspaceId AND c.indexedAt IS NOT NULL", {
                 sourceId,
                 workspaceId,
             })
@@ -275,37 +261,6 @@ export class KnowledgeChunksService {
             ],
         })
         return !stale
-    }
-
-    /** Up to `limit` passages of a workspace that have no vector, or one made by another model than `model`. */
-    async stale(workspaceId: string, model: string, limit: number): Promise<ReadonlyArray<StaleChunk>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(KnowledgeChunkEntity, "c")
-            .select(["c.id", "c.content"])
-            .where(
-                "c.workspaceId = :workspaceId AND ((c.embedding IS NULL AND c.indexedAt IS NULL) OR c.embeddingModel IS NULL OR c.embeddingModel <> :model)",
-                { workspaceId, model },
-            )
-            .orderBy("c.createdAt", "ASC")
-            .limit(limit)
-            .getMany()
-        return rows.map((row) => ({ id: row.id, text: row.content }))
-    }
-
-    /** Gives passages their vectors. */
-    async setVectors(write: VectorWrite): Promise<void> {
-        await this.entityManager
-            .createQueryBuilder(KnowledgeChunkEntity, "kc")
-            .update()
-            .set({ embedding: () => VECTOR_OF_ID, embeddingModel: write.model, contentHash: () => HASH_OF_ID, indexedAt: NOW })
-            .where("workspace_id = :workspaceId AND id = ANY(CAST(:ids AS uuid[]))")
-            .setParameters({
-                workspaceId: write.workspaceId,
-                ids: [...write.ids],
-                vectors: [...write.vectors],
-                hashes: [...write.hashes],
-            })
-            .execute()
     }
 
     /**

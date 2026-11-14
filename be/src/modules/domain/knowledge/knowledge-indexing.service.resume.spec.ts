@@ -16,6 +16,7 @@ import { KNOWLEDGE_OPTIONS } from "./knowledge.decorators"
 import { SourceReaderService } from "./source-reader.service"
 import { UnchangedSourceService } from "./unchanged-source.service"
 import { UsageMeterService } from "./usage-meter.service"
+import { VectorSyncService } from "@modules/domain/vector-sync"
 
 const WS = INDEXING_WS
 const run = { sourceId: "s1", workspaceId: WS }
@@ -36,6 +37,7 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
     const unchanged = mock<UnchangedSourceService>()
     const logger = mock<Logger>()
     const timer = mock<Timer>()
+    const vectorSync = mock<VectorSyncService>()
     const waiting: Array<{ readonly callback: () => void; readonly delayMs: number }> = []
     timer.schedule.mockImplementation((callback: () => void, delayMs: number): CancelTimer => {
         waiting.push({ callback, delayMs })
@@ -47,6 +49,8 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
     embeddings.model.mockReturnValue("m1")
     embeddings.embed.mockResolvedValue([[0.5, 1]])
     chunks.embeddedOf.mockResolvedValue([])
+    // Each stored passage answers the id it was stored under (the point id of its vector).
+    chunks.keep.mockImplementation((write) => Promise.resolve(write.drafts.map((draft) => ({ order: draft.order, id: `c${String(draft.order)}` }))))
     unchanged.holdsWhole.mockResolvedValue(false)
     unchanged.keep.mockResolvedValue("skipped")
     usage.blockedBy.mockResolvedValue(false)
@@ -64,10 +68,11 @@ const build = async (source: SourceRecord | null = sourceOf(), indexChunkDelayMs
             { provide: LOGGER, useValue: logger },
             { provide: KNOWLEDGE_OPTIONS, useValue: { driveAccess: Symbol("drive"), indexChunkDelayMs } },
             { provide: TIMER, useValue: timer },
+            { provide: VectorSyncService, useValue: vectorSync },
         ],
     }).compile()
     const service = moduleRef.get(KnowledgeIndexingService)
-    return { service, sources, blocked, parts, chunks, reader, unchanged, embeddings, usage, logger, held: { waiting } }
+    return { service, sources, blocked, parts, chunks, reader, unchanged, embeddings, usage, logger, vectorSync, held: { waiting } }
 }
 
 const registerResumeCases = () => {

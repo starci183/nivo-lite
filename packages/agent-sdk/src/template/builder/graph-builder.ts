@@ -1,8 +1,8 @@
 import type { TriggerCondition } from "../../graph/workflow-contract"
 import type { ProviderKey, TriggerNames, TriggerVerb } from "../../names"
 import { LOOP_CONCURRENCY_CAP, LOOP_OVER_CAP } from "../../graph/graph-spec-v2"
-import type { LoopEvery } from "../../graph/graph-spec-v2.types"
-import type { JsonValue } from "../../schema/schema.types"
+import type { LoopEvery, LoopExitLabels } from "../../graph/graph-spec-v2.types"
+import type { JsonValue, SpecText } from "../../schema/schema.types"
 import type {
     AndExpr,
     CallVersion,
@@ -18,6 +18,7 @@ import type {
     LoopGraphStep,
     LoopOverGraphStep,
     LoopUntilGraphStep,
+    LoopUnsuccessful,
     NodeGraphStep,
     NodeWiring,
     NotExpr,
@@ -187,6 +188,8 @@ export interface WaitWiring<K extends string> {
     readonly timeout: WaitTimeout
     /** The step each trigger key goes to, and the step `timeout` goes to: every key, no other. */
     readonly next: Readonly<Record<NoInfer<K> | "timeout", string>>
+    /** What the run waits for, in the workspace's words ("Chờ tiền về"); absent: the generic word. */
+    readonly label?: SpecText | undefined
 }
 
 /**
@@ -199,6 +202,7 @@ export const wait = <const K extends string>(wiring: WaitWiring<K>): WaitGraphSt
     on: wiring.for,
     timeout: wiring.timeout,
     next: wiring.next,
+    ...(wiring.label === undefined ? {} : { label: wiring.label }),
 })
 
 /** What `handBack` takes: the wait whose event is handed back, and the step after it. */
@@ -207,6 +211,8 @@ export interface HandBackWiring {
     readonly wait: string
     /** The step after the hand-back, or `endRound` in a loop body; absent: the round (in a body) or the run ends there. */
     readonly next?: string | undefined
+    /** The hand-back's words on the map ("Trả lại tin"); absent: the generic word. */
+    readonly label?: SpecText | undefined
 }
 
 /**
@@ -218,6 +224,7 @@ export const handBack = (wiring: HandBackWiring): HandBackGraphStep => ({
     kind: "hand-back",
     wait: wiring.wait,
     next: wiring.next ?? null,
+    ...(wiring.label === undefined ? {} : { label: wiring.label }),
 })
 
 /** The bindings as a plain record of refs and values. */
@@ -242,6 +249,7 @@ export const node = <N extends AnyTemplateNode>(definition: N, wiring: NodeWirin
     accounts: wiring.accounts ?? null,
     next: wiring.next ?? null,
     routes: wiring.routes === undefined ? null : routesOf(wiring.routes),
+    unsuccessful: wiring.unsuccessful ?? null,
 })
 
 /** The body a `loop` over a list is wired with: its start, its keyed steps and the step whose output the loop gathers. */
@@ -291,6 +299,12 @@ export interface LoopOverWiring {
     readonly every?: never
     /** Absent: only an `until` loop has a route for running out of rounds. */
     readonly exhausted?: never
+    /** Absent: only an `until` loop runs out of rounds. */
+    readonly unsuccessful?: never
+    /** The loop's name on the map, in the workspace's words; absent: the generic word. */
+    readonly label?: SpecText | undefined
+    /** Absent: only an `until` loop has two ways out to name. */
+    readonly exits?: never
 }
 
 /**
@@ -316,8 +330,14 @@ export interface LoopUntilWiring {
     readonly every?: LoopEvery | undefined
     /** Where the run goes when the condition holds. */
     readonly next: string
-    /** Where the run goes when `max` rounds passed without the condition (usually: report to the team). Mandatory. */
+    /** Where the run goes when `max` rounds passed without the condition. Mandatory. */
     readonly exhausted: string
+    /** The engine tells the team, with these facts, when the loop runs out of rounds (R68); absent: no notice (a customer going quiet). */
+    readonly unsuccessful?: LoopUnsuccessful | undefined
+    /** The loop's name on the map, in the workspace's words ("Tư vấn"); absent: the generic word. */
+    readonly label?: SpecText | undefined
+    /** The words of its two ways out on the map (`until`: "Thoát khi đơn đã trả"; `exhausted`: "Hết 6 vòng mà chưa trả"); absent: generic. */
+    readonly exits?: LoopExitLabels | undefined
     /** Absent: an `until` loop runs rounds, not items. */
     readonly over?: never
     /** Absent: rounds are numbered, not keyed. */
@@ -344,6 +364,7 @@ export const loop = (wiring: LoopWiring): LoopGraphStep => {
             concurrency: wiring.concurrency ?? LOOP_CONCURRENCY_CAP,
             body: { start: wiring.body.start, nodes: wiring.body.nodes, collect: wiring.body.collect ?? null },
             next: wiring.next ?? null,
+            ...(wiring.label === undefined ? {} : { label: wiring.label }),
         }
         return over
     }
@@ -356,6 +377,9 @@ export const loop = (wiring: LoopWiring): LoopGraphStep => {
         body: { start: wiring.body.start, nodes: wiring.body.nodes },
         next: wiring.next,
         exhausted: wiring.exhausted,
+        unsuccessful: wiring.unsuccessful ?? null,
+        ...(wiring.label === undefined ? {} : { label: wiring.label }),
+        ...(wiring.exits === undefined ? {} : { exits: wiring.exits }),
     }
     return until
 }
@@ -387,6 +411,8 @@ export interface IfWiring {
      * outside a body the RUN ends there (GraphSpec @2: an `if` with no `no` route).
      */
     readonly no?: string | EndItem | undefined
+    /** The question the map shows on the condition, in the workspace's words ("Đủ tiền?"); absent: the generic word. */
+    readonly label?: SpecText | undefined
 }
 
 /**
@@ -399,6 +425,7 @@ export const ifNode = (wiring: IfWiring): IfGraphStep => ({
     when: wiring.when,
     yes: wiring.yes,
     no: wiring.no ?? null,
+    ...(wiring.label === undefined ? {} : { label: wiring.label }),
 })
 
 /** What `callWorkflow` takes. */
@@ -448,6 +475,8 @@ export interface OutcomeWiring {
     readonly output?: Readonly<Record<string, RefOrValue>> | undefined
     /** The step after the end; absent: the run ends there. */
     readonly next?: string | undefined
+    /** The outcome's words ("Đã trả" / "Paid"); absent: its name. */
+    readonly label?: SpecText | undefined
 }
 
 /** A named business end, with the outputs it hands on. */
@@ -456,4 +485,5 @@ export const outcome = (wiring: OutcomeWiring): OutcomeGraphStep => ({
     name: wiring.name,
     output: wiring.output ?? {},
     next: wiring.next ?? null,
+    ...(wiring.label === undefined ? {} : { label: wiring.label }),
 })

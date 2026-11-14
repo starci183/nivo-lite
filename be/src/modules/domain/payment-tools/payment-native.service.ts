@@ -123,7 +123,7 @@ export class PaymentNativeService implements NativeToolFamily {
         const asked = argumentsOf(PAYMENT_TOOL.transferCreate, TRANSFER_CREATE_SCHEMA, args)
         if (caller.connectionId === undefined) throw paymentRefusal("not_connected")
         const connection = await this.connections.find(workspaceId, caller.connectionId)
-        const port = connection === null ? undefined : this.instructions.of(connection.provider)
+        const port = connection === null ? undefined : this.instructions.portFor(connection)
         if (connection === null || port === undefined) throw paymentRefusal("not_connected")
         return port.transfer(connection, { amountVnd: asked.amountVnd, content: asked.content })
     }

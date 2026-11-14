@@ -290,6 +290,45 @@ describe("ConnectionsService > create", () => {
     })
 })
 
+describe("ConnectionsService > sandbox accounts (lane concept provider-sandbox, rulings R56 + R58)", () => {
+    it("creates a sandbox account with its flag and NO secret row", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const { fakes } = withBuilders([{ execute: { raw: [{ id: "s1" }] } }], tx.em)
+        const { service, secrets } = await buildWith(tx.em)
+        const { secret: _secret, ...fields } = connectionsCase.createInput
+        await expect(service.create({ ...fields, sandbox: true })).resolves.toBe("s1")
+        expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toMatchObject({ sandbox: true })
+        expect(secrets.create).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(1)
+    })
+
+    it("writes no sandbox column for a live account", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const { fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }], tx.em)
+        await (await build(tx.em)).create(connectionsCase.createInput)
+        expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).not.toHaveProperty("sandbox")
+    })
+
+    it("derives a sandbox account's key (stable, per account) and refuses it for a live one", async () => {
+        const { em } = withBuilders([{ getRawOne: { ...ROW, id: "s1", sandbox: true } }, { getRawOne: { ...ROW, id: "s1", sandbox: true } }, { getRawOne: ROW }])
+        const service = await build(em)
+        const key = await service.sandboxKeyOf("ws-1", "s1")
+        expect(key).toMatch(/^sbx_[A-Za-z0-9_-]{43}$/)
+        await expect(service.sandboxKeyOf("ws-1", "s1")).resolves.toBe(key)
+        await expect(service.sandboxKeyOf("ws-1", ROW.id)).resolves.toBeNull()
+        expect(service.isSandboxKey("s1", key ?? "")).toBe(true)
+        expect(service.isSandboxKey("s2", key ?? "")).toBe(false)
+        expect(service.isSandboxKey("s1", undefined)).toBe(false)
+        expect(service.isSandboxKey("s1", `${key ?? ""}x`)).toBe(false)
+    })
+
+    it("carries no sandbox field on a patch, so an account's flag cannot change", async () => {
+        const { em, fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }])
+        await (await build(em)).patch("ws-1", "c1", { name: "Renamed", ...({ sandbox: true } as object) })
+        expect(setOf(fakes[0])).not.toHaveProperty("sandbox")
+    })
+})
+
 describe("ConnectionsService > patch", () => {
     it("changes the given fields", async () => {
         const { em, fakes } = withBuilders([{ execute: { raw: [{ id: "c1" }] } }])

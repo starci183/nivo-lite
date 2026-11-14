@@ -1,20 +1,9 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentGraphsModule } from "@modules/domain/agent-graphs"
-import {
-    AGENT_TEMPLATES_ERROR_KINDS,
-    AGENT_TEMPLATES_MESSAGES,
-    AgentTemplatesModule,
-} from "@modules/domain/agent-templates"
-import {
-    TEMPLATE_MARKETPLACE_ERROR_KINDS,
-    TEMPLATE_MARKETPLACE_MESSAGES,
-    TemplateMarketplaceModule,
-} from "@modules/domain/template-marketplace"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 import { CONTACTS_ERROR_KINDS, CONTACTS_MESSAGES, ContactsModule } from "@modules/domain/contacts"
 import { CUSTOMER_ROUTES_ERROR_KINDS, CUSTOMER_ROUTES_MESSAGES, CustomerRoutesModule } from "@modules/domain/customer-routes"
-import { LEAD_FREEZES_ERROR_KINDS, LEAD_FREEZES_MESSAGES, LeadFreezesModule } from "@modules/domain/lead-freezes"
 import { LEAD_MEMORY_ERROR_KINDS, LEAD_MEMORY_MESSAGES, LeadMemoryModule } from "@modules/domain/lead-memory"
 
 /**
@@ -24,10 +13,7 @@ import { LEAD_MEMORY_ERROR_KINDS, LEAD_MEMORY_MESSAGES, LeadMemoryModule } from 
  */
 export const agentGraphsModules = (): Array<DynamicModule> => [
     AgentGraphsModule.register({ isGlobal: true }),
-    AgentTemplatesModule.register({ isGlobal: true }),
-    TemplateMarketplaceModule.register({ isGlobal: true }),
     // A run that failed for good freezes its customer: the gate of the graph flows holds every new run of theirs until the owner acts.
-    LeadFreezesModule.register({ isGlobal: true }),
     // One memory per customer across every workflow: node outputs, triggers and the facts nodes proved; refs read it at run time.
     LeadMemoryModule.register({ isGlobal: true }),
     // The engine's contacts: every person the agents work with, their identities, merges and audit (the engine's subject).
@@ -38,9 +24,6 @@ export const agentGraphsModules = (): Array<DynamicModule> => [
 
 /** The error kinds of the capabilities this group registers, in registration order. */
 export const agentGraphsErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
-    AGENT_TEMPLATES_ERROR_KINDS,
-    TEMPLATE_MARKETPLACE_ERROR_KINDS,
-    LEAD_FREEZES_ERROR_KINDS,
     LEAD_MEMORY_ERROR_KINDS,
     CONTACTS_ERROR_KINDS,
     CUSTOMER_ROUTES_ERROR_KINDS,
@@ -48,9 +31,6 @@ export const agentGraphsErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorK
 
 /** The message bundles of the capabilities this group registers, in registration order. */
 export const agentGraphsMessages: ReadonlyArray<MessageBundle> = [
-    AGENT_TEMPLATES_MESSAGES,
-    TEMPLATE_MARKETPLACE_MESSAGES,
-    LEAD_FREEZES_MESSAGES,
     LEAD_MEMORY_MESSAGES,
     CONTACTS_MESSAGES,
     CUSTOMER_ROUTES_MESSAGES,

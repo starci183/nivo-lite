@@ -9,6 +9,5 @@ export const RUN_MARK_COLOURS = {
     done: "text-success",
     failed: "text-danger",
     pending: "text-muted",
-    undone: "text-muted",
     cancelled: "text-muted",
 } as const

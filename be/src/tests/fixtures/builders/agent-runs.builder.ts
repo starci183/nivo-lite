@@ -102,7 +102,6 @@ export const stepRecordOf = (over: Partial<StepRecord> = {}): StepRecord => ({
     notBefore: WHEN,
     waitItemId: null,
     workItemId: null,
-    compAttempts: 0,
     errorCode: null,
     ...over,
 })
@@ -169,7 +168,6 @@ export const stepRowOf = (over: Readonly<Record<string, unknown>> = {}, id = "s-
             notBefore: WHEN.toISOString(),
             waitItemId: null,
             workItemId: null,
-            compAttempts: 0,
             errorCode: null,
             startedAt: null,
             endedAt: null,

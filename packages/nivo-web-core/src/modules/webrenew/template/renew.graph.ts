@@ -5,21 +5,29 @@ import {
     defineTemplateGraph,
     equals,
     ifNode,
+    loop,
     node,
+    notEquals,
     outcome,
+    present,
     ref,
     trigger,
 } from "@nivo-lite/agent-sdk/template"
-import { teamDeclinedNoticeNode } from "@nivo-lite/blocks-core"
 import { z } from "zod"
+import { webrenewRenewCheckNode } from "../../../nodes/webrenew/renew-check.node"
 import { webrenewRenewNode } from "../../../nodes/webrenew/renew.node"
+import { webrenewRenewRecheckNode } from "../../../nodes/webrenew/renew-recheck.node"
+import { webrenewRenewRecordNode } from "../../../nodes/webrenew/renew-record.node"
 import { webrenewRenewedTeamNode } from "../../../nodes/webrenew/renewed-team.node"
 import { webrenewRenewedTellNode } from "../../../nodes/webrenew/renewed-tell.node"
-import { webrenewText } from "../copy"
 import { TARGETS } from "../ids"
 
 /** The language the team reads (today's constant param). */
 const LOCALE = "vi"
+
+/** How often a pending order is read again, and the most rounds (the first reads at once): 8 rounds, 30 minutes apart, 3.5 hours at most. */
+const RECHECK_EVERY_MINUTES = 30
+const RECHECK_ROUNDS = 8
 
 /** The graph's contract: what Accounting hands on for a paid renewal request; as version 4 (no conversation, no channel). */
 const renewInput = z.object({
@@ -32,42 +40,47 @@ const renewInput = z.object({
 })
 
 /**
- * `webrenew.renew` version 6 (Renew at the provider): Accounting calls it for a request it recorded as paid. `renew` checks the request
- * exactly and renews through the CRM (by itself: the customer's money is already recorded); `renewed-team` tells the team where it stands (blocking: a renewal never
- * ends unseen); `renewed-tell` tells the customer (a side step; reached by the lead, else the CRM contact, mail as a draft); then
- * Accounting is called to invoice and the outcome carries the renewal. A person who declines the renewal (a shop's own `ask`) made a decision:
- * `renew-declined` (an exact boolean) tells the team (`renew-notice`, `team.declined-notice`) and the run ends `declined`; nothing
- * is renewed, the customer is told nothing and Accounting is not called. Change from version 4: `notify-lead` is split into the team line
- * and the customer's; `renew` makes its checks in code and calls no AI; the hand-off now runs before the outcome (an outcome ends a
- * branch), with the same inputs. Change from version 5: the declined renewal ends at the outcome `declined` (was `approval_declined`, a
- * name the stored outcome-key grammar refuses). Change from version 8: `renewed-team` declined (`renewed-team-declined`, an exact boolean) ->
- * outcome `declined` (the declined write is itself a team post, so no notice); the renewal was made, but the customer is not told and
- * Accounting is not called.
+ * `webrenew.renew` version 14 (Renew at the provider, R57): Accounting calls it for a request it recorded as paid. `check` checks the
+ * request exactly and reads whether a registrar's tool renews the service; `renew` renews the domain at the registrar (iNET / Tino,
+ * mode `ask`: NIVO Web's money) or, when no tool renews it, makes no call (`not_renewable`); `record` writes the registrar's answer on
+ * the request in the CRM; `renewed-team` tells the team where it stands on EVERY path (blocking: a renewal never ends unseen). Only a
+ * `renewed` outcome (`renewed-check`, exact) tells the customer (`renewed-tell`, a side step) and calls Accounting to invoice; pending,
+ * refused and not renewable end `not-renewed` after the team line (a person acts). A person who declines the registrar call made a
+ * decision: it is the step's unsuccessful ending (R68), the ENGINE tells the team with the service's code and the run ends `declined`;
+ * a declined team post (`renewed-team-declined`) ends `declined` too (the declined write is itself a team post, no notice).
+ * Change from version 13 (E-R57): a `pending` order (the registrar took it, its end date did not move yet) is read again by `settle`, a
+ * loop of at most 8 rounds with a 30-minute wait between two (`nivo.tool.domain.renewal.get`, the registrar's own end date is the proof):
+ * `renewed` goes on the normal road (record in the CRM, tell the team and the customer, call Accounting); still `pending` after the
+ * bound goes on the same road and ends `not-renewed` with the team told. Any other answer ends `settle` in its first round, no read.
+ * R83: hosting / SSL (no registrar tool) is recorded in the CRM as pending with the note `awaiting_manual_renewal`, the team is told with the
+ * service's facts, and the run ends `not-renewed`.
+ * Change from version 12: the CRM no longer renews (its `post services/{code}/renewals` and its dry run are gone); the registrar does,
+ * the CRM records the answer.
  */
 export const renewGraph: TemplateGraph = defineTemplateGraph({
     key: "webrenew.renew",
-    title: { vi: "Gia h\u1ea1n t\u1ea1i nh\u00e0 cung c\u1ea5p", en: "Renew at the provider" },
+    title: { vi: "Gia hạn tại nhà cung cấp", en: "Renew at the provider" },
     input: z.object({ data: renewInput }),
     triggers: [trigger(TRIGGER.workflowCalled)],
     openTo: "any",
-    start: "renew",
+    start: "check",
     catalogue: {
-        name: { vi: "Gia h\u1ea1n t\u1ea1i nh\u00e0 cung c\u1ea5p", en: "Renew at the provider" },
+        name: { vi: "Gia hạn tại nhà cung cấp", en: "Renew at the provider" },
         summary: {
-            vi: "K\u1ebf to\u00e1n b\u00e1o kh\u00e1ch \u0111\u00e3 tr\u1ea3 ti\u1ec1n: gia h\u1ea1n t\u1ea1i nh\u00e0 cung c\u1ea5p (t\u1ef1 ch\u1ea1y khi ti\u1ec1n \u0111\u00e3 ghi nh\u1eadn), b\u00e1o kh\u00e1ch v\u00e0 \u0111\u1ed9i, r\u1ed3i g\u1ecdi K\u1ebf to\u00e1n xu\u1ea5t ho\u00e1 \u0111\u01a1n",
-            en: "Accounting says the customer paid: renews at the provider (runs by itself once the payment is recorded), tells the customer and the team, then calls Accounting to invoice",
+            vi: "Kế toán báo khách đã trả tiền: gia hạn tên miền tại nhà đăng ký khi người duyệt, ghi kết quả vào CRM, báo đội; chỉ khi đã gia hạn mới báo khách và gọi Kế toán xuất hoá đơn",
+            en: "Accounting says the customer paid: renews the domain at the registrar once a person approves, records the answer in the CRM and tells the team; only a renewed service tells the customer and calls Accounting to invoice",
         },
-        version: 12,
+        version: 14,
         // The old JSON template had `seedActive: true`: the seed makes an ACTIVE workflow from it.
         seedActive: true,
-        publishedAt: "2026-11-14T04:50:00.000Z",
+        publishedAt: "2026-11-14T22:00:00.000Z",
         notes: {
-            vi: "Thời gian gom tin nhắn do khai báo của trigger quyết định, đồ thị không còn tự khai báo",
-            en: "How long a burst of messages settles is the trigger declaration's, no longer the graph's",
+            vi: "R57: gia hạn tại nhà đăng ký tên miền (iNET, Tino) có người duyệt, CRM chỉ ghi kết quả; chỉ báo khách và xuất hoá đơn khi đã gia hạn. R68: người duyệt từ chối thì hệ thống tự báo đội kèm mã dịch vụ. Đơn nhà đăng ký đã nhận nhưng chưa đổi ngày hết hạn được đọc lại 30 phút một lần, tối đa 8 vòng",
+            en: "R57: renews at the domain registrar (iNET, Tino) on a person's approval, the CRM only records the answer; tells the customer and invoices only once renewed. R68: a declined renewal is told to the team by the engine with the service's code. An order the registrar took whose end date did not move is read again every 30 minutes, 8 rounds at most",
         },
     },
     nodes: {
-        renew: node(webrenewRenewNode, {
+        check: node(webrenewRenewCheckNode, {
             input: {
                 renewalId: ref("trigger.data.renewalId"),
                 customerCode: ref("trigger.data.customerCode"),
@@ -75,33 +88,85 @@ export const renewGraph: TemplateGraph = defineTemplateGraph({
                 termMonths: ref("trigger.data.termMonths"),
                 transactionRef: ref("trigger.data.transactionRef"),
             },
-            next: "renew-declined",
+            next: "renew",
         }),
-        "renew-declined": ifNode({
-            when: equals(ref("steps.renew.output.declined"), true),
-            yes: "renew-notice",
-            no: "renewed-team",
+        renew: node(webrenewRenewNode, {
+            input: {
+                renewalId: ref("steps.check.output.renewalId"),
+                serviceCode: ref("steps.check.output.serviceCode"),
+                termMonths: ref("steps.check.output.termMonths"),
+                domain: ref("steps.check.output.domain", { default: null }),
+                years: ref("steps.check.output.years", { default: null }),
+                provider: ref("steps.check.output.provider", { default: null }),
+                reason: ref("steps.check.output.reason", { default: null }),
+            },
+            next: "settle",
+            // R68: a person declining the registrar call (or the step's `cannot`) is told to the team by the ENGINE, with the service's
+            // code, and the run ends `declined` (was `renew-declined` + `renew-notice`).
+            unsuccessful: {
+                then: "end",
+                outcome: "declined",
+                facts: [{ label: { vi: "Mã dịch vụ", en: "Service" }, value: ref("trigger.data.serviceCode") }],
+            },
         }),
-        "renew-notice": node(teamDeclinedNoticeNode, {
-            input: { step: webrenewText("node.renew.title").vi, ref: ref("trigger.data.serviceCode"), locale: LOCALE },
-            next: "declined",
+        // A person declined the renewal (the engine told the team) or a team post: nothing else runs.
+        declined: outcome({ name: "declined", label: { vi: "Bị từ chối", en: "Declined" } }),
+        // A pending order is read again until the registrar's end date moves (round 1 reads at once, the rounds after wait 30 minutes);
+        // any other answer passes through round 1 with no read. Out of rounds the order is still pending and goes on the same road.
+        settle: loop({
+            label: { vi: "Đọc lại đơn đang chờ", en: "Re-read the pending order" },
+            exits: {
+                until: { vi: "Thoát khi không còn chờ", en: "Ends when no longer pending" },
+                exhausted: { vi: "Hết 8 vòng mà vẫn chờ", en: "8 rounds used, still pending" },
+            },
+            until: notEquals(ref("steps.recheck.output.outcome"), "pending"),
+            max: RECHECK_ROUNDS,
+            every: { minutes: RECHECK_EVERY_MINUTES },
+            body: {
+                start: "recheck",
+                nodes: {
+                    recheck: node(webrenewRenewRecheckNode, {
+                        input: { renewal: ref("steps.renew.output"), domain: ref("steps.check.output.domain", { default: null }) },
+                    }),
+                },
+            },
+            next: "settled",
+            exhausted: "settled",
         }),
-        // A person declined the renewal: the team was told; nothing else runs.
-        declined: outcome({ name: "declined" }),
+        // A loop's last output is nullable (a loop that ran no round); this one runs at least one, so `no` is never taken. It proves the
+        // answer present for the steps after it (the save check's narrowing).
+        settled: ifNode({
+            label: { vi: "Có kết quả đơn gia hạn?", en: "Renewal answer in hand?" },
+            when: present(ref("steps.settle.output.last")),
+            yes: "record",
+            no: "not-renewed",
+        }),
+        record: node(webrenewRenewRecordNode, {
+            input: { renewal: ref("steps.settle.output.last") },
+            next: "renewed-team",
+        }),
         "renewed-team": node(webrenewRenewedTeamNode, {
-            input: { customerCode: ref("trigger.data.customerCode"), renewal: ref("steps.renew.output"), locale: LOCALE },
+            input: { customerCode: ref("trigger.data.customerCode"), renewal: ref("steps.settle.output.last"), locale: LOCALE },
             next: "renewed-team-declined",
         }),
         "renewed-team-declined": ifNode({
+            label: { vi: "Bị từ chối báo đội?", en: "Team post declined?" },
             when: equals(ref("steps.renewed-team.output.declined"), true),
             yes: "declined",
-            no: "renewed-tell",
+            no: "renewed-check",
+        }),
+        // Only a renewal the registrar made tells the customer and calls Accounting; the team line said what a person must do otherwise.
+        "renewed-check": ifNode({
+            label: { vi: "Đã gia hạn tại nhà đăng ký?", en: "Renewed at the registrar?" },
+            when: equals(ref("steps.settle.output.last.outcome"), "renewed"),
+            yes: "renewed-tell",
+            no: "not-renewed",
         }),
         "renewed-tell": node(webrenewRenewedTellNode, {
             input: {
                 customerCode: ref("trigger.data.customerCode"),
                 contactId: ref("trigger.data.contactId", { default: null }),
-                renewal: ref("steps.renew.output"),
+                renewal: ref("steps.settle.output.last"),
                 locale: LOCALE,
             },
             next: "to-invoice",
@@ -120,11 +185,23 @@ export const renewGraph: TemplateGraph = defineTemplateGraph({
         }),
         renewed: outcome({
             name: "renewed",
+            label: { vi: "Đã gia hạn", en: "Renewed" },
             output: {
                 customerCode: ref("trigger.data.customerCode"),
                 serviceCode: ref("steps.renew.output.serviceCode"),
                 renewalId: ref("steps.renew.output.renewalId"),
                 termMonths: ref("steps.renew.output.termMonths"),
+            },
+        }),
+        "not-renewed": outcome({
+            name: "not-renewed",
+            label: { vi: "Chưa gia hạn", en: "Not renewed" },
+            output: {
+                customerCode: ref("trigger.data.customerCode"),
+                serviceCode: ref("steps.renew.output.serviceCode"),
+                renewalId: ref("steps.renew.output.renewalId"),
+                outcome: ref("steps.settle.output.last.outcome"),
+                reason: ref("steps.settle.output.last.reason"),
             },
         }),
     },

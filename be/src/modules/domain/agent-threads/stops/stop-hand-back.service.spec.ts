@@ -50,7 +50,7 @@ describe("StopHandBackService (R51 item 3: a hand-back ends the take-overs left 
         await expect(service.handedBack(tx, "ws-1", "route-1", "contact-1", "member-2")).resolves.toBe(1)
 
         expect(threads.resume).toHaveBeenCalledTimes(1)
-        expect(threads.resume).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1", stepKey: "understand" }, { kind: "skip", by: "member-2", at: NOW }, tx)
+        expect(threads.resume).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1", stepKey: "understand" }, { kind: "handed_back", by: "member-2", at: NOW }, tx)
     })
 
     it("leaves every other stop: another route's, one never taken over, one answered after the take-over, one already resolved", async () => {
@@ -72,6 +72,14 @@ describe("StopHandBackService (R51 item 3: a hand-back ends the take-overs left 
 
         await expect(service.handedBack(mockEntityManager(), "ws-1", "route-1", null, "member-2")).resolves.toBe(0)
         expect(records.ofContacts).not.toHaveBeenCalled()
+        expect(threads.resume).toHaveBeenCalledTimes(1)
+    })
+
+    it("DEF-4: the same ending decision admitted again (the resume door's once-key: `fresh: false`) ends nothing new", async () => {
+        const { service, threads } = build([], [stopOf({})])
+        threads.resume.mockResolvedValue({ kind: "admitted", fresh: false })
+
+        await expect(service.handedBack(mockEntityManager(), "ws-1", "route-1", null, "member-2")).resolves.toBe(0)
         expect(threads.resume).toHaveBeenCalledTimes(1)
     })
 })

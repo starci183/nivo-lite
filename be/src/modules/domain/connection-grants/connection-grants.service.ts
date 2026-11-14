@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentAccessLogService } from "@modules/domain/agent-access-log"
+import { AgentAccessLogService, BOUND } from "@modules/domain/agent-access-log"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import {
     ConnectionsError,
@@ -31,9 +31,6 @@ const AGENT_LIMIT = 200
 const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const pairKey = (agentId: string, connectionId: string): string => `${agentId}:${connectionId}`
-
-/** What the access log keeps for a bound pair (its before/after); null when the pair is not bound. */
-const BOUND = "bound"
 
 /** A non-secret fact, or null when the connection does not carry it. */
 const publicFact = (meta: Readonly<Record<string, string>>, key: string): string | null => {

@@ -6,19 +6,16 @@ export type StepJson = Readonly<Record<string, unknown>>
  * owner or manager, with what it had already sent left as it was.
  */
 export type AgentRunStatus =
-    "running" | "waiting" | "parked" | "done" | "failed" | "dead" | "compensating" | "compensated" | "cancelled"
+    "running" | "waiting" | "parked" | "done" | "failed" | "dead" | "cancelled"
 
 /** Where a step stands. */
-export type AgentStepStatus = "pending" | "running" | "done" | "failed" | "compensating" | "compensated"
+export type AgentStepStatus = "pending" | "running" | "done" | "failed"
 
 /**
- * What a step does to the world. `read` changes nothing. `compensable` names the handler kind that undoes it. `pivot` cannot be undone
- * (a sent message, a bank action): once one is done, a later failure goes forward or to a person, never back.
+ * What a step does to the world. `read` changes nothing. `write` changes something outside (a sent message, a bank action): the run only
+ * goes forward from a done write, to a later step or to a person, never back.
  */
-export type StepEffect =
-    | { readonly kind: "read" }
-    | { readonly kind: "compensable"; readonly compensation: string }
-    | { readonly kind: "pivot" }
+export type StepEffect = { readonly kind: "read" } | { readonly kind: "write" }
 
 /** Opens the one run of a trigger. */
 export interface RunOpen {

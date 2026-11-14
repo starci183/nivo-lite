@@ -1,6 +1,6 @@
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { InsertResult } from "typeorm"
-import type { VectorIndexBoot } from "@modules/integrations/qdrant"
+import { PLATFORM_TENANT, type VectorIndexBoot } from "@modules/integrations/qdrant"
 import type { Logger } from "@modules/platform/logging"
 import { VectorSyncQueue } from "@modules/queues/vector-sync"
 import { FakeEmbedder, FakeRowSource, FakeVectorIndex, TEST_MODEL, vectorRowOf } from "@tests/fixtures/builders/vector-sync.builder"
@@ -16,9 +16,9 @@ const NOW = new Date("2026-11-11T10:00:00.000Z")
 /** A row id that sorts by its number. */
 const idOf = (at: number): string => `row-${String(at).padStart(7, "0")}`
 
-const build = (bound = true) => {
+const build = () => {
     const index = new FakeVectorIndex()
-    const sources = { passage: new FakeRowSource(), truth: new FakeRowSource() }
+    const sources = { passage: new FakeRowSource(), truth: new FakeRowSource(), base: new FakeRowSource() }
     const embedder = new FakeEmbedder()
     const queue = mock<VectorSyncQueue>()
     const logger = mock<Logger>()
@@ -36,8 +36,8 @@ const build = (bound = true) => {
         return Promise.resolve(new InsertResult())
     })
     const clock = new FakeClock(NOW)
-    const sync = new VectorSyncService(bound ? index : null, sources, embedder, queue, em, logger, clock)
-    const reconcile = new VectorReconcileService(bound ? index : null, bound ? boot : null, sources, sync, queue, em, logger, clock, notices)
+    const sync = new VectorSyncService(index, sources, embedder, queue, em, logger, clock)
+    const reconcile = new VectorReconcileService(index, boot, sources, sync, queue, em, logger, clock, notices)
     return { reconcile, index, sources, embedder, queue, logger, notices, states, boot }
 }
 
@@ -105,38 +105,51 @@ const registerDriftCases = () => {
         expect([...index.points.passage.keys()]).toEqual(["p1"])
     })
 
-    it("does nothing and says so when the deployment has no vector index", async () => {
-        const { reconcile, sources, queue } = build(false)
-        sources.truth.put(vectorRowOf("t1", WS))
-        await expect(reconcile.run()).resolves.toEqual({ outcome: "off", kinds: {}, continued: false, driftRuns: 0, reported: 0 })
-        expect(sources.truth.calls).toEqual({})
-        expect(queue.enqueueReconcile).not.toHaveBeenCalled()
+    it("walks every kind that declares it is embedded, the base knowledge too; the platform tenant's drift is logged, never told to a founder", async () => {
+        const { reconcile, index, sources, embedder, notices } = build()
+        const item = vectorRowOf("k1", PLATFORM_TENANT, { mirror: { ...vectorRowOf("k1", PLATFORM_TENANT).mirror, isPublic: true, customerReady: true } })
+        sources.base.put(item)
+
+        const done = await reconcile.run()
+        expect(done.kinds.base).toMatchObject({ rows: 1, embedded: 1, rowsWrapped: true })
+        expect(index.payloadOf("base", "k1")).toMatchObject({ workspaceId: PLATFORM_TENANT, model: TEST_MODEL })
+
+        // An outage of the embedding provider over three runs: drift, but the platform has no founder to tell.
+        sources.base.put(vectorRowOf("k2", PLATFORM_TENANT))
+        embedder.answer = "failed"
+        await reconcile.run()
+        await reconcile.run()
+        const third = await reconcile.run()
+        expect(third).toMatchObject({ driftRuns: 3, reported: 0 })
+        expect(notices.postBackgroundStopped).not.toHaveBeenCalled()
     })
 }
 
 const registerBoundCases = () => {
     it("is bounded per run and resumes from its cursor: 4,096 rows a run, the follow-up queued while it repairs", async () => {
-        const { reconcile, index, sources, queue, states } = build()
+        const { reconcile, index, sources, queue, states, embedder } = build()
+        // Every row holds its point, with flags the rows no longer have (a document released to customers): repairs with no call.
         for (let at = 0; at < 10_000; at += 1) {
-            sources.passage.put(vectorRowOf(idOf(at), WS))
-            sources.passage.stored.set(idOf(at), [at])
+            const row = vectorRowOf(idOf(at), WS, { mirror: { ...vectorRowOf(idOf(at), WS).mirror, isPublic: true } })
+            sources.passage.put(row)
+            index.put("passage", row.id, [at], { ...row.mirror, isPublic: false, model: TEST_MODEL, textHash: row.textHash })
         }
 
         const first = await reconcile.run()
-        expect(first.kinds.passage).toMatchObject({ rows: 4096, copied: 4096, rowsWrapped: false })
+        expect(first.kinds.passage).toMatchObject({ rows: 4096, marked: 4096, embedded: 0, rowsWrapped: false })
         expect(first.continued).toBe(true)
         expect(queue.enqueueReconcile).toHaveBeenCalledWith({ resumedAt: NOW.getTime() }, expect.anything())
         expect(states.get("passage")).toMatchObject({ rowsAfter: idOf(4095), driftRuns: 0 })
-        expect(index.points.passage.size).toBe(4096)
 
         expect(await settle(reconcile)).toBe(2)
-        expect(index.points.passage.size).toBe(10_000)
+        expect([...index.points.passage.values()].every((point) => point.payload.isPublic)).toBe(true)
         expect(states.get("passage")).toMatchObject({ rowsAfter: null, passes: 1 })
+        expect(embedder.calls).toBe(0)
 
         // A clean pass queues no follow-up: it waits for the tick.
         queue.enqueueReconcile.mockClear()
         const clean = await reconcile.run()
-        expect(clean.kinds.passage).toMatchObject({ unchanged: 4096, copied: 0 })
+        expect(clean.kinds.passage).toMatchObject({ unchanged: 4096, marked: 0 })
         expect(queue.enqueueReconcile).not.toHaveBeenCalled()
     })
 
@@ -223,43 +236,47 @@ const registerOutageCases = () => {
 }
 
 const registerWorkloadCases = () => {
-    it("rebuilds 200,000 passages from an empty index out of Postgres's own vectors: the calls, in numbers, and no embedding", async () => {
+    it("walks 200,000 passages whose points stand (the state after the pgvector drop): compares, writes nothing, embeds nothing", async () => {
         const { reconcile, index, sources, embedder } = build()
         const N = 200_000
         for (let at = 0; at < N; at += 1) {
-            sources.passage.put(vectorRowOf(idOf(at), WS))
-            sources.passage.stored.set(idOf(at), [at])
+            const row = vectorRowOf(idOf(at), WS, { stamped: true, stampedModel: TEST_MODEL })
+            sources.passage.put(row)
+            index.put("passage", row.id, [at], { ...row.mirror, model: TEST_MODEL, textHash: row.textHash })
         }
 
-        const runs = await settle(reconcile)
+        // A clean run queues no follow-up: each tick walks 4,096 rows until the pass wraps.
+        let runs = 0
+        let wrapped = false
+        while (!wrapped && runs < 100) {
+            runs += 1
+            const done = await reconcile.run()
+            expect(done.continued).toBe(false)
+            wrapped = done.kinds.passage?.rowsWrapped === true
+        }
 
         expect(index.points.passage.size).toBe(N)
         expect(embedder.calls).toBe(0)
-        const restUpserts = index.upsertSizes.reduce((sum, size) => sum + Math.ceil(size / 64), 0)
         expect({
             runs,
             rowPages: sources.passage.calls.page,
             stampReads: index.calls.stampsOf,
-            vectorReads: sources.passage.calls.storedVectors,
-            restUpserts,
-            postgresStamps: sources.passage.calls.stamp,
+            upserts: index.calls.upsert ?? 0,
+            postgresStamps: sources.passage.calls.stamp ?? 0,
         }).toEqual({
-            // 49 runs of 4,096 rows back to back (the 49th ends the pass), plus the truths' empty page each run.
+            // 49 runs of 4,096 rows (the 49th reads the last 3,392 rows and the empty page that ends the pass).
             runs: 49,
             // 782 pages of 256 rows + the empty page that ends the pass.
             rowPages: 783,
             // One read of the points of a page's ids per page.
             stampReads: 782,
-            // One read of the stored vectors per page.
-            vectorReads: 782,
-            // 3,125 writes of 64 points (781 full pages x 4, the last page of 64 x 1).
-            restUpserts: 3125,
-            // One Postgres write per page: indexed_at.
-            postgresStamps: 782,
+            // Nothing written to the index, nothing stamped in Postgres.
+            upserts: 0,
+            postgresStamps: 0,
         })
     })
 
-    it("rebuilds after the pgvector column is dropped by embedding again: one call per 32 passages, 1,024 passages a run (200,000 = 6,250 calls, 196 runs)", async () => {
+    it("rebuilds a lost index by embedding again: one call per 32 passages, 1,024 passages a run (200,000 = 6,250 calls, 196 runs)", async () => {
         const { reconcile, index, sources, embedder } = build()
         // A tenth of the 200,000 workload: the walk is linear in the rows (the copy rebuild above runs the full size).
         const N = 20_000

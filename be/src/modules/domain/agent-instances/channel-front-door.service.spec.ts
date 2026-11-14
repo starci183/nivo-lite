@@ -28,6 +28,7 @@ const connectionOf = (provider: ConnectionRecord["provider"], id = "c1"): Connec
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

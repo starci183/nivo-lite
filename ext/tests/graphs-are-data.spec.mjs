@@ -1,7 +1,7 @@
 import rule from "../lint/graphs-are-data.mjs"
 import { at, tester } from "./tester.mjs"
 
-const file = at("packages/blocks-core/src/modules/sales/template/example.graph.ts")
+const file = at("packages/blocks-core/src/agents/sales/graphs/example.graph.ts")
 const T =
     'import { callWorkflow, defineTemplateGraph, equals, ifNode, loop, node, outcome, ref, trigger } from "@nivo-lite/agent-sdk/template"\n'
 

@@ -362,10 +362,6 @@ describe("AgentWorkflowAdoptionService: every road by which a version becomes th
             "agent-graphs/agent-graph-setup.service.ts",
             "agent-graphs/agent-graph-admin.service.ts",
         ])
-        expect([...everywhere(".publishTemplate("), ...everywhere(".publishCopy(")]).toEqual([
-            "agent-templates/agent-template-installer.service.ts",
-            "template-marketplace/template-updates.service.ts",
-            "agent-instances/agent-setup-copy.service.ts",
-        ])
+        expect(everywhere(".publishCopy(")).toEqual(["agent-instances/agent-setup-copy.service.ts"])
     })
 })

@@ -1,8 +1,8 @@
 import type { VectorFlags } from "./qdrant.contracts"
 
 /**
- * One Postgres row as the sync reads it: the system of record's side of a point. It never carries the vector (a page of rows would be
- * megabytes): the vector Postgres still holds during the transition is read apart, only for the rows that need one.
+ * One Postgres row as the sync reads it: the system of record's side of a point. Postgres holds no vector: the point's vector lives
+ * in the index only.
  */
 export interface VectorRow {
     /** The row id: the id of its point. */
@@ -44,7 +44,8 @@ export interface AcceptedRow {
 
 /**
  * The Postgres side of one kind of point, owned by the capability that owns the table (passages: knowledge-chunks; truths:
- * brain-facts). The sync asks it for rows and tells it what the index accepted; it never writes a vector to Postgres.
+ * brain-facts; base knowledge: nivo-knowledge): how a row kind declares that it is embedded. The sync asks it for rows and tells it
+ * what the index accepted; Postgres never holds a vector.
  */
 export interface VectorRowSource {
     /** The rows of one workspace with these ids; an id with no row is not answered. */
@@ -55,15 +56,6 @@ export interface VectorRowSource {
     page(afterId: VectorRowCursor, limit: number): Promise<ReadonlyArray<VectorRow>>
     /** Among these ids, the rows that exist and want a point, whatever workspace. */
     wantedAmong(ids: ReadonlyArray<string>): Promise<ReadonlyArray<WantedRow>>
-    /**
-     * The vectors Postgres still holds for these rows under this identity (the pgvector column, during the transition): a point is
-     * copied from it with no embedding call. Empty once the column is dropped.
-     */
-    storedVectors(
-        workspaceId: string,
-        ids: ReadonlyArray<string>,
-        model: string,
-    ): Promise<ReadonlyMap<string, ReadonlyArray<number>>>
     /**
      * For each of these text hashes, ANOTHER row of the workspace whose point the index accepted for the same text under this
      * identity: its vector is adopted with no embedding call. A hash with no such row is not answered.

@@ -13,7 +13,6 @@ import type { FactDecision, FactForm } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
 import { BrainService } from "./brain.service"
 import { DocumentFactsService } from "./document-facts.service"
-import { FactVectorsSweepService } from "./fact-vectors-sweep.service"
 import { SERVICE_AT, SERVICE_WS, serviceFactOf, serviceLesson, serviceMemberOf } from "@tests/fixtures/builders/brain-service.builder"
 
 const WS = SERVICE_WS
@@ -38,10 +37,8 @@ const build = async () => {
     const gaps = mock<KnowledgeGapsService>()
     const sources = mock<KnowledgeSourcesService>()
     const documentFacts = mock<DocumentFactsService>()
-    const vectors = mock<FactVectorsSweepService>()
     const reads = mock<BrainFactsReadService>()
     members.require.mockResolvedValue(memberOf())
-    vectors.sweep.mockResolvedValue({ workspaces: 0, embedded: 0, copied: 0, more: 0 })
     facts.propose.mockResolvedValue({ fact: factOf(), outcome: "applied" })
     lessons.propose.mockResolvedValue(lesson)
     const moduleRef = await Test.createTestingModule({
@@ -55,7 +52,6 @@ const build = async () => {
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: DocumentFactsService, useValue: documentFacts },
-            { provide: FactVectorsSweepService, useValue: vectors },
             { provide: BrainFactsReadService, useValue: reads },
         ],
     }).compile()
@@ -68,7 +64,6 @@ const build = async () => {
         gaps,
         sources,
         documentFacts,
-        vectors,
         reads,
     }
 }
@@ -77,13 +72,12 @@ describe("BrainService upkeep: the timed job that brings scheduled facts in forc
     /** The dev pair of D-P11-8: 35.000 d scheduled from 00:00 VN, nothing activated it until someone opened the page. */
     const scheduled = factOf({ id: "fee-35", value: "35.000 d", scope: "internal", status: "active", version: 2 })
 
-    it("runs the page's maintain in every due workspace as the brain itself (no member check), then the vectors' sweep of the tick", async () => {
-        const { service, reads, facts, members, vectors, logger, documentFacts } = await build()
+    it("runs the page's maintain in every due workspace as the brain itself (no member check); no vector work of its own", async () => {
+        const { service, reads, facts, members, logger, documentFacts } = await build()
         reads.dueWorkspaces.mockResolvedValue([WS, "ws-2"])
         facts.maintain
             .mockResolvedValueOnce({ activated: [scheduled], expired: 1 })
             .mockResolvedValueOnce({ activated: [], expired: 0 })
-        vectors.sweep.mockResolvedValue({ workspaces: 1, embedded: 40, copied: 2, more: 0 })
         documentFacts.resumeParked.mockResolvedValue(1)
 
         await expect(service.upkeep()).resolves.toEqual({
@@ -91,7 +85,6 @@ describe("BrainService upkeep: the timed job that brings scheduled facts in forc
             activated: 1,
             expired: 1,
             failed: 0,
-            vectors: 42,
             readingsResumed: 1,
         })
 
@@ -100,15 +93,12 @@ describe("BrainService upkeep: the timed job that brings scheduled facts in forc
         expect(documentFacts.resumeIndexing).toHaveBeenCalledTimes(1)
         expect(facts.maintain.mock.calls).toEqual([[WS], ["ws-2"]])
         expect(members.require).not.toHaveBeenCalled()
-        // The fact that came in force got its vector from maintain's announcement; the tick sweeps once, never a workspace per fact.
-        expect(vectors.refresh).not.toHaveBeenCalled()
-        expect(vectors.sweep).toHaveBeenCalledTimes(1)
+        // The fact that came in force gets its point from maintain's announcement (its sync job); the vector reconcile catches the rest.
         expect(logger.info).toHaveBeenCalledWith(BrainLogEvent.UpkeepDone, {
             workspaces: 2,
             activated: 1,
             expired: 1,
             failed: 0,
-            vectors: 42,
             readingsResumed: 1,
         })
     })
@@ -122,12 +112,9 @@ describe("BrainService upkeep: the timed job that brings scheduled facts in forc
             activated: 0,
             expired: 0,
             failed: 0,
-            vectors: 0,
             readingsResumed: 0,
         })
         expect(idle.facts.maintain).not.toHaveBeenCalled()
-        // Facts with no vector are swept even in a tick with no upkeep due.
-        expect(idle.vectors.sweep).toHaveBeenCalledTimes(1)
 
         const { service, reads, facts, logger, documentFacts } = await build()
         documentFacts.resumeParked.mockResolvedValue(0)
@@ -139,7 +126,6 @@ describe("BrainService upkeep: the timed job that brings scheduled facts in forc
             activated: 0,
             expired: 2,
             failed: 1,
-            vectors: 0,
             readingsResumed: 0,
         })
         expect(logger.error).toHaveBeenCalledWith(BrainLogEvent.UpkeepFailed, cause, { workspaceId: "broken" })
@@ -423,8 +409,8 @@ describe("BrainService founder-only activation", () => {
         expect(facts.apply).not.toHaveBeenCalled()
     })
 
-    it("lets the founder approve a change request; its vector comes with the store's announcement, never a workspace refresh", async () => {
-        const { service, facts, vectors } = await build()
+    it("lets the founder approve a change request; its point comes with the store's announcement (its sync job), nothing here", async () => {
+        const { service, facts } = await build()
         facts.apply.mockResolvedValue(factOf({ status: "active", version: 2 }))
 
         await expect(service.decideFact("u1", { workspaceId: WS, id: "f1", action: "apply" })).resolves.toMatchObject({
@@ -433,6 +419,5 @@ describe("BrainService founder-only activation", () => {
         })
 
         expect(facts.apply).toHaveBeenCalledWith(WS, "f1", "Ada", "")
-        expect(vectors.refresh).not.toHaveBeenCalled()
     })
 })

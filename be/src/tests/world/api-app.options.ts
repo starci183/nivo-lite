@@ -193,6 +193,7 @@ const localApiOptions = (): ApiOptions => ({
         publicSiteUrl: undefined,
         publicApiUrl: "https://api.invalid",
     },
+    providerSandbox: { enabled: true },
     webhookConnections: { signingSecret: undefined },
     google: {
         client: null,
@@ -216,8 +217,9 @@ const localApiOptions = (): ApiOptions => ({
     webhookDelivery: { timeoutMs: 1000 },
     toolsConfig: { defaultTimeoutMs: 4000 },
     knowledge: { indexChunkDelayMs: 0 },
-    // No vector index in a proof: vectors stay in Postgres (the one switch is QDRANT_URL).
-    qdrant: { url: null, apiKey: null, timeoutMs: 5000 },
+    // The vector index is a required engine piece. A proof runs no Qdrant: this address refuses at once (the discard port), so the
+    // collections are not prepared, a meaning search answers by words, and the readiness probe says `vectors` is down.
+    qdrant: { url: "http://127.0.0.1:9", apiKey: null, timeoutMs: 1000 },
 })
 
 /** The optional external model configuration of a proof; every domain binding remains the production binding. */

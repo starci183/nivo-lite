@@ -1,3 +1,4 @@
+import type { FileNotKept } from "@modules/domain/chat-files"
 import type { TriggerVerb } from "@nivo-lite/agent-sdk/names"
 import { isRecord } from "@modules/platform/primitives"
 import type { CorrelationKey } from "./trigger-declaration.contracts"
@@ -32,6 +33,8 @@ export interface KeptFile {
     readonly url: string
     readonly name: string
     readonly contentType: string
+    /** Why the entry could NOT keep this file (its typed reason): the person's stored line keeps it with no address. */
+    readonly notKept?: FileNotKept | undefined
 }
 
 /** The generic trigger scope a graph refs as `trigger.*` (ROAD-API section 3.1). */

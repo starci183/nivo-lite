@@ -30,10 +30,17 @@ interface ChannelSendCommon {
 }
 
 /**
- * A message to a PERSON: the core contact, on one of the channels they are known on. Nothing names a conversation: the engine resolves
- * the contact's channel identity (the channel, the account, the channel's id of them) and the route the run was woken on.
+ * A message to a PERSON: the core contact, on one of the channels they are known on; or to the person of a ROUTE (`routeId`: the route a
+ * record came in on), on that route's channel and account. The engine resolves the contact's channel identity (the channel, the account,
+ * the channel's id of them) and the route; every rule of the send (holds, consent, rights, the node's mode) is the same either way.
  */
 export type ChannelSendPayload = ChannelSendCommon & {
+    /**
+     * The route to speak on (the route a record came in on, as a trigger handed it: `trigger.routeId`): its person, channel and account
+     * are the address. Named with no `contactId`, `channel` or `accountId`. For a run that serves no person (a clock round, a team-chat
+     * turn) addressing a person a stored record names by its route.
+     */
+    readonly routeId?: string | undefined
     /** The person (the core contact). Absent: the person the run serves. */
     readonly contactId?: string | undefined
     /** The channel to use when the person is known on more than one (zalo, telegram, facebook, instagram, website). Absent: the route the run was woken on. */
@@ -110,6 +117,11 @@ const channelSendPayloadOf = (
 ): z.ZodType<ChannelSendPayload> =>
     z
         .object({
+            routeId: id
+                .optional()
+                .describe(
+                    "The route to speak on (the route a record came in on). Its person, channel and account are the address: name no contactId, channel or accountId with it.",
+                ),
             contactId: id
                 .optional()
                 .describe("The person (the core contact) to speak to. Leave it out to speak to the person this run serves."),
@@ -121,6 +133,12 @@ const channelSendPayloadOf = (
                 .describe("The account (connection id) to use when the person is known on several of one channel. Leave it out for the account they wrote on."),
             ...common,
         })
+        .refine(
+            (payload) =>
+                payload.routeId === undefined ||
+                (payload.contactId === undefined && payload.channel === undefined && payload.accountId === undefined),
+            { message: "A send addressed by its route names no contactId, channel or accountId besides.", path: ["routeId"] },
+        )
         .describe(
             "Send one message to a person on one of their channels (by default the one they wrote on). The answer is the delivery receipt: how it ended, and why not when it was not delivered.",
         )

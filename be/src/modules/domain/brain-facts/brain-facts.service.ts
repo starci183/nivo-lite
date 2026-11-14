@@ -135,10 +135,6 @@ interface VersionOf {
     readonly note: string
 }
 
-/** A column of the old version, read in the same statement (its vector is copied, never recomputed). */
-const copied = (column: string) => (): string =>
-    `(SELECT o.${column} FROM public.brain_facts o WHERE o.workspace_id = :workspaceId AND o.id = :oldId)`
-
 /** The number a stored value reads as, as the column keeps it. */
 const valueNumberOf = (value: string): string | null => {
     const number = numberOf(value)
@@ -488,7 +484,7 @@ export class BrainFactsService {
     /**
      * A source states the value in force again: its evidence is added and the trust lifted to the source's when higher. When the source
      * is read by a WIDER audience than the truth (a public document repeats an internal truth: D-BR-1), the truth becomes the next version
-     * with the wider audience, decided by the brain, so the history shows why (the old version is superseded and kept, its vector copied,
+     * with the wider audience, decided by the brain, so the history shows why (the old version is superseded and kept, its point adopted,
      * its relations carried, the values waiting for the key take the new audience) and the change is announced. A narrower source never
      * narrows it.
      */
@@ -768,7 +764,7 @@ export class BrainFactsService {
     /**
      * A time-boxed value over a standing one is an OVERLAY (D-BR-18, a holiday surcharge window): when a value with a stated end replaces a
      * value in force that holds longer (or with no end), the standing value is scheduled to come back at the window's end, until its own
-     * end, as the next version after the window (same value, audience, source, evidence; its vector copied). The upkeep tick puts it in
+     * end, as the next version after the window (same value, audience, source, evidence; its point adopted). The upkeep tick puts it in
      * force when the window ends, as any scheduled value. Nothing when the new value states no end (it replaces for good) or outlasts the
      * standing one. A newer schedule of the key replaces this plan like any other (`schedule`).
      */
@@ -856,10 +852,11 @@ export class BrainFactsService {
      * Changes who reads the value in force; the value stays (the owner's "customers may know" switch on the policy tab). The next version
      * of the fact: same key, instance, value, unit, source, trust, end and evidence, the new scope (modules only for `restricted`), valid
      * from now, decided by the caller; the old row is superseded and kept, so the history shows who read each version. Its relations are
-     * carried and its vector copied (the embedded line holds no audience: no embedding call; an old row with no vector copies none, and
-     * the vectors listener then copies one of the same line or embeds it once). The values of the key not yet in force (the
-     * scheduled one, the waiting ones) take the new reach too and point at the new version, so approving one later does not undo the
-     * switch. The same reach writes nothing and answers the fact. Who may call it is the caller's to check: the workspace owner alone.
+     * carried and its point adopted (the embedded line holds no audience: the vectors listener gives the new row the vector of the old
+     * row's point, no embedding call; an old row with no point has none to lend, and the line is embedded once). The values of the key
+     * not yet in force (the scheduled one, the waiting ones) take the new reach too and point at the new version, so approving one later
+     * does not undo the switch. The same reach writes nothing and answers the fact. Who may call it is the caller's to check: the
+     * workspace owner alone.
      */
     setReach(
         workspaceId: string,
@@ -889,8 +886,8 @@ export class BrainFactsService {
 
     /**
      * The next version of a fact in force with another audience, in the caller's transaction: the old row is superseded and kept, the new
-     * one carries the same key, instance, value, unit, source and end with the given evidence and trust, valid from now, its vector
-     * copied and its relations carried; the values of the key not yet in force take the new audience and point at the new version. The
+     * one carries the same key, instance, value, unit, source and end with the given evidence and trust, valid from now, its point
+     * adopted and its relations carried; the values of the key not yet in force take the new audience and point at the new version. The
      * one write behind the founder's switch (`setReach`) and the brain's widening on wider evidence (`confirmed`, `repairAudience`).
      */
     private async reachTx(
@@ -1187,9 +1184,9 @@ export class BrainFactsService {
     }
 
     /**
-     * Stores another version of a fact (the same key, instance, value, unit and source) with what `version` says, its vector copied from
-     * the old row in the same statement (no embedding call), and answers it: the next version in force with another audience, or the
-     * standing value scheduled to come back after a time-boxed one.
+     * Stores another version of a fact (the same key, instance, value, unit and source) with what `version` says, and answers it: the
+     * next version in force with another audience, or the standing value scheduled to come back after a time-boxed one. The new row has
+     * no point yet: its line is the old row's, so the vectors listener adopts the old point's vector (no embedding call).
      */
     private async copyVersion(
         tx: EntityManager,
@@ -1227,13 +1224,9 @@ export class BrainFactsService {
                 validTo: () =>
                     `coalesce(:validTo::timestamptz, coalesce(:validFrom::timestamptz, now()) + ${DEFAULT_VALIDITY})`,
                 evidence: () => ":evidence::jsonb",
-                embedding: copied("embedding"),
-                embeddingModel: copied("embedding_model"),
-                embeddingHash: copied("embedding_hash"),
             })
             .setParameters({
                 workspaceId,
-                oldId: old.id,
                 validFrom: version.validFrom,
                 validTo: version.validTo,
                 evidence: JSON.stringify(version.evidence),

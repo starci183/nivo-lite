@@ -5,11 +5,13 @@ import {
     editedKnowledgeRow,
     knowledgeRow,
     knowledgeRowWithText,
-    longKnowledgeRow,
 } from "@tests/fixtures/builders/nivo-knowledge.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { PLATFORM_TENANT } from "@modules/integrations/qdrant"
+import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { VectorSyncQueue } from "@modules/queues/vector-sync"
 import { isRecord } from "@modules/platform/primitives"
 import type { NivoItemInput } from "./nivo-knowledge.contracts"
 import { NivoKnowledgeService } from "./nivo-knowledge.service"
@@ -30,12 +32,27 @@ const item = (slug: string): NivoItemInput => ({
     kind: "playbook",
 })
 
+const NOW = new Date("2026-11-14T08:00:00.000Z")
+
+/** The `vector.sync` producer every write of the base knowledge commits its jobs through. */
+const queue = mock<VectorSyncQueue>()
+
 const build = async (em: ReturnType<typeof mockEntityManager>) => {
+    queue.enqueueSync.mockReset()
+    queue.enqueueSync.mockResolvedValue()
     const moduleRef = await Test.createTestingModule({
-        providers: [NivoKnowledgeService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            NivoKnowledgeService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: VectorSyncQueue, useValue: queue },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+        ],
     }).compile()
     return moduleRef.get(NivoKnowledgeService)
 }
+
+/** The sync job of some base-knowledge items: kind base, the platform tenant, the time of the write. */
+const syncOf = (ids: ReadonlyArray<string>) => ({ kind: "base", workspaceId: PLATFORM_TENANT, ids, at: NOW.getTime() })
 
 describe("NivoKnowledgeService", () => {
     describe("upsert", () => {
@@ -49,7 +66,9 @@ describe("NivoKnowledgeService", () => {
             const [first] = queueQueryBuilders(tx.em, [{ execute: { raw: [{ id: "n1" }] } }, { execute: { raw: [] } }])
             const service = await build(tx.em)
 
-            await expect(service.upsert([item("a"), item("b")])).resolves.toEqual({ inserted: 1, updated: 1 })
+            await expect(service.upsert([item("a"), item("b")])).resolves.toEqual({ inserted: 1, updated: 1, queued: 2 })
+            // Every item written gets its sync job in the same transaction: the index embeds only what changed.
+            expect(queue.enqueueSync.mock.calls).toEqual([[syncOf(["n1", "n1"]), expect.anything()]])
 
             expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(NivoKnowledgeItemEntity, "nivo_knowledge")
             expect(first?.callsOf("insert")).toEqual([[]])
@@ -65,7 +84,7 @@ describe("NivoKnowledgeService", () => {
 
 describe("NivoKnowledgeService upsert of existing items", () => {
     describe("upsert", () => {
-        it("keeps the version and the vector of an item whose text did not change", async () => {
+        it("keeps the version of an item whose text did not change", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
                     findOne: [NivoKnowledgeItemEntity, knowledgeRowWithText("T a", "B a")],
@@ -90,7 +109,7 @@ describe("NivoKnowledgeService upsert of existing items", () => {
             })
         })
 
-        it("takes the next version and drops the vector of an item whose text changed", async () => {
+        it("takes the next version of an item whose text changed; Postgres holds no vector to drop (its sync job re-embeds it)", async () => {
             const tx = fakeTransaction(
                 mockEntityManager({
                     findOne: [NivoKnowledgeItemEntity, knowledgeRow()],
@@ -104,7 +123,9 @@ describe("NivoKnowledgeService upsert of existing items", () => {
 
             const changes: unknown = tx.em.update.mock.calls[0]?.[2]
             expect(called(isRecord(changes) ? changes.version : undefined)).toBe('"version" + 1')
-            expect(changes).toMatchObject({ embedding: null, embeddingModel: null, title: "T a" })
+            expect(changes).toMatchObject({ title: "T a" })
+            expect(Object.keys(isRecord(changes) ? changes : {})).not.toContain("embedding")
+            expect(queue.enqueueSync).toHaveBeenCalledWith(syncOf(["n1"]), expect.anything())
         })
 
         it("leaves an item that vanished while it was republished", async () => {
@@ -112,8 +133,9 @@ describe("NivoKnowledgeService upsert of existing items", () => {
             queueQueryBuilders(tx.em, [{ execute: { raw: [] } }])
             const service = await build(tx.em)
 
-            await expect(service.upsert([item("a")])).resolves.toEqual({ inserted: 0, updated: 1 })
+            await expect(service.upsert([item("a")])).resolves.toEqual({ inserted: 0, updated: 1, queued: 0 })
             expect(tx.em.update).not.toHaveBeenCalled()
+            expect(queue.enqueueSync).not.toHaveBeenCalled()
         })
     })
 })
@@ -220,50 +242,20 @@ describe("NivoKnowledgeService list", () => {
 
 describe("NivoKnowledgeService", () => {
     describe("removeExcept", () => {
-        it("answers how many items went", async () => {
-            const em = mockEntityManager()
-            const removal = queueQueryBuilders(em, [{ execute: { raw: [{ id: "x" }, { id: "y" }] } }])[0]
-            const service = await build(em)
+        it("answers how many items went, with the sync job of each in the same transaction (their points go)", async () => {
+            const tx = fakeTransaction(mockEntityManager())
+            const removal = queueQueryBuilders(tx.em, [{ execute: { raw: [{ id: "x" }, { id: "y" }] } }])[0]
+            const service = await build(tx.em)
 
-            await expect(service.removeExcept(["a"])).resolves.toBe(2)
+            await expect(service.removeExcept(["a"])).resolves.toEqual({ removed: 2, queued: 2 })
 
-            expect(em.createQueryBuilder).toHaveBeenCalledWith(NivoKnowledgeItemEntity, "n")
+            expect(tx.em.createQueryBuilder).toHaveBeenCalledWith(NivoKnowledgeItemEntity, "n")
+            expect(queue.enqueueSync.mock.calls).toEqual([[syncOf(["x", "y"]), expect.anything()]])
+            expect(tx.commits).toBe(1)
 
             expect(removal?.callsOf("delete")).toEqual([[]])
             expect(removal?.callsOf("where")).toEqual([["slug <> ALL(CAST(:slugs AS text[]))", { slugs: ["a"] }]])
         })
     })
 
-    describe("unembedded", () => {
-        it("names the items that need a vector with the text to embed, cut at the limit", async () => {
-            const em = mockEntityManager()
-            const read = queueQueryBuilders(em, [{ getMany: [longKnowledgeRow(9000)] }])[0]
-            const service = await build(em)
-
-            const found = await service.unembedded("m1", 32)
-
-            expect(read?.callsOf("where")[0]?.[1]).toEqual({ model: "m1" })
-            expect(read?.callsOf("limit")).toEqual([[32]])
-            expect(found).toEqual([{ id: "n1", text: `T\n\n${"x".repeat(7997)}` }])
-        })
-    })
-
-    describe("setVectors", () => {
-        it("gives the items their vectors", async () => {
-            const em = mockEntityManager()
-            const write = queueQueryBuilders(em, [{ execute: {} }])[0]
-            const service = await build(em)
-
-            await service.setVectors({ model: "m1", ids: ["n1"], vectors: ["[1]"] })
-
-            expect(em.createQueryBuilder).toHaveBeenCalledWith(NivoKnowledgeItemEntity, "n")
-
-            expect(write?.callsOf("update")).toEqual([[]])
-            expect(write?.callsOf("setParameters")).toEqual([[{ ids: ["n1"], vectors: ["[1]"] }]])
-            const set: unknown = write?.callsOf("set")[0]?.[0]
-            expect(called(isRecord(set) ? set.embedding : undefined)).toEqual(
-                expect.stringContaining("unnest(CAST(:ids AS uuid[])"),
-            )
-        })
-    })
 })

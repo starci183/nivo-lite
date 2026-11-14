@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { ContactMemoryEntryEntity } from "@modules/domain/contacts/persistence/entities"
-import { ContactFreezeEntity } from "@modules/domain/lead-freezes/persistence/entities"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { GraphSeedService } from "./graph-seed.service"
@@ -92,15 +91,13 @@ const build = async (answers: Answers = {}) => {
             ...RESET_RUN_STATE.map((kind, index): [string, unknown] => [kind.count, [{ count: 10 + index }]]),
             ...COUNTS.map((sql, index): [string, unknown] => [sql, [{ count: 20 + index }]]),
         ],
-        // The engine's own tables the reset clears beside the runs and workflows: the memory and freezes. Ledger (ROAD Opus-1d,
+        // The engine's own tables the reset clears beside the runs and workflows: the lead memory (the contact freeze is gone: rule Q-1, a run holds its subject). Ledger (ROAD Opus-1d,
         // 2026-11-14): the conversation holds went with the agent conversation hold (ruling R35), so their counts left the totals below.
         delete: [
             [ContactMemoryEntryEntity, { affected: 1 }],
-            [ContactFreezeEntity, { affected: 2 }],
         ],
         count: [
             [ContactMemoryEntryEntity, 1],
-            [ContactFreezeEntity, 2],
         ],
     })
     const transaction = fakeTransaction(em)
@@ -134,7 +131,7 @@ describe("WorkflowResetService: what it deletes", () => {
         ])
     })
 
-    it("deletes the steps of the agents' runs, the runs (with their pins), the workflows with their versions and holds, the memory and freezes, then the graph versions that held a flow", async () => {
+    it("deletes the steps of the agents' runs, the runs (with their pins), the workflows with their versions and holds, the lead memory, then the graph versions that held a flow", async () => {
         const { subject, em } = await build()
 
         await subject.run(TEXT, "NIVO")
@@ -149,7 +146,6 @@ describe("WorkflowResetService: what it deletes", () => {
         ])
         expect(em.delete.mock.calls).toEqual([
             [ContactMemoryEntryEntity, { workspaceId: "ws-1" }],
-            [ContactFreezeEntity, { workspaceId: "ws-1" }],
         ])
     })
 
@@ -168,7 +164,7 @@ describe("WorkflowResetService: what it deletes", () => {
             ["ws-1", RUNS],
             ["ws-1", RUNS, ["agent_step", "thread_deadline"], ["queued", "running"]],
             ["ws-1", RUNS, "thread", ["pending", "held", "running", "failed"], "workflow_reset"],
-            ["ws-1", RUNS, ["queued", "waiting_decision"], "lead_frozen", "workflow_reset"],
+            ["ws-1", RUNS, ["queued", "waiting_decision"], "workflow_reset"],
             ["ws-1", AGENTS, ["open", "waiting"]],
             ["ws-1", RUNS, ["candidate", "proposing"]],
         ])
@@ -212,7 +208,6 @@ describe("WorkflowResetService: what it deletes", () => {
             WORKFLOW_VERSIONS_SQL,
             WORKFLOWS_SQL,
             ContactMemoryEntryEntity,
-            ContactFreezeEntity,
             GRAPHS_SQL,
             FLOWS_SQL,
             ...STATE_CLEARS,
@@ -252,14 +247,14 @@ describe("WorkflowResetService: the seed and the report", () => {
             "reset runs: 5 removed",
             "reset workflows and versions: 7 removed",
             "reset graph versions that held a flow: 4 removed",
-            "reset lead memory and freezes: 3 removed",
+            "reset lead memory: 1 removed",
             "reset run stops: 1 removed",
             "reset LangGraph checkpoint writes: 2 removed",
             "reset LangGraph checkpoint values: 3 removed",
             "reset LangGraph checkpoints: 4 removed",
             "reset open step and deadline jobs: 5 removed",
             "reset open thread wakes (closed dead): 6 removed",
-            "reset open work items of gone runs and lead freezes (closed rejected): 7 removed",
+            "reset open work items of gone runs (closed rejected): 7 removed",
             "reset open care timers of the reset agents (dropped): 8 removed",
             "reset open lesson candidates of gone runs (declined): 9 removed",
         ])
@@ -303,7 +298,7 @@ describe("WorkflowResetService: the dry run", () => {
             "reset (dry run) runs: 2 to remove",
             "reset (dry run) workflows and versions (the seed writes these again): 43 to remove",
             "reset (dry run) graph versions that held a flow (the seed writes these again): 23 to remove",
-            "reset (dry run) lead memory and freezes: 3 to remove",
+            "reset (dry run) lead memory: 1 to remove",
             ...RESET_RUN_STATE.map((kind, index) => `reset (dry run) ${kind.what}: ${String(10 + index)} to remove`),
         ])
     })

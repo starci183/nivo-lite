@@ -1,3 +1,4 @@
+import type { FileNotKept } from "@modules/domain/chat-files"
 import type { DeliveryState } from "./delivery.policy"
 
 /** One delivery row as the store keeps it. */
@@ -72,10 +73,12 @@ export interface DeliveryClaim {
     readonly memberId?: string | null | undefined
 }
 
-/** A file of a line: an address, never the bytes. */
+/** A file of a line: an address, never the bytes; or a file the person sent that the shop could not keep, with why. */
 export interface CustomerLineFile {
-    /** Where the file is served from. */
-    readonly url: string
+    /** Where the file is served from; null for a file that was not kept (`notKept` says why). Never an empty address. */
+    readonly url: string | null
+    /** Why a file the person sent was not kept (the entry's typed reason, chat-files `FileNotKept`); absent for a kept file. */
+    readonly notKept?: FileNotKept | undefined
     /** The name of the file, or empty. */
     readonly name: string
     /** The media type, or empty when the sender did not say. */
@@ -119,8 +122,11 @@ export interface ChannelDeliveryStore {
     byKey(workspaceId: string, sendKey: string): Promise<OptionalStoredDelivery>
     /** Writes the claimed row of a send key once: true when this call wrote it (an atomic insert-or-nothing on the unique key). */
     insertClaimed(workspaceId: string, claim: DeliveryClaim): Promise<boolean>
-    /** Takes a REFUSED row back to claimed in one conditional statement: true when this call moved it. */
-    reclaim(workspaceId: string, sendKey: string): Promise<boolean>
+    /**
+     * Takes a row back to claimed in one conditional statement when its state is one of `from` (a REFUSED row; an ended-UNKNOWN one too
+     * for a repeatable send, rule Q-3): true when this call moved it.
+     */
+    reclaim(workspaceId: string, sendKey: string, from: ReadonlyArray<"refused" | "unknown">): Promise<boolean>
     /** Settles a row that is not delivered: true when a row moved (a delivered row never changes). */
     settle(workspaceId: string, sendKey: string, values: DeliverySettle): Promise<boolean>
     /** The rows of one route, newest first, at most `limit`, after the cursor. */

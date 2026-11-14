@@ -29,10 +29,21 @@ export enum ProviderRegistryErrorCode {
     DomainContactsRequired = "PROVIDER_REGISTRY_DOMAIN_CONTACTS_REQUIRED",
     /** The registrar takes no contact data on a registration. */
     DomainContactsUnsupported = "PROVIDER_REGISTRY_DOMAIN_CONTACTS_UNSUPPORTED",
+    /** The registrar refused a charged order for the account's balance: nothing was ordered. */
+    DomainInsufficientBalance = "PROVIDER_REGISTRY_DOMAIN_INSUFFICIENT_BALANCE",
+    /** The registrar refused the operation because the domain or the service is locked at it: nothing was done. */
+    DomainLocked = "PROVIDER_REGISTRY_DOMAIN_LOCKED",
     /** A provider call failed and the request never left (no account, no token, a refusal at the gateway). */
     CallNotSent = "PROVIDER_REGISTRY_CALL_NOT_SENT",
     /** A provider call failed after the request may have reached the provider (a timeout, a broken connection): the effect is not known. */
     CallUnknown = "PROVIDER_REGISTRY_CALL_UNKNOWN",
+    /**
+     * A SANDBOX account whose provider registered no sandbox implementation of the port (lane concept provider-sandbox rule 3): refused,
+     * nothing called, never the live implementation. The provider rides in the params.
+     */
+    SandboxMissing = "PROVIDER_SANDBOX_MISSING",
+    /** A provider registered a sandbox implementation that names another provider: a wiring defect, refused at boot. */
+    SandboxMismatch = "PROVIDER_SANDBOX_MISMATCH",
 }
 
 /** How each provider-registry code travels. */
@@ -49,8 +60,12 @@ export const PROVIDER_REGISTRY_ERROR_KINDS: Record<ProviderRegistryErrorCode, Er
     [ProviderRegistryErrorCode.DomainRejected]: "invalid",
     [ProviderRegistryErrorCode.DomainContactsRequired]: "invalid",
     [ProviderRegistryErrorCode.DomainContactsUnsupported]: "invalid",
+    [ProviderRegistryErrorCode.DomainInsufficientBalance]: "conflict",
+    [ProviderRegistryErrorCode.DomainLocked]: "conflict",
     [ProviderRegistryErrorCode.CallNotSent]: "unavailable",
     [ProviderRegistryErrorCode.CallUnknown]: "unavailable",
+    [ProviderRegistryErrorCode.SandboxMissing]: "unavailable",
+    [ProviderRegistryErrorCode.SandboxMismatch]: "internal",
 }
 
 /** The one error class of the provider-registry capability. */

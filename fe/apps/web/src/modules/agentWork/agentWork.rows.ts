@@ -1,4 +1,4 @@
-import type { AgentWorkGoalView, AgentWorkPreset, AgentWorkTaskView, AgentWorkTriggerView } from "@/modules/types"
+import type { AgentWorkPreset, AgentWorkTaskView, AgentWorkTriggerView } from "@/modules/types"
 import { maskPhones } from "@/modules/utils"
 import {
     presetOf,
@@ -6,11 +6,10 @@ import {
     workItemHrefOf,
     type AgentWorkContext,
     type AgentWorkTranslator,
-    type GoalWire,
     type TaskWire,
     type TriggerWire,
 } from "./agentWork.wire"
-import { eventWord, goalSourceWord, goalStatusWord, plainText, taskStatusWord, waitingOnWord } from "./agentWork.words"
+import { eventWord, plainText, taskStatusWord, waitingOnWord } from "./agentWork.words"
 
 /** The sentence a preset reads as. */
 const presetSentence = (t: AgentWorkTranslator, preset: AgentWorkPreset | null, atTime: string): string => {
@@ -35,10 +34,9 @@ export const toTriggerView = (wire: TriggerWire, context: AgentWorkContext): Age
         wire.kind === "event"
             ? context.t("triggerEvent", { event: eventWord(context.t, wire.eventName) })
             : presetSentence(context.t, preset, atTime)
-    const hasProbe = wire.probeKey !== null && wire.probeKey !== undefined
     return {
         id: wire.id,
-        sentence: hasProbe ? context.t("triggerWithProbe", { when }) : when,
+        sentence: when,
         nextRunLabel: wire.enabled ? nextOf(context, wire.nextRunAt) : "",
         isEnabled: wire.enabled,
         isRemovable: wire.seedKey === null || wire.seedKey === undefined,
@@ -47,21 +45,6 @@ export const toTriggerView = (wire: TriggerWire, context: AgentWorkContext): Age
         atTime,
         timeZone: wire.timeZone,
         eventName: wire.eventName ?? "",
-        probeKey: wire.probeKey ?? "",
-    }
-}
-
-/** One goal in words. */
-export const toGoalView = (wire: GoalWire, context: AgentWorkContext): AgentWorkGoalView => {
-    const due = relative(context, wire.dueAt)
-    return {
-        id: wire.id,
-        title: maskPhones(plainText(context.t, wire.title)),
-        detail: maskPhones(plainText(context.t, wire.detail)),
-        statusLabel: goalStatusWord(context.t, wire.status),
-        dueLabel: due === "" ? "" : context.t("goalDue", { when: due }),
-        isOpen: wire.status === "active" || wire.status === "paused",
-        source: goalSourceWord(context.t, wire.source),
     }
 }
 

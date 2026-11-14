@@ -15,11 +15,12 @@ export const knowledgeRow: (overrides?: Partial<NivoKnowledgeItemEntity>) => Niv
         body: "Warm.",
         kind: "tone",
         version: 1,
-        embedding: null,
         fts: null,
         createdAt: new Date("2026-04-01T00:00:00.000Z"),
         updatedAt: new Date("2026-04-01T00:00:00.000Z"),
         embeddingModel: null,
+        textHash: null,
+        indexedAt: null,
     })
 
 /** A stored item with the given text. */

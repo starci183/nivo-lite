@@ -1,6 +1,7 @@
 import { isBusinessFailure, isNodeConfused, type NodeConfusion, type StepFailure } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { isDomainError } from "@modules/platform/errors"
+import { classifyFailure, type FailureClass as QueueFailureClass } from "@modules/platform/queue/queue-failure.policy"
 
 /** How a step failed to complete: the node threw, an executor or the host refused, a business failure had no route, or its AI was confused. */
 export type TroubleKind = "threw" | "refused" | "failed" | "confused"
@@ -18,6 +19,8 @@ export interface StepTrouble {
     readonly text: string
     /** The data that came with it (a failure's fields, an error's params, the AI's question). */
     readonly data: Readonly<Record<string, unknown>>
+    /** The class `classifyFailure` gave the thrown cause (R81-4: the one classifier), absent for a typed end that threw nothing. */
+    readonly thrownClass?: QueueFailureClass | undefined
 }
 
 /** The code of a step whose node threw something that names no code of its own. */
@@ -45,6 +48,7 @@ export const troubleOfThrow = (cause: unknown): StepTrouble => {
         code,
         text,
         data: isDomainError(cause) ? { ...cause.params } : {},
+        thrownClass: classifyFailure(cause),
     }
 }
 
@@ -52,13 +56,78 @@ export const troubleOfThrow = (cause: unknown): StepTrouble => {
  * The codes a step fails with when the AI itself failed: every try of a model call failed (the deadline, a cut or empty answer, the
  * provider), or its answers were never the JSON asked for. The prompt library made all its tries before it threw one of them.
  */
-const AI_FAILURE_CODES: ReadonlySet<string> = new Set(["AI_TASKS_UNAVAILABLE", "AI_TASKS_JSON_NOT_RETURNED"])
+const AI_FAILURE_CODES: ReadonlySet<string> = new Set([
+    "AI_TASKS_UNAVAILABLE",
+    "AI_TASKS_JSON_NOT_RETURNED",
+    // The node host's typed failure of an answer that does not fit the node's schema (never a raw parse error: P-FIX2).
+    "GRAPH_NODES_MODEL_ANSWER_INVALID",
+])
 
 /**
  * True when the trouble is the AI's own failure. The AI core is then not asked: it is the same AI, which just failed all its
  * tries, so the engine reports in its own words with the facts (the tries made and what each failed as).
  */
 export const isAiFailure = (trouble: StepTrouble): boolean => AI_FAILURE_CODES.has(trouble.code)
+
+/**
+ * The class of a step's failure (QUEUE-BUILD rule Q-2, R71/R73/R80), read from typed codes and declarations only, never from words:
+ * `transient` (`classifyFailure` of platform/queue said so of the thrown cause: the network, a deadline, a busy or unavailable side), `outcome_unknown` (a call
+ * that may or may not have acted), `ai_failed` (the AI's own tries are spent), `permanent` (everything else: refusals, `cannot`, rights,
+ * schema, engine stop codes).
+ */
+export type FailureClass = "transient" | "outcome_unknown" | "ai_failed" | "permanent"
+
+/** The saga kind of a step (`StepEffect.kind`, forward only, R81): it only reads, or it writes. */
+export type StepSagaKind = "read" | "write"
+
+/** What the retry reads of a tool beyond the trouble (R80/R81): its own `repeatable` declaration (null: a tool the registry does not hold). */
+export interface FailureFacts {
+    /** The tool's own `repeatable` declaration (null for a tool the registry does not hold: never repeatable). */
+    readonly repeatable: (tool: string) => boolean | null
+}
+
+/** The tool an outcome-unknown trouble names (`params.effect` of `EffectOutcomeUnknownError`), or null. */
+export const unknownToolOf = (trouble: StepTrouble): string | null => {
+    const effect: unknown = trouble.data.effect
+    return typeof effect === "string" && effect !== "" ? effect : null
+}
+
+/** The class of a trouble; `unknownCodes` are the engine's outcome-unknown codes. */
+export const failureClassOf = (trouble: StepTrouble, unknownCodes: ReadonlySet<string>): FailureClass => {
+    if (unknownCodes.has(trouble.code)) return "outcome_unknown"
+    if (isAiFailure(trouble)) return "ai_failed"
+    return trouble.thrownClass === "transient" ? "transient" : "permanent"
+}
+
+/** The pauses before the automatic retries of a step (1, 2, 4, 8 minutes): four retries over about fifteen minutes, never more. */
+export const RETRY_PAUSES_MS: ReadonlyArray<number> = [60_000, 120_000, 240_000, 480_000]
+
+/** What the engine does with a failed step: run it again after `pauseMs` (the `attempt`-th retry), or stop it for a person. */
+export type RetryVerdict =
+    | { readonly kind: "retry"; readonly attempt: number; readonly pauseMs: number }
+    | { readonly kind: "stop"; readonly why: "not_retried" | "forward_only" | "exhausted" }
+
+/**
+ * Whether a failed step runs again by itself (rule Q-2 on the saga, R80): the saga kind first, then the class. A transient failure
+ * left nothing outside, so any step runs again (a read, or a write whose call was typed "not sent"). An unknown
+ * outcome runs again only when its tool declares `repeatable` (same key through the ledgers); otherwise the run stops for a person at
+ * once: past a write the run only goes forward. Never more than `RETRY_PAUSES_MS.length` retries; `retried` counts those already made.
+ */
+export const retryVerdictOf = (
+    saga: StepSagaKind,
+    failure: FailureClass,
+    trouble: StepTrouble,
+    facts: FailureFacts,
+    retried: number,
+): RetryVerdict => {
+    const tool = unknownToolOf(trouble)
+    const repeatable = failure === "outcome_unknown" && tool !== null && facts.repeatable(tool) === true
+    // A step that wrote outside (not a read) and does not know whether its write acted only goes forward: a person decides.
+    if (failure === "outcome_unknown" && !repeatable) return { kind: "stop", why: saga === "read" ? "not_retried" : "forward_only" }
+    if (failure !== "transient" && !repeatable) return { kind: "stop", why: "not_retried" }
+    const pause = RETRY_PAUSES_MS[retried]
+    return pause === undefined ? { kind: "stop", why: "exhausted" } : { kind: "retry", attempt: retried + 1, pauseMs: pause }
+}
 
 /** The trouble of a refusal the node step already named by its code. */
 export const troubleOfRefusal = (code: string, text: string): StepTrouble => ({ kind: "refused", code, text, data: {} })

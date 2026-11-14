@@ -19,7 +19,6 @@ import {
     wait,
     waitFor,
 } from "@nivo-lite/agent-sdk/template"
-import { teamDeclinedNoticeNode } from "@nivo-lite/blocks-core"
 import { z } from "zod"
 import { webrenewCloseRecordNode } from "../../../nodes/webrenew/close-record.node"
 import { webrenewCloseTeamNode } from "../../../nodes/webrenew/close-team.node"
@@ -28,13 +27,13 @@ import { webrenewPaidAckNode } from "../../../nodes/webrenew/paid-ack.node"
 import { webrenewPaidTeamNode } from "../../../nodes/webrenew/paid-team.node"
 import { webrenewQuoteOpenNode } from "../../../nodes/webrenew/quote-open.node"
 import { webrenewQuoteRecordNode } from "../../../nodes/webrenew/quote-record.node"
-import { webrenewQuoteTellNode } from "../../../nodes/webrenew/quote-tell.node"
+import { webrenewQuoteTellMailNode, webrenewQuoteTellNode } from "../../../nodes/webrenew/quote-tell.node"
+import { webrenewQuoteToldNode } from "../../../nodes/webrenew/quote-told.node"
 import { webrenewReplyAnswerNode } from "../../../nodes/webrenew/reply-answer.node"
 import { webrenewRoundMessageNode } from "../../../nodes/webrenew/round-message.node"
 import { webrenewUnderstandOpenNode } from "../../../nodes/webrenew/understand-open.node"
 import { webrenewUnlinkedTellNode } from "../../../nodes/webrenew/unlinked-tell.node"
 import { webdeskUnderstandSalesNode } from "../../../nodes/webdesk/understand-sales.node"
-import { webrenewText } from "../copy"
 
 /** The language the team reads (today's constant param). */
 const LOCALE = "vi"
@@ -71,7 +70,9 @@ const CUSTOMER_CODE = ended("customerCode")
 const routed = (branch: string) => equals(ref("steps.understand.output.branch", { default: null }), branch)
 
 /**
- * `webrenew.answer` version 14 (Customer answers a renewal): THE CONVERSATION AS ONE RUN (owner's rule, R53; the form of
+ * `webrenew.answer` version 16 (Customer answers a renewal). Change from version 15 (ask ONE write): the send is split by channel:
+ * `tell` (conversation) -> `tell-mail` (mail) -> `tell-told` (the merge the later steps read); the one whose channel is not the reach's is
+ * skipped. Version 15: THE CONVERSATION AS ONE RUN (owner's rule, R53; the form of
  * `sales.consult`). The business of version 13 is kept step for step; only the form moved (WEBCORE-AUDIT.md, webrenew BEFORE / AFTER):
  * - TALK LOOP (`talk`, at most 30 rounds). Round 1 answers the front door's hand-off. Every later round parks at `hear` for the
  *   customer's next Zalo message (a day at most) and first runs the FRONT DOOR'S OWN judgement (`desk`, `webdesk.understand`, the step
@@ -83,9 +84,10 @@ const routed = (branch: string) => equals(ref("steps.understand.output.branch", 
  * - AFTER THE TALK (`settled`), read from the understand step that ended it (`last`): agree -> `open-each` (one renewal request per
  *   service) -> `tell` (the CRM's totals and payment codes) -> `record-each`; no -> `close-each` -> `close-team` (side) -> `close-thank`
  *   (side) -> `declined` with the reason; paid -> `paid-team` (side) -> `paid-ack`. Accounting hears of the money from the bank.
- * - Declined (a person declined a step a shop set to `ask`, a decision): inside a list loop the team is told and that service's item
- *   ends; on `tell`, `reply` and `paid-ack` the team is told and the run ends `declined` (reason null), as in v13; `reply` sits in the
- *   talk: its notice ends the round and the talk, then `declined`.
+ * - Declined (a person declined an asked step, a decision): the step's unsuccessful ending (R68): the ENGINE tells the team with the
+ *   service's or the customer's code. Inside a list loop that service's item ends; on `tell` and `paid-ack` the run ends `declined`
+ *   (reason null), as in v13; `reply` sits in the talk: `reply-declined` ends the round and the talk, then `declined`. A quote with every
+ *   request declined (`tell-declined`, each request already told) ends `declined` with no post of its own.
  * - The customer going quiet (a day without a message) or 30 rounds end the talk `answered`: the only rounds that do not end the talk
  *   are answered questions, so this is v13's outcome of the last message; a later message starts at the front door again.
  */
@@ -102,17 +104,22 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
             vi: "Lễ tân Hỗ trợ chuyển câu trả lời của khách: đồng ý thì báo giá và yêu cầu trả tiền trước, báo đã chuyển thì nhắn khách, báo đội (Kế toán nghe tiền từ ngân hàng), từ chối thì ghi nhận, hỏi thêm thì trả lời",
             en: "The support front desk passes the customer's answer on: agrees, quote and ask to pay first; says they paid, tell the customer and the team (Accounting hears of the money from the bank); declines, record it; asks, answer",
         },
-        version: 14,
+        version: 16,
         // The old JSON template had `seedActive: true`: the seed makes an ACTIVE workflow from it.
         seedActive: true,
-        publishedAt: "2026-11-14T16:00:00.000Z",
+        publishedAt: "2026-11-14T22:00:00.000Z",
         notes: {
-            vi: "Cả cuộc trò chuyện là một lượt chạy: mỗi tin sau của khách được Lễ tân đánh giá như trước, tin không phải về gia hạn được trả lại cho Lễ tân; các bước và quyết định không đổi",
-            en: "The whole conversation is one run: each later message of the customer is judged by the front door's own step as before, one not about a renewal goes back to the front door; the steps and decisions are unchanged",
+            vi: "R68: bước bị từ chối duyệt thì hệ thống tự báo đội kèm mã dịch vụ hoặc mã khách; quy trình chỉ còn các bước nghiệp vụ. Bước báo giá tách theo kênh (trò chuyện, thư), mỗi bước chỉ một thao tác ghi",
+            en: "R68: a declined step is told to the team by the engine with the service's or the customer's code; the workflow keeps only its business steps. The quote send is split by channel (conversation, mail), one write each",
         },
     },
     nodes: {
         talk: loop({
+            label: { vi: "Trò chuyện gia hạn", en: "Renewal talk" },
+            exits: {
+                until: { vi: "Thoát khi khách đồng ý, báo đã trả, từ chối hoặc im lặng", en: "Ends when the customer agrees, says paid, says no or goes quiet" },
+                exhausted: { vi: "Hết 30 vòng", en: "30 rounds used" },
+            },
             until: or(
                 routed("agree"),
                 routed("paid"),
@@ -125,8 +132,14 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
                 start: "opening",
                 nodes: {
                     // Round 1 has no event: its message is the hand-off's. Every later round takes the customer's next message first.
-                    opening: ifNode({ when: equals(round(), 1), yes: "message", no: "hear" }),
+                    opening: ifNode({
+                        label: { vi: "Vòng đầu?", en: "First round?" },
+                        when: equals(round(), 1),
+                        yes: "message",
+                        no: "hear",
+                    }),
                     hear: wait({
+                        label: { vi: "Chờ khách nhắn tiếp (tối đa 1 ngày)", en: "Waits for the customer's next message (a day at most)" },
                         for: { zalo: waitFor(TRIGGER.zaloMessageReceived) },
                         timeout: "1d",
                         next: { zalo: "desk", timeout: endRound },
@@ -142,7 +155,7 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
                             question: "give-back",
                         },
                     }),
-                    "give-back": handBack({ wait: "hear" }),
+                    "give-back": handBack({ wait: "hear", label: { vi: "Trả tin về Lễ tân", en: "Back to the front door" } }),
                     message: node(webrenewRoundMessageNode, {
                         input: { handed: ref("trigger.data.text"), latest: ref("steps.hear.output.event.data.text", { default: null }) },
                         next: "understand",
@@ -160,21 +173,23 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
                             ...SOURCE,
                         },
                         next: "reply-declined",
+                        // R68: a person declining the reply is told to the team by the ENGINE with the customer's code (was the
+                        // `reply-notice` node). Inside the talk (an `until` body) the step goes on to its exit: `reply-declined` ends
+                        // the round, and the talk's `until` ends the talk on it.
+                        unsuccessful: {
+                            then: "continue",
+                            facts: [{ label: { vi: "Mã khách hàng", en: "Customer" }, value: ref("steps.understand.output.customerCode", { default: null }) }],
+                        },
                     }),
+                    // Business, kept: a declined reply ends the round (and the talk: `until`), then `declined`.
                     "reply-declined": ifNode({
+                        label: { vi: "Bị từ chối trả lời?", en: "Reply declined?" },
                         when: equals(ref("steps.reply.output.declined"), true),
-                        yes: "reply-notice",
+                        yes: endRound,
                         no: "linked",
                     }),
-                    "reply-notice": node(teamDeclinedNoticeNode, {
-                        input: {
-                            step: webrenewText("node.reply.title").vi,
-                            ref: ref("steps.understand.output.customerCode", { default: null }),
-                            locale: LOCALE,
-                        },
-                        next: endRound,
-                    }),
                     linked: ifNode({
+                        label: { vi: "Chưa liên kết khách CRM?", en: "No CRM customer linked?" },
                         when: absent(ref("steps.understand.output.customerCode")),
                         yes: "unlinked-tell",
                         no: endRound,
@@ -192,15 +207,37 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
             next: "settled",
             exhausted: "answered",
         }),
-        // The talk ended on its understand step (agree, paid, no): that output is the loop's `last`. Else the declined reply's notice
-        // ended it (`posted`), or the customer went quiet after an answered question (a round of control steps only: `last` is null).
-        settled: ifNode({ when: present(ended("branch")), yes: "agree-said", no: "declined-said" }),
-        "declined-said": ifNode({ when: present(ended("posted")), yes: "declined", no: "answered" }),
-        "agree-said": ifNode({ when: equals(ended("branch"), "agree"), yes: "open-each", no: "paid-said" }),
-        "paid-said": ifNode({ when: equals(ended("branch"), "paid"), yes: "paid-team", no: "close-each" }),
+        // The talk ended on its understand step (agree, paid, no): that output is the loop's `last`. Else the declined reply ended it
+        // (`declined` true on the reply's output, R68: no notice node any more), or the customer went quiet after an answered question
+        // (a round of control steps only: `last` is null).
+        settled: ifNode({
+            label: { vi: "Khách đã quyết?", en: "Customer decided?" },
+            when: present(ended("branch")),
+            yes: "agree-said",
+            no: "declined-said",
+        }),
+        "declined-said": ifNode({
+            label: { vi: "Bị từ chối trả lời?", en: "Reply declined?" },
+            when: equals(ended("declined"), true),
+            yes: "declined",
+            no: "answered",
+        }),
+        "agree-said": ifNode({
+            label: { vi: "Khách đồng ý gia hạn?", en: "Customer agrees?" },
+            when: equals(ended("branch"), "agree"),
+            yes: "open-each",
+            no: "paid-said",
+        }),
+        "paid-said": ifNode({
+            label: { vi: "Khách báo đã trả?", en: "Customer says paid?" },
+            when: equals(ended("branch"), "paid"),
+            yes: "paid-team",
+            no: "close-each",
+        }),
 
         // agree
         "open-each": loop({
+            label: { vi: "Mở yêu cầu từng dịch vụ", en: "Open a request per service" },
             over: ended("serviceCodes"),
             concurrency: 1,
             body: {
@@ -212,42 +249,44 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
                             termMonths: ended("termMonths"),
                             locale: LOCALE,
                         },
-                        next: "open-declined",
-                    }),
-                    // A person declined this request: the team is told, the item ends; the quote names the others.
-                    "open-declined": ifNode({
-                        when: equals(ref("steps.open.output.declined"), true),
-                        yes: "open-notice",
-                    }),
-                    "open-notice": node(teamDeclinedNoticeNode, {
-                        input: {
-                            step: webrenewText("node.quoteOpen.title").vi,
-                            ref: item(),
-                            locale: LOCALE,
-                            scope: "item",
-                        },
+                        // R68: a person declining this request is told to the team by the ENGINE with the service's code; the item
+                        // ends here (its output says `declined`), the quote names the others (was `open-declined` + `open-notice`).
+                        unsuccessful: { then: "continue", facts: [{ label: { vi: "Mã dịch vụ", en: "Service" }, value: item() }] },
                     }),
                 },
                 collect: "open",
             },
             next: "tell",
         }),
+        // The send is split by channel (an `ask` node declares ONE write): `tell` tells in the conversation, `tell-mail` by mail; the one
+        // whose channel is not the customer's reach is skipped; `tell-told` merges them, so the steps after read ONE step.
         tell: node(webrenewQuoteTellNode, {
             input: { customerCode: CUSTOMER_CODE, quotes: ref("steps.open-each.output"), ...SOURCE },
+            next: "tell-mail",
+            // R68: a person declining the quote's send is told to the team by the ENGINE with the customer's code; the run ends
+            // `declined` (was the `tell-notice` node).
+            unsuccessful: { then: "end", outcome: "declined", facts: [{ label: { vi: "Mã khách hàng", en: "Customer" }, value: CUSTOMER_CODE }] },
+        }),
+        "tell-mail": node(webrenewQuoteTellMailNode, {
+            input: { customerCode: CUSTOMER_CODE, quotes: ref("steps.open-each.output"), ...SOURCE },
+            next: "tell-told",
+            unsuccessful: { then: "end", outcome: "declined", facts: [{ label: { vi: "Mã khách hàng", en: "Customer" }, value: CUSTOMER_CODE }] },
+        }),
+        "tell-told": node(webrenewQuoteToldNode, {
+            input: { chat: ref("steps.tell.output"), mail: ref("steps.tell-mail.output") },
             next: "tell-declined",
         }),
+        // Business, kept: every request was declined (each one already told by the engine), so there is nothing to quote: `declined`.
         "tell-declined": ifNode({
-            when: equals(ref("steps.tell.output.declined"), true),
-            yes: "tell-notice",
+            label: { vi: "Không còn yêu cầu nào để báo giá?", en: "Nothing left to quote?" },
+            when: equals(ref("steps.tell-told.output.declined"), true),
+            yes: "declined",
             no: "record-each",
-        }),
-        "tell-notice": node(teamDeclinedNoticeNode, {
-            input: { step: webrenewText("node.quoteTell.title").vi, ref: CUSTOMER_CODE, locale: LOCALE },
-            next: "declined",
         }),
         // Over the services the customer was told a quote for (`tell` answers them, never null), one record each.
         "record-each": loop({
-            over: ref("steps.tell.output.serviceCodes"),
+            label: { vi: "Ghi báo giá từng dịch vụ", en: "Record the quote per service" },
+            over: ref("steps.tell-told.output.serviceCodes"),
             concurrency: 1,
             body: {
                 start: "record",
@@ -255,22 +294,11 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
                     record: node(webrenewQuoteRecordNode, {
                         input: {
                             serviceCode: item(),
-                            channel: ref("steps.tell.output.channel", { default: null }),
-                            messageRef: ref("steps.tell.output.messageRef", { default: null }),
+                            channel: ref("steps.tell-told.output.channel", { default: null }),
+                            messageRef: ref("steps.tell-told.output.messageRef", { default: null }),
                         },
-                        next: "record-declined",
-                    }),
-                    "record-declined": ifNode({
-                        when: equals(ref("steps.record.output.declined"), true),
-                        yes: "record-notice",
-                    }),
-                    "record-notice": node(teamDeclinedNoticeNode, {
-                        input: {
-                            step: webrenewText("node.quoteRecord.title").vi,
-                            ref: item(),
-                            locale: LOCALE,
-                            scope: "item",
-                        },
+                        // R68: a declined record is told to the team by the ENGINE with the service's code; the item ends here.
+                        unsuccessful: { then: "continue", facts: [{ label: { vi: "Mã dịch vụ", en: "Service" }, value: item() }] },
                     }),
                 },
                 collect: "record",
@@ -279,6 +307,7 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
 
         // no
         "close-each": loop({
+            label: { vi: "Ghi khách từ chối từng dịch vụ", en: "Record the no per service" },
             over: ended("serviceCodes"),
             concurrency: 1,
             body: {
@@ -286,19 +315,8 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
                 nodes: {
                     "close-record": node(webrenewCloseRecordNode, {
                         input: { serviceCode: item(), channel: ref("trigger.data.channel", { default: null }) },
-                        next: "close-declined",
-                    }),
-                    "close-declined": ifNode({
-                        when: equals(ref("steps.close-record.output.declined"), true),
-                        yes: "close-notice",
-                    }),
-                    "close-notice": node(teamDeclinedNoticeNode, {
-                        input: {
-                            step: webrenewText("node.close.title").vi,
-                            ref: item(),
-                            locale: LOCALE,
-                            scope: "item",
-                        },
+                        // R68: a declined record is told to the team by the ENGINE with the service's code; the item ends here.
+                        unsuccessful: { then: "continue", facts: [{ label: { vi: "Mã dịch vụ", en: "Service" }, value: item() }] },
                     }),
                 },
                 collect: "close-record",
@@ -320,13 +338,14 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
             next: "declined",
         }),
         // A no: the customer's (`reason` from close-team) or a person's decline of an asked step outside a list loop (tell, reply,
-        // paid-ack: the team was told; nothing else runs; `reason` is null).
+        // paid-ack: the engine told the team; nothing else runs; `reason` is null).
         declined: outcome({
             name: "declined",
+            label: { vi: "Từ chối", en: "Declined" },
             output: { reason: ref("steps.close-team.output.reason", { default: null }) },
         }),
         // The talk ended after answered questions (the customer went quiet, or 30 rounds): v13's outcome of an answered question.
-        answered: outcome({ name: "answered" }),
+        answered: outcome({ name: "answered", label: { vi: "Đã trả lời", en: "Answered" } }),
 
         // paid
         "paid-team": node(webrenewPaidTeamNode, {
@@ -342,15 +361,9 @@ export const answerGraph: TemplateGraph = defineTemplateGraph({
         }),
         "paid-ack": node(webrenewPaidAckNode, {
             input: { text: ended("text"), ...SOURCE },
-            next: "paid-declined",
-        }),
-        "paid-declined": ifNode({
-            when: equals(ref("steps.paid-ack.output.declined"), true),
-            yes: "paid-notice",
-        }),
-        "paid-notice": node(teamDeclinedNoticeNode, {
-            input: { step: webrenewText("node.paidAck.title").vi, ref: CUSTOMER_CODE, locale: LOCALE },
-            next: "declined",
+            // R68: a person declining the acknowledgement is told to the team by the ENGINE with the customer's code; the run ends
+            // `declined` (was `paid-declined` + `paid-notice`). Acknowledged: the run ends here, as before.
+            unsuccessful: { then: "end", outcome: "declined", facts: [{ label: { vi: "Mã khách hàng", en: "Customer" }, value: CUSTOMER_CODE }] },
         }),
     },
 })

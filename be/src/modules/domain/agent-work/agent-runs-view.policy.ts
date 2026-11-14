@@ -180,7 +180,6 @@ export const recoveredFactsOf = (result: unknown): ReadonlyArray<AgentRunFact> =
 /** Where a step stands as a person tells it. */
 export const stepStatusOf = (step: RunStepDetail): RunStepStatus => {
     if (step.status === "running") return step.waitItemId === null ? "running" : "waiting"
-    if (step.status === "compensating" || step.status === "compensated") return "undone"
     return step.status
 }
 
@@ -231,7 +230,7 @@ export const detailOf = (
     credits: ReadonlyMap<string, number> = new Map(),
 ): AgentRunDetail => {
     const { steps } = detail
-    const done = steps.filter((step) => step.status === "done" || step.status === "compensated").length
+    const done = steps.filter((step) => step.status === "done").length
     const entry: RunListEntry = {
         run: detail.run,
         stepTotal: steps.length,

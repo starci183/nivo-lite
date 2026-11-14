@@ -621,6 +621,8 @@ environments:
             # The running build's name (the jobs and the entity engine read it).
             APP_BUILD_ID: dev
             SMTP_ALLOW_PRIVATE_HOSTS: "true"
+            # Dev only: provider sandbox accounts (no credentials, hardcoded cases; rulings R56-R62). Absent in production = off.
+            PROVIDER_SANDBOX_ENABLED: "true"
             # Embeddings: the pinned OpenAI profile (text-embedding-3-small@1536). The AI pool is ANTHROPIC_API_KEY (chat) + OPENAI_API_KEY
             # (embeddings); OPENROUTER_API_KEY stays sealed and listed in files: but the pool no longer reads it (owner 2026-11-11).
             AI_EMBEDDING_MODEL: embed-oa
@@ -644,7 +646,7 @@ environments:
             REALTIME_REDIS_PREFIX: nivo-realtime
             AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
             AI_ROUTER_KEYS_PATH: "${data}/ai-router/keys.db"
-            # The vector index (Qdrant). This address is the one switch: with it vectors live in Qdrant, without it in Postgres (pgvector).
+            # The vector index (Qdrant): REQUIRED (the only home of vectors; the api refuses to start without it, readiness says `vectors`).
             QDRANT_URL: "http://127.0.0.1:${port.qdrant}"
             WORKSPACE_SIGNUP_ENABLED: "true"
           health: {url: "http://localhost:${port.api}/healthz"}
@@ -1128,7 +1130,7 @@ environments:
             REALTIME_HUB: redis
             REALTIME_REDIS_PREFIX: nivo-realtime
             # The vector index (Qdrant) on the private agents network; QDRANT_API_KEY comes from the sealed qdrant member. This address is
-            # the one switch: with it vectors live in Qdrant, without it in Postgres (pgvector).
+            # REQUIRED: the only home of vectors (the api refuses to start without it; /readyz is unready while it does not answer).
             QDRANT_URL: "http://nivo-qdrant:6333"
             # the in-process AI gateway (declared port above); ANTHROPIC_API_KEY (chat), OPENAI_API_KEY (embeddings) and STARCI_AI_KEY come
             # from the sealed ai member; OPENROUTER_API_KEY stays sealed there but the pool no longer reads it (owner 2026-11-11)

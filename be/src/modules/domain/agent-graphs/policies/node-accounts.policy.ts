@@ -3,8 +3,8 @@ import { INSTALLED } from "@modules/domain/installed-plugins"
 import { PROVIDER_CATALOGUE, servesTool, type ProviderSpec } from "@modules/domain/tools"
 
 // nivo-frame `rights` + `templates`: a node lists its PROVIDERS in priority order and declares ONE mode. The binding is a read of the
-// agent's attachments (no row is written): each provider binds the agent's one attached account of it; of several, the account the owner
-// picked (the workspace's default account of the provider's kind), else none (never a guess: `needs_pick`).
+// agent's attachments (no row is written): readiness counts every attached account of a provider; a CALL acts on one, picked where it is
+// needed (the event's account, the run's, the agent's default, else the typed `TOOLS_ACCOUNT_NEEDS_PICK`: tools `pickAccountOf`).
 
 /** An operation a node may call, as far as its title needs it: the kind and the provider of its account, and its id. */
 export interface TitledOperation {

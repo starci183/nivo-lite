@@ -6,7 +6,7 @@ import {
 } from "@modules/queues/sepay-delivery"
 import { InjectEntityInbox, type EntityInbox } from "@modules/platform/inbox"
 import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { IsNull, type EntityManager, type ObjectLiteral } from "typeorm"
 import {
     PaymentProofService,
@@ -17,8 +17,6 @@ import {
 } from "@modules/domain/billing"
 import { orderCodesIn, PaymentOrdersService } from "@modules/domain/payment-orders"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
-import { InjectPaidOrderFulfilment } from "./sepay-transactions.decorators"
-import type { PaidOrderFulfilment } from "./sepay-transactions.port"
 import type { ReviewTransaction, SepayAuthorization, SettleOutcome } from "./sepay-transactions.contracts"
 import { transactionStatus } from "./sepay-transactions.policy"
 import { SepayTransactionEntity } from "./persistence/entities"
@@ -45,7 +43,6 @@ export class SepayTransactionsService {
         @InjectEntityInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly orders: PaymentOrdersService,
-        @Optional() @InjectPaidOrderFulfilment() private readonly fulfilment: PaidOrderFulfilment | null = null,
     ) {}
 
     /** Transfers needing review on the requested orders; the workspace predicate prevents cross-workspace disclosure. */
@@ -151,7 +148,6 @@ export class SepayTransactionsService {
             [code, amount, sepayId],
         )
         const outcome = settled?.settle_payment_order ?? "unmatched"
-        if (outcome === "paid") await this.fulfilment?.fulfil(manager, code)
         return outcome === "unmatched" ? this.settleFirst(manager, rest, amount, sepayId) : outcome
     }
 }

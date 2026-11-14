@@ -16,13 +16,10 @@ const MESSAGING_KIND = "messaging"
 export interface StepAccountsWords {
     readonly sectionTitle: string
     readonly sectionHint: string
-    readonly modeTitle: string
-    readonly modeHint: string
     readonly noProvider: string
     readonly addLabel: string
     readonly addHint: (count: number) => string
     readonly removeLabel: string
-    readonly modeLabel: string
     readonly modeAuto: string
     readonly modeAsk: string
     /** The line of a node that acts through providers but declares no mode. */
@@ -58,7 +55,7 @@ const withAccounts = (
     next: (accounts: ReadonlyArray<GraphNodeAccount>) => ReadonlyArray<GraphNodeAccount>,
 ): GraphSpec => withNode(spec, nodeKey, (node) => ({ ...node, accounts: next(node.accounts ?? []) }))
 
-/** The graph with the one mode of a node changed. */
+/** The graph with the one mode of a node changed (the drawer applies the owner's choice to an unsaved draft with it). */
 export const withNodeMode = (spec: GraphSpec, nodeKey: string, mode: GraphNodeAccountMode): GraphSpec =>
     withNode(spec, nodeKey, (node) => ({ ...node, mode }))
 
@@ -152,16 +149,6 @@ export const stepAccountsViewOf = (
     return {
         sectionTitle: words.sectionTitle,
         sectionHint: words.sectionHint,
-        mode:
-            mode === undefined
-                ? null
-                : {
-                      title: words.modeTitle,
-                      hint: words.modeHint,
-                      label: words.modeLabel,
-                      value: mode,
-                      options: { auto: words.modeAuto, ask: words.modeAsk },
-                  },
         modeNote: mode === undefined && accounts.length > 0 ? words.modeMissing : null,
         accounts,
         noProvider: words.noProvider,

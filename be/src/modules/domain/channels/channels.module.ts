@@ -1,8 +1,7 @@
 import { Module, type DynamicModule } from "@nestjs/common"
-import { CHANNEL_SENDER_REGISTRY, ZALO_INBOX_READS } from "./channels.decorators"
+import { ZALO_INBOX_READS } from "./channels.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channels.module-definition"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
-import { ChannelSenderRegistryService } from "./channel-sender-registry.service"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import { TelegramPicturesService } from "./telegram-pictures.service"
 import { ZaloPicturesService } from "./zalo-pictures.service"
@@ -10,6 +9,9 @@ import { CustomerProfileNativeService } from "./customer-profile-native.service"
 import { CustomerMessageNativeService } from "./customer-message-native.service"
 import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
 import { ZaloDeliveryService } from "./zalo-delivery.service"
+import { CustomerSendRegistryService } from "./customer-send-registry.service"
+import { ZaloCustomerSendService } from "./zalo-customer-send.service"
+import { TelegramCustomerSendService } from "./telegram-customer-send.service"
 import { ConnectionHealthService } from "./connection-health.service"
 import { TelegramProofService } from "./telegram-proof.service"
 import { ZaloProofService } from "./zalo-proof.service"
@@ -33,12 +35,14 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloCredentialsService,
                 ZaloPicturesService,
                 TelegramPicturesService,
-                ChannelSenderRegistryService,
                 ChannelDeliveryService,
                 CustomerMessageNativeService,
                 CustomerProfileNativeService,
                 ChannelPlanNoticeService,
                 ZaloDeliveryService,
+                ZaloCustomerSendService,
+                TelegramCustomerSendService,
+                CustomerSendRegistryService,
                 ConnectionHealthService,
                 TelegramProofService,
                 ZaloProofService,
@@ -48,7 +52,6 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloConnectionFieldsService,
                 ZaloPageService,
                 TelegramPageService,
-                { provide: CHANNEL_SENDER_REGISTRY, useExisting: ChannelSenderRegistryService },
                 { provide: ZALO_INBOX_READS, useExisting: options.ports.inbox },
             ],
             exports: [
@@ -60,10 +63,12 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloPageService,
                 TelegramPageService,
                 ChannelDeliveryService,
+                CustomerSendRegistryService,
+                ZaloCustomerSendService,
+                TelegramCustomerSendService,
                 CustomerMessageNativeService,
                 CustomerProfileNativeService,
                 ConnectionHealthService,
-                CHANNEL_SENDER_REGISTRY,
             ],
         }
     }

@@ -11,6 +11,7 @@ import {
     type EntryOpenTo,
     type TriggerCondition,
     type TriggerSourceKind,
+    type WorkflowOutcome,
 } from "../workflow-contract"
 
 /*
@@ -315,10 +316,20 @@ export const contractViewsOf = (words: ContractWords): ContractViews => {
                 .map((param) => chipOf(param.name, param.type, locale)),
         }))
 
+    /** An outcome's words in the language: its `title` written in both languages, else its `label` (a catalogue key title reads as the label). */
+    const outcomeWords = (outcome: WorkflowOutcome, locale: ViewLocale): string =>
+        outcome.title === undefined || "key" in outcome.title ? outcome.label : outcome.title[locale]
+
+    /** The words of the outcome `key` of a spec; its key when the spec declares no such outcome. */
+    const outcomeOf = (spec: GraphSpec, key: string, locale: ViewLocale): string => {
+        const outcome = spec.outcomes?.find((one) => one.key === key)
+        return outcome === undefined ? key : outcomeWords(outcome, locale)
+    }
+
     const outcomeViewsOf = (spec: GraphSpec, locale: ViewLocale): ReadonlyArray<OutcomeView> =>
         (spec.outcomes ?? []).map((outcome) => ({
             key: outcome.key,
-            label: outcome.label,
+            label: outcomeWords(outcome, locale),
             outputs: outcome.outputs.map((output) => chipOf(output.name, output.type, locale)),
         }))
 
@@ -359,7 +370,7 @@ export const contractViewsOf = (words: ContractWords): ContractViews => {
         const key = typeof node.params.outcome === "string" ? node.params.outcome : ""
         return {
             key,
-            label: spec.outcomes?.find((outcome) => outcome.key === key)?.label ?? key,
+            label: outcomeOf(spec, key, locale),
             bindings: bindingViewsOf(node.params.outputs, locale),
         }
     }

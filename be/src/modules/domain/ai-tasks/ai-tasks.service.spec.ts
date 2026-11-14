@@ -199,6 +199,31 @@ describe("AiTasksService json parsing", () => {
         })
         expect(generator.generate).toHaveBeenCalledTimes(3)
     })
+
+    // P-FIX2 / DEF-2 (runs 22c340e1, 8b9bcff6): a JSON object that did NOT fit the schema was returned loose, the node's port parsed it
+    // and a raw ZodError left the step as `handler_threw`. It is a failed try now: asked again with what did not fit.
+    it("a JSON object that does not fit the schema is a failed try: asked again with the issues, then read", async () => {
+        const { client, generator } = await build()
+        generator.generate.mockResolvedValueOnce('{"items":42}').mockResolvedValueOnce(ITEMS_A_JSON)
+
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).resolves.toMatchObject({ items: "A" })
+
+        expect(generator.generate).toHaveBeenCalledTimes(2)
+        const again = generator.generate.mock.calls[1]?.[0].messages.at(-1)
+        expect(again?.role).toBe("system")
+        expect(again?.content).toContain("Answer again with ONLY the JSON object described above.")
+        expect(again?.content).toContain("Your last answer did not fit it: items:")
+    })
+
+    it("an answer that never fits fails with the typed AI failure after three tries, each named `not_fitting` (never a raw parse error)", async () => {
+        const { client, generator } = await build()
+        generator.generate.mockResolvedValue('{"items":42}')
+
+        await expect(client.nodeJson(scope, ORDER_ASK, ITEMS_SCHEMA)).rejects.toMatchObject({
+            code: AiTasksErrorCode.JsonNotReturned,
+            params: { tries: 3, failures: "not_fitting, not_fitting, not_fitting" },
+        })
+    })
 })
 
 describe("AiTasksService on the AI endpoint", () => {

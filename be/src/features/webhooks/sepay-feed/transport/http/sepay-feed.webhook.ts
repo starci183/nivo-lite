@@ -1,4 +1,5 @@
-import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest, Optional } from "@nestjs/common"
+import { SANDBOX_KEY_HEADER, SandboxWebhookKeyService } from "@modules/domain/provider-sandbox"
 import type { Request } from "express"
 import { BankFeedIntakeService, BankFeedReceiptsService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
@@ -20,6 +21,7 @@ export class SepayFeedWebhook {
     constructor(
         private readonly feed: BankFeedReceiptsService,
         private readonly intake: BankFeedIntakeService,
+        @Optional() private readonly sandboxes?: SandboxWebhookKeyService,
     ) {}
 
     /** Answers `{"success": true}` for every accepted, repeated or ignored delivery, so SePay stops retrying it. */
@@ -31,8 +33,11 @@ export class SepayFeedWebhook {
         @Req() request: RawBodyRequest<Request>,
         @Param("connectionId") connectionId: string,
         @Headers("authorization") authorization: string | undefined,
+        @Headers(SANDBOX_KEY_HEADER) sandboxKey?: string,
     ): Promise<typeof PROVIDER_ACK> {
-        await this.feed.verifyFeedDelivery(authorization, connectionId, request.rawBody, PROVIDER)
+        // The one shared sandbox guard first (rulings R58 + R60): a sandbox account is proven by its sandbox key, a live one by its key as before.
+        const verdict = this.sandboxes === undefined ? undefined : await this.sandboxes.verdictOf(connectionId, sandboxKey)
+        if (verdict?.kind !== "sandbox") await this.feed.verifyFeedDelivery(authorization, connectionId, request.rawBody, PROVIDER)
         await this.intake.acceptDelivery(request.rawBody, connectionId, PROVIDER)
         return PROVIDER_ACK
     }

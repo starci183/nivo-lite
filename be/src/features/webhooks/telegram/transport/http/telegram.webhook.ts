@@ -1,4 +1,5 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { SANDBOX_KEY_HEADER } from "@modules/domain/provider-sandbox"
 import type { Request } from "express"
 import { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import { Public, PublicReason } from "@modules/domain/identity"
@@ -26,6 +27,7 @@ export class TelegramWebhook {
         @Req() request: RawBodyRequest<Request>,
         @Param() route: ConnectionRequest,
         @Headers("x-telegram-bot-api-secret-token") token?: string,
+        @Headers(SANDBOX_KEY_HEADER) sandboxKey?: string,
     ): Promise<void> {
         await this.signature.verify({
             provider: "telegram",
@@ -33,6 +35,7 @@ export class TelegramWebhook {
             rawBody: request.rawBody,
             signature: token,
             timestamp: undefined,
+            sandboxKey,
         })
         await this.deliveries.acceptTelegramDelivery(request.rawBody, route.connectionId)
     }

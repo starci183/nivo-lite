@@ -42,7 +42,6 @@ const record = (over: Partial<AgentTriggerRecord> = {}): AgentTriggerRecord => (
     atTime: null,
     timeZone: "Asia/Ho_Chi_Minh",
     eventName: null,
-    probeKey: "invoices_due",
     enabled: true,
     seedKey: null,
     nextRunAt: null,
@@ -175,7 +174,6 @@ describe("AgentWorkSweepService.sweep, tasks: wakes", () => {
         tasks.byId.mockResolvedValue({
             id: "task-9",
             agentId: "agent-1",
-            goalId: null,
             dedupeKey: "care:occasion:lead-1:birthday-2-1",
             title: "care due 2027-01-25T17:00:00.000Z",
             detail: "",
@@ -245,13 +243,13 @@ describe("AgentWorkSweepService.sweep, triggers", () => {
     it("takes the slot just before the next one when the scheduler was lost for a long time", async () => {
         const { service, clockTicks } = await build(
             [due({ kind: "trigger", subjectId: "trigger-1", at: new Date("2026-11-07T03:06:00.000Z") })],
-            record({ probeKey: null }),
+            record(),
         )
 
         await service.sweep()
 
         const latest = NEXT.getTime() - 3_600_000
-        expect(clockTicks.deliverSlot).toHaveBeenCalledWith(expect.anything(), "ws-1", record({ probeKey: null }), String(latest), null)
+        expect(clockTicks.deliverSlot).toHaveBeenCalledWith(expect.anything(), "ws-1", record(), String(latest), null)
     })
 
     it("writes no wake when the trigger has no scheduler any more, for it is off or its work is switched off", async () => {
@@ -361,7 +359,6 @@ const PRESS = { memberId: "member-owner", at: new Date(NOW) }
 const careTask = (over: Record<string, unknown> = {}) => ({
     id: "task-7",
     agentId: "agent-1",
-    goalId: null,
     dedupeKey: "care:delivery-check:o7",
     title: "care due 2026-11-12T02:00:00.000Z",
     detail: "",
@@ -438,7 +435,6 @@ describe('AgentWorkSweepService.runTaskNow (the schedule list\'s "run now")', ()
 const timerTask = (over: Record<string, unknown> = {}) => ({
     id: "task-t1",
     agentId: "agent-1",
-    goalId: null,
     dedupeKey: "timer:contact:c-1:pay-check",
     title: "timer due 2026-11-10T03:00:00.000Z",
     detail: "",

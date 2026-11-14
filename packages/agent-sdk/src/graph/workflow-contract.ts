@@ -1,7 +1,7 @@
 import { z } from "zod"
-import { keyText } from "../schema/bounded.schema"
+import { keyText, prose } from "../schema/bounded.schema"
 import { jsonValue } from "../schema/json-value.schema"
-import type { JsonValue } from "../schema/schema.types"
+import type { JsonValue, SpecText } from "../schema/schema.types"
 import { TRIGGER_KEY_MEMBERS, isTriggerKeyPath, type TriggerKeyPath } from "./trigger-event"
 
 /*
@@ -613,8 +613,10 @@ export interface OutcomeOutput {
 export interface WorkflowOutcome {
     /** The id, what an end node names (`won`). */
     readonly key: string
-    /** The words the owner reads. */
+    /** The id as words when the graph gives none (the key itself). */
     readonly label: string
+    /** The outcome's words in both languages ("Đã trả" / "Paid"), from its outcome step's `label`; absent: `label`. */
+    readonly title?: SpecText | undefined
     /** The fields every end on this outcome must fill. */
     readonly outputs: ReadonlyArray<OutcomeOutput>
 }
@@ -852,6 +854,7 @@ export const workflowOutcomesSchema: z.ZodType<ReadonlyArray<WorkflowOutcome>> =
         z.strictObject({
             key: slug,
             label: keyText.min(1),
+            title: z.union([z.strictObject({ key: keyText.min(1) }), z.strictObject({ vi: prose, en: prose })]).optional(),
             outputs: z
                 .array(
                     z.strictObject({

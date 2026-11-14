@@ -32,7 +32,7 @@ import { websalesQuoteSendNode } from "../../../nodes/websales/quote-send.node"
 import { websalesRoundMessageNode } from "../../../nodes/websales/round-message.node"
 import { websalesUnderstandNode } from "../../../nodes/websales/understand.node"
 import { webdeskUnderstandSalesNode } from "../../../nodes/webdesk/understand-sales.node"
-import { DECLINED_END, declinedCheck, declinedEnd, declinedNotice } from "./declined"
+import { DECLINED_END, declinedEnd, endsDeclined, goesOn, purchaseFact } from "./declined"
 
 /** The language the team reads (version 1's constant param). */
 const LOCALE = "vi"
@@ -91,20 +91,20 @@ const declinedIn = (step: string) => equals(ref(`steps.${step}.output.declined`,
 /** The understand step's route in the round that just ended. */
 const routed = (branch: string) => equals(ref("steps.understand.output.branch", { default: null }), branch)
 
-/** What the template catalogue shows of `websales.enquiry` version 8. */
+/** What the template catalogue shows of `websales.enquiry` version 9. */
 const CATALOGUE: TemplateCatalogue = {
     name: { vi: "Tư vấn khách mới", en: "Advise a new customer" },
     summary: {
         vi: "Khách hỏi mua dịch vụ mới (Hỗ trợ chuyển sang): ghi nhận yêu cầu trong CRM, hỏi nhu cầu hoặc báo giá từ bảng giá; khách đồng ý hay báo đã chuyển khoản thì nhắn khách, báo đội rồi dừng để người trong đội làm tiếp",
         en: "A customer asks to buy something new (handed on by Support): records the enquiry in the CRM, asks the need or quotes from the price list; on a yes or a 'money sent' it tells the customer and the team and stops for a person to take over",
     },
-    version: 8,
+    version: 9,
     // The old JSON template had `seedActive: true`: the seed makes an ACTIVE workflow from it.
     seedActive: true,
-    publishedAt: "2026-11-14T16:00:00.000Z",
+    publishedAt: "2026-11-14T22:00:00.000Z",
     notes: {
-        vi: "Cả cuộc trò chuyện là một lượt chạy: mỗi tin sau của khách được Lễ tân đánh giá như trước, tin không phải về mua mới được trả lại cho Lễ tân; các bước và quyết định không đổi",
-        en: "The whole conversation is one run: each later message of the customer is judged by the front door's own step as before, one not about buying something new goes back to the front door; the steps and decisions are unchanged",
+        vi: "R68: bước bị từ chối duyệt (hay lời gửi khách bị chặn) thì hệ thống tự báo đội kèm mã đơn mua; trong cuộc trò chuyện thì cuộc trò chuyện dừng, sau cuộc trò chuyện thì dừng ở kết quả Bị từ chối",
+        en: "R68: a declined step (or a refused customer send) is told to the team by the engine with the purchase code; inside the talk the talk ends, after it the run ends declined",
     },
 }
 
@@ -121,9 +121,11 @@ const CATALOGUE: TemplateCatalogue = {
  *   (`has-quote`, the open step's own answer) -> `ask`. agree with a quote held, paid, no: the round ends and so does the talk.
  * - AFTER THE TALK (`settled`), read from the understand step that ended it (`last`): agree -> `agreed-reply` -> `agreed-notify`
  *   (side) -> `agreed`; paid -> `paid-reply` -> `paid-notify` (side), the run ends; no -> `lose` -> `lost-notify` (side) -> `lost`.
- * - Declined (a person declined a write or send a shop set to `ask`, a decision): after each blocking step an `ifNode`
- *   `<step>-declined` goes to that step's notice (`team.declined-notice`, its title and the purchase code) and the run ends
- *   `declined`, as in v7; inside the talk the notice ends the round and the talk, then `declined`.
+ * - Declined (a person declined a write or send set to `ask`, a decision) or unsuccessful (a customer send refused, a step's
+ *   `cannot`): each blocking step declares its `unsuccessful` ending (R68): the ENGINE tells the team (the step, the reason, the
+ *   purchase code) and the step takes its own exit inside the talk (`opened` / `quoted` let only a real purchase / quote go on; a
+ *   declined step ends the round, the talk's `until` ends the talk, `declined-said` ends the run `declined`), or the run ends `declined`
+ *   after the talk. Change from version 8: the `<step>-declined` checks and their notices are gone (the engine reports).
  * - The person going quiet (a day without a message) or 30 rounds end the talk `quiet`, with no notice: a later message starts at the
  *   front door again, as every message did in v7. Hidden without the CRM or without any messaging account.
  */
@@ -137,6 +139,11 @@ export const enquiryGraph: TemplateGraph = defineTemplateGraph({
     start: "talk",
     nodes: {
         talk: loop({
+            label: { vi: "Trò chuyện với khách", en: "Talk with the customer" },
+            exits: {
+                until: { vi: "Thoát khi khách chốt, đã trả, không mua, bị từ chối hoặc im lặng", en: "Out when the customer agrees, paid, says no, a step is declined or they go quiet" },
+                exhausted: { vi: "Hết 30 lượt tin nhắn", en: "30 messages used up" },
+            },
             until: or(
                 declinedIn("open"),
                 declinedIn("ask"),
@@ -152,8 +159,9 @@ export const enquiryGraph: TemplateGraph = defineTemplateGraph({
                 start: "opening",
                 nodes: {
                     // Round 1 has no event: its message is the hand-off's. Every later round takes the person's next message first.
-                    opening: ifNode({ when: equals(round(), 1), yes: "message", no: "hear" }),
+                    opening: ifNode({ label: { vi: "Lượt đầu tiên?", en: "First round?" }, when: equals(round(), 1), yes: "message", no: "hear" }),
                     hear: wait({
+                        label: { vi: "Chờ tin tiếp theo của khách (tối đa 1 ngày)", en: "Wait for the customer's next message (a day at most)" },
                         for: { zalo: waitFor(TRIGGER.zaloMessageReceived) },
                         timeout: "1d",
                         next: { zalo: "desk", timeout: endRound },
@@ -169,7 +177,7 @@ export const enquiryGraph: TemplateGraph = defineTemplateGraph({
                             question: "give-back",
                         },
                     }),
-                    "give-back": handBack({ wait: "hear" }),
+                    "give-back": handBack({ label: { vi: "Trả tin về Lễ tân", en: "Hand the message back to the front desk" }, wait: "hear" }),
                     message: node(websalesRoundMessageNode, {
                         input: {
                             handed: ref("trigger.data.text"),
@@ -188,11 +196,17 @@ export const enquiryGraph: TemplateGraph = defineTemplateGraph({
                             summary: ROUND_SUMMARY,
                             locale: LOCALE,
                         },
-                        next: "open-declined",
+                        next: "opened",
+                        // No purchase was opened: the notice names no record.
+                        unsuccessful: goesOn([]),
                     }),
-                    // No purchase was opened: the notice names no record.
-                    "open-declined": declinedCheck("open", "open-notice", "note"),
-                    "open-notice": declinedNotice("node.purchase-open.title", null, endRound),
+                    // Only a purchase really opened goes on; a declined (or failed) opening ends the round (the talk's `until` ends the talk).
+                    opened: ifNode({
+                        label: { vi: "Đã ghi nhận yêu cầu mua?", en: "Enquiry recorded?" },
+                        when: equals(ref("steps.open.output.declined"), false),
+                        yes: "note",
+                        no: endRound,
+                    }),
                     note: node(websalesPurchaseNoteNode, {
                         input: { ...PURCHASE, held: ref("steps.open.output.held"), text: ROUND_TEXT, locale: LOCALE },
                         next: "understand",
@@ -209,31 +223,36 @@ export const enquiryGraph: TemplateGraph = defineTemplateGraph({
                             conversationId: ref("trigger.data.conversationId"),
                             locale: LOCALE,
                         },
-                        next: "ask-declined",
+                        // Asked or declined, the round ends here (no `next`).
+                        unsuccessful: goesOn([purchaseFact(ref("steps.open.output.purchaseCode"))]),
                     }),
-                    "ask-declined": declinedCheck("ask", "ask-notice", endRound),
-                    "ask-notice": declinedNotice("node.ask.title", ref("steps.open.output.purchaseCode"), endRound),
                     quote: node(websalesQuoteCreateNode, {
                         input: { ...PURCHASE, items: ref("steps.understand.output.items") },
-                        next: "quote-declined",
+                        next: "quoted",
+                        unsuccessful: goesOn([purchaseFact(ref("steps.open.output.purchaseCode"))]),
                     }),
-                    "quote-declined": declinedCheck("quote", "quote-notice", "quote-send"),
-                    "quote-notice": declinedNotice("node.quote-create.title", ref("steps.quote.output.purchaseCode"), endRound),
+                    // Only a quote the CRM really made is sent; a declined (or failed) quote ends the round.
+                    quoted: ifNode({
+                        label: { vi: "Đã lập báo giá?", en: "Quote made?" },
+                        when: equals(ref("steps.quote.output.declined"), false),
+                        yes: "quote-send",
+                        no: endRound,
+                    }),
                     "quote-send": node(websalesQuoteSendNode, {
                         input: {
                             ...PURCHASE,
-                            // Null only when the quote was declined, a branch that never reaches this step.
+                            // Null only when the quote was declined, an ending that never reaches this step.
                             quote: ref("steps.quote.output.quote", { default: null }),
                             summary: ref("steps.understand.output.summary"),
                             conversationId: ref("trigger.data.conversationId"),
                             locale: LOCALE,
                         },
-                        next: "quote-send-declined",
+                        // Sent or declined, the round ends here (no `next`).
+                        unsuccessful: goesOn([purchaseFact(ref("steps.open.output.purchaseCode"))]),
                     }),
-                    "quote-send-declined": declinedCheck("quote-send", "quote-send-notice", endRound),
-                    "quote-send-notice": declinedNotice("node.quote-send.title", ref("steps.quote-send.output.purchaseCode"), endRound),
                     // v7's `has-quote`: a yes with no quote held asks the need; a yes to a held quote ends the talk (its reply follows it).
                     "has-quote": ifNode({
+                        label: { vi: "Đã có báo giá?", en: "Quote held?" },
                         when: equals(ref("steps.open.output.quoted"), true),
                         yes: endRound,
                         no: "ask",
@@ -244,32 +263,57 @@ export const enquiryGraph: TemplateGraph = defineTemplateGraph({
             exhausted: "quiet",
         }),
         // The talk ended on its understand step (agree with a quote held, paid, no): that output is the loop's `last`. Else a declined
-        // step's notice ended it (`posted`), or the person went quiet (a round of control steps only: `last` is null).
-        settled: ifNode({ when: present(ended("branch")), yes: "agree-said", no: "declined-said" }),
-        "declined-said": ifNode({ when: present(ended("posted")), yes: DECLINED_END, no: "quiet" }),
-        "agree-said": ifNode({ when: equals(ended("branch"), "agree"), yes: "agreed-reply", no: "paid-said" }),
-        "paid-said": ifNode({ when: equals(ended("branch"), "paid"), yes: "paid-reply", no: "lose" }),
-        "agreed-reply": node(websalesHeardReplyNode, { input: heardInput("agreed"), next: "agreed-reply-declined" }),
-        "agreed-reply-declined": declinedCheck("agreed-reply", "heard-notice", "agreed-notify"),
+        // step ended it (its own output, `declined` true, is `last`; the engine already told the team), or the person went quiet (a
+        // round of control steps only: `last` is null).
+        settled: ifNode({
+            label: { vi: "Khách đã trả lời rõ?", en: "Did the customer answer?" },
+            when: present(ended("branch")),
+            yes: "agree-said",
+            no: "declined-said",
+        }),
+        "declined-said": ifNode({
+            label: { vi: "Bị từ chối duyệt?", en: "Declined?" },
+            when: equals(ended("declined"), true),
+            yes: DECLINED_END,
+            no: "quiet",
+        }),
+        "agree-said": ifNode({
+            label: { vi: "Khách đồng ý?", en: "Customer agreed?" },
+            when: equals(ended("branch"), "agree"),
+            yes: "agreed-reply",
+            no: "paid-said",
+        }),
+        "paid-said": ifNode({
+            label: { vi: "Khách báo đã chuyển khoản?", en: "Customer says paid?" },
+            when: equals(ended("branch"), "paid"),
+            yes: "paid-reply",
+            no: "lose",
+        }),
+        "agreed-reply": node(websalesHeardReplyNode, {
+            input: heardInput("agreed"),
+            next: "agreed-notify",
+            unsuccessful: endsDeclined([purchaseFact(ended("purchaseCode"))]),
+        }),
         "agreed-notify": node(websalesHeardNotifyNode, { input: heardNotifyInput("agreed"), next: "agreed" }),
         agreed: outcome({
             name: "agreed",
+            label: { vi: "Khách đồng ý", en: "Agreed" },
             output: {
                 purchaseId: ref("steps.agreed-reply.output.purchaseId"),
                 purchaseCode: ref("steps.agreed-reply.output.purchaseCode"),
             },
         }),
-        "paid-reply": node(websalesHeardReplyNode, { input: heardInput("paid"), next: "paid-reply-declined" }),
-        "paid-reply-declined": declinedCheck("paid-reply", "heard-notice", "paid-notify"),
-        // Shared by both heard replies: the same step (`websales.heard-reply`) about the same purchase.
-        "heard-notice": declinedNotice("node.heard-reply.title", ended("purchaseCode"), DECLINED_END),
+        "paid-reply": node(websalesHeardReplyNode, {
+            input: heardInput("paid"),
+            next: "paid-notify",
+            unsuccessful: endsDeclined([purchaseFact(ended("purchaseCode"))]),
+        }),
         "paid-notify": node(websalesHeardNotifyNode, { input: heardNotifyInput("paid") }),
         lose: node(websalesPurchaseLoseNode, {
             input: { ...ENDED_PURCHASE, text: ended("text"), summary: ended("summary"), locale: LOCALE },
-            next: "lose-declined",
+            next: "lost-notify",
+            unsuccessful: endsDeclined([purchaseFact(ended("purchaseCode"))]),
         }),
-        "lose-declined": declinedCheck("lose", "lose-notice", "lost-notify"),
-        "lose-notice": declinedNotice("node.purchase-lose.title", ref("steps.lose.output.purchaseCode"), DECLINED_END),
         "lost-notify": node(websalesLostNotifyNode, {
             input: {
                 purchaseCode: ref("steps.lose.output.purchaseCode"),
@@ -281,10 +325,11 @@ export const enquiryGraph: TemplateGraph = defineTemplateGraph({
         }),
         "lost-end": outcome({
             name: "lost",
+            label: { vi: "Khách không mua", en: "Lost" },
             output: { purchaseId: ref("steps.lose.output.purchaseId"), reason: ref("steps.lose.output.reason") },
         }),
         [DECLINED_END]: declinedEnd(),
         // The person went quiet, or the talk ran out of rounds: the run ends; a later message starts at the front door again.
-        quiet: outcome({ name: "quiet" }),
+        quiet: outcome({ name: "quiet", label: { vi: "Khách im lặng", en: "Customer went quiet" } }),
     },
 })

@@ -12,8 +12,6 @@ import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { SEPAY_DELIVERY_QUEUE } from "@modules/queues/sepay-delivery"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { SepayTransactionEntity } from "./persistence/entities"
-import { PAID_ORDER_FULFILMENT } from "./sepay-transactions.decorators"
-import type { PaidOrderFulfilment } from "./sepay-transactions.port"
 import { SepayTransactionsService } from "./sepay-transactions.service"
 
 const AUTHORIZATION = "Apikey billing-key"
@@ -82,16 +80,10 @@ const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> 
             { provide: INBOX, useValue: inbox },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: PaymentOrdersService, useValue: orders },
-            { provide: PAID_ORDER_FULFILMENT, useValue: fulfilment },
         ],
     }).compile()
     return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims, orders }
 }
-
-const settledCodes: Array<string> = []
-const fulfilment = mock<PaidOrderFulfilment>({
-    fulfil: jest.fn((_manager: unknown, code: string) => Promise.resolve(void settledCodes.push(code))),
-})
 
 describe("SepayTransactionsService review", () => {
     describe("review", () => {
@@ -190,17 +182,6 @@ describe("SepayTransactionsService verification", () => {
 })
 
 describe("SepayTransactionsService settlement", () => {
-    it("hands the code of a paid order to the fulfilment, and of an underpaid one to nobody", async () => {
-        const underpaid = await build([PENDING, [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "underpaid" }]]])
-        const paid = await build([PENDING, [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "paid" }]]])
-
-        await underpaid.settlement.processRecordedDelivery({ deliveryId: "9001" })
-        expect(settledCodes).toEqual([])
-        await paid.settlement.processRecordedDelivery({ deliveryId: "9001" })
-
-        expect(settledCodes).toEqual(["NIVO8F3K2"])
-    })
-
     it("proves and records the delivery, then settles and completes its queued receipt", async () => {
         const { settlement, tx, proof, inbox, outbox } = await build([
             PENDING,

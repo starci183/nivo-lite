@@ -17,6 +17,7 @@ import { RollbackAgentWorkflowResolver } from "./rollback-agent-workflow.resolve
 import { AcceptAgentWorkflowTemplateResolver } from "./accept-agent-workflow-template.resolver"
 import { AgreeAgentNodeRightsResolver } from "./agree-agent-node-rights.resolver"
 import { SetAgentWorkflowStatusResolver } from "./set-agent-workflow-status.resolver"
+import { SetAgentNodeModeResolver } from "./set-agent-node-mode.resolver"
 import { RunWorkflowResolver } from "./run-workflow.resolver"
 import { RunnableWorkflowResolver } from "./runnable-workflow.resolver"
 
@@ -38,6 +39,7 @@ import { RunnableWorkflowResolver } from "./runnable-workflow.resolver"
         RollbackAgentWorkflowResolver,
         AcceptAgentWorkflowTemplateResolver,
         SetAgentWorkflowStatusResolver,
+        SetAgentNodeModeResolver,
         AgreeAgentNodeRightsResolver,
         RunWorkflowResolver,
         RunnableWorkflowResolver,

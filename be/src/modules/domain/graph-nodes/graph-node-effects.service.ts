@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common"
 import { isRefused, type EffectCall, type SubjectRef } from "@nivo-lite/agent-sdk/node"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { isDomainError } from "@modules/platform/errors"
+import { repeatableBySpec } from "@modules/domain/tool-specs"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import {
     EffectOutcomeUnknownCode,
@@ -210,9 +211,11 @@ export class GraphNodeEffectsService {
                     params: { effect, heldBy: before.effect },
                 })
             }
+            const unknown = before.subject.kind === OUTCOME_UNKNOWN_KIND && isOutcomeUnknownCode(before.subject.id)
+            // Rule Q-3: a kept unknown outcome of a tool that declares itself `repeatable` is made again under the SAME key.
+            if (unknown && repeatableBySpec(effect) === true) return this.actedAgain(workspaceId, effect, ledgerKey, act)
             this.logger.info(GraphNodesLogEvent.EffectReplayed, { workspaceId, effect })
-            if (before.subject.kind === OUTCOME_UNKNOWN_KIND && isOutcomeUnknownCode(before.subject.id))
-                throw new EffectOutcomeUnknownError({ code: before.subject.id, params: { effect } })
+            if (unknown) throw new EffectOutcomeUnknownError({ code: before.subject.id, params: { effect } })
             return before.subject
         }
         const place = record.place ?? placeOf(call.key)
@@ -277,6 +280,23 @@ export class GraphNodeEffectsService {
      * error is what the caller gets either way (a failed keep is answered, not thrown, so it never hides that error); a key another
      * attempt wrote meanwhile keeps what that attempt wrote.
      */
+    /**
+     * Makes again a call the ledger kept with an unknown outcome, for a tool that declares itself `repeatable` (rule Q-3, R74): the act
+     * runs under the same key; what it answers settles the kept row (a refusal settles nothing, an unknown outcome again leaves the row
+     * as it is), so a later call of the key answers the new subject.
+     */
+    private async actedAgain(workspaceId: string, effect: string, ledgerKey: string, act: EffectAct): Promise<SubjectRef> {
+        this.logger.info(GraphNodesLogEvent.EffectReplayed, { workspaceId, effect, again: true })
+        const subject = await act()
+        if (isRefused(subject)) return subject
+        await this.store.resettle(workspaceId, ledgerKey, OUTCOME_UNKNOWN_KIND, {
+            subjectEntity: subject.kind,
+            subjectId: subject.id,
+            facts: ledgerJsonOf(subject.facts),
+        })
+        return subject
+    }
+
     private keepUnknown(
         workspaceId: string,
         values: Omit<EffectInsert, "subjectEntity" | "subjectId" | "facts">,

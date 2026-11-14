@@ -2,10 +2,10 @@ import { injector, type TypedParameterDecorator } from "@modules/platform/compos
 import type { VectorIndex } from "./qdrant.contracts"
 import type { QdrantEndpoint } from "./qdrant.options"
 
-/** Token of the vector index (the Qdrant client), or of null when the deployment has no Qdrant service. */
+/** Token of the vector index (the Qdrant client). */
 export const VECTOR_INDEX: unique symbol = Symbol("integrations.qdrant")
 
-/** Token of what prepares the collections, or of null when the deployment has no Qdrant service. */
+/** Token of what prepares the collections. */
 export const VECTOR_INDEX_BOOT: unique symbol = Symbol("integrations.qdrant.boot")
 
 /** Token of the endpoint the client calls. */
@@ -23,9 +23,8 @@ export interface VectorIndexBoot {
 /** Injects the endpoint. Parameter type: QdrantEndpoint. */
 export const InjectQdrantEndpoint = (): TypedParameterDecorator<QdrantEndpoint> => injector<QdrantEndpoint>(QDRANT_ENDPOINT)
 
-/** Injects the vector index, or null when the deployment has none. Parameter type: VectorIndex | null. */
-export const InjectVectorIndex = (): TypedParameterDecorator<VectorIndex | null> => injector<VectorIndex | null>(VECTOR_INDEX)
+/** Injects the vector index. Parameter type: VectorIndex. */
+export const InjectVectorIndex = (): TypedParameterDecorator<VectorIndex> => injector<VectorIndex>(VECTOR_INDEX)
 
-/** Injects what prepares the collections, or null when the deployment has no index. Parameter type: VectorIndexBoot | null. */
-export const InjectVectorIndexBoot = (): TypedParameterDecorator<VectorIndexBoot | null> =>
-    injector<VectorIndexBoot | null>(VECTOR_INDEX_BOOT)
+/** Injects what prepares the collections. Parameter type: VectorIndexBoot. */
+export const InjectVectorIndexBoot = (): TypedParameterDecorator<VectorIndexBoot> => injector<VectorIndexBoot>(VECTOR_INDEX_BOOT)

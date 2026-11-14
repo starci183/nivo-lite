@@ -15,8 +15,8 @@ import {
 } from "@modules/integrations/webhook-delivery"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectIds, type Ids } from "@modules/platform/ids"
-import { parseJsonText } from "@modules/platform/primitives"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
+import { WebhookSendRegistryService } from "./webhook-send-registry.service"
 import type {
     CreatedWebhook,
     StartWebhookInput,
@@ -51,6 +51,7 @@ export class WebhookConnectionsService {
         @InjectClock() private readonly clock: Clock,
         @InjectIds() private readonly ids: Ids,
         @InjectWebhookConnectionsOptions() private readonly options: WebhookConnectionsOptions,
+        private readonly sends: WebhookSendRegistryService,
     ) {}
 
     /** Creates the connection as PENDING and returns the signing secret to copy: this answer is the only place it is shown whole. */
@@ -112,8 +113,6 @@ export class WebhookConnectionsService {
     async test(actor: ConnectionActor, connectionId: string): Promise<WebhookTestResult> {
         await this.connections.authorize(actor, MANAGER)
         const connection = await this.ownWebhook(actor, connectionId)
-        const url = await this.urlOf(connection.id)
-        const target = await this.target(url)
         const key = this.requireSigning(actor.workspaceId)
         const sample = this.sampleOf(connection)
         const now = this.clock.now()
@@ -126,8 +125,9 @@ export class WebhookConnectionsService {
             data: { test: true, ...sample.sample },
         })
         const timestamp = String(now.getTime())
-        const result = await this.delivery.post({
-            url: target,
+        const port = this.sends.portFor(connection)
+        if (port === undefined) throw new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.NoUrl })
+        const result = await port.post(connection, {
             body,
             headers: {
                 "x-nivo-event": sample.id,
@@ -199,16 +199,5 @@ export class WebhookConnectionsService {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id } })
         }
         return connection
-    }
-
-    private async urlOf(connectionId: string): Promise<string> {
-        const secret = await this.connections.readSecret(connectionId)
-        const read = secret === null ? null : parseJsonText(secret.plain)
-        const parsed = read?.ok ? read.value : null
-        const url = typeof parsed === "object" && parsed !== null && "url" in parsed ? parsed.url : null
-        if (typeof url !== "string" || url === "") {
-            throw new WebhookConnectionsError({ code: WebhookConnectionsErrorCode.NoUrl })
-        }
-        return url
     }
 }

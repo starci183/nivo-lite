@@ -13,6 +13,7 @@ import { AccountDataModule } from "@modules/domain/account-data"
 import { ACCOUNT_DATA_CATALOG } from "@modules/domain/account-data-catalog"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { EmailMessagesModule } from "@modules/domain/email-messages"
+import { ProviderSandboxModule } from "@modules/domain/provider-sandbox"
 import { EntityPlannerModule } from "@modules/domain/entity-planner"
 import { EventsModule } from "@modules/domain/events"
 import { JobOpsModule } from "@modules/domain/job-ops"
@@ -87,8 +88,10 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     I18nModule.register({ isGlobal: true, bundles: [NIVO_KNOWLEDGE_MESSAGES, MODULES_MESSAGES] }),
     HttpModule.register({ isGlobal: true }),
     AiModule.register({ isGlobal: true, ...options.ai, profileRoutes: chatProfileRoutes() }),
+    // Publishing only: the cli has no vector index; the items' sync jobs it writes are run by the api's worker.
     NivoKnowledgeModule.register({
         isGlobal: true,
+        publishOnly: true,
         folders: [CORE_FOLDER, ...MODULE_KNOWLEDGE_FOLDERS],
     }),
     MailModule.register({ isGlobal: true, ...options.mail }),
@@ -129,6 +132,9 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
         readOnly: false,
         ports: { agents: AgentBindingsService },
     }),
+    // The workspace mail resolves an SMTP account through its registry, whose sandbox twin answers through the sandbox frame: the CLI
+    // composes the frame with the dev switch OFF (no sandbox call is ever answered here; a live account never reaches it).
+    ProviderSandboxModule.register({ isGlobal: true, sandbox: { enabled: false } }),
     EmailMessagesModule.register({ isGlobal: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     ConnectionGrantsModule.register({ isGlobal: true }),

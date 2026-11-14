@@ -14,21 +14,12 @@ const RUN_STATUSES: ReadonlyArray<AgentRunStatus> = [
     "failed",
     "done",
     "dead",
-    "compensating",
-    "compensated",
     "cancelled",
 ]
 
 const RUN_ENGINES: ReadonlyArray<RunEngine> = ["legacy", "langgraph"]
 
-const STEP_STATUSES: ReadonlyArray<AgentStepStatus> = [
-    "pending",
-    "running",
-    "done",
-    "failed",
-    "compensating",
-    "compensated",
-]
+const STEP_STATUSES: ReadonlyArray<AgentStepStatus> = ["pending", "running", "done", "failed"]
 
 const rejected = (): AgentRunsError => new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })
 
@@ -80,9 +71,7 @@ const jsonOrNull = (data: Data, key: string): StepJson | null => {
 const effectOf = (data: Data): StepEffect => {
     const effect = jsonOf(data, "effect")
     if (effect.kind === "read") return { kind: "read" }
-    if (effect.kind === "pivot") return { kind: "pivot" }
-    if (effect.kind === "compensable" && typeof effect.compensation === "string")
-        return { kind: "compensable", compensation: effect.compensation }
+    if (effect.kind === "write") return { kind: "write" }
     throw rejected()
 }
 
@@ -163,7 +152,6 @@ export const stepRecordOf = (row: StoredStep): StepRecord => {
         notBefore: dateOrNull(data, "notBefore"),
         waitItemId: textOrNull(data, "waitItemId"),
         workItemId: textOrNull(data, "workItemId"),
-        compAttempts: intOf(data, "compAttempts"),
         errorCode: textOrNull(data, "errorCode"),
     }
 }

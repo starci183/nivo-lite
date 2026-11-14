@@ -328,19 +328,6 @@ export class KnowledgeSourcesService {
         }
     }
 
-    /** Queues the re-embedding of the workspace's stale passages with `model`. */
-    async requestReembed(userId: string, workspaceId: string, model: string): Promise<void> {
-        await this.members.require(userId, workspaceId, MANAGERS)
-        await this.entityManager.transaction((tx) => this.queue.enqueueReembed({ workspaceId, model }, tx))
-    }
-
-    /** Queues the follow-up of a re-embedding job that reached its batch limit. */
-    async continueReembed(workspaceId: string, model: string): Promise<void> {
-        await this.entityManager.transaction((tx) =>
-            this.queue.enqueueReembed({ workspaceId, model }, tx, this.clock.now().getTime()),
-        )
-    }
-
     /** A source of a workspace as the jobs read it; null when it is gone. */
     async sourceOf(workspaceId: string, sourceId: string): Promise<MaybeSource> {
         const row = await this.entityManager.findOne(KnowledgeSourceEntity, { where: { id: sourceId, workspaceId } })

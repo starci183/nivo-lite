@@ -9,7 +9,8 @@ import {
 
 /**
  * Why a provider keeps a graph hidden: the agent has no account of it (`not_connected`), every account it has keeps the graph's trigger
- * off (`trigger_off`), it has several accounts of it and none is picked (`needs_pick`), or its account
+ * off (`trigger_off`), two of its accounts read ONE trigger stream and none is picked as its source (`needs_pick`, a trigger's only: several
+ * accounts of a node's provider never hide a graph, the call picks among them), or its account
  * is bound but serves no operation of one tool the node needs (`tool_unavailable`: a platform purpose an OpenAPI source serves only
  * where its PINNED document marks it, and the bound account's document marks none; the block names the tool).
  */
@@ -81,18 +82,13 @@ export interface TriggerReadiness {
 export interface ReadinessInput extends BindOptions {
     /** The agent's attachments (tier 1): the connected accounts it may touch, by provider. */
     readonly attachments: ReadonlyArray<AgentAttachment>
-    /**
-     * The account the owner picked for a provider the agent has several accounts of (the workspace's default account of the provider's
-     * kind), or null: of several accounts, only the picked one binds the provider (never a guess). Absent: none is picked.
-     */
-    readonly picked?: ((provider: string) => string | null) | undefined
     /** The node definition's own `blocking` for a `@1` step that states none; absent: it blocks. */
     readonly definedBlocking?: ((step: string) => boolean | undefined) | undefined
     /** The trigger side, from the later slice; absent: not judged. */
     readonly triggers?: TriggerReadiness | undefined
     /**
-     * The tools served only by some accounts (`ToolSpec.availability` `pinned-mark`: an OpenAPI source's purpose, served where the
-     * account's PINNED document marks it), each with the agent's accounts that serve it; a provider is bound FOR such a tool only through
+     * The tools served only by some accounts (a CRM's generated operation, served where the account's PINNED document holds it callable),
+     * each with the agent's accounts that serve it; a provider is bound FOR such a tool only through
      * one of them. A tool absent from the map is judged as before; the map absent: no tool is judged so.
      */
     readonly served?: ReadonlyMap<string, ReadonlySet<string>> | undefined
@@ -103,16 +99,16 @@ const blocks = (node: ReadinessNode, input: ReadinessInput): boolean =>
     (node.blocking ?? (node.step === undefined ? undefined : input.definedBlocking?.(node.step))) !== false
 
 /**
- * The accounts that bind one provider of a node (`nivo` needs none): the account a `@1` entry pins, when the agent is attached to it;
- * else the agent's one account of the provider; of several, the one the owner picked (`picked`), else none.
+ * The accounts that can serve one provider of a node (`nivo` needs none): the account a `@1` entry pins, when the agent is attached to it;
+ * else EVERY attached account of the provider. Readiness asks only whether the node CAN act; WHICH account a call acts on is the call's
+ * pick, made where the account is needed (the event's account, the run's account, the agent's default, else the typed refusal
+ * `TOOLS_ACCOUNT_NEEDS_PICK` at that call: `pickAccountOf`). So a second attached account of a kind never hides a graph, never mutes the
+ * registrations that hear the first account's events, and never refuses a hand-off for a later step's account (MX-CORE D2-2, D2-F1).
  */
 const boundAccountsOf = (_nodeKey: string, wanted: NodeProvider, input: ReadinessInput): ReadonlyArray<string> => {
     const own = input.attachments.filter((attachment) => attachment.provider === wanted.provider).map((one) => one.connectionId)
     const { pinned } = wanted
-    if (pinned !== null) return own.filter((connectionId) => connectionId === pinned)
-    if (own.length <= 1) return own
-    const picked = input.picked?.(wanted.provider) ?? null
-    return own.filter((connectionId) => connectionId === picked)
+    return pinned === null ? own : own.filter((connectionId) => connectionId === pinned)
 }
 
 /** Whether one provider of a node is bound: `nivo` always; else some account binds it (`boundAccountsOf`). */
@@ -130,17 +126,6 @@ const servesTool = (nodeKey: string, wanted: NodeProvider, tool: string, input: 
 }
 
 /**
- * Why one provider of a node is not bound (it is not, `boundProvider`): the agent has accounts of it (the pinned one among them, for a
- * pinned entry), so the owner must pick one (`needs_pick`); or it has none (`not_connected`).
- */
-const unboundReasonOf = (wanted: NodeProvider, input: ReadinessInput): ReadinessBlockReason => {
-    const own = input.attachments.filter((attachment) => attachment.provider === wanted.provider)
-    const { pinned } = wanted
-    if (pinned !== null) return "not_connected"
-    return own.length > 1 ? "needs_pick" : "not_connected"
-}
-
-/**
  * What one node waits for, PER TOOL (contract ADDENDUM 2 point 4): a provider is an alternative only for the tools it serves,
  * so the node is ready when every tool listed under some provider has at least one of those providers bound (`nivo` always is). The
  * answer is the providers of the tools that have none bound, in the node's order of providers, each once; empty: the node is ready (a
@@ -150,7 +135,7 @@ const waitingOfNode = (node: ReadinessNode, input: ReadinessInput): ReadonlyArra
     blocksOfNode(node, input).map((block) => block.provider)
 
 /**
- * What one node waits for (as `waitingOfNode`), each provider with why: not bound (`unboundReasonOf`), or bound but serving a tool it
+ * What one node waits for (as `waitingOfNode`), each provider with why: no attached account of it (`not_connected`), or bound but serving a tool it
  * lists that no provider of the node serves (`tool_unavailable`, one block per such tool, naming it).
  */
 const blocksOfNode = (node: ReadinessNode, input: ReadinessInput): ReadonlyArray<ReadinessBlock> => {
@@ -173,7 +158,7 @@ const blocksOfNode = (node: ReadinessNode, input: ReadinessInput): ReadonlyArray
     return providers
         .filter((wanted) => wanted.operations.some((tool) => unmet.has(tool)))
         .flatMap((wanted): ReadonlyArray<ReadinessBlock> => {
-            if (!bound.has(wanted.provider)) return [{ provider: wanted.provider, reason: unboundReasonOf(wanted, input) }]
+            if (!bound.has(wanted.provider)) return [{ provider: wanted.provider, reason: "not_connected" }]
             return wanted.operations
                 .filter((tool) => unmet.has(tool))
                 .map((tool): ReadinessBlock => ({ provider: wanted.provider, reason: "tool_unavailable", tool }))

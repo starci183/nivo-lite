@@ -1,4 +1,5 @@
 import { builder, type MockOf } from "@starci/jest-preset"
+import type { VectorSyncService } from "@modules/domain/vector-sync"
 import type { BrainFactEmbeddingsService, BrainFactsReadService, FactEmbeddingState, FactRecord } from "@modules/domain/brain-facts"
 import { EMBEDDING_DIMENSIONS } from "@modules/domain/knowledge-chunks"
 import type { AiService } from "@modules/integrations/ai"
@@ -250,10 +251,12 @@ export interface EmbeddingDoubles {
     readonly ai: MockOf<AiService>
     readonly vectors: MockOf<BrainFactEmbeddingsService>
     readonly reads: MockOf<BrainFactsReadService>
+    /** The vector sync: the one door to the index (adoption of a point of the same line, hand-over of fresh vectors, the change jobs). */
+    readonly sync: MockOf<VectorSyncService>
 }
 
 /** Scripts the doubles of a fact-embeddings spec: an index that answers, the AI on, the stored states given, no other row holding a line. */
-export const scriptEmbeddingDoubles = ({ ai, vectors, reads }: EmbeddingDoubles, states: ReadonlyArray<FactEmbeddingState>): void => {
+export const scriptEmbeddingDoubles = ({ ai, vectors, reads, sync }: EmbeddingDoubles, states: ReadonlyArray<FactEmbeddingState>): void => {
     // The service reads `nearestToRead` (does the index answer?); the scripted hits stay on `nearestTo`, an index that answers.
     vectors.nearestToRead.mockImplementation(async (...args) => ({
         facts: await vectors.nearestTo(...args),
@@ -264,7 +267,20 @@ export const scriptEmbeddingDoubles = ({ ai, vectors, reads }: EmbeddingDoubles,
     ai.chatModel.mockReturnValue("work")
     ai.embeddingModel.mockReturnValue(EMBEDDING_PROFILE)
     vectors.statesOf.mockResolvedValue(states)
-    vectors.storeMany.mockResolvedValue(undefined)
-    // No other row holds the same line unless a case says so: every stale line is embedded.
-    vectors.adopt.mockResolvedValue(new Set())
+    sync.accept.mockImplementation((_kind, _workspaceId, handed) => Promise.resolve({ ...NOTHING_ACCEPTED, given: handed.size }))
+    // No other point holds the same line unless a case says so: every stale line is embedded.
+    sync.adopt.mockResolvedValue(new Set())
+}
+
+/** What a hand-over the index accepted reports, before its count of given vectors. */
+const NOTHING_ACCEPTED = {
+    unchanged: 0,
+    given: 0,
+    adopted: 0,
+    embedded: 0,
+    marked: 0,
+    removed: 0,
+    waiting: 0,
+    failed: 0,
+    embedCalls: 0,
 }

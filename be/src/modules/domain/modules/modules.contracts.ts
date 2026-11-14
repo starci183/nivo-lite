@@ -111,8 +111,6 @@ export interface ModuleTrigger {
     readonly preset: AgentTriggerPreset
     /** The time of day (`HH:MM`) of a daily preset. */
     readonly atTime?: string | undefined
-    /** The probe that decides whether a fire has work; always works when absent. */
-    readonly probeKey?: string | undefined
 }
 
 /** One module of the catalogue: everything the product knows about an installable agent type. */

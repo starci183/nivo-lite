@@ -1,8 +1,7 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import {
     EMBEDDING_DIMENSIONS,
     PassageSearchService,
-    toVector,
     type PassageLens,
     type StoredPassage,
 } from "@modules/domain/knowledge-chunks"
@@ -80,7 +79,7 @@ export class PassageRetrievalService {
         private readonly passages: PassageSearchService,
         private readonly cites: KnowledgeSourceCitesService,
         private readonly embeddings: EmbeddingService,
-        @Optional() @InjectVectorIndex() private readonly index: VectorIndex | null,
+        @InjectVectorIndex() private readonly index: VectorIndex,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -107,21 +106,16 @@ export class PassageRetrievalService {
                 }),
             byVector: async (vector, limit) => {
                 ran.add("meaning")
-                if (this.index != null) {
-                    // THE READ SWITCH: with a vector index bound the meaning leg reads it; without one, the pgvector statement below.
-                    // An index that does not answer is no failure of the search: the word leg stands and the answer says so.
-                    const near = await this.nearInIndex(this.index, lens, vector, limit, keep).catch((cause: unknown) => {
-                        this.logger.error(KnowledgeLogEvent.IndexUnavailable, cause, { workspaceId: lens.workspaceId })
-                        return null
-                    })
-                    if (near !== null) return near
-                    ran.delete("meaning")
-                    state.meaningDown = true
-                    return []
-                }
-                const model = this.embeddings.model()
-                const near = keep(await this.passages.byMeaning(lens, { vector: toVector(vector), model, limit }))
-                return near.map((hit) => ({ ...retrievedOf(hit), similarity: 1 - hit.distance }))
+                // The meaning leg is the vector index's query. An index that does not answer is no failure of the search: the word leg
+                // stands and the answer says so.
+                const near = await this.nearInIndex(lens, vector, limit, keep).catch((cause: unknown) => {
+                    this.logger.error(KnowledgeLogEvent.IndexUnavailable, cause, { workspaceId: lens.workspaceId })
+                    return null
+                })
+                if (near !== null) return near
+                ran.delete("meaning")
+                state.meaningDown = true
+                return []
             },
             cites: async (documentIds) => {
                 const read = await this.cites.of(lens.workspaceId, documentIds)
@@ -218,13 +212,12 @@ export class PassageRetrievalService {
      * whose row is gone, moved or no longer served to a customer is dropped here: the index may lag, it never decides what is read.
      */
     private async nearInIndex(
-        index: VectorIndex,
         lens: PassageLens,
         vector: ReadonlyArray<number>,
         limit: number,
         keep: (hits: ReadonlyArray<StoredPassage>) => ReadonlyArray<StoredPassage>,
     ): Promise<ReadonlyArray<NearPassage>> {
-        const matches = await index.search(
+        const matches = await this.index.search(
             "passage",
             { ...lens, model: this.embeddings.model(), standing: "in_force" },
             vector,

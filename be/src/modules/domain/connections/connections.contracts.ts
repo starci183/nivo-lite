@@ -79,8 +79,13 @@ export interface ConnectionRecord {
     readonly status: ConnectionStatus
     /** The last failure shown to the owner, if any. */
     readonly lastError: string | null
-    /** Test or live. */
+    /** Test or live: the provider's OWN test host (real network, real credentials). */
     readonly environment: Environment
+    /**
+     * A SANDBOX account (lane concept provider-sandbox, ruling R56): its provider's sandbox implementation answers it from fixtures and
+     * scripts, never a real host; it holds no secret. Set at creation, never changed. The UI labels it and what came from it "Sandbox".
+     */
+    readonly sandbox: boolean
     /** SMTP only: the workspace default sender. */
     readonly isDefault: boolean
     /** When the last event arrived, ISO 8601. */
@@ -106,8 +111,24 @@ export interface ConnectionSecretInput {
     readonly webhookSecret: string
 }
 
-/** What creating a connection takes. */
-export interface CreateConnectionInput {
+/** What creating a connection takes: a LIVE account carries its credential; a SANDBOX account (R56) carries none. */
+export type CreateConnectionInput = CreateLiveConnectionInput | CreateSandboxConnectionInput
+
+/** What creating a live connection takes. */
+export interface CreateLiveConnectionInput extends NewConnectionFields {
+    /** Never a sandbox account. */
+    readonly sandbox?: false | undefined
+    /** The credential and webhook secret. */
+    readonly secret: ConnectionSecretInput
+}
+
+/** What creating a sandbox connection takes (the provider-sandbox capability's door, behind the dev switch): no credential at all. */
+export interface CreateSandboxConnectionInput extends NewConnectionFields {
+    readonly sandbox: true
+}
+
+/** The fields every new connection carries. */
+interface NewConnectionFields {
     /** The id the row takes: only a seed names one, so its connection keeps the same id in every environment. */
     readonly id?: string
     /** The workspace that owns it. */
@@ -124,8 +145,6 @@ export interface CreateConnectionInput {
     readonly environment: Environment
     /** Non-secret facts. */
     readonly meta: Readonly<Record<string, string>>
-    /** The credential and webhook secret. */
-    readonly secret: ConnectionSecretInput
 }
 
 /** The fields of a connection that can change; an absent field stays. */

@@ -44,24 +44,20 @@ const stepOf = (graph: TemplateGraph, key: string): (typeof graph.spec.nodes)[nu
     graph.spec.nodes.find((step) => step.key === key)
 
 /**
- * The declined wiring of a blocking `ask` step (DECLINED rule 2), as stored: the step goes to an `if` on its own `declined` member; the
- * yes branch is ONE `team.declined-notice` step naming the step's vi title (and the record), which goes on to `end` (the outcome
- * `declined`; absent inside a loop body: the item ends there); the no branch is the rest of the graph.
+ * R68: a declined (or refused) blocking step is the step's stored `unsuccessful` ending: the ENGINE posts the team notice (the step, the
+ * typed reason, the facts the old hand-drawn `team.declined-notice` carried) and follows the policy; no `if` + notice pair is drawn.
  */
-const declinedWiringOf = (graph: TemplateGraph, key: string, check: string, notice: string) => {
+const unsuccessfulOf = (graph: TemplateGraph, key: string) => {
     const step = stepOf(graph, key)
-    const branch = stepOf(graph, check)
-    const told = stepOf(graph, notice)
-    return {
-        next: step?.kind === "node" ? step.next : null,
-        when: branch?.kind === "if" ? branch.params.when : null,
-        yes: branch?.kind === "if" ? branch.routes.yes : null,
-        notice:
-            told?.kind === "node"
-                ? [told.step, told.params["step"], told.params["ref"], told.params["scope"] ?? "run", told.next ?? null]
-                : null,
-    }
+    return step?.kind === "node" ? { next: step.next ?? null, unsuccessful: step.unsuccessful ?? null } : null
 }
+
+/** A notice fact as stored: its vi label and the ref it reads. */
+const factOf = (vi: string, at: string) => ({ label: expect.objectContaining({ vi }), value: expect.objectContaining({ $ref: at }) })
+
+/** R68: no graph draws the shared declined notice any more (the engine reports). */
+const noticesOf = (graph: TemplateGraph): ReadonlyArray<string> =>
+    graph.spec.nodes.filter((step) => step.kind === "node" && step.step === "team.declined-notice").map((step) => step.key)
 
 describe("the Support agent template", () => {
     it("loads with no problem, its graphs judged with its providers and the supplies of its triggers", () => {
@@ -102,10 +98,11 @@ describe("the Support agent template", () => {
             ]),
             // ledger 2026-11-13 (`nivo-frame.rights`): every graph's catalogue version + 1 (one mode per node changed every compiled document); 2026-11-13 later: + 1 again (NIVO Web `auto` almost everywhere).
         ).toEqual([
-            ["webdesk.front", 12],
-            ["webdesk.ticket", 11],
-            ["webdesk.mail-tickets", 8],
+            ["webdesk.front", 13],
+            ["webdesk.ticket", 12],
+            ["webdesk.mail-tickets", 9],
         ])
+        // 2026-11-14 (R68): front 12 -> 13, ticket 11 -> 12, mail-tickets 8 -> 9: the declined notice pairs are the steps' unsuccessful ending.
         // Ledger 2026-11-14 (R4 rulings, each graph's own catalogue `notes` say why): front 8 -> 12 (no `burst`, call params under `data`, the hand-offs
         // end the front desk's run, ...), ticket 9 -> 11, mail-tickets 7 -> 8; the versions are the graphs' own, this spec only records them.
         // 2026-11-14 (EF-G, `rights` 11c): the chat turn + 1 (a declined answer post ends the turn `declined`).
@@ -138,14 +135,11 @@ describe("webdesk.front", () => {
                 ["complaint-notify", "chatbot.complaint-notify"],
                 ["to-person", "outcome"],
                 ["answer", "chatbot.answer"],
-                ["complaint-declined", "if"],
-                ["complaint-notice", "team.declined-notice"],
-                ["answer-declined", "if"],
-                ["answer-notice", "team.declined-notice"],
                 ["declined", "outcome"],
             ]),
         )
-        expect(webdeskFrontGraph.spec.nodes).toHaveLength(13)
+        // R68: 13 -> 9 (the two declined ifs and their notices are gone).
+        expect(webdeskFrontGraph.spec.nodes).toHaveLength(9)
         const handOffs = ["to-ticket", "to-renewal", "to-sales"].map((key) => {
             const step = stepOf(webdeskFrontGraph, key)
             return step?.kind === "call-workflow" ? [step.params.agent, step.params.workflow] : null
@@ -170,33 +164,18 @@ describe("webdesk.front", () => {
 })
 
 describe("webdesk.front, declined", () => {
+    // R68: the `complaint-`/`answer-declined` ifs and their notices became the two sends' unsuccessful ending (the engine tells the team).
+    // DIFF: no order-code fact (the old ref was complaint-reply's own `orderCode`, null on a decline; a fact may not read its own step).
     it("routes a person's no to either customer send of the Chatbot steps to one team notice, then the outcome declined", () => {
-        expect(
-            declinedWiringOf(webdeskFrontGraph, "complaint-reply", "complaint-declined", "complaint-notice"),
-        ).toEqual({
-            next: "complaint-declined",
-            when: { op: "eq", ref: { $ref: "steps.complaint-reply.output.declined", default: null }, value: true },
-            yes: "complaint-notice",
-            notice: [
-                "team.declined-notice",
-                "Tr\u1ea3 l\u1eddi khi\u1ebfu n\u1ea1i",
-                { $ref: "steps.complaint-reply.output.orderCode" },
-                "run",
-                "declined",
-            ],
+        expect(unsuccessfulOf(webdeskFrontGraph, "complaint-reply")).toEqual({
+            next: "complaint-notify",
+            unsuccessful: { then: "end", outcome: "declined", facts: [] },
         })
-        expect(declinedWiringOf(webdeskFrontGraph, "answer", "answer-declined", "answer-notice")).toEqual({
-            next: "answer-declined",
-            when: { op: "eq", ref: { $ref: "steps.answer.output.declined", default: null }, value: true },
-            yes: "answer-notice",
-            notice: ["team.declined-notice", "Tr\u1ea3 l\u1eddi c\u00e2u h\u1ecfi", null, "run", "declined"],
+        expect(unsuccessfulOf(webdeskFrontGraph, "answer")).toEqual({
+            next: null,
+            unsuccessful: { then: "end", outcome: "declined", facts: [] },
         })
-        const complaint = stepOf(webdeskFrontGraph, "complaint-declined")
-        const answer = stepOf(webdeskFrontGraph, "answer-declined")
-        expect([
-            complaint?.kind === "if" ? complaint.routes.no : null,
-            answer?.kind === "if" ? (answer.routes.no ?? null) : null,
-        ]).toEqual(["complaint-notify", null])
+        expect(noticesOf(webdeskFrontGraph)).toEqual([])
         expect(webdeskFrontGraph.spec.outcomes.map((outcome) => outcome.key).sort()).toEqual(["declined", "person"])
     })
 })
@@ -224,16 +203,11 @@ describe("webdesk.ticket", () => {
                 ["is-covered", "if"],
                 ["in-progress", "outcome"],
                 ["quoted", "outcome"],
-                ["intake-declined", "if"],
-                ["intake-notice", "team.declined-notice"],
-                ["reply-declined", "if"],
-                ["reply-notice", "team.declined-notice"],
-                ["note-declined", "if"],
-                ["note-notice", "team.declined-notice"],
                 ["declined", "outcome"],
             ]),
         )
-        expect(webdeskTicketGraph.spec.nodes).toHaveLength(21)
+        // R68: 21 -> 15 (the three declined ifs and their notices are gone).
+        expect(webdeskTicketGraph.spec.nodes).toHaveLength(15)
         expect(webdeskTicketGraph.spec.outcomes.map((outcome) => outcome.key).sort()).toEqual([
             "declined",
             "in-progress",
@@ -241,36 +215,22 @@ describe("webdesk.ticket", () => {
         ])
     })
 
+    // R68: the `intake-`, `reply-`, `note-declined` ifs and their notices became the steps' unsuccessful ending (same facts: the ticket).
     it("routes a person's no to each blocking ask write (ticket, reply, note) to one team notice, then the outcome declined", () => {
-        const wiring = [
-            ["intake", "intake-declined", "intake-notice", "check", "M\u1edf phi\u1ebfu", null],
-            [
-                "customer-reply",
-                "reply-declined",
-                "reply-notice",
-                "ticket-note",
-                "Tr\u1ea3 l\u1eddi kh\u00e1ch",
-                { $ref: "steps.intake.output.ticketId" },
-            ],
-            [
-                "ticket-note",
-                "note-declined",
-                "note-notice",
-                "is-unlinked",
-                "Ghi phi\u1ebfu",
-                { $ref: "steps.intake.output.ticketId" },
-            ],
-        ] as const
-        for (const [key, check, notice, rest, title, record] of wiring) {
-            expect(declinedWiringOf(webdeskTicketGraph, key, check, notice)).toEqual({
-                next: check,
-                when: { op: "eq", ref: { $ref: `steps.${key}.output.declined`, default: null }, value: true },
-                yes: notice,
-                notice: ["team.declined-notice", title, record, "run", "declined"],
-            })
-            const branch = stepOf(webdeskTicketGraph, check)
-            expect(branch?.kind === "if" ? branch.routes.no : null).toBe(rest)
-        }
+        const ticket = [factOf("M\u00e3 phi\u1ebfu", "steps.intake.output.ticketId")]
+        expect(unsuccessfulOf(webdeskTicketGraph, "intake")).toEqual({
+            next: "check",
+            unsuccessful: { then: "end", outcome: "declined", facts: [] },
+        })
+        expect(unsuccessfulOf(webdeskTicketGraph, "customer-reply")).toEqual({
+            next: "ticket-note",
+            unsuccessful: { then: "end", outcome: "declined", facts: ticket },
+        })
+        expect(unsuccessfulOf(webdeskTicketGraph, "ticket-note")).toEqual({
+            next: "is-unlinked",
+            unsuccessful: { then: "end", outcome: "declined", facts: ticket },
+        })
+        expect(noticesOf(webdeskTicketGraph)).toEqual([])
         const declined = stepOf(webdeskTicketGraph, "declined")
         expect(declined?.kind === "outcome" ? declined.params : null).toEqual({
             outcome: "declined",
@@ -318,13 +278,11 @@ describe("webdesk.mail-tickets", () => {
                 ["mail-reply-draft", "webdesk.mail-reply-draft"],
                 ["ticket-note", "webdesk.ticket-note"],
                 ["open-declined", "if"],
-                ["open-notice", "team.declined-notice"],
-                ["note-declined", "if"],
-                ["note-notice", "team.declined-notice"],
                 ["opened", "outcome"],
             ]),
         )
-        expect(webdeskMailTicketsGraph.spec.nodes).toHaveLength(17)
+        // R68: 17 -> 14 (the two notices and `note-declined` are gone; `open-declined` stays: the item cannot go on without its ticket).
+        expect(webdeskMailTicketsGraph.spec.nodes).toHaveLength(14)
         const loop = stepOf(webdeskMailTicketsGraph, "each")
         expect(
             loop?.kind === "loop" && loop.params.mode === "over"
@@ -334,24 +292,24 @@ describe("webdesk.mail-tickets", () => {
     })
 
     it("ends a mail's item after one team notice when a person declines its ticket or its note; the round goes on", () => {
-        expect(declinedWiringOf(webdeskMailTicketsGraph, "ticket-open", "open-declined", "open-notice")).toEqual({
+        // R68: the two notices are the steps' unsuccessful ending (continue, a loop body's default); `open-declined` ends the item.
+        expect(unsuccessfulOf(webdeskMailTicketsGraph, "ticket-open")).toEqual({
             next: "open-declined",
-            when: { op: "eq", ref: { $ref: "steps.ticket-open.output.declined", default: null }, value: true },
-            yes: "open-notice",
-            notice: ["team.declined-notice", "M\u1edf phi\u1ebfu", { $ref: "item.mailId" }, "item", null],
+            unsuccessful: { then: "continue", facts: [factOf("M\u00e3 th\u01b0", "item.mailId")] },
         })
-        expect(declinedWiringOf(webdeskMailTicketsGraph, "ticket-note", "note-declined", "note-notice")).toEqual({
-            next: "note-declined",
-            when: { op: "eq", ref: { $ref: "steps.ticket-note.output.declined", default: null }, value: true },
-            yes: "note-notice",
-            notice: ["team.declined-notice", "Ghi phi\u1ebfu", { $ref: "steps.ticket-note.output.ticketId" }, "item", null],
+        // The note's fact reads the ticket from `ticket-open` (same value; a fact may not read its own step's output).
+        expect(unsuccessfulOf(webdeskMailTicketsGraph, "ticket-note")).toEqual({
+            next: null,
+            unsuccessful: { then: "continue", facts: [factOf("M\u00e3 phi\u1ebfu", "steps.ticket-open.output.ticketId")] },
         })
         const opened = stepOf(webdeskMailTicketsGraph, "open-declined")
-        const noted = stepOf(webdeskMailTicketsGraph, "note-declined")
-        expect([
-            opened?.kind === "if" ? opened.routes.no : null,
-            noted?.kind === "if" ? (noted.routes.no ?? null) : null,
-        ]).toEqual(["check", null])
+        expect(opened?.kind === "if" ? opened.params.when : null).toEqual({
+            op: "eq",
+            ref: { $ref: "steps.ticket-open.output.declined", default: null },
+            value: true,
+        })
+        expect(opened?.kind === "if" ? [opened.routes.yes ?? null, opened.routes.no] : null).toEqual([null, "check"])
+        expect(noticesOf(webdeskMailTicketsGraph)).toEqual([])
         // A declined team post (the plan) ends its item with no notice (the post was the team's own); the items are independent.
         const told = stepOf(webdeskMailTicketsGraph, "team-tell")
         expect(told?.kind === "node" ? told.next : null).toBe("team-tell-declined")

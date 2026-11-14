@@ -134,6 +134,7 @@ const scriptedPorts = (node: AnyTemplateNode, example: AnyExample, params: unkno
             item: example.item ?? null,
             queue: example.queue ?? [],
             waiting: example.waiting ?? 0,
+            ...(example.unreachable === undefined ? {} : { unreachable: example.unreachable }),
         },
         subject: example.subject ?? null,
         workspace: example.workspace ?? EXAMPLE_WORKSPACE,

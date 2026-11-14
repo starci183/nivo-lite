@@ -8,6 +8,14 @@ import type {
     ReadContactsRequest,
 } from "@modules/domain/contacts"
 import type { LinePage } from "@modules/domain/customer-routes"
+import type {
+    ContactMessagesPageView,
+    ContactRouteView,
+    ContactWorkView,
+    ReadContactMessagesRequest,
+    ReadContactRoutesRequest,
+    ReadContactWorkRequest,
+} from "./contact-conversation.contracts"
 
 /** `nivo.api.nivo.contact.list` / `.search`: a page of the people of the workspace, or the people a search finds. */
 export class ReadContactsQuery extends Query<ContactsPageView> {
@@ -47,6 +55,27 @@ export interface ReadCustomerMessagesRequest {
 /** `nivo.api.nivo.customer.message.list`: the lines of one route, both directions, newest first (owner ruling R26). */
 export class ReadCustomerMessagesQuery extends Query<LinePage> {
     constructor(readonly params: ExecuteParams<ReadCustomerMessagesRequest>) {
+        super()
+    }
+}
+
+/** The routes of one contact: the entrance of each, the activity on it, the agent whose workbench holds it and the member who holds it. */
+export class ReadContactRoutesQuery extends Query<ReadonlyArray<ContactRouteView>> {
+    constructor(readonly params: ExecuteParams<ReadContactRoutesRequest>) {
+        super()
+    }
+}
+
+/** The whole conversation with a person, every route merged by time (or one route), newest first, with who spoke each line. */
+export class ReadContactMessagesQuery extends Query<ContactMessagesPageView> {
+    constructor(readonly params: ExecuteParams<ReadContactMessagesRequest>) {
+        super()
+    }
+}
+
+/** What the agents did for a person lately, each row labelled in the workspace language. */
+export class ReadContactWorkQuery extends Query<ReadonlyArray<ContactWorkView>> {
+    constructor(readonly params: ExecuteParams<ReadContactWorkRequest>) {
         super()
     }
 }

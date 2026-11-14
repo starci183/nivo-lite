@@ -1,4 +1,4 @@
-import type { ProviderKey } from "@nivo-lite/agent-sdk/names"
+import { PROVIDER, type ProviderKey } from "@nivo-lite/agent-sdk/names"
 import type { JsonObject } from "@nivo-lite/agent-sdk/schema"
 import type { ToolAnswer } from "@nivo-lite/agent-sdk/template"
 import { answered, refused as coreRefused } from "@nivo-lite/blocks-core"
@@ -27,6 +27,9 @@ export const creditsOk = (value: JsonObject): ToolAnswer<JsonObject> => answered
  * is, through no account (`via.provider` null: the mailbox it left from is the send record's, never the answer's).
  */
 export const mailSentOk = (value: JsonObject): ToolAnswer<JsonObject> => answered(value)
+
+/** An e-invoice issue's answer (`TOOL.invoiceCreate`), through the MISA meInvoice account (R57). */
+export const misaOk = (value: JsonObject): ToolAnswer<JsonObject> => via(PROVIDER.misaMeinvoice, value)
 
 /** NIVO's own records (the team post, the truths, the received e-invoices): no account. */
 export const ownOk = (value: JsonObject): ToolAnswer<JsonObject> => answered(value)

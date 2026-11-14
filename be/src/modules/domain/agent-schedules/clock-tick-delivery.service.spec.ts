@@ -15,7 +15,6 @@ const record = (over: Partial<AgentTriggerRecord> = {}): AgentTriggerRecord => (
     atTime: null,
     timeZone: "Asia/Ho_Chi_Minh",
     eventName: null,
-    probeKey: "invoices_due",
     enabled: true,
     seedKey: null,
     nextRunAt: null,
@@ -63,7 +62,7 @@ describe("ClockTickDeliveryService", () => {
                     {
                         event: {
                             id: `trigger-1:${SLOT}`,
-                            data: { triggerId: "trigger-1", slotMs: Number(SLOT), probeKey: "invoices_due" },
+                            data: { triggerId: "trigger-1", slotMs: Number(SLOT) },
                         },
                         actorMemberId: null,
                         occurredAt: new Date(Number(SLOT)).toISOString(),
@@ -77,8 +76,8 @@ describe("ClockTickDeliveryService", () => {
     it("names the person who pressed run now, and the same event id for the same slot (the job, the sweep and a press are one)", async () => {
         const { clock, triggers, tx } = await build()
 
-        await clock.deliverSlot(tx, "ws-1", record({ probeKey: null }), SLOT, "member-1")
-        await clock.deliverSlot(tx, "ws-1", record({ probeKey: null }), SLOT, null)
+        await clock.deliverSlot(tx, "ws-1", record(), SLOT, "member-1")
+        await clock.deliverSlot(tx, "ws-1", record(), SLOT, null)
 
         expect(
             triggers.deliver.mock.calls.map((call) => [call[0].events[0]?.event.id, call[0].events[0]?.actorMemberId]),

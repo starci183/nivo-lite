@@ -6,7 +6,6 @@ import { KnowledgeDocumentsService } from "./knowledge-documents.service"
 import { KnowledgeDriveService } from "./knowledge-drive.service"
 import { KnowledgeIndexingService } from "./knowledge-indexing.service"
 import { KnowledgeJobsService } from "./knowledge-jobs.service"
-import { KnowledgeReembedService } from "./knowledge-reembed.service"
 import { KnowledgeSearchService } from "./knowledge-search.service"
 import { PassageRetrievalService } from "./passage-retrieval.service"
 import { UnchangedSourceService } from "./unchanged-source.service"
@@ -57,7 +56,6 @@ export class KnowledgeModule extends ConfigurableModuleClass {
                 KnowledgeDriveService,
                 KnowledgeIndexingService,
                 KnowledgeJobsService,
-                KnowledgeReembedService,
                 PassageRetrievalService,
                 KnowledgeSearchService,
                 UnchangedSourceService,
@@ -70,7 +68,6 @@ export class KnowledgeModule extends ConfigurableModuleClass {
                 KnowledgeDriveService,
                 KnowledgeIndexingService,
                 KnowledgeJobsService,
-                KnowledgeReembedService,
                 PassageRetrievalService,
                 KnowledgeSearchService,
                 VectorEmbedderService,

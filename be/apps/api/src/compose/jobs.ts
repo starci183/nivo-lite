@@ -11,7 +11,6 @@ import { DraftPublicDocumentQueueModule } from "@features/jobs/draft-public-docu
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
 import { DeriveBrainPoliciesQueueModule } from "@features/jobs/derive-brain-policies"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
-import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
 import { EmitWebhookEventQueueModule } from "@features/jobs/emit-webhook-event"
 import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
@@ -58,7 +57,6 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunBrainCommandQueueModule.register({}),
     DeriveBrainPoliciesQueueModule.register({}),
     IndexKnowledgeSourceQueueModule.register({}),
-    ReembedKnowledgeQueueModule.register({}),
     EmitWebhookEventQueueModule.register({}),
     RunSetupTurnQueueModule.register({}),
     GenerateWithAgentQueueModule.register({}),

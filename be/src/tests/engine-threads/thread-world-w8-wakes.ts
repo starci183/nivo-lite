@@ -32,7 +32,6 @@ export const W8P = {
     deliveryCheck: "sales.care-delivery-check:agent",
     occasion: "sales.care-occasion:agent",
     paymentReminder: "sales.payment-reminder:agent",
-    unpaidNotice: "sales.unpaid-notice:agent",
     webOrderKeep: "sales.web-order-keep:agent",
     webOrder: "sales.web-order-notice:agent",
     core: "engine:step-trouble",

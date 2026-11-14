@@ -13,6 +13,5 @@ export const toGetShellRequest = (workspaceId: string, input: ShellWindowInput):
 /** Maps the shell facts to the GraphQL type. */
 export const toWorkspaceShellType = (result: ShellFacts): WorkspaceShellType => ({
     agents: result.agents.map((agent) => ({ ...agent })),
-    hasChatbot: result.hasChatbot,
     isFoundingMember: result.isFoundingMember,
 })

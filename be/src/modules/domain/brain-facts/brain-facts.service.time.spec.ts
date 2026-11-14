@@ -102,7 +102,7 @@ describe("truth integrity: time (D-BR-16, D-BR-18)", () => {
             version: null,
             decisionNote: 'Back in force after the time-boxed value "9%" ends',
         })
-        expect(parametersOf(restore)).toMatchObject({ oldId: "eight", validFrom: facts.LATER, validTo: STANDING_END })
+        expect(parametersOf(restore)).toMatchObject({ validFrom: facts.LATER, validTo: STANDING_END })
     })
 
     it("restores nothing when the new value states no end", async () => {
@@ -171,6 +171,6 @@ describe("truth integrity: a time-boxed value merged over another key (D-N-5)", 
         await service.apply(facts.WS, "tet", "Ada")
 
         expect(valuesOf(restore)).toMatchObject({ status: "scheduled", value: PRICE_30K_VI, supersedesId: "tet" })
-        expect(parametersOf(restore)).toMatchObject({ oldId: "fee", validFrom: facts.LATER, validTo: STANDING_END })
+        expect(parametersOf(restore)).toMatchObject({ validFrom: facts.LATER, validTo: STANDING_END })
     })
 })

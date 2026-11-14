@@ -4,7 +4,7 @@ export { parseQdrantConfig } from "./qdrant.config"
 export { InjectVectorIndex, InjectVectorIndexBoot, VECTOR_INDEX } from "./qdrant.decorators"
 export type { VectorIndexBoot } from "./qdrant.decorators"
 export { QdrantModule } from "./qdrant.module"
-export { VECTOR_KINDS } from "./qdrant.policy"
+export { PLATFORM_TENANT, VECTOR_KINDS } from "./qdrant.policy"
 export type {
     VectorFlags,
     VectorHealth,
@@ -13,6 +13,8 @@ export type {
     VectorMatch,
     VectorPayload,
     VectorPoint,
+    VectorScope,
+    VectorSearchPage,
     VectorStamp,
     VectorStampCursor,
     VectorStampFilter,

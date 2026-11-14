@@ -38,12 +38,23 @@ const query1: Document = gql`
                     name
                     value
                 }
-                notes {
-                    workflow
-                    step
-                    status
+            }
+            routes {
+                routeId
+                channel
+                accountId
+                accountName
+                lastLineAt
+                workbench {
+                    agentId
+                    agentName
+                    moduleKey
+                    installationId
+                }
+                holder {
+                    memberId
+                    name
                     at
-                    output
                 }
             }
             suggestions {
@@ -69,7 +80,7 @@ interface QueryContactParams extends QueryParams<QueryContact, QueryContactReque
 }
 
 /**
- * Reads one person of the workspace with their identities, agent memory and the people they may be (the back end
+ * Reads one person of the workspace with their identities, agent memory, routes and the people they may be (the back end
  * `contact` query). The answer is null for a person who is not in the workspace (or was merged away).
  */
 export const queryContact = async ({

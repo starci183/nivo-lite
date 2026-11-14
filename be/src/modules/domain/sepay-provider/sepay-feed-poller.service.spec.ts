@@ -18,6 +18,7 @@ const record = (meta: Record<string, string>): ConnectionRecord => ({
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

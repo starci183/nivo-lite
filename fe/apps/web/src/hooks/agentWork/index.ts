@@ -1,5 +1,4 @@
 export {
-    GOAL_TITLE_MAX,
     TIME_OF_DAY,
     WORK_PLACEHOLDER,
     WORK_PRESETS,

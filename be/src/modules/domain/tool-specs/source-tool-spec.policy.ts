@@ -28,9 +28,7 @@ export const sourceToolSpecOf = (operation: SourceOperation): ToolSpec => {
         dataKind: operation.dataKind,
         onceBy: [],
         refusals: { closed: false, codes: [] },
-        // An operation of the source is no platform purpose: a purpose's slot is the core registry's.
-        adapter: null,
-        // It is read from the pinned document itself, so the account that pinned it serves it.
-        availability: "bound",
+        // A read may be asked again; a write at the source is not sent again by itself on an unknown outcome (R74).
+        repeatable: reads,
     }
 }

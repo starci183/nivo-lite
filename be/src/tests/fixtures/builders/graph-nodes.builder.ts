@@ -1,14 +1,10 @@
 import { mock } from "@starci/jest-preset"
 import { callDigestOf, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import {
-    flatEffect,
     lookTool,
-    lostEffect,
     pingEffect,
     probeNode,
     swallowNode,
-    unflatEffect,
-    unpingEffect,
 } from "@nivo-lite/agent-sdk/testing"
 import { ENGINE_CORE_MODEL } from "@nivo-lite/agent-sdk/models"
 import {
@@ -30,7 +26,7 @@ type SubjectResolvers = ReturnType<GraphNodeRegistryService["subjectResolvers"]>
 /** The installed index of the host specs: the probe and swallowing nodes, their effects and the look tool. */
 export const PROBE_INSTALL: ReturnType<typeof nodeIndexOf> = nodeIndexOf({
     nodes: [probeNode, swallowNode],
-    effects: [pingEffect, unpingEffect, lostEffect, flatEffect, unflatEffect],
+    effects: [pingEffect],
     tools: [lookTool],
     dataKinds: [],
 })

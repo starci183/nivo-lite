@@ -54,6 +54,7 @@ export interface StopOpened {
     readonly told: RunStopCustomerLine | null
 }
 
+
 /** The most customer lines a stop holds (its `customer_lines`). */
 const STOP_LINES_MAX = 50
 

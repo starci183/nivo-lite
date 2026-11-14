@@ -11,7 +11,15 @@ export { AgentRunDrainService } from "./agent-run-drain.service"
 export type { AgentRunTableStore } from "./agent-run-table-store.port"
 export { agentRunsEntities } from "./persistence/entities"
 export { parseAgentRunsConfig } from "./agent-runs.config"
-export { TOOL_OUTCOME_UNKNOWN, DECISION_ACTOR_UNKNOWN, DEFAULT_DEADLINE_MS } from "./policies/agent-runs.policy"
+export {
+    TOOL_OUTCOME_UNKNOWN,
+    DECISION_ACTOR_UNKNOWN,
+    DEFAULT_DEADLINE_MS,
+    RUN_ENDED,
+    OPEN_STEP_STATUSES,
+    WAIT_PARKED_STATUS,
+    reportedStatusOf,
+} from "./policies/agent-runs.policy"
 export type {
     StepEffect,
     StepJson,
@@ -37,4 +45,4 @@ export type {
     StoredWaiter,
 } from "./agent-runs-rows.contracts"
 export type { RunDetail, RunListEntry, RunStepDetail } from "./agent-runs-view.contracts"
-export type { RunSubject } from "./agent-run-store.service"
+export type { RunSubject, SubjectHolder } from "./agent-run-store.service"

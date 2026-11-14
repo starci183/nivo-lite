@@ -1,4 +1,6 @@
 export { ProviderRegistryModule } from "./provider-registry.module"
+export { ProviderRegistryService } from "./provider-registry.service"
+export type { PortAccount, ProviderImplementations } from "./provider-registry.service"
 export {
     BankFeedPollerRegistryService,
     BankTransactionsRegistryService,
@@ -64,6 +66,7 @@ export type {
     ProviderRefusalReason,
     SpeechPort,
     SpeechRequest,
+    SpeechVoice,
     SpeechVoicePage,
     SpeechVoiceQuery,
     VideoGenerationPort,
@@ -71,7 +74,8 @@ export type {
     VideoRequest,
     VideoStarted,
 } from "./media-ports.contracts"
-export type { InvoiceIssuePort, InvoiceIssueRequest, IssuedInvoice } from "./invoice-ports.contracts"
+export { INVOICE_TOOL_BUSINESS_REFUSALS, INVOICE_TOOL_REFUSALS } from "./invoice-ports.contracts"
+export type { InvoiceIssuePort, InvoiceIssueRequest, InvoiceToolRefusal, IssuedInvoice } from "./invoice-ports.contracts"
 export { DOMAIN_TOOL_BUSINESS_REFUSALS, DOMAIN_TOOL_REFUSALS } from "./domain-ports.contracts"
 export type {
     DomainRefusalReason,
@@ -85,11 +89,16 @@ export type {
     DomainListQuery,
     DomainOrderReceipt,
     DomainPage,
+    DomainPeriodPrice,
     DomainRecord,
     DomainRegistrarPort,
     DomainRegistrationRequest,
     DomainRenewalRequest,
+    DomainService,
     DomainTransferRequest,
+    RenewableService,
+    ServiceRenewalReceipt,
+    ServiceRenewalRequest,
 } from "./domain-ports.contracts"
 export { CalendarRegistryService } from "./calendar-registry.service"
 export { PaymentLinkRegistryService } from "./payment-link-registry.service"

@@ -1,5 +1,6 @@
 import { UuidAbstractEntity } from "@modules/platform/database"
 import { Column, Entity } from "typeorm"
+import type { AccessState } from "../../agent-access-log.contracts"
 
 @Entity({ schema: "public", name: "agent_access_log" })
 /** One recorded change of the access an agent holds on a connection. */
@@ -26,11 +27,11 @@ export class AgentAccessLogEntity extends UuidAbstractEntity {
 
     /** The access before the change. */
     @Column({ name: "before_access", type: "text", nullable: true })
-    beforeAccess!: string | null
+    beforeAccess!: AccessState | null
 
     /** The access after the change. */
     @Column({ name: "after_access", type: "text", nullable: true })
-    afterAccess!: string | null
+    afterAccess!: AccessState | null
 
     /** The member that changed it. */
     @Column({ name: "changed_by", type: "uuid", nullable: true })

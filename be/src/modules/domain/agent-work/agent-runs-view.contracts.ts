@@ -73,7 +73,7 @@ export interface AgentRunsBoard {
 }
 
 /** Where a step stands as a person tells it. */
-export type RunStepStatus = "pending" | "running" | "waiting" | "done" | "failed" | "undone"
+export type RunStepStatus = "pending" | "running" | "waiting" | "done" | "failed"
 
 /** One plain fact of what a step was given or stored. */
 export interface AgentRunFact {

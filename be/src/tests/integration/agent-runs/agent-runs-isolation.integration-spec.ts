@@ -60,7 +60,6 @@ const seededRun = async (): Promise<{ readonly runId: string; readonly stepId: s
         status: "done",
         attempt: 1,
         maxAttempts: 1,
-        compAttempts: 0,
         deadlineMs: 30000,
         doorCalls: { calls: [] },
     })

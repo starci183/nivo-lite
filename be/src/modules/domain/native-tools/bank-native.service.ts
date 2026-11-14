@@ -93,8 +93,8 @@ export class BankNativeService implements NativeToolFamily {
         if (tool !== "transaction.list") throw unknownTool(tool)
         const input = argumentsOf(tool, BANK_TRANSACTIONS_SCHEMA, args)
         const allowed = narrowedTo(await this.allowedOf(workspaceId, caller), caller.connectionId)
-        const ports = this.providers.all().filter((port) => caller.provider === undefined || port.provider === caller.provider)
-        const answer = await this.firstAnswer(workspaceId, ports, input, allowed)
+        const providers = this.providers.providers().filter((provider) => caller.provider === undefined || provider === caller.provider)
+        const answer = await this.firstAnswer(workspaceId, providers, input, allowed)
         if (answer === undefined) throw nativeRefusal("not_connected")
         return answer
     }
@@ -105,16 +105,18 @@ export class BankNativeService implements NativeToolFamily {
      */
     private async firstAnswer(
         workspaceId: string,
-        ports: ReadonlyArray<BankTransactionsPort>,
+        providers: ReadonlyArray<string>,
         input: BankTransactionsArgs,
         allowed: ReadonlyArray<string> | null,
     ): Promise<ToolJson | undefined> {
-        const [port, ...rest] = ports
-        if (port === undefined) return undefined
-        const feeds = await this.liveFeeds(workspaceId, port.provider, allowed)
+        const [provider, ...rest] = providers
+        if (provider === undefined) return undefined
+        const feeds = await this.liveFeeds(workspaceId, provider, allowed)
         const read = await Promise.all(
             feeds.map(async (connection) => {
-                const transactions = await port.transactions(connection, {
+                // Each account through the one switch: a sandbox feed answers from its fixtures (lane concept provider-sandbox).
+                const port: BankTransactionsPort | undefined = this.providers.portFor(connection)
+                const transactions = await port?.transactions(connection, {
                     since: input.since === undefined ? undefined : new Date(input.since),
                     until: input.until === undefined ? undefined : new Date(input.until),
                     limit: input.limit,
@@ -132,7 +134,7 @@ export class BankNativeService implements NativeToolFamily {
             .flat()
             .toSorted(newestFirst)
             .slice(0, input.limit)
-        return { provider: port.provider, transactions }
+        return { provider, transactions }
     }
 
     /**

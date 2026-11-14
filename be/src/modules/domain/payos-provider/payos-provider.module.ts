@@ -1,6 +1,7 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { OrderCodesPolicy } from "./payos-order-code.policy"
 import { PayosPaymentLinkService } from "./payos-payment-link.service"
+import { PayosSandboxPaymentLinkService } from "./payos-sandbox-payment-link.service"
 import { PayosProviderRegistrationService } from "./payos-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./payos-provider.module-definition"
 
@@ -16,7 +17,7 @@ export class PayosProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), OrderCodesPolicy, PayosPaymentLinkService, PayosProviderRegistrationService],
+            providers: [...(base.providers ?? []), OrderCodesPolicy, PayosPaymentLinkService, PayosSandboxPaymentLinkService, PayosProviderRegistrationService],
             exports: [PayosPaymentLinkService],
         }
     }

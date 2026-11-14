@@ -8,8 +8,9 @@ import type { EntityManager } from "typeorm"
  */
 export interface ContactRunsPort {
     /**
-     * Ends, in the deletion's own database transaction and BEFORE the contacts are marked deleted, every run parked on the contacts (the
-     * contact and every id merged into it) or on one of their routes; answers how many runs it ended.
+     * Ends, in the deletion's own database transaction and BEFORE the contacts are marked deleted, EVERYTHING pending for the contacts (the
+     * contact and every id merged into it) or one of their routes (R72 Q1): the runs parked on them, the wakes still waiting in their
+     * scopes, the timers armed for them; answers how many runs it ended.
      */
     erasing(tx: EntityManager, workspaceId: string, contactIds: ReadonlyArray<string>): Promise<number>
 }

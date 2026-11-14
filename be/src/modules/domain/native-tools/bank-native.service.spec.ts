@@ -42,6 +42,7 @@ const record = (environment: ConnectionRecord["environment"]): ConnectionRecord 
     status: "connected",
     lastError: null,
     environment,
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

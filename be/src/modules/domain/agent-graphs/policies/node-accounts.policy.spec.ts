@@ -60,6 +60,28 @@ import { nodeAccountLookup, nodeProvidersOf } from "./node-accounts.policy"
  * one-run talks `websales.enquiry` v8 and `webrenew.answer` v14 + `desk` (`webdesk.understand-sales`, auto, none) and + `message`
  * (`websales.round-message` / `webrenew.round-message`, auto, none) each; the other rows of the two graphs keep graph/step/node/mode/
  * providers (only `webrenew.answer`'s `reply`, `reply-notice`, `unlinked-tell` move up in the order).
+ * Ledger (E-FIX7, 2026-11-14, coordinator R68 / G-SLIM, 270 -> 254 rows from the installation of G-SLIM's 13:39 build, read by diff):
+ * the slim graphs replace every hand-made notice pair by the step option `unsuccessful` (the ENGINE posts the notice), so 16 rows
+ * disappear and none appear: `sales.consult` v30 keep-occasions-declined-notice, create-declined-notice, tell-declined-notice,
+ * order-talk-unsent-notice, remind-unsent-notice, unpaid-notice, paid-declined-notice, consult-declined-notice, cancel-declined-notice,
+ * tell-cancelled-declined-notice; `sales.after-sale` v17 thank-unsent-notice; `sales.payment` v11 pay-declined-notice,
+ * claim-reply-declined-notice; `sales.web-order` v9 lead-declined-notice; `chatbot.front-desk` v26 complaint-declined-notice,
+ * answer-declined-notice. Every other row keeps graph/step/node/mode/providers and its order.
+ * Ledger (WEBCORE-4, 2026-11-14, coordinator R57 / R68 / R83, 254 -> 221 rows from the installation of WEBCORE-4's 15:12 nivo-web-core build, read by
+ * diff; only nivo-web-core rows move, every other row is untouched): (k) R68: the 37 `team.declined-notice` rows of the six NIVO Web agents
+ * disappear (the step option `unsuccessful` replaces each pair); (l) R57: `webrenew.renew` gains `check` (`webrenew.renew-check`, auto, [crm.nivoweb])
+ * and `record` (`webrenew.renew-record`, auto, [crm.nivoweb]); its `renew` step is the registrar call (`webrenew.renew`, ask, [inet, tino]: it spends
+ * NIVO Web's balance); `webbooks.invoice` gains `record` (`webbooks.issue-record`, auto, [crm.nivoweb]) and its `issue` runs on [misa_meinvoice]
+ * (still ask); (m) E-R57: `webrenew.renew` gains `recheck` (`webrenew.renew-recheck`, auto, [inet, tino]: the registrar's order read again while a
+ * renewal is pending); (n) R83 customer mail (interim, the CEO reviews later): ask on AI-written mail about money or a commitment
+ * (`webdesk.mail-tickets#mail-reply-draft`, `webrenew.answer#tell`, `webbooks.invoice#mail`, `webbooks.debt-round#draft`, `websales.round#follow`,
+ * `websales.close#pay`, `websales.won#tell`, `websales.mail-enquiries#draft`); auto stays on the first renewal reminder (`webrenew.round#send`) and
+ * the "renewed" notice (`webrenew.renew#renewed-tell`), whose rows do not change.
+ * Ledger (WEBCORE-4b, 2026-11-14, coordinator "ask ONE write" / NODE_ASK_WRITES_MANY, 221 -> 229 rows from the installation of the 15:3x build, read by
+ * diff; only nivo-web-core rows move): (o) the four asked customer sends that chose chat or mail by data are split by channel so each asked step
+ * declares ONE write: the chat step keeps its key and loses `smtp` (`webrenew.answer#tell`, `websales.round#follow`, `websales.close#pay`,
+ * `websales.won#tell`), a NEW `<key>-mail` step per graph holds the mail send alone (ask, [smtp] plus the CRM where the node reads it), and a NEW
+ * auto `<key>-told` merge step (no tools, no accounts) returns the one send that was not skipped.
  */
 
 /** A node step of a template graph. */

@@ -67,7 +67,7 @@ export const runOutcomeOf = (status: unknown, changed: number | null): RunOutcom
     const known = typeof status === "string" ? status : ""
     if (FAILED.has(known)) return "failed"
     if (STOPPED.has(known)) return "stopped"
-    if (known === "done" || known === "compensated") return changed !== null && changed > 0 ? "changed" : "answered"
+    if (known === "done") return changed !== null && changed > 0 ? "changed" : "answered"
     return "running"
 }
 

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { ScopedTx } from "@modules/domain/entity-engine"
+import { eachInOrder } from "@modules/platform/primitives"
 import { InjectAgentRunTableStore, type AgentRunTableStore } from "./agent-run-table-store.port"
 import { runRecordOf, stepRecordOf } from "./agent-runs.mapper"
 import type {
@@ -28,7 +29,7 @@ import type {
     StoredWaiter,
 } from "./agent-runs-rows.contracts"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
-import { STEPS_MAX } from "./policies/agent-runs.policy"
+import { OPEN_STEP_STATUSES, SETTLE_TRIES, STEPS_MAX } from "./policies/agent-runs.policy"
 
 /** The most runs one list of an agent holds. */
 const RUNS_PAGE = 50
@@ -148,4 +149,38 @@ export class AgentRunRecordsService {
     patchStepRow(tx: ScopedTx, step: StoredStep, values: StepValues): Promise<OptionalStoredStep> {
         return this.store.patchStep(tx, step.id, step.version, values)
     }
+
+    /**
+     * CLOSES, in `tx`, every step row of a run that is still open (`pending`, `running`: `OPEN_STEP_STATUSES`) as
+     * `failed` with the run's terminal reason `code` and the moment `at`, giving back its claim and its wait. The ONE function every road
+     * that ends a run in a terminal state calls in the same transaction (the owner's cancel, the erasure of a subject, a thread's end:
+     * done, skipped, failed), so no closed run keeps a step that reads as running. A step already closed is left as it is; a row another
+     * writer moved first is read again (at most `SETTLE_TRIES` passes). Answers how many rows it closed.
+     */
+    async closeOpenSteps(tx: ScopedTx, runId: string, code: string, at: string): Promise<number> {
+        const pass = async (left: number, closed: number): Promise<number> => {
+            const open = (await this.store.steps(tx, runId, STEPS_MAX)).filter((step) =>
+                OPEN_STEP_STATUSES.includes(step.status),
+            )
+            if (open.length === 0) return closed
+            if (left <= 0) throw new AgentRunsError({ code: AgentRunsErrorCode.RunContended })
+            let written = 0
+            await eachInOrder(open, async (step) => {
+                if ((await this.store.patchStep(tx, step.id, step.version, closedStepOf(step, code, at))) !== null) written += 1
+            })
+            return pass(left - 1, closed + written)
+        }
+        return pass(SETTLE_TRIES, 0)
+    }
 }
+
+/** What closing an open step writes: failed with the run's terminal reason, ended now, no claim, no wait. */
+const closedStepOf = (step: StoredStep, code: string, at: string): StepValues => ({
+    status: "failed",
+    errorCode: code,
+    error: { code },
+    endedAt: at,
+    durationMs: step.startedAt === null ? null : Math.max(0, new Date(at).getTime() - new Date(step.startedAt).getTime()),
+    claimedUntil: null,
+    waitItemId: null,
+})

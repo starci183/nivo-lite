@@ -1,15 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import { In, type EntityManager } from "typeorm"
+import { PLATFORM_TENANT } from "@modules/integrations/qdrant"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import type {
-    NivoEntry,
-    NivoItemInput,
-    NivoRule,
-    NivoUnembedded,
-    NivoVectorWrite,
-    NivoWriteResult,
-} from "./nivo-knowledge.contracts"
+import { VECTOR_SYNC_IDS_MAX, VectorSyncQueue } from "@modules/queues/vector-sync"
+import type { NivoEntry, NivoItemInput, NivoRemoveResult, NivoRule, NivoWriteResult } from "./nivo-knowledge.contracts"
 import { CORE_FOLDER } from "./nivo-item.policy"
 import { NivoKnowledgeItemEntity } from "./persistence/entities"
 
@@ -19,25 +15,27 @@ const LIST_LIMIT = 500
 /** The row an insert or a delete returns for each item it touched. */
 const isTouchedRow = rowShape({ id: "string" })
 
-/** The vector of each id, picked from the two arrays the write carries. */
-const VECTOR_OF_ID =
-    '(SELECT t.embedding::extensions.vector FROM unnest(CAST(:ids AS uuid[]), CAST(:vectors AS text[])) AS t(id, embedding) WHERE t.id = "nivo_knowledge"."id")'
-
-/** The longest text of an item that is embedded. */
-const EMBED_CHARS = 8000
-
 @Injectable()
-/** The base knowledge of NIVO: its items are written from the resource files and given vectors. */
+/**
+ * The base knowledge of NIVO: its items are written from the resource files. An item is a row kind that declares it is embedded (kind
+ * `base`, tenant `PLATFORM_TENANT`): every write commits its `vector.sync` job in the same transaction, and the job brings the index
+ * in step (embeds a changed text, drops the point of a removed item). Postgres holds no vector.
+ */
 export class NivoKnowledgeService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly vectorSync: VectorSyncQueue,
+        @InjectClock() private readonly clock: Clock,
+    ) {}
 
     /**
-     * Inserts the new items and updates the changed ones in one transaction; an item whose text changed loses its vector, an unchanged
-     * one keeps it.
+     * Inserts the new items and updates the existing ones in one transaction, with the `vector.sync` job of every item written: the
+     * job re-reads them and embeds only those whose text changed (an unchanged item keeps its point).
      */
     upsert(items: ReadonlyArray<NivoItemInput>): Promise<NivoWriteResult> {
         return this.entityManager.transaction(async (tx) => {
             const counts = { inserted: 0, updated: 0 }
+            const written = new Array<string>()
             await eachInOrder(items, async (item) => {
                 const result = await tx
                     .createQueryBuilder(NivoKnowledgeItemEntity, "nivo_knowledge")
@@ -52,37 +50,47 @@ export class NivoKnowledgeService {
                     .orIgnore()
                     .returning("id")
                     .execute()
-                if (returnedRows(result.raw, isTouchedRow).length > 0) {
+                const inserted = returnedRows(result.raw, isTouchedRow)
+                if (inserted.length > 0) {
                     counts.inserted += 1
+                    written.push(...inserted.map((row) => row.id))
                     return
                 }
                 counts.updated += 1
-                await this.republish(tx, item)
+                const id = await this.republish(tx, item)
+                if (id !== null) written.push(id)
             })
-            return counts
+            await this.changed(tx, written)
+            return { ...counts, queued: written.length }
         })
     }
 
-    /** Republishes an item that exists: an unchanged text keeps its version and vector, a changed one takes the next version and loses its vector. */
-    private async republish(tx: EntityManager, item: NivoItemInput): Promise<void> {
+    /** Republishes an item that exists: an unchanged text keeps its version, a changed one takes the next; answers its id. */
+    private async republish(tx: EntityManager, item: NivoItemInput): Promise<string | null> {
         const current = await tx.findOne(NivoKnowledgeItemEntity, {
             select: { id: true, title: true, body: true },
             where: { slug: item.slug },
         })
-        if (current === null) return
+        if (current === null) return null
         const fields = { module: item.module, title: item.title, body: item.body, kind: item.kind }
         const changed = current.title !== item.title || current.body !== item.body
         await tx.update(
             NivoKnowledgeItemEntity,
             { id: current.id },
-            changed
-                ? {
-                      ...fields,
-                      version: () => '"version" + 1',
-                      embedding: null,
-                      embeddingModel: null,
-                  }
-                : fields,
+            changed ? { ...fields, version: () => '"version" + 1' } : fields,
+        )
+        return current.id
+    }
+
+    /** The `vector.sync` jobs of these items, in the caller's transaction, at most `VECTOR_SYNC_IDS_MAX` ids each. */
+    private async changed(tx: EntityManager, ids: ReadonlyArray<string>): Promise<void> {
+        const at = this.clock.now().getTime()
+        const starts = Array.from({ length: Math.ceil(ids.length / VECTOR_SYNC_IDS_MAX) }, (_, index) => index * VECTOR_SYNC_IDS_MAX)
+        await eachInOrder(starts, (from) =>
+            this.vectorSync.enqueueSync(
+                { kind: "base", workspaceId: PLATFORM_TENANT, ids: ids.slice(from, from + VECTOR_SYNC_IDS_MAX), at },
+                tx,
+            ),
         )
     }
 
@@ -132,38 +140,21 @@ export class NivoKnowledgeService {
         }))
     }
 
-    /** Removes the items whose slug is not given, so the table mirrors the folder; answers how many went. */
-    async removeExcept(slugs: ReadonlyArray<string>): Promise<number> {
-        const removed = await this.entityManager
-            .createQueryBuilder(NivoKnowledgeItemEntity, "n")
-            .delete()
-            .where("slug <> ALL(CAST(:slugs AS text[]))", { slugs: [...slugs] })
-            .returning("id")
-            .execute()
-        return returnedRows(removed.raw, isTouchedRow).length
-    }
-
-    /** Up to `limit` items without a vector of `model`, with the text to embed. */
-    async unembedded(model: string, limit: number): Promise<ReadonlyArray<NivoUnembedded>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(NivoKnowledgeItemEntity, "k")
-            .select(["k.id", "k.title", "k.body"])
-            .where("k.embedding IS NULL OR k.embeddingModel IS NULL OR k.embeddingModel <> :model", { model })
-            .orderBy("k.module", "ASC")
-            .addOrderBy("k.slug", "ASC")
-            .limit(limit)
-            .getMany()
-        return rows.map((row) => ({ id: row.id, text: `${row.title}\n\n${row.body}`.slice(0, EMBED_CHARS) }))
-    }
-
-    /** Gives items their vectors. */
-    async setVectors(write: NivoVectorWrite): Promise<void> {
-        await this.entityManager
-            .createQueryBuilder(NivoKnowledgeItemEntity, "n")
-            .update()
-            .set({ embedding: () => VECTOR_OF_ID, embeddingModel: write.model })
-            .where("id = ANY(CAST(:ids AS uuid[]))")
-            .setParameters({ ids: [...write.ids], vectors: [...write.vectors] })
-            .execute()
+    /**
+     * Removes the items whose slug is not given, so the table mirrors the folder, with the `vector.sync` job of every removed item in
+     * the same transaction (its point goes).
+     */
+    removeExcept(slugs: ReadonlyArray<string>): Promise<NivoRemoveResult> {
+        return this.entityManager.transaction(async (tx) => {
+            const removed = await tx
+                .createQueryBuilder(NivoKnowledgeItemEntity, "n")
+                .delete()
+                .where("slug <> ALL(CAST(:slugs AS text[]))", { slugs: [...slugs] })
+                .returning("id")
+                .execute()
+            const ids = returnedRows(removed.raw, isTouchedRow).map((row) => row.id)
+            await this.changed(tx, ids)
+            return { removed: ids.length, queued: ids.length }
+        })
     }
 }

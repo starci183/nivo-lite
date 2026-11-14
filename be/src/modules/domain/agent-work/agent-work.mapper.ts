@@ -1,6 +1,5 @@
 import { isRecord } from "@modules/platform/primitives"
 import type {
-    AgentGoalRecord,
     AgentTaskRecord,
     AgentTriggerRecord,
     AgentTurnRecord,
@@ -10,7 +9,6 @@ import type {
     AgentWakeSource,
 } from "./agent-work.contracts"
 import type {
-    AgentGoalEntity,
     AgentTaskEntity,
     AgentTriggerEntity,
     AgentTurnEntity,
@@ -54,23 +52,10 @@ export const toStateRecord = (row: AgentWorkStateEntity): AgentWorkState => ({
     backgroundTurns: row.backgroundTurns,
 })
 
-/** The goal row as the capability's record. */
-export const toGoalRecord = (row: AgentGoalEntity): AgentGoalRecord => ({
-    id: row.id,
-    agentId: row.agentId,
-    title: row.title,
-    detail: row.detail,
-    status: row.status,
-    source: row.source,
-    dueAt: row.dueAt,
-    reviewedAt: row.reviewedAt,
-})
-
 /** The task row as the capability's record. */
 export const toTaskRecord = (row: AgentTaskEntity): AgentTaskRecord => ({
     id: row.id,
     agentId: row.agentId,
-    goalId: row.goalId,
     dedupeKey: row.dedupeKey,
     title: row.title,
     detail: row.detail,
@@ -90,7 +75,6 @@ export const toTriggerRecord = (row: AgentTriggerEntity): AgentTriggerRecord => 
     atTime: row.atTime === null ? null : row.atTime.slice(0, 5),
     timeZone: row.timeZone,
     eventName: row.eventName,
-    probeKey: row.probeKey,
     enabled: row.enabled,
     seedKey: row.seedKey,
     nextRunAt: row.nextRunAt,

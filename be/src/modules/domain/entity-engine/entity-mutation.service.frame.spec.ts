@@ -259,8 +259,11 @@ describe("declared states", () => {
     })
 })
 
-describe("eraseForContacts: deleting a contact erases (or clears) every record of any agent that points at it", () => {
-    it("soft-deletes the records of an erase field (their files stay: none handed back), clears the records of a clear field, in one transaction", async () => {
+describe("eraseForContacts: deleting a contact erases every record of an erase field and keeps a clear field's record untouched", () => {
+    // DEF-6 (MX D-01): the erase REWROTE the kept records' contact field to null (the sales orders lost their person, and a credit then
+    // paid an erased person's order as anyone's). R31: an erasure never rewrites a record; the reference stays and reads through the
+    // erased contact find nothing (RecordContactsAdapter.aliasesOf).
+    it("soft-deletes the records of an erase field (their files stay: none handed back), keeps the records of a clear field AS THEY ARE, in one transaction", async () => {
         const receipt = {
             key: `${WS}/blocks-core.sales.order/${ORDER_ID}/receipt/o-1`,
             mime: "image/png",
@@ -294,7 +297,9 @@ describe("eraseForContacts: deleting a contact erases (or clears) every record o
             [{ entity: ORDER.name, id: ORDER_ID, workspaceId: WS, deletedAt: IS_NULL }],
         ])
         expect(removal?.callsOf("delete")).toEqual([])
-        expect(clear?.callsOf("setParameter")).toEqual([["patch", '{"referrer":null}']])
+        // No write to the kept record: its reference to the erased person stays.
+        expect(clear?.callsOf("setParameter")).toEqual([])
+        expect(clear?.callsOf("execute")).toEqual([])
     })
 })
 

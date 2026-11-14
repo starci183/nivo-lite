@@ -5,7 +5,7 @@ import type { AgentRunsService } from "@modules/domain/agent-runs"
 import { ErasedContactRunsAdapter } from "@modules/domain/agent-threads/erased-contact-runs.adapter"
 import { ErasedSubjectRunsService } from "@modules/domain/agent-threads/erased-subject-runs.service"
 import { DeliveredWakesService } from "@modules/domain/provider-triggers"
-import { AGENT_RUNS } from "@tests/fixtures/builders/engine-core-tables.builder"
+import { AGENT_RUNS, AGENT_RUN_STEPS } from "@tests/fixtures/builders/engine-core-tables.builder"
 import { CONTACT, CONV, customersSay, drain, handedBack, runTurns } from "../../thread-world"
 import { chatServicesOf, wakeQueueOf } from "../../thread-world-intake"
 import { subjectRunReadsOf } from "../../thread-world-process"
@@ -29,6 +29,12 @@ describe("R37: erasing a contact ends the sale parked on their route", () => {
         // A run parked at a `wait` is row status `running` with its wait mark (only a STOP writes `waiting`: thread-projection `runValuesOfStep`).
         expect(db.records.get(AGENT_RUNS, saleRun)?.data).toMatchObject({ status: "running" })
         expect(db.records.get(AGENT_RUNS, saleRun)?.data.waitMatch).not.toEqual(null)
+        // The dev shape (RESTART-R3 g1, RESTART-R4 reseed): the loop step and the wait inside it are OPEN step rows of the parked run.
+        const stepsOfSale = () => db.records.of(AGENT_RUN_STEPS).filter((row) => row.data.runId === saleRun)
+        const openKeys = stepsOfSale()
+            .filter((row) => ["pending", "running"].includes(String(row.data.status)))
+            .map((row) => String(row.data.stepKey))
+        expect(openKeys.length).toBeGreaterThan(0)
         const wakes = new DeliveredWakesService(mock<AgentWakeService>({ ...wakeQueueOf(db.chat) }))
         const runs = subjectRunReadsOf(db)
         const adapter = new ErasedContactRunsAdapter(
@@ -40,6 +46,11 @@ describe("R37: erasing a contact ends the sale parked on their route", () => {
 
         expect(db.records.get(AGENT_RUNS, saleRun)?.data).toMatchObject({ status: "cancelled", error: { code: "subject_erased" } })
         expect(db.records.get(AGENT_RUNS, saleRun)?.data.waitMatch ?? null).toBeNull()
+        // E-FIX4: the open step rows close WITH the run, same transaction, same reason: nothing of it reads as running (and `tools reseed`
+        // drains): before, they stayed `running` forever.
+        expect(stepsOfSale().filter((row) => openKeys.includes(String(row.data.stepKey))).map((row) => [row.data.stepKey, row.data.status, row.data.errorCode])).toEqual(
+            openKeys.map((key) => [key, "failed", "subject_erased"]),
+        )
         // No card, no notice: nobody is told, no stop exists for it.
         expect(db.team).toEqual([])
         expect(db.records.of("run_stops")).toEqual([])

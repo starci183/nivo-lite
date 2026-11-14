@@ -16,9 +16,10 @@ import { DoorPressesService } from "./door-presses.service"
 const RELEASE = "conversation.release"
 
 /**
- * What handing a conversation back did: `released` (the staff hold of the route was cleared, or the resume event woke an agent, or both),
- * `nothing_held` (nobody held the route and none of the graphs registered on its channel trigger took the resume event), `not_found` (no
- * such route in the workspace). `answered`: how many agents were woken by the resume event.
+ * What handing a conversation back did: `released` (the staff hold of the route was cleared, or a take-over of a stop on it was ended, or
+ * both; the ONE resume event was then delivered), `nothing_held` (nobody held the route and no take-over stood: NO event is delivered, so a
+ * second press never makes the agent answer twice), `not_found` (no such route in the workspace). `answered`: how many agents the resume
+ * event woke; 0 when none (or none was delivered).
  */
 export interface ConversationRelease {
     /** How it ended. */
@@ -83,10 +84,14 @@ export class HoldReleaseDoorService {
         const { held, ended, answered } = await this.entityManager.transaction(async (tx) => {
             const cleared = (await this.routes?.release(workspaceId, routeId, tx)) ?? null
             const stops = (await this.takeOvers?.handedBack(tx, workspaceId, routeId, route?.contactId ?? null, by.memberId)) ?? 0
+            // ONE resume event per hand-back (MX-CORE DEF-4, R35/R51): only a press that ended something (a staff hold cleared, or a
+            // take-over closed) delivers it. A press with nothing held (a second press, a press after the drain, a double click before
+            // it) delivers nothing: the agent would otherwise answer again with no new line of the person.
+            if (cleared === null && stops === 0) return { held: null, ended: 0, answered: 0 }
             const woken = (await this.heldLines?.answerHeld(workspaceId, routeId, tx)) ?? 0
             return { held: cleared, ended: stops, answered: woken }
         })
-        if (answered === 0 && held === null && ended === 0) return { outcome: "nothing_held", answered: 0 }
+        if (held === null && ended === 0) return { outcome: "nothing_held", answered: 0 }
         await this.presses.record({
             workspaceId,
             door: RELEASE,

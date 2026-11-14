@@ -4,7 +4,7 @@ import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@st
 import { parseJsonText } from "@modules/platform/primitives"
 import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
+import type { ConnectionRecord, CreateConnectionInput } from "@modules/domain/connections"
 import type { ConnectionReadyEvent } from "@modules/events/api"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { EVENT_BUS } from "@modules/platform/event-bus"
@@ -20,6 +20,13 @@ import {
     SEED_TELEGRAM_TOKEN,
     seededRecordOf,
 } from "@tests/fixtures/builders/channel-connections.builder"
+
+/** A create call that must be a live connection: only a live one carries a credential. */
+type LiveConnectionInput = Extract<CreateConnectionInput, { readonly secret: unknown }>
+const liveOf = (input: CreateConnectionInput): LiveConnectionInput => {
+    if (input.sandbox === true) throw new Error("expected a live connection input")
+    return input
+}
 
 const hashOf = (text: string): string => createHash("sha256").update(text).digest("hex")
 
@@ -57,7 +64,7 @@ const build = async (held: Held = {}) => {
 }
 
 const createdWith = (connections: jest.Mocked<ConnectionsService>, id: string) =>
-    connections.create.mock.calls.map(([input]) => input).find((input) => input.id === id)
+    connections.create.mock.calls.map(([input]) => liveOf(input)).find((input) => input.id === id)
 
 const HELD_ROWS = [
     seededRecordOf(SEED_IDS.telegram, "telegram"),

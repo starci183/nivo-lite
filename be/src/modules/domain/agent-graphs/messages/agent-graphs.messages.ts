@@ -32,6 +32,20 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.unit.million": "tr",
         "agentGraphs.runDead.title": "AI gặp lỗi xử lý tin – cần xem",
         "agentGraphs.sideStepFailed.title": "Một bước thông báo của AI bị lỗi – khách vẫn được phục vụ, cần xem",
+        "agentGraphs.stepEnding.title": "Một bước của quy trình không thành – cần một người xem",
+        "agentGraphs.stepEnding.sendRefused": "Tin nhắn bước này viết cho khách đã không tới được khách.",
+        "agentGraphs.stepEnding.declined": "Một người đã từ chối duyệt việc bước này xin làm.",
+        "agentGraphs.stepEnding.cannot": "Bước này báo không làm được việc của nó.",
+        "agentGraphs.stepEnding.exhausted": "Vòng lặp đã chạy hết số vòng cho phép mà chưa xong.",
+        "agentGraphs.stepEnding.continued": "Quy trình vẫn chạy tiếp.",
+        "agentGraphs.stepEnding.exhaustedNext": "Quy trình đi tiếp theo nhánh hết vòng.",
+        "agentGraphs.stepEnding.ended": "Quy trình dừng ở kết quả {{outcome}}.",
+        "agentGraphs.stepEnding.fact.workflow": "Quy trình",
+        "agentGraphs.stepEnding.fact.step": "Bước",
+        "agentGraphs.stepEnding.fact.reason": "Lý do",
+        "agentGraphs.stepEnding.fact.route": "Cuộc trò chuyện",
+        "agentGraphs.stepEnding.fact.contact": "Khách",
+        "agentGraphs.stepEnding.fact.run": "Lượt chạy",
         "agentGraphs.customerLineNotSent.title": "Khách chưa được nhắn lời báo chờ – bước này không được nhắn khách",
         "agentGraphs.publishUnfinished.title": "Bản mới đã xuất bản nhưng quy trình chính chưa ghi nhận – cần xem",
         "agentGraphs.publishUnfinished.sentence":
@@ -64,6 +78,12 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
             "Một sự kiện đến trợ lý không cho biết nó là loại sự kiện nào nên không quy trình nào nhận được; không có gì chạy.",
         "agentGraphs.wake.reason.no_trigger_verb": "sự kiện không mang loại sự kiện mà quy trình có thể đăng ký nhận",
         "agentGraphs.wake.fact.waitingFor": "Đang chờ tài khoản",
+        "agentGraphs.wake.lost.title": "Một sự kiện chưa quy trình nào xử lý",
+        "agentGraphs.wake.lost.sentence":
+            "Hệ thống đã dừng một sự kiện trước khi quy trình nào chạy cho nó, nên chưa ai xử lý; bạn hãy xem và xử lý.",
+        "agentGraphs.wake.reason.attempts": "đã thử lại nhiều lần mà không chạy được",
+        "agentGraphs.wake.reason.call_handed_back":
+            "sự kiện được chuyển lại cho chính lượt chạy vừa trả nó ra vì không thuộc việc của nó, nên không quy trình nào nhận",
         "agentGraphs.wake.failed.text":
             "Một lượt xử lý dừng trước khi vào bước nào của quy trình, sau khi đã thử lại. Kênh: {{channel}}. Hội thoại: {{conversation}}. Mã lỗi: {{code}}.",
         "agentGraphs.toolApproval.title": "AI cần bạn duyệt trước khi chạy {{tool}}",
@@ -160,6 +180,20 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.runDead.title": "The AI could not handle a message – please review",
         "agentGraphs.sideStepFailed.title":
             "A notice step of the AI failed – the customer was still served, please review",
+        "agentGraphs.stepEnding.title": "A workflow step did not succeed – a person should look",
+        "agentGraphs.stepEnding.sendRefused": "The message this step wrote to the customer did not reach them.",
+        "agentGraphs.stepEnding.declined": "A person declined to approve what this step asked to do.",
+        "agentGraphs.stepEnding.cannot": "This step said it cannot do its work.",
+        "agentGraphs.stepEnding.exhausted": "The loop ran every round it may without finishing.",
+        "agentGraphs.stepEnding.continued": "The workflow goes on.",
+        "agentGraphs.stepEnding.exhaustedNext": "The workflow takes its out-of-rounds road.",
+        "agentGraphs.stepEnding.ended": "The workflow ended at the outcome {{outcome}}.",
+        "agentGraphs.stepEnding.fact.workflow": "Workflow",
+        "agentGraphs.stepEnding.fact.step": "Step",
+        "agentGraphs.stepEnding.fact.reason": "Reason",
+        "agentGraphs.stepEnding.fact.route": "Conversation",
+        "agentGraphs.stepEnding.fact.contact": "Customer",
+        "agentGraphs.stepEnding.fact.run": "Run",
         "agentGraphs.customerLineNotSent.title": "The customer was not sent a holding line – this step may not message customers",
         "agentGraphs.publishUnfinished.title": "A new version was published but the main workflow has not recorded it – please review",
         "agentGraphs.publishUnfinished.sentence":
@@ -192,6 +226,12 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
             "An event reached the assistant without saying what kind of event it is, so no workflow could take it; nothing ran.",
         "agentGraphs.wake.reason.no_trigger_verb": "the event carries no event kind a workflow can register for",
         "agentGraphs.wake.fact.waitingFor": "Waiting for accounts",
+        "agentGraphs.wake.lost.title": "An event no workflow handled",
+        "agentGraphs.wake.lost.sentence":
+            "The system stopped an event before any workflow ran for it, so nobody has handled it yet; please look and handle it.",
+        "agentGraphs.wake.reason.attempts": "it was retried several times and could not run",
+        "agentGraphs.wake.reason.call_handed_back":
+            "the event was handed to the very run that had just given it back as not its business, so no workflow took it",
         "agentGraphs.wake.failed.text":
             "A turn stopped before any step of a workflow, after its retries. Channel: {{channel}}. Conversation: {{conversation}}. Error code: {{code}}.",
         "agentGraphs.toolApproval.title": "The AI needs your approval before it runs {{tool}}",

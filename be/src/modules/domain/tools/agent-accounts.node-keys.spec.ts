@@ -58,6 +58,7 @@ const recordOf = (id: string, meta: Readonly<Record<string, string>>): Connectio
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

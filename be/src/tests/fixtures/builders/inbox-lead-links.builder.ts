@@ -12,6 +12,7 @@ export const connectionRecordOf: (overrides?: Partial<ConnectionRecord>) => Conn
         status: "connected",
         lastError: null,
         environment: "live",
+        sandbox: false,
         isDefault: false,
         lastEventAt: null,
         firstEvent: null,

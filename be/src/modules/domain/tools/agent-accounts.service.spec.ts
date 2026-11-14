@@ -2,6 +2,8 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import { AgentRunsService } from "@modules/domain/agent-runs"
+import { ToolCallLogService } from "@modules/domain/tool-call-log"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { ConnectionEntity } from "@modules/domain/connections/persistence/entities"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
@@ -47,7 +49,16 @@ const rowOf = (agentId: string, connectionId: string, provider: string): Attachm
         connectionId,
         provider,
         updatedBy: "owner-1",
+        isDefault: false,
     })
+
+/** What a spec binds of the run's own records: the stored run (its trigger context) and the tool call log. */
+interface RunReaders {
+    /** The runs reader. */
+    readonly runs?: AgentRunsService
+    /** The call log. */
+    readonly callLog?: ToolCallLogService
+}
 
 /**
  * The service over the real attachment store: the shop's `accounts`, the stored `rows`, and what the step's node declares (`request`: its
@@ -57,6 +68,7 @@ const build = async (
     accounts: ReadonlyArray<Account> = ONE_EACH,
     rows: ReadonlyArray<AttachmentRow> = [],
     request: OptionalNodeRequest = null,
+    run: RunReaders = {},
 ) => {
     // Every account of this world is connected: the attachment read keeps only attachments to a live connection (R36).
     const live = [...new Set(rows.map((row) => row.connectionId))].map((id) => Object.assign(new ConnectionEntity(), { id }))
@@ -98,6 +110,8 @@ const build = async (
             { provide: AgentDirectoryService, useValue: agents },
             { provide: ConnectionBindingsReadService, useValue: connections },
             { provide: NODE_REQUESTS_GATE, useValue: gate },
+            ...(run.runs === undefined ? [] : [{ provide: AgentRunsService, useValue: run.runs }]),
+            ...(run.callLog === undefined ? [] : [{ provide: ToolCallLogService, useValue: run.callLog }]),
         ],
     }).compile()
     return { service: moduleRef.get(AgentAccountsService), entityManager, gate }
@@ -338,5 +352,90 @@ describe("AgentAccountsService: the accounts of a step are the node's providers,
 
         await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE)).resolves.toEqual([])
         await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL)).resolves.toEqual([{ provider: "sepay", connectionId: "vcb" }])
+    })
+})
+
+describe("AgentAccountsService: which of two accounts of one provider a step's call uses", () => {
+    const rows = (defaultId: string | null) => [
+        Object.assign(rowOf(SALES, "mb", "sepay"), { isDefault: defaultId === "mb" }),
+        Object.assign(rowOf(SALES, "vcb", "sepay"), { isDefault: defaultId === "vcb" }),
+    ]
+    const RUN = { runId: "run-1" }
+    const readers = (trigger: string | undefined, used: ReadonlyArray<string>) => {
+        const runs = mock<AgentRunsService>()
+        runs.runOf.mockResolvedValue({
+            id: "run-1",
+            workspaceId: WS,
+            agentId: SALES,
+            wakeId: "wake-1",
+            trigger: "start",
+            versionId: null,
+            status: "running",
+            context: trigger === undefined ? {} : { connectionId: trigger },
+            errorCode: null,
+            spoken: false,
+        })
+        const callLog = mock<ToolCallLogService>()
+        callLog.connectionsUsedByRun.mockResolvedValue(used)
+        return { runs, callLog }
+    }
+    const bound = (defaultId: string | null, trigger: string | undefined, used: ReadonlyArray<string>) =>
+        build(TWO_EACH, rows(defaultId), bankNodeOf("auto"), readers(trigger, used))
+
+    it("(1) binds the account the run's trigger came in on, over the run's earlier calls and the default", async () => {
+        const { service } = await bound("mb", "vcb", ["mb"])
+        await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toEqual([{ provider: "sepay", connectionId: "vcb" }])
+        await expect(service.pickNeeded(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toBeNull()
+    })
+
+    it("(2) binds an account the run already used when its trigger names none of them, over the default", async () => {
+        const { service } = await bound("mb", "elsewhere", ["vcb", "mb"])
+        await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toEqual([{ provider: "sepay", connectionId: "vcb" }])
+        const quiet = await bound("mb", undefined, ["vcb"])
+        await expect(quiet.service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toEqual([{ provider: "sepay", connectionId: "vcb" }])
+    })
+
+    it("(3) binds the agent's default account of the provider when the run names none, and hands the account without the flag", async () => {
+        const { service } = await bound("vcb", undefined, [])
+        await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toEqual([{ provider: "sepay", connectionId: "vcb" }])
+        // Without the run at all (a caller that knows none) the default still decides.
+        await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE)).resolves.toEqual([{ provider: "sepay", connectionId: "vcb" }])
+    })
+
+    it("(4) binds none and names the choice when nothing picks: the provider and its candidate accounts", async () => {
+        const { service } = await bound(null, undefined, [])
+        await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toEqual([])
+        await expect(service.pickNeeded(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toEqual({
+            provider: "sepay",
+            connectionIds: ["mb", "vcb"],
+        })
+        // Outside a step there is no node to name a provider: nothing is to pick.
+        await expect(service.pickNeeded(WS, SALES, BANK_TOOL)).resolves.toBeNull()
+    })
+
+    it("keeps the single-account path as it was: the one account binds, and the run's records are never read", async () => {
+        const one = readers("mb", ["mb"])
+        const { service } = await build(TWO_EACH, [rowOf(SALES, "vcb", "sepay")], bankNodeOf("auto"), one)
+
+        await expect(service.boundAccountsOf(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toEqual([{ provider: "sepay", connectionId: "vcb" }])
+        await expect(service.pickNeeded(WS, SALES, BANK_TOOL, FROM_NODE, RUN)).resolves.toBeNull()
+        expect(one.runs.runOf).not.toHaveBeenCalled()
+        expect(one.callLog.connectionsUsedByRun).not.toHaveBeenCalled()
+    })
+
+    it("makes an attachment the default through the store and refuses an account the agent is not attached to", async () => {
+        const { service, entityManager } = await build(TWO_EACH, rows(null))
+        const inside = mockEntityManager({ update: [AccountAttachmentEntity, { affected: 1, raw: [], generatedMaps: [] }] })
+        inside.findOne.mockResolvedValueOnce(rowOf(SALES, "vcb", "sepay")).mockResolvedValueOnce(null)
+        entityManager.transaction.mockImplementation((first: unknown, second?: unknown) => {
+            const work = (typeof first === "function" ? first : second) as (scoped: MockEntityManager) => Promise<unknown>
+            return work(inside)
+        })
+
+        await expect(service.setDefault({ workspaceId: WS, agentId: SALES }, "vcb", "owner-1")).resolves.toEqual({ ok: true })
+        await expect(service.setDefault({ workspaceId: WS, agentId: SALES }, "nope", "owner-1")).resolves.toEqual({
+            ok: false,
+            reason: "not_attached",
+        })
     })
 })

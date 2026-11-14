@@ -9,6 +9,8 @@ import type {
     VectorPoint,
     VectorRow,
     VectorRowSource,
+    VectorScope,
+    VectorSearchPage,
     VectorStamp,
     VectorStampCursor,
     VectorStampFilter,
@@ -23,12 +25,33 @@ export const TEST_MODEL = "text-embedding-3-small@1536"
 /** The error a scripted index that is down throws. */
 export class IndexDown extends Error {}
 
+/** The cosine similarity of two vectors, 0 when either has no length. */
+const cosineOf = (left: ReadonlyArray<number>, right: ReadonlyArray<number>): number => {
+    const dot = left.reduce((sum, value, at) => sum + value * (right[at] ?? 0), 0)
+    const norm = (vector: ReadonlyArray<number>): number => Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0))
+    const both = norm(left) * norm(right)
+    return both === 0 ? 0 : dot / both
+}
+
 /**
- * A scripted vector index, in memory: no network. It keeps points per kind, counts every call, and can be switched down (every call
- * throws) to play an outage.
+ * Whether a point's mirror passes the MANDATORY filter of a scope, as `filterOf` builds it for Qdrant: the tenant, the identity, the
+ * standing, the reader's module (its own or for every module) and instance (its own or shared), and for a customer public and
+ * customer-ready points only.
+ */
+export const inScope = (payload: VectorPayload, scope: VectorScope): boolean =>
+    payload.workspaceId === scope.workspaceId &&
+    payload.model === scope.model &&
+    (scope.standing === "any" || payload.inForce) &&
+    (payload.module === null || payload.module === scope.module) &&
+    (payload.installationId === null || payload.installationId === scope.installationId) &&
+    (scope.audience === "internal" || (payload.isPublic && payload.customerReady))
+
+/**
+ * A scripted vector index, in memory: no network. It keeps points per kind, searches them by cosine INSIDE the mandatory filter of the
+ * scope (`inScope`), counts every call, and can be switched down (every call throws, the probe answers down) to play an outage.
  */
 export class FakeVectorIndex implements VectorIndex {
-    readonly points: Record<VectorKind, Map<string, VectorPoint>> = { passage: new Map(), truth: new Map() }
+    readonly points: Record<VectorKind, Map<string, VectorPoint>> = { passage: new Map(), truth: new Map(), base: new Map() }
     readonly calls: Record<string, number> = {}
     /** How many points each write carried: the REST client sends them 64 at a time. */
     readonly upsertSizes: Array<number> = []
@@ -39,8 +62,23 @@ export class FakeVectorIndex implements VectorIndex {
         if (this.down) throw new IndexDown(name)
     }
 
+    /** Runs a call as the REST client does: a failure is a rejected promise, never a throw. */
+    private answered<Answer>(name: string, answer: () => Answer): Promise<Answer> {
+        try {
+            this.called(name)
+            return Promise.resolve(answer())
+        } catch (cause) {
+            return Promise.reject(cause instanceof Error ? cause : new IndexDown(name))
+        }
+    }
+
     health(): VectorHealth {
         return this.down ? "down" : "ok"
+    }
+
+    probe(): Promise<VectorHealth> {
+        this.calls.probe = (this.calls.probe ?? 0) + 1
+        return Promise.resolve(this.health())
     }
 
     ensure(): Promise<void> {
@@ -73,14 +111,30 @@ export class FakeVectorIndex implements VectorIndex {
         return Promise.resolve()
     }
 
-    search(): Promise<ReadonlyArray<VectorMatch>> {
-        this.called("search")
-        return Promise.resolve([])
+    search(
+        kind: VectorKind,
+        scope: VectorScope,
+        vector: ReadonlyArray<number>,
+        page: VectorSearchPage,
+    ): Promise<ReadonlyArray<VectorMatch>> {
+        return this.answered("search", () => {
+            const ranked = [...this.points[kind].values()]
+                .filter((point) => inScope(point.payload, scope))
+                .map((point) => ({ id: point.id, score: cosineOf(point.vector, vector) }))
+                .toSorted((left, right) => right.score - left.score || left.id.localeCompare(right.id))
+            const from = page.offset ?? 0
+            return ranked.slice(from, from + page.limit)
+        })
     }
 
-    count(kind: VectorKind): Promise<number> {
+    count(kind: VectorKind, scope: VectorScope): Promise<number> {
         this.called("count")
-        return Promise.resolve(this.points[kind].size)
+        return Promise.resolve([...this.points[kind].values()].filter((point) => inScope(point.payload, scope)).length)
+    }
+
+    /** Stores one point directly (a world's given state), with the mirror of a row and the identity in use. */
+    put(kind: VectorKind, id: string, vector: ReadonlyArray<number>, payload: VectorPayload): void {
+        this.points[kind].set(id, { id, vector, payload })
     }
 
     stamps(
@@ -152,10 +206,9 @@ export const vectorRowOf = (id: string, workspaceId: string, over: Partial<Vecto
     ...over,
 })
 
-/** A scripted Postgres side of one kind: rows in memory, what the index accepted, and the vectors Postgres still holds. */
+/** A scripted Postgres side of one kind: rows in memory and what the index accepted. Postgres holds no vector. */
 export class FakeRowSource implements VectorRowSource {
     readonly rows: Map<string, VectorRow> = new Map()
-    readonly stored: Map<string, ReadonlyArray<number>> = new Map()
     readonly calls: Record<string, number> = {}
 
     private called(name: string): void {
@@ -197,18 +250,6 @@ export class FakeRowSource implements VectorRowSource {
                 const row = this.rows.get(id)
                 return row?.wanted === true ? [{ id, workspaceId: row.workspaceId }] : []
             }),
-        )
-    }
-
-    storedVectors(_workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyMap<string, ReadonlyArray<number>>> {
-        this.called("storedVectors")
-        return Promise.resolve(
-            new Map(
-                ids.flatMap((id): ReadonlyArray<readonly [string, ReadonlyArray<number>]> => {
-                    const vector = this.stored.get(id)
-                    return vector === undefined ? [] : [[id, vector]]
-                }),
-            ),
         )
     }
 

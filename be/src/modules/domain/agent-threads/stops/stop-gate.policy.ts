@@ -25,14 +25,25 @@ const decisionSchema: z.ZodType<StopDecision> = z.union([
         at: z.string().min(1).max(SHORT_MAX),
     }),
     z.object({
-        kind: z.enum(["retry", "take_over", "skip"]),
+        kind: z.enum(["retry", "take_over", "skip", "handed_back"]),
         by: z.string().min(1).max(SHORT_MAX),
         at: z.string().min(1).max(SHORT_MAX),
     }),
     z.object({ kind: z.literal("timeout"), at: z.string().min(1).max(SHORT_MAX) }),
 ])
 
-/** The decision a resume carried, or null when it is none of the five kinds (a thread is never moved by a value it cannot read). */
+/**
+ * The code a run ends with when a person's decision ends it at the gate (rule S-3): a take-over handed back is its own closing kind,
+ * every other ending decision (`skip`) is the founder's skip.
+ */
+export const stopEndCodeOf = (decision: Pick<StopDecision, "kind"> | null): "handed_back" | "skipped_by_founder" =>
+    decision?.kind === "handed_back" ? "handed_back" : "skipped_by_founder"
+
+/** True for a decision that ends the run at the gate: a skip, or a take-over handed back. */
+export const endsTheRun = (decision: Pick<StopDecision, "kind"> | null | undefined): boolean =>
+    decision?.kind === "skip" || decision?.kind === "handed_back"
+
+/** The decision a resume carried, or null when it is none of the six kinds (a thread is never moved by a value it cannot read). */
 export const stopDecisionOf = (value: unknown): StopDecision | null => {
     const parsed = decisionSchema.safeParse(value)
     return parsed.success ? parsed.data : null
@@ -64,8 +75,8 @@ export const founderAnswersOf = (answers: ReadonlyArray<RunStopAnswer>): Readonl
 /**
  * Where a decision sends the stopped thread. `answer`, `retry` and `timeout` run the stopped step again with every word the founder gave
  * this stop (an `answer` adds its own); the stop stays open until that run of the step completes (so the per-stop send guard holds
- * through a plain retry). `skip` ends the run and resolves the stop at once; `take_over` keeps the thread at the gate, the stop open, a
- * person holding the conversation. Mechanics only: the step decides what an answer means, the gate only carries it.
+ * through a plain retry). `skip` and `handed_back` end the run and resolve the stop at once; `take_over` keeps the thread at the gate,
+ * the stop open, a person holding the conversation. Mechanics only: the step decides what an answer means, the gate only carries it.
  */
 export const stopRouteOf = (
     stop: Pick<RunStop, "stepKey" | "answers">,
@@ -73,7 +84,7 @@ export const stopRouteOf = (
     gate: string,
 ): StopRoute => {
     const founderAnswers = founderAnswersOf([...stop.answers, stopAnswerOf(decision)])
-    if (decision.kind === "skip") return { goto: STOP_END, founderAnswers, resolves: true }
+    if (endsTheRun(decision)) return { goto: STOP_END, founderAnswers, resolves: true }
     if (decision.kind === "take_over") return { goto: gate, founderAnswers, resolves: false }
     return { goto: stop.stepKey, founderAnswers, resolves: false }
 }

@@ -7,7 +7,7 @@ Grammar: `Heading`, `Text size="xs" tone="muted"`; icon `AgentRunStatusMark` (ou
 
 ## Nút "Thử lại" (chỉ khi lượt lỗi) và "Huỷ lượt"
 Vì sao: một nút chính duy nhất mỗi trang; "Thử lại" là nút chính có icon, "Huỷ lượt" là nút trung tính có hộp xác nhận.
-Luật: ui-laws.md (Buttons: one primary, pill, only commit md/lg has an icon). Khi trang đang chờ một quyết định hoặc có khách bị đóng băng, nút chính là của thẻ đó và "Thử lại" ở đầu lượt thành nút trung tính: luôn chỉ một nút chính.
+Luật: ui-laws.md (Buttons: one primary, pill, only commit md/lg has an icon). Khi trang đang chờ một quyết định, nút chính là của thẻ đó và "Thử lại" ở đầu lượt thành nút trung tính: luôn chỉ một nút chính.
 Grammar: `Button intent="commit"` và `intent="neutral"`, `AlertDialog`; `D:/starci-lanes/nivo-auth-ux/node_modules/@starci/grammar/dist/core/buttonIntent.d.ts`.
 
 ## Đầu thẻ sơ đồ: "Quy trình · tên" + "Bản n" + liên kết "Mở quy trình →"
@@ -50,8 +50,3 @@ Vì sao: mỗi nhánh một dòng, nhánh lượt này đã đi có chip "Đã �
 Luật: workflow-memory-contracts (cổng "lỗi" và nhánh); ui-laws.md (Language: no raw keys).
 Grammar: `SurfaceCard kind="list" layout="rows"`, `ListRowData.badges`, `D:/starci-lanes/nivo-auth-ux/node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.
 
-## Thẻ "Đang chờ bạn xử lý lỗi" (khách bị đóng băng sau một lượt lỗi)
-Vì sao: lượt lỗi đóng băng khách (`lead-freeze-on-failure`): thẻ chi tiết (trạng thái, bước lỗi, số sự kiện đang chờ, người tiếp quản) dưới nhãn nhỏ, ba câu trả lời Thử lại / Tiếp quản / Bỏ qua lượt này, và một câu nói mỗi câu trả lời làm gì dưới thẻ. Chỉ vẽ những câu trả lời còn mở: khi đã có người tiếp quản thì không còn nút "Tiếp quản" (theo bản vẽ `stop-card`: chỉ các nút needs cho phép). "Thử lại" là nút chính duy nhất của thẻ; hai nút kia trung tính; chip trạng thái là Badge không chấm (nhãn kết quả).
-Luật: `lead-freeze-on-failure`, `stop-card-design`, `red-budget-links-foreground`, `badge-dot-or-not`.
-Grammar: `SurfaceCard kind="details"` với `footers=[{kind:"custom"}]`, `Badge tone="danger"`, `Button intent="commit" | "neutral"`.
-Shots missing: thẻ ở ba trạng thái (đang chờ, đang chạy lại, đã có người tiếp quản).

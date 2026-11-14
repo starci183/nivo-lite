@@ -1,7 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { CHANNEL_SENDER_REGISTRY } from "@modules/domain/channels"
-import type { ChannelSenderRegistry } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { META_CLIENT } from "@modules/integrations/meta"
@@ -27,6 +25,7 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -39,7 +38,6 @@ const seal = (plain: string) => ({ plain, webhookSecret: "webhook-secret" })
 const pageSecret = JSON.stringify({ pageId: "page-1", pageToken: "page-token" })
 
 const build = async () => {
-    const registry = mock<ChannelSenderRegistry>()
     const connections = mock<ConnectionsService>()
     connections.find.mockResolvedValue(record())
     connections.readSecret.mockResolvedValue(seal(pageSecret))
@@ -49,23 +47,22 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             MetaChannelSender,
-            { provide: CHANNEL_SENDER_REGISTRY, useValue: registry },
             { provide: ConnectionsService, useValue: connections },
             { provide: META_CLIENT, useValue: meta },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(MetaChannelSender), registry, connections, meta, logger, moduleRef }
+    return { service: moduleRef.get(MetaChannelSender), connections, meta, logger, moduleRef }
 }
 
 describe("MetaChannelSender", () => {
-    it("registers its Facebook and Instagram channels when the module initializes", async () => {
-        const { service, registry, moduleRef } = await build()
+    it("is only the live route behind the Meta customer-send port: it registers itself nowhere and names no channel", async () => {
+        const { service, moduleRef } = await build()
 
         await moduleRef.init()
 
-        expect(service.channels).toEqual(["facebook", "instagram"])
-        expect(registry.add.mock.calls).toEqual([[service]])
+        expect(Reflect.get(service, "channels")).toBeUndefined()
+        expect(Reflect.get(service, "onModuleInit")).toBeUndefined()
     })
 
     it("sends a Facebook reply to the person before the first archive colon", async () => {

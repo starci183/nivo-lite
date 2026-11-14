@@ -2,6 +2,7 @@ import { Module, type DynamicModule } from "@nestjs/common"
 import { GoogleCalendarCredentialService } from "./google-calendar-credential.service"
 import { GoogleCalendarProviderRegistrationService } from "./google-calendar-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./google-calendar-provider.module-definition"
+import { GoogleCalendarSandboxService } from "./google-calendar-sandbox-calendar.service"
 import { GoogleCalendarService } from "./google-calendar.service"
 
 const PROVIDERS = [GoogleCalendarCredentialService, GoogleCalendarService]
@@ -18,7 +19,7 @@ export class GoogleCalendarProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, GoogleCalendarProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, GoogleCalendarSandboxService, GoogleCalendarProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

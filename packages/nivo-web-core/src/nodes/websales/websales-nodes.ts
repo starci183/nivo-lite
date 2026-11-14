@@ -7,7 +7,8 @@ import { websalesCloseNotifyNode } from "./close-notify.node"
 import { websalesCustomerProposeNode } from "./customer-propose.node"
 import { websalesDueNode } from "./due.node"
 import { websalesFollowRecordNode } from "./follow-record.node"
-import { websalesFollowSendNode } from "./follow-send.node"
+import { websalesFollowSendMailNode, websalesFollowSendNode } from "./follow-send.node"
+import { websalesFollowSendToldNode } from "./follow-send-told.node"
 import { websalesHandoverNotifyNode } from "./handover-notify.node"
 import { websalesHeardNotifyNode } from "./heard-notify.node"
 import { websalesHeardReplyNode } from "./heard-reply.node"
@@ -19,8 +20,10 @@ import { websalesMailNotifyNode } from "./mail-notify.node"
 import { websalesMailPurchaseOpenNode } from "./mail-purchase-open.node"
 import { websalesMailReplyDraftNode } from "./mail-reply-draft.node"
 import { websalesMailUnderstandNode } from "./mail-understand.node"
-import { websalesPaidTellNode } from "./paid-tell.node"
-import { websalesPayInstructNode } from "./pay-instruct.node"
+import { websalesPaidMailNode, websalesPaidTellNode } from "./paid-tell.node"
+import { websalesPaidToldNode } from "./paid-told.node"
+import { websalesPayInstructMailNode, websalesPayInstructNode } from "./pay-instruct.node"
+import { websalesPayInstructToldNode } from "./pay-instruct-told.node"
 import { websalesPurchaseLoseNode } from "./purchase-lose.node"
 import { websalesPurchaseNoteNode } from "./purchase-note.node"
 import { websalesPurchaseOpenNode } from "./purchase-open.node"
@@ -52,6 +55,8 @@ export const websalesNodes: ReadonlyArray<TemplateNode> = [
     websalesLostNotifyNode,
     websalesDueNode,
     websalesFollowSendNode,
+    websalesFollowSendMailNode,
+    websalesFollowSendToldNode,
     websalesFollowRecordNode,
     websalesRoundReportNode,
     websalesTeamRouteNode,
@@ -60,12 +65,16 @@ export const websalesNodes: ReadonlyArray<TemplateNode> = [
     websalesCustomerProposeNode,
     websalesAcceptNode,
     websalesPayInstructNode,
+    websalesPayInstructMailNode,
+    websalesPayInstructToldNode,
     websalesCloseNotifyNode,
     websalesLinkFindNode,
     websalesLinkWriteNode,
     websalesLinkNotifyNode,
     websalesHandoverNotifyNode,
     websalesPaidTellNode,
+    websalesPaidMailNode,
+    websalesPaidToldNode,
     websalesMailPurchaseOpenNode,
     websalesMailUnderstandNode,
     websalesMailReplyDraftNode,

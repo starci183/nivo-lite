@@ -139,10 +139,18 @@ export class AgentWorkflowStoreService {
     /**
      * Refuses a version whose end hand-offs do not cover the workflows they call (a missing or mistyped input, an unknown target or
      * version, a closed entry), or which would break a workflow that calls this one as `latest`: the two-way check that lets a hand-off
-     * follow the target's newest version safely. Every problem in `problems`, the first worded in Vietnamese in `first`.
+     * follow the target's newest version safely. Every problem in `problems`, the first worded in Vietnamese in `first`. `together`: the
+     * graphs, by workflow id, of a SET of versions written as one change (a re-seed): every workflow of the set is judged as running its
+     * graph of the set, so a hand-off whose two ends change together is judged against the other end's new version, whichever is
+     * written first.
      */
-    async requireCallsSound(tx: ScopedTx, workflow: WorkflowRecord, graph: GraphSpec): Promise<void> {
-        const all = await this.callablesOf(tx)
+    async requireCallsSound(
+        tx: ScopedTx,
+        workflow: WorkflowRecord,
+        graph: GraphSpec,
+        together: ReadonlyMap<string, GraphSpec> = new Map(),
+    ): Promise<void> {
+        const all = await this.callablesOf(tx, together)
         const saver = { agentId: workflow.agentId, moduleKey: graph.moduleKey, key: workflow.key }
         const own = callContractProblems(saver, graph, all.map((entry) => entry.callable))
         const broken = brokenCallersOf(
@@ -172,16 +180,17 @@ export class AgentWorkflowStoreService {
         })
     }
 
-    /** Every workflow of the workspace with the graph it runs and its versions by number, and its name. */
+    /** Every workflow of the workspace with the graph it runs (its graph in `together` when the set holds it), its versions by number, and its name. */
     private async callablesOf(
         tx: ScopedTx,
+        together: ReadonlyMap<string, GraphSpec>,
     ): Promise<ReadonlyArray<{ readonly callable: CallableWorkflow; readonly name: string }>> {
         const found: Array<{ readonly callable: CallableWorkflow; readonly name: string }> = []
         for (const workflow of await this.records.workflowsOfWorkspace(tx, WORKSPACE_WORKFLOW_LIMIT)) {
             const versions = await this.records.versionsOf(tx, workflow.id, VERSION_LIMIT)
             const running = await this.runningOf(tx, workflow)
             if (running === null) continue
-            const graph = snapshotOf(running)
+            const graph = together.get(workflow.id) ?? snapshotOf(running)
             found.push({
                 name: workflow.name,
                 callable: {

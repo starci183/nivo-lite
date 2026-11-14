@@ -152,7 +152,7 @@ export const Icon = (props: IconProps): ReactElement => (
 )
 
 /** The states a run or one of its steps can stand in. */
-type RunMarkStatus = "queued" | "scheduled" | "running" | "waiting" | "done" | "failed" | "pending" | "undone" | "cancelled"
+type RunMarkStatus = "queued" | "scheduled" | "running" | "waiting" | "done" | "failed" | "pending" | "cancelled"
 
 /** What the mark of a run or of a step says: where it stands, and the word that names it. */
 type AgentRunStatusMarkProps = {
@@ -170,7 +170,6 @@ const RUN_MARKS: Readonly<Record<Exclude<RunMarkStatus, "running">, { readonly i
     done: { icon: "complete" },
     failed: { icon: "failure" },
     pending: { icon: "pending" },
-    undone: { icon: "retry" },
     cancelled: { icon: "remove" },
 }
 

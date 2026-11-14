@@ -26,6 +26,7 @@ export type ConsoleDestination = {
         | "navCredits"
         | "navSettings"
         | "navDevelopers"
+        | "navSandbox"
     readonly route: string
     readonly icon: ConsoleIconName
     /** Rail section: the daily work, running the business, setting it up. */
@@ -34,6 +35,8 @@ export type ConsoleDestination = {
     readonly also?: ReadonlyArray<string>
     /** Only owner and manager see this destination. */
     readonly managerOnly?: boolean
+    /** Only where the dev switch of the sandbox is on: the rail asks the back end and leaves it out in production. */
+    readonly sandboxOnly?: boolean
 }
 
 /** The Brain owns the business memory, so its documents are no separate destination. */
@@ -68,6 +71,15 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
         icon: "developers",
         group: "setup",
         managerOnly: true,
+    },
+    {
+        key: "sandbox",
+        label: "navSandbox",
+        route: "/sandbox",
+        icon: "agentos",
+        group: "setup",
+        managerOnly: true,
+        sandboxOnly: true,
     },
 ]
 

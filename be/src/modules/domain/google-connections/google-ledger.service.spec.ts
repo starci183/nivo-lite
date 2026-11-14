@@ -21,6 +21,8 @@ import {
     tokens,
 } from "@tests/fixtures/builders/google-connections.builder"
 
+/** The account the ledger is written on: the connection every row of these cases is. */
+const ACCOUNT = record()
 const SHEET = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
 const ENTRY: BusinessLedgerEntry = {
     date: "2026-11-04",
@@ -65,7 +67,7 @@ const build = async (rows = [ledgerRow()]) => {
 
 describe("GoogleLedgerService > ready", () => {
     it("is ready when a Google connection gave the spreadsheets access and was told the sheet", async () => {
-        await expect((await build()).service.ready("ws-1")).resolves.toBe(true)
+        await expect((await build()).service.ready(ACCOUNT)).resolves.toBe(true)
     })
 
     it.each([
@@ -76,9 +78,9 @@ describe("GoogleLedgerService > ready", () => {
     ])("is not ready with %s, so the ledger step is skipped", async (_name, rows) => {
         const { service, google } = await build(rows)
 
-        await expect(service.ready("ws-1")).resolves.toBe(false)
-        await expect(service.append("ws-1", ENTRY)).resolves.toBeUndefined()
-        await expect(service.void("ws-1", ENTRY.transactionId)).resolves.toBeUndefined()
+        await expect(service.ready(ACCOUNT)).resolves.toBe(false)
+        await expect(service.append(ACCOUNT, ENTRY)).resolves.toBeUndefined()
+        await expect(service.void(ACCOUNT, ENTRY.transactionId)).resolves.toBeUndefined()
         expect(google.appendValues).not.toHaveBeenCalled()
     })
 })
@@ -87,7 +89,7 @@ describe("GoogleLedgerService > append, once the header is there", () => {
     it("writes only the row once the header is there, and changes no cell", async () => {
         const { service, google, connections } = await build([ledgerRow(HEADED)])
 
-        await service.append("ws-1", ENTRY)
+        await service.append(ACCOUNT, ENTRY)
 
         expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [ROW])
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
@@ -108,7 +110,7 @@ describe("GoogleLedgerService > append", () => {
     it("writes the header with the first entry, once, and marks the sheet headed", async () => {
         const { service, google, connections } = await build()
 
-        await expect(service.append("ws-1", ENTRY)).resolves.toBe("Sheet1!A2:G3")
+        await expect(service.append(ACCOUNT, ENTRY)).resolves.toBe("Sheet1!A2:G3")
 
         expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [LEDGER_HEADER, ROW])
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
@@ -126,7 +128,7 @@ describe("GoogleLedgerService > append", () => {
     it("adds the cash book tab before the header and the first entry", async () => {
         const { service, google } = await build()
 
-        await service.append("ws-1", ENTRY)
+        await service.append(ACCOUNT, ENTRY)
 
         expect(google.ensureTab).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB)
     })
@@ -134,7 +136,7 @@ describe("GoogleLedgerService > append", () => {
     it("lays out again a sheet an older version headed: the new tab and header once, then rows only", async () => {
         const { service, google, connections } = await build([ledgerRow({ ledgerHeader: "written" })])
 
-        await service.append("ws-1", ENTRY)
+        await service.append(ACCOUNT, ENTRY)
 
         expect(google.ensureTab).toHaveBeenCalledTimes(1)
         expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [LEDGER_HEADER, ROW])
@@ -145,7 +147,7 @@ describe("GoogleLedgerService > append", () => {
     it("does not look for the tab again once the sheet is laid out", async () => {
         const { service, google } = await build([ledgerRow(HEADED)])
 
-        await service.append("ws-1", ENTRY)
+        await service.append(ACCOUNT, ENTRY)
 
         expect(google.ensureTab).not.toHaveBeenCalled()
     })
@@ -154,7 +156,7 @@ describe("GoogleLedgerService > append", () => {
         const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockResolvedValue("")
 
-        await expect(service.append("ws-1", ENTRY)).resolves.toBe(SHEET)
+        await expect(service.append(ACCOUNT, ENTRY)).resolves.toBe(SHEET)
     })
 
 })
@@ -164,7 +166,7 @@ describe("GoogleLedgerService > append, refused tokens and failures", () => {
         const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockRejectedValueOnce(googleRefusal({ status: 401 })).mockResolvedValueOnce("Sheet1!A4:G4")
 
-        await expect(service.append("ws-1", ENTRY)).resolves.toBe("Sheet1!A4:G4")
+        await expect(service.append(ACCOUNT, ENTRY)).resolves.toBe("Sheet1!A4:G4")
         expect(google.refreshAccessToken).toHaveBeenCalledTimes(1)
         expect(google.appendValues).toHaveBeenLastCalledWith("access-new", SHEET, LEDGER_TAB, [ROW])
     })
@@ -178,7 +180,7 @@ describe("GoogleLedgerService > append, refused tokens and failures", () => {
         const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockRejectedValue(failure)
 
-        await expect(service.append("ws-1", ENTRY)).rejects.toMatchObject({
+        await expect(service.append(ACCOUNT, ENTRY)).rejects.toMatchObject({
             code: ProviderRegistryErrorCode.LedgerConnectionRefused,
             params: { provider: "google" },
         })
@@ -192,27 +194,27 @@ describe("GoogleLedgerService > append, refused tokens and failures", () => {
         const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockRejectedValue(failure)
 
-        await expect(service.append("ws-1", ENTRY)).rejects.toBe(failure)
+        await expect(service.append(ACCOUNT, ENTRY)).rejects.toBe(failure)
     })
 
     it("says what a failure proves where it happened: before the append the row never left, after it the row may be there", async () => {
         const before = await build([ledgerRow()])
         const tab = new Error("tab")
         before.google.ensureTab.mockRejectedValue(tab)
-        await expect(before.service.append("ws-1", ENTRY)).rejects.toBe(tab)
+        await expect(before.service.append(ACCOUNT, ENTRY)).rejects.toBe(tab)
         expect(proofOf(tab)).toBe("not_sent")
 
         const after = await build([ledgerRow(HEADED)])
         const lost = new Error("lost")
         after.google.appendValues.mockRejectedValue(lost)
-        await expect(after.service.append("ws-1", ENTRY)).rejects.toBe(lost)
+        await expect(after.service.append(ACCOUNT, ENTRY)).rejects.toBe(lost)
         expect(proofOf(lost)).toBe("unknown")
     })
 
-    it("writes on the connection the tool runner handed the call, and on no other", async () => {
+    it("writes on the account it is handed, and on no other", async () => {
         const { service, google } = await build([ledgerRow(HEADED)])
 
-        await expect(service.append("ws-1", ENTRY, "another-connection")).resolves.toBeUndefined()
+        await expect(service.append({ ...ACCOUNT, id: "another-connection" }, ENTRY)).resolves.toBeUndefined()
         expect(google.appendValues).not.toHaveBeenCalled()
     })
 
@@ -220,7 +222,7 @@ describe("GoogleLedgerService > append, refused tokens and failures", () => {
         const { service, google } = await build()
         google.isConfigured.mockReturnValue(false)
 
-        await expect(service.append("ws-1", ENTRY)).rejects.toMatchObject({
+        await expect(service.append(ACCOUNT, ENTRY)).rejects.toMatchObject({
             code: ProviderRegistryErrorCode.LedgerConnectionRefused,
             params: { provider: "google" },
         })
@@ -232,7 +234,7 @@ describe("GoogleLedgerService > void", () => {
     it("adds one row that names the transaction and the day, and removes nothing", async () => {
         const { service, google } = await build([ledgerRow(HEADED)])
 
-        await service.void("ws-1", ENTRY.transactionId)
+        await service.void(ACCOUNT, ENTRY.transactionId)
 
         expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [
             ["2026-10-12", "'sepay:95958515", `'${ledgerVoidText()}`, "", "", "", "", BALANCE_FORMULA],
@@ -243,7 +245,7 @@ describe("GoogleLedgerService > void", () => {
         const { service, google, zones } = await build([ledgerRow(HEADED)])
         zones.timeZoneOf.mockResolvedValue("Pacific/Pago_Pago")
 
-        await service.void("ws-1", ENTRY.transactionId)
+        await service.void(ACCOUNT, ENTRY.transactionId)
 
         expect(zones.timeZoneOf).toHaveBeenCalledWith("ws-1")
         expect(google.appendValues.mock.calls[0]?.[3]?.[0]?.[0]).toBe("2026-10-11")

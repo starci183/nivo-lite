@@ -51,7 +51,7 @@
     "@heroui/react": "3.2.6",
     "@nivo-lite/agent-sdk": "*",
     "@nivo-lite/i18n": "*",
-    "@starci/grammar": "0.39.0",
+    "@starci/grammar": "0.39.1",
     "@starci/next-data": "0.1.0",
     "next-intl": "4.13.6",
     "next-themes": "0.4.6",

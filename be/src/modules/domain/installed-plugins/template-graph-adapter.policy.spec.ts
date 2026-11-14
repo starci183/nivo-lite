@@ -8,6 +8,7 @@ import { OPENAPI_PROVIDER } from "@modules/domain/openapi-tools"
 import {
     SOURCE_ACCOUNT_KIND,
     TEMPLATE_IF_STEP,
+    TEMPLATE_UNTIL_STEP,
     accountKindOf,
     graphOfSpecV2,
     workflowTemplateOfGraph,
@@ -170,6 +171,58 @@ describe("the trigger verbs of today's sources", () => {
         expect(sourcesOf("webmail.triage")?.find((entry) => entry.verb === TRIGGER.mailMessageReceived)?.accounts).toEqual([
             PROVIDER.imap,
         ])
+    })
+})
+
+describe("the words of the control steps on the map (R68: G-SLIM's labels), carried to @1", () => {
+    // E-FIX7: G-SLIM gave the slim package graphs LABELS on their control steps (if / wait / loop / hand-back / outcome) and the words of
+    // an until loop's two ways out (`exits`); the adapter dropped them, so the map read the package's generic words. Read from the REAL
+    // installed slim sale (`sales.consult` v30) and every other installed graph: what the @2 step says, the @1 node says, as written.
+    const real = {
+        legacyNodeOf: (id: string) => INSTALLED.nodeInstall().nodes.find((node) => node.id === id),
+        templateNodeOf: (id: string) => INSTALLED.templateNodeOf(id) ?? undefined,
+    }
+    const consult = INSTALLED.templateGraphOf("sales.consult")?.graph.spec
+
+    it("the slim sale: the pay loop's label and its two exits, the talk loop's, an if's question, a wait's, a hand-back's and an outcome's", () => {
+        expect(consult).toBeDefined()
+        if (consult === undefined) return
+        const flow = graphOfSpecV2(consult, real)
+        expect(graphSpecSchema.safeParse(flow).success).toBe(true)
+        const nodeOf = (key: string) => flow.nodes.find((node) => node.key === key)
+        expect(nodeOf("pay")).toMatchObject({
+            step: TEMPLATE_UNTIL_STEP,
+            exits: { until: { vi: "Thoát khi đơn đã trả" }, exhausted: { vi: "Hết 6 vòng mà chưa trả" } },
+        })
+        expect(nodeOf("pay")?.label).toBeDefined()
+        expect(nodeOf("talk")).toMatchObject({ step: TEMPLATE_UNTIL_STEP, label: { vi: "Tư vấn", en: "Consult" } })
+        expect(nodeOf("opening")).toMatchObject({ step: TEMPLATE_IF_STEP, label: { vi: "Vòng đầu?", en: "First round?" } })
+        expect(nodeOf("exact")).toMatchObject({ label: { vi: "Đủ tiền?" } })
+        expect(nodeOf("hear")).toMatchObject({ label: { vi: "Chờ khách nhắn", en: "Wait for the customer's message" } })
+        expect(nodeOf("give-back-talk")).toMatchObject({ label: { vi: "Trả lại tin", en: "Hand the message back" } })
+        expect(nodeOf("declined")).toMatchObject({ step: "core.outcome", label: { vi: "Bị từ chối", en: "Declined" } })
+        // A node step carries no label: its node's title names it.
+        const nodeSteps = new Set(consult.nodes.filter((step) => step.kind === "node").map((step) => step.key))
+        expect(flow.nodes.filter((node) => nodeSteps.has(node.key) && node.label !== undefined)).toEqual([])
+    })
+
+    it("every installed @2 graph: each control step's label and an until loop's exits reach its @1 node unchanged", () => {
+        const graphs = INSTALLED.templateAgents().flatMap((agent) => agent.graphs)
+        expect(graphs.length).toBeGreaterThan(0)
+        const carried = graphs.flatMap((graph) => {
+            const flow = graphOfSpecV2(graph.spec, real)
+            return graph.spec.nodes.flatMap((step) => {
+                const node = flow.nodes.find((one) => one.key === step.key)
+                const label = "label" in step ? step.label : undefined
+                const exits = "exits" in step ? step.exits : undefined
+                return [
+                    ...(label === undefined ? [] : [[graph.key, step.key, "label", node?.label === label]]),
+                    ...(exits === undefined ? [] : [[graph.key, step.key, "exits", node?.exits === exits]]),
+                ]
+            })
+        })
+        expect(carried.length).toBeGreaterThan(0)
+        expect(carried.filter(([, , , same]) => same !== true)).toEqual([])
     })
 })
 

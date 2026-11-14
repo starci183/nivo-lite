@@ -4,6 +4,7 @@ import { webbooksInvoiceDraftNode } from "./invoice-draft.node"
 import { webbooksInvoiceIssueNode } from "./invoice-issue.node"
 import { webbooksInvoiceMailNode } from "./invoice-mail.node"
 import { webbooksInvoiceTeamNode } from "./invoice-team.node"
+import { webbooksIssueRecordNode } from "./issue-record.node"
 import { webbooksNoticeDraftNode } from "./notice-draft.node"
 import { webbooksNoticeRecordNode } from "./notice-record.node"
 import { webbooksNoticeTeamNode } from "./notice-team.node"
@@ -22,7 +23,7 @@ import { webbooksTeamAnswerNode } from "./team-answer.node"
 
 /**
  * The steps of the Accounting agent, graph by graph: read a bank credit and the requests awaiting money, settle the credit against a renewal or a purchase,
- * record it paid and tell the team; draft, issue and mail the invoice and tell the team; find, remind, record and report
+ * record it paid and tell the team; draft, issue, record and mail the invoice and tell the team; find, remind, record and report
  * receivables; check, note and report supplier invoices; answer the team (`webbooks.team-answer`, converted by the team-answer
  * factory's worker). `webbooks.payment-match` and `webbooks.payment-reconcile` are deleted (used by old template versions only,
  * ADDENDUM 2).
@@ -37,6 +38,7 @@ export const webbooksNodes: ReadonlyArray<TemplateNode> = [
     webbooksPurchasePaidTeamNode,
     webbooksInvoiceDraftNode,
     webbooksInvoiceIssueNode,
+    webbooksIssueRecordNode,
     webbooksInvoiceMailNode,
     webbooksInvoiceTeamNode,
     webbooksDueNode,

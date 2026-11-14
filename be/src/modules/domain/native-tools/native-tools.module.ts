@@ -2,6 +2,7 @@ import { Module, type DynamicModule, type Type } from "@nestjs/common"
 import { SepayNativeService, type NativeToolFamily } from "@modules/domain/tools"
 import { ContactToolsNativeService } from "@modules/domain/contact-tools"
 import { DomainToolsService } from "@modules/domain/domain-tools"
+import { InvoiceToolsService } from "@modules/domain/invoice-tools"
 import { MediaNativeService, PROVIDER_FILE_SINK } from "@modules/domain/media-tools"
 import { PaymentLinkNativeService, PaymentNativeService } from "@modules/domain/payment-tools"
 import { TimerNativeService } from "@modules/domain/timer-tools"
@@ -16,6 +17,8 @@ import { BrainNativeService } from "./brain-native.service"
 import { BrainProbeService } from "./brain-probe.service"
 import { NivoNativeService } from "./nivo-native.service"
 import { OpenApiNativeService } from "./openapi-connection-native.service"
+import { OpenApiLiveReachService } from "./openapi-live-reach.service"
+import { OpenApiReachRegistrationService } from "./openapi-reach-registration.service"
 import { OpenApiInterfaceReadsService } from "./openapi-workbench.service"
 import { PassageNativeService } from "./passage-native.service"
 import { PluginToolsNativeService } from "./plugin-tools-native.service"
@@ -39,7 +42,7 @@ import { SepayRecordsNativeService } from "./sepay-records-native.service"
  * `contacts` holds the engine's person tools (`nivo.tool.contact.*`): the run's contact, lookups, name and tags, memory, identities (an
  * outside system's customer id on a person's approval) and merges.
  * The generic provider purposes run through the provider registry, never naming a provider: the domains (`nivo.tool.domain.*`, any
- * registrar), speech, dubbing and video (`nivo.tool.speech.*`, `nivo.tool.dubbing.*`, `nivo.tool.video.generate` / `.generation.get`) and the
+ * registrar), the e-invoice issue (`nivo.tool.invoice.create`, any e-invoice provider: owner ruling R57), speech, dubbing and video (`nivo.tool.speech.*`, `nivo.tool.dubbing.*`, `nivo.tool.video.generate` / `.generation.get`) and the
  * calendar (`nivo.tool.calendar.*`); the destinations Facebook, Instagram, YouTube and TikTok (`nivo.tool.facebook.*`, `.instagram.*`,
  * `.youtube.*`, `.tiktok.*`) are NIVO's own adapters that run on the account of their owner provider.
  * `nivo.tool.record.*` reads and writes the records of the record types a package declares, and `nivo.tool.file.*` puts and links the
@@ -59,6 +62,7 @@ export const NATIVE_TOOL_ADAPTERS: ReadonlyArray<Type<NativeToolFamily>> = [
     NivoNativeService,
     ContactToolsNativeService,
     DomainToolsService,
+    InvoiceToolsService,
     MediaNativeService,
     PaymentNativeService,
     PaymentLinkNativeService,
@@ -96,6 +100,9 @@ export class NativeToolsModule extends ConfigurableModuleClass {
                 ...NATIVE_TOOL_ADAPTERS,
                 ...(options.fileSink === undefined ? [] : [options.fileSink, { provide: PROVIDER_FILE_SINK, useExisting: options.fileSink }]),
                 OpenApiInterfaceReadsService,
+                // How an API account is reached: the live reach of this app, registered with the sandbox twin on the OpenAPI provider's registry.
+                OpenApiLiveReachService,
+                OpenApiReachRegistrationService,
                 AccountInfoService,
                 ProviderRegistryReadsService,
                 // The owner's probe of the Brain reads (`BrainProbeService`): the same families, run with no model turn.

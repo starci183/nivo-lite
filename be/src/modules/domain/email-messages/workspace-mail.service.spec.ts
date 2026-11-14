@@ -13,7 +13,11 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { EmailMessagesLogEvent } from "./email-messages.log-events"
 import { EmailMessagesService } from "./email-messages.service"
+import { sandboxAccount, sandboxServiceOf } from "@tests/fixtures/builders/provider-sandbox.builder"
+import { SmtpLiveSendService } from "./smtp-live-send.service"
+import { SmtpSendRegistryService } from "./smtp-send-registry.service"
 import type { SendEmailInput } from "./email-messages.contracts"
+import { SmtpSandboxSendService } from "./smtp-sandbox-send.service"
 import { SMTP_MAIL_TYPE } from "./smtp.data-types"
 import { WorkspaceMailService } from "./workspace-mail.service"
 
@@ -45,6 +49,7 @@ const build = async () => {
             { provide: LOGGER, useValue: mock<Logger>() },
             { provide: EmailMessagesService, useValue: log },
             { provide: ConnectionsService, useValue: connections },
+            { provide: SmtpSendRegistryService, useValue: new SmtpSendRegistryService() },
         ],
     }).compile()
     return moduleRef.get(WorkspaceMailService)
@@ -88,6 +93,7 @@ const connectionOf = builder<ConnectionRecord>({
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: true,
     lastEventAt: null,
     firstEvent: null,
@@ -126,9 +132,12 @@ const buildDelivery = async (records: ReadonlyArray<ConnectionRecord> = [connect
     intake.write.mockResolvedValue({ owner: null, rows: [] })
     const em = mockEntityManager()
     const tx = fakeTransaction(em)
+    const senders = new SmtpSendRegistryService()
+    senders.register(new SmtpLiveSendService(mail))
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceMailService,
+            { provide: SmtpSendRegistryService, useValue: senders },
             { provide: MAIL_RELAY, useValue: mail },
             { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
             { provide: MESSAGE_CATALOG, useValue: catalog },
@@ -139,7 +148,7 @@ const buildDelivery = async (records: ReadonlyArray<ConnectionRecord> = [connect
             { provide: AccountDataIntakeService, useValue: intake },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkspaceMailService), mail, log, connections, catalog, logger, intake, tx }
+    return { service: moduleRef.get(WorkspaceMailService), mail, log, connections, catalog, logger, intake, tx, senders }
 }
 
 describe("WorkspaceMailService delivery", () => {
@@ -455,5 +464,37 @@ describe("WorkspaceMailService: the SMTP account's own record of a send", () => 
             connectionId: "smtp-1",
             emailMessageId: "email-1",
         })
+    })
+})
+
+describe("WorkspaceMailService: a sandbox SMTP account (provider sandbox)", () => {
+    const SANDBOX = connectionOf({ id: "smtp-sbx", sandbox: true })
+    const sandboxed = async () => {
+        const kit = await buildDelivery([SANDBOX])
+        const { sandbox } = sandboxServiceOf(sandboxAccount({ id: "smtp-sbx", workspaceId: "ws-1", provider: "smtp" }))
+        kit.senders.register({ live: new SmtpLiveSendService(kit.mail), sandbox: new SmtpSandboxSendService(sandbox) })
+        return { ...kit, sandbox }
+    }
+
+    it("records the mail in the call log, delivers nothing and reads no secret", async () => {
+        const { service, mail, connections, sandbox } = await sandboxed()
+        const input = { ...OWNER, audience: "customer" as const, to: "buyer@example.com" }
+
+        await expect(service.send(input)).resolves.toMatchObject({ status: "sent", via: "workspace", messageId: "sbx-smtp-000001" })
+
+        expect(mail.sendThroughSmtp).not.toHaveBeenCalled()
+        expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
+        expect(connections.readSecret).not.toHaveBeenCalled()
+        const calls = await sandbox.calls(sandboxAccount({ id: "smtp-sbx", workspaceId: "ws-1", provider: "smtp" }), "send")
+        expect(calls).toHaveLength(1)
+        expect(calls[0]).toMatchObject({ request: { to: "buyer@example.com", subject: "Daily report", text: "Report" } })
+    })
+
+    it("answers a refused recipient as a failed send with the live mail error text", async () => {
+        const { service, sandbox, catalog } = await sandboxed()
+        await sandbox.setNextCase(sandboxAccount({ id: "smtp-sbx", workspaceId: "ws-1", provider: "smtp" }), "send", "SMTP-2")
+
+        await expect(service.send({ ...OWNER, audience: "customer" })).resolves.toMatchObject({ status: "failed", failure: "mail" })
+        expect(catalog.get).toHaveBeenCalledWith("errors.MAIL_RECIPIENT", {}, "vi")
     })
 })

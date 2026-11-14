@@ -4,9 +4,9 @@ import { Column, Entity, PrimaryColumn } from "typeorm"
 @Entity({ schema: "public", name: "vector_sync_state" })
 /** Where the reconcile of one kind of point stands: one row per kind, for the whole deployment. */
 export class VectorSyncStateEntity extends AbstractEntity {
-    /** The kind of point: passage or truth (the table checks it). */
+    /** The kind of point: passage, truth or base (the table checks it). */
     @PrimaryColumn({ name: "kind", type: "text" })
-    kind!: "passage" | "truth"
+    kind!: "passage" | "truth" | "base"
 
     /** The last Postgres row id the walk over the rows compared; null = the next run starts from the first row. */
     @Column({ name: "rows_after", type: "uuid", nullable: true })

@@ -112,11 +112,6 @@ export class PaymentOrdersService {
         return this.findOpen("credit_pack", query)
     }
 
-    /** The pending, unexpired order that already asks for exactly this listing and amount. */
-    findOpenAgentTemplate(query: OpenOrderQuery): Promise<OrderLookup> {
-        return this.findOpen("agent_template", query)
-    }
-
     /** The order with this code, read in the given transaction when one is, or null. */
     async findByCode(orderCode: string, manager: EntityManager = this.entityManager): Promise<OrderLookup> {
         const row = await manager.findOne(PaymentOrderEntity, { where: { orderCode: orderCode.toUpperCase() } })
@@ -124,7 +119,7 @@ export class PaymentOrdersService {
     }
 
     private async findOpen(
-        kind: "topup" | "upgrade" | "credit_pack" | "agent_template",
+        kind: "topup" | "upgrade" | "credit_pack",
         query: OpenOrderQuery,
     ): Promise<OrderLookup> {
         const open = this.entityManager
@@ -140,7 +135,6 @@ export class PaymentOrdersService {
         if (kind === "topup") open.andWhere("o.packCode = :target", { target: query.target })
         if (kind === "upgrade") open.andWhere("o.planCode = :target", { target: query.target })
         if (kind === "credit_pack") open.andWhere("o.detail ->> 'credits' = :target", { target: query.target })
-        if (kind === "agent_template") open.andWhere("o.detail ->> 'listingId' = :target", { target: query.target })
         const row = await open.orderBy("o.createdAt", "DESC").limit(1).getOne()
         return row === null ? null : toPaymentOrder(row)
     }

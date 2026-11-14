@@ -26,6 +26,7 @@ export const toProviderRightsType = (board: ProviderBoard): ProviderRightsType =
         agentId: attachment.agentId,
         connectionId: attachment.connectionId,
         provider: attachment.provider,
+        isDefault: attachment.isDefault === true,
     })),
 })
 

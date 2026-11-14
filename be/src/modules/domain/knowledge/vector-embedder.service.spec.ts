@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { PLATFORM_TENANT } from "@modules/integrations/qdrant"
 import { EmbeddingService } from "./embedding.service"
 import { UsageMeterService } from "./usage-meter.service"
 import { VectorEmbedderService } from "./vector-embedder.service"
@@ -47,6 +48,16 @@ describe("VectorEmbedderService", () => {
         await expect(embedder.embed(WS, ["a"])).resolves.toEqual({ kind: "blocked" })
 
         expect(embeddings.embed).not.toHaveBeenCalled()
+    })
+
+    it("embeds the platform tenant's rows (the base knowledge) as platform work: no credit check, nothing booked to a workspace", async () => {
+        const { embedder, embeddings, usage } = await build()
+        embeddings.embed.mockResolvedValue([[0.5, 1]])
+
+        await expect(embedder.embed(PLATFORM_TENANT, ["a"])).resolves.toEqual({ kind: "vectors", vectors: [[0.5, 1]] })
+
+        expect(usage.blockedBy).not.toHaveBeenCalled()
+        expect(embeddings.embed).toHaveBeenCalledWith({ workspaceId: null, texts: ["a"], timeoutMs: 20_000 })
     })
 
     it("answers failed when the provider gives no vectors", async () => {

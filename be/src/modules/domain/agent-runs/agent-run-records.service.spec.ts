@@ -97,3 +97,63 @@ describe("AgentRunRecordsService: the engine of a run is read with it", () => {
         await expect(service.run(tx, "run-2")).resolves.toMatchObject({ engine: "legacy" })
     })
 })
+
+describe("AgentRunRecordsService.closeOpenSteps: the ONE closing every road that ends a run calls (E-FIX4)", () => {
+    const AT = "2026-11-10T03:05:00.000Z"
+
+    /** The shape seen twice on dev: a sale parked at `talk[r2].hear` inside its `talk` loop, both rows `running`, after the run ended. */
+    const parkedSale = (tables: MemoryTables): void => {
+        tables.put(AGENT_RUN_STEPS, "s-1", dataOf(stepRowOf({ stepKey: "talk[r1].consult", status: "done", ordinal: 2 })))
+        tables.put(
+            AGENT_RUN_STEPS,
+            "s-2",
+            dataOf(stepRowOf({ stepKey: "talk", status: "running", ordinal: 1, startedAt: "2026-11-10T03:00:00.000Z" })),
+        )
+        tables.put(
+            AGENT_RUN_STEPS,
+            "s-3",
+            dataOf(stepRowOf({ stepKey: "talk[r2].hear", status: "running", ordinal: 3, waitItemId: "item-1", claimedUntil: AT })),
+        )
+        tables.put(AGENT_RUN_STEPS, "s-4", dataOf(stepRowOf({ stepKey: "later", status: "pending", ordinal: 4 })))
+        tables.put(AGENT_RUN_STEPS, "s-9", dataOf(stepRowOf({ runId: "run-9", stepKey: "other", status: "running" })))
+    }
+
+    it("closes every open step (pending, running) of the run failed with the run's reason, gives back claim and wait, leaves done steps and other runs", async () => {
+        const { service, tables } = await build()
+        parkedSale(tables)
+
+        await expect(service.closeOpenSteps(tx, "run-1", "subject_erased", AT)).resolves.toBe(3)
+
+        const steps = await service.stepsOf(tx, "run-1")
+        expect(steps.map((step) => [step.stepKey, step.status])).toEqual([
+            ["talk", "failed"],
+            ["talk[r1].consult", "done"],
+            ["talk[r2].hear", "failed"],
+            ["later", "failed"],
+        ])
+        expect((await service.stepRowsOf(tx, "run-1")).find((step) => step.stepKey === "talk")).toMatchObject({
+            errorCode: "subject_erased",
+            error: { code: "subject_erased" },
+            endedAt: AT,
+            durationMs: 300_000,
+            claimedUntil: null,
+            waitItemId: null,
+        })
+        expect((await service.stepRowsOf(tx, "run-1")).find((step) => step.stepKey === "talk[r2].hear")).toMatchObject({
+            waitItemId: null,
+            claimedUntil: null,
+            durationMs: null,
+        })
+        expect((await service.stepRowsOf(tx, "run-9"))[0]?.status).toBe("running")
+    })
+
+    it("is idempotent: a second call closes nothing and writes nothing", async () => {
+        const { service, tables } = await build()
+        parkedSale(tables)
+        await service.closeOpenSteps(tx, "run-1", "subject_erased", AT)
+        const before = await service.stepRowsOf(tx, "run-1")
+
+        await expect(service.closeOpenSteps(tx, "run-1", "run_cancelled", "2026-11-10T04:00:00.000Z")).resolves.toBe(0)
+        expect(await service.stepRowsOf(tx, "run-1")).toEqual(before)
+    })
+})

@@ -11,8 +11,13 @@ import type { WebhookDeliveryClient } from "@modules/integrations/webhook-delive
 import { CLOCK } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
 import { IDS } from "@modules/platform/ids"
+import type { Logger } from "@modules/platform/logging"
+import { sandboxAccount, sandboxServiceOf } from "@tests/fixtures/builders/provider-sandbox.builder"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
 import { WebhookConnectionsService } from "./webhook-connections.service"
+import { WebhookLiveSendService } from "./webhook-live-send.service"
+import { WebhookSandboxSendService } from "./webhook-sandbox-send.service"
+import { WebhookSendRegistryService } from "./webhook-send-registry.service"
 import { WEBHOOK_CONNECTIONS_OPTIONS } from "./webhook-connections.decorators"
 
 /** A pattern matcher, typed `unknown` so it flows into any slot. */
@@ -31,6 +36,9 @@ const BODY =
     'lead_id":"00000000-0000-0000-0000-000000000000","name":"NIVO ' +
     'test","phone":"0900000000","need":"NIVO sample event"}}'
 
+/** The account of the sandbox webhook connection of the spec. */
+const SANDBOX_ACCOUNT = sandboxAccount({ id: "sbx-c1", workspaceId: "ws-1", provider: "webhook" })
+
 const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => ({
     id: "c1",
     workspaceId: "ws-1",
@@ -40,6 +48,7 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
     status: "pending",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -60,6 +69,12 @@ const build = async (signing = true, origin: string | null = "https://nivo.vn") 
     delivery.resolveTarget.mockResolvedValue(new URL(TARGET))
     delivery.post.mockResolvedValue({ status: 204, failure: null, durationMs: 37 })
     const clock = new FakeClock(NOW)
+    const sends = new WebhookSendRegistryService()
+    const { sandbox } = sandboxServiceOf(SANDBOX_ACCOUNT)
+    sends.register({
+        live: new WebhookLiveSendService(connections, delivery, mock<Logger>()),
+        sandbox: new WebhookSandboxSendService(sandbox),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WebhookConnectionsService,
@@ -68,9 +83,10 @@ const build = async (signing = true, origin: string | null = "https://nivo.vn") 
             { provide: CLOCK, useValue: clock },
             { provide: IDS, useValue: fakeIds() },
             { provide: WEBHOOK_CONNECTIONS_OPTIONS, useValue: options },
+            { provide: WebhookSendRegistryService, useValue: sends },
         ],
     }).compile()
-    return { service: moduleRef.get(WebhookConnectionsService), connections, delivery, clock }
+    return { service: moduleRef.get(WebhookConnectionsService), connections, delivery, clock, sandbox }
 }
 
 describe("WebhookConnectionsService start", () => {
@@ -291,6 +307,20 @@ describe("WebhookConnectionsService test", () => {
             },
         })
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", { lastError: null })
+    })
+
+    it("a SANDBOX account's test is answered by the sandbox (HTTP 200 by default, the picked case otherwise): no address is read, no delivery client is reached", async () => {
+        const { service, connections, delivery, sandbox } = await build()
+        connections.get.mockResolvedValue(record({ id: "sbx-c1", sandbox: true }))
+
+        await expect(service.test(ACTOR, "sbx-c1")).resolves.toEqual({ ok: true, status: 200, error: null, durationMs: 12 })
+        await sandbox.setNextCase(SANDBOX_ACCOUNT, "deliver", "WEBHOOK-11")
+        await expect(service.test(ACTOR, "sbx-c1")).resolves.toEqual({ ok: false, status: null, error: "TIMEOUT", durationMs: 12 })
+
+        expect(connections.readSecret).not.toHaveBeenCalled()
+        expect(delivery.resolveTarget).not.toHaveBeenCalled()
+        expect(delivery.post).not.toHaveBeenCalled()
+        expect(await sandbox.calls(SANDBOX_ACCOUNT, "deliver")).toHaveLength(2)
     })
 
     it("sends the first picked event with its declared sample data (only `test` when it declares none)", async () => {

@@ -16,6 +16,7 @@ const record: ConnectionRecord = {
     meta: { host: "db" },
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

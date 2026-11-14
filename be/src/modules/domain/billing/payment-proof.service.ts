@@ -78,7 +78,7 @@ export class PaymentProofService {
      * stored webhook secret of the connection. A provider that registered no feed webhook proves nothing.
      */
     async proveFeed(provider: string, delivery: FeedDelivery): Promise<ProvenDelivery> {
-        const presented = this.webhooks.of(provider)?.keyOf(delivery.authorization)
+        const presented = this.webhooks.liveOf(provider)?.keyOf(delivery.authorization)
         if (presented === undefined) throw unauthorized()
         const connection = await this.secrets.load(delivery.connectionId, provider)
         if (connection === null || !sameText(sha256Hex(presented), connection.webhookSecret)) throw unauthorized()

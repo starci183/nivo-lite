@@ -6,7 +6,6 @@ import type { AgentWakeContext, PendingScopeWake } from "@modules/domain/agent-w
 import { DeliveredWakesService } from "@modules/domain/provider-triggers/delivered-wakes.service"
 import { NODE_EFFECT_STORE, type NodeEffectStore, type NodeTurn, type StoredEffect } from "@modules/domain/graph-nodes"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { AgentGraphFreezeGateService, type FlowHeldEvent } from "./agent-graph-freeze-gate.service"
 import { AgentGraphRawRowsService } from "./agent-graph-raw-rows.service"
 import { AgentGraphRunQueueService } from "./agent-graph-run-queue.service"
 
@@ -39,6 +38,7 @@ const memoryLedger = (): NodeEffectStore & { readonly rows: Map<string, StoredEf
         rows,
         byKey: (_ws, key) => Promise.resolve(rows.get(key) ?? null),
         ofStep: () => Promise.resolve([]),
+        resettle: () => Promise.resolve(false),
         insert: (_ws, effect: EffectInsert) => {
             if (rows.has(effect.effectKey)) return Promise.resolve(false)
             rows.set(effect.effectKey, { ...effect, undoneAt: null, createdAt: "2026-11-14T03:00:00.000Z" })
@@ -47,8 +47,10 @@ const memoryLedger = (): NodeEffectStore & { readonly rows: Map<string, StoredEf
     }
 }
 
-const build = async (pendingAtFirst: ReadonlyArray<PendingScopeWake>, held: ReadonlyArray<FlowHeldEvent> = []) => {
+const build = async (pendingAtFirst: ReadonlyArray<PendingScopeWake>, heldAtFirst: ReadonlyArray<PendingScopeWake> = []) => {
     let pending = [...pendingAtFirst]
+    // The wakes held behind the run (`waiting:run-1`, rule Q-1), oldest first, as the table keeps them.
+    let heldBehind = [...heldAtFirst]
     let waitingNow = 0
     const claimed: Array<ReadonlyArray<string>> = []
     const wakes = mock<DeliveredWakesService>()
@@ -57,22 +59,17 @@ const build = async (pendingAtFirst: ReadonlyArray<PendingScopeWake>, held: Read
     )
     wakes.claimQueued.mockImplementation((_m, _ws, ids) => {
         claimed.push(ids)
-        const before = pending.length
+        const before = pending.length + heldBehind.length
         pending = pending.filter((wake) => !ids.includes(wake.id))
-        return Promise.resolve(before - pending.length)
+        heldBehind = heldBehind.filter((wake) => !ids.includes(wake.id))
+        return Promise.resolve(before - pending.length - heldBehind.length)
     })
+    wakes.heldBehind.mockImplementation((_m, _ws, runId) => Promise.resolve(runId === "run-1" ? heldBehind : []))
     wakes.waitingCountOf.mockImplementation(() => Promise.resolve(waitingNow))
     const runs = mock<AgentRunsService>()
     runs.runOf.mockResolvedValue(
         mock<RunView>({ id: "run-1", agentId: "front", status: "running", context: { threadScope: SCOPE, workflowId: "wf-front" } }),
     )
-    let stillHeld = [...held]
-    const gate = mock<AgentGraphFreezeGateService>()
-    gate.untakenOfRun.mockImplementation(() => Promise.resolve(stillHeld))
-    gate.markTaken.mockImplementation((_ws, _run, ids) => {
-        stillHeld = stillHeld.filter((event) => !ids.includes(event.wakeId))
-        return Promise.resolve()
-    })
     const raw = mock<AgentGraphRawRowsService>()
     raw.pipelineEventOf.mockImplementation((wake) => Promise.resolve({ data: { text: `words of ${String(wake.context.rawRowId)}` } }))
     const ledger = memoryLedger()
@@ -83,7 +80,6 @@ const build = async (pendingAtFirst: ReadonlyArray<PendingScopeWake>, held: Read
             { provide: AgentRunsService, useValue: runs },
             { provide: DeliveredWakesService, useValue: wakes },
             { provide: NODE_EFFECT_STORE, useValue: ledger },
-            { provide: AgentGraphFreezeGateService, useValue: gate },
             { provide: AgentGraphRawRowsService, useValue: raw },
         ],
     }).compile()
@@ -91,7 +87,10 @@ const build = async (pendingAtFirst: ReadonlyArray<PendingScopeWake>, held: Read
         queue: moduleRef.get(AgentGraphRunQueueService),
         claimed,
         ledger,
-        gate,
+        held: () => heldBehind,
+        holdBehind: (wake: PendingScopeWake) => {
+            heldBehind = [...heldBehind, wake]
+        },
         arrive: (wake: PendingScopeWake) => {
             pending = [...pending, wake]
         },
@@ -149,20 +148,18 @@ describe("AgentGraphRunQueueService: the run queue (D5, ROAD-API section 4)", ()
     })
 
     it("a step visit after the founder's answer keeps what the step took before and adds what came during the stop", async () => {
-        const held: FlowHeldEvent = {
-            wakeId: "w5",
-            trigger: { eventId: "m-w5", contactId: "contact-1", conversationId: "route-1", workflowId: "wf-front", data: { text: "con do khong" } },
-        }
         const world = await build([lineWake("w2", "2026-11-14T03:00:02Z")])
         await world.queue.snapshotOf(turnOf(0), PLACE)
-        world.gate.untakenOfRun.mockResolvedValueOnce([held])
+        world.holdBehind(lineWake("w5", "2026-11-14T03:00:30Z"))
 
-        const after = await world.queue.snapshotOf(turnOf(1), PLACE)
+        const after = await world.queue.snapshotOf(turnOf(1), PLACE, true)
 
+        // Rule Q-1: the event held behind the run (`waiting:run-1`) joins the visit's queue, after what the step took before.
         expect(after.map((event) => event.eventId)).toEqual(["m-w2", "m-w5"])
-        // The engine's own gate members of a held event never reach the node.
-        expect(after[1]).toEqual({ eventId: "m-w5", contactId: "contact-1", data: { text: "con do khong" } })
-        expect(world.gate.markTaken).toHaveBeenLastCalledWith("ws-1", "run-1", ["w2", "w5"], "run-1:answer:1")
+        expect(after[1]).toMatchObject({ verb: TRIGGER.zaloMessageReceived, routeId: "route-1", contactId: "contact-1", data: { text: "words of row-w5" } })
+        // The held wake is closed `queued:<run>` (no drain starts a run for it).
+        expect(world.claimed.at(-1)).toEqual(["w2", "w5"])
+        expect(world.held()).toEqual([])
     })
 
     it("takes only events of the run's own workflow: another workflow's event on the same key starts its own run", async () => {
@@ -193,18 +190,24 @@ describe("AgentGraphRunQueueService: the run queue (D5, ROAD-API section 4)", ()
     })
 
     it("R18: a later step's visit after the founder's answer takes the events held behind the stop (the stopped run takes them on resume)", async () => {
-        const held: FlowHeldEvent = {
-            wakeId: "w6",
-            trigger: { eventId: "m-w6", contactId: "contact-1", conversationId: "route-1", workflowId: "wf-front", data: { text: "alo" } },
-        }
         const world = await build([])
         await world.queue.snapshotOf(turnOf(), { runId: "run-1", stepKey: "hear" })
-        world.gate.untakenOfRun.mockResolvedValueOnce([held])
+        world.holdBehind(lineWake("w6", "2026-11-14T03:00:40Z"))
 
-        const resumed = await world.queue.snapshotOf(turnOf(1), PLACE)
+        const resumed = await world.queue.snapshotOf(turnOf(1), PLACE, true)
 
         expect(resumed.map((event) => event.eventId)).toEqual(["m-w6"])
-        expect(world.gate.markTaken).toHaveBeenLastCalledWith("ws-1", "run-1", ["w6"], "run-1:answer:1")
+        expect(world.claimed.at(-1)).toEqual(["w6"])
+        expect(world.held()).toEqual([])
+    })
+
+    it("rule Q-1: the FIRST visit of a step (no decision yet) takes no held wake: it stays held behind the run", async () => {
+        const world = await build([], [lineWake("w7", "2026-11-14T03:00:50Z")])
+
+        const first = await world.queue.snapshotOf(turnOf(0), { runId: "run-1", stepKey: "hear" })
+
+        expect(first).toEqual([])
+        expect(world.held().map((wake) => wake.id)).toEqual(["w7"])
     })
 
     it("`run.waiting` is fixed per step attempt: a re-run of the visit reads the same count, the next attempt counts again", async () => {

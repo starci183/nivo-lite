@@ -30,6 +30,11 @@ export enum GraphNodesErrorCode {
     EffectNotRecorded = "GRAPH_NODES_EFFECT_NOT_RECORDED",
     /** A call's ledger key is held by another effect: nothing acts, since the kept result is not this effect's to answer. */
     EffectKeyTaken = "GRAPH_NODES_EFFECT_KEY_TAKEN",
+    /**
+     * The model's answer did not fit the schema the node asked for (after the model call's own tries): the AI failed, a typed failure
+     * the step stops on as "the AI failed", never a raw parse error (`handler_threw`, P-FIX2 / DEF-2). The issues ride in the params.
+     */
+    ModelAnswerInvalid = "GRAPH_NODES_MODEL_ANSWER_INVALID",
 }
 
 /** How each graph-nodes code travels. */
@@ -48,6 +53,7 @@ export const GRAPH_NODES_ERROR_KINDS: Record<GraphNodesErrorCode, ErrorKind> = {
     [GraphNodesErrorCode.ToolFailed]: "unavailable",
     [GraphNodesErrorCode.EffectNotRecorded]: "internal",
     [GraphNodesErrorCode.EffectKeyTaken]: "internal",
+    [GraphNodesErrorCode.ModelAnswerInvalid]: "unavailable",
 }
 
 /** The one error class of the graph-nodes capability. */

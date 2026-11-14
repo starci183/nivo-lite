@@ -216,6 +216,11 @@ describe("ToolReseedService", () => {
                 { kind: "system", memberId: null },
                 3,
                 "re-seed levels2026_11_12: the template's current version",
+                // The set its hand-offs are judged against: every graph the workspace's plan writes, the primary's republish included.
+                new Map([
+                    ["main", MAIN],
+                    ["round", ROUND],
+                ]),
             ],
         ])
         expect(workflows.setStatus.mock.calls).toEqual([[WS, "gone", "paused"]])

@@ -39,13 +39,13 @@ const CATALOGUE: TemplateCatalogue = {
         vi: "Khi ng\u01b0\u1eddi trong \u0111\u1ed9i nh\u1eafn trong chat ri\u00eang ho\u1eb7c g\u1ecdi t\u00ean trong ph\u00f2ng chung: \u0111\u1ecdc t\u00e0i li\u1ec7u v\u00e0 h\u1ed3 s\u01a1 kh\u00e1ch li\u00ean quan, so\u1ea1n b\u1ea3n nh\u00e1p k\u00e8m ngu\u1ed3n v\u00e0 tr\u1ea3 l\u1eddi ngay d\u01b0\u1edbi tin nh\u1eafn \u0111\u1ec3 ng\u01b0\u1eddi \u0111\u00f3 xem v\u00e0 k\u00fd tay",
         en: "When a person of the team writes in the private chat or calls it by name in a shared room: reads the relevant documents and customer records, drafts with the sources and replies under the message for that person to check and sign by hand",
     },
-    version: 8,
+    version: 9,
     // The old JSON template had `seedActive: true`: the seed makes an ACTIVE workflow from it.
     seedActive: true,
-    publishedAt: "2026-11-14T04:15:00.000Z",
+    publishedAt: "2026-11-14T22:00:00.000Z",
     notes: {
-        vi: "Nhận tham số của bước gọi trong dữ liệu của sự kiện (trigger.data)",
-        en: "Takes its caller's params in the event's data (trigger.data)",
+        vi: "R68: bước điều kiện và kết quả mang tên theo lời của workspace; nghiệp vụ không đổi",
+        en: "R68: the condition and the outcomes carry the workspace's words; the business is unchanged",
     },
 }
 
@@ -89,8 +89,13 @@ export const webdocsTeamChatGraph: TemplateGraph = defineTemplateGraph({
             input: { messageId: ref("trigger.data.messageId"), answer: ref("steps.draft.output.answer") },
             next: "post-declined",
         }),
-        "post-declined": ifNode({ when: equals(ref("steps.post.output.declined"), true), yes: "declined", no: "drafted" }),
-        drafted: outcome({ name: "drafted" }),
-        declined: outcome({ name: "declined" }),
+        "post-declined": ifNode({
+            label: { vi: "Bị từ chối đăng câu trả lời?", en: "Answer post declined?" },
+            when: equals(ref("steps.post.output.declined"), true),
+            yes: "declined",
+            no: "drafted",
+        }),
+        drafted: outcome({ name: "drafted", label: { vi: "Đã trả lời", en: "Answered" } }),
+        declined: outcome({ name: "declined", label: { vi: "Bị từ chối", en: "Declined" } }),
     },
 })

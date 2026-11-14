@@ -45,7 +45,7 @@ import type { ThreadDb } from "./thread-world-process"
 // double that records the line it delivered.
 
 /** The state of a wake in the world's wake table. */
-export type HeardState = "pending" | "begun" | "queued"
+export type HeardState = "pending" | "held" | "begun" | "queued"
 
 /** A wake the delivery wrote, with the id the table gave it. */
 export interface HeardWake extends AgentWake {
@@ -53,7 +53,7 @@ export interface HeardWake extends AgentWake {
     readonly id: string
     /** When the table took it. */
     readonly createdAt: Date
-    /** `pending` until a run began on it; `begun` once one did; `queued` once a step of a run took it into its queue snapshot. */
+    /** `pending` until a run began on it; `held` once its event waits behind a run (`waiting:<run>`, rule Q-1) or out of hours; `begun` once one did; `queued` once a step of a run took it into its queue snapshot. */
     state: HeardState
     /** Why it closed (`queued:<run>` when a run's queue took it). */
     reason?: string
@@ -109,6 +109,7 @@ export const connectionRecordOf = (workspaceId: string, account: Pick<Account, "
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -122,10 +123,10 @@ const pendingOf = (chat: ChatWorld, agentId: string, scopeKey: string): Readonly
 
 /**
  * The wake door's two reads of the run queue, over the world's wake table, as the table answers them: the pending wakes of one lock scope
- * (`pendingOfScope`) and the closing of those a step took (`claimQueued`: each still pending becomes `queued:<run>`, one already closed is
+ * (`pendingOfScope`) and the closing of those a step took (`claimQueued`: each still pending or held becomes `queued:<run>`, one already closed is
  * left as it is). The process's wake double answers them from here.
  */
-export const wakeQueueOf = (chat: ChatWorld): Pick<AgentWakeService, "pendingOfScope" | "claimQueued" | "reoffer" | "dropWaiting" | "releaseWaiting" | "waitingCountOf"> => ({
+export const wakeQueueOf = (chat: ChatWorld): Pick<AgentWakeService, "pendingOfScope" | "claimQueued" | "reoffer" | "dropWaiting" | "releaseWaiting" | "waitingCountOf" | "heldBehind" | "runsHeldBehind"> => ({
     // The run a subject's events waited behind has ended: every wake held `waiting:<run>` is pending again, in the order it came.
     releaseWaiting: (_manager: unknown, _workspaceId: string, runId: string): Promise<number> => {
         let released = 0
@@ -139,6 +140,25 @@ export const wakeQueueOf = (chat: ChatWorld): Pick<AgentWakeService, "pendingOfS
     },
     waitingCountOf: (_manager: unknown, _workspaceId: string, runId: string): Promise<number> =>
         Promise.resolve(chat.wakes.filter((wake) => wake.reason === `waiting:${runId}`).length),
+    // The wakes still held behind a run (`waiting:<run>`), oldest first: what a step of that run that runs again after a decision takes.
+    heldBehind: (_manager: unknown, _workspaceId: string, runId: string, limit: number): Promise<ReadonlyArray<PendingScopeWake>> =>
+        Promise.resolve(
+            chat.wakes
+                .filter((wake) => wake.state === "held" && wake.reason === `waiting:${runId}`)
+                .slice(0, limit)
+                .map((one) => ({ id: one.id, context: one.context, createdAt: one.createdAt })),
+        ),
+    // The runs wakes are held behind (the sweep's backstop reads them).
+    runsHeldBehind: (_manager: unknown, _workspaceId: string, limit: number): Promise<ReadonlyArray<string>> =>
+        Promise.resolve(
+            [
+                ...new Set(
+                    chat.wakes.flatMap((wake) =>
+                        wake.state === "held" && wake.reason?.startsWith("waiting:") === true ? [wake.reason.slice("waiting:".length)] : [],
+                    ),
+                ),
+            ].slice(0, limit),
+        ),
     // The wakes held behind a run that ended because its subject was erased are dropped with that reason (none are held in the world's table).
     dropWaiting: (_manager: unknown, _workspaceId: string, runId: string, reason: string): Promise<number> => {
         let dropped = 0
@@ -185,7 +205,7 @@ export const wakeQueueOf = (chat: ChatWorld): Pick<AgentWakeService, "pendingOfS
     claimQueued: (_manager: unknown, _workspaceId: string, wakeIds: ReadonlyArray<string>, runId: string): Promise<number> => {
         let closed = 0
         for (const wake of chat.wakes) {
-            if (!wakeIds.includes(wake.id) || wake.state !== "pending") continue
+            if (!wakeIds.includes(wake.id) || (wake.state !== "pending" && wake.state !== "held")) continue
             wake.state = "queued"
             wake.reason = `queued:${runId}`
             closed += 1
@@ -369,6 +389,7 @@ export const nextTurnOf = (among: ReadonlyArray<HeardWake>): HeardWake | undefin
 const channelOf = (outside: Pick<Outside, "clock" | "lines" | "chat">): ChannelDeliveryService =>
     mock<ChannelDeliveryService>({
         deliverToPerson: async (request: { readonly workspaceId: string; readonly routeId: string; readonly sendKey: string; readonly text: string }) => {
+            if (outside.chat.channelOutcome === "ambiguous") return { delivered: false, failure: null, outcome: "ambiguous" as const }
             const claimed = await outside.chat.ledger.byKey(request.workspaceId, request.sendKey)
             const line: Line = {
                 conversationId: request.routeId,
@@ -459,6 +480,8 @@ export interface CalledWorkflow {
     /** The person the call is about, and the route they are on. */
     readonly contactId: string
     readonly routeId: string
+    /** The calling agent and run, as `core.call-workflow`'s effect hands them to `deliver` (the call guards read them); none when absent. */
+    readonly caller?: { readonly agentId: string; readonly runId: string }
 }
 
 /**
@@ -477,7 +500,15 @@ export const calledWorkflow = async (source: ChatSource, call: CalledWorkflow): 
             declaration: WORKFLOW_CALL_TRIGGER,
             connectionId: null,
             agentId: call.agentId,
-            events: [{ event, contactId: call.contactId, routeId: call.routeId, pin: { workflow: call.workflow, version: "latest" } }],
+            events: [
+                {
+                    event,
+                    contactId: call.contactId,
+                    routeId: call.routeId,
+                    pin: { workflow: call.workflow, version: "latest" },
+                    ...(call.caller === undefined ? {} : { caller: call.caller }),
+                },
+            ],
         },
         mockEntityManager(),
     )

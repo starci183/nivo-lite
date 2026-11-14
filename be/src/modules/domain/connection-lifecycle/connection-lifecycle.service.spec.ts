@@ -17,6 +17,7 @@ const record = (status: ConnectionStatus = "connected"): ConnectionRecord => ({
     status,
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

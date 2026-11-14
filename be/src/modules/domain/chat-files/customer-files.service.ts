@@ -1,7 +1,8 @@
 import { Injectable, Optional } from "@nestjs/common"
-import type { LineFile } from "@nivo-lite/agent-sdk/customer-send"
 import type { StorageAssetsPort, StorageObjectsPort } from "@modules/integrations/object-storage"
 import { InjectRemoteFiles, type RemoteFiles } from "@modules/integrations/remote-files"
+import { RemoteFilesError, RemoteFilesErrorCode } from "@modules/integrations/remote-files/errors/remote-files.error"
+import { InjectErrorReporter, isDomainError, type ErrorReporter } from "@modules/platform/errors"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CHAT_FILE_BUCKET, CHAT_FILE_MAX_BYTES, chatFileNameOf, sniffChatFile } from "./chat-file.policy"
 import type { CustomerAttachment, OptionalCustomerFileBytes } from "./chat-files.contracts"
@@ -14,7 +15,12 @@ import {
     customerObjectPathOf,
     isCustomerFilePath,
     unreadFileOf,
+    type CustomerFile,
+    type FileNotKept,
 } from "./customer-files.policy"
+
+/** The scope an attachment an intake could not keep is reported under (the app errors, /admin/health). */
+const NOT_KEPT_SCOPE = "chat_files.customer_file_not_kept"
 
 /** How long one file may take to come from the channel, milliseconds. */
 const FETCH_TIMEOUT_MS = 15_000
@@ -33,7 +39,9 @@ const isWanted = (declared: string): boolean => {
  * The pictures and files a customer sends on a channel (D-MX-4): read ONCE from the channel's address, through the lane's guarded
  * fetch (size and time limits, a type check on the header and on the bytes), and kept in the shop's private store under a path the
  * message decides, so the line keeps an address that never expires (`chat-file:<path>`) and the same message heard again writes the
- * same object. A file that cannot be kept is still on the line, without an address: a step is told a picture came that nobody saw.
+ * same object. A file that cannot be kept is a TYPED, REPORTED outcome (DEF-7): it stays on the event's stored line without an address,
+ * its id naming why (`unread:<reason>:<index>`, `FileNotKept`), one app error is recorded per file (the event, the index, the reason, the
+ * cause), and a model call is told it was not seen (`picturesNotSeen`): never an address that is not there, never a silent warning.
  */
 export class CustomerFilesService {
     constructor(
@@ -41,6 +49,7 @@ export class CustomerFilesService {
         @InjectRemoteFiles() private readonly remote: RemoteFiles,
         @InjectChatFilesStorage() private readonly storage: StorageObjectsPort,
         @Optional() @InjectChatFilesAssets() private readonly assets?: StorageAssetsPort,
+        @Optional() @InjectErrorReporter() private readonly errors?: ErrorReporter,
     ) {}
 
     /** The files of one customer message as its line keeps them, in the order sent; at most `CUSTOMER_FILES_MAX`. */
@@ -48,7 +57,7 @@ export class CustomerFilesService {
         workspaceId: string,
         channelEventId: string,
         attachments: ReadonlyArray<CustomerAttachment>,
-    ): Promise<ReadonlyArray<LineFile>> {
+    ): Promise<ReadonlyArray<CustomerFile>> {
         return Promise.all(
             attachments
                 .slice(0, CUSTOMER_FILES_MAX)
@@ -71,9 +80,10 @@ export class CustomerFilesService {
         channelEventId: string,
         index: number,
         attachment: CustomerAttachment,
-    ): Promise<LineFile> {
-        const unread = unreadFileOf(index, attachment.kind, attachment.name)
-        if (attachment.url === "" || this.assets === undefined) return this.notKept(unread, "no_address")
+    ): Promise<CustomerFile> {
+        const at: NotKeptAt = { workspaceId, channelEventId, index, kind: attachment.kind, name: attachment.name }
+        if (attachment.url === "") return this.notKept(at, "no_address", null)
+        if (this.assets === undefined) return this.notKept(at, "no_store", null)
         try {
             const answer = await this.remote.read({
                 url: attachment.url,
@@ -83,18 +93,40 @@ export class CustomerFilesService {
             })
             const bytes = answer.bytes
             const contentType = bytes === null ? null : sniffChatFile(bytes)
-            if (bytes === null || contentType === null) return this.notKept(unread, `refused_${String(answer.status)}`)
+            if (bytes === null || contentType === null) return this.notKept(at, `refused_${answer.status}`, null)
             const path = customerObjectPathOf(workspaceId, channelEventId, index, contentType)
             const written = await this.assets.upload(CHAT_FILE_BUCKET, path, bytes, contentType)
-            if (written.error !== null) return this.notKept(unread, "store_failed")
+            if (written.error !== null) return this.notKept(at, "store_failed", written.error)
             return { id: path, url: `${CUSTOMER_FILE_REF}${path}`, name: chatFileNameOf(attachment.name, path), contentType }
         } catch (cause) {
-            return this.notKept(unread, cause instanceof Error ? cause.name : "unreadable")
+            return this.notKept(at, "fetch_failed", cause)
         }
     }
 
-    private notKept(unread: LineFile, reason: string): LineFile {
-        this.logger.warn(ChatFilesLogEvent.CustomerFileNotKept, { reason, contentType: unread.contentType })
-        return unread
+    /**
+     * The line's entry of a file that was not kept, with why in its id, after ONE app error is recorded for it (the event, the index,
+     * the reason; the cause when there is one, else the remote files' typed failure). A report never throws.
+     */
+    private async notKept(at: NotKeptAt, reason: FileNotKept, cause: unknown): Promise<CustomerFile> {
+        this.logger.warn(ChatFilesLogEvent.CustomerFileNotKept, { reason, channelEventId: at.channelEventId, index: at.index })
+        const error = isDomainError(cause)
+            ? cause
+            : new RemoteFilesError({ code: RemoteFilesErrorCode.RequestFailed, params: { reason }, cause })
+        await this.errors?.report(NOT_KEPT_SCOPE, error, {
+            workspaceId: at.workspaceId,
+            event: at.channelEventId,
+            index: at.index,
+            reason,
+        })
+        return unreadFileOf(at.index, at.kind, at.name, reason)
     }
+}
+
+/** Where a file that was not kept belongs: the workspace, the event it came with, its place and kind there. */
+interface NotKeptAt {
+    readonly workspaceId: string
+    readonly channelEventId: string
+    readonly index: number
+    readonly kind: "image" | "file"
+    readonly name: string
 }

@@ -31,7 +31,7 @@ describe("the registries of the provider capabilities", () => {
     it("start empty, each on its own", async () => {
         const registries = await build()
 
-        for (const registry of Object.values(registries)) expect(registry.all()).toEqual([])
+        for (const registry of Object.values(registries)) expect(registry.providers()).toEqual([])
     })
 
     it("keep the registrations of one capability apart from the others", async () => {
@@ -40,7 +40,7 @@ describe("the registries of the provider capabilities", () => {
 
         instructions.register(port)
 
-        expect(instructions.of("sepay")).toBe(port)
+        expect(instructions.liveOf("sepay")).toBe(port)
         expect(transactions.has("sepay")).toBe(false)
     })
 })

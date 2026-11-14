@@ -36,6 +36,7 @@ const query1: Document = gql`
                 agentId
                 connectionId
                 provider
+                isDefault
             }
         }
     }

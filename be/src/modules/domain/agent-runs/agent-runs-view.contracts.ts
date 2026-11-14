@@ -10,9 +10,9 @@ export interface RunListEntry {
     readonly run: RunRecord
     /** The steps written so far. */
     readonly stepTotal: number
-    /** The steps that are done or were undone. */
+    /** The steps that are done. */
     readonly stepDone: number
-    /** The steps that are no longer pending: running, done, failed or undone. */
+    /** The steps that are no longer pending: running, done or failed. */
     readonly stepBegun: number
     /** The steps that failed. */
     readonly stepFailed: number

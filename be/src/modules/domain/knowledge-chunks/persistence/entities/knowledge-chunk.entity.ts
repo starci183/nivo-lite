@@ -24,10 +24,6 @@ export class KnowledgeChunkEntity extends UuidAbstractEntity {
     @Column({ name: "content", type: "text" })
     content!: string
 
-    /** The pgvector vector, or null; it is read only by the database, never selected. */
-    @Column({ name: "embedding", type: "vector", nullable: true, select: false })
-    embedding!: string | null
-
     /** The search vector the database generates from the text. */
     @Column({ name: "fts", type: "tsvector", nullable: true, select: false, insert: false, update: false })
     fts!: string | null
@@ -40,7 +36,7 @@ export class KnowledgeChunkEntity extends UuidAbstractEntity {
     @Column({ name: "customer_ready", type: "boolean", default: () => "false" })
     customerReady!: boolean
 
-    /** The model that made the vector, or null. */
+    /** The model that made the passage's vector (the index holds the vector), or null. */
     @Column({ name: "embedding_model", type: "text", nullable: true })
     embeddingModel!: string | null
 

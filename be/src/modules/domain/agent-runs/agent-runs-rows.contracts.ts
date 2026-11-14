@@ -123,8 +123,6 @@ export interface StoredStep {
     readonly waitItemId: string | null
     /** The work item it is about, or null. */
     readonly workItemId: string | null
-    /** The compensation tries made. */
-    readonly compAttempts: number
     /** Why it last failed, or null. */
     readonly errorCode: string | null
     /** When the claim runs out, or null. */
@@ -175,6 +173,11 @@ export interface RunListFilter {
     readonly subject?: { readonly kind: string; readonly id: string } | undefined
     /** true: only the runs that carry a wait mark (`wait_match` set: parked at a `wait`, whatever their status). */
     readonly waitMarked?: true
+    /**
+     * The runs whose REPORTED status (`reportedStatusOf`: a `running` run with a wait mark reads `waiting`) is one of these: what a reader
+     * that shows runs narrows by. Named with `statuses`, both hold.
+     */
+    readonly reported?: ReadonlyArray<string>
     /** `started`: newest start first; `ended`: newest end first; `resume`: earliest resume first. */
     readonly order: "started" | "ended" | "resume"
     /** How many runs of the order to pass over first (a page after the first). */
@@ -231,6 +234,8 @@ export interface RunCountFilter {
     readonly agentId?: string
     /** The runs in these statuses. */
     readonly statuses?: ReadonlyArray<string>
+    /** true: only the runs that carry a wait mark (`wait_match` set), so a reader can report the ones parked at a `wait`. */
+    readonly waitMarked?: true
     /** The runs that started in this window. */
     readonly started?: RunWindow
     /** The runs that ended in this window. */
@@ -253,7 +258,7 @@ export interface StepCounts {
     readonly runId: string
     /** Every step. */
     readonly total: number
-    /** The steps done or undone. */
+    /** The steps done. */
     readonly done: number
     /** The steps that have begun. */
     readonly begun: number

@@ -34,7 +34,7 @@ export const leadEntity: AnyEntityDefinition = {
     matchKeys: [{ name: "by_phone", on: ["phone"] }],
 }
 
-/** A deletable entity with a `status` enum: a saga run state. */
+/** A deletable entity with a `status` enum: a run state. */
 export const runEntity: AnyEntityDefinition = {
     entry: "entity",
     name: "demo.run",

@@ -329,6 +329,27 @@ describe("ProviderTriggersService.deliver: the one delivery function", () => {
         expect(sales?.context).not.toHaveProperty("workflowId")
     })
 
+    it("an event NO registration of any attached agent takes marks its wait-only wakes `unclaimed`; one a registration took does not", async () => {
+        const world = await build(["chatbot", "sales"], {})
+        const waitsOn = jest.fn((_ws: string, agentId: string) => Promise.resolve(agentId === "sales"))
+        Object.assign(world.receivers, { waitsOn })
+
+        const result = await world.service.deliver(zaloInput([lineOf("m-2", "con hang khong")]), world.manager)
+
+        // Nobody's registration took it: the sales agent's wait-only wake is still written (a parked run may take it), marked unclaimed.
+        expect(result).toMatchObject({ status: "delivered", events: 1, woken: [] })
+        const [sales] = [...world.written.values()]
+        expect(sales).toMatchObject({ agentId: "sales" })
+        expect(sales?.context).toMatchObject({ waitOnly: "true", unclaimed: "true" })
+
+        const taken = await build(["chatbot", "sales"], { chatbot: FRONT_DESK })
+        Object.assign(taken.receivers, { waitsOn })
+        await taken.service.deliver(zaloInput([lineOf("m-3", "con hang khong")]), taken.manager)
+        const listener = [...taken.written.values()].find((wake) => wake.agentId === "sales")
+        expect(listener?.context).toMatchObject({ waitOnly: "true" })
+        expect(listener?.context).not.toHaveProperty("unclaimed")
+    })
+
     it("two registrations on one trigger with disjoint `where` each get their own events (MATCH is the registration's)", async () => {
         const byDirection =
             (direction: string, workflowId: string) =>

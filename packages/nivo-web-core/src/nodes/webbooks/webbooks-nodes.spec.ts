@@ -23,6 +23,8 @@ describe("the steps of the Accounting agent (webbooks)", () => {
             "webbooks.purchase-paid-team",
             "webbooks.invoice-draft",
             "webbooks.invoice-issue",
+            // R57: the issued invoice is recorded on its draft in the CRM.
+            "webbooks.issue-record",
             "webbooks.invoice-mail",
             "webbooks.invoice-team",
             "webbooks.due",
@@ -45,6 +47,7 @@ describe("the steps of the Accounting agent (webbooks)", () => {
             "webbooks.renewal-paid",
             "webbooks.purchase-paid",
             "webbooks.invoice-issue",
+            "webbooks.issue-record",
             "webbooks.notice-record",
             "webbooks.supplier-note",
         ])

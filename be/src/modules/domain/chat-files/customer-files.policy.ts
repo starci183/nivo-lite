@@ -39,15 +39,37 @@ export const customerObjectPathOf = (workspaceId: string, channelEventId: string
 }
 
 /**
- * The line's entry of a file the customer sent that the shop could NOT keep (the address failed, too large, not a picture or a
- * document): no address, so nothing is shown or read, and a step is told that a picture came that nobody has seen.
+ * A file of a customer message as the entry hands it on: a kept one (its address in the shop's store), or one the shop could NOT keep,
+ * which carries the typed reason (`notKept`) the person's stored line keeps (MX-CORE D2-4: never a bare empty address with no reason).
  */
-export const unreadFileOf = (index: number, kind: "image" | "file", name: string): LineFile => ({
-    id: `unread-${String(index)}`,
+export type CustomerFile = LineFile & {
+    /** Why the file was not kept; absent for a kept file. */
+    readonly notKept?: FileNotKept | undefined
+}
+
+/**
+ * The line's entry of a file the customer sent that the shop could NOT keep (the address failed, too large, not a picture or a
+ * document): no address, so nothing is shown or read, and a step is told that a picture came that nobody has seen. The run's data keeps
+ * the SDK's shape (`url` empty, the id naming why); the person's stored line keeps the typed reason (`notKept`) and no address.
+ */
+export const unreadFileOf = (index: number, kind: "image" | "file", name: string, reason: FileNotKept): CustomerFile => ({
+    id: `${UNREAD_FILE_PREFIX}${reason}:${String(index)}`,
     url: "",
     name,
     contentType: kind === "image" ? "image/*" : "application/octet-stream",
+    notKept: reason,
 })
+
+/**
+ * Why a file a customer sent was NOT kept (DEF-7), as the line records it in the unread file's id (`unread:<reason>:<index>`) and the app
+ * error reports it: the channel gave no address (`no_address`), the app has no whole-file store (`no_store`), the channel's address
+ * answered no file of a kept type (`refused_<status>`: a refusal, a page, too large), the store refused the copy (`store_failed`), or
+ * the read itself failed (`fetch_failed`: network, timeout).
+ */
+export type FileNotKept = "no_address" | "no_store" | `refused_${number}` | "store_failed" | "fetch_failed"
+
+/** The start of the id of a file that is on a line but was not kept (no address): `unread:<reason>:<index>`. */
+export const UNREAD_FILE_PREFIX = "unread:"
 
 /** What a step is told when pictures it was to be shown could not be read: a fact of its input, never words for the customer. */
 export interface PicturesNotSeen {

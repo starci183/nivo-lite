@@ -38,6 +38,16 @@ export class AgentTurnQueue {
         })
     }
 
+    /**
+     * Enqueues the drain of a wake that is PENDING AGAIN (a run handed its event back, or the run it waited behind let it go), in the
+     * caller's transaction. The wake's first drain job already holds its fact's dedupe key (`agentTurnWakeKey`, unique for ever in the
+     * outbox), so writing that key again writes NO job and the wake waited for the minute sweep (60 to 120 s, DEF-5): this job has a
+     * fresh identity, one per call. A drain finds the scope busy or idle when another drain served it first: a spare job costs nothing.
+     */
+    enqueueAgainDrain(payload: AgentTurnDrainPayload, tx: EntityManager): Promise<void> {
+        return this.outbox.write(tx, AGENT_TURN_QUEUE, payload, { job: AgentTurnJob.Drain })
+    }
+
     /** Enqueues the drain the minute sweep starts for a scope it found stuck; one per scope and minute. */
     enqueueSweepDrain(payload: AgentTurnDrainPayload, at: Date, tx: EntityManager): Promise<void> {
         return this.outbox.write(tx, AGENT_TURN_QUEUE, payload, {

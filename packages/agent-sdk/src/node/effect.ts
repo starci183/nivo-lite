@@ -13,10 +13,9 @@ import type {
 /** A data kind name: kebab-case ASCII, one word group, no namespace. */
 const DATA_KIND = /^[a-z][a-z0-9-]*$/
 
-/** Defines an effect a node may run. Throws `SdkDefinitionError` (`ID_MALFORMED`) at module load, for its id or its compensation. */
+/** Defines an effect a node may run. Throws `SdkDefinitionError` (`ID_MALFORMED`) at module load, for its id. */
 export const defineEffect = <P extends z.ZodType>(config: EffectConfig<P>): EffectDefinition<P> => {
     assertToolName(config.id)
-    if (config.compensation !== undefined) assertToolName(config.compensation)
     return { ...config, entry: "effect" }
 }
 

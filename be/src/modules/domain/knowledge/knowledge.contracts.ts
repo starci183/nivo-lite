@@ -10,17 +10,8 @@ export type Audience = "customer" | "internal"
 /** How many passages one embeddings call takes. */
 export const EMBED_BATCH = 32
 
-/** How many stale passages one re-embedding batch takes. */
-export const REEMBED_BATCH = 32
-
-/** How many batches one re-embedding job does before it hands over to a follow-up job. */
-export const REEMBED_MAX_BATCHES = 100
-
 /** The fair group of a knowledge job for the queue's admission (`document:<id>`, the critique runs), or null for none. */
 export type OptionalFairGroup = string | null
-
-/** How a re-embedding run ended. */
-export type ReembedOutcome = "done" | "more" | "blocked" | "unavailable" | "mismatch"
 
 /** A question to try against what the agents would retrieve. */
 export interface AskInput {

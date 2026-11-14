@@ -43,7 +43,7 @@ export interface RecordsFacts {
     readonly conversations: Compared
     /** New contacts: conversations opened in the period, one per channel identity. */
     readonly newContacts: Compared
-    /** Runs that finished (done or compensated). */
+    /** Runs that finished (done). */
     readonly runsDone: Compared
     /** Runs that failed or were handed to a person. */
     readonly runsFailed: Compared

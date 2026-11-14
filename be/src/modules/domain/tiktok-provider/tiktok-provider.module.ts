@@ -3,6 +3,7 @@ import { TiktokConnectionFieldsService } from "./tiktok-connection-fields.servic
 import { TiktokCredentialService } from "./tiktok-credential.service"
 import { TiktokProviderRegistrationService } from "./tiktok-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./tiktok-provider.module-definition"
+import { TiktokSandboxVideoService } from "./tiktok-sandbox-video.service"
 import { TiktokVideoService } from "./tiktok-video.service"
 
 const PROVIDERS = [TiktokCredentialService, TiktokVideoService, TiktokConnectionFieldsService]
@@ -19,7 +20,7 @@ export class TiktokProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, TiktokProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, TiktokSandboxVideoService, TiktokProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

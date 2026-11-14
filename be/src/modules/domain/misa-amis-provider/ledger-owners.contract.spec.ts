@@ -2,6 +2,7 @@ import { mock } from "@starci/jest-preset"
 import { proofOf, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
 import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
 import { MisaAmisClient } from "@modules/integrations/misa-amis"
+import { connectionRecord } from "@tests/fixtures/builders/connection-records.builder"
 import { MisaAmisLedgerService } from "./misa-amis-ledger.service"
 
 /**
@@ -11,6 +12,7 @@ import { MisaAmisLedgerService } from "./misa-amis-ledger.service"
  * same shape, the Google sheet by a double of its contract and MISA AMIS by its real adapter (docs-missing: never ready, refused
  * `not_available` before anything leaves).
  */
+const ACCOUNT = connectionRecord({ id: "conn-1", workspaceId: "ws-1" })
 const ENTRY: BusinessLedgerEntry = {
     date: "2026-11-04",
     orderNo: "DH-7",
@@ -47,12 +49,12 @@ describe.each(OWNERS)("the ledger contract, owner $name", ({ port, ready, writeP
     })
 
     it("answers ready as a boolean", async () => {
-        await expect(port.ready("ws-1")).resolves.toBe(ready)
+        await expect(port.ready(ACCOUNT)).resolves.toBe(ready)
     })
 
     it.each([
-        ["append", (owner: LedgerPort) => owner.append("ws-1", ENTRY, "conn-1")],
-        ["void", (owner: LedgerPort) => owner.void("ws-1", "sepay:1", "conn-1")],
+        ["append", (owner: LedgerPort) => owner.append(ACCOUNT, ENTRY)],
+        ["void", (owner: LedgerPort) => owner.void(ACCOUNT, "sepay:1")],
     ] as const)("answers a %s with a reference, or fails with what it proves", async (_write, write) => {
         const outcome = await write(port).then(
             (ref) => ({ ref }),

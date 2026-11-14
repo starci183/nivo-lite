@@ -26,14 +26,10 @@ export { ACME_TICKET_GET, ACME_TICKET_LIST, ACME_TICKET_UPDATE, OTHER_THING_LIST
 export type { FakeExecuted, FakeNodePorts, FakeNodePortsOptions, FakeToolCall, FakeWrite } from "./node-ports"
 export { scriptedNodePorts as fakeNodePorts } from "./node-ports"
 export {
-    flatEffect,
     lookTool,
-    lostEffect,
     pingEffect,
     probeNode,
     swallowNode,
-    unflatEffect,
-    unpingEffect,
 } from "./probe-nodes"
 export { EXAMPLE_TURN, nodeExampleMismatches, nodeListMismatches } from "./node-examples"
 export {

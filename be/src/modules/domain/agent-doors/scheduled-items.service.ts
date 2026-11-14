@@ -85,14 +85,7 @@ const taskWakeOf = (task: AgentTaskRecord): FlowWake => {
 
 /** The wake a clock slot writes: its `clock.tick` event as the delivery writes it (`ClockTickDeliveryService.deliverSlot`). */
 const slotWakeOf = (trigger: AgentTriggerRecord, slot: Date): FlowWake => {
-    const event = CLOCK_TICK_TRIGGER.translate(
-        {
-            triggerId: trigger.id,
-            slot: String(slot.getTime()),
-            ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
-        },
-        { connectionId: null },
-    )
+    const event = CLOCK_TICK_TRIGGER.translate({ triggerId: trigger.id, slot: String(slot.getTime()) }, { connectionId: null })
     const context =
         event === null ? {} : { verb: CLOCK_TICK_TRIGGER.verb, eventId: event.id, dataJson: JSON.stringify(event.data) }
     return { source: "trigger", context, actorMemberId: null }
@@ -265,7 +258,7 @@ export class ScheduledItemsService {
                 ...base,
                 id,
                 kind: "schedule",
-                what: trigger.probeKey ?? trigger.preset ?? "schedule",
+                what: trigger.preset ?? "schedule",
                 subject: { kind: "trigger", id: trigger.id },
                 dueAt: trigger.nextRunAt,
                 realDueAt: null,

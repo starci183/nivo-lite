@@ -53,7 +53,15 @@ const factOf = (line: CustomerLine): ToolJson => ({
     direction: line.direction,
     text: line.text.slice(0, THREAD_TEXT_MAX),
     at: line.saidAt,
-    ...(line.files.length === 0 ? {} : { files: line.files.map((file) => ({ url: file.url, contentType: file.contentType })) }),
+    ...(line.files.length === 0
+        ? {}
+        : {
+              files: line.files.map((file) =>
+                  file.url === null
+                      ? { notKept: file.notKept ?? null, contentType: file.contentType }
+                      : { url: file.url, contentType: file.contentType },
+              ),
+          }),
     agentId: line.agentId,
     memberId: line.memberId,
 })

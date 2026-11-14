@@ -54,8 +54,8 @@ export const knowledgeModules = (options: ApiOptions): Array<DynamicModule> => [
     AiGatewayModule.register({ isGlobal: true, ...options.aiGateway }),
     AiModule.register({ isGlobal: true, ...options.aiTasks.endpoint, profileRoutes: chatProfileRoutes() }),
     DocumentsModule.register({ isGlobal: true, ...options.documents }),
-    // The vector index (Qdrant) and the sync that keeps it in step with Postgres. Without `QDRANT_URL` the index is not bound and
-    // vectors stay in Postgres: that address is the one switch. The vector size is the embedding profile's.
+    // The vector index (Qdrant): a required engine piece, the only home of vectors (`QDRANT_URL` is required), kept in step with
+    // Postgres by the vector sync below. The vector size is the embedding profile's.
     QdrantModule.register({ isGlobal: true, ...options.qdrant, dimensions: EMBEDDING_DIMENSIONS }),
     KnowledgeSourcesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeChunksModule.register({ isGlobal: true }),

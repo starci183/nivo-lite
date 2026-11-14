@@ -18,11 +18,6 @@ export interface EffectConfig<P extends z.ZodType> {
      * record a step built can be typed by a model.
      */
     readonly codePayload?: z.ZodType | undefined
-    /**
-     * The effect that undoes this one, given `{ id }` of the subject this one touched; it must be idempotent. Without one the effect is
-     * a pivot: it cannot be undone, so a run that failed after it goes forward or to a person, never back.
-     */
-    readonly compensation?: Namespaced | undefined
 }
 
 /** A validated effect as `defineEffect` returns it: the config plus the tag a module list reads it by. */

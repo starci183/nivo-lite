@@ -1,11 +1,15 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { MetaFacebookPublishService } from "./meta-facebook-publish.service"
+import { MetaFacebookSandboxPublishService } from "./meta-facebook-sandbox-publish.service"
 import { MetaInstagramPublishService } from "./meta-instagram-publish.service"
+import { MetaInstagramSandboxPublishService } from "./meta-instagram-sandbox-publish.service"
 import { MetaPublishingCredentialService } from "./meta-publishing-credential.service"
 import { MetaPublishingProviderRegistrationService } from "./meta-publishing-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./meta-publishing-provider.module-definition"
 
 const PROVIDERS = [MetaPublishingCredentialService, MetaFacebookPublishService, MetaInstagramPublishService]
+
+const SANDBOXES = [MetaFacebookSandboxPublishService, MetaInstagramSandboxPublishService]
 
 @Module({})
 /**
@@ -18,7 +22,7 @@ export class MetaPublishingProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, MetaPublishingProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, ...SANDBOXES, MetaPublishingProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

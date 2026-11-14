@@ -1,4 +1,4 @@
-import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import {
   BrainFactEmbeddingsService,
   BrainFactsReadService,
@@ -107,10 +107,10 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
         private readonly facts: BrainFactsService,
         private readonly json: ModelJsonService,
         private readonly reads: BrainFactsReadService,
-        @Optional() private readonly sync?: VectorSyncService,
+        private readonly sync: VectorSyncService,
     ) {}
 
-    /** The pinned identity new vectors are made with: the configured profile and the stored column's dimensions. */
+    /** The pinned identity new vectors are made with: the configured profile and the index's dimensions. */
     identity(): EmbeddingIdentity {
         return { model: this.ai.embeddingModel(), dimensions: EMBEDDING_DIMENSIONS }
     }
@@ -123,8 +123,7 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
     /**
      * The facts store's announcement (after the write committed): ONLY the facts it names are looked at (never the whole workspace), and
      * at most `ANNOUNCE_INLINE_MAX` of them are embedded inline (one call, under the embedding timeout), so a fact write never waits on
-     * a long batch; the rest are left to the timed sweep, which finds every fact in force with no vector. Never throws and never fails
-     * the write.
+     * a long batch; every changed fact also gets its `vector.sync` job, which embeds the rest. Never throws and never fails the write.
      */
     async factsChanged(workspaceId: string, changedIds: ReadonlyArray<string>): Promise<void> {
         await this.embedChanged(workspaceId, changedIds)
@@ -132,12 +131,11 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
     }
 
     /**
-     * Vectors in the vector index: EVERY changed fact gets its `vector.sync` job, not only those in force, so the point of a fact that
-     * was superseded, retired, expired or rejected is removed and the point of one whose standing changed is rewritten. Logged, never
-     * thrown: the reconcile finds what a lost job left.
+     * EVERY changed fact gets its `vector.sync` job, not only those in force, so the point of a fact that was superseded, retired,
+     * expired or rejected is removed and the point of one whose standing changed is rewritten. Logged, never thrown: the reconcile
+     * finds what a lost job left.
      */
     private async follow(workspaceId: string, changedIds: ReadonlyArray<string>): Promise<void> {
-        if (this.sync?.bound() !== true) return
         try {
             await this.sync.changed("truth", workspaceId, changedIds)
         } catch (cause) {
@@ -146,9 +144,9 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
     }
 
     /**
-     * Gives the named facts that are in force and lack a current vector one (the copy of the same line first, then one embedding call),
-     * the first `ANNOUNCE_INLINE_MAX` of them, read by id in one statement. A failure is logged and the facts stay searchable by words
-     * until the sweep; it never throws.
+     * Gives the named facts that are in force and lack a current point one (the vector of another point of the same line first, then
+     * one embedding call), the first `ANNOUNCE_INLINE_MAX` of them, read by id in one statement. A failure is logged and the facts stay
+     * searchable by words until their sync job or the reconcile embeds them; it never throws.
      */
     async embedChanged(workspaceId: string, changedIds: ReadonlyArray<string>): Promise<EmbeddingsRefreshed> {
         try {
@@ -159,7 +157,7 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
                 workspaceId,
                 states.filter((state) => state.fact.status === "active"),
             )
-            return { embedded: done.embedded, copied: done.copied, unchanged: done.unchanged }
+            return { embedded: done.embedded, adopted: done.adopted, unchanged: done.unchanged }
         } catch (cause) {
             this.logger.error(BrainLogEvent.EmbeddingsFailed, cause, { workspaceId })
             return NOTHING_REFRESHED
@@ -457,10 +455,11 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
     }
 
     /**
-     * Gives the facts among these whose stored vector is not current one: the vector of the same line another row holds is copied
-     * (`adopt`, no call), the rest are embedded in batches of `EMBED_BATCH` lines, one batch after the other, and each batch's vectors
-     * are stored in one write. `stopped` when a call answered nothing or the wrong shape: the batches after it are not sent. The one
-     * embedding loop of the truth graph: the announcement, the same-meaning check and the timed sweep all come through it.
+     * Gives the facts among these whose point is not current one: the vector of another point of the same line is adopted
+     * (`VectorSyncService.adopt`, one index read, no call), the rest are embedded in batches of `EMBED_BATCH` lines, one batch after the
+     * other, and each batch's vectors are handed to the index (`VectorSyncService.accept`). `stopped` when a call answered nothing or the
+     * wrong shape: the batches after it are not sent. The one inline embedding loop of the truth graph: the announcement and the
+     * same-meaning check come through it.
      */
     async embedLines(workspaceId: string, states: ReadonlyArray<FactEmbeddingState>): Promise<LinesEmbedded> {
         const identity = this.identity()
@@ -468,26 +467,26 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
             .map((state) => ({ state, hash: factEmbedHashOf(state.fact) }))
             .filter(({ state, hash }) => needsEmbedding(state.stored, hash, identity))
         const unchanged = states.length - stale.length
-        const copied =
+        const adopted =
             stale.length === 0
                 ? new Set<string>()
-                : await this.adoptLines(
+                : await this.sync.adopt(
+                      "truth",
                       workspaceId,
-                      stale.map(({ state, hash }) => ({ id: state.fact.id, hash })),
-                      identity,
+                      stale.map(({ state }) => state.fact.id),
                   )
         const run = { embedded: 0, stopped: false }
-        await eachInOrder(batchesOf(stale.filter(({ state }) => !copied.has(state.fact.id))), async (batch) => {
+        await eachInOrder(batchesOf(stale.filter(({ state }) => !adopted.has(state.fact.id))), async (batch) => {
             if (run.stopped) return
             const written = await this.embedBatch(workspaceId, batch, identity)
             if (written === null) run.stopped = true
             else run.embedded += written
         })
-        return { embedded: run.embedded, copied: copied.size, unchanged, stopped: run.stopped }
+        return { embedded: run.embedded, adopted: adopted.size, unchanged, stopped: run.stopped }
     }
 
     /**
-     * Embeds one batch of lines in one call, meters it (as the `index` step of the work in scope) and stores its vectors in one write;
+     * Embeds one batch of lines in one call, meters it (as the `index` step of the work in scope) and hands its vectors to the index;
      * null when the call gave nothing usable, or the credit pool is empty (checked before EVERY call: the batches after it wait).
      */
     private embedBatch(
@@ -520,47 +519,15 @@ export class FactEmbeddingsService implements OnModuleInit, FactsChangedHook {
             promptChars: texts.reduce((sum, text) => sum + text.length, 0),
         })
         const vectors = answer.vectors
-        const written = batch.flatMap(({ state, hash }, index) => {
-            const vector = vectors[index]
-            return vector === undefined ? [] : [{ id: state.fact.id, hash, vector }]
-        })
-        await this.storeLines(workspaceId, written, identity)
-        return written.length
-    }
-
-    /**
-     * THE STORE SWITCH of the truths' vectors, adoption half. Vectors in the vector index (`VectorSyncService.bound`): a line another
-     * row's point already holds takes that point's vector (one index read, no embedding call, nothing booked). Otherwise the pgvector
-     * copy in the database.
-     */
-    private adoptLines(
-        workspaceId: string,
-        wanted: ReadonlyArray<{ readonly id: string; readonly hash: string }>,
-        identity: EmbeddingIdentity,
-    ): Promise<ReadonlySet<string>> {
-        return this.sync?.bound() === true
-            ? this.sync.adopt(
-                  "truth",
-                  workspaceId,
-                  wanted.map((one) => one.id),
-              )
-            : this.vectors.adopt(workspaceId, wanted, identity)
-    }
-
-    /**
-     * THE STORE SWITCH, write half. Vectors in the vector index: the fresh vectors are handed to the sync (the `vector.sync` job of
-     * the facts is written first, then the points; Postgres records the identity, the hash and `indexed_at` once the index accepted
-     * them) and Postgres keeps no vector. Otherwise the pgvector column.
-     */
-    private async storeLines(
-        workspaceId: string,
-        written: ReadonlyArray<{ readonly id: string; readonly hash: string; readonly vector: ReadonlyArray<number> }>,
-        identity: EmbeddingIdentity,
-    ): Promise<void> {
-        if (this.sync?.bound() === true) {
-            await this.sync.accept("truth", workspaceId, new Map(written.map((one) => [one.id, one.vector])))
-            return
-        }
-        await this.vectors.storeMany(workspaceId, written, identity)
+        const written = new Map(
+            batch.flatMap(({ state }, index): ReadonlyArray<readonly [string, ReadonlyArray<number>]> => {
+                const vector = vectors[index]
+                return vector === undefined ? [] : [[state.fact.id, vector]]
+            }),
+        )
+        // The `vector.sync` job of the facts is written first, then the points; Postgres records the identity, the hash and
+        // `indexed_at` once the index accepted them, and keeps no vector.
+        await this.sync.accept("truth", workspaceId, written)
+        return written.size
     }
 }

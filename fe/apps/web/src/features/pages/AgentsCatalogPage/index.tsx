@@ -1,7 +1,6 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { agentPageTabsOf } from "@/modules/page-header"
 import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { AgentsCatalogPageBase, type AgentsCatalogPageBaseProps } from "./component"
 
@@ -18,12 +17,7 @@ interface AgentsCatalogPageProps {
 
 /** The words of the page, resolved on the server so the page and its loading state say the same; no workspace while loading. */
 const catalogCopy = async (workspaceId?: string): Promise<AgentsCatalogPageBaseProps["props"]> => {
-    const [t, ts, tt, tm] = await Promise.all([
-        getTranslations("agentCatalog"),
-        getTranslations("shell"),
-        getTranslations("agentTemplates"),
-        getTranslations("agentMarketplace"),
-    ])
+    const [t, ts] = await Promise.all([getTranslations("agentCatalog"), getTranslations("shell")])
     return {
         crumbLabel: ts("crumbLabel"),
         crumbs: [
@@ -36,14 +30,6 @@ const catalogCopy = async (workspaceId?: string): Promise<AgentsCatalogPageBaseP
         ],
         title: t("title"),
         description: t("description"),
-        tabs: agentPageTabsOf({
-            workspaceId,
-            label: tt("tabsLabel"),
-            selected: "running",
-            runningLabel: tt("tabRunning"),
-            marketplaceLabel: tm("title"),
-            templatesLabel: tt("title"),
-        }),
     }
 }
 
@@ -52,7 +38,7 @@ export const AgentsCatalogPage = async (props: AgentsCatalogPageProps): Promise<
     <AgentsCatalogPageBase props={await catalogCopy(props.workspaceId)} />
 )
 
-/** The same page while the route loads: the trail, heading, tabs and create action stay real, the catalogue draws its own skeletons. */
+/** The same page while the route loads: the trail, heading and create action stay real, the blocks draw their own skeletons. */
 export const AgentsCatalogLoadingPage = async (): Promise<ReactElement> => (
     <AgentsCatalogPageBase props={await catalogCopy()} />
 )

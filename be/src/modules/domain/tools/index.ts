@@ -77,11 +77,22 @@ export type {
 export {
     PROVIDER_CATALOGUE,
     bindNodeProviders,
+    pickAccountOf,
+    unpickedOf,
     providerSpecOf,
     mutatesOf,
     providerOfChannel,
     servesTool,
 } from "./provider-abilities.policy"
-export type { AttachmentVerdict, NamedAccount, ProviderSpec, RightVerdict } from "./provider-abilities.policy"
+export type {
+    AccountPick,
+    AccountPickedBy,
+    AttachmentVerdict,
+    NamedAccount,
+    PickNeeded,
+    ProviderSpec,
+    RightVerdict,
+    RunAccountFacts,
+} from "./provider-abilities.policy"
 export type { AbilityLabel } from "./messages/provider-abilities.labels"
 export { abilityLabelOf } from "./messages/provider-abilities.labels"

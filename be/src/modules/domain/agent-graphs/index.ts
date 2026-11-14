@@ -16,7 +16,8 @@ export { AgentGraphPublishService } from "./agent-graph-publish.service"
 export { AgentGraphSeedService } from "./agent-graph-seed.service"
 export { AgentGraphFlowRunsService, WAIT_TOOK, subjectOfScope } from "./agent-graph-flow-runs.service"
 export { callerRunIdOf } from "./agent-graph-call-guard.service"
-export { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
+export { AgentGraphSubjectHoldsService, isInFlight } from "./agent-graph-subject-holds.service"
+export type { FlowWaiting, HeldPerson, PersonStop, SubjectStopsPort } from "./agent-graph-subject-holds.service"
 export { AgentGraphRunNoticesService } from "./agent-graph-run-notices.service"
 export type { FlowWake } from "./policies/graph-flow.policy"
 export type { GraphRecord, ProposalRecord, VersionRecord } from "./agent-graphs-records.contracts"
@@ -28,7 +29,7 @@ export { AgentWorkflowsAdminService } from "./agent-workflows-admin.service"
 export { AgentWorkflowStartService } from "./agent-workflow-start.service"
 export { AgentWorkflowStartDeliveryService } from "./agent-workflow-start-delivery.service"
 export type { WorkflowStartAnswer, WorkflowStartView } from "./agent-workflow-start.service"
-export type { AgentRightsAgreeRequest, AgreedRightRequest } from "./agent-workflows-door.contracts"
+export type { AgentRightsAgreeRequest, AgreedRightRequest, WorkflowNodeModeRequest } from "./agent-workflows-door.contracts"
 export { agreedRightsOf } from "./policies/node-rights-gate.policy"
 export { AgentGraphRightsService } from "./agent-graph-rights.service"
 export { AgentRightsStandingService } from "./agent-rights-standing.service"
@@ -56,7 +57,9 @@ export { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
 export { GRAPH_NODE_STEP_KIND, localeOf, namespaceOf, nodeBlocks, triggerScopeOf } from "./policies/graph-flow.policy"
 export type { GraphNodeStepInput } from "./policies/graph-flow.policy"
 export {
+    failureClassOf,
     isAiFailure,
+    retryVerdictOf,
     stuckFactsOf,
     troubleOfConfusion,
     troubleOfFailure,
@@ -64,7 +67,7 @@ export {
     troubleOfThrow,
     typedEndOf,
 } from "./policies/step-trouble.policy"
-export type { StepTrouble } from "./policies/step-trouble.policy"
+export type { FailureClass, FailureFacts, RetryVerdict, StepSagaKind, StepTrouble } from "./policies/step-trouble.policy"
 export { effectsBeyond } from "./policies/workflow-grant.policy"
 export { WAITING_MEMBER, takingTriggerOf } from "./policies/workflow-trigger.policy"
 export {
@@ -76,3 +79,5 @@ export {
     untilSettingsOf,
 } from "./policies/graph-loops.policy"
 export type { GraphLoopProblem, UntilCondition, UntilSettings } from "./policies/graph-loops.policy"
+
+export { AgentNodeRoutesService } from "./agent-node-routes.service"

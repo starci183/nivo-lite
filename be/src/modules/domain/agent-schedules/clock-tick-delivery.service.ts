@@ -34,7 +34,7 @@ export class ClockTickDeliveryService {
         memberId: string | null,
     ): Promise<SlotDelivery> {
         const event = CLOCK_TICK_TRIGGER.translate(
-            { triggerId: trigger.id, slot, ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }) },
+            { triggerId: trigger.id, slot },
             { connectionId: null },
         )
         if (event === null) return "untaken"

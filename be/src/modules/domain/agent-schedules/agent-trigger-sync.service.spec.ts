@@ -19,7 +19,6 @@ const record = (over: Partial<AgentTriggerRecord> = {}): AgentTriggerRecord => (
     atTime: null,
     timeZone: "Asia/Ho_Chi_Minh",
     eventName: null,
-    probeKey: null,
     enabled: true,
     seedKey: null,
     nextRunAt: null,
@@ -110,7 +109,7 @@ describe("AgentTriggerSyncService.seed", () => {
         const { service, triggers, schedules } = await build()
 
         await service.seed("ws-1", "agent-1", [
-            { key: "morning", preset: "daily_at", atTime: "08:00", probeKey: "invoices_due" },
+            { key: "morning", preset: "daily_at", atTime: "08:00" },
             { key: "pulse", preset: "hourly" },
         ])
 
@@ -125,14 +124,13 @@ describe("AgentTriggerSyncService.seed", () => {
                 atTime: "08:00",
                 timeZone: null,
                 eventName: null,
-                probeKey: "invoices_due",
                 enabled: true,
             },
             "morning",
         )
         expect(triggers.seed).toHaveBeenNthCalledWith(
             2,
-            expect.objectContaining({ preset: "hourly", atTime: null, probeKey: null }),
+            expect.objectContaining({ preset: "hourly", atTime: null }),
             "pulse",
         )
         expect(schedules.schedule).not.toHaveBeenCalled()

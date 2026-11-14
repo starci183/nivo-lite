@@ -62,19 +62,22 @@ const columnsOf = (values: StopValues): QueryDeepPartialEntity<RunStopEntity> =>
 })
 
 @Injectable()
-/** The run stops on public.run_stops, on the primary connection; every write is one statement. No raw SQL. */
+/**
+ * The run stops on public.run_stops, on the primary connection; every write is one statement. No raw SQL. `manager` joins the caller's
+ * transaction (a stop opening with the writes that go with it).
+ */
 export class TypeormRunStopStore implements RunStopStore {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The stop of one run and step, or null when that step never stopped. */
-    async byRunStep(workspaceId: string, runId: string, stepKey: string): Promise<RunStop | null> {
-        const row = await this.entityManager.findOne(RunStopEntity, { where: { workspaceId, runId, stepKey } })
+    async byRunStep(workspaceId: string, runId: string, stepKey: string, manager?: EntityManager): Promise<RunStop | null> {
+        const row = await (manager ?? this.entityManager).findOne(RunStopEntity, { where: { workspaceId, runId, stepKey } })
         return row === null ? null : runStopOfRow(row)
     }
 
     /** The stop with this id in the workspace, or null. */
-    async byId(workspaceId: string, id: string): Promise<RunStop | null> {
-        const row = await this.entityManager.findOne(RunStopEntity, { where: { workspaceId, id } })
+    async byId(workspaceId: string, id: string, manager?: EntityManager): Promise<RunStop | null> {
+        const row = await (manager ?? this.entityManager).findOne(RunStopEntity, { where: { workspaceId, id } })
         return row === null ? null : runStopOfRow(row)
     }
 
@@ -114,14 +117,25 @@ export class TypeormRunStopStore implements RunStopStore {
         return rows.map((row) => runStopOfRow(row))
     }
 
+    /** The stops in this state about any of these routes, oldest first, up to the limit; none when no route is given. */
+    async ofRoutes(workspaceId: string, routeIds: ReadonlyArray<string>, state: StopState, limit: number): Promise<ReadonlyArray<RunStop>> {
+        if (routeIds.length === 0) return []
+        const rows = await this.entityManager.find(RunStopEntity, {
+            where: { workspaceId, conversationId: In([...routeIds]), state },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
+        })
+        return rows.map((row) => runStopOfRow(row))
+    }
+
     /** How many stops hold this state in the workspace. */
     countIn(workspaceId: string, state: StopState): Promise<number> {
         return this.entityManager.count(RunStopEntity, { where: { workspaceId, state } })
     }
 
     /** Writes the stop for its run and step; null when that run and step held a stop already. */
-    async insert(workspaceId: string, stop: RunStopInsert): Promise<RunStop | null> {
-        const inserted = await this.entityManager
+    async insert(workspaceId: string, stop: RunStopInsert, manager?: EntityManager): Promise<RunStop | null> {
+        const inserted = await (manager ?? this.entityManager)
             .createQueryBuilder()
             .insert()
             .into(RunStopEntity)
@@ -139,16 +153,16 @@ export class TypeormRunStopStore implements RunStopStore {
         // Postgres answers the inserted rows: none when the run and step held a stop already.
         const returned: unknown = inserted.raw
         if (!Array.isArray(returned) || returned.length === 0) return null
-        return this.byRunStep(workspaceId, stop.runId, stop.stepKey)
+        return this.byRunStep(workspaceId, stop.runId, stop.stepKey, manager)
     }
 
     /** Sets the given members on the stop while its version is the expected one; null when the version moved or the stop is gone. */
-    async update(workspaceId: string, id: string, expected: string, values: StopValues): Promise<RunStop | null> {
-        const result = await this.entityManager.update(
+    async update(workspaceId: string, id: string, expected: string, values: StopValues, manager?: EntityManager): Promise<RunStop | null> {
+        const result = await (manager ?? this.entityManager).update(
             RunStopEntity,
             { workspaceId, id, version: Number(expected) },
             { ...columnsOf(values), version: () => "version + 1" },
         )
-        return (result.affected ?? 0) > 0 ? this.byId(workspaceId, id) : null
+        return (result.affected ?? 0) > 0 ? this.byId(workspaceId, id, manager) : null
     }
 }

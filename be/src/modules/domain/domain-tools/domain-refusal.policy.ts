@@ -20,6 +20,9 @@ export const DOMAIN_REFUSAL_CLASS: Readonly<Record<DomainToolRefusal, RefusalCla
     // The registration's contact data does not fit what the provider takes: an answer about the request.
     contacts_required: "business",
     contacts_unsupported: "business",
+    // The provider refused a charged order for the account's balance, or the domain is locked at it: facts a person acts on.
+    insufficient_balance: "business",
+    domain_locked: "business",
     // No account holds the domain: a fact about the business.
     domain_not_held: "business",
     // No registrar is connected, or no single one selected: the setup.

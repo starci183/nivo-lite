@@ -11,6 +11,7 @@ export const WEBRENEW_NODE_MODELS: Readonly<Record<string, PluginNodeModel>> = {
     "webrenew.understand-open": { model: "auto", weight: "light", maxOutputTokens: 800 },
     "webrenew.quote-open": { model: "auto", weight: "heavy", maxOutputTokens: 600 },
     "webrenew.quote-tell": { model: "auto", weight: "heavy", maxOutputTokens: 2000 },
+    "webrenew.quote-tell-mail": { model: "auto", weight: "heavy", maxOutputTokens: 2000 },
     "webrenew.close-team": { model: "auto", weight: "light", maxOutputTokens: 1000 },
     "webrenew.close-thank": { model: "auto", weight: "light", maxOutputTokens: 400 },
     "webrenew.reply-answer": { model: "auto", weight: "light", maxOutputTokens: 1500 },

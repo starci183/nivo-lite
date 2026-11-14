@@ -46,7 +46,7 @@ const event = (over: Partial<InboundEvent> = {}): InboundEvent => ({
 })
 
 interface Options {
-    readonly targets?: ReadonlyArray<{ readonly agentId: string; readonly probeKey: string | null }>
+    readonly targets?: ReadonlyArray<{ readonly agentId: string }>
     readonly written?: ReadonlyArray<string | null>
     readonly reporter?: boolean
     readonly live?: boolean
@@ -55,7 +55,7 @@ interface Options {
 const NO_REPORTER: InboundStopReporter | null = null
 
 const build = async ({
-    targets = [{ agentId: "agent-1", probeKey: null }],
+    targets = [{ agentId: "agent-1" }],
     written = ["wake-1"],
     reporter = true,
     live = true,
@@ -132,7 +132,7 @@ const codeOf = async (run: Promise<unknown>): Promise<unknown> => {
 describe("InboundDoorService.accept, the wake", () => {
     it("wakes the agents holding a trigger for the event type and the adapter, keyed by the idempotency key, with the event in the wake context", async () => {
         const { door, tx, events, wakes } = await build({
-            targets: [{ agentId: "agent-1", probeKey: "money_in" }],
+            targets: [{ agentId: "agent-1" }],
         })
 
         await expect(door.accept(tx, event())).resolves.toEqual({ accepted: true, agentIds: ["agent-1"] })
@@ -146,7 +146,7 @@ describe("InboundDoorService.accept, the wake", () => {
             source: KEY,
             eventKey: "conn-1:evt-1",
             actorMemberId: null,
-            context: { eventName: "invoice.paid", probeKey: "money_in" },
+            context: { eventName: "invoice.paid" },
         })
         expect(decodeInbound(wake?.context.inbound)).toMatchObject({
             eventType: "invoice.paid",
@@ -183,7 +183,6 @@ describe("InboundDoorService.accept, the wake", () => {
         expect(access.agent).toHaveBeenCalledWith("ws-1", "agent-9")
         expect(events.agentsFor).not.toHaveBeenCalled()
         expect(wakes.write.mock.calls[0]?.[1]).toMatchObject({ agentId: "agent-9" })
-        expect(wakes.write.mock.calls[0]?.[1].context).not.toHaveProperty("probeKey")
     })
 })
 
@@ -224,8 +223,8 @@ describe("InboundDoorService.accept, a fact seen before or never wanted", () => 
     it("wakes each matched agent in order and answers only the ones it woke", async () => {
         const { door, tx, wakes } = await build({
             targets: [
-                { agentId: "agent-1", probeKey: null },
-                { agentId: "agent-2", probeKey: null },
+                { agentId: "agent-1" },
+                { agentId: "agent-2" },
             ],
             written: ["wake-1", null],
         })

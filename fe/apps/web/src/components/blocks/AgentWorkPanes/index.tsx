@@ -4,7 +4,6 @@ import { useAgentRoute } from "@/hooks/installations"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import {
-    GOAL_TITLE_MAX,
     TIME_OF_DAY,
     WORK_PLACEHOLDER,
     WORK_PRESETS,
@@ -29,12 +28,6 @@ const presetOf = (value: string | null): AgentWorkPreset | null =>
 /** The words of the Work tab that do not come from the data. */
 const copyOf = (t: ReturnType<typeof useTranslations<"agentWork">>): AgentWorkCopy => ({
     paneLabel: t("paneLabel"),
-    goalsTitle: t("goalsTitle"),
-    goalsEmpty: t("goalsEmpty"),
-    goalDone: t("goalMarkDone"),
-    goalNewLabel: t("goalNewLabel"),
-    goalNewPlaceholder: t("goalNewPlaceholder"),
-    goalAdd: t("goalAdd"),
     tasksTitle: t("tasksTitle"),
     tasksEmpty: t("tasksEmpty"),
     taskClose: t("taskClose"),
@@ -61,19 +54,11 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
     const slotLabels = useSlotLabels()
     const { slot, reload } = useAgentWork(route.module, route.installationId)
     const actions = useAgentWorkActions(route.installationId)
-    const [goalTitle, setGoalTitle] = useState("")
     const [preset, setPreset] = useState<AgentWorkPreset>("daily_at")
     const [atTime, setAtTime] = useState("09:00")
-    const [openForm, setOpenForm] = useState<"goal" | "clock" | null>(null)
+    const [openForm, setOpenForm] = useState<"clock" | null>(null)
     const needsTime = presetNeedsTime(preset)
     const isTimeInvalid = needsTime && atTime !== "" && !TIME_OF_DAY.test(atTime)
-    const title = goalTitle.trim()
-    const addGoal = async (): Promise<void> => {
-        if (await actions.addGoal(title)) {
-            setGoalTitle("")
-            setOpenForm(null)
-        }
-    }
     return (
         <AgentWorkPanesBase
             props={{
@@ -83,8 +68,6 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
                 slotLabels: slotLabels(t("emptyWork")),
                 grid: agentWorkGridOf(),
                 draft: {
-                    goalTitle,
-                    canAddGoal: title !== "" && title.length <= GOAL_TITLE_MAX,
                     preset,
                     presetOptions: [
                         { id: "every_15m", label: t("optEvery15m") },
@@ -101,9 +84,6 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
                 isSaving: actions.isSaving,
             }}
             on={{
-                goalTitle: (value) => setGoalTitle(value.slice(0, GOAL_TITLE_MAX)),
-                addGoal: () => void addGoal(),
-                closeGoal: (goal) => void actions.closeGoal(goal),
                 preset: (value) => setPreset(presetOf(value) ?? "daily_at"),
                 atTime: setAtTime,
                 addClock: () => {

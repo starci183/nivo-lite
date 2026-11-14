@@ -27,6 +27,7 @@ const feed = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => ({
     status: "connected",
     lastError: null,
     environment: "test",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

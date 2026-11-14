@@ -18,24 +18,16 @@ export interface NivoWriteResult {
     readonly inserted: number
     /** Items that already existed (changed or not). */
     readonly updated: number
+    /** Items whose `vector.sync` job was written with the change (every item written: the job plans only the difference). */
+    readonly queued: number
 }
 
-/** One item that needs a vector, with the text to embed. */
-export interface NivoUnembedded {
-    /** The item id. */
-    readonly id: string
-    /** The text to embed: title and body. */
-    readonly text: string
-}
-
-/** Vectors to give to items. */
-export interface NivoVectorWrite {
-    /** The model that made the vectors. */
-    readonly model: string
-    /** The item ids. */
-    readonly ids: ReadonlyArray<string>
-    /** One vector per id, in the pgvector text form. */
-    readonly vectors: ReadonlyArray<string>
+/** What removing the items the folder no longer has did. */
+export interface NivoRemoveResult {
+    /** Items removed. */
+    readonly removed: number
+    /** Items whose `vector.sync` job was written with the removal (their points go). */
+    readonly queued: number
 }
 
 /** The knowledge folder to read, or undefined for the default one. */
@@ -49,8 +41,8 @@ export interface NivoSeedResult {
     readonly updated: number
     /** Items removed because the folder no longer has them. */
     readonly removed: number
-    /** Items given a vector. */
-    readonly embedded: number
+    /** Items whose `vector.sync` job was written: the index embeds what changed and drops what went (the api's worker runs it). */
+    readonly queued: number
 }
 
 /** One item of the base knowledge as the Knowledge page lists it. */
@@ -77,9 +69,9 @@ export interface NivoEntry {
 export interface NivoQuery {
     /** The module of the reader: its own items and those of the core folder. */
     readonly module: string
-    /** The query vector in the pgvector text form, or null. */
-    readonly vector: string | null
-    /** The model the vector comes from; items of another model score by words only. */
+    /** The query vector, or null (words only). */
+    readonly vector: ReadonlyArray<number> | null
+    /** The embedding identity the vector comes from: only points of it are compared; null with no vector. */
     readonly model: string | null
     /** The words of the query as a tsquery text (`a | b`), or null. */
     readonly tsquery: string | null

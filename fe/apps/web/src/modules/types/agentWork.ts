@@ -16,19 +16,6 @@ export interface AgentWorkStatusView {
     readonly stopNotice: string
 }
 
-/** One goal of the agent. */
-export interface AgentWorkGoalView {
-    readonly id: string
-    readonly title: string
-    readonly detail: string
-    /** "Active", "Paused" and so on. */
-    readonly statusLabel: string
-    readonly dueLabel: string
-    /** A goal that is done or dropped is no longer asked of the agent. */
-    readonly isOpen: boolean
-    readonly source: string
-}
-
 /** One task the agent is on. */
 export interface AgentWorkTaskView {
     readonly id: string
@@ -57,7 +44,6 @@ export interface AgentWorkTriggerView {
     readonly atTime: string
     readonly timeZone: string
     readonly eventName: string
-    readonly probeKey: string
 }
 
 /** One row of the turn list: why it woke, what it did, how long it took. No prompt and no customer words. */
@@ -83,11 +69,10 @@ export interface AgentWorkTurnsView {
 /** Everything the Work tab draws, every word resolved. */
 export interface AgentWorkView {
     readonly status: AgentWorkStatusView
-    readonly goals: ReadonlyArray<AgentWorkGoalView>
     readonly tasks: ReadonlyArray<AgentWorkTaskView>
     readonly triggers: ReadonlyArray<AgentWorkTriggerView>
     readonly turns: AgentWorkTurnsView
-    /** Owners and managers change goals, triggers and tasks. */
+    /** Owners and managers change triggers and tasks. */
     readonly canEdit: boolean
 }
 

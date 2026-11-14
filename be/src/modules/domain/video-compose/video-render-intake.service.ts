@@ -94,7 +94,7 @@ export class VideoRenderIntakeService {
     }
 
     private async taken(delivery: RenderDoorDelivery): Promise<RenderIntakeOutcome> {
-        const port = this.registry.of(delivery.provider)
+        const port = this.registry.liveOf(delivery.provider)
         const webhook = port?.webhook ?? null
         if (port === undefined || webhook === null) return "unknown_provider"
         const { rawBody } = delivery

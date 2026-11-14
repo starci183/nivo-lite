@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
 import {
@@ -30,6 +31,7 @@ import {
     addedCounts,
     oldIdsOf,
     perStore,
+    reseedGraphsOf,
     toolRenameMapOf,
     workflowCountsOf,
     workflowReseedOf,
@@ -53,6 +55,9 @@ const NOTE = "re-seed levels2026_11_12: the template's current version"
 
 /** One agent's part of a workspace: its plan, its tick top-up, the workflows the install road adds, and (executed) whether it failed. */
 interface AgentPart {
+    readonly installation: InstallationRecord
+    readonly agentId: string
+    readonly templates: ReadonlyArray<CurrentTemplate>
     readonly plans: ReadonlyArray<PlannedReseed>
     readonly added: number
     readonly failed: ReseedFailure | null
@@ -73,6 +78,9 @@ const codeOf = (cause: unknown): string =>
  *    install road (`AgentWorkflowsService.seedAgent`: the primary workflow adopts the flow, a template the agent holds no workflow of
  *    becomes one), a NEW version holding the current graph for every other workflow of an installed template that runs another graph
  *    with its provenance (`AgentWorkflowsService.adoptTemplateVersion`, author system), and a pause for a workflow whose template is gone (`setStatus`);
+ *    the plans of ALL agents of the workspace are read first: the re-seed of a workspace is one change, so every hand-off a written
+ *    version holds (and every caller of it) is judged against the graphs the whole plan writes (`reseedGraphsOf`), never against a
+ *    callee the same re-seed has not reached yet;
  * Ability ticks, node rows, endpoint rights and shadow tallies are REMOVED concepts (nivo-frame `rights`): nothing here writes them.
  * Old versions are NOT deleted: workflow and graph versions are append-only rows of their core tables, and run
  * pins (history) point at them; the new version is the one that runs. Dry unless asked to execute; a second run finds nothing to do.
@@ -141,10 +149,17 @@ export class ToolReseedService {
         const notes: Array<string> = []
         counts.tool_grants = await this.grantsRekeyed(workspaceId, map, executed)
         const active = await this.workflows.activeGraphsOf(workspaceId)
-        const parts: Array<AgentPart> = []
+        const planned: Array<AgentPart> = []
         await eachInOrder(await this.installations.list(workspaceId), async (installation) => {
-            const part = await this.agent(installation, active, map, executed)
-            if (part !== null) parts.push(part)
+            const part = await this.agent(installation, active, map)
+            if (part !== null) planned.push(part)
+        })
+        // The workspace's re-seed is ONE change: every hand-off is judged against the graphs ALL its agents' plans write, so two ends of
+        // a hand-off that change together pass whichever is written first (a caller that passes a new input to a callee that takes it now).
+        const together = new Map(planned.flatMap((part) => reseedGraphsOf(part.plans, part.templates)))
+        const parts: Array<AgentPart> = []
+        await eachInOrder(planned, async (part) => {
+            parts.push(executed ? await this.executed(part, together) : part)
         })
         const plans = parts.flatMap((part) => part.plans)
         const added = parts.reduce((sum, part) => sum + part.added, 0)
@@ -166,12 +181,11 @@ export class ToolReseedService {
         }
     }
 
-    /** One agent's plan and, when executing, its re-seed; null for an installation with no agent. A failure is kept, the rest goes on. */
+    /** One agent's plan; null for an installation with no agent. */
     private async agent(
         installation: InstallationRecord,
         active: ReadonlyArray<ActiveWorkflowGraph>,
         map: ToolRenameMap,
-        executed: boolean,
     ): Promise<AgentPart | null> {
         const { agentId, workspaceId, moduleKey } = installation
         if (agentId === null) return null
@@ -197,13 +211,18 @@ export class ToolReseedService {
         const plans = workflowReseedOf(held, templates, standing, old)
         const input = { workspaceId, agentId, installationId: installation.id, moduleKey }
         const added = (await this.installer.plan(input)).filter((row) => row.action === "add").length
-        if (!executed) return { plans, added, failed: null }
+        return { installation, agentId, templates, plans, added, failed: null }
+    }
+
+    /** One agent's re-seed, its hand-offs judged against the workspace's set (`together`). A failure is kept, the rest goes on. */
+    private async executed(part: AgentPart, together: ReadonlyMap<string, GraphSpec>): Promise<AgentPart> {
+        const { installation, agentId } = part
         try {
-            await this.applied(installation, agentId, plans, templates, added)
-            return { plans, added, failed: null }
+            await this.applied(installation, agentId, part.plans, part.templates, part.added, together)
+            return part
         } catch (cause: unknown) {
-            this.logger.error(ToolReseedLogEvent.AgentFailed, cause, { workspaceId, agentId })
-            return { plans, added, failed: { agentId, code: codeOf(cause) } }
+            this.logger.error(ToolReseedLogEvent.AgentFailed, cause, { workspaceId: installation.workspaceId, agentId })
+            return { ...part, failed: { agentId, code: codeOf(cause) } }
         }
     }
 
@@ -226,6 +245,7 @@ export class ToolReseedService {
         plans: ReadonlyArray<PlannedReseed>,
         templates: ReadonlyArray<CurrentTemplate>,
         added: number,
+        together: ReadonlyMap<string, GraphSpec>,
     ): Promise<void> {
         const { workspaceId, moduleKey } = installation
         const primary = templates.find((template) => template.primary)
@@ -248,7 +268,7 @@ export class ToolReseedService {
             if (template === undefined) return
             // The template's current version as shipped, graph and provenance: a later update merges from a version that exists.
             const pick = { templateId: template.id, templateVersion: template.version }
-            await this.workflows.adoptTemplateVersion(workspaceId, plan.workflowId, pick, SYSTEM, plan.latestNumber, NOTE)
+            await this.workflows.adoptTemplateVersion(workspaceId, plan.workflowId, pick, SYSTEM, plan.latestNumber, NOTE, together)
         })
     }
 

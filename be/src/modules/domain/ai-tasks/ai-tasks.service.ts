@@ -30,6 +30,7 @@ import { failedTryEntryOf, promptCharsOf } from "./failed-try.policy"
 import { modelChoiceOf, modelFactsOf, servedModelOf, type ModelChoice } from "./model-choice.policy"
 import { modelPickerOf, type ModelPicker } from "./model-picker.mapper"
 import {
+  NOT_FITTING,
   NOT_JSON,
   failedTries,
   fallbackOf,
@@ -89,6 +90,19 @@ interface Ran {
     readonly text: string
     /** The structured output, or null. */
     readonly parsed: OptionalJsonRecord
+}
+
+/** The most issues of a misfit answer told back to the model. */
+const ISSUES_TOLD_MAX = 8
+
+/** What of a JSON object does not fit the schema, as one line the model reads (`<path>: <message>; ...`), or null when it fits. */
+const issuesOf = (schema: TaskSchema, value: JsonRecord): string | null => {
+    const checked = schema.safeParse(value)
+    if (checked.success) return null
+    return checked.error.issues
+        .slice(0, ISSUES_TOLD_MAX)
+        .map((issue) => `${issue.path.length === 0 ? "(root)" : issue.path.map(String).join(".")}: ${issue.message}`)
+        .join("; ")
 }
 
 const JSON_AGAIN = "Answer again with ONLY the JSON object described above. No prose, no code fences."
@@ -481,10 +495,16 @@ export class AiTasksService {
         const options: CallOptions = { schema, question: null, reasoning: node.reasoning, purpose: node.purpose }
         const ran = await this.run(scope, messages, true, meta, options, tries)
         const parsed = ran.parsed ?? this.parseObject(ran.text)
-        if (parsed !== null) return parsed
-        tries.failures.push(NOT_JSON)
+        // A JSON object that does not FIT the schema is a failed try too (P-FIX2, DEF-2): it is asked again with what did not fit, never
+        // returned loose for the caller's parse to throw on.
+        const issues = parsed === null ? null : issuesOf(schema, parsed)
+        if (parsed !== null && issues === null) return parsed
+        tries.failures.push(parsed === null ? NOT_JSON : NOT_FITTING)
         if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.JsonNotReturned, tries)
-        const again: ChatMessage = { role: "system", content: JSON_AGAIN }
+        const again: ChatMessage = {
+            role: "system",
+            content: issues === null ? JSON_AGAIN : `${JSON_AGAIN} Your last answer did not fit it: ${issues}`,
+        }
         return this.completeJson(scope, [...messages, again], meta, schema, tries, node)
     }
 

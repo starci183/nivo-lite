@@ -1,3 +1,5 @@
+import type { ReactNode } from "react"
+import type { ChatMessageFile } from "./chatbot-inbox"
 import type { DataSlot, SlotLabels } from "./slot"
 
 /** The words a person's data is worded with, resolved once by the connected half (the mapping below it holds no copy). */
@@ -16,6 +18,16 @@ export interface ContactWords {
     readonly reason: Readonly<Record<"phone_verified" | "email_verified" | "link_token" | "member_approved", string>>
     readonly whyClaimed: string
     readonly whySameName: string
+    /** The name of the connection a channel identity lives on ("Flower shop"); null when the app does not know it. */
+    readonly account: (connectionId: string) => string | null
+    /** The label of how a piece of work ended ("Done", "Failed", "Passed over"); null for a status the app has no word for. */
+    readonly noteStatus: (status: string) => string | null
+    /** What a piece of work is called when the back end names neither its workflow nor its step. */
+    readonly noteUnknownWork: string
+    /** "round 2": which turn of a repeated step a row is. */
+    readonly noteRound: (round: number) => string
+    /** "Held by An": the staff hold the conversation; the name is null when the seat is gone. */
+    readonly hold: (name: string | null) => string
 }
 
 /** One channel a person is reached on: its name and its mark. */
@@ -43,16 +55,19 @@ export interface ContactsListData {
     readonly hasMore: boolean
 }
 
-/** One way to reach the person, with how it is proven and why it is on this person. */
+/** One way to reach the person, with why it is on this person. */
 export interface ContactIdentityView {
     readonly id: string
+    /** "Zalo · Flower shop" for a channel, else the kind ("Phone"). */
     readonly title: string
-    readonly value: string
-    readonly proof: string
+    /** The phone or the mail; null for a channel (its own id is no one's business). */
+    readonly description: string | null
     /** The mark of the channel, when the app has one. */
     readonly logo: string | null
-    /** The merge reason ("same phone"); null for an identity the person was met with. */
-    readonly reason: string | null
+    /** Why it is linked ("vouched by the channel", "same phone"); null when nothing is known. */
+    readonly why: string | null
+    /** "Held by An": the staff hold the conversation on this channel account; null when the agents speak on it. */
+    readonly hold: string | null
 }
 
 /** One fact the agents remember about the person. */
@@ -61,11 +76,13 @@ export interface ContactFactView {
     readonly value: string
 }
 
-/** One step outcome the agents remember. */
+/** One piece of work the agents did: which work it was, how it ended (a label in the workspace language) and when. */
 export interface ContactNoteView {
     readonly id: string
+    /** The workflow's label, and the step's when the app has one ("Sales · Consult"); never a key. */
     readonly title: string
-    readonly text: string
+    /** How the step ended, as a label ("Done"); null for a status the app has no word for. */
+    readonly status: string | null
     readonly time: string
 }
 
@@ -115,6 +132,85 @@ export interface ContactModuleAgentView {
     readonly blocks: ReadonlyArray<ContactModuleBlockView>
 }
 
+/** One tab of the conversation block: every channel, or one channel the person is on. */
+export interface ContactHistoryTabView {
+    readonly key: string
+    readonly label: string
+}
+
+/** Who said a line: the person, an agent, or a member of the shop. */
+export type ContactHistoryVoice = "person" | "agent" | "staff"
+
+/** The words an order card of a line is labelled with. */
+export interface ContactHistoryOrderWords {
+    /** The label of the total. */
+    readonly total: string
+    /** The label of the delivery line. */
+    readonly deliver: string
+    /** The mark of an order that was paid. */
+    readonly paid: string
+    /** The mark of an order that waits for its payment. */
+    readonly pending: string
+}
+
+/** The order a line told, as the sender snapshotted it: its number, whether it was paid, and the body the app draws an order with (items, total, delivery). */
+export interface ContactHistoryOrderView {
+    readonly orderNo: string
+    /** The mark of the order: paid, or waiting for its payment. */
+    readonly status: { readonly label: string; readonly isPaid: boolean }
+    /** The body of the order (the registered order view's own drawing); null when the registry has none. */
+    readonly body: ReactNode
+}
+
+/** One line of the conversation: who said it, when, the words and the files. */
+export interface ContactHistoryLineView {
+    readonly id: string
+    readonly voice: ContactHistoryVoice
+    /** "Customer", "Lan (agent)" or "An (staff)": the caption above the bubble. */
+    readonly author: string
+    /** The time of day. */
+    readonly time: string
+    readonly text: string
+    readonly files: ReadonlyArray<ChatMessageFile>
+    /** The order card the line carries; null when it told none or its snapshot does not read. */
+    readonly order: ContactHistoryOrderView | null
+    /** The day separator drawn before the line ("Today · Zalo"); null when the line shares the one before. */
+    readonly separator: string | null
+}
+
+/** The lines of the conversation read so far (oldest first) and whether older ones wait. */
+export interface ContactHistoryThread {
+    readonly lines: ReadonlyArray<ContactHistoryLineView>
+    /** Older lines exist on a route of the tab. */
+    readonly hasOlder: boolean
+    readonly isLoadingOlder: boolean
+}
+
+/** What the conversation block of a person draws: its tabs, where the workbench is, and the thread as one data slot. */
+export interface ContactHistoryView {
+    readonly tabs: ReadonlyArray<ContactHistoryTabView>
+    readonly selectedKey: string
+    /** The workbench of the agent that spoke last on the route the tab shows (on every channel: the most recently active route); null when no agent has spoken. */
+    readonly workbenchHref: string | null
+    /** The thread: loading, failed, nothing said yet, or the lines. */
+    readonly thread: DataSlot<ContactHistoryThread>
+}
+
+/** The words the conversation lines are worded with, resolved once by the connected half. */
+export interface ContactHistoryWords {
+    readonly person: string
+    /** "Lan (agent)" for the agent that told a line (null: the server names none). */
+    readonly agent: (name: string | null) => string
+    /** "An (staff)" for the member who typed a line (null: the seat is gone). */
+    readonly staff: (name: string | null) => string
+    /** "Today", "Yesterday" or the date, then the channel when the tab is every channel. */
+    readonly day: (iso: string, channel: string | null) => string
+    /** The time of day of a line. */
+    readonly time: (iso: string) => string
+    /** The order card of a line's `orderJson` text; null when the text is no order (the line then shows its words alone). */
+    readonly order: (orderJson: string | null) => ContactHistoryOrderView | null
+}
+
 /** The words of the edit drawer. */
 interface ContactEditCopy {
     readonly title: string
@@ -156,6 +252,7 @@ export interface ContactsPanesCopy {
     readonly clearSearch: string
     readonly listTitle: string
     readonly listLabel: string
+    readonly channelsLabel: string
     readonly moreLabel: string
     readonly emptyBody: string
     readonly noMatchTitle: string
@@ -171,6 +268,7 @@ export interface ContactsPanesCopy {
     readonly errorBody: string
     readonly cancelLabel: string
     readonly editLabel: string
+    readonly noWayLine: string
     readonly rowMenuLabel: string
     readonly unlinkLabel: string
     readonly linkIdentityLabel: string
@@ -180,10 +278,14 @@ export interface ContactsPanesCopy {
     readonly memoryEmpty: string
     readonly forgetLabel: string
     readonly notesTitle: string
+    readonly historyTitle: string
+    readonly historyTabsLabel: string
+    readonly historyTabAll: string
+    readonly historyWorkbench: string
+    readonly historyFooter: string
+    readonly historyOlder: string
     readonly modulesTitle: string
     readonly modulesNote: string
-    readonly modulesEmptyTitle: string
-    readonly modulesEmptyBody: string
     readonly modulesMore: string
     readonly suggestionsTitle: string
     readonly suggestionViewLabel: string
@@ -246,6 +348,9 @@ export interface ContactsPanesBaseProps {
         /** What each installed agent's module knows about the open person; null while the address names none. */
         readonly modules: DataSlot<ReadonlyArray<ContactModuleAgentView>> | null
         readonly modulesLabels: SlotLabels
+        readonly historyLabels: SlotLabels
+        /** The conversation of the open person across every channel; null while the address names none. */
+        readonly history: ContactHistoryView | null
         readonly selectedId: string | null
         readonly query: string
         readonly edit: ContactEditView
@@ -260,6 +365,10 @@ export interface ContactsPanesBaseProps {
         readonly retryList: () => void
         readonly retryDetail: () => void
         readonly retryModules: () => void
+        /** Narrows the conversation to one channel, or back to every channel. */
+        readonly selectHistoryTab: (key: string) => void
+        readonly historyOlder: () => void
+        readonly retryHistory: () => void
         readonly select: (id: string) => void
         readonly loadMore: () => void
         readonly goHome: () => void

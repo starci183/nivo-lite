@@ -25,7 +25,6 @@ const record = (over: Partial<AgentTriggerRecord> = {}): AgentTriggerRecord => (
     atTime: null,
     timeZone: "Asia/Ho_Chi_Minh",
     eventName: null,
-    probeKey: "invoices_due",
     enabled: true,
     seedKey: null,
     nextRunAt: null,

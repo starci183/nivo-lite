@@ -40,7 +40,16 @@ export interface NodeEffectStore {
     ofStep(workspaceId: string, runId: string, stepKey: string, limit: number): Promise<ReadonlyArray<StoredEffect>>
     /** Writes the row of a key once: true when this call wrote it. */
     insert(workspaceId: string, effect: EffectInsert): Promise<boolean>
+    /**
+     * Settles again a row kept with an UNKNOWN outcome (subject kind `unknownKind`) once its call was made again (a `repeatable` tool,
+     * rule Q-3): the subject and facts the new act answered replace the unknown one. True when this call moved the row (a row of any
+     * other kind is never touched).
+     */
+    resettle(workspaceId: string, effectKey: string, unknownKind: string, subject: EffectResettle): Promise<boolean>
 }
+
+/** What a row kept as outcome-unknown is settled to once its repeatable call acted again. */
+export type EffectResettle = Pick<StoredEffect, "subjectEntity" | "subjectId" | "facts">
 
 /** The injection token of the effect ledger store. */
 export const NODE_EFFECT_STORE: unique symbol = Symbol("NODE_EFFECT_STORE")

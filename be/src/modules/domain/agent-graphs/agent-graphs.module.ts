@@ -4,6 +4,7 @@ import { NODE_REQUESTS_GATE } from "@modules/domain/tools"
 import { PROVIDER_TRIGGER_RECEIVERS } from "@modules/domain/provider-triggers"
 import { AgentWorkflowTriggerReceiversService } from "./agent-workflow-trigger-receivers.service"
 import { AgentNodeRequestsService } from "./agent-node-requests.service"
+import { AgentNodeRoutesService } from "./agent-node-routes.service"
 import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
 import { AgentGraphFlowService } from "./agent-graph-flow.service"
 import { AGENT_GRAPHS_OPTIONS, GRAPH_FACT_READERS } from "./agent-graphs.decorators"
@@ -36,7 +37,7 @@ import { AgentWorkflowsAdminService } from "./agent-workflows-admin.service"
 import { AgentWorkflowStartService } from "./agent-workflow-start.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphRawRowsService } from "./agent-graph-raw-rows.service"
-import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
+import { AgentGraphSubjectHoldsService } from "./agent-graph-subject-holds.service"
 import { AgentGraphCallGuardService } from "./agent-graph-call-guard.service"
 import { AgentGraphHoursGateService } from "./agent-graph-hours-gate.service"
 import { AGENT_GRAPH_STORE } from "./agent-graph-store.port"
@@ -148,6 +149,8 @@ const WHOLE: Part = {
         AgentWorkflowRecordsService,
         TypeormAgentWorkflowStore,
         AgentNodeRequestsService,
+        // The routes a step cannot follow here (`ctx.run.unreachable`), which the node host reads (apps/api binds it on graph-nodes).
+        AgentNodeRoutesService,
         GraphFactsService,
         OUTGOING_FACTS,
         AgentGraphContextService,
@@ -160,7 +163,7 @@ const WHOLE: Part = {
         AgentGraphWatchService,
         AgentGraphSetupService,
         AgentGraphContractSetupService,
-        AgentGraphFreezeGateService,
+        AgentGraphSubjectHoldsService,
         AgentGraphCallGuardService,
         AgentGraphHoursGateService,
         AgentGraphWakeNoticesService,

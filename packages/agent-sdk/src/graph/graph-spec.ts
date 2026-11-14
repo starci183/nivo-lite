@@ -5,7 +5,6 @@ import {
     BRANCH_FIELD,
     graphNodeProblems,
     inputSourcesOf,
-    nodeSagaOf,
     TRIGGER_SOURCE,
     type NodeDefinition,
     type NodeIndex,
@@ -94,30 +93,6 @@ const refProblems = (spec: GraphSpec, nodes: ReadonlyMap<string, GraphSpecNode>)
             .map((source): GraphSpecProblem => ({ code: "GRAPH_REF_NOT_UPSTREAM", at: `${node.key}<-${source}` }))
     })
 
-/**
- * The saga rule: a compensable node reachable after a pivot could never be undone (the run goes forward past a pivot, never back), so
- * each one is named. A node not installed is judged elsewhere.
- */
-const sagaProblems = (
-    spec: GraphSpec,
-    nodes: ReadonlyMap<string, GraphSpecNode>,
-    index: NodeIndex,
-): ReadonlyArray<GraphSpecProblem> => {
-    const sagaOf = (node: GraphSpecNode): string | null => {
-        const definition = index.nodes.get(node.step)
-        return definition === undefined ? null : nodeSagaOf(definition, index)
-    }
-    const after = spec.nodes
-        .filter((node) => sagaOf(node) === "pivot")
-        .flatMap((pivot) => [...reachedFrom(nodes, edgesOf(pivot))])
-    return [...new Set(after)]
-        .filter((key) => {
-            const node = nodes.get(key)
-            return node !== undefined && sagaOf(node) === "compensable"
-        })
-        .map((at): GraphSpecProblem => ({ code: "GRAPH_COMPENSABLE_AFTER_PIVOT", at }))
-}
-
 /** The members of `granted` that `needed` does not contain. */
 const surplus = (granted: ReadonlyArray<string>, needed: ReadonlyArray<string>): ReadonlyArray<string> =>
     [...new Set(granted)].filter((item) => !needed.includes(item))
@@ -135,8 +110,7 @@ const minimumProblems = (spec: GraphSpec, installed: ReadonlyArray<NodeDefinitio
 }
 
 /**
- * The problems of a graph spec against the installed nodes: its shape (keys, edges, references), the saga rule (nothing undoable after a
- * pivot), every node as `graphNodeProblems`
+ * The problems of a graph spec against the installed nodes: its shape (keys, edges, references), every node as `graphNodeProblems`
  * judges it under the spec's own grant, and a grant that holds more than its nodes need. A step that is not installed is
  * `NODE_UNKNOWN` (any built-in step but `stop`: a spec is composed of SDK nodes), and the minimum is not judged while one is missing.
  * The accounts a node asks for are judged by `nodeAccountProblems`, with what the host told of its kinds and ask-only operations
@@ -162,7 +136,6 @@ export const graphSpecProblems = (
         ...outcomeProblems(spec.outcomes, outcomeEndsOf(spec.nodes)),
         ...entryProblems(spec.entry, spec.contract),
         ...refProblems(spec, nodes),
-        ...sagaProblems(spec, nodes, index),
         ...judged,
         ...nodeAccountProblems(spec.nodes, index, accounts),
         ...(installed.length === working.length ? minimumProblems(spec, installed) : []),

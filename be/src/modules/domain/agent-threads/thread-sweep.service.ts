@@ -11,6 +11,7 @@ import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import type { RunStop } from "./stops/run-stop.contracts"
+import { endsTheRun, stopEndCodeOf } from "./stops/stop-gate.policy"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
 import type { ThreadRunEndParams, ThreadStepFactParams } from "./thread-projection.contracts"
@@ -38,7 +39,7 @@ const ARM_GRACE_MS = 2 * 60_000
 const OPEN_RUNS: ReadonlyArray<string> = ["running", "waiting"]
 
 /** The statuses of a run that is closed. */
-const CLOSED_RUNS: ReadonlySet<string> = new Set(["done", "failed", "cancelled", "dead", "compensated"])
+const CLOSED_RUNS: ReadonlySet<string> = new Set(["done", "failed", "cancelled", "dead"])
 
 /** The engine a thread run is marked with. */
 const THREAD_ENGINE = "langgraph"
@@ -60,7 +61,7 @@ export interface ThreadSweepReport {
     readonly fired: number
 }
 
-/** A pass of another capability that rides the thread sweep, once per workspace (the lead freezes' release of their holds). */
+/** A pass of another capability that rides the thread sweep, once per workspace (the subject holds' backstop release of held wakes). */
 export type ThreadSweepRider = (workspaceId: string) => Promise<void>
 
 /** What handling one item did, for the report. */
@@ -73,13 +74,9 @@ const textOf = (value: unknown): string | null => (typeof value === "string" && 
 const numberOf = (value: unknown, fallback: number): number =>
     typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback
 
-/** The effect a step row keeps, read back; a row with none it can read is a pivot (the safe side: nothing is ever undone). */
-const effectOf = (value: unknown): StepEffect => {
-    if (isRecord(value) && value.kind === "read") return { kind: "read" }
-    if (isRecord(value) && value.kind === "compensable" && typeof value.compensation === "string")
-        return { kind: "compensable", compensation: value.compensation }
-    return { kind: "pivot" }
-}
+/** The effect a step row keeps, read back; a row with none it can read is a write (the safe side). */
+const effectOf = (value: unknown): StepEffect =>
+    isRecord(value) && value.kind === "read" ? { kind: "read" } : { kind: "write" }
 
 /** The step a stopped thread waits on, as its stop's question names it; null when it names none. */
 const stoppedStepOf = (view: ThreadView): string | null => {
@@ -145,7 +142,7 @@ export class ThreadSweepService {
     ) {}
 
     /**
-     * Adds a pass run once per workspace after the threads' own (the lead freezes register their release here, so the threads import
+     * Adds a pass run once per workspace after the threads' own (the subject holds register their backstop here, so the threads import
      * nothing of them). A failing rider is logged and never stops the sweep.
      */
     alsoPerWorkspace(rider: ThreadSweepRider): void {
@@ -265,11 +262,11 @@ export class ThreadSweepService {
     /** A thread that ended while its run row still reads open: the row closes as the thread did. */
     private async endedRepair(ref: ThreadRef): Promise<Done> {
         const stops = await this.records.ofRun(ref.workspaceId, ref.runId)
-        const skipped = stops.find((stop) => stop.decision?.kind === "skip")?.decision ?? null
+        const skipped = stops.find((stop) => endsTheRun(stop.decision))?.decision ?? null
         const end: ThreadRunEndParams =
             skipped === null
                 ? { outcome: "done", code: null, by: null, at: this.clock.now() }
-                : { outcome: "skipped", code: "skipped_by_founder", by: skipped.by, at: new Date(skipped.at) }
+                : { outcome: "skipped", code: stopEndCodeOf(skipped), by: skipped.by, at: new Date(skipped.at) }
         return this.repaired(ref, await this.projection.runEnded(ref, end))
     }
 

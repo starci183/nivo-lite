@@ -31,6 +31,6 @@ export class VideoComposeModule extends ConfigurableModuleClass implements OnApp
 
     /** Registers the render trigger of every compose provider that registered its port. */
     onApplicationBootstrap(): void {
-        triggerDeclarations.register(...this.composers.all().map((port) => renderTriggerOf(port.provider)))
+        triggerDeclarations.register(...this.composers.providers().map((provider) => renderTriggerOf(provider)))
     }
 }

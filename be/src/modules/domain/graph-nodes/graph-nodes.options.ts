@@ -14,4 +14,6 @@ export interface GraphNodesOptions {
      * with no node named, every step's agent runs the runner's JSON loop. `loops` is the provider of the `NodeAgentLoops` port.
      */
     readonly agentLoop?: { readonly nodes: ReadonlyArray<string>; readonly loops?: InjectionToken | undefined } | undefined
+    /** Provider of the `NodeRouteReach` port (the routes a step cannot follow in the workspace); absent: every route is open. */
+    readonly routes?: InjectionToken | undefined
 }

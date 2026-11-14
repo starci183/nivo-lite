@@ -1,4 +1,4 @@
-import type { MeaningHit, StoredPassage, WordHit, WordMatch } from "./passage-search.contracts"
+import type { StoredPassage, WordHit, WordMatch } from "./passage-search.contracts"
 import { placeOfRow } from "./passage-place.policy"
 import { candidateGroupsOf, totalWeightOf, type WordTerms } from "./word-terms.policy"
 
@@ -7,9 +7,6 @@ export const LEG_MAX = 40
 
 /** The most passages one ordered read of a document answers. */
 export const STRETCH_MAX = 12
-
-/** A passage farther than this cosine distance from the query is no hit of the meaning leg. */
-export const MEANING_MAX_DISTANCE = 0.8
 
 /**
  * The words of a query as the index reads them: folded by the same `public.knowledge_fold` the stored `fts` uses and parsed by the
@@ -107,10 +104,6 @@ export const rankedWordsOf = (alias: string, words: WordTerms): RankedWords | nu
  */
 export const isComplete = (coverage: number, total: number): boolean => total >= 2 && coverage >= total
 
-/** The cosine distance of a passage alias to the query vector: the ORDER BY the HNSW index serves; bind `:vector`. */
-export const meaningDistance = (alias: string): string =>
-    `(${alias}.embedding OPERATOR(extensions.<=>) CAST(:vector AS extensions.vector))`
-
 /** A passage row as the statements of this capability name its columns. */
 export interface PassageRawRow {
     /** The passage id. */
@@ -133,8 +126,6 @@ export interface PassageRawRow {
     readonly placeLabel: string | null
     /** The text rank, on a row of the word leg. */
     readonly rank?: unknown
-    /** The cosine distance, on a row of the meaning leg. */
-    readonly distance?: unknown
     /** The weight of the query terms the passage holds, on a row of the ranked word leg. */
     readonly coverage?: unknown
 }
@@ -168,13 +159,6 @@ export const wordHitsOf = (
     rows
         .map((row) => ({ ...storedPassageOf(row), rank: numberOf(row.rank), complete: completeOf(numberOf(row.coverage)) }))
         .toSorted((left, right) => right.rank - left.rank || left.id.localeCompare(right.id))
-
-/** The hits of the meaning leg in their one order (distance, then id), without the passages too far to be a hit. */
-export const meaningHitsOf = (rows: ReadonlyArray<PassageRawRow>): ReadonlyArray<MeaningHit> =>
-    rows
-        .map((row) => ({ ...storedPassageOf(row), distance: numberOf(row.distance) }))
-        .filter((hit) => hit.distance < MEANING_MAX_DISTANCE)
-        .toSorted((left, right) => left.distance - right.distance || left.id.localeCompare(right.id))
 
 /** A wanted count inside 1 and the most a read answers. */
 export const boundedOf = (wanted: number, most: number): number => Math.max(1, Math.min(Math.trunc(wanted), most))

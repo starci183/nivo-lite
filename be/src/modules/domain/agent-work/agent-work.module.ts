@@ -2,7 +2,6 @@ import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentTurnQueueModule } from "@modules/queues/agent-turn"
 import { AgentDrainService } from "./agent-drain.service"
 import { AgentEndedWakesService } from "./agent-ended-wakes.service"
-import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTurnsService } from "./agent-turns.service"
 import { AgentTasksService } from "./agent-tasks.service"
 import { AgentTriggersService } from "./agent-triggers.service"
@@ -17,7 +16,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-work.module-defin
 
 @Module({})
 /**
- * Agents as data: the wake, the lease that lets one turn run per scope, the drain that runs it, and the goals, tasks, triggers and
+ * Agents as data: the wake, the lease that lets one turn run per scope, the drain that runs it, and the tasks, triggers and
  * switches an agent keeps. It owns the tables, imports platform and the agent-turn queue, and takes the turn executor and the
  * handlers from the capabilities that supply them, so a wake with none is held, not lost.
  */
@@ -37,7 +36,6 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentWakeRetentionService,
                 AgentEndedWakesService,
                 AgentDrainService,
-                AgentGoalsService,
                 AgentTasksService,
                 AgentTriggersService,
                 AgentWorkSettingsService,
@@ -52,7 +50,6 @@ export class AgentWorkModule extends ConfigurableModuleClass {
                 AgentDrainService,
                 AgentTurnsService,
                 AgentWorkHandlersService,
-                AgentGoalsService,
                 AgentTasksService,
                 AgentTriggersService,
                 AgentWorkSettingsService,

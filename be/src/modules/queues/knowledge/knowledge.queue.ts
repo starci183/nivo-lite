@@ -5,7 +5,6 @@ import {
     KnowledgeJob,
     knowledgeDedupeKey,
     type DossierReviewPayload,
-    type KnowledgeReembedPayload,
     type PolicyDerivePayload,
     type PublicDraftPayload,
     type KnowledgeSourcePayload,
@@ -63,18 +62,6 @@ export class KnowledgeQueue {
         return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
             job: KnowledgeJob.Facts,
             dedupeKey: knowledgeDedupeKey(KnowledgeJob.Facts, payload.sourceId, `next:${step}`),
-        })
-    }
-
-    /** Enqueues the re-embedding of a workspace in the caller's transaction; one job per workspace and model, and `continuedAt` (epoch ms) keys the follow-up of a job that hit its batch limit. */
-    enqueueReembed(payload: KnowledgeReembedPayload, tx: EntityManager, continuedAt?: number): Promise<void> {
-        return this.outbox.write(tx, KNOWLEDGE_QUEUE, payload, {
-            job: KnowledgeJob.Reembed,
-            dedupeKey: knowledgeDedupeKey(
-                KnowledgeJob.Reembed,
-                payload.workspaceId,
-                continuedAt === undefined ? payload.model : `${payload.model ?? ""}:next:${continuedAt}`,
-            ),
         })
     }
 

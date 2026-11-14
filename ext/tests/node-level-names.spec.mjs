@@ -1,11 +1,11 @@
 import rule from "../lint/node-level-names.mjs"
 import { at, tester } from "./tester.mjs"
 
-const nodeFile = at("packages/blocks-core/src/nodes/sales/example.node.ts")
-const plainFile = at("packages/blocks-core/src/modules/sales/example.ts")
-const graphFile = at("packages/blocks-core/src/modules/sales/template/example.graph.ts")
+const nodeFile = at("packages/blocks-core/src/agents/sales/nodes/example.node.ts")
+const plainFile = at("packages/blocks-core/src/agents/sales/example.ts")
+const graphFile = at("packages/blocks-core/src/agents/sales/graphs/example.graph.ts")
 const feFile = at("fe/apps/web/src/modules/example/example.ts")
-const specFile = at("packages/blocks-core/src/modules/sales/specs/sales.workbench.ts")
+const specFile = at("packages/blocks-core/src/agents/sales/workbench/specs/sales.workbench.ts")
 
 const TEMPLATE = 'import { defineTemplateGraph, defineTemplateNode, trigger } from "@nivo-lite/agent-sdk/template"\n'
 

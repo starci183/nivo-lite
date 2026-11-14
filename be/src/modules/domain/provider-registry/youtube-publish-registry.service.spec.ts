@@ -12,9 +12,9 @@ describe("YoutubePublishRegistryService", () => {
     it("starts with no provider and answers undefined for a key nobody registered", async () => {
         const registry = await build()
 
-        expect(registry.all()).toEqual([])
+        expect(registry.providers()).toEqual([])
         expect(registry.has("youtube")).toBe(false)
-        expect(registry.of("youtube")).toBeUndefined()
+        expect(registry.liveOf("youtube")).toBeUndefined()
     })
 
     it("finds a registered provider by its key, and a second registration under the key replaces the first", async () => {
@@ -23,11 +23,11 @@ describe("YoutubePublishRegistryService", () => {
         const second = mock<YoutubePublishPort>({ provider: "youtube" })
 
         registry.register(first)
-        expect(registry.of("youtube")).toBe(first)
+        expect(registry.liveOf("youtube")).toBe(first)
         registry.register(second)
 
-        expect(registry.of("youtube")).toBe(second)
-        expect(registry.all()).toHaveLength(1)
-        expect(registry.all()[0]).toBe(second)
+        expect(registry.liveOf("youtube")).toBe(second)
+        expect(registry.providers()).toHaveLength(1)
+        expect(registry.liveOf(registry.providers()[0] ?? "")).toBe(second)
     })
 })

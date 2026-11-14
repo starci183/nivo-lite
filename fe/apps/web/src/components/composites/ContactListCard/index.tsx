@@ -1,12 +1,14 @@
-import { Cluster, EmptyNotice, Image, ListBox, SurfaceCard, Text, type ListBoxItem } from "@starci/grammar/common"
+import { Cluster, EmptyNotice, ListBox, LogoStack, SurfaceCard, Text, type ListBoxItem } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { ContactListRowView, ContactsListData, ContactsPanesCopy } from "@/modules/types"
-import { contactListClassNames } from "./classNames"
 
 /** What the list card draws and does. */
 interface ContactListCardProps {
-    readonly copy: Pick<ContactsPanesCopy, "listTitle" | "listLabel" | "moreLabel" | "noMatchTitle" | "noMatchBody">
+    readonly copy: Pick<
+        ContactsPanesCopy,
+        "listTitle" | "listLabel" | "channelsLabel" | "moreLabel" | "noMatchTitle" | "noMatchBody"
+    >
     readonly data: ContactsListData
     readonly selectedId: string | null
     readonly isLoading: boolean
@@ -14,41 +16,33 @@ interface ContactListCardProps {
     readonly onMore: () => void
 }
 
-/** The channels a person is reached on as one row of small marks: the channel's own mark, or its name when the app has none. */
-const channelsOf = (row: ContactListRowView) => (
-    <Cluster gap="inline">
-        {row.channels.map((channel) =>
-            channel.logo === null ? (
-                <Text key={channel.name} as="span" size="xs" tone="muted">
-                    {channel.name}
-                </Text>
-            ) : (
-                <div key={channel.name} className={contactListClassNames.mark}>
-                    <Image
-                        src={channel.logo}
-                        alt={channel.name}
-                        aspect="square"
-                        fit="contain"
-                        plate="none"
-                        width={16}
-                        height={16}
-                    />
-                </div>
-            ),
-        )}
-    </Cluster>
+/** The channels a person is reached on as the Grammar's row of logos, each named for assistive technology; a channel with no mark of its own wears a chat glyph. */
+const channelsOf = (row: ContactListRowView, label: string) => (
+    <LogoStack
+        label={label}
+        max={4}
+        items={row.channels.map((channel) => ({
+            id: channel.name,
+            label: channel.name,
+            ...(channel.logo === null
+                ? { iconSource: nivoIconSource("moduleChatbot", "leading") }
+                : { src: channel.logo }),
+        }))}
+    />
 )
 
-/** One person as a row of the list: the mark of the name, the name, when they were last seen (muted) and the channels under it. */
-const itemOf = (row: ContactListRowView): ListBoxItem => ({
+/** One person as a row of the list: the mark of the name, the name, and under it, when they were last seen (muted, at the start) and the channels (at the end). */
+const itemOf = (row: ContactListRowView, channelsLabel: string): ListBoxItem => ({
     id: row.id,
     label: row.name,
     description: (
-        <Text as="span" size="xs" tone="muted">
-            {row.time}
-        </Text>
+        <Cluster gap="inline" justify="between" wrap={false}>
+            <Text as="span" size="xs" tone="muted">
+                {row.time}
+            </Text>
+            {row.channels.length === 0 ? null : channelsOf(row, channelsLabel)}
+        </Cluster>
     ),
-    ...(row.channels.length === 0 ? {} : { footer: channelsOf(row) }),
     leading: <PersonAvatar name={row.isUnknown ? "?" : row.name} seed={row.id} size="md" />,
 })
 
@@ -75,7 +69,7 @@ export const ContactListCard = (props: ContactListCardProps) => (
                 const id = ids[0]
                 if (id !== undefined) props.onSelect(id)
             }}
-            items={props.data.rows.map((row) => itemOf(row))}
+            items={props.data.rows.map((row) => itemOf(row, props.copy.channelsLabel))}
             isLoading={props.isLoading}
             emptyContent={
                 <EmptyNotice

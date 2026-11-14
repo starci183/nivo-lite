@@ -76,7 +76,7 @@ const READ_CALLS: ReadonlyArray<ScriptedToolCall> = [
 /**
  * `webbooks.notice-draft` (Draft the customer notice): split from `webbooks.notice`, the second body step of the receivable
  * round. The agent reads the customer and the truths and writes the notice, or decides none (ADDENDUM 10); the node mails it with
- * `TOOL.mailMessageSend` (smtp, `auto`: the mail tool raises the draft a person edits and sends; it replaces the `send_email` work item),
+ * `TOOL.mailMessageSend` (smtp, mode `ask`: the mail goes once a person approves it on the card, MXW-1; it replaces the `send_email` work item),
  * carrying the project code as the record it is about. A refusal of the send (a shop's own `ask` declined included) is read in code
  * and answered as a fact: no reference, so the graph records no notice. A side node (`blocking: false`): without a sending mailbox the
  * round still tells the team and reports.
@@ -86,7 +86,9 @@ export const webbooksNoticeDraftNode: TemplateNode = defineTemplateNode({
     title: webbooksText("node.notice-draft.title"),
     description: { vi: "So\u1ea1n th\u01b0 nh\u1eafc n\u1ee3 cho kh\u00e1ch c\u00f3 kho\u1ea3n qu\u00e1 h\u1ea1n \u0111\u1ec3 ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch duy\u1ec7t r\u1ed3i g\u1eedi.", en: "Drafts the overdue-payment reminder for the customer for the owner to approve and send." },
     tools: [...READS, TOOL.mailMessageSend],
-    mode: "auto",
+    // R83 (owner, interim; the CEO reviews later): AI-written mail about money or a commitment asks, a person approves the whole
+    // message on the approval card before it goes (`ask`), as the package's own words ("a draft a person sends") say.
+    mode: "ask",
     accounts: [CRM_NIVOWEB_PROVIDER, PROVIDER.smtp],
     input: noticeItemSchema,
     output,

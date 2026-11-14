@@ -1,6 +1,7 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { ZaloZnsProviderRegistrationService } from "./zalo-zns-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./zalo-zns-provider.module-definition"
+import { ZaloZnsSandboxTemplateService } from "./zalo-zns-sandbox-template.service"
 import { ZaloZnsTemplateService } from "./zalo-zns-template.service"
 
 @Module({})
@@ -11,7 +12,7 @@ export class ZaloZnsProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ZaloZnsTemplateService, ZaloZnsProviderRegistrationService],
+            providers: [...(base.providers ?? []), ZaloZnsTemplateService, ZaloZnsSandboxTemplateService, ZaloZnsProviderRegistrationService],
             exports: [ZaloZnsTemplateService],
         }
     }

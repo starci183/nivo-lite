@@ -1,11 +1,11 @@
 import rule from "../lint/no-provider-logic-in-nodes.mjs"
 import { at, tester } from "./tester.mjs"
 
-const nodeFile = at("packages/blocks-core/src/nodes/sales/example.node.ts")
-const controlFile = at("packages/blocks-core/src/nodes/core/if.node.ts")
-const controlSpec = at("packages/blocks-core/src/nodes/core/call-workflow.node.spec.ts")
+const nodeFile = at("packages/blocks-core/src/agents/sales/nodes/example.node.ts")
+const controlFile = at("packages/blocks-core/src/shared/nodes/core/if.node.ts")
+const controlSpec = at("packages/blocks-core/src/shared/nodes/core/call-workflow.node.spec.ts")
 const pluginControlLike = at("packages/nivo-web-core/src/nodes/core/hand-off.node.ts")
-const plainFile = at("packages/blocks-core/src/modules/sales/example.ts")
+const plainFile = at("packages/blocks-core/src/agents/sales/example.ts")
 
 const NAMES = 'import { PROVIDER, TOOL } from "@nivo-lite/agent-sdk/names"\n'
 const SDK = 'import { defineEffect, defineNode, defineTool } from "@nivo-lite/agent-sdk/node"\n'

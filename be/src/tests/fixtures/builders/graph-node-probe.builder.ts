@@ -13,34 +13,14 @@ import {
     PROBE_COUNT,
     PROBE_LOOK_RESULT,
     PROBE_NOTHING,
-    PROBE_PING_PAYLOAD,
     PROBE_INPUT,
     PROBE_OUTPUT,
     PROBE_RECORD_FIELDS,
     PROBE_SWALLOW_OUTPUT,
-    PROBE_UNPING_PAYLOAD,
     type ProbeSchema,
 } from "@modules/domain/graph-nodes"
 
-/** The compensation of `core.ping`. */
-export const unping: EffectDefinition = defineEffect({
-    id: "core.unping",
-    title: { key: "u" },
-    payload: PROBE_UNPING_PAYLOAD,
-})
-
-/** An effect with a compensation. */
-export const ping: EffectDefinition = defineEffect({
-    id: "core.ping",
-    title: { key: "p" },
-    payload: PROBE_PING_PAYLOAD,
-    compensation: "core.unping",
-})
-
-/** An effect whose compensation is not installed. */
-export const lost: EffectDefinition = defineEffect({ ...ping, id: "core.lost", compensation: "core.gone" })
-
-/** An effect with an empty payload and no compensation. */
+/** An effect with an empty payload. */
 export const emptyPing: EffectDefinition = defineEffect({
     id: "core.ping",
     title: { key: "p" },

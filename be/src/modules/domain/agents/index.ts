@@ -6,6 +6,8 @@ export { AGENTS_ERROR_KINDS } from "./errors/agents.error"
 export { AGENTS_MESSAGES } from "./messages/agents.messages"
 export { AGENTS_INSTALLATIONS, AGENTS_ROOMS, InjectInstallations } from "./agents.decorators"
 export { AgentsModule } from "./agents.module"
+export { WorkflowCallReachService } from "./workflow-call-reach.service"
+export type { CallOrigin, CalledWorkflowRef } from "./workflow-call-reach.service"
 export type {
     BaseRule,
     Installation,

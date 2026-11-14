@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import type { ConnectionActor, ConnectionRecord, CreateConnectionInput } from "@modules/domain/connections"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { MAIL_ERROR_KINDS, MAIL_RELAY, MailError, renderEmail } from "@modules/integrations/mail"
 import type { MailRelayService } from "@modules/integrations/mail"
@@ -14,6 +14,13 @@ import { EmailMessagesService } from "./email-messages.service"
 import { EmailMessagesErrorCode } from "./errors/email-messages.error"
 import { SmtpWizardService } from "./smtp-wizard.service"
 import type { SmtpFormInput } from "./smtp-wizard.contracts"
+
+/** A create call that must be a live connection: only a live one carries a credential. */
+type LiveConnectionInput = Extract<CreateConnectionInput, { readonly secret: unknown }>
+const liveOf = (input: CreateConnectionInput): LiveConnectionInput => {
+    if (input.sandbox === true) throw new Error("expected a live connection input")
+    return input
+}
 
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 
@@ -47,6 +54,7 @@ const connectionOf = builder<ConnectionRecord>({
     status: "pending",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -116,7 +124,8 @@ describe("SmtpWizardService", () => {
 
             expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner"])
             expect(mail.assertSmtpTarget).toHaveBeenCalledWith("smtp.gmail.com", 465)
-            const [input] = connections.create.mock.calls[0] ?? []
+            const [call] = connections.create.mock.calls[0] ?? []
+            const input = call === undefined ? undefined : liveOf(call)
             expect(input).toMatchObject({
                 workspaceId: "ws-1",
                 createdBy: "owner-1",

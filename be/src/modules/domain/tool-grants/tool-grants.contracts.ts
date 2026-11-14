@@ -49,6 +49,8 @@ export interface ProviderAttachmentView {
     readonly connectionId: string
     /** The provider of that account. */
     readonly provider: string
+    /** True when it is the agent's default account of that provider; absent or false otherwise. */
+    readonly isDefault?: boolean | undefined
 }
 
 /** Where a node policy row came from: a template's proposal the owner agreed, the owner's own edit, or the move from the agent's ticks. */
@@ -109,51 +111,6 @@ export interface NodeAccountPolicyView {
     readonly mode: GrantMode
     /** Where the row came from. */
     readonly origin: NodePolicyOrigin
-}
-
-/**
- * One judged call of the shadow compare, as it is counted: who and where, the tool, and the two decision codes. Ids and codes only:
- * no argument, no text of the call.
- */
-export interface ShadowTallyLine {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The agent. */
-    readonly agentId: string
-    /** The road the call came by (`node`, or a road outside every node). */
-    readonly originKind: string
-    /** The workflow of the step, or null. */
-    readonly workflowId: string | null
-    /** The node key of the step, or null. */
-    readonly nodeKey: string | null
-    /** The version the run is pinned to, or null. */
-    readonly versionId: string | null
-    /** The tool (or the work action) judged. */
-    readonly tool: string
-    /** What the agent-level rights decided: the decision that was acted on. */
-    readonly realCode: string
-    /** What the node policy would have decided, or why it was not compared (`outside_node`, `no_workflow`). */
-    readonly shadowCode: string
-}
-
-/** One line of the shadow report: how often one pair of decisions was seen for a node and tool. */
-export interface ShadowTallyView extends Omit<ShadowTallyLine, "versionId"> {
-    /** How many calls. */
-    readonly calls: number
-    /** The pinned version of the latest such call, or null. */
-    readonly lastVersionId: string | null
-    /** When the first such call was seen. */
-    readonly firstAt: Date
-    /** When the latest was. */
-    readonly lastAt: Date
-}
-
-/** Which tallies a report reads. */
-export interface ShadowReportQuery {
-    /** Only this workspace; absent = every workspace. */
-    readonly workspaceId?: string | undefined
-    /** The most lines, already bounded by the caller. */
-    readonly limit: number
 }
 
 /** The switch "node rights decide" of one workspace, as stored. */

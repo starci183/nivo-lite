@@ -8,7 +8,7 @@ import { customerMailSchema, mailArgsOf, sendCustomerMail } from "./customer-mai
 import { webbooksText } from "../../modules/webbooks/copy"
 
 /**
- * The invoice really issued and whom it is for. The graph's `ifNode` passes only `dryRun` false with a number (and a declined draft
+ * The invoice really issued and whom it is for. The graph's `ifNode` passes only an `issued` outcome with a number (and a declined draft
  * never reaches the issue), but a check does not narrow the ref: the number and the draft id are typed nullable here and the node
  * refuses a null one exactly.
  */
@@ -101,7 +101,7 @@ const READ_CALLS: ReadonlyArray<ScriptedToolCall> = [
 /**
  * `webbooks.invoice-mail` (Send the invoice to the customer): split from `webbooks.invoice-notify`, reached only for an invoice
  * really issued. The agent reads the customer and the draft and writes the mail; the node mails it with `TOOL.mailMessageSend`
- * (smtp, `auto`: the mail tool raises the draft a person edits and sends; it replaces the `send_email` work item), carrying the invoice number
+ * (smtp, mode `ask`: the mail goes once a person approves it on the card, MXW-1; it replaces the `send_email` work item), carrying the invoice number
  * as the record it is about. A refusal (a shop's own `ask` declined included) is answered as a fact. A side node (`blocking:
  * false`): without a sending mailbox the invoice is still issued and the team told.
  */
@@ -110,7 +110,9 @@ export const webbooksInvoiceMailNode: TemplateNode = defineTemplateNode({
     title: webbooksText("node.invoice-mail.title"),
     description: { vi: "G\u1eedi ho\u00e1 \u0111\u01a1n \u0111\u00e3 xu\u1ea5t cho kh\u00e1ch qua th\u01b0.", en: "Mails the issued invoice to the customer." },
     tools: [...READS, TOOL.mailMessageSend],
-    mode: "auto",
+    // R83 (owner, interim; the CEO reviews later): AI-written mail about money or a commitment asks, a person approves the whole
+    // message on the approval card before it goes (`ask`), as the package's own words ("a draft a person sends") say.
+    mode: "ask",
     accounts: [CRM_NIVOWEB_PROVIDER, PROVIDER.smtp],
     input,
     output,

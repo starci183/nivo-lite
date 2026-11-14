@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentRunStoreService, type RunSubject } from "./agent-run-store.service"
+import { AgentRunStoreService, type RunSubject, type SubjectHolder } from "./agent-run-store.service"
 import type { RunOpen } from "./agent-runs.contracts"
 import type { OptionalRunId, OptionalRunView, RunView } from "./agent-runs-engine.contracts"
 import type { RunWaiterFilter, StoredWaiter } from "./agent-runs-rows.contracts"
@@ -35,8 +35,18 @@ export class AgentRunsService {
     }
 
     /** The agent's runs parked (waiting) for one subject, oldest first: where the waits of that subject are looked for first. */
+    /** The thread runs in flight for one subject, whatever the workflow, oldest first: the runs that hold it (rule Q-1). */
+    inFlightOfSubject(workspaceId: string, subject: RunSubject): Promise<ReadonlyArray<SubjectHolder>> {
+        return this.store.inFlightOfSubject(workspaceId, subject)
+    }
+
     parkedOfSubject(workspaceId: string, agentId: string, subject: RunSubject): Promise<ReadonlyArray<RunView>> {
         return this.store.parkedOfSubject(workspaceId, agentId, subject)
+    }
+
+    /** The workspace's thread runs parked at a `wait`, newest start first, at most `limit` (the dev Sandbox page's list, R66). */
+    parkedAtWait(workspaceId: string, limit: number): Promise<ReadonlyArray<RunView>> {
+        return this.store.parkedAtWait(workspaceId, limit)
     }
 
     /** Marks the wait a run parks on with the keys an event finds it by; an empty list clears the mark (the wait has what came). */

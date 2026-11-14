@@ -10,6 +10,7 @@ import {
     type GraphLoopProblem,
 } from "@modules/domain/agent-graphs"
 import { THREAD_END } from "@modules/integrations/langgraph"
+import { endingTargetsOf } from "./step-ending.policy"
 import { FREEZE_NODE, type CompiledStep, type CompiledTemplate, type StepExit } from "./template-compiler.policy"
 
 /*
@@ -86,7 +87,10 @@ export const withUntilLoops = (compiled: CompiledTemplate, spec: GraphSpec): Com
         const loop = loopOf.get(step.key)
         if (loop === undefined) return step
         const exit = roundExitOf(step.exit, loop)
-        return { ...step, exit, inLoop: loop, ends: [...new Set(exitTargetsOf(exit)), FREEZE_NODE] }
+        // R68 + R75: a step's declared end outcome is a route of that step wherever it sits; from a round it leaves the loop (the step's
+        // answer clears the frame), so it is NOT turned back to the loop node as the round's own ends are.
+        const endings = node === undefined ? [] : endingTargetsOf(node).map((key) => targetOf(byKey, key))
+        return { ...step, exit, inLoop: loop, ends: [...new Set([...exitTargetsOf(exit), ...endings]), FREEZE_NODE] }
     }
     return { ...compiled, nodes: compiled.nodes.map((step) => stepOf(step)) }
 }

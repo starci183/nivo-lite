@@ -1,5 +1,4 @@
-import { Injectable, type OnModuleInit } from "@nestjs/common"
-import { InjectChannelSenderRegistry, type ChannelSender, type ChannelSenderRegistry } from "@modules/domain/channels"
+import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
 import { InjectMetaClient, type MetaClient } from "@modules/integrations/meta"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
@@ -31,22 +30,16 @@ const personOf = (externalId: string): string => {
 }
 
 @Injectable()
-/** Sends the company side of a Facebook or Instagram conversation through the Page of the connection the conversation came in on. */
-export class MetaChannelSender implements ChannelSender, OnModuleInit {
-    /** The conversation channels this sender delivers; the registry routes a send here by them. */
-    readonly channels = ["facebook", "instagram"] as const
-
+/**
+ * Sends the company side of a Facebook or Instagram conversation through the Page of the connection the conversation came in on. It is the
+ * live route behind the Meta customer-send port (`MetaCustomerSendService`); the engine reaches it only for a live account.
+ */
+export class MetaChannelSender {
     constructor(
-        @InjectChannelSenderRegistry() private readonly registry: ChannelSenderRegistry,
         @InjectMetaClient() private readonly meta: MetaClient,
         private readonly connections: ConnectionsService,
         @InjectLogger() private readonly logger: Logger,
     ) {}
-
-    /** Registers this sender for its channels once at start. */
-    onModuleInit(): void {
-        this.registry.add(this)
-    }
 
     /** Pushes the text to the customer; false when the Page is gone, the credential is unreadable or Meta refused. Never throws. */
     async send(conversation: MetaSendTarget, text: string): Promise<boolean> {

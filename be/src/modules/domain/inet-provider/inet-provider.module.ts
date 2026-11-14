@@ -1,5 +1,6 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { InetDomainRegistrarService } from "./inet-domain-registrar.service"
+import { InetSandboxRegistrarService } from "./inet-sandbox-registrar.service"
 import { InetProviderRegistrationService } from "./inet-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inet-provider.module-definition"
 
@@ -15,7 +16,7 @@ export class InetProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), InetDomainRegistrarService, InetProviderRegistrationService],
+            providers: [...(base.providers ?? []), InetDomainRegistrarService, InetSandboxRegistrarService, InetProviderRegistrationService],
             exports: [InetDomainRegistrarService],
         }
     }

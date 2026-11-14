@@ -22,15 +22,14 @@ const FACT: InternalEventFact = {
     subjectId: "tx-1",
 }
 
-const triggerOf = (agentId: string, probeKey: string | null): AgentTriggerRecord => ({
-    id: `trigger-${agentId}`,
+const triggerOf = (agentId: string, id = `trigger-${agentId}`): AgentTriggerRecord => ({
+    id,
     agentId,
     kind: "event",
     preset: null,
     atTime: null,
     timeZone: "Asia/Ho_Chi_Minh",
     eventName: "bank_credit_booked",
-    probeKey,
     enabled: true,
     seedKey: null,
     nextRunAt: null,
@@ -69,7 +68,7 @@ const build = async ({ triggers = [], installation = runtimeInstallationOf() }: 
 describe("AgentEventWakesService.eventHappened", () => {
     it("wakes only the agents of the workspace that asked for the event, each once, keyed by the event and its dedupe key", async () => {
         const { service, wakes, triggerService, inbox } = await build({
-            triggers: [triggerOf("agent-1", "money_in"), triggerOf("agent-2", null), triggerOf("agent-1", "other")],
+            triggers: [triggerOf("agent-1"), triggerOf("agent-2"), triggerOf("agent-1", "trigger-agent-1-other")],
         })
 
         await expect(service.eventHappened(FACT, CLAIM)).resolves.toBeUndefined()
@@ -77,11 +76,7 @@ describe("AgentEventWakesService.eventHappened", () => {
         expect(inbox.claimed).toEqual([{ source: CLAIM.consumer, eventId: CLAIM.dedupeKey }])
         expect(triggerService.enabledForSource).toHaveBeenCalledWith("ws-1", "bank_credit_booked", 100, "internal")
         expect(wakes.wake.mock.calls.map(([, wake]) => [wake.agentId, wake.eventKey, wake.context])).toEqual([
-            [
-                "agent-1",
-                "bank_credit_booked:tx-1",
-                { eventName: "bank_credit_booked", subjectId: "tx-1", probeKey: "money_in" },
-            ],
+            ["agent-1", "bank_credit_booked:tx-1", { eventName: "bank_credit_booked", subjectId: "tx-1" }],
             ["agent-2", "bank_credit_booked:tx-1", { eventName: "bank_credit_booked", subjectId: "tx-1" }],
         ])
     })
@@ -95,7 +90,7 @@ describe("AgentEventWakesService.eventHappened", () => {
     })
 
     it("wakes nobody twice for a redelivery", async () => {
-        const { service, wakes, inbox } = await build({ triggers: [triggerOf("agent-1", null)] })
+        const { service, wakes, inbox } = await build({ triggers: [triggerOf("agent-1")] })
 
         await service.eventHappened(FACT, CLAIM)
         await service.eventHappened(FACT, CLAIM)
@@ -106,14 +101,14 @@ describe("AgentEventWakesService.eventHappened", () => {
 })
 
 describe("AgentEventWakesService.agentsFor", () => {
-    it("answers each agent that asked for the event type and answers to the source, once, with the probe of its first trigger", async () => {
+    it("answers each agent that asked for the event type and answers to the source, once", async () => {
         const { service, triggerService } = await build({
-            triggers: [triggerOf("agent-1", "money_in"), triggerOf("agent-2", null), triggerOf("agent-1", "other")],
+            triggers: [triggerOf("agent-1"), triggerOf("agent-2"), triggerOf("agent-1", "trigger-agent-1-other")],
         })
 
         await expect(service.agentsFor("ws-1", "invoice.paid", "generic_webhook")).resolves.toEqual([
-            { agentId: "agent-1", probeKey: "money_in" },
-            { agentId: "agent-2", probeKey: null },
+            { agentId: "agent-1" },
+            { agentId: "agent-2" },
         ])
         expect(triggerService.enabledForSource).toHaveBeenCalledWith("ws-1", "invoice.paid", 100, "generic_webhook")
     })

@@ -12,9 +12,9 @@ describe("PaymentLinkRegistryService", () => {
     it("starts with no provider and answers undefined for a key nobody registered", async () => {
         const registry = await build()
 
-        expect(registry.all()).toEqual([])
+        expect(registry.providers()).toEqual([])
         expect(registry.has("payos")).toBe(false)
-        expect(registry.of("payos")).toBeUndefined()
+        expect(registry.liveOf("payos")).toBeUndefined()
     })
 
     it("finds a registered provider by its key, and a second registration under the key replaces the first", async () => {
@@ -23,11 +23,11 @@ describe("PaymentLinkRegistryService", () => {
         const second = mock<PaymentLinkPort>({ provider: "payos" })
 
         registry.register(first)
-        expect(registry.of("payos")).toBe(first)
+        expect(registry.liveOf("payos")).toBe(first)
         registry.register(second)
 
-        expect(registry.of("payos")).toBe(second)
-        expect(registry.all()).toHaveLength(1)
-        expect(registry.all()[0]).toBe(second)
+        expect(registry.liveOf("payos")).toBe(second)
+        expect(registry.providers()).toHaveLength(1)
+        expect(registry.liveOf(registry.providers()[0] ?? "")).toBe(second)
     })
 })

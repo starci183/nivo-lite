@@ -6,6 +6,19 @@ import { AgentWakeService, WAITING_REASON, handedBackOf } from "./agent-wake.ser
 import type { AgentWakeContext } from "./agent-work.contracts"
 import { AgentWakeEntity } from "./persistence/entities"
 
+
+/** A query builder that records its update: the table, the values set, the where text and its params; it answers `affected`. */
+const updateBuilderOf = (affected: number) => {
+    const seen: { entity?: unknown; set?: Record<string, unknown>; where?: string; params?: Record<string, unknown> } = {}
+    const builder = {
+        update: (entity: unknown) => ((seen.entity = entity), builder),
+        set: (values: Record<string, unknown>) => ((seen.set = values), builder),
+        where: (text: string, params: Record<string, unknown>) => ((seen.where = text), (seen.params = params), builder),
+        execute: () => Promise.resolve({ affected, raw: [], generatedMaps: [] }),
+    }
+    return { builder, seen }
+}
+
 const WS = "ws-1"
 
 /** A stored wake row as the table holds it. */
@@ -59,11 +72,29 @@ describe("AgentWakeService: the events waiting behind a run (one run in flight p
         })
         expect(tx.update.mock.calls.map(([, where]) => (where as { id: string }).id)).toEqual(["w-1", "w-2", "w-3"])
         expect(tx.update.mock.calls[0]?.[2]).toMatchObject({ status: "pending", reason: null })
-        expect(queue.enqueueDrain.mock.calls.map(([, , eventKey]) => eventKey)).toEqual([
-            "nivo.trigger.zalo.message.received:acc-1:w-1",
-            "nivo.trigger.zalo.message.received:acc-1:w-2",
-            "nivo.trigger.zalo.message.received:acc-1:w-3",
+        // DEF-5: a FRESH drain job per released wake. The wake's first job holds its fact's key for ever (`job_outbox.dedupe_key` UNIQUE):
+        // writing that key again (`enqueueDrain` with the event key) wrote no job and the wake waited for the minute sweep.
+        expect(queue.enqueueDrain).not.toHaveBeenCalled()
+        expect(queue.enqueueAgainDrain.mock.calls).toEqual([
+            [{ workspaceId: WS, agentId: "agent-1", scopeKey: "key:routeId=route-1" }, tx],
+            [{ workspaceId: WS, agentId: "agent-1", scopeKey: "key:routeId=route-1" }, tx],
+            [{ workspaceId: WS, agentId: "agent-1", scopeKey: "key:routeId=route-1" }, tx],
         ])
+    })
+
+    // DEF-5 (MX P-07b): the call wake held behind the sale run was released at each park of the run (`offerToWait`) and held again: `begin`
+    // counts every begin, so after three parks it was dead `attempts` before it ever ran. Waiting behind a run is no failed try.
+    it("a released wake starts its tries from zero again: waiting behind a run is no failed try", async () => {
+        const { service, tx } = await build()
+        tx.find.mockResolvedValue([rowOf("w-1", { attempts: 3, maxAttempts: 3 })])
+
+        await service.releaseWaiting(tx, WS, "run-1")
+
+        expect(tx.update).toHaveBeenCalledWith(
+            AgentWakeEntity,
+            { id: "w-1", status: "held" },
+            expect.objectContaining({ status: "pending", reason: null, attempts: 0 }),
+        )
     })
 })
 
@@ -87,7 +118,13 @@ describe("AgentWakeService.reoffer: a run hands back the event its wait took", (
         expect(where).toEqual({ id: "w-chatbot", status: "done", reason: "wait_took" })
         expect(values).toMatchObject({ status: "pending", reason: null, attempts: 0, finishedAt: null })
         expect(handedBackOf((values as { context: AgentWakeContext }).context)).toEqual(["run-sale"])
-        expect(queue.enqueueDrain).toHaveBeenCalledTimes(2)
+        // DEF-5: each re-offered wake drains NOW on a job of its own (the event key's job already exists: the same key wrote none and the
+        // handed-back line waited ~90 s for the minute sweep).
+        expect(queue.enqueueDrain).not.toHaveBeenCalled()
+        expect(queue.enqueueAgainDrain.mock.calls).toEqual([
+            [{ workspaceId: WS, agentId: "agent-chatbot", scopeKey: "key:routeId=route-1" }, tx],
+            [{ workspaceId: WS, agentId: "agent-sales", scopeKey: "key:routeId=route-1" }, tx],
+        ])
     })
 
     it("offers it to each run at most once: a wake this run already handed back is left as it is (a replay changes nothing)", async () => {
@@ -98,7 +135,7 @@ describe("AgentWakeService.reoffer: a run hands back the event its wait took", (
 
         await expect(service.reoffer(tx, WS, event, "run-sale")).resolves.toBe(0)
         expect(tx.update).not.toHaveBeenCalled()
-        expect(queue.enqueueDrain).not.toHaveBeenCalled()
+        expect(queue.enqueueAgainDrain).not.toHaveBeenCalled()
     })
 
     it("a second hand-back of the same event by ANOTHER run adds that run to the list", async () => {
@@ -111,5 +148,29 @@ describe("AgentWakeService.reoffer: a run hands back the event its wait took", (
 
         const values = tx.update.mock.calls[0]?.[2] as { context: AgentWakeContext }
         expect(handedBackOf(values.context)).toEqual(["run-a", "run-b"])
+    })
+})
+
+describe("AgentWakeService.dropOfScopes (R72 Q1: erasing a subject drops the events of it no run took yet)", () => {
+    it("every pending or held wake of any agent in the subject scopes is skipped with the reason; a running one is left to its drive", async () => {
+        const { service } = await build()
+        const { builder, seen } = updateBuilderOf(3)
+        const tx = mockEntityManager()
+        tx.createQueryBuilder.mockReturnValue(builder as never)
+
+        await expect(service.dropOfScopes(tx, WS, ["key:contactId=c-1", "key:routeId=route-1"], "subject_erased")).resolves.toBe(3)
+
+        expect(seen.entity).toBe(AgentWakeEntity)
+        expect(seen.set).toMatchObject({ status: "skipped", reason: "subject_erased" })
+        expect(seen.where).toBe("workspace_id = :workspaceId AND status IN ('pending', 'held') AND scope_key IN (:...scopeKeys)")
+        expect(seen.params).toEqual({ workspaceId: WS, scopeKeys: ["key:contactId=c-1", "key:routeId=route-1"] })
+    })
+
+    it("writes nothing for no scope", async () => {
+        const { service } = await build()
+        const tx = mockEntityManager()
+
+        await expect(service.dropOfScopes(tx, WS, [], "subject_erased")).resolves.toBe(0)
+        expect(tx.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

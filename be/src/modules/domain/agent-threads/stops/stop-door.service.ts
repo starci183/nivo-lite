@@ -131,7 +131,7 @@ const refusedOutcomeOf = (code: ThreadWakeRefusal, after: OptionalRunStop): Stop
  * The people's door to the stop of a thread run: the founder's words (a reply to the card on /chat, the card's box) and the card's three
  * buttons become the typed decision of the stop and go to the resume request (`ThreadResumeRequestsService.resume`), which admits it from
  * the stores and records it as a wake of the run's own scope the api's drain applies; nothing runs here, so any app that serves people
- * (the api, the mcp app) runs this same door. Only an owner or a manager of the workspace may decide, as for the freezes. A stop is one record per run and step: a
+ * (the api, the mcp app) runs this same door. Only an owner or a manager of the workspace may decide, as for every decision of a stop. A stop is one record per run and step: a
  * decision for a stop already resolved is refused with `stop_closed` and never resumes anything. After a take-over the run stays waiting with its stop open, so the customer's next lines join that stopped run and the person
  * becomes the holder of the run's route (the staff hold, ruling R43): the customer-send door refuses every AI send to it until "hand back to
  * the agent" or any other decision closes the taken-over stop (the resume door clears the hold then). The engine writes no chat record and asks no plugin. A `retry` or the founder's words on a stop that

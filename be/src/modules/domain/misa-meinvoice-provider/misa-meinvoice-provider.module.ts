@@ -1,5 +1,6 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { MisaMeinvoiceInvoiceService } from "./misa-meinvoice-invoice.service"
+import { MisaMeinvoiceSandboxInvoiceService } from "./misa-meinvoice-sandbox-invoice.service"
 import { MisaMeinvoiceProviderRegistrationService } from "./misa-meinvoice-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./misa-meinvoice-provider.module-definition"
 
@@ -11,7 +12,7 @@ export class MisaMeinvoiceProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), MisaMeinvoiceInvoiceService, MisaMeinvoiceProviderRegistrationService],
+            providers: [...(base.providers ?? []), MisaMeinvoiceInvoiceService, MisaMeinvoiceSandboxInvoiceService, MisaMeinvoiceProviderRegistrationService],
             exports: [MisaMeinvoiceInvoiceService],
         }
     }

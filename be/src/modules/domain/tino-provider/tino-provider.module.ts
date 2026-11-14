@@ -1,5 +1,6 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { TinoDomainRegistrarService } from "./tino-domain-registrar.service"
+import { TinoSandboxRegistrarService } from "./tino-sandbox-registrar.service"
 import { TinoProviderRegistrationService } from "./tino-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./tino-provider.module-definition"
 
@@ -15,7 +16,7 @@ export class TinoProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), TinoDomainRegistrarService, TinoProviderRegistrationService],
+            providers: [...(base.providers ?? []), TinoDomainRegistrarService, TinoSandboxRegistrarService, TinoProviderRegistrationService],
             exports: [TinoDomainRegistrarService],
         }
     }

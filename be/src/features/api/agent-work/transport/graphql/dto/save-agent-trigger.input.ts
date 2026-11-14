@@ -50,13 +50,6 @@ export class SaveAgentTriggerInput {
     @MaxLength(80)
     eventName: string | null = null
 
-    /** The probe that decides whether there is work. */
-    @Field(() => String, { nullable: true })
-    @IsOptional()
-    @IsString()
-    @MaxLength(80)
-    probeKey: string | null = null
-
     /** Off keeps the trigger and fires nothing. */
     @Field(() => Boolean)
     @IsBoolean()

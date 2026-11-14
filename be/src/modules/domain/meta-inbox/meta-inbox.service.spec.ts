@@ -163,6 +163,33 @@ describe("MetaInboxService receipt", () => {
     })
 })
 
+describe("MetaInboxService sandbox receipt", () => {
+    const SANDBOX_OWNER = { id: "11111111-1111-4111-8111-111111111111", workspaceId: "ws-sandbox" }
+
+    it("writes every event of the body as a meta.event row of the named sandbox account, looks up no Page id and queues its reference", async () => {
+        const second = event({ mid: "message-2", event_key: "dm:message-2" })
+        const other = event({ page_id: "sandbox-page", event_key: "dm:message-3" })
+        const { service, connections, write, intake } = await build([event(), second, other])
+        intake.write.mockResolvedValue(writtenOf("dm:message-1"))
+        await service.acceptSandbox(RAW_BODY, SANDBOX_OWNER)
+        const manager = write.mock.calls[0]?.[0]
+        expect(isTransactionManager(manager)).toBe(true)
+        expect(connections.findLiveByMeta).not.toHaveBeenCalled()
+        expect(intake.write.mock.calls.map((call) => [call[1], (call[2] as ReadonlyArray<{ value: { eventKey: string } }>)[0]?.value.eventKey])).toEqual([
+            [SANDBOX_OWNER.id, "dm:message-1"],
+            [SANDBOX_OWNER.id, "dm:message-2"],
+            [SANDBOX_OWNER.id, "dm:message-3"],
+        ])
+        expect(write).toHaveBeenCalledTimes(3)
+    })
+
+    it.each(unreadableReceipts.filter((one) => one.signature !== undefined))("refuses an unreadable body: $rawBody", async ({ rawBody }) => {
+        const { service, outbox, intake, tx } = await build([event()])
+        await expect(service.acceptSandbox(rawBody, SANDBOX_OWNER)).rejects.toEqual(objectLike({ code: MetaInboxErrorCode.DeliveryInvalid }))
+        expect([intake.write.mock.calls, outbox.jobs, tx.outcomes]).toEqual([[], [], ["rollback"]])
+    })
+})
+
 describe("MetaInboxService consumer", () => {
     it("processes the one event for the row's own connection, keeps the message and the person and completes it", async () => {
         const pending = pendingOf(structuredClone(event()))

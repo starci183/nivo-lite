@@ -21,7 +21,7 @@ import {
 import type { CallLogLine } from "@modules/domain/tool-call-log"
 import type { ToolJson } from "@modules/domain/tool-receipts"
 import { proofOf } from "@modules/domain/provider-registry"
-import { takesOneAccountBySpec, toolSpecOf } from "@modules/domain/tool-specs"
+import { repeatableBySpec, takesOneAccountBySpec, toolSpecOf } from "@modules/domain/tool-specs"
 import type { Clock } from "@modules/platform/clock"
 import { isDomainError } from "@modules/platform/errors"
 import type { Logger } from "@modules/platform/logging"
@@ -29,6 +29,7 @@ import { pinRefusalOf } from "./adapters/effect-pin.policy"
 import { answerOf, effectAddressOf, jsonOf, refusalOf } from "./adapters/effect-tools.policy"
 import { argsHashOf, masked, summaryOf } from "./audit-mask.policy"
 import type { ConversationLeadsGate, NativeCaller } from "./tools.contracts"
+import { ToolsError, ToolsErrorCode } from "./errors/tools.error"
 import { ToolsLogEvent } from "./tools.log-events"
 import { RECEIPT_REPLAY } from "./tool-registry.service"
 import { isProviderBound, mutatesOf } from "./provider-abilities.policy"
@@ -66,11 +67,13 @@ export interface ToolRunnerParts {
      */
     readonly ledger: Pick<GraphNodeEffectsService, "once"> & Partial<Pick<GraphNodeEffectsService, "recordsOf">>
     /**
-     * The accounts a call may act on, in order, and whether its step's node lists a provider serving it (`listsProviders`: absent, every
-     * call that takes an account needs one); absent where no provider rights are bound (no call is then handed an account).
+     * The accounts a call may act on, in order, whether its step's node lists a provider serving it (`listsProviders`: absent, every
+     * call that takes an account needs one), and the choice the owner still has to make when the agent holds several accounts of a
+     * listed provider and nothing picks one (`pickNeeded`: absent, a call that binds none is the never-sent refusal as before); absent
+     * where no provider rights are bound (no call is then handed an account).
      */
     readonly accounts?:
-        | (Pick<AgentAccountsService, "boundAccountsOf"> & Partial<Pick<AgentAccountsService, "listsProviders">>)
+        | (Pick<AgentAccountsService, "boundAccountsOf"> & Partial<Pick<AgentAccountsService, "listsProviders" | "pickNeeded">>)
         | undefined
     /** Which lead a conversation belongs to, for the run's pin; null when nothing can say. */
     readonly leads: ConversationLeadsGate | null
@@ -211,8 +214,17 @@ export class ToolRunnerService {
     async run(call: NodeToolRun): Promise<NodeToolAnswer> {
         const accounts = await this.accountsOf(call)
         if (accounts.length === 0 && (await this.bindsAccount(call))) {
-            // A step whose node binds no account serving the tool (no provider of it attached, or several and none picked): the
-            // typed never-sent refusal, which freezes the step and is reported (readiness hides such a graph beforehand).
+            // Several accounts of a listed provider and no rule of the order picks one (the run's trigger, its earlier calls, the agent's
+            // default account): the typed refusal that names the choice to make, never a guess (readiness shows it as `needs_pick`).
+            const needed = await this.pickNeeded(call)
+            if (needed !== null) {
+                throw new ToolsError({
+                    code: ToolsErrorCode.AccountNeedsPick,
+                    params: { tool: idOf(call), provider: needed.provider, connectionIds: needed.connectionIds.join(",") },
+                })
+            }
+            // A step whose node binds no account serving the tool (no provider of it attached): the typed never-sent refusal, which
+            // freezes the step and is reported (readiness hides such a graph beforehand).
             throw new GraphNodesError({ code: GraphNodesErrorCode.ToolNotConnected, params: { tool: idOf(call) } })
         }
         const mutates = call.road === "effect" || mutatesOf(idOf(call))
@@ -253,6 +265,15 @@ export class ToolRunnerService {
         return Promise.resolve(accounts.listsProviders(call.turn.workspaceId, call.turn.agentId, id, seenAtStep("node", step)))
     }
 
+    /** The choice still to make for a call of a workflow step (several accounts of a listed provider, none picked), or null. */
+    private async pickNeeded(call: NodeToolRun): Promise<{ readonly provider: string; readonly connectionIds: ReadonlyArray<string> } | null> {
+        const { accounts } = this.parts
+        const step = call.workflowStep
+        if (accounts?.pickNeeded === undefined || step === undefined) return null
+        const { workspaceId, agentId, turnId } = call.turn
+        return accounts.pickNeeded(workspaceId, agentId, idOf(call), seenAtStep("node", step), { runId: turnId })
+    }
+
     /** The accounts a call may act on, in order; none for a call that is handed no account. */
     private accountsOf(call: NodeToolRun): Promise<ReadonlyArray<BoundAccount>> {
         const { accounts } = this.parts
@@ -262,7 +283,7 @@ export class ToolRunnerService {
         const { workspaceId, agentId } = call.turn
         return Promise.resolve(step === undefined
             ? accounts.boundAccountsOf(workspaceId, agentId, id)
-            : accounts.boundAccountsOf(workspaceId, agentId, id, seenAtStep("node", step)))
+            : accounts.boundAccountsOf(workspaceId, agentId, id, seenAtStep("node", step), { runId: call.turn.turnId }))
     }
 
     /** One try of the call, on the account handed, or on the adapter's own pick when none is. */
@@ -430,8 +451,11 @@ export class ToolRunnerService {
             effect: call.effect,
             position,
         })
-        if (kept.subject.kind === OUTCOME_UNKNOWN_KIND && isOutcomeUnknownCode(kept.subject.id))
+        if (kept.subject.kind === OUTCOME_UNKNOWN_KIND && isOutcomeUnknownCode(kept.subject.id)) {
+            // Rule Q-3: a tool that declares itself `repeatable` makes the call again (the ledger then answers it under its key).
+            if (repeatableBySpec(call.effect) === true) return null
             throw new EffectOutcomeUnknownError({ code: kept.subject.id, params: { effect: call.effect } })
+        }
         return kept.subject
     }
 

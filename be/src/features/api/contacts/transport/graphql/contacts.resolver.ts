@@ -14,11 +14,21 @@ import {
     UnlinkContactIdentityCommand,
     UpdateContactCommand,
 } from "../../application/contacts.commands"
-import type { CustomerLine, LinePage } from "@modules/domain/customer-routes"
-import { ContactModuleBlocksQuery, ReadContactQuery, ReadContactsQuery, ReadCustomerMessagesQuery } from "../../application/contacts.queries"
+import type { CustomerLine, CustomerLineFile, LinePage } from "@modules/domain/customer-routes"
+import type { ContactMessagesPageView, ContactMessageView, ContactWorkView } from "../../application/contact-conversation.contracts"
+import {
+    ContactModuleBlocksQuery,
+    ReadContactMessagesQuery,
+    ReadContactQuery,
+    ReadContactsQuery,
+    ReadContactWorkQuery,
+    ReadCustomerMessagesQuery,
+} from "../../application/contacts.queries"
 import {
     ContactInput,
+    ContactMessagesInput,
     ContactModuleBlocksInput,
+    ContactWorkInput,
     ContactsInput,
     CustomerMessagesInput,
     DeleteContactInput,
@@ -30,15 +40,42 @@ import {
 } from "./dto/contacts.input"
 import {
     ContactDetailType,
+    ContactMessagePageType,
     ContactModuleAgentType,
     ContactsPageType,
     ContactType,
+    ContactWorkType,
     CustomerMessagePageType,
+    type CustomerMessageFileType,
     type CustomerMessageType,
     LinkContactIdentityType,
 } from "./dto/contacts.type"
 
+/** A file of a line as the page reads it: its address, or no address and the typed reason it could not be fetched. */
+const fileTypeOf = (file: CustomerLineFile): CustomerMessageFileType => ({
+    url: file.url,
+    notKept: file.notKept ?? null,
+    name: file.name,
+    contentType: file.contentType,
+    caption: file.caption ?? null,
+})
+
 /** One line as the wire carries it: the order snapshot as JSON text, a missing caption as null. */
+/** One line of the whole conversation as the wire carries it: the order snapshot as JSON text, a missing caption as null. */
+const contactMessageOf = (line: ContactMessageView): ContactMessagePageType["rows"][number] => ({
+    id: line.id,
+    routeId: line.routeId,
+    channel: line.channel,
+    accountId: line.accountId,
+    direction: line.direction,
+    saidAt: line.saidAt,
+    text: line.text,
+    files: line.files.map((file) => fileTypeOf(file)),
+    orderJson: line.order === null ? null : JSON.stringify(line.order),
+    state: line.state,
+    speaker: { kind: line.speaker.kind, name: line.speaker.name },
+})
+
 const customerMessageOf = (line: CustomerLine): CustomerMessageType => ({
     id: line.id,
     routeId: line.routeId,
@@ -46,7 +83,7 @@ const customerMessageOf = (line: CustomerLine): CustomerMessageType => ({
     direction: line.direction,
     text: line.text,
     saidAt: line.saidAt,
-    files: line.files.map((file) => ({ url: file.url, name: file.name, contentType: file.contentType, caption: file.caption ?? null })),
+    files: line.files.map((file) => fileTypeOf(file)),
     orderJson: line.order === null ? null : JSON.stringify(line.order),
     agentId: line.agentId,
     memberId: line.memberId,
@@ -115,6 +152,33 @@ export class ContactsResolver {
             }),
         )
         return { rows: page.rows.map((line) => customerMessageOf(line)), next: page.next }
+    }
+
+    /** The whole conversation with a person: every route merged by time (or one route), newest first, one cursor, the speaker of each line resolved. */
+    @Query(() => ContactMessagePageType, { name: "contactMessages" })
+    async contactMessages(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: ContactMessagesInput,
+    ): Promise<ContactMessagePageType> {
+        const page: ContactMessagesPageView = await this.queryBus.execute(
+            new ReadContactMessagesQuery({
+                request: { workspaceId, contactId: input.contactId, routeId: input.routeId, before: input.before, limit: input.limit },
+                principal,
+            }),
+        )
+        return { rows: page.rows.map((line) => contactMessageOf(line)), next: page.next }
+    }
+
+    /** What the agents did for a person lately, each row labelled (workflow, step, agent) in the language of the request. */
+    @Query(() => [ContactWorkType], { name: "contactWork" })
+    async contactWork(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @AcceptedLocale() locale: Locale,
+        @Args("input") input: ContactWorkInput,
+    ): Promise<ReadonlyArray<ContactWorkView>> {
+        return this.queryBus.execute(new ReadContactWorkQuery({ request: { workspaceId, contactId: input.contactId, locale, limit: input.limit }, principal }))
     }
 
     /** `nivo.api.nivo.contact.update`: the display name and / or the tags. */

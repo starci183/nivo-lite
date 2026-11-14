@@ -35,7 +35,7 @@ for three routes; nothing else on this page is proven live yet.
 
 A step that cannot complete writes `state.trouble` and goes to `__freeze`, which calls `interrupt(question)`.
 
-- One record per run + step: entity `agent.run-stop` (`packages/blocks-core/src/entities/agent/run-stop.entity.ts`), kinds
+- One record per run + step: entity `agent.run-stop` (`packages/blocks-core/src/shared/entities/agent/run-stop.entity.ts`), kinds
   `ai_report` (the AI core reported), `ai_error` (3 tries failed; engine-written), `approval` (an `ask` ability), `engine` (only a
   person can decide: checkpoint or output too large). Services: `domain/agent-threads/stops/` (`run-stops.service.ts`,
   `run-stop-records.service.ts`, `stop-gate.policy.ts`).
@@ -82,8 +82,8 @@ A step that cannot complete writes `state.trouble` and goes to `__freeze`, which
   (`<run>:<step>:<16 hex>`, the hex = `callDigestOf(id, args)` in `packages/agent-sdk/src/node/host.ts`); each record keeps
   `runId`, `stepKey`, `args`, `facts`; a replay answers the kept facts. `recordsOf(ws, {runId, stepKey}, effectIds)` reads them back.
 - Outcome unknown (`tool_outcome_unknown`, `delivery_outcome_unknown`, `decision_actor_unknown`): kept, and any later call under the
-  key throws `EffectOutcomeUnknownError` (`graph-nodes/errors/`) without acting: a person decides. Forward recovery only: no
-  automatic compensation on threads.
+  key throws `EffectOutcomeUnknownError` (`graph-nodes/errors/`) without acting: a person decides. Forward only: no
+  automatic undo on threads.
 - One customer line per stop: the stop's `customerLines` are filled from the ledger; the send door refuses a second line from the
   stopped step to an already-told conversation (`already_told_for_this_stop`, `tools/node-tool-door.service.ts`) until an
   `answer` arrives. `alreadySent` (`agent-graphs/agent-graph-turn-policy.service.ts`) also carries lines told to the same customer by

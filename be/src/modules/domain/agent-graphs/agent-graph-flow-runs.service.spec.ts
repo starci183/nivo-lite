@@ -30,6 +30,7 @@ import { AgentGraphRawRowsService } from "./agent-graph-raw-rows.service"
 import type { FlowThreadRun, FlowThreads } from "./agent-graph-flow-runs.service"
 import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
 import { AgentGraphWakeNoticesService } from "./agent-graph-wake-notices.service"
+import { AgentGraphSubjectHoldsService } from "./agent-graph-subject-holds.service"
 import { flowProblemsOf } from "./policies/flow.policy"
 import { tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
 import type { FlowWake } from "./policies/graph-flow.policy"
@@ -68,21 +69,20 @@ const RECORD_ONLY_NODE: NodeDefinition = defineNode({
     examples: [{ name: "one", params: {}, input: {}, output: {}, effects: [] }],
 })
 
-/** The one effect the record-only step runs, as an effect that can be undone: the saga kind of its step is then compensable. */
-const UNDOABLE_EFFECT = defineEffect({
+/** The one effect the record-only step runs: its step is then a write. */
+const RECORD_ONLY_EFFECT = defineEffect({
     id: TOOL.agentTag,
     title: { key: "t" },
     payload: z.object({}),
-    compensation: TOOL.teamMessagePost,
 })
 
-/** The installed nodes (the core package's control nodes), with the spec's own record-only step and its undoable effect beside them. */
+/** The installed nodes (the core package's control nodes), with the spec's own record-only step and its effect beside them. */
 const installedNodes = () => {
     const index = coreNodeIndex()
     return {
         ...index,
         nodes: new Map<string, NodeDefinition>([...index.nodes, [RECORD_ONLY, RECORD_ONLY_NODE]]),
-        effects: new Map([...index.effects, [TOOL.agentTag, UNDOABLE_EFFECT]]),
+        effects: new Map([...index.effects, [TOOL.agentTag, RECORD_ONLY_EFFECT]]),
     }
 }
 
@@ -125,6 +125,8 @@ const stateWith = (flow: GraphSpec | undefined, versionId: string | null = "vers
 interface BuildOptions {
     readonly workflows?: AgentWorkflowRunsService
     readonly notices?: AgentGraphWakeNoticesService
+    /** The hold of a subject (rule Q-1): the run that keeps an event's subject, whatever its workflow; absent, no hold. */
+    readonly holds?: AgentGraphSubjectHoldsService
     /** The engine's raw message rows by id (the value as stored), of connection `conn-1`: what a channel wake that names its entrance reads. */
     readonly rows?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
 }
@@ -165,6 +167,7 @@ const build = async (state: GraphState | null, options: BuildOptions = {}) => {
                 ? []
                 : [{ provide: AgentWorkflowRunsService, useValue: options.workflows }]),
             ...(options.notices === undefined ? [] : [{ provide: AgentGraphWakeNoticesService, useValue: options.notices }]),
+            ...(options.holds === undefined ? [] : [{ provide: AgentGraphSubjectHoldsService, useValue: options.holds }]),
         ],
     }).compile()
     return { flows: moduleRef.get(AgentGraphFlowRunsService), runs, handlers, accountRows }
@@ -249,7 +252,7 @@ describe("AgentGraphFlowRunsService", () => {
         expect(flows.stepOf({ key: "end", kind: "output", step: "stop" }, input).effect).toEqual({ kind: "read" })
     })
 
-    it("keys the projected step of a node by the node, with the saga kind of what it runs", async () => {
+    it("keys the projected step of a node by the node, with the step kind of what it runs", async () => {
         const { flows } = await build(stateWith(FLOW))
         const node = FLOW.nodes[0]
         if (node === undefined) throw new Error("FLOW has no first node")
@@ -259,7 +262,7 @@ describe("AgentGraphFlowRunsService", () => {
             stepKey: "keep",
             nodeKey: "keep",
             kind: "graph_node",
-            effect: { kind: "compensable", compensation: "graph_node" },
+            effect: { kind: "write" },
             input,
         })
         expect(
@@ -897,14 +900,15 @@ describe("one run in flight per (graph, subject): an event behind its subject's 
             attempts,
             context: { verb: TRIGGER.zaloMessageReceived, eventId: "zalo:2", conversationId: "conv-1", connectionId: "conn-1", keyPath: "routeId", workflowId: "wf-front" },
         })
-    const worldOf = async (inFlight: string | null, ownRun: string | null = null) => {
+    const worldOf = async (inFlight: string | null, ownRun: string | null = null, holds?: AgentGraphSubjectHoldsService) => {
         const world = workflowWorldOf({ [agentOf("chatbot")]: "chatbot", [agentOf("sales")]: "sales" })
-        const { flows, runs } = await build(null, { rows: {}, workflows: world.service })
+        const notices = mock<AgentGraphWakeNoticesService>()
+        const { flows, runs } = await build(null, { rows: {}, workflows: world.service, notices, ...(holds === undefined ? {} : { holds }) })
         runs.inFlightOf.mockResolvedValue(inFlight === null ? null : runViewOf({ id: inFlight }))
         runs.runIdOfWake.mockResolvedValue(ownRun)
         const { threads, started } = threadsOf()
         flows.setThreads(threads)
-        return { flows, runs, started }
+        return { flows, runs, started, notices }
     }
 
     it("a line whose route has the front desk's run in flight, that no wait took, is HELD `waiting:<run>`: no second run, nothing pushed in", async () => {
@@ -916,6 +920,66 @@ describe("one run in flight per (graph, subject): an event behind its subject's 
         expect(runs.inFlightOf).toHaveBeenCalledWith("ws-1", expect.any(String), { kind: "routeId", id: "conv-1" })
     })
 
+    // Rule Q-1: a run that is not finished keeps its subject for EVERY workflow (the old contact freeze is gone): a line whose person has a
+    // run of ANOTHER workflow in flight (or an open stop of one) waits behind that run, `waiting:<run>`.
+    it("a line whose person has a run of ANOTHER workflow that holds the subject is HELD `waiting:<that run>`: no run, no model, the hold asked with the route and the contact", async () => {
+        const holds = mock<AgentGraphSubjectHoldsService>({ holderOf: jest.fn().mockResolvedValue({ id: "run-9", workflowId: "wf-sales" }) })
+        const { flows, runs, started } = await worldOf(null, null, holds)
+
+        await expect(flows.run(lineOf())).resolves.toEqual({ status: "held", reason: "waiting:run-9", outcome: null })
+        expect(started).toEqual([])
+        expect(runs.open).not.toHaveBeenCalled()
+        expect(holds.holderOf).toHaveBeenCalledWith("ws-1", expect.arrayContaining([{ kind: "routeId", id: "conv-1" }]), expect.objectContaining({ routeId: "conv-1" }), expect.any(Set))
+    })
+
+    it("the control: no run holds the subject, the line starts its run and is told what waits for a person of the shop", async () => {
+        const holds = mock<AgentGraphSubjectHoldsService>({
+            holderOf: jest.fn().mockResolvedValue(null),
+            waitingOf: jest.fn().mockResolvedValue([]),
+        })
+        const { flows, started } = await worldOf(null, null, holds)
+
+        await flows.run(lineOf())
+        expect(started).toHaveLength(1)
+        expect(holds.waitingOf).toHaveBeenCalledWith("ws-1", expect.objectContaining({ routeId: "conv-1" }))
+    })
+
+    // DEF-5 (MX P-07b): the sale's pay loop handed a line back, the front desk routed it `buy` and called the sale: the call was held
+    // `waiting:<the sale run>` behind the VERY run that had said "not mine", and died with it. Such a wake is ended at once and reported.
+    it("a line handed back by the very run it would wait behind is NOT held: it ends `call_handed_back` and the team is told once", async () => {
+        const { flows, runs, started, notices } = await worldOf("run-7")
+        const line = lineOf()
+        const handedBack = { ...line, context: { ...line.context, handedBackJson: JSON.stringify(["run-7"]) } }
+
+        await expect(flows.run(handedBack)).resolves.toEqual({ status: "skipped", reason: "call_handed_back", outcome: null })
+        expect(started).toEqual([])
+        expect(runs.open).not.toHaveBeenCalled()
+        expect(notices.lost).toHaveBeenCalledTimes(1)
+        expect(notices.lost).toHaveBeenCalledWith(handedBack, { code: "call_handed_back", workflow: expect.any(String), heldBy: "run-7", event: "zalo:2" })
+    })
+
+    it("a workflow CALL made by a run the handed-back line started is not held behind the run that handed it back (the caller's context names it)", async () => {
+        const { flows, runs, started, notices } = await worldOf("run-7")
+        const line = lineOf()
+        const call = { ...line, context: { ...line.context, tagContext: JSON.stringify({ caller: { runId: "run-front" }, params: {} }) } }
+        runs.runOf.mockResolvedValue(runViewOf({ id: "run-front", context: { handedBackJson: JSON.stringify(["run-7"]), messageKey: "zalo:m-62" } }))
+
+        await expect(flows.run(call)).resolves.toEqual({ status: "skipped", reason: "call_handed_back", outcome: null })
+        expect(runs.runOf).toHaveBeenCalledWith("ws-1", "run-front")
+        expect(started).toEqual([])
+        expect(notices.lost).toHaveBeenCalledWith(call, expect.objectContaining({ code: "call_handed_back", heldBy: "run-7", event: "zalo:m-62" }))
+    })
+
+    it("the control: a call whose caller handed nothing back (or another run did) still waits behind the run in flight, nobody told", async () => {
+        const { flows, runs, notices } = await worldOf("run-7")
+        const line = lineOf()
+        const call = { ...line, context: { ...line.context, tagContext: JSON.stringify({ caller: { runId: "run-front" }, params: {} }) } }
+        runs.runOf.mockResolvedValue(runViewOf({ id: "run-front", context: { handedBackJson: JSON.stringify(["run-other"]) } }))
+
+        await expect(flows.run(call)).resolves.toEqual({ status: "held", reason: "waiting:run-7", outcome: null })
+        expect(notices.lost).not.toHaveBeenCalled()
+    })
+
     it("a replay of the very wake that opened the run in flight goes on with its run (it is not behind itself)", async () => {
         const { flows, started } = await worldOf("run-7", "run-7")
 
@@ -923,11 +987,13 @@ describe("one run in flight per (graph, subject): an event behind its subject's 
         expect(started).toHaveLength(1)
     })
 
-    it("with no run in flight for the subject, the line starts the run", async () => {
-        const { flows, started } = await worldOf(null)
+    it("with no run in flight for the subject, the line starts the run, labelled by the trigger id its delivered scope names", async () => {
+        const { flows, runs, started } = await worldOf(null)
 
         await flows.run(lineOf())
         expect(started).toHaveLength(1)
+        // The desk lists the run by its trigger (E-FIX4: a Zalo-started run read `tag`, the graph-flow label of a wake of no pipeline).
+        expect(runs.open).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ trigger: TRIGGER.zaloMessageReceived }))
     })
 
     it("a wake only a `wait` listened to (no registration took it) that no parked run took ends `no_waiter`, never a run or a report", async () => {
@@ -937,5 +1003,58 @@ describe("one run in flight per (graph, subject): an event behind its subject's 
 
         await expect(flows.run(heard)).resolves.toMatchObject({ status: "skipped", reason: "no_waiter" })
         expect(started).toEqual([])
+    })
+
+    // MX-CORE D2-2: a line no agent's registration took (the delivery marked its wait-only wakes `unclaimed`) and no parked wait took
+    // started nothing anywhere: it is the engine's untaken report (once per conversation), never a silent `no_waiter`.
+    it("a wait-only wake of an UNCLAIMED event about a person that no parked run took is reported untaken, never silent", async () => {
+        const { flows, started, notices } = await worldOf(null)
+        const { workflowId: _taken, ...unregistered } = lineOf().context
+        const heard = { ...lineOf(), context: { ...unregistered, waitOnly: "true" as const, unclaimed: "true" as const } }
+
+        await expect(flows.run(heard)).resolves.toMatchObject({ status: "skipped", reason: "no_workflow" })
+        expect(started).toEqual([])
+        expect(notices.untaken).toHaveBeenCalledTimes(1)
+    })
+
+    it("a wait-only wake of an event ANOTHER agent's registration took (not unclaimed) stays a quiet `no_waiter`", async () => {
+        const { flows, notices } = await worldOf(null)
+        const { workflowId: _taken, ...unregistered } = lineOf().context
+        const heard = { ...lineOf(), context: { ...unregistered, waitOnly: "true" as const } }
+
+        await expect(flows.run(heard)).resolves.toMatchObject({ status: "skipped", reason: "no_waiter" })
+        expect(notices.untaken).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphFlowRunsService.gaveUp: a wake the engine gives up on is never a silent death (DEF-5)", () => {
+    const pipelineWake = agentTurnViewOf({
+        agentId: agentOf("sales"),
+        wakeId: "wake-call",
+        source: "trigger",
+        scopeKey: "key:contactId=contact-1",
+        context: { verb: TRIGGER.workflowCalled, eventId: "call:front:1", contactId: "contact-1", conversationId: "conv-1" },
+    })
+
+    it("a pipeline wake dead past its attempts is reported (person, conversation, code) and answered as the flow's", async () => {
+        const notices = mock<AgentGraphWakeNoticesService>()
+        const { flows } = await build(null, { notices })
+
+        await expect(flows.gaveUp(pipelineWake, "attempts")).resolves.toBe(true)
+        expect(notices.lost).toHaveBeenCalledWith(pipelineWake, { code: "attempts", workflow: null, heldBy: null, event: "call:front:1" })
+    })
+
+    it("a wake of no pipeline and no pin is not the flow's: its handler tells (false), nothing is reported", async () => {
+        const notices = mock<AgentGraphWakeNoticesService>()
+        const { flows } = await build(null, { notices })
+
+        await expect(flows.gaveUp(TURN, "attempts")).resolves.toBe(false)
+        expect(notices.lost).not.toHaveBeenCalled()
+    })
+
+    it("an app with no wake notices answers false, so the handler road still speaks", async () => {
+        const { flows } = await build(null)
+
+        await expect(flows.gaveUp(pipelineWake, "attempts")).resolves.toBe(false)
     })
 })

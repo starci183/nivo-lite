@@ -3,7 +3,7 @@ import type { MockOf } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import type { ConnectionActor, ConnectionRecord, CreateConnectionInput } from "@modules/domain/connections"
 import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
 import { LOGGER } from "@modules/platform/logging"
@@ -15,6 +15,13 @@ import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZALO_AUTHORIZATION_FAILED_REASON } from "./messages/channels.messages"
 import { ZaloConnectService } from "./zalo-connect.service"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
+
+/** A create call that must be a live connection: only a live one carries a credential. */
+type LiveConnectionInput = Extract<CreateConnectionInput, { readonly secret: unknown }>
+const liveOf = (input: CreateConnectionInput): LiveConnectionInput => {
+    if (input.sandbox === true) throw new Error("expected a live connection input")
+    return input
+}
 
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
 const CALLBACK = "https://nivo.test/connections/zalo/callback"
@@ -35,6 +42,7 @@ const connection = builder<ConnectionRecord>({
     status: "pending",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     createdAt: "2026-10-01T00:00:00.000Z",
@@ -86,7 +94,10 @@ const build = async () => {
 /** Lets the name read started in the background settle. */
 const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve))
 
-const createdOf = (connections: MockOf<ConnectionsService>) => connections.create.mock.calls[0]?.[0]
+const createdOf = (connections: MockOf<ConnectionsService>) => {
+    const input = connections.create.mock.calls[0]?.[0]
+    return input === undefined ? undefined : liveOf(input)
+}
 
 describe("ZaloConnectService", () => {
     describe("start", () => {

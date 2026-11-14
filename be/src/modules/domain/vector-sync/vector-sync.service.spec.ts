@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { VECTOR_INDEX, type VectorFlags, type VectorRow } from "@modules/integrations/qdrant"
+import { PLATFORM_TENANT, VECTOR_INDEX, type VectorFlags, type VectorRow } from "@modules/integrations/qdrant"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER, type Logger } from "@modules/platform/logging"
@@ -20,9 +20,9 @@ interface PassageOver extends Partial<Omit<VectorRow, "mirror">> {
 }
 
 /** Builds the sync service in a testing module over the scripted index, row sources, embedder, queue and clock. */
-const build = async (bound = true) => {
+const build = async () => {
     const index = new FakeVectorIndex()
-    const sources = { passage: new FakeRowSource(), truth: new FakeRowSource() }
+    const sources = { passage: new FakeRowSource(), truth: new FakeRowSource(), base: new FakeRowSource() }
     const embedder = new FakeEmbedder()
     const queue = mock<VectorSyncQueue>()
     const logger = mock<Logger>()
@@ -32,7 +32,7 @@ const build = async (bound = true) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             VectorSyncService,
-            { provide: VECTOR_INDEX, useValue: bound ? index : null },
+            { provide: VECTOR_INDEX, useValue: index },
             { provide: VECTOR_ROW_SOURCES, useValue: sources },
             { provide: VECTOR_EMBEDDER, useValue: embedder },
             { provide: VectorSyncQueue, useValue: queue },
@@ -162,7 +162,7 @@ const registerTruthEventCases = () => {
         expect(index.points.truth.size).toBe(0)
     })
 
-    it("every change of a truth writes its job; a deployment with no index writes none and does nothing", async () => {
+    it("every change of a truth writes its job, in its own transaction or the caller's; a change naming no row writes none", async () => {
         const { service, queue, transaction } = await build()
         await service.changed("truth", WS, ["t1", "t1", "t2"])
         expect(queue.enqueueSync).toHaveBeenCalledWith({ kind: "truth", workspaceId: WS, ids: ["t1", "t2"], at: AT }, expect.anything())
@@ -172,13 +172,32 @@ const registerTruthEventCases = () => {
         await service.changedSource(WS, "doc", tx)
         expect(queue.enqueueSync).toHaveBeenLastCalledWith({ kind: "passage", workspaceId: WS, sourceId: "doc", at: AT }, tx)
 
-        const off = await build(false)
-        expect(off.service.bound()).toBe(false)
-        await off.service.changed("truth", WS, ["t1"])
-        await off.service.changedSource(WS, "doc")
-        await expect(off.service.sync({ kind: "truth", workspaceId: WS, ids: ["t1"], at: AT })).resolves.toMatchObject({ embedded: 0 })
-        await expect(off.service.accept("truth", WS, new Map([["t1", [1]]]))).resolves.toMatchObject({ given: 0 })
-        expect(off.queue.enqueueSync).not.toHaveBeenCalled()
+        await service.changed("truth", WS, [])
+        expect(queue.enqueueSync).toHaveBeenCalledTimes(2)
+    })
+}
+
+const registerKindCases = () => {
+    it("a row kind that declares it is embedded is synced by the same road: the base knowledge, tenant PLATFORM_TENANT", async () => {
+        const { service, index, sources, embedder } = await build()
+        const item = vectorRowOf("k1", PLATFORM_TENANT, {
+            mirror: { workspaceId: PLATFORM_TENANT, sourceId: null, module: null, installationId: null, isPublic: true, customerReady: true, inForce: true },
+        })
+        sources.base.put(item)
+
+        await expect(service.sync({ kind: "base", workspaceId: PLATFORM_TENANT, ids: ["k1"], at: AT })).resolves.toMatchObject({ embedded: 1 })
+        expect(index.payloadOf("base", "k1")).toMatchObject({ workspaceId: PLATFORM_TENANT, model: TEST_MODEL, textHash: "hash-k1" })
+        expect(sources.base.rows.get("k1")).toMatchObject({ stamped: true })
+        expect(embedder.calls).toBe(1)
+
+        // A workspace's job naming the item's id finds no row of its own tenant and removes nothing.
+        await expect(service.sync({ kind: "base", workspaceId: WS, ids: ["k1"], at: AT })).resolves.toMatchObject({ removed: 0 })
+        expect(index.points.base.has("k1")).toBe(true)
+
+        // The item is removed from the folder: its point goes.
+        sources.base.rows.delete("k1")
+        await expect(service.sync({ kind: "base", workspaceId: PLATFORM_TENANT, ids: ["k1"], at: AT + 1 })).resolves.toMatchObject({ removed: 1 })
+        expect(index.points.base.size).toBe(0)
     })
 }
 
@@ -243,14 +262,21 @@ const registerIdempotenceCases = () => {
 }
 
 const registerVectorCases = () => {
-    it("copies the vector Postgres still holds (the transition) instead of embedding", async () => {
+    it("a vector comes from three origins only, cheapest first: the caller's, another point of the same text, an embedding call", async () => {
         const { service, index, sources, embedder } = await build()
-        sources.passage.put(passage("p1", "doc"))
-        sources.passage.stored.set("p1", [7, 7, 7])
+        sources.truth.put(vectorRowOf("t1", WS, { textHash: "line-a" }), vectorRowOf("t2", WS, { textHash: "line-a" }), vectorRowOf("t3", WS))
 
-        await expect(service.sync({ kind: "passage", workspaceId: WS, ids: ["p1"], at: AT })).resolves.toMatchObject({ copied: 1, embedded: 0 })
-        expect(index.points.passage.get("p1")?.vector).toEqual([7, 7, 7])
-        expect(embedder.calls).toBe(0)
+        // The writer hands over t1's vector: given, no call.
+        await expect(service.accept("truth", WS, new Map([["t1", [3, 4]]]))).resolves.toMatchObject({ given: 1, embedCalls: 0 })
+        // t2 says the same line: adopted from t1's point; t3 has no donor: embedded.
+        const done = await service.sync({ kind: "truth", workspaceId: WS, ids: ["t2", "t3"], at: AT })
+
+        expect(done).toMatchObject({ adopted: 1, embedded: 1, embedCalls: 1 })
+        expect(Object.keys(done).toSorted()).toEqual(
+            ["adopted", "embedCalls", "embedded", "failed", "given", "marked", "removed", "unchanged", "waiting"].toSorted(),
+        )
+        expect(index.points.truth.get("t2")?.vector).toEqual([3, 4])
+        expect(embedder.calls).toBe(1)
     })
 
     it("adopts the vector of an identical line's point: one index read, no embedding call", async () => {
@@ -317,6 +343,7 @@ const registerVectorCases = () => {
 describe("VectorSyncService", () => {
     describe("events", registerEventCases)
     describe("truth events", registerTruthEventCases)
+    describe("row kinds", registerKindCases)
     describe("idempotence", registerIdempotenceCases)
     describe("vectors", registerVectorCases)
 })

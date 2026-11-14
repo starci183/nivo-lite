@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { reembedPayloadOf, sourcePayloadOf } from "./knowledge-payload.policy"
+import { sourcePayloadOf } from "./knowledge-payload.policy"
 
 const SUBJECT = Symbol("knowledge-payload.policy")
-type Subject = { sourcePayloadOf: typeof sourcePayloadOf; reembedPayloadOf: typeof reembedPayloadOf }
+type Subject = { sourcePayloadOf: typeof sourcePayloadOf }
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { sourcePayloadOf, reembedPayloadOf } }],
+        providers: [{ provide: SUBJECT, useValue: { sourcePayloadOf } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -24,20 +24,5 @@ describe("sourcePayloadOf", () => {
         const subject = await build()
 
         expect(subject.sourcePayloadOf({ sourceId: "s1" })).toBeNull()
-    })
-})
-
-describe("reembedPayloadOf", () => {
-    it("gives back a payload with a workspace and an optional model", async () => {
-        const subject = await build()
-
-        expect(subject.reembedPayloadOf({ workspaceId: "w1" })).toEqual({ workspaceId: "w1" })
-        expect(subject.reembedPayloadOf({ workspaceId: "w1", model: "m" })).toEqual({ workspaceId: "w1", model: "m" })
-    })
-
-    it("gives nothing for any other payload", async () => {
-        const subject = await build()
-
-        expect(subject.reembedPayloadOf({ model: "m" })).toBeNull()
     })
 })

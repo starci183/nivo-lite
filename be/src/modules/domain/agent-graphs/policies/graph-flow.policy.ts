@@ -8,7 +8,7 @@ import { suppliedScopeOf } from "./workflow-trigger.policy"
 /** The step kind a node of a graph runs as. */
 export const GRAPH_NODE_STEP_KIND = "graph_node"
 
-/** The trigger step a node graph's run is opened under. */
+/** The trigger label a node graph's run is opened under when its wake is no event of the pipeline (a tag); a pipeline run takes its verb. */
 export const GRAPH_FLOW_TRIGGER = "tag"
 
 /** The language of a turn whose wake names none. */
@@ -106,11 +106,8 @@ export const triggerScopeOf = (wake: FlowWake): StepJson => {
 /** The language of a trigger scope; Vietnamese when it names none the product speaks. */
 export const localeOf = (trigger: StepJson): Locale => (trigger.locale === "en" ? "en" : DEFAULT_LOCALE)
 
-/** What a node's step does to the world, in the run engine's terms: a compensable node is undone by the node step itself. */
-const stepEffectOf = (saga: NodeSaga): StepEffect => {
-    if (saga === "compensable") return { kind: "compensable", compensation: GRAPH_NODE_STEP_KIND }
-    return saga === "pivot" ? { kind: "pivot" } : { kind: "read" }
-}
+/** What a node's step does to the world, in the run engine's terms: a read, or a write. */
+const stepEffectOf = (saga: NodeSaga): StepEffect => (saga === "read" ? { kind: "read" } : { kind: "write" })
 
 /** The key of a node's step: the item of a body node (`<loop>[<item>].<node>`), else the node itself. */
 export const nodeStepKeyIn = (node: Pick<GraphSpecNode, "key">, input: Pick<GraphNodeStepInput, "item" | "loop">): string =>

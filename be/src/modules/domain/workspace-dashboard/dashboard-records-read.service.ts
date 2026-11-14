@@ -6,7 +6,7 @@ import { ChannelDeliveriesService } from "@modules/domain/customer-routes"
 import type { Compared, DashboardWindow, RecordsFacts } from "./workspace-dashboard.contracts"
 
 /** The statuses of a run that finished. */
-const DONE_RUN_STATUSES = ["done", "compensated"] as const
+const DONE_RUN_STATUSES = ["done"] as const
 
 /** The statuses of a run that failed or was handed to a person. */
 const FAILED_RUN_STATUSES = ["failed", "dead"] as const

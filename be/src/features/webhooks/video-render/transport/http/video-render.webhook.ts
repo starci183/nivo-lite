@@ -1,4 +1,5 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { SANDBOX_KEY_HEADER } from "@modules/domain/provider-sandbox"
 import type { Request } from "express"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RENDER_DOOR_PATH, VideoRenderIntakeService, type RenderDoorHeaders } from "@modules/domain/video-compose"
@@ -36,6 +37,7 @@ export class VideoRenderWebhook {
             rawBody: request.rawBody,
             signature: route.token,
             timestamp: undefined,
+            sandboxKey: typeof headers[SANDBOX_KEY_HEADER] === "string" ? headers[SANDBOX_KEY_HEADER] : undefined,
         })
         await this.intake.accept({ provider: route.provider, connectionId: route.connectionId, rawBody: request.rawBody, headers })
     }

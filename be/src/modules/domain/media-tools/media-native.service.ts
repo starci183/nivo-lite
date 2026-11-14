@@ -35,7 +35,8 @@ import { DomainError } from "@modules/platform/errors"
 
 /** A registry that answers the port of a provider, when the provider serves the purpose. */
 interface PortRegistry<Port> {
-    of(provider: string): Port | undefined
+    /** The port that serves the account (its sandbox one for a sandbox account), or undefined when none serves it. */
+    portFor(account: ConnectionRecord): Port | undefined
 }
 
 /** An account and the port of its provider. */
@@ -280,7 +281,7 @@ export class MediaNativeService implements NativeToolFamily {
     ): Promise<AccountPort<Port>> {
         if (caller.connectionId === undefined) throw mediaRefusal("not_connected")
         const connection = await this.connections.find(workspaceId, caller.connectionId)
-        const port = connection === null ? undefined : registry.of(connection.provider)
+        const port = connection === null ? undefined : registry.portFor(connection)
         if (connection === null || port === undefined) throw mediaRefusal("not_connected")
         return { connection, port }
     }

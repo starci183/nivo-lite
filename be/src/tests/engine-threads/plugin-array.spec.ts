@@ -8,7 +8,6 @@ import { toModuleDefinitionType } from "@features/api/modules/transport/graphql/
 import { AgentGraphTurnPolicyService } from "@modules/domain/agent-graphs/agent-graph-turn-policy.service"
 import { installedModules } from "@tests/fixtures/builders/installed-modules.builder"
 import { RunStopRecordsService } from "@modules/domain/agent-threads/stops/run-stop-records.service"
-import { LeadFreezeRecordsService } from "@modules/domain/lead-freezes/lead-freeze-records.service"
 import { AgentWorkflowAdoptionService } from "@modules/domain/agent-graphs/agent-workflow-adoption.service"
 import { AgentWorkflowRecordsService } from "@modules/domain/agent-graphs/agent-workflow-records.service"
 import { AgentWorkflowsAdminService } from "@modules/domain/agent-graphs/agent-workflows-admin.service"
@@ -186,9 +185,8 @@ const world = async () => {
             { provide: WORKSPACE_SEED_OPTIONS, useValue: { print, nodes: INSTALLED.nodeInstall() } },
             { provide: SEED_AGENTS, useValue: mock() },
             { provide: EntityNodePortsService, useValue: { ports: () => [] } },
-            // The stops and the holds of the engine's tables: this workspace has neither.
+            // The stops of the engine's tables: this workspace has none.
             { provide: RunStopRecordsService, useValue: mock<RunStopRecordsService>({ ofContacts: jest.fn().mockResolvedValue([]) }) },
-            { provide: LeadFreezeRecordsService, useValue: mock<LeadFreezeRecordsService>({ byRun: jest.fn().mockResolvedValue(null) }) },
             { provide: LOGGER, useValue: mock() },
         ],
     })

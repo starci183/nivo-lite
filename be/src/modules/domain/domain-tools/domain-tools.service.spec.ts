@@ -210,6 +210,7 @@ describe("the domain tools' manifest and schemas", () => {
             "nivo.tool.domain.list",
             "nivo.tool.domain.registration.create",
             "nivo.tool.domain.renewal.create",
+            "nivo.tool.domain.renewal.get",
             "nivo.tool.domain.transfer.create",
             "nivo.tool.domain.dns.record.list",
             "nivo.tool.domain.dns.record.create",

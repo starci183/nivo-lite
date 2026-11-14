@@ -35,6 +35,7 @@ const stored = (provider: StoredRecord["provider"], meta: Readonly<Record<string
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

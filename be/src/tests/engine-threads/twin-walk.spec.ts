@@ -64,8 +64,8 @@ const scripts: Readonly<Record<Route, { readonly text: string; readonly script: 
 const PATHS: Readonly<Record<Route, ReadonlyArray<string>>> = {
     buy: ["hear", "understand", "to-consult"],
     paid: ["hear", "understand", "to-payment"],
-    complaint: ["hear", "understand", "complaint-reply", "complaint-declined", "complaint-notify", "to-owner"],
-    question: ["hear", "understand", "answer", "answer-declined"],
+    complaint: ["hear", "understand", "complaint-reply", "complaint-notify", "to-owner"],
+    question: ["hear", "understand", "answer"],
 }
 const ACTS: Readonly<Record<Route, ReadonlyArray<string>>> = {
     buy: [TOOL.agentTag],

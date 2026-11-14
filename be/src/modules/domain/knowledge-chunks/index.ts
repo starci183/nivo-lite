@@ -10,13 +10,12 @@ export type {
 export { chunkLocated, chunkPassages } from "./chunk.policy"
 export { passageHashOf, passageTextHashOf } from "./passage-hash.policy"
 export { reusePlanOf } from "./passage-reuse.policy"
-export { hybridHit, hybridScore } from "./hybrid-score.policy"
 export { KnowledgeChunksModule } from "./knowledge-chunks.module"
 export { KnowledgeChunksService } from "./knowledge-chunks.service"
 export { PassageSearchService } from "./passage-search.service"
 export { PassageVectorRowsService } from "./passage-vector-rows.service"
 export type { PassageLens, StoredPassage, WordMatch } from "./passage-search.contracts"
-export { hasStoredSize, storedVectorOf, toVector } from "./vector.policy"
+export { hasStoredSize } from "./vector.policy"
 export type {
     PassageVerdict,
     PassageView,

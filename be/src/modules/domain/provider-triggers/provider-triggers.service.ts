@@ -26,6 +26,7 @@ import type {
     SwitchRequest,
     TriggerChangeResult,
     TriggerSwitchView,
+    TriggerTaker,
 } from "./provider-triggers.contracts"
 import { InjectProviderTriggerCoreDeciders, InjectProviderTriggerReceivers } from "./provider-triggers.decorators"
 import { ProviderTriggersLogEvent } from "./provider-triggers.log-events"
@@ -52,6 +53,12 @@ interface Handed {
 }
 
 /** What one event came to for one agent. */
+/** What MATCH found for one agent: the registration that takes the event, else whether a `wait` of the agent lists its verb. */
+interface Match {
+    readonly taker: TriggerTaker | null
+    readonly listened: boolean
+}
+
 type EventOutcome =
     | { readonly kind: "woken"; readonly agentId: string; readonly workflowId: string; readonly eventId: string; readonly wakeId: string }
     | { readonly kind: "repeat" }
@@ -134,8 +141,16 @@ export class ProviderTriggersService {
             }
             let taken = false
             let repeated = false
+            // MATCH every agent first: an event no registration of any agent takes is UNCLAIMED, and its wait-only wakes say so (a wait
+            // that takes none of them leaves the event unanswered, which the engine reports, never a silent `no_waiter`).
+            const matches = new Map<string, Match>()
             await eachInOrder(agents, async (agentId) => {
-                const outcome = await this.correlate(input, one, agentId, tx)
+                matches.set(agentId, await this.matchOf(input, one, agentId))
+            })
+            const unclaimed = [...matches.values()].every((match) => match.taker === null)
+            await eachInOrder(agents, async (agentId) => {
+                const match = matches.get(agentId) ?? { taker: null, listened: false }
+                const outcome = await this.correlate(input, one, agentId, match, unclaimed, tx)
                 if (outcome.kind !== "untaken") taken = true
                 if (outcome.kind === "repeat") repeated = true
                 if (outcome.kind !== "untaken") outcomes.push(outcome)
@@ -304,30 +319,48 @@ export class ProviderTriggersService {
     }
 
     /**
-     * MATCH and CORRELATE of one event for one agent: the workflow whose registration takes it, then one wake keyed once by the verb, the
-     * origin and the event's id, locked by the event's correlation key (the registration's own, else the declaration's), with the
-     * registration's settle time. Ids only ride on the wake: the data is rebuilt from the raw row when the run starts.
+     * MATCH of one event for one agent: the workflow whose registration takes it, else whether a `wait` of one of its workflows lists the
+     * verb (a run parked there may take it; with none the drain ends it). The clock's firing names its workflow, so it is never heard by a
+     * wait. Read only.
      */
-    private async correlate(input: DeliverInput, one: Handed, agentId: string, tx: EntityManager): Promise<EventOutcome> {
+    private async matchOf(input: DeliverInput, one: Handed, agentId: string): Promise<Match> {
         const { declaration } = input
         const pin = one.given.pin ?? null
-        const taker = await this.receivers?.takerOf(
-            input.workspaceId,
-            agentId,
-            declaration.verb,
-            { ...one.scope },
-            one.given.workflowId ?? null,
-            pin?.workflow ?? null,
-        )
-        if (this.wakes === undefined) return { kind: "untaken" }
-        // No registration takes it: the agent still hears it when a `wait` of one of its workflows lists the verb (a run parked there may
-        // take it; with none the drain ends it `no_waiter`). The clock's firing names its workflow, so it is never heard by a wait.
+        const taker =
+            (await this.receivers?.takerOf(
+                input.workspaceId,
+                agentId,
+                declaration.verb,
+                { ...one.scope },
+                one.given.workflowId ?? null,
+                pin?.workflow ?? null,
+            )) ?? null
         const listened =
-            (taker === null || taker === undefined) &&
+            taker === null &&
             (one.given.workflowId ?? null) === null &&
             pin === null &&
             (await this.receivers?.waitsOn?.(input.workspaceId, agentId, declaration.verb)) === true
-        if ((taker === null || taker === undefined) && !listened) return { kind: "untaken" }
+        return { taker, listened }
+    }
+
+    /**
+     * CORRELATE of one matched event for one agent: one wake keyed once by the verb, the origin and the event's id, locked by the event's
+     * correlation key (the registration's own, else the declaration's), with the registration's settle time. Ids only ride on the wake:
+     * the data is rebuilt from the raw row when the run starts. A wait-only wake of an event no agent's registration took is marked
+     * `unclaimed`.
+     */
+    private async correlate(
+        input: DeliverInput,
+        one: Handed,
+        agentId: string,
+        match: Match,
+        unclaimed: boolean,
+        tx: EntityManager,
+    ): Promise<EventOutcome> {
+        const { declaration } = input
+        const { taker, listened } = match
+        if (this.wakes === undefined) return { kind: "untaken" }
+        if (taker === null && !listened) return { kind: "untaken" }
         const keyPath = ownKeyPathOf(taker?.ownKey ?? null) ?? keyPathOf(declaration.key)
         const keyValue = keyPath === null ? null : keyValueOf(one.scope, keyPath)
         const origin = input.connectionId ?? agentId
@@ -336,24 +369,30 @@ export class ProviderTriggersService {
             agentId,
             source: TRIGGER_WAKE_SOURCE,
             eventKey: eventWakeKeyOf(declaration.verb, origin, one.scope.eventId),
-            context: this.contextOf(input, one, taker?.workflowId ?? null, keyValue === null ? null : keyPath),
+            context: this.contextOf(input, one, taker?.workflowId ?? null, keyValue === null ? null : keyPath, unclaimed),
             actorMemberId: one.given.actorMemberId ?? null,
             scopeKey: scopeKeyOfEvent(keyPath, keyValue),
             // The settle time is the SOURCE's (its declaration: a chat line a few seconds, capped; every other source zero).
             ...(declaration.settle === undefined || declaration.settle === null ? {} : { settle: declaration.settle }),
         })
         if (written === null) return { kind: "repeat" }
-        return taker === null || taker === undefined
+        return taker === null
             ? { kind: "listened" }
             : { kind: "woken", agentId, workflowId: taker.workflowId, eventId: one.scope.eventId, wakeId: written }
     }
 
     /**
      * The ids a wake of the pipeline carries (ROAD-API section 3.2): the verb, the event, the declaration, the workflow that took it, the
-     * key it is locked by, the account, the person and the route (`conversationId`: the engine's own name of the route, which holds, stops
-     * and freezes are keyed by), the raw row its data is rebuilt from, else the data itself for a source that keeps no row, and the files.
+     * key it is locked by, the account, the person and the route (`conversationId`: the engine's own name of the route, which holds and stops
+     * are keyed by), the raw row its data is rebuilt from, else the data itself for a source that keeps no row, and the files.
      */
-    private contextOf(input: DeliverInput, one: Handed, workflowId: string | null, keyPath: string | null): AgentWakeContext {
+    private contextOf(
+        input: DeliverInput,
+        one: Handed,
+        workflowId: string | null,
+        keyPath: string | null,
+        unclaimed: boolean,
+    ): AgentWakeContext {
         const { declaration, connectionId } = input
         const { scope, given } = one
         return {
@@ -362,6 +401,7 @@ export class ProviderTriggersService {
             declaration: `${declaration.provider}:${declaration.name}`,
             // A wake no registration took names no workflow: only a parked `wait` may take it (`listened`).
             ...(workflowId === null ? { waitOnly: "true" as const } : { workflowId }),
+            ...(workflowId === null && unclaimed ? { unclaimed: "true" as const } : {}),
             ...(keyPath === null ? {} : { keyPath }),
             ...(connectionId === null ? {} : { connectionId }),
             ...(scope.contactId === undefined ? {} : { contactId: scope.contactId }),

@@ -16,6 +16,7 @@ import { RollbackAgentWorkflowHandler } from "./application/rollback-agent-workf
 import { AcceptAgentWorkflowTemplateHandler } from "./application/accept-agent-workflow-template.handler"
 import { AgreeAgentNodeRightsHandler } from "./application/agree-agent-node-rights.handler"
 import { SetAgentWorkflowStatusHandler } from "./application/set-agent-workflow-status.handler"
+import { SetAgentNodeModeHandler } from "./application/set-agent-node-mode.handler"
 import { RunWorkflowHandler } from "./application/run-workflow.handler"
 import { RunnableWorkflowHandler } from "./application/runnable-workflow.handler"
 import { ConfigurableModuleClass } from "./agent-workflows.module-definition"
@@ -38,6 +39,7 @@ import { ConfigurableModuleClass } from "./agent-workflows.module-definition"
         RollbackAgentWorkflowHandler,
         AcceptAgentWorkflowTemplateHandler,
         SetAgentWorkflowStatusHandler,
+        SetAgentNodeModeHandler,
         AgreeAgentNodeRightsHandler,
         RunWorkflowHandler,
         RunnableWorkflowHandler,

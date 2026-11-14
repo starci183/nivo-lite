@@ -44,6 +44,7 @@ const heldSmtp = (host: string, from: string): ConnectionRecord => ({
     status: "pending",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

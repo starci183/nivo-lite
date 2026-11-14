@@ -5,8 +5,8 @@ import type { AgentWakeSource } from "../../modules/domain/agent-work/agent-work
 
 const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
 type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>
-const AgentTriggerEntity: (typeof agentWorkEntities)[5] = agentWorkEntities[5]
-const AgentWakeEntity: (typeof agentWorkEntities)[6] = agentWorkEntities[6]
+const AgentTriggerEntity: (typeof agentWorkEntities)[4] = agentWorkEntities[4]
+const AgentWakeEntity: (typeof agentWorkEntities)[5] = agentWorkEntities[5]
 
 const MINUTE_MS = 60_000
 

@@ -1,11 +1,10 @@
 import { SlotView, type SlotLabels } from "@nivo-lite/agent-sdk/client"
-import { Divider, Section, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Section, Stack, SurfaceCard } from "@starci/grammar/common"
 import { ContactBlockNode } from "@/components/leaves/ContactBlockNode"
-import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ContactModuleAgentView, ContactsPanesCopy, DataSlot } from "@/modules/types"
 
 /** The words the card draws. */
-type ModulesCopy = Pick<ContactsPanesCopy, "modulesTitle" | "modulesNote" | "modulesEmptyBody" | "modulesMore" | "errorBody">
+type ModulesCopy = Pick<ContactsPanesCopy, "modulesTitle" | "modulesNote" | "modulesMore" | "errorBody">
 
 /** What the modules card draws. */
 interface ContactModulesCardProps {
@@ -68,7 +67,7 @@ const SectionView = (props: SectionViewProps) => (
 
 /**
  * The place where installed modules mount their own blocks about this person: ONE card (the engine page draws no business of its own)
- * holding each module's block as a titled section, with a divider between sections; the same card says so when no module mounted one.
+ * holding each module's block as a titled section, the sections one row step apart. Nothing is drawn when no module mounts a block.
  */
 export const ContactModulesCard = (props: ContactModulesCardProps) => (
     <SlotView
@@ -77,10 +76,9 @@ export const ContactModulesCard = (props: ContactModulesCardProps) => (
         labels={props.labels}
         errorLayout="band"
         errorDescription={props.copy.errorBody}
-        emptyDescription={props.copy.modulesEmptyBody}
-        emptyIconSource={nivoIconSource("apps", "leading")}
         onRetry={props.onRetry}
         forbidden="hide"
+        empty="collapse"
         frame={(notice) => (
             <SurfaceCard label={props.copy.modulesTitle} headingLevel={2} fact={props.copy.modulesNote}>
                 {notice}
@@ -94,12 +92,9 @@ export const ContactModulesCard = (props: ContactModulesCardProps) => (
                 isLoading={isSkeleton}
                 {...(agents.some((agent) => agent.hasMore) ? { note: props.copy.modulesMore } : {})}
             >
-                <Stack gap="row">
-                    {sectionsOf(agents).map((section, index) => (
-                        <Stack key={section.key} gap="inline">
-                            {index === 0 ? null : <Divider semantics="presentation" />}
-                            <SectionView section={section} isLoading={isSkeleton} />
-                        </Stack>
+                <Stack gap="section">
+                    {sectionsOf(agents).map((section) => (
+                        <SectionView key={section.key} section={section} isLoading={isSkeleton} />
                     ))}
                 </Stack>
             </SurfaceCard>

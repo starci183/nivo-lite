@@ -1,7 +1,7 @@
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import type { ConnectionActor, ConnectionRecord, CreateConnectionInput } from "@modules/domain/connections"
 import { CHANNEL_SETUP_CLIENT, ChannelSetupError, ChannelSetupErrorCode } from "@modules/integrations/channel-setup"
 import type { ChannelSetupClient } from "@modules/integrations/channel-setup"
 import { CLOCK } from "@modules/platform/clock"
@@ -11,6 +11,13 @@ import { ChannelConnectionsService } from "./channel-connections.service"
 import { ChannelConnectionsErrorCode } from "./errors/channel-connections.error"
 import * as moneyPolicy from "./money-provider.policy"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
+
+/** A create call that must be a live connection: only a live one carries a credential. */
+type LiveConnectionInput = Extract<CreateConnectionInput, { readonly secret: unknown }>
+const liveOf = (input: CreateConnectionInput): LiveConnectionInput => {
+    if (input.sandbox === true) throw new Error("expected a live connection input")
+    return input
+}
 const matching = (pattern: RegExp): unknown => expect.stringMatching(pattern)
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
 const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
@@ -25,6 +32,7 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
     status: "pending",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -149,7 +157,7 @@ describe("ChannelConnectionsService startMoneyConnection", () => {
     it("creates a pending SePay feed with a generated API key whose hash verifies calls", async () => {
         const { service, connections } = await build()
         const view = await service.startMoneyConnection(actor, input)
-        const created = connections.create.mock.calls[0]?.[0]
+        const created = liveOf(connections.create.mock.calls[0]![0])
         expect(created).toMatchObject({
             provider: "sepay",
             status: "pending",

@@ -3,14 +3,11 @@ import {
     type TemplateGraph,
     callWorkflow,
     defineTemplateGraph,
-    equals,
-    ifNode,
     node,
     outcome,
     ref,
     trigger,
 } from "@nivo-lite/agent-sdk/template"
-import { teamDeclinedNoticeNode } from "@nivo-lite/blocks-core"
 import { z } from "zod"
 import { idSchema } from "../../../nodes/webbooks/books-shapes"
 import { webbooksPaymentCreditNode } from "../../../nodes/webbooks/payment-credit.node"
@@ -20,7 +17,6 @@ import { webbooksPurchasePaidTeamNode } from "../../../nodes/webbooks/purchase-p
 import { webbooksPurchasePaidNode } from "../../../nodes/webbooks/purchase-paid.node"
 import { webbooksRenewalPaidTeamNode } from "../../../nodes/webbooks/renewal-paid-team.node"
 import { webbooksRenewalPaidNode } from "../../../nodes/webbooks/renewal-paid.node"
-import { webbooksText } from "../copy"
 
 /** The language the team reads (today's templates fix it). */
 const LOCALE = "vi"
@@ -29,7 +25,7 @@ const LOCALE = "vi"
 const input = z.object({ data: z.object({ transactionId: idSchema }) })
 
 /**
- * `webbooks.payment` version 9 (Reconcile money in), woken by a bank credit alone (SePay or Casso; the verb is a CREDIT, so
+ * `webbooks.payment` version 12 (Reconcile money in), woken by a bank credit alone (SePay or Casso; the verb is a CREDIT, so
  * today's `direction == in` condition is the verb itself). It is composed of generic pieces: `credit` reads the raw bank row the trigger
  * names (the provider's generic read of received credits), `open` reads the CRM's requests awaiting money, `match` settles the credit
  * against ONE open request (exact comparisons first, by the pure rule `rules/webbooks/payment-match`: a payment code held in the transfer
@@ -38,8 +34,9 @@ const input = z.object({ data: z.object({ transactionId: idSchema }) })
  * recorded paid, the team told, and handed to the provider renewal (Renewal agent); a purchase is recorded paid, the team told,
  * and handed to Sales. Each hand-off runs before its outcome (the contract's `outcome` has no `next`). The request's id is present
  * on its own route (`match`'s output says so); the record steps take null and refuse it exactly. A person who declines a record
- * (money; `record-declined` / `purchase-declined`, exact booleans) made a decision: the team is told (`record-notice` /
- * `purchase-notice`, `team.declined-notice`) and the run ends `declined`; no team line, no hand-off.
+ * (money) made a decision: it is the record step's unsuccessful ending (R68): the ENGINE tells the team (the step, `declined`, the
+ * service or purchase code) and the run ends `declined`; no team line, no hand-off. Change from version 11 (R68): the hand-drawn
+ * `record-declined`/`record-notice` and `purchase-declined`/`purchase-notice` pairs are the record steps' `unsuccessful` option.
  * Change from version 9: `record-team` / `purchase-team` answer `declined: true` when a person declined their team line on its card;
  * they are side steps (`blocking: false`, a failure of theirs was always passed over), so a declined team line skips that line only and
  * the hand-off runs as before: the money is recorded, the renewal or the sale must go on.
@@ -59,12 +56,12 @@ export const paymentGraph: TemplateGraph = defineTemplateGraph({
             vi: "Khi ng\u00e2n h\u00e0ng b\u00e1o c\u00f3 ti\u1ec1n v\u00e0o: kh\u1edbp v\u1edbi y\u00eau c\u1ea7u gia h\u1ea1n ho\u1eb7c \u0111\u01a1n mua \u0111ang ch\u1edd tr\u1ea3 b\u1eb1ng m\u00e3 thanh to\u00e1n v\u00e0 \u0111\u00fang s\u1ed1 ti\u1ec1n, ghi nh\u1eadn \u0111\u00e3 tr\u1ea3 trong CRM, b\u00e1o \u0111\u1ed9i, r\u1ed3i chuy\u1ec3n sang gia h\u1ea1n t\u1ea1i nh\u00e0 cung c\u1ea5p ho\u1eb7c cho Kinh doanh",
             en: "When the bank reports money in: matches it to the renewal request or the purchase awaiting payment by its payment code and exact amount, records it paid in the CRM, tells the team, then hands on to the provider renewal or to Sales",
         },
-        version: 11,
-        publishedAt: "2026-11-14T03:00:00.000Z",
+        version: 12,
+        publishedAt: "2026-11-14T22:00:00.000Z",
         notes: {
-        vi: "Đọc sự kiện theo một đường chung: route, liên hệ, tài khoản và dữ liệu của sự kiện (trigger.data)",
-        en: "Reads its event on the one pipeline: the route, the contact, the account and the event's data (trigger.data)",
-    },
+            vi: "R68: ghi nhận tiền bị từ chối duyệt thì hệ thống tự báo đội kèm mã dịch vụ hoặc mã đơn mua và kết thúc bị từ chối; quy trình chỉ còn các bước nghiệp vụ",
+            en: "R68: a record of money a person declined is told to the team by the engine with the service or purchase code and the run ends declined; the workflow keeps only its business steps",
+        },
     },
     nodes: {
         credit: node(webbooksPaymentCreditNode, {
@@ -90,20 +87,12 @@ export const paymentGraph: TemplateGraph = defineTemplateGraph({
                 renewalId: ref("steps.match.output.renewalId", { default: null }),
                 transactionRef: ref("steps.match.output.transactionRef"),
             },
-            next: "record-declined",
-        }),
-        "record-declined": ifNode({
-            when: equals(ref("steps.record.output.declined"), true),
-            yes: "record-notice",
-            no: "record-team",
-        }),
-        "record-notice": node(teamDeclinedNoticeNode, {
-            input: {
-                step: webbooksText("node.renewal-paid.title").vi,
-                ref: ref("steps.match.output.serviceCode", { default: null }),
-                locale: LOCALE,
+            next: "record-team",
+            unsuccessful: {
+                then: "end",
+                outcome: "declined",
+                facts: [{ label: { vi: "Mã dịch vụ", en: "Service" }, value: ref("steps.match.output.serviceCode", { default: null }) }],
             },
-            next: "declined",
         }),
         "record-team": node(webbooksRenewalPaidTeamNode, {
             input: {
@@ -132,6 +121,7 @@ export const paymentGraph: TemplateGraph = defineTemplateGraph({
         }),
         paid: outcome({
             name: "paid",
+            label: { vi: "Đã ghi nhận gia hạn đã trả", en: "Renewal paid" },
             output: {
                 renewalId: ref("steps.record.output.renewalId"),
                 customerCode: ref("steps.match.output.customerCode"),
@@ -147,20 +137,12 @@ export const paymentGraph: TemplateGraph = defineTemplateGraph({
                 purchaseId: ref("steps.match.output.purchaseId", { default: null }),
                 transactionRef: ref("steps.match.output.transactionRef"),
             },
-            next: "purchase-declined",
-        }),
-        "purchase-declined": ifNode({
-            when: equals(ref("steps.purchase.output.declined"), true),
-            yes: "purchase-notice",
-            no: "purchase-team",
-        }),
-        "purchase-notice": node(teamDeclinedNoticeNode, {
-            input: {
-                step: webbooksText("node.purchase-paid.title").vi,
-                ref: ref("steps.match.output.purchaseCode", { default: null }),
-                locale: LOCALE,
+            next: "purchase-team",
+            unsuccessful: {
+                then: "end",
+                outcome: "declined",
+                facts: [{ label: { vi: "Mã đơn mua", en: "Purchase" }, value: ref("steps.match.output.purchaseCode", { default: null }) }],
             },
-            next: "declined",
         }),
         "purchase-team": node(webbooksPurchasePaidTeamNode, {
             input: {
@@ -187,6 +169,7 @@ export const paymentGraph: TemplateGraph = defineTemplateGraph({
         }),
         "purchase-paid": outcome({
             name: "purchase-paid",
+            label: { vi: "Đã ghi nhận đơn mua đã trả", en: "Purchase paid" },
             output: {
                 purchaseId: ref("steps.purchase.output.purchaseId"),
                 customerCode: ref("steps.match.output.customerCode"),
@@ -194,10 +177,8 @@ export const paymentGraph: TemplateGraph = defineTemplateGraph({
             },
         }),
 
-        // A person declined a record of money: the team was told; nothing else runs.
-        declined: outcome({
-            name: "declined",
-            output: { transactionRef: ref("steps.match.output.transactionRef") },
-        }),
+        // A person declined a record of money: the engine told the team; nothing else runs. Reached only by the record steps'
+        // unsuccessful ending (no edge of the graph), it reads no step: no output (R68; v11 output `match`'s transactionRef).
+        declined: outcome({ name: "declined", label: { vi: "Bị từ chối", en: "Declined" } }),
     },
 })

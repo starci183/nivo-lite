@@ -34,7 +34,6 @@ describe("commandOf", () => {
             "source.delete",
             "source.reindex",
             "source.update",
-            "knowledge.reembed",
             "knowledge.ask",
             "drive.linked",
             "drive.picked",
@@ -198,7 +197,8 @@ describe("commandOf", () => {
             sourceId: "source-1",
         })
         expect(subject.commandOf("brain.maintain", {})).toEqual({ kind: "brain.maintain" })
-        expect(subject.commandOf("knowledge.reembed", {})).toEqual({ kind: "knowledge.reembed" })
+        // The re-embedding command is gone: the vector reconcile re-embeds another model's points by itself.
+        expect(subject.commandOf("knowledge.reembed", {})).toBeNull()
     })
 
     it("reads replacement text only when it is text", async () => {

@@ -51,6 +51,8 @@ describe("provider-registry refusals: ProviderRegistryError codes and kinds", ()
         ["rejected", ProviderRegistryErrorCode.DomainRejected, "invalid"],
         ["contacts_required", ProviderRegistryErrorCode.DomainContactsRequired, "invalid"],
         ["contacts_unsupported", ProviderRegistryErrorCode.DomainContactsUnsupported, "invalid"],
+        ["insufficient_balance", ProviderRegistryErrorCode.DomainInsufficientBalance, "conflict"],
+        ["domain_locked", ProviderRegistryErrorCode.DomainLocked, "conflict"],
     ] as const)("a registrar refusal %s is %s (%s) and reads back as a registrar refusal only", (reason, code, kind) => {
         const refusal = registrarRefusal(reason, "route_code")
 

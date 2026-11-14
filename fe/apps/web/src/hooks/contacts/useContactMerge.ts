@@ -32,11 +32,9 @@ export const useContactMerge = (
         .filter((contact) => contact.id !== detail?.id)
         .map((contact) => {
             const row = detailOf(
-                { contact, memory: { facts: [], notes: [] }, suggestions: [] },
+                { contact, memory: { facts: [] }, routes: [], suggestions: [] },
                 words,
-                {
-                    canDelete: false,
-                },
+                { canDelete: false, work: undefined },
             )
             return { id: contact.id, title: row.name, subtitle: row.line }
         })

@@ -12,9 +12,9 @@ describe("InstagramPublishRegistryService", () => {
     it("starts with no provider and answers undefined for a key nobody registered", async () => {
         const registry = await build()
 
-        expect(registry.all()).toEqual([])
+        expect(registry.providers()).toEqual([])
         expect(registry.has("instagram")).toBe(false)
-        expect(registry.of("instagram")).toBeUndefined()
+        expect(registry.liveOf("instagram")).toBeUndefined()
     })
 
     it("finds a registered provider by its key, and a second registration under the key replaces the first", async () => {
@@ -23,11 +23,11 @@ describe("InstagramPublishRegistryService", () => {
         const second = mock<InstagramPublishPort>({ provider: "instagram" })
 
         registry.register(first)
-        expect(registry.of("instagram")).toBe(first)
+        expect(registry.liveOf("instagram")).toBe(first)
         registry.register(second)
 
-        expect(registry.of("instagram")).toBe(second)
-        expect(registry.all()).toHaveLength(1)
-        expect(registry.all()[0]).toBe(second)
+        expect(registry.liveOf("instagram")).toBe(second)
+        expect(registry.providers()).toHaveLength(1)
+        expect(registry.liveOf(registry.providers()[0] ?? "")).toBe(second)
     })
 })

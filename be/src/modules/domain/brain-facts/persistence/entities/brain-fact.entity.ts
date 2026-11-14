@@ -125,21 +125,13 @@ export class BrainFactEntity extends UuidAbstractEntity {
     @Column({ name: "review_flags", type: "text", array: true, default: () => "'{}'::text[]" })
     reviewFlags?: Array<FactFlag> | null
 
-    /** The vector of the fact's line (embedding standard W2): never read back by default. */
-    @Column({ name: "embedding", type: "vector", nullable: true, select: false })
-    embedding?: string | null
-
-    /** The embedding identity (pinned profile / model) the vector was made with. */
+    /** The embedding identity (`<model>@<dimensions>`) of the point the vector index accepted for the fact's line, or null. */
     @Column({ name: "embedding_model", type: "text", nullable: true })
     embeddingModel?: string | null
 
-    /** `passageTextHashOf` of the embedded line: the same hash and identity mean the vector is current. */
+    /** `passageTextHashOf` of the embedded line: the same hash and identity mean the point is current. */
     @Column({ name: "embedding_hash", type: "text", nullable: true })
     embeddingHash?: string | null
-
-    /** The vector's dimensions, computed by the database from the vector itself. */
-    @Column({ name: "embedding_dimensions", type: "integer", nullable: true, insert: false, update: false })
-    embeddingDimensions?: number | null
 
     /**
      * When the vector index accepted the vector of the fact's line (vectors live in the index, one point per row; migration

@@ -8,10 +8,14 @@ import {
     NodeRunError,
     RightsDeniedError,
     ToolUndeclaredError,
+    resolveParams,
     type NodeConfusion,
     type NodeRun,
     type StepFailure,
 } from "@nivo-lite/agent-sdk/node"
+import { reportFactsKind, type MessageFact } from "@nivo-lite/agent-sdk/team-chat"
+import type { NoticeFactSpec } from "@nivo-lite/agent-sdk/graph"
+import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { AgentRunsService, DECISION_ACTOR_UNKNOWN, TOOL_OUTCOME_UNKNOWN, type StepJson, type StepView } from "@modules/domain/agent-runs"
 import { CHAT_DELIVERY_UNKNOWN, HOLDING_LINE_KEY_PREFIX } from "@nivo-lite/agent-sdk/customer-send"
 import { ConversationContactsService } from "@modules/domain/contacts"
@@ -22,6 +26,7 @@ import {
     GraphNodesError,
     GraphNodesErrorCode,
     resolvedConditionHolds,
+    type HostedNodeRun,
     type NodeStepRef,
     type NodeToolApproval,
     type NodeTurn,
@@ -41,11 +46,13 @@ import {
     GRAPH_NODE_STEP_KIND,
     WAITING_MEMBER,
     effectsBeyond,
+    failureClassOf,
     isAiFailure,
     isUntilNode,
     jsonOf,
     localeOf,
     nodeBlocks,
+    retryVerdictOf,
     stuckFactsOf,
     troubleOfConfusion,
     troubleOfFailure,
@@ -53,10 +60,14 @@ import {
     troubleOfThrow,
     typedEndOf,
     untilSettingsOf,
+    type FailureFacts,
     type GraphNodeStepInput,
+    type RetryVerdict,
+    type StepSagaKind,
     type StepTrouble,
     type UntilSettings,
 } from "@modules/domain/agent-graphs"
+import { repeatableBySpec } from "@modules/domain/tool-specs"
 import {
     CHECKPOINT_LIMITS,
     DEFAULT_CHECKPOINT_LIMITS,
@@ -105,11 +116,24 @@ import {
     untilFrameOf,
     untilJudged,
     untilParkOf,
+    type UntilPark,
     untilStarted,
     type OptionalUntilFrame,
     type UntilFrame,
 } from "./until-rounds.policy"
 import { UntilRoundTimersService } from "./until-round-timers.service"
+import {
+    NODE_CANNOT,
+    declaredFactsOf,
+    endingNoticeKeyOf,
+    endingSentenceKeyOf,
+    factBindingsOf,
+    loopNoticeOf,
+    reasonValueOf,
+    stepEndingOf,
+    type StepEndingReason,
+    type UnsuccessfulEnding,
+} from "./step-ending.policy"
 import { runSubjectOf, timeoutMsOf, waitCameOf, waitOnOf, waitOutputOf, waitParkOf } from "./thread-waits.policy"
 import { waitMatchKeysOf } from "./wait-match.policy"
 import { HAND_BACK_NO_EVENT, HAND_BACK_WAIT_PARAM, TEMPLATE_HAND_BACK_STEP, handedOffByOf } from "./thread-hand-back.policy"
@@ -118,6 +142,7 @@ import { ThreadProjectionService } from "./thread-projection.service"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
 import type { FounderAnswerJson, StopCardContext, StopKind, StopQuestion } from "./stops/run-stop.contracts"
+import { stopDecisionOf, stopEndCodeOf } from "./stops/stop-gate.policy"
 
 /** The node of a thread graph one call runs, and what of the run it needs: bound to one pinned version, shared by every thread on it. */
 export interface ThreadStepNode {
@@ -139,6 +164,8 @@ export interface ThreadStepNode {
     readonly frame?: OptionalThreadLoopFrame | undefined
     /** The `loop({ until })` in progress when this visit began (`state.loop` of kind `until`), or null/absent. Set by `run`. */
     readonly until?: OptionalUntilFrame | undefined
+    /** How many automatic retries of this step were already made (rule Q-2: read from the run's checkpoint), 0 for none. */
+    readonly retried?: number | undefined
 }
 
 /** How a visit leaves a step other than its own exit: the loop node's move (where it goes, the frame it writes). */
@@ -181,6 +208,46 @@ export interface ThreadTrouble {
  * set, kept as it is. Such a step is never completed or re-run by a machine: it always stops for the founder, whatever the AI core says.
  */
 export const OUTCOME_UNKNOWN: ReadonlySet<string> = new Set([TOOL_OUTCOME_UNKNOWN, CHAT_DELIVERY_UNKNOWN, DECISION_ACTOR_UNKNOWN])
+
+/** The loop key a step's retry park is filed under (`retry:<step>`): its timer key `retry:<step>[r<n>]` names no step and no loop. */
+const RETRY_PARK_PREFIX = "retry:"
+
+/** What the gate keeps of a step waiting for its automatic retry (rule Q-2): the step, its graph node, the retry and the team language. */
+interface RetryWait {
+    readonly stepKey: string
+    readonly nodeKey?: string | undefined
+    readonly locale: "vi" | "en"
+    /** The retry the step waits for: its number (1..4), when it is due, and the code it failed with. */
+    readonly retry: { readonly attempt: number; readonly dueAt: string; readonly code: string }
+}
+
+/** The retry wait the checkpoint's `trouble` holds, or null (no trouble, or a stop for a person). */
+const retryWaitOf = (trouble: unknown): RetryWait | null => {
+    if (typeof trouble !== "object" || trouble === null || Array.isArray(trouble)) return null
+    const stepKey: unknown = Reflect.get(trouble, "stepKey")
+    const nodeKey: unknown = Reflect.get(trouble, "nodeKey")
+    const retry: unknown = Reflect.get(trouble, "retry")
+    if (typeof stepKey !== "string" || typeof retry !== "object" || retry === null) return null
+    const attempt: unknown = Reflect.get(retry, "attempt")
+    const dueAt: unknown = Reflect.get(retry, "dueAt")
+    const code: unknown = Reflect.get(retry, "code")
+    if (typeof attempt !== "number" || typeof dueAt !== "string") return null
+    return {
+        stepKey,
+        ...(typeof nodeKey === "string" ? { nodeKey } : {}),
+        locale: Reflect.get(trouble, "locale") === "en" ? "en" : "vi",
+        retry: { attempt, dueAt, code: typeof code === "string" ? code : "" },
+    }
+}
+
+/** The timed park of a step's retry: the generic engine park (timer before interrupt, woken by its timer or the sweep). */
+const retryParkOf = (wait: RetryWait): UntilPark => untilParkOf(`${RETRY_PARK_PREFIX}${wait.stepKey}`, wait.retry.attempt, wait.retry.dueAt)
+
+/** How many automatic retries a step's checkpoint says were made already (its own retry wait, carried into its next visit). */
+const retriedOf = (trouble: unknown, stepKey: string): number => {
+    const wait = retryWaitOf(trouble)
+    return wait !== null && wait.stepKey === stepKey ? wait.retry.attempt : 0
+}
 
 /** Ends the node when the drive lost its lease: the abort's own reason (or an `Aborted` error) is thrown, so the port leaves the thread as its checkpoint says. */
 const leaseHeld = (scope: ThreadNodeScope): void => {
@@ -237,7 +304,7 @@ const APPROVAL_ASKED = "tool_approval_required"
 
 /** The words of a step's trouble: what a node answered when it did not complete. */
 type Ran =
-    | NodeRun
+    | HostedNodeRun
     | { readonly code: string; readonly text: string }
     | { readonly failure: StepFailure }
     | { readonly confusion: NodeConfusion }
@@ -334,6 +401,9 @@ interface TroubleAsked extends StepVisit {
     /** The installed node the step runs. */
     readonly nodeStep: string
 }
+
+/** Whether a trouble is the node's own typed `cannot` (R68), never a throw, a refusal or a confused AI. */
+const isCannot = (trouble: StepTrouble): boolean => trouble.kind === "failed" && trouble.code === NODE_CANNOT
 
 /** The node of a step's trouble, written only for an iteration's step (`<node>[<i>]`): any other trouble stays as it always was. */
 const nodeKeyIn = (view: StepView): TroubleNodePart =>
@@ -550,7 +620,24 @@ export class ThreadStepService {
             // A node of a `loop({ until })` round: the round is its item (`r<round>`).
             ...(!inBody && at.until !== undefined && inRound(step, at.until) ? roundInputOf(at.until) : {}),
         }
-        const view = this.viewOf(at, state, scope, input)
+        const placed = this.viewOf(at, state, scope, input)
+        // Rule Q-2: the automatic retries this step already made ride in the checkpoint (`trouble.retry`), never in memory.
+        const retried = retriedOf(state.trouble, placed.stepKey)
+        return this.visitedAt(retried === 0 ? at : { ...at, retried }, node, placed, input, trigger, state, scope)
+    }
+
+    /** The visit of `visited` once its step and its retries are known. */
+    private async visitedAt(
+        at: ThreadStepNode,
+        node: GraphSpecNode | undefined,
+        view: StepView,
+        input: GraphNodeStepInput,
+        trigger: StepJson,
+        state: ThreadState,
+        scope: ThreadNodeScope,
+    ): Promise<ThreadNodeAnswer> {
+        const { step } = at
+        const frame = at.frame ?? null
         const turn = this.turnOf(view, trigger, state)
         // A `loop({ until })` node: the engine drives its rounds (start, judge after a round, park between rounds, end).
         if (node !== undefined && isUntilNode(node)) return this.untilVisited({ at, view, input, turn }, node, scope)
@@ -593,6 +680,11 @@ export class ThreadStepService {
         if ("ask" in ran) return this.asked(at, view, input, node, turn, ran.ask)
         if ("trouble" in ran) return this.troubled(at, view, input, node, turn, ran.trouble)
         if (step.loop !== undefined) return this.loopBegun({ at, view, input, turn }, node, ran, step.loop.body)
+        // R68: a step that declares its unsuccessful ending and whose calls missed (the customer send refused, an approval declined): the
+        // engine tells the team, then the run follows the step's policy word. A step that declares nothing goes on exactly as before.
+        const ending = stepEndingOf(node)
+        const misses = ran.misses ?? []
+        if (ending !== null && misses.length > 0) return this.missed({ at, view, input, turn }, node, ending, misses, ran)
         return this.completed(at, view, input, node, turn, { output: ran.output, effects: ran.effects })
     }
 
@@ -671,6 +763,12 @@ export class ThreadStepService {
         const judged = untilJudged(frame, settings, holds)
         if (judged.kind !== "again") {
             const goto = judged.kind === "stopped" ? targets.next : targets.exhausted
+            // R68: a loop that declares its notice and ran out of rounds: the engine tells the team, then the run takes `exhausted`.
+            const noticeFacts = judged.kind === "exhausted" ? loopNoticeOf(node) : null
+            if (noticeFacts !== null)
+                await this.endingTold(visit, node, view.stepKey, { then: "continue", outcome: null, facts: noticeFacts }, [
+                    { kind: "exhausted", rounds: judged.output.rounds },
+                ])
             return this.completed(at, view, input, node, turn, { output: judged.output, effects: [], route: { goto, loop: null } })
         }
         if (judged.dueAt !== null && Date.parse(judged.dueAt) > this.clock.now().getTime()) {
@@ -818,6 +916,15 @@ export class ThreadStepService {
      * resumes the thread, routes it through the stop: back to the step with every word the founder gave, back to itself, or to the end.
      */
     async gate(_at: ThreadGateNode, state: ThreadState, scope: ThreadNodeScope): Promise<ThreadNodeAnswer> {
+        // A step waiting for its automatic retry (rule Q-2): the timer first, then the park; once it is resumed, back to the step, which
+        // reads its retry count from the trouble it keeps.
+        const retry = retryWaitOf(state.trouble)
+        if (retry !== null) {
+            const park = retryParkOf(retry)
+            await this.rounds?.armed({ workspaceId: scope.thread.workspaceId, runId: scope.thread.runId }, park)
+            scope.stop(park)
+            return { update: { trouble: { ...retry, retry: { ...retry.retry } } }, goto: retry.nodeKey ?? retry.stepKey }
+        }
         const trouble = this.troubleOf(state)
         if (trouble === null) return { goto: THREAD_END }
         const decision = scope.stop<unknown>(trouble.question)
@@ -837,7 +944,7 @@ export class ThreadStepService {
         else await this.projection?.resumed(ref, { at: this.clock.now() })
         // A skip ends the run here; the speaker goes back in the thread runs' end hook (0-8), never here, so it is released once.
         if (route.goto === THREAD_END)
-            await this.projection?.runEnded(ref, { outcome: "skipped", code: "skipped_by_founder", by, at: this.clock.now() })
+            await this.projection?.runEnded(ref, { outcome: "skipped", code: stopEndCodeOf(stopDecisionOf(decision)), by, at: this.clock.now() })
         return {
             update: { founderAnswers: route.founderAnswers, trouble: route.goto === FREEZE_NODE ? trouble : null },
             goto,
@@ -851,7 +958,7 @@ export class ThreadStepService {
         input: GraphNodeStepInput,
         node: GraphSpecNode,
         turn: NodeTurn,
-    ): Promise<NodeRun | { readonly trouble: StepTrouble } | { readonly ask: unknown }> {
+    ): Promise<HostedNodeRun | { readonly trouble: StepTrouble } | { readonly ask: unknown }> {
         try {
             const ran = await this.ran(at, view, input, node, turn)
             if ("ask" in ran) return ran
@@ -992,16 +1099,26 @@ export class ThreadStepService {
         trouble: StepTrouble,
     ): Promise<ThreadNodeAnswer> {
         this.notices?.troubled(view, trouble)
+        // R68: the node said it CANNOT (a typed business end, no failure) on a step that declares its unsuccessful ending: the engine tells
+        // the team and follows the policy word. A routing step under `continue` has no route to take with no output: today's road.
+        const ending = stepEndingOf(node)
+        if (node !== undefined && ending !== null && isCannot(trouble) && (ending.then === "end" || at.step.exit.kind === "next")) {
+            if (await this.routeHeld(view, turn)) return this.endedUnderHold(view, turn, trouble)
+            return this.cannotEnded({ at, view, input, turn }, node, ending, trouble)
+        }
         const nodeStep = node?.step ?? view.nodeKey
         const byEngine = ENGINE_STOP_CODES.has(trouble.code)
         // A side node (`blocking: false`) that fails is passed over: the thread goes on, the founder is told once. An outcome-unknown
         // failure still stops, side node or not: only a person may say whether its effect happened.
         if (node !== undefined && !byEngine && this.passable(node, trouble)) return this.passedOver(at, view, input, node, turn, trouble)
         // A member of the shop holds the run's route (ruling R45): the step's failure (its send refused `route_held`, or anything else the
-        // node met while the person is served by staff) is no failure for the founder: no stop card, no lead freeze; the run ends quietly
+        // node met while the person is served by staff) is no failure for the founder: no stop card, no hold; the run ends quietly
         // and the hand-back's resume event answers the person. An engine stop or an outcome-unknown step still stops for a person.
         if (!byEngine && !OUTCOME_UNKNOWN.has(trouble.code) && (await this.routeHeld(view, turn)))
             return this.endedUnderHold(view, turn, trouble)
+        // Rule Q-2 (R71/R73/R80): the step's saga kind, then the failure class, decide whether it runs again by itself after a pause.
+        const verdict = node === undefined || byEngine ? null : this.retryVerdictOf(at, input, node, trouble)
+        if (verdict?.kind === "retry") return this.retryParked(view, turn, trouble, verdict)
         const given = node === undefined ? null : await this.givenOf(at, view, input, node)
         const subject = this.memory?.subjectOf(view, input) ?? null
         const contactId = subject?.contactId ?? (await this.contactOfConversation(view.workspaceId, turn.conversationId))
@@ -1055,7 +1172,11 @@ export class ThreadStepService {
                 ),
             question: report?.question ?? null,
             suggestions: report?.suggestions ?? [],
-            facts: report === null ? [...facts, ...triesOf(trouble).filter((one) => !facts.some((fact) => fact.name === one.name))] : facts,
+            facts: [
+                ...(report === null ? [...facts, ...triesOf(trouble).filter((one) => !facts.some((fact) => fact.name === one.name))] : facts),
+                // The automatic retries the engine made before this stop (rule Q-2), as one fact.
+                ...((at.retried ?? 0) > 0 ? [{ name: "retries", value: String(at.retried ?? 0) }] : []),
+            ],
             card,
         })
         // One customer line per stop, ever: when this run's step already told the customer for this stop (its own send, which the
@@ -1069,6 +1190,50 @@ export class ThreadStepService {
         )
         const left: ThreadTrouble = { stepKey: view.stepKey, ...nodeKeyIn(view), question, locale: card.locale }
         return { update: { trouble: { ...left } }, goto: FREEZE_NODE }
+    }
+
+    /** The tool fact the retry reads beyond the step's saga kind (`mutates`): `repeatable` (R80/R81), nothing else. */
+    private readonly failureFacts: FailureFacts = { repeatable: (tool) => repeatableBySpec(tool) }
+
+    /**
+     * Whether a failed step runs again by itself (rule Q-2 on the saga, R80): its saga kind (the step row's `effect`, by `nodeSagaOf`'s
+     * rule; a write when it cannot be read), then the class of the failure, then the retries already made. A step inside a fan-out branch
+     * is never parked (its branch joins its loop; the item is held at a stop as before).
+     */
+    private retryVerdictOf(at: ThreadStepNode, input: GraphNodeStepInput, node: GraphSpecNode, trouble: StepTrouble): RetryVerdict | null {
+        if (at.frame !== undefined && at.frame !== null && isFanoutFrame(at.frame)) return null
+        const effect = this.flows?.stepOf(node, input).effect.kind
+        const saga: StepSagaKind = effect === "read" ? "read" : "write"
+        const failure = failureClassOf(trouble, OUTCOME_UNKNOWN)
+        return retryVerdictOf(saga, failure, trouble, this.failureFacts, at.retried ?? 0)
+    }
+
+    /**
+     * Parks the run on the failed step for its automatic retry (rule Q-2): no stop, no card, no AI core, nothing told to anyone; the run
+     * stays in flight and keeps its subject. The gate arms the retry's timer and parks the thread (LangGraph's interrupt, checkpointed);
+     * the timer (or the sweep) resumes it and the gate sends it back to the step, which runs again from its first line.
+     */
+    private retryParked(
+        view: StepView,
+        turn: NodeTurn,
+        trouble: StepTrouble,
+        verdict: Extract<RetryVerdict, { readonly kind: "retry" }>,
+    ): ThreadNodeAnswer {
+        const dueAt = new Date(this.clock.now().getTime() + verdict.pauseMs).toISOString()
+        this.logger?.info(AgentThreadsLogEvent.StepRetryParked, {
+            runId: view.runId,
+            stepKey: view.stepKey,
+            code: trouble.code,
+            attempt: verdict.attempt,
+            dueAt,
+        })
+        const wait: RetryWait = {
+            stepKey: view.stepKey,
+            ...nodeKeyIn(view),
+            locale: turn.locale === "en" ? "en" : "vi",
+            retry: { attempt: verdict.attempt, dueAt, code: trouble.code },
+        }
+        return { update: { trouble: { ...wait, retry: { ...wait.retry } } }, goto: FREEZE_NODE }
     }
 
     /** True when a member of the shop holds the route of the run's turn now (the engine's staff hold, `customer_routes`). */
@@ -1278,6 +1443,13 @@ export class ThreadStepService {
         } catch (error: unknown) {
             // A line the channel refuses is not the step's failure: the team already has the card.
             this.logger?.error(AgentThreadsLogEvent.CustomerLineRefused, error, { stepKey: view.stepKey })
+            // A line whose delivery nobody knows (R74) is not a line told: the stop says so, with the typed code.
+            if (isDomainError(error) && error.code === CHAT_DELIVERY_UNKNOWN)
+                await this.stops
+                    .lineNotTold({ workspaceId: view.workspaceId, runId: view.runId }, view.stepKey, CHAT_DELIVERY_UNKNOWN, {
+                        locale: turn.locale === "en" ? "en" : "vi",
+                    })
+                    .catch((cause: unknown) => this.logger?.error(AgentThreadsLogEvent.CustomerLineRefused, cause, { stepKey: view.stepKey }))
         }
     }
 
@@ -1490,6 +1662,127 @@ export class ThreadStepService {
         const goto = stepExitOf(at.step, null)
         const left = { ...this.iterationLeft(at, goto, null, undefined), ...this.roundLeftOf(at, goto, null) }
         return { update: { steps: { [view.stepKey]: { ...result } }, trouble: null, ...left }, goto }
+    }
+
+    /**
+     * R68: a step whose calls missed (the customer send refused, an approval declined) and that declares its ending: the team is told
+     * once, then the step completes on the output it answered and goes to its own exit (`continue`) or to its outcome step (`end`: a loop
+     * frame it ran in is closed, the run ends through the graph's own outcome).
+     */
+    private async missed(
+        visit: StepVisit,
+        node: GraphSpecNode,
+        ending: UnsuccessfulEnding,
+        misses: ReadonlyArray<StepEndingReason>,
+        ran: NodeRun,
+    ): Promise<ThreadNodeAnswer> {
+        const { at, view, input, turn } = visit
+        await this.endingTold(visit, node, this.stepTitleOf(node.step, turn.locale) ?? view.stepKey, ending, misses)
+        const route = ending.then === "end" && ending.outcome !== null ? { route: { goto: ending.outcome, loop: null } } : {}
+        return this.completed(at, view, input, node, turn, { output: ran.output, effects: ran.effects, ...route })
+    }
+
+    /**
+     * R68: the node said it cannot, on a step that declares its ending: the team is told once and the step ends with no output (as a
+     * passed-over side step is kept), then the run goes to the step's exit (`continue`, a non-routing step) or to its outcome (`end`).
+     */
+    private async cannotEnded(visit: StepVisit, node: GraphSpecNode, ending: UnsuccessfulEnding, trouble: StepTrouble): Promise<ThreadNodeAnswer> {
+        const { at, view, input, turn } = visit
+        await this.endingTold(visit, node, this.stepTitleOf(node.step, turn.locale) ?? view.stepKey, ending, [
+            { kind: "cannot", why: trouble.text },
+        ])
+        const result: StepJson = { output: null, effects: [], failed: trouble.code, unsuccessful: true }
+        await this.projection?.stepEnded(
+            { workspaceId: view.workspaceId, runId: view.runId },
+            { ...this.factOf(view, input, node), result, calls: [], code: trouble.code, workItemId: null },
+        )
+        if (ending.then === "end" && ending.outcome !== null)
+            return { update: { steps: { [view.stepKey]: { ...result } }, trouble: null, loop: null }, goto: ending.outcome }
+        const goto = stepExitOf(at.step, null)
+        const left = { ...this.iterationLeft(at, goto, null, undefined), ...this.roundLeftOf(at, goto, null) }
+        return { update: { steps: { [view.stepKey]: { ...result } }, trouble: null, ...left }, goto }
+    }
+
+    /**
+     * R68: the ONE team notice of an unsuccessful ending, in the engine's own words (`report.facts`: NIVO speaks, no AI, no customer
+     * text): the sentence of the reason and of what the run does next, then the workflow, the step, the facts the step declares (their
+     * labels in the team's language, the values its refs read now; a value that reads nothing is left out), and the typed reason, the route,
+     * the contact and the run as technical facts. Once per step attempt by its key; a post the door refuses or that fails is recorded by the
+     * door as an app error (R45), logged here, and never told about again (no recursion): the run follows its policy whatever came of it.
+     */
+    private async endingTold(
+        visit: StepVisit,
+        node: GraphSpecNode,
+        stepTitle: string,
+        ending: UnsuccessfulEnding,
+        reasons: ReadonlyArray<StepEndingReason>,
+    ): Promise<void> {
+        const { at, view, turn } = visit
+        const [first] = reasons
+        const post = this.nodes.optionalExecutorOf(TOOL.teamMessagePost)
+        const logged = { runId: view.runId, stepKey: view.stepKey }
+        if (first === undefined || post === undefined) {
+            this.logger?.warn(AgentThreadsLogEvent.StepEndingNotTold, logged)
+            return
+        }
+        const locale = turn.locale
+        const word = (key: string, params: Readonly<Record<string, string>> = {}): string => this.catalog.get(key, params, locale)
+        const workflow = await this.workflowRefOf(at, view, locale)
+        const values = await this.factValuesOf(visit, node, ending.facts)
+        const declared = declaredFactsOf(ending.facts, values, (label) => this.labelOf(label, locale))
+        const next =
+            ending.then === "end" && ending.outcome !== null
+                ? word("agentGraphs.stepEnding.ended", { outcome: ending.outcome })
+                : word(first.kind === "exhausted" ? "agentGraphs.stepEnding.exhaustedNext" : "agentGraphs.stepEnding.continued")
+        const technical = (name: string, value: string | null): ReadonlyArray<MessageFact> =>
+            value === null || value === "" ? [] : [{ name, value, technical: true }]
+        const facts: ReadonlyArray<MessageFact> = [
+            { name: word("agentGraphs.stepEnding.fact.workflow"), value: workflow.title },
+            { name: word("agentGraphs.stepEnding.fact.step"), value: stepTitle },
+            ...declared,
+            ...technical(word("agentGraphs.stepEnding.fact.reason"), reasons.map((one) => reasonValueOf(one)).join(", ")),
+            ...technical(word("agentGraphs.stepEnding.fact.route"), turn.conversationId),
+            ...technical(word("agentGraphs.stepEnding.fact.contact"), turn.contactId ?? null),
+            ...technical(word("agentGraphs.stepEnding.fact.run"), view.runId),
+        ]
+        const key = endingNoticeKeyOf(view.runId, view.stepKey, view.attempt)
+        try {
+            await post.execute(
+                turn,
+                {
+                    kind: reportFactsKind.id,
+                    title: word("agentGraphs.stepEnding.title"),
+                    text: `${word(endingSentenceKeyOf(first))} ${next}`,
+                    facts: facts.map((fact) => ({ ...fact })),
+                    audience: "founder",
+                },
+                { key, dedupeKey: key },
+            )
+            this.logger?.info(AgentThreadsLogEvent.StepEndingTold, { ...logged, kind: first.kind, then: ending.then })
+        } catch (error: unknown) {
+            this.logger?.error(AgentThreadsLogEvent.StepEndingNotTold, error, logged)
+        }
+    }
+
+    /** The values of a step's notice facts, resolved against the step's scope now; none when the scope cannot be read (the facts are left out). */
+    private async factValuesOf(
+        visit: StepVisit,
+        node: GraphSpecNode,
+        facts: ReadonlyArray<NoticeFactSpec>,
+    ): Promise<Readonly<Record<string, unknown>>> {
+        if (this.memory === undefined || facts.length === 0) return {}
+        const { at, view, input } = visit
+        try {
+            return resolveParams(factBindingsOf(facts), await this.memory.scopeOf(view, at.flow, input))
+        } catch (error: unknown) {
+            this.logger?.error(AgentThreadsLogEvent.StepReadFailed, error, { stepKey: view.stepKey, read: "notice_facts", node: node.key })
+            return {}
+        }
+    }
+
+    /** A declared label in the team's language: a catalogue key's words, or the label's own words. */
+    private labelOf(label: SpecText, locale: NodeTurn["locale"]): string {
+        return "key" in label ? this.catalog.get(label.key, {}, locale) : localeText(label, locale)
     }
 
     /** The title of an installed step (a template node or a `defineNode` node) in the team's language, or null. */

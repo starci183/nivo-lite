@@ -1,0 +1,24 @@
+{
+  "customerMessages": "Khách nhắn tin",
+  "waitLine": "{events} · {limit}",
+  "limitMinute": "tối đa {amount} phút",
+  "limitHour": "tối đa {amount} giờ",
+  "limitDay": "tối đa {amount} ngày",
+  "rounds": "lặp tối đa {max} vòng",
+  "repeat": "Lặp lại từ bước đầu khi chưa thoát",
+  "legendLoop": "Vòng lặp",
+  "verbs": {
+    "nivo.trigger.zalo.message.received": "Tin Zalo",
+    "nivo.trigger.telegram.message.received": "Tin Telegram",
+    "nivo.trigger.facebook.message.received": "Tin Facebook",
+    "nivo.trigger.instagram.message.received": "Tin Instagram",
+    "nivo.trigger.website.message.received": "Tin từ website",
+    "nivo.trigger.payment.credit.received": "Tiền về tài khoản",
+    "nivo.trigger.mail.message.received": "Thư mới",
+    "nivo.trigger.video.render.completed": "Video dựng xong",
+    "nivo.trigger.clock.tick": "Đến giờ hẹn",
+    "nivo.trigger.timer.due": "Hẹn giờ đến",
+    "nivo.trigger.chat.message.received": "Tin trong nhóm đội",
+    "nivo.trigger.workflow.called": "Quy trình khác gọi"
+  }
+}

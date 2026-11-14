@@ -22,10 +22,20 @@ const content = {
         .optional(),
 }
 
-/** What the customer send carries: the words, and the person, channel and account they go to (each optional: the run's own person and woken route by default). */
-export const customerMessageSendSchema: z.ZodType<CustomerMessageSend> = z.object({
-    contactId: z.string().min(1).max(ID_MAX).optional(),
-    channel: z.string().min(1).max(CHANNEL_MAX).optional(),
-    accountId: z.string().min(1).max(ID_MAX).optional(),
-    ...content,
-})
+/**
+ * What the customer send carries: the words, and the person, channel and account they go to (each optional: the run's own person and
+ * woken route by default), or the ROUTE they go to (its person, channel and account; named alone).
+ */
+export const customerMessageSendSchema: z.ZodType<CustomerMessageSend> = z
+    .object({
+        routeId: z.string().min(1).max(ID_MAX).optional(),
+        contactId: z.string().min(1).max(ID_MAX).optional(),
+        channel: z.string().min(1).max(CHANNEL_MAX).optional(),
+        accountId: z.string().min(1).max(ID_MAX).optional(),
+        ...content,
+    })
+    .refine(
+        (send) =>
+            send.routeId === undefined || (send.contactId === undefined && send.channel === undefined && send.accountId === undefined),
+        { path: ["routeId"] },
+    )

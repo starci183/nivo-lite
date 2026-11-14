@@ -6,7 +6,7 @@ import type { ScopedTx } from "@modules/domain/entity-engine"
 import { CLOCK } from "@modules/platform/clock"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
-import { OPEN, WHEN, runRecordOf, runRowOf, stepRecordOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { OPEN, WHEN, runRecordOf, runRowOf } from "@tests/fixtures/builders/agent-runs.builder"
 
 const scoped = mock<ScopedTx>({ workspaceId: "ws-1" })
 
@@ -79,16 +79,11 @@ describe("AgentRunStoreService reads", () => {
 })
 
 describe("AgentRunStoreService cancel", () => {
-    it("marks a waiting run cancelled with who and when and gives back the claim, the wait and the timer of its running steps", async () => {
+    it("marks a waiting run cancelled with who and when and closes its open steps in the same scope (the one closing function)", async () => {
         const { store, records } = await build()
-        records.patchStep.mockResolvedValue(stepRecordOf())
         records.run.mockResolvedValue(runRecordOf({ status: "waiting" }))
         records.patchRun.mockResolvedValue(runRecordOf({ status: "cancelled" }))
-        records.stepsOf.mockResolvedValue([
-            stepRecordOf({ stepKey: "sent", status: "done" }),
-            stepRecordOf({ stepKey: "wait", id: "s-2", status: "running", waitItemId: "item-1" }),
-            stepRecordOf({ stepKey: "later", id: "s-3", status: "pending" }),
-        ])
+        records.closeOpenSteps.mockResolvedValue(1)
 
         await expect(store.cancel("ws-1", "run-1", "member-1")).resolves.toEqual({ kind: "cancelled" })
 
@@ -101,24 +96,10 @@ describe("AgentRunStoreService cancel", () => {
             waitWorkItemId: null,
             waitDeadlineAt: null,
         })
-        expect(records.patchStep).toHaveBeenCalledTimes(1)
-        expect(records.patchStep).toHaveBeenCalledWith(scoped, expect.objectContaining({ stepKey: "wait" }), {
-            status: "failed",
-            errorCode: "run_cancelled",
-            claimedUntil: null,
-            waitItemId: null,
-            endedAt: WHEN.toISOString(),
-        })
-    })
-
-    it("never undoes what was done: a done step is left alone and none is compensated", async () => {
-        const { store, records } = await build()
-        records.run.mockResolvedValue(runRecordOf())
-        records.patchRun.mockResolvedValue(runRecordOf({ status: "cancelled" }))
-        records.stepsOf.mockResolvedValue([stepRecordOf({ status: "done", effect: { kind: "pivot" } })])
-
-        await store.cancel("ws-1", "run-1", "member-1")
-
+        // Which rows close (running and pending, never a done one: nothing is undone) is the closing function's own spec
+        // (agent-run-records.service.spec.ts "closeOpenSteps").
+        expect(records.closeOpenSteps).toHaveBeenCalledTimes(1)
+        expect(records.closeOpenSteps).toHaveBeenCalledWith(scoped, "run-1", "run_cancelled", WHEN.toISOString())
         expect(records.patchStep).not.toHaveBeenCalled()
     })
 
@@ -126,7 +107,7 @@ describe("AgentRunStoreService cancel", () => {
         const { store, records } = await build()
         records.run.mockResolvedValueOnce(runRecordOf({ status: "cancelled" }))
         await expect(store.cancel("ws-1", "run-1", "member-1")).resolves.toEqual({ kind: "already_cancelled" })
-        for (const status of ["done", "failed", "dead", "parked", "compensating", "compensated"] as const) {
+        for (const status of ["done", "failed", "dead", "parked"] as const) {
             records.run.mockResolvedValue(runRecordOf({ status }))
             await expect(store.cancel("ws-1", "run-1", "member-1")).resolves.toEqual({ kind: "not_cancellable" })
         }
@@ -135,6 +116,7 @@ describe("AgentRunStoreService cancel", () => {
 
         expect(records.patchRun).not.toHaveBeenCalled()
         expect(records.patchStep).not.toHaveBeenCalled()
+        expect(records.closeOpenSteps).not.toHaveBeenCalled()
     })
 })
 

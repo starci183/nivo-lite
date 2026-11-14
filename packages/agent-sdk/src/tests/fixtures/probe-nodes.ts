@@ -3,36 +3,11 @@ import { defineEffect, defineNode, defineTool } from "../../node"
 import type { EffectDefinition, ToolDefinition } from "../../node/effect.types"
 import type { NodeDefinition } from "../../node/node.types"
 
-/** An effect with a compensation, `core.unping`. */
+/** An effect, `core.ping`. */
 export const pingEffect: EffectDefinition = defineEffect({
     id: "core.ping",
     title: { key: "p" },
     payload: z.object({ n: z.number() }),
-    compensation: "core.unping",
-})
-
-/** The compensation of `core.ping`. */
-export const unpingEffect: EffectDefinition = defineEffect({
-    id: "core.unping",
-    title: { key: "u" },
-    payload: z.object({ id: z.string().max(100) }),
-})
-
-/** An effect whose compensation is not installed. */
-export const lostEffect: EffectDefinition = defineEffect({ ...pingEffect, id: "core.lost", compensation: "core.gone" })
-
-/** An effect whose compensation parses its payload to a bare text, which is no record. */
-export const flatEffect: EffectDefinition = defineEffect({
-    ...pingEffect,
-    id: "core.flat",
-    compensation: "core.unflat",
-})
-
-/** The compensation of `core.flat`: its payload parses to a text. */
-export const unflatEffect: EffectDefinition = defineEffect({
-    id: "core.unflat",
-    title: { key: "uf" },
-    payload: z.object({ id: z.string().max(100) }).transform(({ id }) => id),
 })
 
 /** A read-only tool that answers `{ seen: true }`. */

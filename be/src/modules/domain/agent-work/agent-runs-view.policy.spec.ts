@@ -110,7 +110,6 @@ describe("boardStatusOf", () => {
     it("tells a stopped, parked or given-away run as failed and a waiting or finished one as itself", async () => {
         const subject = await build()
         expect(subject.boardStatusOf(entryOf({}, { status: "failed" }))).toBe("failed")
-        expect(subject.boardStatusOf(entryOf({}, { status: "compensating" }))).toBe("failed")
         expect(subject.boardStatusOf(entryOf({}, { status: "parked" }))).toBe("failed")
         expect(subject.boardStatusOf(entryOf({}, { status: "dead" }))).toBe("failed")
         expect(subject.boardStatusOf(entryOf({}, { status: "waiting" }))).toBe("waiting")
@@ -237,11 +236,11 @@ describe("factsOf", () => {
 })
 
 describe("stepStatusOf", () => {
-    it("tells a running step that holds a wait as waiting and an undone step as undone", async () => {
+    it("tells a running step that holds a wait as waiting and a done step as done", async () => {
         const subject = await build()
         expect(subject.stepStatusOf(stepOf({ status: "running", waitItemId: "w-1" }))).toBe("waiting")
         expect(subject.stepStatusOf(stepOf({ status: "running" }))).toBe("running")
-        expect(subject.stepStatusOf(stepOf({ status: "compensated" }))).toBe("undone")
+        expect(subject.stepStatusOf(stepOf({ status: "done" }))).toBe("done")
     })
 })
 
@@ -304,15 +303,15 @@ describe("detailOf", () => {
     describe("on a run about a work item", () => {
         it("carries the work item a run is about, with its evidence", async () => {
             const subject = await build()
-            const undone = subject.detailOf(
-                detailWith("failed", [stepOf({ status: "compensated" }), stepOf({ stepKey: "b", status: "failed" })]),
+            const closed = subject.detailOf(
+                detailWith("failed", [stepOf({ status: "done" }), stepOf({ stepKey: "b", status: "failed" })]),
                 new Map(),
                 itemOf(),
                 NOW,
             )
-            expect(undone.canResume).toBe(false)
-            expect(undone.item).toMatchObject({ id: "w-1", status: "waiting_decision", reason: "unclear_outcome" })
-            expect(undone.item?.evidence).toEqual([{ key: "content", value: "CHUYEN TIEN" }])
+            expect(closed.canResume).toBe(false)
+            expect(closed.item).toMatchObject({ id: "w-1", status: "waiting_decision", reason: "unclear_outcome" })
+            expect(closed.item?.evidence).toEqual([{ key: "content", value: "CHUYEN TIEN" }])
         })
     })
 })

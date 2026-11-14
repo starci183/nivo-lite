@@ -1,11 +1,5 @@
 import { z } from "zod"
 
-/** The payload of the `core.ping` effect. */
-export const PROBE_PING_PAYLOAD: z.ZodType = z.object({ n: z.number() })
-
-/** The payload of the `core.unping` effect, which undoes a ping by the subject it touched. */
-export const PROBE_UNPING_PAYLOAD: z.ZodType = z.object({ id: z.string().max(200) })
-
 /** A payload, params or input with no member. */
 export const PROBE_NOTHING: z.ZodType = z.object({})
 

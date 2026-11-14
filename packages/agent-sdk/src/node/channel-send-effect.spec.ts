@@ -17,6 +17,14 @@ describe("channelSendEffect payload", () => {
         expect(parse({ text: "Hello", images: [{ url: "https://img/1.png", caption: "QR" }] })).toBe(true)
     })
 
+    it("takes a message addressed by a ROUTE (the route a record came in on), alone: its person, channel and account are the address", () => {
+        expect(parse({ routeId: "route-1", text: "Hello" })).toBe(true)
+        expect(channelSendEffect.payload.safeParse({ routeId: "route-1", text: "Hello" }).success).toBe(true)
+        for (const beside of [{ contactId: "k1" }, { channel: "zalo" }, { accountId: "conn-1" }])
+            expect(parse({ routeId: "route-1", text: "Hello", ...beside })).toBe(false)
+        expect(parse({ routeId: "", text: "Hello" })).toBe(false)
+    })
+
     it("names no conversation: an id of one is not part of the payload any more", () => {
         const parsed = channelSendCodePayload.safeParse({ conversationId: "c1", text: "Hello" })
         expect(parsed.success).toBe(true)

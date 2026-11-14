@@ -2,6 +2,7 @@ import { TRIGGER } from "@nivo-lite/agent-sdk/names"
 import {
     type TemplateGraph,
     defineTemplateGraph,
+    endItem,
     equals,
     ifNode,
     loop,
@@ -11,12 +12,10 @@ import {
     ref,
     trigger,
 } from "@nivo-lite/agent-sdk/template"
-import { teamDeclinedNoticeNode } from "@nivo-lite/blocks-core"
 import { z } from "zod"
 import { webrenewMailReplyRecordNode } from "../../../nodes/webrenew/mail-reply-record.node"
 import { webrenewMailReplyTeamNode } from "../../../nodes/webrenew/mail-reply-team.node"
 import { ROUND_SERVICES_MAX } from "../../../nodes/webrenew/renew-shapes"
-import { webrenewText } from "../copy"
 
 /** The language the team reads (today's constant param). */
 const LOCALE = "vi"
@@ -32,12 +31,12 @@ const mail = z.object({
 })
 
 /**
- * `webrenew.mail-replies` version 4 (Renewal replies by mail): the Mailbox agent calls it with the customers' mail replies to
+ * `webrenew.mail-replies` (Renewal replies by mail): the Mailbox agent calls it with the customers' mail replies to
  * renewal reminders. The loop `each` runs, per mail (item key: the mail id), the record (the loop collects it) and the team's
  * line (a side step). A person continues: nothing is quoted, renewed or answered. A person who declines the record made a
- * decision: `record-declined` (an exact boolean) tells the team (`record-notice`, `team.declined-notice`) and that mail's item
- * ends; the other mails go on. Change from version 3: `webrenew.mail-reply` is
- * split into the record and the team line.
+ * decision: it is the step's unsuccessful ending (R68): the ENGINE tells the team with the service's code, and `record-declined`
+ * (an exact boolean) ends that mail's item; the other mails go on. Earlier: `webrenew.mail-reply` was split into the record and the
+ * team line.
  */
 export const mailRepliesGraph: TemplateGraph = defineTemplateGraph({
     key: "webrenew.mail-replies",
@@ -52,17 +51,18 @@ export const mailRepliesGraph: TemplateGraph = defineTemplateGraph({
             vi: "H\u1ed9p th\u01b0 chuy\u1ec3n c\u00e1c th\u01b0 kh\u00e1ch tr\u1ea3 l\u1eddi l\u1eddi nh\u1eafc gia h\u1ea1n: ghi nh\u1eadn c\u00e2u tr\u1ea3 l\u1eddi v\u00e0o CRM v\u00e0 b\u00e1o \u0111\u1ed9i; ng\u01b0\u1eddi l\u00e0m ti\u1ebfp, agent kh\u00f4ng b\u00e1o gi\u00e1 hay gia h\u1ea1n",
             en: "The Mailbox agent passes the customers' mail replies to renewal reminders: records each answer in the CRM and tells the team; a person continues, the agent never quotes or renews",
         },
-        version: 7,
+        version: 8,
         // The old JSON template had `seedActive: true`: the seed makes an ACTIVE workflow from it.
         seedActive: true,
-        publishedAt: "2026-11-14T04:50:00.000Z",
+        publishedAt: "2026-11-14T22:00:00.000Z",
         notes: {
-            vi: "Thời gian gom tin nhắn do khai báo của trigger quyết định, đồ thị không còn tự khai báo",
-            en: "How long a burst of messages settles is the trigger declaration's, no longer the graph's",
+            vi: "R68: bản ghi bị từ chối duyệt thì hệ thống tự báo đội kèm mã dịch vụ; thư đó dừng, các thư khác vẫn tiếp tục",
+            en: "R68: a declined record is told to the team by the engine with the service's code; that mail ends, the others go on",
         },
     },
     nodes: {
         each: loop({
+            label: { vi: "Mỗi thư trả lời", en: "Each reply mail" },
             over: ref("trigger.data.mails"),
             key: "mailId",
             concurrency: 1,
@@ -80,19 +80,24 @@ export const mailRepliesGraph: TemplateGraph = defineTemplateGraph({
                             locale: LOCALE,
                         },
                         next: "record-declined",
-                    }),
-                    "record-declined": ifNode({
-                        when: equals(ref("steps.record.output.declined"), true),
-                        yes: "record-notice",
-                        no: "team",
-                    }),
-                    "record-notice": node(teamDeclinedNoticeNode, {
-                        input: {
-                            step: webrenewText("node.mailReply.title").vi,
-                            ref: ref("steps.record.output.serviceCode", { default: null }),
-                            locale: LOCALE,
-                            scope: "item",
+                        // R68: a person declining the record is told to the team by the ENGINE with the service's code (was the
+                        // `record-notice` node).
+                        unsuccessful: {
+                            then: "continue",
+                            facts: [
+                                // A step's own output is not upstream of its notice: the fact reads what the mail named.
+                                { label: { vi: "Mã dịch vụ", en: "Service" }, value: item("serviceCode", { default: null }) },
+                                { label: { vi: "Mã khách hàng", en: "Customer" }, value: item("customerCode", { default: null }) },
+                            ],
                         },
+                    }),
+                    // Business, kept: a declined record ends that mail's item with no team line of its own (the engine's notice
+                    // is the one post), the other mails go on.
+                    "record-declined": ifNode({
+                        label: { vi: "Bị từ chối ghi nhận?", en: "Record declined?" },
+                        when: equals(ref("steps.record.output.declined"), true),
+                        yes: endItem,
+                        no: "team",
                     }),
                     team: node(webrenewMailReplyTeamNode, {
                         input: {
@@ -110,6 +115,6 @@ export const mailRepliesGraph: TemplateGraph = defineTemplateGraph({
             },
             next: "recorded",
         }),
-        recorded: outcome({ name: "recorded" }),
+        recorded: outcome({ name: "recorded", label: { vi: "Đã ghi nhận", en: "Recorded" } }),
     },
 })

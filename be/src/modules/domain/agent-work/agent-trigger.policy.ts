@@ -16,8 +16,6 @@ export interface TriggerFields {
     readonly timeZone: string
     /** The event of an event trigger, else null. */
     readonly eventName: string | null
-    /** The probe, or null. */
-    readonly probeKey: string | null
     /** Off means the trigger fires nothing. */
     readonly enabled: boolean
     /** The sources an event trigger answers to; none for a clock, empty for every source. */
@@ -42,7 +40,6 @@ const clockFields = (write: AgentTriggerWrite, preset: AgentTriggerPreset, works
         atTime: needsTime(preset) ? write.atTime : null,
         timeZone: write.timeZone ?? workspaceZone,
         eventName: null,
-        probeKey: write.probeKey,
         enabled: write.enabled,
         sources: [],
     }
@@ -68,7 +65,6 @@ export const triggerFields = (write: AgentTriggerWrite, workspaceZone: string): 
         atTime: null,
         timeZone: write.timeZone ?? workspaceZone,
         eventName: write.eventName,
-        probeKey: write.probeKey,
         enabled: write.enabled,
         sources,
     }

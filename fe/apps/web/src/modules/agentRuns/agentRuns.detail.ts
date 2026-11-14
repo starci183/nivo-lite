@@ -26,8 +26,6 @@ import type {
 /** Where a person decides the work item a waiting step holds. */
 export interface RunDetailContext extends RunContext {
     readonly decideHrefOf: (workItemId: string) => string
-    /** A frozen customer waits for the owner on this page: its retry is the page's primary. */
-    readonly isFrozen?: boolean
     /** Where a workflow of the agent opens, by its key. */
     readonly workflowHrefOf: (workflowKey: string) => string
     /** Where the workflow of the run is set up. */
@@ -276,7 +274,7 @@ const headOf = (wire: AgentRunWire, context: RunDetailContext): RunHeadView => {
         stepCount: row.stepTotal,
         versionLabel: row.versionNumber === null ? "" : context.t("versionChip", { version: row.versionNumber }),
         workflowHref: row.workflowName === null || row.workflowName === undefined ? "" : context.workflowHrefOf(row.workflowKey),
-        isRetryNeutral: wire.decision !== null || context.isFrozen === true,
+        isRetryNeutral: wire.decision !== null,
         canResume: wire.canResume,
         canCancel: wire.canCancel,
     }

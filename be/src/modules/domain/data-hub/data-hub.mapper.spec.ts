@@ -22,6 +22,7 @@ const record: ConnectionRecord = {
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

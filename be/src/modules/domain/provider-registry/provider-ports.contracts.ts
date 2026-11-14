@@ -241,24 +241,20 @@ export interface BusinessLedgerEntry {
 
 /**
  * A provider that keeps the business ledger of a workspace (a Google sheet today; Excel or an accounting tool later). It only ever adds:
- * an entry is never changed or removed, and nothing it holds is read back into a decision. A failure of the provider itself (a timeout, a
- * 5xx, a 429) is thrown as it is and tried again; a refused connection is `PROVIDER_REGISTRY_LEDGER_CONNECTION_REFUSED`.
+ * an entry is never changed or removed, and nothing it holds is read back into a decision. Every method takes the ACCOUNT (the
+ * connection that keeps the ledger), so the registry's one switch `portFor(account)` hands a live account the live port and a sandbox
+ * account the sandbox port. A failure of the provider itself (a timeout, a 5xx, a 429) is thrown as it is and tried again; a refused
+ * connection is `PROVIDER_REGISTRY_LEDGER_CONNECTION_REFUSED`.
  */
 export interface LedgerPort {
     /** The provider key of the connections it writes through. */
     readonly provider: string
-    /** True when the workspace connected this provider and told it where to write. */
-    ready(workspaceId: string): Promise<boolean>
-    /**
-     * Adds one entry and answers the provider's reference to it; undefined when the workspace has nothing connected for it. `connectionId`
-     * is the connected account the tool runner handed the call: the entry is written there alone; absent, the port picks as before.
-     */
-    append(workspaceId: string, entry: BusinessLedgerEntry, connectionId?: string): Promise<OptionalLedgerRef>
-    /**
-     * Adds the void entry of a transaction and answers the reference; undefined when the workspace has nothing connected for it (or not
-     * on the account named by `connectionId`, when the tool runner handed one).
-     */
-    void(workspaceId: string, transactionId: string, connectionId?: string): Promise<OptionalLedgerRef>
+    /** True when the account is connected and told where to write. */
+    ready(account: ConnectionRecord): Promise<boolean>
+    /** Adds one entry on the account and answers the provider's reference to it; undefined when the account has nothing connected for it. */
+    append(account: ConnectionRecord, entry: BusinessLedgerEntry): Promise<OptionalLedgerRef>
+    /** Adds the void entry of a transaction on the account and answers the reference; undefined when the account has nothing connected for it. */
+    void(account: ConnectionRecord, transactionId: string): Promise<OptionalLedgerRef>
 }
 
 /** The port a provider registered, or undefined when none registered under that key. */

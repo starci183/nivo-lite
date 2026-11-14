@@ -72,10 +72,6 @@ export class AgentRunStepEntity extends UuidAbstractEntity {
     @Column({ name: "work_item_id", type: "uuid", nullable: true })
     workItemId!: string | null
 
-    /** The compensation tries made. */
-    @Column({ name: "comp_attempts", type: "integer", default: () => "0" })
-    compAttempts!: number
-
     /** Why it last failed, or null. */
     @Column({ name: "error_code", type: "text", nullable: true })
     errorCode!: string | null

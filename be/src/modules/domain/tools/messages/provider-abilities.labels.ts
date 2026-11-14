@@ -87,12 +87,15 @@ export const ABILITY_LABELS: Readonly<Record<string, Readonly<Record<string, Abi
         "mail.read": { vi: "Đọc thư trong hộp thư", en: "Read mail in the mailbox" },
     },
     inet: {
-        "domain.read": { vi: "Xem tên miền và bản ghi DNS", en: "Read domains and DNS records" },
+        "domain.read": { vi: "Xem tên miền, bản ghi DNS và kết quả gia hạn", en: "Read domains, DNS records and renewal results" },
         "domain.register": { vi: "Đăng ký, gia hạn, chuyển tên miền", en: "Register, renew and transfer domains" },
         "dns.write": { vi: "Sửa bản ghi DNS và nameserver", en: "Change DNS records and nameservers" },
     },
+    misa_meinvoice: {
+        "invoice.issue": { vi: "Phát hành hoá đơn điện tử", en: "Issue e-invoices" },
+    },
     tino: {
-        "domain.read": { vi: "Xem tên miền và bản ghi DNS", en: "Read domains and DNS records" },
+        "domain.read": { vi: "Xem tên miền, bản ghi DNS và kết quả gia hạn", en: "Read domains, DNS records and renewal results" },
         "domain.register": { vi: "Đăng ký, gia hạn, chuyển tên miền", en: "Register, renew and transfer domains" },
         "dns.write": { vi: "Sửa bản ghi DNS và nameserver", en: "Change DNS records and nameservers" },
     },

@@ -27,10 +27,6 @@ export class AgentTriggerType {
     @Field(() => String, { nullable: true })
     eventName!: string | null
 
-    /** The probe that decides whether there is work. */
-    @Field(() => String, { nullable: true })
-    probeKey!: string | null
-
     /** Off means the trigger stays and fires nothing. */
     @Field(() => Boolean)
     enabled!: boolean

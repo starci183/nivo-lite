@@ -1,31 +1,18 @@
 import type { Provider } from "@nestjs/common"
-import { AgentGraphFreezeGateService } from "@modules/domain/agent-graphs"
-import { CONTACT_FREEZE_STORE, LeadFreezeRecordsService, LeadFreezeWakesService, LeadFreezesService } from "@modules/domain/lead-freezes"
-import { LeadFreezeStopHoldsService } from "@modules/domain/lead-freezes/lead-freeze-stop-holds.service"
-import { LeadFreezeStopsService } from "@modules/domain/lead-freezes/lead-freeze-stops.service"
-import { CONTACT_FREEZES, worldFreezeStore } from "../../thread-world-tables"
+import { AgentGraphSubjectHoldsService } from "@modules/domain/agent-graphs"
 import type { MoneyDb } from "./thread-world-money"
 
-// The HOLD of the money world (FX3, D-P11-4): the REAL lead-freezes services (the hold of a customer while a stop of a thread run about
-// them stands open, its pending events, the release and the replay) composed into the money process with the freeze gate the flow asks
-// before any run opens. No other world composed them, so no spec ever drove a customer's line into an open stop.
+// The HOLD of the money world (FX3, D-P11-4): the REAL subject hold (rule Q-1: a run that is not finished keeps its subject for every
+// workflow; the open stops about a person) the flow asks before any run opens, composed into the money process. The thread half of the
+// hold (the release of the wakes held behind a finished run) is the thread module's own.
 
-/**
- * The providers that give the money process the hold: the freeze gate, the lead-freezes services as their module composes them, over the
- * world's freezes table (one freeze per subject key, as the table keeps it).
- */
-export const holdProvidersOf = (db: MoneyDb): ReadonlyArray<Provider> => {
+/** The providers that give the money process the hold: the graph half of the subject hold, over the world's runs and stops. */
+export const holdProvidersOf = (_db: MoneyDb): ReadonlyArray<Provider> => {
     return [
-        AgentGraphFreezeGateService,
-        { provide: CONTACT_FREEZE_STORE, useValue: worldFreezeStore(db.records) },
-        LeadFreezeRecordsService,
-        LeadFreezeStopsService,
-        LeadFreezeStopHoldsService,
-        LeadFreezeWakesService,
-        LeadFreezesService,
+        AgentGraphSubjectHoldsService,
     ]
 }
 
-/** The freezes the world holds, as rows. */
-export const freezesOf = (db: MoneyDb): ReadonlyArray<Readonly<Record<string, unknown>>> =>
-    db.records.of(CONTACT_FREEZES).map((row) => row.data)
+/** The wakes the world holds behind a run (`waiting:<run>`), oldest first. */
+export const heldWakesOf = (db: MoneyDb): ReadonlyArray<{ readonly id: string; readonly reason: string }> =>
+    db.chat.wakes.flatMap((wake) => (wake.state === "held" && wake.reason?.startsWith("waiting:") === true ? [{ id: wake.id, reason: wake.reason }] : []))

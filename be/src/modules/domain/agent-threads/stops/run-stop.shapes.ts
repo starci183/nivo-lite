@@ -16,8 +16,8 @@ const MAX_STOP_ENTRIES = 50
 /** The longest moment text the engine writes. */
 const MAX_TIME = 40
 
-/** How a stop was answered: the founder's words, one of the three buttons, or a NIVO deadline. */
-export const RUN_STOP_DECISIONS = ["answer", "retry", "take_over", "skip", "timeout"] as const
+/** How a stop was answered: the founder's words, one of the three buttons, a take-over handed back, or a NIVO deadline. */
+export const RUN_STOP_DECISIONS = ["answer", "retry", "take_over", "skip", "handed_back", "timeout"] as const
 
 /** One suggested way on, from the AI core, and who would do it. */
 export type RunStopSuggestion = {

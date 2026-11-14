@@ -6,6 +6,7 @@ export type {
     ConnectionMember,
     ConnectionRecord,
     ConnectionStatus,
+    CreateConnectionInput,
     Environment,
     FirstEvent,
     FirstEventState,
@@ -26,3 +27,4 @@ export { ConnectionSecretReadsService } from "./connection-secret-reads.service"
 export { ConnectionBindingsReadService } from "./connection-bindings-read.service"
 export { connectionAttentionOf } from "./connection-attention.policy"
 export type { ConnectionAttention } from "./connection-attention.policy"
+export { isProvider } from "./connections.mapper"

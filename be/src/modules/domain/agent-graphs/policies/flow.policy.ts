@@ -5,7 +5,9 @@ import {
     refProblemText,
     specRefContextOf,
     triggerProblems,
+    type GraphNodeAccountMode,
     type GraphSpec,
+    type GraphSpecV2,
 } from "@nivo-lite/agent-sdk/graph"
 import { CONTRACT_VIEWS } from "./contract-views.policy"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
@@ -60,8 +62,37 @@ export interface FlowProblem {
     readonly at: string
 }
 
-/** The problem of a graph read from a @2 graph that no installed template graph is any longer: @2 is edited in its package, not here. */
-export const GRAPH_V2_EDITED = "GRAPH_V2_EDITED"
+/**
+ * The problem of a stored flow read from a template graph that is no installed template graph's copy any longer: a template graph's steps
+ * are edited in its package, never here (the shop's own settings on its copy aside, `isCopyOf`).
+ */
+export const GRAPH_TEMPLATE_EDITED = "GRAPH_TEMPLATE_EDITED"
+
+/** True for a word that is one node mode (`GraphSpecNode.mode`). */
+const isMode = (mode: unknown): mode is GraphNodeAccountMode => mode === "auto" || mode === "ask"
+
+/**
+ * True when a stored flow is the copy of a template graph's flow (`template`, the graph as the install reads it): equal content for content
+ * in everything but what the shop SETS on its own copy (nivo-frame `rights` rule 5): the ONE mode of a step whose template step states one
+ * (a node step), set to `auto` or `ask`. A changed step, route, param, trigger or a mode on a step the template gives none is an edit.
+ */
+const isCopyOf = (template: GraphSpec, flow: GraphSpec): boolean => {
+    const settable = new Set(template.nodes.filter((node) => node.mode !== undefined).map((node) => node.key))
+    const settingsCleared = (graph: GraphSpec): GraphSpec => ({
+        ...graph,
+        nodes: graph.nodes.map((node) => (settable.has(node.key) && isMode(node.mode) ? { ...node, mode: undefined } : node)),
+    })
+    return sameFlow(settingsCleared(template), settingsCleared(flow))
+}
+
+/** The template graph with the shop's settings of its stored copy applied: each node step's mode as the copy states it. */
+const withSettingsOf = (spec: GraphSpecV2, flow: GraphSpec): GraphSpecV2 => {
+    const modes = new Map(flow.nodes.flatMap((node) => (isMode(node.mode) ? [[node.key, node.mode] as const] : [])))
+    const [first, ...rest] = spec.nodes.map((step) =>
+        step.kind === "node" ? { ...step, mode: modes.get(step.key) ?? step.mode } : step,
+    )
+    return first === undefined ? spec : { ...spec, nodes: [first, ...rest] }
+}
 
 /** True for a flow read from a @2 graph (`graphOfSpecV2`): one of its steps is a template node or the engine's `if`. */
 export const isTemplateFlow = (flow: GraphSpec): boolean =>
@@ -74,9 +105,10 @@ export const isTemplateFlow = (flow: GraphSpec): boolean =>
     )
 
 /**
- * The problems of a flow read from a @2 graph, or null for a flow of `defineNode` nodes (the `@1` checks judge it). The flow must be,
- * content for content, the one an installed template graph of its module reads as (else `GRAPH_V2_EDITED`); that graph is then judged
- * by the SDK's `templateGraphProblems` with the engine's lookups (known tools, provider owners, money tools, what each verb supplies) and
+ * The problems of a flow read from a @2 graph, or null for a flow of `defineNode` nodes (the `@1` checks judge it). The flow must be the
+ * COPY of the one an installed template graph of its module reads as (`isCopyOf`: content for content, the shop's own node modes aside;
+ * else `GRAPH_TEMPLATE_EDITED`); that graph, with the copy's modes (`withSettingsOf`), is then judged by the SDK's `templateGraphProblems`
+ * with the engine's lookups (known tools, provider owners, money tools, what each verb supplies) and
  * its agent's providers, every tool of its nodes must be in what its module's agent may call (`GRAPH_TOOL_OUTSIDE_AGENT`) when the
  * module declares an agent, every condition its derived registrations carry must read a member its source supplies, and a trigger verb
  * it shares with another graph of its agent must be keyed apart by disjoint exact conditions (`TRIGGER_VERB_SHARED`, judged on the
@@ -87,11 +119,12 @@ export const templateFlowProblems = (flow: GraphSpec): ReadonlyArray<FlowProblem
     if (!isTemplateFlow(flow)) return null
     const held = INSTALLED.templatesOf(flow.moduleKey).find(
         (template) =>
-            INSTALLED.templateGraphOf(template.id) !== null && template.versions.some((version) => sameFlow(version.graph, flow)),
+            INSTALLED.templateGraphOf(template.id) !== null && template.versions.some((version) => isCopyOf(version.graph, flow)),
     )
     const found = held === undefined ? null : INSTALLED.templateGraphOf(held.id)
-    if (found === null) return [{ code: GRAPH_V2_EDITED, at: flow.moduleKey }]
-    const { agent, graph } = found
+    if (found === null) return [{ code: GRAPH_TEMPLATE_EDITED, at: flow.moduleKey }]
+    const { agent } = found
+    const graph = { ...found.graph, spec: withSettingsOf(found.graph.spec, flow) }
     const declared = agentToolsOf(flow.moduleKey)
     // What the agent may call is the set the run-time grant bounds every run by (`withDefaultReads`: the declared set and the default
     // reads every agent holds); a control step's own effect is the engine's and no template node's tool, so it is not judged here.

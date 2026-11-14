@@ -5,9 +5,9 @@ import type { AgentWakeSource } from "../../modules/domain/agent-work/agent-work
 
 const AgentWorkStateEntity: (typeof agentWorkEntities)[1] = agentWorkEntities[1]
 const AgentWorkLeaseEntity: (typeof agentWorkEntities)[2] = agentWorkEntities[2]
-const AgentWakeEntity: (typeof agentWorkEntities)[6] = agentWorkEntities[6]
+const AgentWakeEntity: (typeof agentWorkEntities)[5] = agentWorkEntities[5]
 type AgentWakeEntity = InstanceType<typeof AgentWakeEntity>
-const AgentTurnEntity: (typeof agentWorkEntities)[7] = agentWorkEntities[7]
+const AgentTurnEntity: (typeof agentWorkEntities)[6] = agentWorkEntities[6]
 type AgentTurnEntity = InstanceType<typeof AgentTurnEntity>
 const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
 type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>

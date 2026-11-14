@@ -232,25 +232,6 @@ export interface ChannelTarget {
     readonly connectionId: string | null
 }
 
-/** Sends a reply on channels this capability does not own (Facebook, Instagram); the owner registers it once at start. */
-export interface ChannelSender {
-    /** The conversation channel keys it sends for. */
-    readonly channels: ReadonlyArray<string>
-    /** Pushes the text to the customer; false when the channel did not accept it. Never throws. */
-    send(conversation: ChannelTarget, text: string): Promise<boolean>
-}
-
-/** A sender, or none: the answer of the registry. */
-export type RegisteredSender = ChannelSender | undefined
-
-/** Where an owner registers a sender for its channels. */
-export interface ChannelSenderRegistry {
-    /** Registers a sender; the channels it names are served by it. */
-    add(sender: ChannelSender): void
-    /** The sender serving a channel, or undefined. */
-    get(channel: string): RegisteredSender
-}
-
 /** What the health check concluded about one connection. */
 export interface HealthVerdict {
     /** ok, silent, degraded (the provider cannot be read for a reason the owner cannot fix by connecting again) needs_reauth (the poll scheduler recorded a refused credential: only the owner connecting again fixes it) or failing (the connection reports another error). */

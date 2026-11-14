@@ -10,4 +10,6 @@ export interface ScopedWebhookDelivery {
     readonly signature: string | undefined
     /** The provider timestamp header, when it sends one. */
     readonly timestamp: string | undefined
+    /** The `x-nivo-sandbox-key` header, when sent: only a SANDBOX account's webhook reads it (rulings R58 + R60). */
+    readonly sandboxKey?: string | undefined
 }

@@ -11,17 +11,19 @@ import {
     ref,
     trigger,
 } from "@nivo-lite/agent-sdk/template"
-import { teamDeclinedNoticeNode } from "@nivo-lite/blocks-core"
 import { z } from "zod"
 import { idSchema } from "../../../nodes/webbooks/books-shapes"
 import { webbooksInvoiceDraftNode } from "../../../nodes/webbooks/invoice-draft.node"
 import { webbooksInvoiceIssueNode } from "../../../nodes/webbooks/invoice-issue.node"
 import { webbooksInvoiceMailNode } from "../../../nodes/webbooks/invoice-mail.node"
 import { webbooksInvoiceTeamNode } from "../../../nodes/webbooks/invoice-team.node"
-import { webbooksText } from "../copy"
+import { webbooksIssueRecordNode } from "../../../nodes/webbooks/issue-record.node"
 
 /** The language the team reads (today's templates fix it). */
 const LOCALE = "vi"
+
+/** The fact the engine's team notice names for a declined draft or issue: the service the invoice is for. */
+const SERVICE_FACT = { label: { vi: "Mã dịch vụ", en: "Service" }, value: ref("trigger.data.serviceCode") }
 
 /** The graph's contract: what the provider renewal's hand-off passes. */
 const input = z.object({
@@ -32,16 +34,18 @@ const input = z.object({
 })
 
 /**
- * `webbooks.invoice` version 5 (Invoice after a renewal), the Accounting agent's primary workflow, reached by the provider
- * renewal's hand-off. `draft` checks the buyer and opens the CRM's draft; `issue` issues it on the owner's yes (the ONE `ask` step of the package: a tax document issued in the company's name, a legal signature); `issued` (exact:
- * `dryRun` false AND a number present) sends a real invoice to `mail` (a side step: the customer mail), a dry
- * run straight to `team`; the team is told on both paths, then `invoiced`. A person who declines the draft (`draft-declined`) or the
- * owner who declines the issue (`issue-declined`, the legal act), both exact booleans, made a decision: the team is told
- * (`draft-notice` / `issue-notice`, `team.declined-notice`) and the run ends `declined`; nothing after it runs (no issue, no mail,
- * no team report). Version 5 (flipDecisions2026_11_13): `issue` names the CRM source for the invoice purpose, so the graph is hidden
- * (`tool_unavailable`) until an attached CRM account's PINNED document marks `nivo.tool.invoice.create`.
- * Change from version 7: `team` declined (`team-declined`, an exact boolean) -> outcome `declined` (the declined write is itself a team post,
- * so no notice; it is the last step, nothing after it runs).
+ * `webbooks.invoice` version 12 (Invoice after a renewal), the Accounting agent's primary workflow, reached by the provider
+ * renewal's hand-off. `draft` checks the buyer and opens the CRM's draft; `issue` issues it on the MISA meInvoice account on the
+ * owner's yes (the ONE `ask` invoice step: a tax document issued in the company's name, a legal signature); `issued` (exact: `outcome`
+ * `issued` AND a number present) records the invoice on its draft in the CRM (`record`), then sends it to `mail` (a side step: the
+ * customer mail); a rejected issue, or one issued without a number yet, goes straight to `team`. The team is told on every path; the
+ * run ends `invoiced` only when the CRM recorded the invoice (`recorded`), else `not-invoiced` after the team line (a person acts). A
+ * person who declines the draft or the owner who declines the issue (the legal act) made a decision: it is the step's unsuccessful
+ * ending (R68): the ENGINE tells the team (the step, `declined`, the service code) and the run ends `declined`; nothing after it runs. `team` declined (`team-declined`, an exact boolean) -> outcome `declined` (the declined write is itself a team
+ * post, so no notice). Change from version 9 (R57): the issue runs on the MISA account (no CRM dry run: a sandbox account replaces it,
+ * R56) and answers an outcome; the issued invoice is recorded in the CRM; `invoiced` needs that record. Change from version 10 (R68):
+ * the hand-drawn `draft-declined`/`draft-notice` and `issue-declined`/`issue-notice` pairs are the steps' `unsuccessful` option.
+ * Change from version 11 (E-R57): `record` writes MISA's own `issuedOn` from the issue's answer (the node's own day only when MISA gave none).
  */
 export const invoiceGraph: TemplateGraph = defineTemplateGraph({
     key: "webbooks.invoice",
@@ -56,11 +60,11 @@ export const invoiceGraph: TemplateGraph = defineTemplateGraph({
             vi: "Sau khi gia h\u1ea1n t\u1ea1i nh\u00e0 cung c\u1ea5p: so\u1ea1n ho\u00e1 \u0111\u01a1n t\u1eeb CRM, xu\u1ea5t ho\u00e1 \u0111\u01a1n khi ch\u1ee7 duy\u1ec7t, so\u1ea1n th\u01b0 g\u1eedi kh\u00e1ch v\u00e0 b\u00e1o \u0111\u1ed9i",
             en: "After the provider renewal: drafts the invoice in the CRM, issues it when the owner approves, drafts the customer mail and tells the team",
         },
-        version: 9,
-        publishedAt: "2026-11-14T04:15:00.000Z",
+        version: 12,
+        publishedAt: "2026-11-14T22:00:00.000Z",
         notes: {
-            vi: "Nhận tham số của bước gọi trong dữ liệu của sự kiện (trigger.data)",
-            en: "Takes its caller's params in the event's data (trigger.data)",
+            vi: "R68: bản nháp hoặc lần xuất hoá đơn bị từ chối duyệt thì hệ thống tự báo đội kèm mã dịch vụ và kết thúc bị từ chối; quy trình chỉ còn các bước nghiệp vụ",
+            en: "R68: a draft or an issue a person declined is told to the team by the engine with the service code and the run ends declined; the workflow keeps only its business steps",
         },
     },
     nodes: {
@@ -72,47 +76,34 @@ export const invoiceGraph: TemplateGraph = defineTemplateGraph({
                 termMonths: ref("trigger.data.termMonths"),
                 locale: LOCALE,
             },
-            next: "draft-declined",
+            next: "issue",
+            unsuccessful: { then: "end", outcome: "declined", facts: [SERVICE_FACT] },
         }),
-        "draft-declined": ifNode({
-            when: equals(ref("steps.draft.output.declined"), true),
-            yes: "draft-notice",
-            no: "issue",
-        }),
-        "draft-notice": node(teamDeclinedNoticeNode, {
-            input: {
-                step: webbooksText("node.invoice-draft.title").vi,
-                ref: ref("trigger.data.serviceCode"),
-                locale: LOCALE,
-            },
-            next: "declined",
-        }),
-        // Present on this path (`draft-declined` checked it); the step's input takes null and refuses it exactly.
+        // Present on this path (a declined draft ended the run); the step's input takes null and refuses it exactly.
         issue: node(webbooksInvoiceIssueNode, {
             input: {
                 draftId: ref("steps.draft.output.draftId", { default: null }),
                 renewalId: ref("steps.draft.output.renewalId"),
                 locale: LOCALE,
             },
-            next: "issue-declined",
-        }),
-        "issue-declined": ifNode({
-            when: equals(ref("steps.issue.output.declined"), true),
-            yes: "issue-notice",
-            no: "issued",
-        }),
-        "issue-notice": node(teamDeclinedNoticeNode, {
-            input: {
-                step: webbooksText("node.invoice-issue.title").vi,
-                ref: ref("trigger.data.serviceCode"),
-                locale: LOCALE,
-            },
-            next: "declined",
+            next: "issued",
+            unsuccessful: { then: "end", outcome: "declined", facts: [SERVICE_FACT] },
         }),
         issued: ifNode({
-            when: and(equals(ref("steps.issue.output.dryRun"), false), present(ref("steps.issue.output.invoiceNo"))),
-            yes: "mail",
+            label: { vi: "Đã xuất hoá đơn có số?", en: "Issued with a number?" },
+            when: and(equals(ref("steps.issue.output.outcome"), "issued"), present(ref("steps.issue.output.invoiceNo"))),
+            yes: "record",
             no: "team",
+        }),
+        // Present on this path (`issued` checked them); the step's input takes null and refuses it exactly.
+        record: node(webbooksIssueRecordNode, {
+            input: {
+                draftId: ref("steps.draft.output.draftId", { default: null }),
+                invoiceNo: ref("steps.issue.output.invoiceNo", { default: null }),
+                invoiceId: ref("steps.issue.output.invoiceId", { default: null }),
+                issuedOn: ref("steps.issue.output.issuedOn", { default: null }),
+            },
+            next: "mail",
         }),
         mail: node(webbooksInvoiceMailNode, {
             input: {
@@ -125,14 +116,15 @@ export const invoiceGraph: TemplateGraph = defineTemplateGraph({
             },
             next: "team",
         }),
-        // `mail` did not run on the dry-run path (and is skipped without a sending mailbox): its refs default to null.
+        // `mail` did not run on the rejected or numberless path (and is skipped without a sending mailbox): its refs default to null.
         team: node(webbooksInvoiceTeamNode, {
             input: {
                 renewalId: ref("trigger.data.renewalId"),
                 customerCode: ref("trigger.data.customerCode"),
                 serviceCode: ref("trigger.data.serviceCode"),
                 invoiceNo: ref("steps.issue.output.invoiceNo", { default: null }),
-                dryRun: ref("steps.issue.output.dryRun", { default: null }),
+                outcome: ref("steps.issue.output.outcome", { default: null }),
+                refusal: ref("steps.issue.output.refusal", { default: null }),
                 messageRef: ref("steps.mail.output.messageRef", { default: null }),
                 mailRefusal: ref("steps.mail.output.refusal", { default: null }),
                 locale: LOCALE,
@@ -141,11 +133,28 @@ export const invoiceGraph: TemplateGraph = defineTemplateGraph({
         }),
         // A person declined the team post: the post was the team's own, so no notice; the run ends `declined`.
         "team-declined": ifNode({
+            label: { vi: "Bị từ chối báo đội?", en: "Team post declined?" },
             when: equals(ref("steps.team.output.declined"), true),
             yes: "declined",
-            no: "invoiced",
+            no: "recorded",
         }),
-        invoiced: outcome({ name: "invoiced", output: { renewalId: ref("trigger.data.renewalId") } }),
-        declined: outcome({ name: "declined", output: { renewalId: ref("trigger.data.renewalId") } }),
+        // `record` did not run on the rejected or numberless path: its ref defaults to null and the run ends `not-invoiced`.
+        recorded: ifNode({
+            label: { vi: "CRM đã ghi hoá đơn?", en: "Recorded in the CRM?" },
+            when: equals(ref("steps.record.output.recorded", { default: null }), true),
+            yes: "invoiced",
+            no: "not-invoiced",
+        }),
+        invoiced: outcome({ name: "invoiced", label: { vi: "Đã xuất hoá đơn", en: "Invoiced" }, output: { renewalId: ref("trigger.data.renewalId") } }),
+        "not-invoiced": outcome({
+            name: "not-invoiced",
+            label: { vi: "Chưa xuất được hoá đơn", en: "Not invoiced" },
+            output: {
+                renewalId: ref("trigger.data.renewalId"),
+                outcome: ref("steps.issue.output.outcome", { default: null }),
+                refusal: ref("steps.issue.output.refusal", { default: null }),
+            },
+        }),
+        declined: outcome({ name: "declined", label: { vi: "Bị từ chối", en: "Declined" }, output: { renewalId: ref("trigger.data.renewalId") } }),
     },
 })

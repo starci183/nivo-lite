@@ -1,6 +1,5 @@
 import type { useFormatter, useTranslations } from "next-intl"
 import type { WorkspaceDashboardQuery } from "@/modules/api"
-import { actionWordOf } from "@/modules/authority"
 import type {
     OverviewAgentView,
     OverviewApprovalView,
@@ -39,7 +38,6 @@ export type OverviewData = Omit<
 /** The words and the number and date writer the view is made with. */
 export interface OverviewTools {
     readonly t: ReturnType<typeof useTranslations<"overview">>
-    readonly g: ReturnType<typeof useTranslations<"governance">>
     readonly format: ReturnType<typeof useFormatter>
     readonly now: Date
 }
@@ -98,7 +96,7 @@ const kpisOf = (data: OverviewData, tools: OverviewTools, period: OverviewPeriod
 const approvalsOf = (data: OverviewData, tools: OverviewTools): OverviewView["approvals"] => {
     const rows: ReadonlyArray<OverviewApprovalView> = data.approvals.items.map((item) => ({
         id: item.id,
-        title: maskPhones(item.summary ?? actionWordOf(tools.g, item.action)),
+        title: maskPhones(item.summary ?? tools.t("approvalUntitled")),
         description: [item.agentName, tools.format.relativeTime(new Date(item.createdAt), tools.now)]
             .filter((part) => part !== null)
             .join(" · "),
@@ -121,7 +119,7 @@ const savingsOf = (data: OverviewData, tools: OverviewTools): OverviewSavingsVie
     const lines = [
         ...savings.lines.slice(0, DEFINITION_LINES_MAX).map((line) =>
             t("savingsDefinitionLine", {
-                action: actionWordOf(tools.g, line.action),
+                action: tools.t("savingsUntitled"),
                 minutes: line.minutesEach,
                 count: tools.format.number(line.count),
             }),

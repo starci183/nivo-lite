@@ -120,6 +120,29 @@ describe("ToolsConsoleService accounts", () => {
         expect(access.attachByTemplate).toHaveBeenCalledWith("ws-1", "conn-tg", ["a1"], "owner-1")
     })
 
+    it("sets the default account of an agent for an owner or manager, with the person who did it, and throws the reason of a refusal", async () => {
+        const { admin, access, connections } = await build()
+        access.setDefault.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, reason: "not_attached" })
+
+        await expect(admin.setProviderDefault(OWNER, "agent-1", "conn-live")).resolves.toBeUndefined()
+        await expect(admin.setProviderDefault(OWNER, "agent-1", "conn-other")).rejects.toMatchObject({
+            code: ToolsErrorCode.AttachmentRefused,
+            params: { reason: "not_attached" },
+        })
+
+        expect(connections.authorize).toHaveBeenCalledWith(OWNER, ["owner", "manager"])
+        expect(access.setDefault).toHaveBeenNthCalledWith(1, { workspaceId: "ws-1", agentId: "agent-1" }, "conn-live", "owner-1")
+    })
+
+    it("changes no default for a member who is neither owner nor manager", async () => {
+        const { admin, access, connections } = await build()
+        connections.authorize.mockRejectedValue(new Error("forbidden"))
+
+        await expect(admin.setProviderDefault(OWNER, "agent-1", "conn-live")).rejects.toThrow("forbidden")
+
+        expect(access.setDefault).not.toHaveBeenCalled()
+    })
+
     it("lists who a template would attach to a newly connected provider, and attaches the listed agents", async () => {
         const { admin, access } = await build()
         const candidate = { agentId: "a1", agentName: "Sales", module: "sales" } as const

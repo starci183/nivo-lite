@@ -75,7 +75,7 @@ export class BankFeedReceiptsService {
             await this.proof.proveFeed(provider, { authorization, connectionId: connection, rawBody })
         } catch (error) {
             if (error instanceof BillingError && error.code === BillingErrorCode.WebhookUnauthorized) {
-                await this.webhooks.of(provider)?.traceRefusal(connection)
+                await this.webhooks.liveOf(provider)?.traceRefusal(connection)
             }
             throw error
         }
@@ -86,7 +86,7 @@ export class BankFeedReceiptsService {
      * provider reads as no money move (a test ping, a zero amount) is acknowledged without a receipt, and a delivery it cannot read is invalid.
      */
     acceptFeedDelivery(rawBody: RawBody, connection: string, provider: string): Promise<void> {
-        const port = this.webhooks.of(provider)
+        const port = this.webhooks.liveOf(provider)
         if (port === undefined) return Promise.reject(new BillingError({ code: BillingErrorCode.WebhookInvalid }))
         return port.traceIntake(connection, rawBody, () => this.bookFeedDelivery(port, rawBody, connection))
     }

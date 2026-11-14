@@ -1,3 +1,4 @@
+import { In } from "typeorm"
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -86,16 +87,23 @@ describe("TypeormChannelDeliveryStore writes", () => {
         ])
     })
 
-    it("takes back only a REFUSED row, in one conditional statement", async () => {
+    it("takes back only a row in one of the states asked (a REFUSED row; an ended-UNKNOWN one for a repeatable send), in one conditional statement", async () => {
         const { store, em } = await build()
         em.update.mockResolvedValueOnce({ affected: 1, raw: [], generatedMaps: [] }).mockResolvedValueOnce({ affected: 0, raw: [], generatedMaps: [] })
 
-        await expect(store.reclaim(WS, "k1")).resolves.toBe(true)
-        await expect(store.reclaim(WS, "k1")).resolves.toBe(false)
+        await expect(store.reclaim(WS, "k1", ["refused"])).resolves.toBe(true)
+        await expect(store.reclaim(WS, "k1", ["refused", "unknown"])).resolves.toBe(false)
 
-        expect(em.update).toHaveBeenCalledWith(
+        expect(em.update).toHaveBeenNthCalledWith(
+            1,
             CustomerMessageEntity,
-            { workspaceId: WS, direction: "to_person", lineKey: "k1", state: "refused" },
+            { workspaceId: WS, direction: "to_person", lineKey: "k1", state: In(["refused"]) },
+            { state: "claimed", reason: null },
+        )
+        expect(em.update).toHaveBeenNthCalledWith(
+            2,
+            CustomerMessageEntity,
+            { workspaceId: WS, direction: "to_person", lineKey: "k1", state: In(["refused", "unknown"]) },
             { state: "claimed", reason: null },
         )
     })

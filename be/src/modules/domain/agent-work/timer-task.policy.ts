@@ -70,6 +70,16 @@ export const timerTaskKeyOf = (subject: TimerSubject, ref: string): string => {
     return [TIMER_TASK_PREFIX, kind, id, ref].join(KEY_SEPARATOR)
 }
 
+/**
+ * The start every timer task key of ONE subject shares (`timer:<kind>:<id>:`), whatever its `ref`: what the erasure of a person ends
+ * (every timer armed for the contact or one of its conversations). Null for a subject of no contact and no conversation (an agent's own
+ * timer is nobody's).
+ */
+export const timerSubjectKeyStartOf = (subject: TimerSubject): string | null => {
+    const { kind, id } = subjectOf(subject)
+    return kind === "none" ? null : [TIMER_TASK_PREFIX, kind, id, ""].join(KEY_SEPARATOR)
+}
+
 /** The conversation suffix of a timer task title: empty when the arming run had no conversation. */
 const replyTarget = (conversationId?: string | null): string =>
     conversationId === undefined || conversationId === null || conversationId === ""

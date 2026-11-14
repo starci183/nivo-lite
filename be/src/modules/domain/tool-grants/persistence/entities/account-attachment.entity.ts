@@ -21,6 +21,13 @@ export class AccountAttachmentEntity extends UuidAbstractEntity {
     @Column({ name: "provider", type: "text" })
     provider!: string
 
+    /**
+     * True for the agent's DEFAULT account of that provider: the one a step's call uses when several accounts of the provider are attached
+     * and neither the run's trigger nor the run's earlier calls name one. At most one per agent and provider (a partial unique index).
+     */
+    @Column({ name: "is_default", type: "boolean", default: () => "false" })
+    isDefault!: boolean
+
     /** Who set it, or null for the seed. */
     @Column({ name: "updated_by", type: "uuid", nullable: true })
     updatedBy!: string | null

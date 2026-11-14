@@ -59,7 +59,8 @@ describe("the Mailbox agent template", () => {
         expect(webmailAgent.graphs.map((graph) => graph.key)).toEqual(["webmail.triage", "webmail.team-chat"])
         expect(webmailAgent.primary).toBe("webmail.triage")
         // ledger 2026-11-13 (`nivo-frame.rights`): every graph's catalogue version + 1 (one mode per node changed every compiled document).
-        expect(webmailTriageGraph.spec.catalogue?.version).toBe(6)
+        // 2026-11-14 (R68): the triage + 1, its conditions, loop and outcomes carry the workspace's words (labels; business unchanged).
+        expect(webmailTriageGraph.spec.catalogue?.version).toBe(7)
         // 2026-11-14 (EF-G, `rights` 11c): the chat turn + 1 (a declined answer post ends the turn `declined`).
         expect(webmailTeamChatGraph.spec.catalogue?.version).toBe(5)
     })

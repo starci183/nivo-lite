@@ -103,14 +103,31 @@ export interface StepPickerView {
     readonly options: ReadonlyArray<{ readonly id: string; readonly label: string; readonly description: string }>
 }
 
-/** The one mode control of the open step: how the node's calls run (rights.md: ONE mode per node, `auto | ask`, declared by the node). */
-export interface StepModeView {
-    readonly title: string
-    readonly hint: string
+/** One choice of the step's "how it runs" block: its word and the muted line that says what it does. */
+export interface StepRunModeOptionView {
+    readonly id: NodeRightMode
     readonly label: string
-    /** The node's mode. */
+    readonly description: string
+}
+
+/**
+ * The "how it runs" block of a node step's drawer (rights.md: ONE mode per node, `auto | ask`, set by the shop's owner on its own
+ * workflow): the node's mode and the two choices. Only the owner changes it, each change at once writes the workflow's next version
+ * (`setAgentNodeMode`); anybody else reads it as words.
+ */
+export interface StepRunModeView {
+    readonly title: string
+    /** The node's mode now. */
     readonly value: NodeRightMode
-    readonly options: { readonly auto: string; readonly ask: string }
+    readonly options: ReadonlyArray<StepRunModeOptionView>
+    /** True for the owner of a workflow that can be written; false reads the mode as words. */
+    readonly isEditable: boolean
+    /** Said under the read-only mode when the reader is not the owner; empty otherwise. */
+    readonly ownerNote: string
+    /** The line that says runs in progress keep the old setting. */
+    readonly keepNote: string
+    /** True while the change is on its way. */
+    readonly isPending: boolean
 }
 
 /** One account entry of the open step: its name and provider line, in the order the node tries them. */
@@ -134,8 +151,6 @@ export interface StepEffectiveRowView {
 export interface StepAccountsView {
     readonly sectionTitle: string
     readonly sectionHint: string
-    /** The node's one mode; null where the node declares none. */
-    readonly mode: StepModeView | null
     /** Said when the node acts through providers but declares no mode (a graph stored before every node declared one); null otherwise. */
     readonly modeNote: string | null
     readonly accounts: ReadonlyArray<StepAccountView>
@@ -210,6 +225,8 @@ export interface StepDrawerView {
     readonly errorTitle: string
     /** What the back end said when it refused the save; empty otherwise. */
     readonly error: string
+    /** How a node step runs; null for the trigger, a control step and a run's drawer. */
+    readonly runMode: StepRunModeView | null
     /** The accounts the step may call (node rights); absent where the drawer has no agent to choose among. */
     readonly accounts?: StepAccountsSlotView
 }
@@ -234,5 +251,5 @@ export type StepAction =
     | { readonly kind: "account-add"; readonly connectionId: string }
     /** An account entry leaves the step. */
     | { readonly kind: "account-remove"; readonly index: number }
-    /** The node's one mode changed. */
+    /** The owner chose how the open node runs: writes the workflow's next version at once. */
     | { readonly kind: "node-mode"; readonly mode: NodeRightMode }

@@ -370,3 +370,13 @@ export type OptionalNodeModelName = string | undefined
 
 /** The kinds of work a node's calls may be booked as instead of plain node work (`chat_turn`: an answer to a person in the team chat). */
 export type NodeWorkKind = NonNullable<PluginNodeModel["work"]>
+
+/**
+ * THE ROUTES A STEP CANNOT FOLLOW HERE (`ctx.run.unreachable`, rule: a step's route is closed when every road it leads to ends at a
+ * workflow call this workspace cannot start). The engine part that reads the pinned graph binds it; the host asks it only for a node
+ * that routes, and hands the names to the node untouched. Absent: every route is open.
+ */
+export interface NodeRouteReach {
+    /** The names of the step's declared routes whose every road ends at a call this workspace cannot start; none when all are open. */
+    closedRoutesOf(turn: NodeTurn, step: NodeStepRef): Promise<ReadonlyArray<string>>
+}

@@ -1,19 +1,15 @@
 import type { Provider } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { AgentGraphFreezeGateService, AgentGraphTurnPolicyService } from "@modules/domain/agent-graphs"
+import { AgentGraphSubjectHoldsService, AgentGraphTurnPolicyService } from "@modules/domain/agent-graphs"
 import { AgentGraphRunQueueService } from "@modules/domain/agent-graphs/agent-graph-run-queue.service"
 import { RunStopRecordsService } from "@modules/domain/agent-threads"
 import { CustomerRoutesService } from "@modules/domain/customer-routes/customer-routes.service"
-import { CONTACT_FREEZE_STORE, LeadFreezeRecordsService, LeadFreezeWakesService, LeadFreezesService } from "@modules/domain/lead-freezes"
-import { LeadFreezeStopHoldsService } from "@modules/domain/lead-freezes/lead-freeze-stop-holds.service"
-import { LeadFreezeStopsService } from "@modules/domain/lead-freezes/lead-freeze-stops.service"
 import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { chatServicesOf } from "./thread-world-intake"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { INSTALLED } from "@modules/domain/installed-plugins"
 import { MONEY_MOVE, NOTE_WRITE } from "../fixtures/builders/engine-core-plugin.builder"
 import { WorldError } from "./thread-world-records"
-import { CONTACT_FREEZES, worldFreezeStore } from "./thread-world-tables"
 import { memoryEffectStore } from "@tests/fixtures/builders/engine-core-tables.builder"
 import {
     processOf,
@@ -118,23 +114,17 @@ export const threadOf = async (process: ThreadProcess, runId: string) => {
 }
 
 /**
- * The providers that give a process the engine's HOLD of a subject while a stop of a thread run about it stands open (the REAL
- * lead-freezes services, as their module composes them, with the freeze gate the flow asks before any run opens): the only mechanism the
- * engine has for "a second event of a subject whose run waits at a stop". The freezes live in the world's freezes table (`thread-world-tables.ts`), whose one unique key
- * (the subject's) makes a second freeze of a subject find the first, as the table does.
+ * The providers that give a process the engine's HOLD of a subject (rule Q-1: a run that is not finished keeps its subject for every
+ * workflow): the REAL `AgentGraphSubjectHoldsService` the flow asks before any run opens, over the world's runs and stops. Its thread half
+ * (`ThreadSubjectHoldsService`: the open stops about a person, the release of the wakes held behind a finished run) is the thread module's
+ * own, which every process already composes. A held event is a wake of the world's table in state `held` with the reason `waiting:<run>`.
  */
 export const holdProvidersOf = (db: ThreadDb): ReadonlyArray<Provider> => {
     return [
         joinedPolicyOf(db),
         // The run queue the app provides (`agent-graphs.module.ts`): without it `run.queue` is always empty and a held event is never taken.
         AgentGraphRunQueueService,
-        AgentGraphFreezeGateService,
-        { provide: CONTACT_FREEZE_STORE, useValue: worldFreezeStore(db.records) },
-        LeadFreezeRecordsService,
-        LeadFreezeStopsService,
-        LeadFreezeStopHoldsService,
-        LeadFreezeWakesService,
-        LeadFreezesService,
+        AgentGraphSubjectHoldsService,
         // The routes' staff hold the app's global capability serves (`CustomerRoutesModule`): the resume door ends a take-over's hold
         // with the decision that closes the stop (R52), and a step reads it; the same service the world's doors hold and release with.
         { provide: CustomerRoutesService, useValue: chatServicesOf(db).routes },
@@ -144,7 +134,7 @@ export const holdProvidersOf = (db: ThreadDb): ReadonlyArray<Provider> => {
 /**
  * The REAL turn policy (`AgentGraphTurnPolicyService`, which the app's agent-graphs module provides to every step) over the world's
  * database: what a step is told of its run, the events that JOINED the run while it waited at a stop (`ctx.run.joined`) among it. The effect
- * ledger, the stops and the holds are the REAL ledger store double, stop and freeze doors over the world's tables.
+ * ledger, the stops and the holds are the REAL ledger store double, stop doors and subject holds over the world's tables.
  */
 const joinedPolicyOf = (db: ThreadDb): Provider => {
     return {
@@ -156,6 +146,6 @@ const joinedPolicyOf = (db: ThreadDb): Provider => {
     }
 }
 
-/** The holds the world keeps, as rows. */
-export const holdsOf = (db: ThreadDb): ReadonlyArray<Readonly<Record<string, unknown>>> =>
-    db.records.of(CONTACT_FREEZES).map((row) => row.data)
+/** The wakes the world holds behind a run (`waiting:<run>`), oldest first. */
+export const heldWakesOf = (db: ThreadDb): ReadonlyArray<{ readonly id: string; readonly reason: string }> =>
+    db.chat.wakes.flatMap((wake) => (wake.state === "held" && wake.reason?.startsWith("waiting:") === true ? [{ id: wake.id, reason: wake.reason }] : []))

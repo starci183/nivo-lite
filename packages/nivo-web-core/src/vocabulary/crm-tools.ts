@@ -1,4 +1,3 @@
-import { TOOL } from "@nivo-lite/blocks-core"
 import type { PluginToolLabel } from "@nivo-lite/agent-sdk/installation"
 import { defineTool, type ToolDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
@@ -16,9 +15,9 @@ import { CRM_NIVOWEB } from "../crm/nivoweb/api.generated"
  * computed by the CRM.
  *
  * Aligned to the CRM's document (`nivo-web-lite` `be/contracts/api/openapi.json`, 43 operations, pinned as `src/crm/nivoweb/openapi.json`):
- * path members `code` / `id`, query `q`, pages `nextCursor`. The invoice the CRM issues through its e-invoice port is no operation of it
- * yet: it is the platform purpose `TOOL.invoiceCreate` (`nivo.tool.invoice.create`), declared here because a node of the Accounting agent
- * calls it, and served by no adapter until that port exists (a call is refused).
+ * path members `code` / `id`, query `q`, pages `nextCursor`. The CRM acts at no provider (R57): it stores. A renewal is made by the
+ * registrar's tool and an invoice issued by the e-invoice service's (`nivo.tool.domain.renewal.create`, `nivo.tool.invoice.create`: the
+ * engine's tools, never declared here); the CRM records their answers (`post renewals/{id}/outcome`, `post invoice-drafts/{id}/invoice`).
  */
 
 /** The most items a list answer carries (the provider cuts at 50 as well). */
@@ -40,10 +39,6 @@ const note = z.string().max(1000).optional().describe("A short note in the team'
 /** A list answer as the CRM pages it: the items, and the point to page from (null at the end). */
 const listOf = (item: z.ZodObject): z.ZodObject =>
     z.looseObject({ items: z.array(item).max(LIST_MAX), nextCursor: z.string().max(2048).nullable() })
-
-/** A write answer: the record touched and its state, and whether the CRM only rehearsed it. */
-const written = (extra: z.ZodRawShape = {}): z.ZodObject =>
-    z.looseObject({ id: words(120), state: words(40), dryRun: z.boolean().optional(), ...extra })
 
 const service = z.looseObject({
     code: words(120),
@@ -84,7 +79,9 @@ const renewal = z.looseObject({
     totalVnd: z.number().int().nullable(),
     paymentCode: words(20).nullable(),
     transactionRef: words(200).nullable(),
-    dryRun: z.boolean(),
+    providerRef: words(200).nullable(),
+    newExpiresOn: day,
+    confirmedBy: words(120).nullable(),
 })
 /** The states of a ticket, as the CRM's document lists them. */
 const TICKET_STATUSES = ["open", "in_progress", "waiting_customer", "quoted", "resolved", "closed"] as const
@@ -112,7 +109,10 @@ const draft = z.looseObject({
     customerCode: words(80),
     lines: z.array(z.looseObject({})).max(LIST_MAX),
     totalVnd: z.number().int(),
-    state: words(40),
+    state: z.enum(["draft", "issued"]),
+    invoiceNo: words(40).nullable(),
+    providerRef: words(200).nullable(),
+    issuedOn: day,
 })
 
 const ticket = ticketRow.extend({ summary: words(4000), notes: z.array(z.looseObject({})).max(100) })
@@ -370,20 +370,8 @@ const stepTools: ReadonlyArray<ToolDefinition> = [
     crmTool(
         CRM_NIVOWEB.get_services_code_status,
         z.object({ code: serviceCode }).strict(),
-        z.looseObject({ serviceCode: words(120), state: words(40), expiresOn: day, checkedBy: words(40), note: words(200) }),
+        z.looseObject({ serviceCode: words(120), status: words(40), state: words(40), expiresOn: day, expirySource: words(40) }),
         false,
-    ),
-    crmTool(
-        CRM_NIVOWEB.post_services_code_renewals,
-        z
-            .object({
-                code: serviceCode,
-                renewalId,
-                dryRun: z.boolean().optional().describe("Leave it out: the CRM rehearses unless the account is live."),
-            })
-            .strict(),
-        renewal,
-        true,
     ),
     crmTool(
         CRM_NIVOWEB.post_services_code_reminders,
@@ -509,6 +497,24 @@ const stepTools: ReadonlyArray<ToolDefinition> = [
         true,
     ),
     crmTool(
+        CRM_NIVOWEB.post_invoice_drafts_id_invoice,
+        z
+            .object({
+                id: code("The invoice draft's `id`, as the draft answer gave it."),
+                invoiceNo: z.string().min(1).max(40).describe("The invoice number, as the e-invoice issue answered it."),
+                providerRef: z
+                    .string()
+                    .min(1)
+                    .max(200)
+                    .optional()
+                    .describe("The e-invoice service's id of the invoice, as the issue answered it."),
+                issuedOn: z.string().min(10).max(10).describe("The issue day (YYYY-MM-DD)."),
+            })
+            .strict(),
+        draft,
+        true,
+    ),
+    crmTool(
         CRM_NIVOWEB.get_invoice_drafts_id,
         z.object({ id: code("The invoice draft's `id`, as the draft answer gave it.") }).strict(),
         draft,
@@ -557,7 +563,24 @@ const stepTools: ReadonlyArray<ToolDefinition> = [
                 transactionRef: code("The bank transaction that paid it, by the id the bank list answered."),
             })
             .strict(),
-        written(),
+        renewal,
+        true,
+    ),
+    crmTool(
+        CRM_NIVOWEB.post_renewals_id_outcome,
+        z
+            .object({
+                id: renewalId,
+                outcome: z
+                    .enum(["renewed", "failed", "pending"])
+                    .describe("What the provider answered: renewed, failed, or pending (a person finishes it)."),
+                providerRef: z.string().min(1).max(200).optional().describe("The provider's order reference, as its answer gave it."),
+                newExpiresOn: z.string().min(10).max(10).optional().describe("The new end day (YYYY-MM-DD), only when renewed."),
+                confirmedBy: z.string().min(1).max(120).describe("Who confirms the outcome: your own name as the team knows you."),
+                note,
+            })
+            .strict(),
+        renewal,
         true,
     ),
     crmTool(
@@ -678,26 +701,6 @@ const stepTools: ReadonlyArray<ToolDefinition> = [
     ),
 ]
 
-/**
- * The invoice of an invoice draft: the platform purpose `TOOL.invoiceCreate` (class money in the core), which the CRM's document serves
- * no operation for yet, so no adapter runs it and its words are the core's labels: the purpose is UNAVAILABLE (a graph needing it is
- * hidden) until an attached CRM document marks it (flipDecisions2026_11_13). Declared here because the Accounting agent's node
- * `webbooks.invoice-issue` calls it (and requires it); its node declares `ask` (a legal act: the owner signs every call). The contract is the platform's:
- * the draft to issue, and (optional) the renewal the invoice ties to, as the node passes it.
- */
-const invoiceCreateTool: ToolDefinition = defineTool({
-    id: TOOL.invoiceCreate,
-    title: { vi: "Xu\u1ea5t ho\u00e1 \u0111\u01a1n", en: "Issue an invoice" },
-    args: z
-        .object({
-            draftId: code("The invoice draft, as the draft answer gave it."),
-            renewalId: code("The renewal the invoice ties to, as a CRM answer gave it; absent for an invoice of no renewal.").optional(),
-        })
-        .strict(),
-    result: envelopeOf(written({ invoiceNo: words(60).nullable() })),
-    mutates: true,
-})
-
 /** A count per state, as the CRM's counts answer them. */
 const stateCounts = z.array(z.looseObject({ state: words(40), count: z.number().int().nonnegative() })).max(20)
 
@@ -752,8 +755,8 @@ const workspaceReads: ReadonlyArray<ToolDefinition> = [
     ),
 ]
 
-/** The tools this plugin installs for its CRM: the tools its steps call, the workspace reads, and the invoice purpose. */
-export const crmTools: ReadonlyArray<ToolDefinition> = [...stepTools, ...workspaceReads, invoiceCreateTool]
+/** The tools this plugin installs for its CRM: the tools its steps call and the workspace reads. */
+export const crmTools: ReadonlyArray<ToolDefinition> = [...stepTools, ...workspaceReads]
 
 /** The owner-facing words of every CRM tool, by tool id. */
 export const CRM_TOOL_LABELS: Readonly<Record<string, PluginToolLabel>> = LABELS

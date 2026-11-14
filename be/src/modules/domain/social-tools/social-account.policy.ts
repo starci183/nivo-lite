@@ -4,8 +4,8 @@ import { socialRefusal } from "./social-refusal.policy"
 
 /** A registry that hands the port of a provider, when one serves it. */
 interface PortRegistry<Port> {
-    /** The port of the provider, or undefined when none serves it. */
-    of(provider: string): Port | undefined
+    /** The port that serves the account (its sandbox one for a sandbox account, lane concept provider-sandbox), or undefined. */
+    portFor(account: ConnectionRecord): Port | undefined
 }
 
 /**
@@ -20,7 +20,7 @@ export const socialAccountOf = async <Port extends { readonly provider: string }
 ): Promise<{ readonly connection: ConnectionRecord; readonly port: Port }> => {
     if (caller.connectionId === undefined) throw socialRefusal("not_connected")
     const connection = await connections.find(workspaceId, caller.connectionId)
-    const port = connection === null ? undefined : registry.of(connection.provider)
+    const port = connection === null ? undefined : registry.portFor(connection)
     if (connection === null || port === undefined) throw socialRefusal("not_connected")
     return { connection, port }
 }

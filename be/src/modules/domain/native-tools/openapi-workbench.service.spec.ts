@@ -144,6 +144,7 @@ describe("OpenApiInterfaceReadsService info", () => {
             lastError: null,
             lastEventAt: null,
             environment: "live" as const,
+            sandbox: false,
             isDefault: false,
             firstEvent: null,
             createdBy: null,

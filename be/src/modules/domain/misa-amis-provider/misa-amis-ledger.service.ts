@@ -1,5 +1,6 @@
 import { PROVIDER } from "@nivo-lite/agent-sdk/names"
 import { Injectable } from "@nestjs/common"
+import type { ConnectionRecord } from "@modules/domain/connections"
 import {
     providerRefusal,
     withProof,
@@ -31,17 +32,17 @@ export class MisaAmisLedgerService implements LedgerPort {
     constructor(@InjectMisaAmis() private readonly client: MisaAmisClient) {}
 
     /** Never ready while no operation is built: the ledger tool never picks it. */
-    ready(_workspaceId: string): Promise<boolean> {
+    ready(_account: ConnectionRecord): Promise<boolean> {
         return Promise.resolve(false)
     }
 
     /** Adds one entry: docs-missing (operation `voucher.create`), refused `not_available`. */
-    append(_workspaceId: string, _entry: BusinessLedgerEntry, _connectionId?: string): Promise<string | undefined> {
+    append(_account: ConnectionRecord, _entry: BusinessLedgerEntry): Promise<string | undefined> {
         return this.voucher()
     }
 
     /** Takes one entry back: docs-missing (operation `voucher.create`), refused `not_available`. */
-    void(_workspaceId: string, _transactionId: string, _connectionId?: string): Promise<string | undefined> {
+    void(_account: ConnectionRecord, _transactionId: string): Promise<string | undefined> {
         return this.voucher()
     }
 

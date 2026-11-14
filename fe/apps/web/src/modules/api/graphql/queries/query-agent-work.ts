@@ -19,14 +19,6 @@ const query1: TypedDocumentNode<QueryAgentWorkResponse, InputVariables<QueryAgen
                 lastTurnAt
                 workEnabled
             }
-            goals {
-                detail
-                dueAt
-                id
-                source
-                status
-                title
-            }
             tasks {
                 dedupeKey
                 detail
@@ -46,7 +38,6 @@ const query1: TypedDocumentNode<QueryAgentWorkResponse, InputVariables<QueryAgen
                 lastFiredAt
                 nextRunAt
                 preset
-                probeKey
                 seedKey
                 timeZone
             }
@@ -82,7 +73,7 @@ const queryMap: Record<
 
 type QueryAgentWorkParams = QueryParams<QueryAgentWork, QueryAgentWorkRequest> & { request: QueryAgentWorkRequest }
 
-/** The back end `agentWork` query. The work of one agent: its switch, goals, open tasks, triggers and the last turns. Rejects with the back end failure (message localized by the server). */
+/** The back end `agentWork` query. The work of one agent: its switch, open tasks, triggers and the last turns. Rejects with the back end failure (message localized by the server). */
 export const queryAgentWork = async ({
     query = QueryAgentWork.Query1,
     request,

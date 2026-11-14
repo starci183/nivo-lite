@@ -155,6 +155,17 @@ const registerSearchCases = () => {
         })
     })
 
+    it("keeps the base knowledge in its own collection, searched inside the platform tenant's filter", async () => {
+        const { client, requests } = await build(() => ({ result: { points: [{ id: "k1", score: 0.9 }] } }))
+        const platform: VectorScope = { ...internal, workspaceId: "platform", installationId: null }
+
+        await expect(client.search("base", platform, [0.1, 0.2], { limit: 5 })).resolves.toEqual([{ id: "k1", score: 0.9 }])
+
+        expect(requests[0]).toMatchObject({ url: `${BASE}/collections/nivo_base/points/query` })
+        expect(requests[0]?.body).toMatchObject({ filter: filterOf(platform) })
+        expect(filterOf(platform).must[0]).toEqual({ key: "workspace_id", match: { value: "platform" } })
+    })
+
 }
 
 /** The stamps of a document and the walk of a kind. */
@@ -374,6 +385,19 @@ const registerFailureCases = () => {
 
         await client.count("passage", customer)
         expect(client.health()).toBe("ok")
+    })
+
+    it("probes the service with one authenticated read when asked: ok, or down for a refusal or a network failure, never thrown", async () => {
+        const { client, http, requests } = await build(() => ({ result: { collections: [] } }))
+        await expect(client.probe()).resolves.toBe("ok")
+        expect(requests[0]).toMatchObject({ method: "GET", url: `${BASE}/collections` })
+
+        http.request.mockRejectedValueOnce(new Error("ECONNREFUSED"))
+        await expect(client.probe()).resolves.toBe("down")
+        expect(client.health()).toBe("down")
+
+        const refused = await build(() => ({ status: { error: "forbidden" } }), 403)
+        await expect(refused.client.probe()).resolves.toBe("down")
     })
 
     it("turns a refusal and a network failure into its own errors", async () => {

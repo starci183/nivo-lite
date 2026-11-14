@@ -34,6 +34,7 @@ const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRecord => 
     status: "connected",
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,
@@ -137,6 +138,25 @@ describe("DriveGrantService / grant, authorize and disconnect", () => {
         await service.disconnect(actor)
         expect(connections.remove).toHaveBeenCalledWith("ws-1", "d1")
         expect(connections.remove).toHaveBeenCalledWith("ws-1", "d2")
+    })
+
+    it("never forgets a SANDBOX Drive account (the Sandbox page one): it is not the owner grant", async () => {
+        const { service, connections } = await build()
+        connections.listByProvider.mockResolvedValueOnce([record({ id: "sbx", sandbox: true }), record()])
+
+        await service.disconnect(actor)
+
+        expect(connections.remove).toHaveBeenCalledTimes(1)
+        expect(connections.remove).toHaveBeenCalledWith("ws-1", "d1")
+    })
+
+    it("never takes a SANDBOX Drive account for the grant: it holds no token, the live grant behind it answers", async () => {
+        const { service, connections } = await build()
+        connections.listByProvider.mockResolvedValueOnce([record({ id: "sbx", sandbox: true, meta: { email: "sandbox@example.test" } }), record()])
+        await expect(service.grant(actor)).resolves.toEqual({ state: "connected", email: "shop@example.test" })
+
+        connections.listByProvider.mockResolvedValueOnce([record({ id: "sbx", sandbox: true })])
+        await expect(service.grant(actor)).resolves.toEqual({ state: "none", email: "" })
     })
 })
 

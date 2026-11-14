@@ -1,29 +1,73 @@
+import { ProviderRegistryError, ProviderRegistryErrorCode } from "./errors/provider-registry.error"
 import type { OptionalProviderPort } from "./provider-ports.contracts"
 
+/** A provider's two implementations of one port: the live one (its real host) and, when it has one, its sandbox twin (lane concept provider-sandbox). */
+export interface ProviderImplementations<Port extends { readonly provider: string }> {
+    readonly live: Port
+    readonly sandbox: Port
+}
+
+/** What a lookup needs of an account: its provider key and its creation-time sandbox flag. */
+export interface PortAccount {
+    readonly provider: string
+    readonly sandbox: boolean
+}
+
 /**
- * Providers by their key for one capability. A provider module registers its implementation once at boot; core code looks it up by the
- * provider key of a connection and never names a provider. A second registration under a key replaces the first.
+ * Providers by their key for one capability, each with its live implementation and, optionally, its sandbox one. A provider module
+ * registers once at boot; core code resolves the port of an ACCOUNT through `portFor`, THE ONE SWITCH between live and sandbox (lane
+ * concept provider-sandbox rule 2): a live account answers the live port, a sandbox account the sandbox port or the typed refusal
+ * `PROVIDER_SANDBOX_MISSING`, never the live one. A second registration under a key replaces the first.
  */
 export abstract class ProviderRegistryService<Port extends { readonly provider: string }> {
-    private readonly ports = new Map<string, Port>()
+    private readonly live = new Map<string, Port>()
+    private readonly sandboxes = new Map<string, Port>()
 
-    /** Registers the port under its provider key. */
-    register(port: Port): void {
-        this.ports.set(port.provider, port)
+    /** Registers a provider's live port, or its live and sandbox ports (both must name the same provider). */
+    register(entry: Port | ProviderImplementations<Port>): void {
+        if (!("live" in entry)) {
+            this.live.set(entry.provider, entry)
+            this.sandboxes.delete(entry.provider)
+            return
+        }
+        if (entry.sandbox.provider !== entry.live.provider) {
+            throw new ProviderRegistryError({
+                code: ProviderRegistryErrorCode.SandboxMismatch,
+                params: { provider: entry.live.provider, sandbox: entry.sandbox.provider },
+            })
+        }
+        this.live.set(entry.live.provider, entry.live)
+        this.sandboxes.set(entry.live.provider, entry.sandbox)
     }
 
-    /** The port of a provider, or undefined when none registered. */
-    of(provider: string): OptionalProviderPort<Port> {
-        return this.ports.get(provider)
+    /**
+     * The port that serves an account: a live account's provider's live port (undefined when none registered: the caller's own "not
+     * served" answer); a sandbox account's provider's sandbox port, or `PROVIDER_SANDBOX_MISSING` when it registered none.
+     */
+    portFor(account: PortAccount): OptionalProviderPort<Port> {
+        if (!account.sandbox) return this.live.get(account.provider)
+        const sandbox = this.sandboxes.get(account.provider)
+        if (sandbox === undefined) {
+            throw new ProviderRegistryError({ code: ProviderRegistryErrorCode.SandboxMissing, params: { provider: account.provider } })
+        }
+        return sandbox
     }
 
-    /** True when the provider registered. */
+    /**
+     * The LIVE port of a provider, for the provider's own inbound door only (its webhook, proven against the provider's signature before
+     * any account is read): it can never answer a sandbox port. Every account lookup uses `portFor`.
+     */
+    liveOf(provider: string): OptionalProviderPort<Port> {
+        return this.live.get(provider)
+    }
+
+    /** True when the provider registered a port. */
     has(provider: string): boolean {
-        return this.ports.has(provider)
+        return this.live.has(provider)
     }
 
-    /** Every registered port, in registration order. */
-    all(): ReadonlyArray<Port> {
-        return [...this.ports.values()]
+    /** The keys of the registered providers, in registration order; a listing resolves each account through `portFor`. */
+    providers(): ReadonlyArray<string> {
+        return [...this.live.keys()]
     }
 }

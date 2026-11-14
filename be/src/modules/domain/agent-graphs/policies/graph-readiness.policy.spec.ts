@@ -100,57 +100,73 @@ interface Case {
     readonly expected: GraphReadiness
 }
 
-/** The invoice issue (`webbooks.invoice-issue`): the platform purpose `TOOL.invoiceCreate` under the CRM provider (`crm.nivoweb`). */
+/**
+ * The CRM's storage write of an issued invoice (`webbooks.issue-record`): a CRM operation served only where the bound CRM account's pinned
+ * snapshot holds it callable. (Before owner ruling R57 this case used the invoice issue `nivo.tool.invoice.create` under the CRM's mark; the
+ * issue is now the e-invoice provider's own tool, and the CRM only stores the result.)
+ */
+const INVOICE_RECORD = "nivo.api.crm.nivoweb.post.invoice-drafts.id.invoice"
 const issue: ReadinessNode = {
-    key: "issue",
-    step: "webbooks.invoice-issue",
-    accounts: [{ provider: CRM, operations: { [TOOL.invoiceCreate]: "ask" } }],
+    key: "record",
+    step: "webbooks.issue-record",
+    accounts: [{ provider: CRM, operations: { [INVOICE_RECORD]: "auto" } }],
 }
 
 const CASES: ReadonlyArray<Case> = [
     {
-        name: "a purpose served only where a pinned document marks it: a bound CRM account whose document does not mark it hides the graph, tool_unavailable",
+        name: "an operation served only where a pinned snapshot holds it: a bound CRM account whose snapshot does not hold it hides the graph, tool_unavailable",
         nodes: [issue],
         input: {
             attachments: [{ connectionId: "c1", provider: CRM }],
-            served: new Map([[TOOL.invoiceCreate, new Set<string>()]]),
+            served: new Map([[INVOICE_RECORD, new Set<string>()]]),
         },
         expected: {
             hidden: true,
             waitingFor: [CRM],
-            blocked: [{ provider: CRM, reason: "tool_unavailable", tool: TOOL.invoiceCreate }],
+            blocked: [{ provider: CRM, reason: "tool_unavailable", tool: INVOICE_RECORD }],
         },
     },
     {
-        name: "the same purpose once the bound CRM account's pinned document marks it: ready",
+        name: "the same operation once the bound CRM account's pinned snapshot holds it: ready",
         nodes: [issue],
         input: {
             attachments: [{ connectionId: "c1", provider: CRM }],
-            served: new Map([[TOOL.invoiceCreate, new Set(["c1"])]]),
+            served: new Map([[INVOICE_RECORD, new Set(["c1"])]]),
         },
         expected: shown(),
     },
     {
-        name: "an account that marks the purpose but is not the one bound for the node does not serve it (the default account picks c2)",
+        name: "two CRM accounts, one whose snapshot holds the operation: ready (readiness asks whether the node CAN act; the call picks the account)",
         nodes: [issue],
         input: {
             attachments: [
                 { connectionId: "c1", provider: CRM },
                 { connectionId: "c2", provider: CRM },
             ],
-            picked: (provider) => (provider === CRM ? "c2" : null),
-            served: new Map([[TOOL.invoiceCreate, new Set(["c1"])]]),
+            served: new Map([[INVOICE_RECORD, new Set(["c1"])]]),
+        },
+        expected: shown(),
+    },
+    {
+        name: "two CRM accounts, neither snapshot holds the operation: tool_unavailable",
+        nodes: [issue],
+        input: {
+            attachments: [
+                { connectionId: "c1", provider: CRM },
+                { connectionId: "c2", provider: CRM },
+            ],
+            served: new Map([[INVOICE_RECORD, new Set<string>()]]),
         },
         expected: {
             hidden: true,
             waitingFor: [CRM],
-            blocked: [{ provider: CRM, reason: "tool_unavailable", tool: TOOL.invoiceCreate }],
+            blocked: [{ provider: CRM, reason: "tool_unavailable", tool: INVOICE_RECORD }],
         },
     },
     {
         name: "no CRM account at all: not_connected, as before (the availability is judged only on a bound account)",
         nodes: [issue],
-        input: { attachments: [], served: new Map([[TOOL.invoiceCreate, new Set<string>()]]) },
+        input: { attachments: [], served: new Map([[INVOICE_RECORD, new Set<string>()]]) },
         expected: hidden([CRM]),
     },
     {
@@ -158,7 +174,7 @@ const CASES: ReadonlyArray<Case> = [
         nodes: [{ key: "read", step: "webbooks.notice-draft", accounts: [{ provider: CRM, operations: { [CUSTOMER_GET]: "auto" } }] }],
         input: {
             attachments: [{ connectionId: "c1", provider: CRM }],
-            served: new Map([[TOOL.invoiceCreate, new Set<string>()]]),
+            served: new Map([[INVOICE_RECORD, new Set<string>()]]),
         },
         expected: shown(),
     },
@@ -301,39 +317,26 @@ const CASES: ReadonlyArray<Case> = [
         expected: shown(["book"]),
     },
     {
-        name: "two accounts of one provider and no pick: never a guess, not bound, hidden (needs_pick)",
+        name: "two accounts of one provider and no default: shown (a second account never hides a graph; the call picks or refuses TOOLS_ACCOUNT_NEEDS_PICK)",
         nodes: [{ key: "say", step: "x", accounts: [{ provider: "zalo_oa", operations: { [SEND]: "auto" } }] }],
         input: {
             attachments: [
                 { connectionId: "z1", provider: "zalo_oa" },
                 { connectionId: "z2", provider: "zalo_oa" },
             ],
-        },
-        expected: hidden(["zalo_oa"], { zalo_oa: "needs_pick" }),
-    },
-    {
-        name: "two accounts of one provider and the default account is neither of them: not bound, hidden",
-        nodes: [{ key: "say", step: "x", accounts: [{ provider: "zalo_oa", operations: { [SEND]: "auto" } }] }],
-        input: {
-            attachments: [
-                { connectionId: "z1", provider: "zalo_oa" },
-                { connectionId: "z2", provider: "zalo_oa" },
-            ],
-            picked: () => "z9",
-        },
-        expected: hidden(["zalo_oa"], { zalo_oa: "needs_pick" }),
-    },
-    {
-        name: "two accounts and the workspace default account of the kind is one of them: bound",
-        nodes: [{ key: "say", step: "x", accounts: [{ provider: "zalo_oa", operations: { [SEND]: "auto" } }] }],
-        input: {
-            attachments: [
-                { connectionId: "z1", provider: "zalo_oa" },
-                { connectionId: "z2", provider: "zalo_oa" },
-            ],
-            picked: (provider) => (provider === "zalo_oa" ? "z2" : null),
         },
         expected: shown(),
+    },
+    {
+        name: "an entry pinned to an account the agent is not attached to: not_connected, whatever other accounts of the provider it holds",
+        nodes: [{ key: "say", step: "x", accounts: [{ kind: "chat", provider: "zalo_oa", connectionId: "z9", operations: { [SEND]: "auto" } }] }],
+        input: {
+            attachments: [
+                { connectionId: "z1", provider: "zalo_oa" },
+                { connectionId: "z2", provider: "zalo_oa" },
+            ],
+        },
+        expected: hidden(["zalo_oa"]),
     },
     {
         name: "one account of the provider and no pick: bound",

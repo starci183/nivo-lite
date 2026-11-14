@@ -20,8 +20,8 @@ export const RESEED_STORE_WORDS: Readonly<Record<ReseedStore, string>> = {
 }
 
 /**
- * What the verb never writes: run history, the call log, the effect ledger, closed and open work, the lead memory, published template
- * packages, setup snapshots, checkpoints and every record of business data. Printed with every report.
+ * What the verb never writes: run history, the call log, the effect ledger, closed and open work, the lead memory, setup
+ * snapshots, checkpoints and every record of business data. Printed with every report.
  */
 export const HISTORY_STORES: ReadonlyArray<string> = [
     "mcp_call_log",
@@ -34,7 +34,6 @@ export const HISTORY_STORES: ReadonlyArray<string> = [
     "work_items",
     "approval_requests",
     "agent_checkpoints",
-    "agent_template_versions.package",
     "module_context_versions.snapshot",
     "business records (leads, orders, payments, conversations, messages)",
 ]
@@ -54,8 +53,8 @@ export interface EngineDrainCondition {
  * workspace (a count through TypeORM, no SQL). The verb refuses `--execute` while any is above zero.
  */
 export const ENGINE_DRAIN: ReadonlyArray<EngineDrainCondition> = [
-    { key: "runs", table: "agent_runs", values: ["running", "waiting", "parked", "compensating"] },
-    { key: "steps", table: "agent_run_steps", values: ["pending", "running", "compensating"] },
+    { key: "runs", table: "agent_runs", values: ["running", "waiting", "parked"] },
+    { key: "steps", table: "agent_run_steps", values: ["pending", "running"] },
 ]
 
 /**
@@ -67,11 +66,10 @@ export const BY_HAND_DRAIN: ReadonlyArray<string> = [
     "outbox: public.job_outbox state IN (queued, running) on agent_turn, thread_deadline, module_jobs, payment_order_requested, decisions (the recurring ticks excluded)",
     "wakes: public.agent_wakes status IN (pending, running), or source thread with status IN (held, failed)",
     "approvals: public.approval_requests status pending",
-    "work_items: public.work_items status IN (queued, waiting_decision) that are lead_frozen, a tool-approval:% key or name a runId",
-    "threads: public.agent_checkpoints of a run that is running, waiting, parked or compensating",
+    "work_items: public.work_items status IN (queued, waiting_decision) that are a tool-approval:% key or name a runId",
+    "threads: public.agent_checkpoints of a run that is running, waiting or parked",
     "care_timers: public.agent_tasks status IN (open, waiting) with next_action_at set",
     "stops: public.run_stops state open",
-    "freezes: public.contact_freezes status IN (frozen, retrying)",
 ]
 
 /** The parsed rename map: every old tool id with its successor. */
@@ -292,6 +290,25 @@ export const perStore = <T>(make: (store: ReseedStore) => T): Record<ReseedStore
     graphs: make("graphs"),
     tool_grants: make("tool_grants"),
 })
+
+/**
+ * The graph each workflow of one agent's plan will run once the re-seed wrote it, by workflow id: a `replace` its template's current
+ * graph, the primary's `republish` the primary template's current graph; every other action writes no graph. The re-seed of a workspace
+ * is ONE change: these graphs, of every agent of it, are the set its hand-offs are judged against.
+ */
+export const reseedGraphsOf = (
+    plans: ReadonlyArray<PlannedReseed>,
+    templates: ReadonlyArray<CurrentTemplate>,
+): ReadonlyArray<readonly [string, GraphSpec]> =>
+    plans.flatMap((plan): ReadonlyArray<readonly [string, GraphSpec]> => {
+        const template =
+            plan.action === "replace"
+                ? templates.find((entry) => entry.id === plan.toTemplateId)
+                : plan.action === "republish"
+                  ? templates.find((entry) => entry.primary)
+                  : undefined
+        return template === undefined ? [] : [[plan.workflowId, template.graph]]
+    })
 
 /** The counts of the workflows and flows of a set of plans, and of the workflows the install road adds. */
 export const workflowCountsOf = (

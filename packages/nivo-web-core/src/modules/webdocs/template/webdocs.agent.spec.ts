@@ -48,8 +48,9 @@ describe("the Paperwork agent template", () => {
         expect(webdocsAgent.primary).toBe("webdocs.draft")
         // ledger 2026-11-13 (`nivo-frame.rights`): every graph's catalogue version + 1 (one mode per node changed every compiled document).
         expect(webdocsAgent.graphs.map((graph) => [graph.key, graph.spec.catalogue?.version])).toEqual([
-            ["webdocs.draft", 8],
-            ["webdocs.team-chat", 8],
+            // 2026-11-14 (R68): both + 1, their conditions and outcomes carry the workspace's words (labels; business unchanged).
+            ["webdocs.draft", 9],
+            ["webdocs.team-chat", 9],
         ])
     })
 
@@ -118,7 +119,7 @@ describe("webdocs.team-chat", () => {
             ]),
         )
         expect(webdocsTeamChatGraph.spec.nodes).toHaveLength(6)
-        expect(webdocsTeamChatGraph.spec.catalogue?.version).toBe(8)
+        expect(webdocsTeamChatGraph.spec.catalogue?.version).toBe(9) // R68 labels
         const declined = stepOf(webdocsTeamChatGraph, "post-declined")
         expect(declined).toMatchObject({ routes: { yes: "declined", no: "drafted" } })
         const post = stepOf(webdocsTeamChatGraph, "post")

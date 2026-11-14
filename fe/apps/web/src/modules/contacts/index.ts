@@ -1,2 +1,5 @@
 export { contactRowOf, detailOf, moduleAgentsOf, tagsOfText } from "./contacts.view"
-export type { ContactDetailWire, ContactModulesWire } from "./contacts.view"
+export type { ContactDetailWire, ContactModulesWire, ContactWorkWire } from "./contacts.view"
+export { HISTORY_ALL_KEY, historyLinesOf, historyTabsOf, routeOfTab } from "./contacts.history"
+export type { ContactLineWire, ContactRouteWire } from "./contacts.history"
+export { orderViewOf } from "./contacts.order.view"

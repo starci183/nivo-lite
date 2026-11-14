@@ -2,6 +2,7 @@ import { Module, type DynamicModule } from "@nestjs/common"
 import { Json2VideoComposeService } from "./json2video-compose.service"
 import { Json2VideoConnectionFieldsService } from "./json2video-connection-fields.service"
 import { Json2VideoCredentialService } from "./json2video-credential.service"
+import { Json2VideoSandboxComposeService } from "./json2video-sandbox-compose.service"
 import { Json2VideoProviderRegistrationService } from "./json2video-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./json2video-provider.module-definition"
 
@@ -19,7 +20,7 @@ export class Json2VideoProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, Json2VideoProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, Json2VideoSandboxComposeService, Json2VideoProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

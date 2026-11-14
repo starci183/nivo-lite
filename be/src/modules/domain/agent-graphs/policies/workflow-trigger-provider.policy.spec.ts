@@ -204,7 +204,7 @@ describe("the plugin case: webbooks.payment registered on sepay:transaction.rece
             ),
         }
         // A graph read from a template graph is edited in its package, never in a save: the save refuses it as edited.
-        expect(flowProblemsOf(wrong, index).map((problem) => problem.code)).toEqual(["GRAPH_V2_EDITED"])
+        expect(flowProblemsOf(wrong, index).map((problem) => problem.code)).toEqual(["GRAPH_TEMPLATE_EDITED"])
         // And the provider trigger check names the unknown registration (whose wake supplies nothing of the contract, not even the
         // `direction` its credit condition reads).
         expect(

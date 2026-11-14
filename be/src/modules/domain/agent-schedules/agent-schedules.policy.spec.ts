@@ -255,9 +255,9 @@ describe("firstPerAgent", () => {
     it("keeps the first row of each agent, in the order given", async () => {
         const { firstPerAgent } = await buildSubject()
         const rows = [
-            { agentId: "a", probeKey: "one" },
-            { agentId: "b", probeKey: "two" },
-            { agentId: "a", probeKey: "three" },
+            { agentId: "a", id: "one" },
+            { agentId: "b", id: "two" },
+            { agentId: "a", id: "three" },
         ]
 
         expect(firstPerAgent(rows)).toEqual([rows[0], rows[1]])

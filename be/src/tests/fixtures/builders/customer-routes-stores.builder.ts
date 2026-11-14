@@ -151,8 +151,10 @@ export class MemoryChannelDeliveryStore implements ChannelDeliveryStore {
         return Promise.resolve(true)
     }
 
-    reclaim(workspaceId: string, sendKey: string): Promise<boolean> {
-        const at = this.rows.findIndex((row) => row.workspaceId === workspaceId && row.sendKey === sendKey && row.state === "refused")
+    reclaim(workspaceId: string, sendKey: string, from: ReadonlyArray<"refused" | "unknown">): Promise<boolean> {
+        const at = this.rows.findIndex(
+            (row) => row.workspaceId === workspaceId && row.sendKey === sendKey && (from as ReadonlyArray<string>).includes(row.state),
+        )
         const held = this.rows[at]
         if (held === undefined) return Promise.resolve(false)
         this.rows[at] = { ...held, state: "claimed", reason: null }

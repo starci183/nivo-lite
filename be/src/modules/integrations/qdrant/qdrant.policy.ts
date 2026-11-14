@@ -10,11 +10,22 @@ import type {
     VectorStampFilter,
 } from "./qdrant.contracts"
 
-/** The collection of each kind of point: passages and truths never share one (other filters, other sizes, rebuilt alone). */
-export const COLLECTION_OF: Readonly<Record<VectorKind, string>> = { passage: "nivo_passages", truth: "nivo_truths" }
+/** The collection of each kind of point: two kinds never share one (other filters, other sizes, rebuilt alone). */
+export const COLLECTION_OF: Readonly<Record<VectorKind, string>> = {
+    passage: "nivo_passages",
+    truth: "nivo_truths",
+    base: "nivo_base",
+}
 
 /** The kinds of point, in the order they are prepared at boot. */
-export const VECTOR_KINDS: ReadonlyArray<VectorKind> = ["passage", "truth"]
+export const VECTOR_KINDS: ReadonlyArray<VectorKind> = ["passage", "truth", "base"]
+
+/**
+ * The tenant of a row no workspace owns (the platform's base knowledge): its points name it as their workspace, so the tenant filter
+ * of every search and removal holds for them too. It is not a uuid: no workspace can ever carry it, and the queue does not count its
+ * jobs against a workspace; the embedding of its rows is the platform's, not metered against a workspace.
+ */
+export const PLATFORM_TENANT = "platform"
 
 /** The distance every collection compares with. */
 export const DISTANCE = "Cosine"

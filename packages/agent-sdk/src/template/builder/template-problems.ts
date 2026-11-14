@@ -76,6 +76,16 @@ export type TemplateGraphProblemCode =
     | "GRAPH_OUTCOME_NAME_INVALID"
     /** Two outcome steps of one name filling different outputs. */
     | "GRAPH_OUTCOME_MISMATCH"
+    /** A step's `unsuccessful` ends the run (`then: "end"`, written or by default) but names no `outcome`. */
+    | "GRAPH_UNSUCCESSFUL_OUTCOME_MISSING"
+    /** A step's `unsuccessful.outcome` that is not the key of an outcome step outside every loop. */
+    | "GRAPH_UNSUCCESSFUL_OUTCOME_UNKNOWN"
+    /** A step's `unsuccessful.outcome` beside `then: "continue"`: the run never goes there. */
+    | "GRAPH_UNSUCCESSFUL_OUTCOME_UNUSED"
+    /** `then: "end"` in the body of an `over` loop whose items run at once (`concurrency` above 1): one item cannot end the run. */
+    | "GRAPH_UNSUCCESSFUL_END_IN_FANOUT"
+    /** More notice facts than `UNSUCCESSFUL_FACTS_MAX` on one step. */
+    | "GRAPH_UNSUCCESSFUL_FACTS_TOO_MANY"
     /** A `call-workflow` or an `outcome` inside a loop body. */
     | "LOOP_BODY_HANDOFF"
     /** A loop inside another one's body. */

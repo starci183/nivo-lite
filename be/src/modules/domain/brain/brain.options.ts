@@ -16,19 +16,12 @@ export interface BrainFullOptions {
 
 /**
  * The derivations mode of an app that writes facts but runs no pass: only the policy derivations (`BrainPolicyDerivationsService`) with
- * their queue, so a fact change made there is announced and queues a pass for the api's worker (mcp), and `cli brain-policies backfill`
- * can queue a pass per workspace (cli); with `vectors`, the vectors listener too (one embedding call for the changed facts); no team
- * chat, no read or edit door.
+ * their queue, so `cli brain-policies backfill` can queue a pass per workspace (cli); no vectors listener (the api's vector reconcile
+ * gives a fact changed there its point), no team chat, no read or edit door.
  */
 export interface BrainDerivationsOptions {
     /** Registers the derivations mode. */
     readonly derivationsOnly: true
-    /**
-     * Also registers the vectors listener (`FactEmbeddingsService`): a fact this process puts in force gets its vector at once, as in the
-     * api. Only for an app that has the AI endpoint and the usage meter (`AiModule`, `KnowledgeModule` search mode): the mcp. Absent or
-     * false (the cli): the api's timed sweep gives such a fact its vector.
-     */
-    readonly vectors?: boolean
 }
 
 /**

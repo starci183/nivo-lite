@@ -21,8 +21,11 @@ export const pauseBeforeRetryMs = (failure: TryFailure): number => (failure === 
 /** The failure of a try whose answer came but was no JSON object. */
 export const NOT_JSON = "not_json"
 
+/** The failure of a try whose answer was a JSON object that does not fit the call's schema (P-FIX2: asked again with the issues). */
+export const NOT_FITTING = "not_fitting"
+
 /** What one try failed as. */
-export type TryFailure = AiFailure | typeof NOT_JSON
+export type TryFailure = AiFailure | typeof NOT_JSON | typeof NOT_FITTING
 
 /** The tries of one model call so far: how many were made, and what each failed one failed as, in order. */
 export interface Tries {

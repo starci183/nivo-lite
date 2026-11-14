@@ -7,6 +7,7 @@ import { AI } from "@modules/integrations/ai"
 import type { AiService } from "@modules/integrations/ai"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { VectorSyncService } from "@modules/domain/vector-sync"
 import { FactEmbeddingsService } from "./fact-embeddings.service"
 import { ModelJsonService } from "./model-json.service"
 import { JUDGE_DISTANCE_CAP } from "./same-fact.policy"
@@ -25,7 +26,8 @@ const build = async (states: ReadonlyArray<FactEmbeddingState>) => {
     const facts = mock<BrainFactsService>()
     const json = mock<ModelJsonService>()
     const reads = mock<BrainFactsReadService>()
-    scriptEmbeddingDoubles({ ai, vectors, reads }, states)
+    const sync = mock<VectorSyncService>()
+    scriptEmbeddingDoubles({ ai, vectors, reads, sync }, states)
     const moduleRef = await Test.createTestingModule({
         providers: [
             FactEmbeddingsService,
@@ -36,9 +38,10 @@ const build = async (states: ReadonlyArray<FactEmbeddingState>) => {
             { provide: BrainFactsService, useValue: facts },
             { provide: ModelJsonService, useValue: json },
             { provide: BrainFactsReadService, useValue: reads },
+            { provide: VectorSyncService, useValue: sync },
         ],
     }).compile()
-    return { service: moduleRef.get(FactEmbeddingsService), ai, logger, usage, vectors, facts, json, reads }
+    return { service: moduleRef.get(FactEmbeddingsService), ai, logger, usage, vectors, facts, json, reads, sync }
 }
 
 

@@ -26,6 +26,7 @@ const recordOf = (
     status,
     lastError: null,
     environment: "live",
+    sandbox: false,
     isDefault: false,
     lastEventAt: null,
     firstEvent: null,

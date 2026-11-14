@@ -1,6 +1,7 @@
 import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { HttpSecurityError, HttpSecurityErrorCode, WEBHOOK_PROOF_REGISTRY } from "@modules/platform/http-security"
+import { ProviderSandboxError, ProviderSandboxErrorCode, type SandboxWebhookKeyService } from "@modules/domain/provider-sandbox"
 import { ScopedWebhookVerifier } from "./scoped-webhook-verifier.service"
 import type { WebhookProofRegistry } from "@modules/platform/http-security"
 
@@ -58,5 +59,35 @@ describe("ScopedWebhookVerifier scoped proofs", () => {
         await expect(service.verify(scoped)).rejects.toMatchObject({
             code: HttpSecurityErrorCode.WebhookProviderUnknown,
         })
+    })
+})
+
+describe("ScopedWebhookVerifier and the one sandbox guard (rulings R58 + R60)", () => {
+    const delivery = { provider: "zalo", scope: "11111111-1111-4111-8111-111111111111", rawBody: BODY, signature: undefined, timestamp: undefined }
+
+    const withGuard = (verdict: SandboxWebhookKeyService["verdictOf"]) => {
+        const registry = mock<WebhookProofRegistry>({ verify: jest.fn(unknownProvider) })
+        const guard = mock<SandboxWebhookKeyService>({ verdictOf: jest.fn(verdict) })
+        return { registry, guard, service: new ScopedWebhookVerifier(registry, guard) }
+    }
+
+    it("skips the provider proof for a sandbox account the guard proved by its sandbox key", async () => {
+        const { service, registry, guard } = withGuard(() => Promise.resolve({ kind: "sandbox", workspaceId: "ws-1", provider: "zalo_oa" }))
+        await expect(service.verify({ ...delivery, sandboxKey: "k" })).resolves.toBeUndefined()
+        expect(guard.verdictOf).toHaveBeenCalledWith(delivery.scope, "k")
+        expect(registry.verify).not.toHaveBeenCalled()
+    })
+
+    it("runs the provider proof unchanged for a live account, even when a sandbox key is presented", async () => {
+        const { service, registry } = withGuard(() => Promise.resolve({ kind: "live" }))
+        await expect(service.verify({ ...delivery, sandboxKey: "k" })).rejects.toMatchObject({ code: HttpSecurityErrorCode.WebhookProviderUnknown })
+        expect(registry.verify).toHaveBeenCalledTimes(1)
+    })
+
+    it("lets the guard's refusal through (a sandbox account without its key, or the sandbox off)", async () => {
+        const refused = new ProviderSandboxError({ code: ProviderSandboxErrorCode.WebhookKeyRefused })
+        const { service, registry } = withGuard(() => Promise.reject(refused))
+        await expect(service.verify(delivery)).rejects.toBe(refused)
+        expect(registry.verify).not.toHaveBeenCalled()
     })
 })

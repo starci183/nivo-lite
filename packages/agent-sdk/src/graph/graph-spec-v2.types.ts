@@ -1,4 +1,4 @@
-import type { ParamBindings } from "../node/memory.contracts"
+import type { ParamBinding, ParamBindings } from "../node/memory.contracts"
 import type { ProviderKey, TriggerVerb } from "../names"
 import type { JsonObject, JsonValue, Namespaced, SpecText } from "../schema/schema.types"
 import type { TriggerCondition, WorkflowContract, WorkflowEntry, WorkflowOutcome } from "./workflow-contract"
@@ -103,6 +103,39 @@ export interface GraphV2NodeStep extends GraphV2StepBase {
     readonly routeBy?: string | undefined
     /** For a routing node: the step each route goes to, one per route name the node declares. */
     readonly routes?: Readonly<Record<string, string>> | undefined
+    /** What the ENGINE does when the step ends unsuccessfully (`StepUnsuccessfulSpec`); absent: today's road (the step reports nothing itself). */
+    readonly unsuccessful?: StepUnsuccessfulSpec | undefined
+}
+
+/** What the run does after the engine told the team of an unsuccessful step: its own exit (`continue`), or its declared outcome (`end`). */
+export type UnsuccessfulThen = "continue" | "end"
+
+/** One fact the team notice of an unsuccessful step carries: a label in both languages and its value, fixed or read by a ref. */
+export interface NoticeFactSpec {
+    /** The label a person reads, in the team's language. */
+    readonly label: SpecText
+    /** The value: a fixed one or a ref, resolved when the step ended (a null value is left out of the notice). */
+    readonly value: ParamBinding
+}
+
+/**
+ * A step's unsuccessful ending, as stored (R68): when the step ends in a TYPED non-success the graph does not route on (a customer send
+ * refused other than `route_held`, an approval declined, the node's `cannot`), the ENGINE posts ONE team notice (the workflow, the step,
+ * the typed reason and `facts`) and the run follows `then`. `then` is always written (the compile resolves its default).
+ */
+export interface StepUnsuccessfulSpec {
+    /** `continue`: the step's own exit; `end`: the run goes to the outcome step `outcome`. */
+    readonly then: UnsuccessfulThen
+    /** With `end`: the key of the outcome step (outside every loop) the run ends at. */
+    readonly outcome?: string | undefined
+    /** What the notice says beside the reason, in order, at most `UNSUCCESSFUL_FACTS_MAX`. */
+    readonly facts: ReadonlyArray<NoticeFactSpec>
+}
+
+/** An `until` loop's unsuccessful ending, as stored: when it runs out of rounds the engine posts the team notice, then the run takes `exhausted`. */
+export interface LoopUnsuccessfulSpec {
+    /** What the notice says beside the rounds, in order, at most `UNSUCCESSFUL_FACTS_MAX`. */
+    readonly facts: ReadonlyArray<NoticeFactSpec>
 }
 
 /** A data condition: the engine's expression language over refs (`StoredExpr`). */
@@ -119,6 +152,8 @@ export interface GraphV2IfStep extends GraphV2StepBase {
      * `callWorkflows` writes no `no`; outside a body `yes` is always written).
      */
     readonly routes: { readonly yes?: string | undefined; readonly no?: string | undefined }
+    /** The question the map shows on the condition, in the workspace's words ("Đủ tiền?"); absent: the generic word. */
+    readonly label?: SpecText | undefined
 }
 
 /** A ref as stored: the `ParamRef` form. */
@@ -257,6 +292,16 @@ export interface GraphV2LoopOverStep extends GraphV2StepBase {
     readonly routes: { readonly body: string }
     /** The step after the loop; absent ends the run. */
     readonly next?: string | undefined
+    /** The loop's name on the map, in the workspace's words; absent: the generic word. */
+    readonly label?: SpecText | undefined
+}
+
+/** The words of an `until` loop's two ways out, as the map shows them on the loop's frame. */
+export interface LoopExitLabels {
+    /** The way out when the condition holds ("Thoát khi đơn đã trả"); absent: the generic word. */
+    readonly until?: SpecText | undefined
+    /** The way out after the last round ("Hết 6 vòng mà chưa trả"); absent: the generic word. */
+    readonly exhausted?: SpecText | undefined
 }
 
 /** A loop until a condition: its body once per round, the condition checked after each round. */
@@ -269,8 +314,14 @@ export interface GraphV2LoopUntilStep extends GraphV2StepBase {
     readonly params: GraphV2LoopUntilParams
     /** The first step of the body, and where the run goes when `max` rounds passed without the condition. */
     readonly routes: { readonly body: string; readonly exhausted: string }
-    /** Where the run goes when the condition holds. */
+    /** The engine tells the team when the loop runs out of rounds (`LoopUnsuccessfulSpec`); absent: it goes to `exhausted` with no notice. */
+    readonly unsuccessful?: LoopUnsuccessfulSpec | undefined
+    /**Where the run goes when the condition holds. */
     readonly next: string
+    /** The loop's name on the map, in the workspace's words ("Tư vấn"); absent: the generic word. */
+    readonly label?: SpecText | undefined
+    /** The words of its two ways out on the map; absent: the generic words. */
+    readonly exits?: LoopExitLabels | undefined
 }
 
 /** A loop: `over` a list, or `until` a condition (`params.mode`). The only legal way round in a graph. */
@@ -328,6 +379,8 @@ export interface GraphV2OutcomeStep extends GraphV2StepBase {
     readonly params: { readonly outcome: string; readonly outputs: ParamBindings }
     /** The step that follows; absent at the end of the graph. */
     readonly next?: string | undefined
+    /** The outcome's words ("Đã trả"); absent: its key. */
+    readonly label?: SpecText | undefined
 }
 
 /**
@@ -384,6 +437,8 @@ export interface GraphV2WaitStep extends GraphV2StepBase {
     readonly params: GraphV2WaitParams
     /** One route per trigger key and `timeout`. */
     readonly routes: Readonly<Record<string, string>>
+    /** What the run waits for, in the workspace's words ("Chờ tiền về"); absent: the generic word. */
+    readonly label?: SpecText | undefined
 }
 
 /**
@@ -400,6 +455,8 @@ export interface GraphV2HandBackStep extends GraphV2StepBase {
     readonly params: { readonly wait: string }
     /** The step that follows; absent: the round (inside a loop body) or the run ends here. */
     readonly next?: string | undefined
+    /** The hand-back's words on the map ("Trả lại tin"); absent: the generic word. */
+    readonly label?: SpecText | undefined
 }
 
 /** One step of a @2 graph. */

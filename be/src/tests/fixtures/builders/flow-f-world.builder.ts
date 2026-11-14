@@ -18,9 +18,9 @@ import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import {
     AgentGraphFlowRunsService,
-    AgentGraphFreezeGateService,
     AgentGraphRunNoticesService,
     AgentGraphsService,
+    AgentGraphSubjectHoldsService,
 } from "@modules/domain/agent-graphs"
 import {
     GRAPH_NODE_MODEL,
@@ -155,10 +155,10 @@ export interface FlowServices {
 /** What the scripted model answers, by the purpose a node asks it for: text or a structured answer, one per call. */
 export type FlowModelScript = Record<string, Array<string | Readonly<Record<string, unknown>>>>
 
-/** What a spec swaps in the engine around the graphs: the gate of the freezes, and the run engine the start of a run writes to. */
+/** What a spec swaps in the engine around the graphs: the subject hold (rule Q-1), and the run engine the start of a run writes to. */
 export interface FlowEngine {
-    /** The gate the start of a run asks; none by default. */
-    readonly gate?: AgentGraphFreezeGateService
+    /** The hold of a subject the start of a run asks; none by default. */
+    readonly holds?: AgentGraphSubjectHoldsService
     /** The run engine; a mock that writes nothing by default. */
     readonly runs?: AgentRunsService
     /**
@@ -215,9 +215,9 @@ const graphStoreOf = (graph: GraphSpec, workflows: WorkflowWorld | undefined): A
     })
 }
 
-/** The providers a spec swaps in around the graphs: the gate of the freezes, the routing, the guards and the lead memory. */
+/** The providers a spec swaps in around the graphs: the subject hold, the routing, the guards and the lead memory. */
 const engineProvidersOf = (engine: FlowEngine): ReadonlyArray<Provider> => {
-    const { workflows, memory, gate } = engine
+    const { workflows, memory, holds } = engine
     const guards =
         workflows === undefined || engine.guarded !== true
             ? []
@@ -228,7 +228,7 @@ const engineProvidersOf = (engine: FlowEngine): ReadonlyArray<Provider> => {
               ]
     return [
         { provide: AgentRunsService, useValue: engine.runs ?? quietRuns() },
-        ...(gate === undefined ? [] : [{ provide: AgentGraphFreezeGateService, useValue: gate }]),
+        ...(holds === undefined ? [] : [{ provide: AgentGraphSubjectHoldsService, useValue: holds }]),
         ...(workflows === undefined ? [] : [{ provide: AgentWorkflowRunsService, useValue: workflows.service }]),
         ...guards,
         ...(memory === undefined

@@ -73,7 +73,7 @@ export interface ScheduledItem {
     readonly id: string
     /** What kind of thing it is. */
     readonly kind: ScheduledItemKind
-    /** What exactly: the care step (`payment-reminder`, `payment-stale`, `delivery-check`, `occasion`), the task title, the probe or preset of a trigger, the kind of the stop. */
+    /** What exactly: the care step (`payment-reminder`, `payment-stale`, `delivery-check`, `occasion`), the task title, the preset of a trigger, the kind of the stop. */
     readonly what: string
     /** The agent that holds it. */
     readonly agentId: string

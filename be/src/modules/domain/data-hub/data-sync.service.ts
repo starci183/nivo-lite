@@ -16,13 +16,12 @@ import {
     type DataSyncPayload,
 } from "@modules/queues/data-sync"
 import { CsvImportSyncService } from "./csv-import-sync.service"
-import { DATA_PROVIDERS, type DataConnector, type DataProvider } from "./data-hub.contracts"
+import { DATA_PROVIDERS, type DataConnection, type DataConnector, type DataProvider } from "./data-hub.contracts"
 import { DataHubLogEvent } from "./data-hub.log-events"
 import { DataHubService } from "./data-hub.service"
-import { DatabaseSyncService } from "./database-sync.service"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 import { ImapSyncService } from "./imap-sync.service"
-import { TelegramUserSyncService } from "./telegram-user-sync.service"
+import { DataConnectorRegistryService } from "./data-connector-registry.service"
 
 /** How long one sync may run before it stops early and the next one continues. */
 const SYNC_BUDGET_MS = 120_000
@@ -46,13 +45,12 @@ export class DataSyncService {
         private readonly records: DataRecordsService,
         private readonly runs: DataSyncRunsService,
         csv: CsvImportSyncService,
-        database: DatabaseSyncService,
         private readonly imap: ImapSyncService,
-        telegramUser: TelegramUserSyncService,
+        private readonly registry: DataConnectorRegistryService,
     ) {
-        this.connectors = new Map<DataProvider, DataConnector>(
-            [csv, database, imap, telegramUser].map((connector) => [connector.provider, connector]),
-        )
+        // Only the import of a file is here: it has no outside system, so no sandbox. Every other connector (mailbox, database, personal
+        // Telegram) is resolved per ACCOUNT by the registry (live or sandbox).
+        this.connectors = new Map<DataProvider, DataConnector>([csv].map((connector) => [connector.provider, connector]))
     }
 
     /** "Sync now" (owner): opens a run and queues the job that does it; the run is what the owner then polls. */
@@ -94,12 +92,13 @@ export class DataSyncService {
         let rows = 0
         try {
             const connection = await this.hub.own(payload.workspaceId, payload.connectionId)
-            const connector = this.connectors.get(connection.provider)
+            const connector = this.connectorOf(connection)
             if (connector === undefined) throw new DataHubError({ code: DataHubErrorCode.NotFound })
             const deadline = this.clock.now().getTime() + SYNC_BUDGET_MS
             const result = await connector.sync({
                 connection,
-                credential: (await this.hub.credentialOf(connection.id)) ?? "",
+                // A sandbox account holds no secret: its credential is never read.
+                credential: connection.sandbox === true ? "" : ((await this.hub.credentialOf(connection.id)) ?? ""),
                 upsert: async (entity, list) => {
                     // A mailbox's mails are the IMAP account's own data; every other connector's rows go to the hub.
                     const written =
@@ -131,6 +130,18 @@ export class DataSyncService {
     async abandonJob(payload: object): Promise<void> {
         if (!isDataSyncPayload(payload)) return
         await this.runs.finish(payload.runId, "failed", 0, this.catalog.get("errors.DATA_HUB_SYNC_FAILED", {}, "vi"))
+    }
+
+    /**
+     * The connector that serves a connection. A registered provider's account (or any sandbox account) goes through the registry's
+     * `portFor`, THE ONE SWITCH: a live account its live connector, a sandbox account its sandbox twin or the typed refusal
+     * `PROVIDER_SANDBOX_MISSING`, never a live connector.
+     */
+    private connectorOf(connection: DataConnection): DataConnector | undefined {
+        if (connection.sandbox === true || this.registry.has(connection.provider)) {
+            return this.registry.portFor({ provider: connection.provider, sandbox: connection.sandbox === true })
+        }
+        return this.connectors.get(connection.provider)
     }
 
     private async open(

@@ -21,6 +21,7 @@
     "node.payment-settle.title": "Khớp tiền với yêu cầu đang chờ trả",
     "node.invoice-draft.title": "Soạn hoá đơn",
     "node.invoice-issue.title": "Xuất hoá đơn",
+    "node.issue-record.title": "Ghi hoá đơn đã xuất",
     "node.due.title": "Tìm khoản đến hạn",
     "node.round-report.title": "Báo đội kết quả nhắc nợ",
     "node.supplier-report.title": "Báo đội hoá đơn nhà cung cấp",

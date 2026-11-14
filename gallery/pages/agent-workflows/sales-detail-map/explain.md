@@ -26,12 +26,23 @@ Vì sao: nền chấm kiểu n8n và khối kéo được để người dùng t
 Luật: flowgraph-card-style.md (người dùng sửa graph).
 Grammar: `FlowGraph background="dots" isEditable positions onPositionsChange resetLabel`, node_modules/@starci/grammar/dist/core/branch/FlowGraph/index.d.ts (0.37.5).
 
-## Chú giải loại bước và chú thích
-Vì sao: chú giải màu các loại bước nằm dưới thẻ, kèm một dòng giải thích.
+## Chú giải loại bước
+Vì sao: chú giải nằm dưới sơ đồ và chỉ liệt kê loại đang có trên sơ đồ; điều kiện có mẫu hình thoi, khung vòng lặp có mẫu nét đứt. Không còn dòng chú thích riêng: khung tự mang dòng giải thích của nó.
 Luật: flowgraph-card-style.md (màu theo loại).
-Grammar: `FlowGraphLegend` đặt dưới `FlowGraph` trong `Section`, node_modules/@starci/grammar/dist/core/branch/FlowGraph/index.d.ts.
+Grammar: `FlowGraphLegend` đặt dưới `FlowGraph`, mục `{ kind: "loop" }` và `shape: "diamond"` (Grammar 0.39.1), node_modules/@starci/grammar/dist/core/branch/FlowGraph/types.d.ts.
 
 ## Ngăn tham số của bước (mở khi bấm một bước)
 Vì sao: form do Opus B sở hữu; chủ đã nhắc luật thẻ viền 1px một nhóm một thẻ, cần kiểm tra ở form.
 Luật: surfacecard-zones-api.md, flowgraph-card-style.md (ngăn tham số, Lưu thành bản N).
 Grammar: Drawer + SurfaceCard, ngoài phạm vi tôi.
+
+## Các loại thẻ trên sơ đồ khi quy trình có vòng lặp (cập nhật 2026-11-14, FE-MAP-2, chưa chụp lại ảnh)
+Vì sao: quy trình bán hàng "một lượt chạy cho cả việc bán" (`sales.consult` bản 30, 35 bước) có hai vòng lặp (tư vấn, thanh toán), hai bước chờ và bảy điều kiện. Mọi lời trên sơ đồ là lời của chính đồ thị (nhãn của điều kiện, chờ, vòng lặp, trả lại tin, tiêu đề kết quả, hai lối thoát của vòng lặp); bản đồ không tự đặt lời, trừ dòng chờ ghép từ sự kiện và thời gian chờ.
+- Thẻ "Có việc mới" (Sự kiện) chỉ một thẻ, ghi các nguồn thật của quy trình (từ `triggers` của spec) làm dòng phụ.
+- Vòng lặp (`core.until`) là khung nét đứt bao các bước thân vòng (`container.kind: "loop"`): tên của đồ thị, "lặp tối đa N vòng" mờ sau tên, một dòng mờ trong khung nói vòng chạy lại từ bước đầu, hai lối thoát là pill nằm trên mép khung (lời của đồ thị: "Thoát khi ..." và "Hết N vòng mà chưa ..."); cạnh đi tiếp rời khung từ đúng pill của nó.
+- Chờ (`core.wait`) là thẻ loại Chờ: dòng phụ = các sự kiện nó chờ + "tối đa 1 ngày"; mỗi đường đi tiếp là một cổng (tin nhắn của khách gộp một cổng); đường hết giờ là cạnh nét đứt (`isFallback`).
+- Điều kiện (`core.when`) là hình thoi, câu hỏi của đồ thị nằm trong thoi ("Đủ tiền?"), hai nhánh Có / Không ở hai đỉnh.
+- Trả lại tin (`core.hand-back`) là thẻ nhỏ theo nhãn của đồ thị; kết thúc ghi tiêu đề kết quả, không phải khóa.
+- Bước việc và gọi quy trình khác giữ kiểu thẻ đã duyệt.
+Luật: flowgraph-card-style.md (thẻ bước, cổng điều kiện, cạnh nét đứt cho đường hết giờ), type-scale-14-12.md (chữ 14, nhỏ 12, không dưới 12), owner-colors-exact.md (chỉ token).
+Grammar: `FlowGraphNode.shape: "diamond"`, `FlowGraphNode.container` (`kind: "loop"`, `description`, `note`, `exits`, `childIds`), `FlowGraphEdge.sourcePort` (kể cả lấy lối thoát của khung làm nguồn) và `isFallback`, node_modules/@starci/grammar/dist/core/branch/FlowGraph/types.d.ts (0.39.1). Cần chụp lại: vòng thanh toán 13 thẻ ở 1440 (mở rộng khoảng 2000px, cuộn ngang), thoi, pill lối thoát, cạnh hết giờ nét đứt, chú giải, 390.

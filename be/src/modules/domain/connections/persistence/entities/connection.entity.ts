@@ -36,6 +36,13 @@ export class ConnectionEntity extends UuidAbstractEntity {
     @Column({ name: "environment", type: "text", default: () => "'live'::text" })
     environment!: string
 
+    /**
+     * A SANDBOX account (lane concept provider-sandbox, ruling R56): answered by its provider's sandbox implementation from fixtures and
+     * scripts, never a real host; it holds no secret. Set at creation, never changed (no writer changes it; a trigger refuses it).
+     */
+    @Column({ name: "sandbox", type: "boolean", default: () => "false", update: false })
+    sandbox!: boolean
+
     /** When the provider last delivered an event; null when it never has. */
     @Column({ name: "last_event_at", type: "timestamptz", nullable: true })
     lastEventAt!: Date | null

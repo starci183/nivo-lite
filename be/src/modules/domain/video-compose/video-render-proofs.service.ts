@@ -38,7 +38,8 @@ export class VideoRenderProofsService implements OnApplicationBootstrap {
     /** Registers the proof of each compose provider with a webhook. */
     onApplicationBootstrap(): void {
         this.registry
-            .all()
+            .providers()
+            .flatMap((provider) => this.registry.liveOf(provider) ?? [])
             .filter((port) => port.webhook !== null)
             .forEach((port) => {
                 this.proofs.add(this.proofOf(port))

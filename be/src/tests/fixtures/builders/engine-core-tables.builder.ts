@@ -12,6 +12,7 @@ import type { ProposalStatusFilter } from "@modules/domain/agent-graphs/agent-gr
 import type { AgentWorkflowTableStore } from "@modules/domain/agent-graphs/agent-workflow-store.port"
 import { workflowRecordOf, workflowVersionRecordOf } from "@modules/domain/agent-graphs/agent-workflows.mapper"
 import type { AgentRunTableStore } from "@modules/domain/agent-runs/agent-run-table-store.port"
+import { reportedStatusOf } from "@modules/domain/agent-runs/policies/agent-runs.policy"
 import type {
     RunCount,
     RunCountFilter,
@@ -348,7 +349,6 @@ export const STEP_DEFAULTS: Omit<StoredStep, "id" | "workspaceId" | "version" | 
     notBefore: null,
     waitItemId: null,
     workItemId: null,
-    compAttempts: 0,
     errorCode: null,
     claimedUntil: null,
     startedAt: null,
@@ -382,13 +382,18 @@ export const storedStepOfRow = (row: RecordRow): StoredStep => ({
 const inWindow = (at: string | null, window: RunWindow | undefined): boolean =>
     window === undefined || (at !== null && at >= window.from && at < window.to)
 
+/** True for a run row that carries a wait mark (`wait_match` set). */
+const waitMarkedRow = (row: RecordRow): boolean => Array.isArray(row.data.waitMatch) && row.data.waitMatch.length > 0
+
 const listedRuns = (rows: TableRows, filter: RunListFilter): ReadonlyArray<StoredRun> => {
     const { subject } = filter
     const held = rows
         .of(AGENT_RUNS)
         // The subject index: the exact (kind, id) the run was opened with (columns `subject_kind`, `subject_id`).
         .filter((row) => subject === undefined || (row.data.subjectKind === subject.kind && row.data.subjectId === subject.id))
-        .filter((row) => filter.waitMarked !== true || (Array.isArray(row.data.waitMatch) && row.data.waitMatch.length > 0))
+        .filter((row) => filter.waitMarked !== true || waitMarkedRow(row))
+        // The REPORTED status (`reportedStatusOf`): a `running` run with a wait mark reads `waiting`.
+        .filter((row) => filter.reported === undefined || filter.reported.includes(reportedStatusOf(String(row.data.status), waitMarkedRow(row))))
         .map((row) => storedRunOfRow(row))
         .filter(
             (run) =>
@@ -422,7 +427,7 @@ export const memoryRunStore = (rows: TableRows, now: () => string = () => STAMP)
     },
     counts: (_tx, filter: RunCountFilter) => {
         const groups = new Map<string, RunCount>()
-        for (const run of rows.of(AGENT_RUNS).map((row) => storedRunOfRow(row))) {
+        for (const run of rows.of(AGENT_RUNS).filter((row) => filter.waitMarked !== true || waitMarkedRow(row)).map((row) => storedRunOfRow(row))) {
             const kept =
                 (filter.agentId === undefined || run.agentId === filter.agentId) &&
                 (filter.statuses === undefined || filter.statuses.includes(run.status)) &&
@@ -499,7 +504,7 @@ export const memoryRunStore = (rows: TableRows, now: () => string = () => STAMP)
             const held = counts.get(step.runId) ?? { total: 0, done: 0, begun: 0, failed: 0 }
             counts.set(step.runId, {
                 total: held.total + 1,
-                done: held.done + (step.status === "done" || step.status === "compensated" ? 1 : 0),
+                done: held.done + (step.status === "done" ? 1 : 0),
                 begun: held.begun + (step.status === "pending" ? 0 : 1),
                 failed: held.failed + (step.status === "failed" ? 1 : 0),
             })
@@ -562,6 +567,14 @@ export const memoryEffectStore = (rows: TableRows): NodeEffectStore => ({
                 values: valuesOf(Object.fromEntries(Object.entries(effect).filter(([, value]) => value !== null))),
             }) !== null,
         ),
+    resettle: (_ws, effectKey, unknownKind, subject) => {
+        const row = rows.of(AGENT_NODE_EFFECTS, { effectKey }).find((one) => one.data.subjectEntity === unknownKind)
+        if (row === undefined) return Promise.resolve(false)
+        const values = valuesOf({ subjectEntity: subject.subjectEntity, subjectId: subject.subjectId, facts: subject.facts })
+        return Promise.resolve(
+            writtenOf(rows, { op: "update", entity: AGENT_NODE_EFFECTS, key: row.id, expected: row.version, values }) !== null,
+        )
+    },
 })
 
 /** A workflow record read from a row of the workflows table double. */

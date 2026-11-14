@@ -39,11 +39,11 @@ const CATALOGUE: TemplateCatalogue = {
         vi: "M\u1ed7i 15 ph\u00fat \u0111\u1ecdc th\u01b0 m\u1edbi c\u1ee7a c\u00e1c h\u1ed9p th\u01b0 \u0111\u01b0\u1ee3c g\u1eafn v\u00e0 b\u00e1o \u0111\u1ed9i trong /chat nh\u1eefng th\u01b0 c\u1ea7n ng\u01b0\u1eddi x\u1eed l\u00fd",
         en: "Every 15 minutes reads the new mail of the attached mailboxes and tells the team in /chat which mails need a person",
     },
-    version: 6,
-    publishedAt: "2026-11-14T01:00:00.000Z",
+    version: 7,
+    publishedAt: "2026-11-14T22:00:00.000Z",
     notes: {
-        vi: "Ng\u01b0\u1eddi t\u1eeb ch\u1ed1i b\u00e0i b\u00e1o \u0111\u1ed9i c\u1ee7a v\u00f2ng th\u01b0 th\u00ec k\u1ebft th\u00fac v\u1edbi k\u1ebft qu\u1ea3 declined (kh\u00f4ng c\u00f3 th\u00f4ng b\u00e1o ri\u00eang, v\u00ec ch\u00ednh b\u00e0i \u0111\u0103ng l\u00e0 b\u00e0i c\u1ee7a \u0111\u1ed9i)",
-        en: "A person declining the round report to the team ends the run `declined` (no extra notice: the declined write is itself a team post)",
+        vi: "R68: các bước điều kiện, vòng lặp và kết quả mang tên theo lời của workspace; nghiệp vụ không đổi",
+        en: "R68: the conditions, the loop and the outcomes carry the workspace's words; the business is unchanged",
     },
 }
 
@@ -72,11 +72,13 @@ export const webmailTriageGraph: TemplateGraph = defineTemplateGraph({
     nodes: {
         read: node(webmailReadNode, { input: {}, next: "has-mail" }),
         "has-mail": ifNode({
+            label: { vi: "Có thư mới?", en: "New mail?" },
             when: gt(ref("steps.read.output.count"), 0),
             yes: "each",
             no: "empty",
         }),
         each: loop({
+            label: { vi: "Phân loại từng thư", en: "Sort each mail" },
             over: ref("steps.read.output.mails"),
             key: "id",
             concurrency: 1,
@@ -105,6 +107,7 @@ export const webmailTriageGraph: TemplateGraph = defineTemplateGraph({
             next: "report-declined",
         }),
         "report-declined": ifNode({
+            label: { vi: "Bị từ chối báo đội?", en: "Team report declined?" },
             when: equals(ref("steps.report.output.declined"), true),
             yes: "declined",
             no: "hand-offs",
@@ -140,6 +143,7 @@ export const webmailTriageGraph: TemplateGraph = defineTemplateGraph({
         }),
         sorted: outcome({
             name: "sorted",
+            label: { vi: "Đã phân loại", en: "Sorted" },
             output: {
                 renewals: ref("steps.report.output.renewals"),
                 tickets: ref("steps.report.output.tickets"),
@@ -147,7 +151,7 @@ export const webmailTriageGraph: TemplateGraph = defineTemplateGraph({
                 enquiries: ref("steps.report.output.enquiries"),
             },
         }),
-        empty: outcome({ name: "empty" }),
-        declined: outcome({ name: "declined" }),
+        empty: outcome({ name: "empty", label: { vi: "Không có thư mới", en: "No new mail" } }),
+        declined: outcome({ name: "declined", label: { vi: "Bị từ chối", en: "Declined" } }),
     },
 })

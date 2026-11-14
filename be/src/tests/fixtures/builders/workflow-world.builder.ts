@@ -3,6 +3,7 @@ import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { latestTemplateVersion, type WorkflowTemplate } from "@nivo-lite/agent-sdk/template"
 import { EntityEngineService, type ScopedTx, type ScopedWork } from "@modules/domain/entity-engine"
 import { INSTALLED } from "@modules/domain/installed-plugins"
+import type { AccountAttachmentsService } from "@modules/domain/tool-grants"
 import type { EntityManager } from "typeorm"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { AgentWorkflowAdoptionService } from "../../../modules/domain/agent-graphs/agent-workflow-adoption.service"
@@ -123,9 +124,11 @@ const versionRecordOf = (agentId: string, workflow: SeededWorkflow): WorkflowVer
 /**
  * The workflows of a shop's agents, seeded from the templates (the primary and every `seedActive` one, active), behind the REAL
  * `AgentWorkflowRunsService`: the routing of a wake picks the workflow by the hand-off's pin, else by a trigger's source kind, channel
- * and conditions, exactly as the engine does. `agents` maps each agent id to its module key.
+ * and conditions, exactly as the engine does. `agents` maps each agent id to its module key. `access`, when given, is the agents'
+ * attachments the REAL readiness reads (a graph whose blocking node has no account of its provider is hidden, as in the app); absent,
+ * readiness is not judged.
  */
-export const workflowWorldOf = (agents: Readonly<Record<string, string>>): WorkflowWorld => {
+export const workflowWorldOf = (agents: Readonly<Record<string, string>>, access?: AccountAttachmentsService): WorkflowWorld => {
     const seeded = new Map(Object.entries(agents).map(([agentId, module]) => [agentId, seededWorkflowsOf(agentId, module)]))
     const workflowsOf = (agentId: string): ReadonlyArray<SeededWorkflow> => seeded.get(agentId) ?? []
     const all = [...seeded.entries()].flatMap(([agentId, workflows]) => workflows.map((workflow) => ({ agentId, workflow })))
@@ -177,7 +180,7 @@ export const workflowWorldOf = (agents: Readonly<Record<string, string>>): Workf
     })
     const adoption = mock<AgentWorkflowAdoptionService>({ adoptAgentGraph: () => Promise.resolve(null) })
     return {
-        service: new AgentWorkflowRunsService(engine, records, store, adoption),
+        service: new AgentWorkflowRunsService(engine, records, store, adoption, access),
         graphs,
         pins,
         engine,

@@ -1,6 +1,7 @@
 import { TOOL } from "@nivo-lite/agent-sdk/names"
 import { GRAPH_NODE_TOOL_DOOR, GraphNodesError, GraphNodesErrorCode, toolFingerprintOf, type NodeRow, type NodeToolCall, type NodeToolDoor } from "@modules/domain/graph-nodes"
 import { mock } from "@starci/jest-preset"
+import type { Provider } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
 import { PAYMENT_TOOL, PaymentNativeService } from "@modules/domain/payment-tools/payment-native.service"
 import { PaymentInstructionRegistryService } from "@modules/domain/provider-registry"
@@ -349,6 +350,7 @@ export interface SalesWorld {
 export const salesWorldOf = async (
     truths: ReadonlyArray<Readonly<Record<string, unknown>>>,
     seed: (db: MoneyDb) => void = () => undefined,
+    extra: (db: MoneyDb) => ReadonlyArray<Provider> = () => [],
 ): Promise<SalesWorld> => {
     const db = moneyDbOf({})
     const books: SalesBooks = {
@@ -365,11 +367,14 @@ export const salesWorldOf = async (
         db.rights.attachments.push({ agentId: SALES, connectionId: BANK_FEEDS[feed], provider: feed })
     }
     seed(db)
-    return { db, books, process: await salesProcessOf(db, books) }
+    return { db, books, process: await salesProcessOf(db, books, extra(db)) }
 }
 
-/** One process of the app over a sales world's database and books (a second one is a restart: the same stores, a new process). */
-export const salesProcessOf = (db: MoneyDb, books: SalesBooks): Promise<ThreadProcess> =>
+/**
+ * One process of the app over a sales world's database and books (a second one is a restart: the same stores, a new process); `extra`
+ * adds providers (the hold of a stop: `holdProvidersOf`).
+ */
+export const salesProcessOf = (db: MoneyDb, books: SalesBooks, extra: ReadonlyArray<Provider> = []): Promise<ThreadProcess> =>
     moneyProcessOf(db, [
         turnPolicyOf(db),
         // Later than the money world's door: the same token, so this one is the door the host is given.
@@ -378,6 +383,7 @@ export const salesProcessOf = (db: MoneyDb, books: SalesBooks): Promise<ThreadPr
             useFactory: (door: NodeToolDoorService): NodeToolDoor => salesDoorOf(db, books, door),
             inject: [NodeToolDoorService],
         },
+        ...extra,
     ])
 
 /** The customer lines of the conversation, by text. */

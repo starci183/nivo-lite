@@ -6,8 +6,6 @@ export enum AgentWorkErrorCode {
     ResultRejected = "AGENT_WORK_RESULT_REJECTED",
     /** The agent is not an agent of the workspace. */
     AgentNotFound = "AGENT_WORK_AGENT_NOT_FOUND",
-    /** The goal is not a goal of the agent. */
-    GoalNotFound = "AGENT_WORK_GOAL_NOT_FOUND",
     /** The task is not a task of the agent. */
     TaskNotFound = "AGENT_WORK_TASK_NOT_FOUND",
     /** The trigger is not a trigger of the agent. */
@@ -40,7 +38,6 @@ export enum AgentWorkErrorCode {
 export const AGENT_WORK_ERROR_KINDS: Record<AgentWorkErrorCode, ErrorKind> = {
     [AgentWorkErrorCode.ResultRejected]: "internal",
     [AgentWorkErrorCode.AgentNotFound]: "not-found",
-    [AgentWorkErrorCode.GoalNotFound]: "not-found",
     [AgentWorkErrorCode.TaskNotFound]: "not-found",
     [AgentWorkErrorCode.TriggerNotFound]: "not-found",
     [AgentWorkErrorCode.TooManyTriggers]: "conflict",

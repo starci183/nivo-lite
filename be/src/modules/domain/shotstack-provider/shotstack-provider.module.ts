@@ -2,6 +2,7 @@ import { Module, type DynamicModule } from "@nestjs/common"
 import { ShotstackComposeService } from "./shotstack-compose.service"
 import { ShotstackConnectionFieldsService } from "./shotstack-connection-fields.service"
 import { ShotstackCredentialService } from "./shotstack-credential.service"
+import { ShotstackSandboxComposeService } from "./shotstack-sandbox-compose.service"
 import { ShotstackProviderRegistrationService } from "./shotstack-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./shotstack-provider.module-definition"
 
@@ -19,7 +20,7 @@ export class ShotstackProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, ShotstackProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, ShotstackSandboxComposeService, ShotstackProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

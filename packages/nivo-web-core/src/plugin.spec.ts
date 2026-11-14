@@ -1,5 +1,5 @@
 import { defineInstallation } from "@nivo-lite/agent-sdk/installation"
-import { DEFAULT_AI_READ_TOOLS, DEFAULT_NODE_TOOLS, TOOL } from "@nivo-lite/agent-sdk/names"
+import { DEFAULT_AI_READ_TOOLS, DEFAULT_NODE_TOOLS } from "@nivo-lite/agent-sdk/names"
 import * as root from "./index"
 import { plugin } from "./plugin"
 import { crmTools } from "./vocabulary/crm-tools"
@@ -97,13 +97,9 @@ describe("the nivo-web-core plugin", () => {
         ).toEqual([])
         expect(installed.providers.map((template) => template.id)).toEqual(["nivoweb"])
         expect([installed.effects, installed.jobs, installed.entities, installed.blocks]).toEqual([[], [], [], []])
-        // The four customer purposes and the invoice are the core's tools, words and labels: never declared here.
-        expect(Object.keys(installed.toolLabels).sort()).toEqual(
-            crmTools
-                .map((tool) => tool.id)
-                .filter((id) => id !== TOOL.invoiceCreate)
-                .sort(),
-        )
+        // The four customer purposes and the invoice are the core's tools, words and labels: never declared here (R57: the invoice
+        // issue is no CRM tool any more, so every CRM tool has its label).
+        expect(Object.keys(installed.toolLabels).sort()).toEqual(crmTools.map((tool) => tool.id).sort())
         expect(installed.tools.map((tool) => tool.id)).toContain(CRM_NIVOWEB.get_customers)
         expect(Object.keys(installed.messages)).toEqual(AGENTS.map(([key]) => key))
     })
@@ -141,7 +137,7 @@ describe("the nivo-web-core plugin", () => {
 
     it("gives every CRM tool owner words in both languages and model words for its title", () => {
         const installed = defineInstallation([plugin], "")
-        for (const id of crmTools.map((tool) => tool.id).filter((one) => one !== TOOL.invoiceCreate)) {
+        for (const id of crmTools.map((tool) => tool.id)) {
             const tool = installed.tools.find((one) => one.id === id)
             const title = tool?.title
             expect(title !== undefined && "key" in title ? installed.wordsOf(title.key) : undefined).toEqual(

@@ -5,6 +5,7 @@ import { GetAgentAbilityProposalHandler } from "./application/get-agent-ability-
 import { ListProviderTemplateCandidatesHandler } from "./application/list-provider-template-candidates.handler"
 import { AttachAgentProviderHandler } from "./application/attach-agent-provider.handler"
 import { DetachAgentProviderHandler } from "./application/detach-agent-provider.handler"
+import { SetAgentProviderDefaultHandler } from "./application/set-agent-provider-default.handler"
 import { AttachProviderByTemplateHandler } from "./application/attach-provider-by-template.handler"
 import { ConfigurableModuleClass } from "./tools.module-definition"
 
@@ -16,6 +17,7 @@ import { ConfigurableModuleClass } from "./tools.module-definition"
         ListProviderTemplateCandidatesHandler,
         AttachAgentProviderHandler,
         DetachAgentProviderHandler,
+        SetAgentProviderDefaultHandler,
         AttachProviderByTemplateHandler,
     ],
 })

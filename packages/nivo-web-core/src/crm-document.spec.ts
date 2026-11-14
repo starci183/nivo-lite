@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { TOOL, crmOpsOf } from "@nivo-lite/agent-sdk/names"
+import { crmOpsOf } from "@nivo-lite/agent-sdk/names"
 import { z } from "zod"
 import { CRM_NIVOWEB } from "./crm/nivoweb/api.generated"
 import { NIVOWEB_CRM } from "./crm/nivoweb/template"
@@ -15,13 +15,8 @@ import { crmTools } from "./vocabulary/crm-tools"
  * `Idempotency-Key`), and every member the declared answer names is a member the operation answers (a page: its items' members).
  */
 
-/** The sha256 of the document as pinned (the P3b note, the file on disk). */
-const PINNED_SHA256 = "c088784438cc2e406655dc8c375658b819fe885111bbc423eaf57567c2a0b92c"
-
-/** Tools the plugin declares that no operation of the document serves yet, each with why (no adapter runs them). */
-const NOT_SERVED: Readonly<Record<string, string>> = {
-    [TOOL.invoiceCreate]: "the MISA port: the CRM issues invoices only once its e-invoice adapter exists",
-}
+/** The sha256 of the document as pinned (R57: re-pinned from nivo-web-lite 745599e, the file on disk). */
+const PINNED_SHA256 = "9c410167d589e85ddabc7d4b315c3db747ce5e5f46086f54b3938522bd771fa0"
 
 /** The operation of each generated tool id, as the document writes it (`GET /v1/prices`): the one derivation of the SDK. */
 const reading = ((): ReadonlyMap<string, string> => {
@@ -95,8 +90,8 @@ const declaredData = (result: unknown): unknown => {
 /** One way a declaration disagrees with the document. */
 const mismatchesOf = (tool: (typeof crmTools)[number]): ReadonlyArray<string> => {
     const { id } = tool
+    // R57: no tool the document does not serve is declared any more (the invoice issue is MISA's tool, the engine's, not the CRM's).
     const at = reading.get(id)
-    if (NOT_SERVED[id] !== undefined) return at === undefined ? [] : [`${id}: served now, drop it from NOT_SERVED`]
     const operation = at === undefined ? undefined : OPERATIONS.get(at)
     if (operation === undefined) return [`${id}: no such operation`]
     const accepted = new Set([...operation.parameters.map((parameter) => parameter.name), ...operation.body])

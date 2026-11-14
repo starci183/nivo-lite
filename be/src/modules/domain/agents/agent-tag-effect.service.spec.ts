@@ -7,6 +7,7 @@ import { ProviderTriggersService } from "@modules/domain/provider-triggers"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { agentInstallationOf } from "@tests/fixtures/builders/agents.builder"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
+import { WorkflowCallReachService } from "./workflow-call-reach.service"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { AGENTS_CHANNEL_OWNERS, AGENTS_INSTALLATIONS } from "./agents.decorators"
 import type { ConversationChannelOwners, InstallationDirectory } from "./agents.port"
@@ -51,6 +52,8 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentTagEffectService,
+            // The one target resolution the call effect and the engine's reach check share (E-SMALL item 1).
+            WorkflowCallReachService,
             { provide: GraphNodeRegistryService, useValue: registry },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: AGENTS_CHANNEL_OWNERS, useValue: channelOwners },

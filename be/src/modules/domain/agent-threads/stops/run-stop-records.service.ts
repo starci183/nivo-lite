@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { RunStopsError, RunStopsErrorCode } from "./errors/run-stops.error"
 import type { OptionalRunStop, RunStop, StopOpen, StopState, StopValues } from "./run-stop.contracts"
 import { RUN_STOP_STORE, type RunStopStore } from "./run-stop-store.port"
@@ -57,6 +58,11 @@ export class RunStopRecordsService {
         return this.store.ofContacts(workspaceId, contactIds, state, Math.min(Math.max(limit, 1), CONTACT_PAGE))
     }
 
+    /** The stops of one state about any of the routes, in the order first written, at most `limit`. */
+    ofRoutes(workspaceId: string, routeIds: ReadonlyArray<string>, state: StopState, limit: number): Promise<ReadonlyArray<RunStop>> {
+        return this.store.ofRoutes(workspaceId, routeIds, state, Math.min(Math.max(limit, 1), CONTACT_PAGE))
+    }
+
     /** How many stops of the workspace stand open. */
     openCount(workspaceId: string): Promise<number> {
         return this.store.countIn(workspaceId, "open")
@@ -64,9 +70,10 @@ export class RunStopRecordsService {
 
     /**
      * The stop of the step, open: a new stop the first time, else the same stop opened again (one more repeat, the new words, no
-     * decision) with its card, customer lines and answers kept. The unique key makes a race find the one written first.
+     * decision) with its card, customer lines and answers kept. The unique key makes a race find the one written first. `manager`
+     * joins the caller's transaction (a stop opens in the caller's own write).
      */
-    async open(input: StopOpen, now: string): Promise<RunStop> {
+    async open(input: StopOpen, now: string, manager?: EntityManager): Promise<RunStop> {
         const words = {
             kind: input.kind,
             reason: input.reason,
@@ -93,9 +100,9 @@ export class RunStopRecordsService {
             repeats: 1,
             stoppedAt: now,
             resolvedAt: null,
-        })
+        }, manager)
         if (made !== null) return made
-        const found = await this.store.byRunStep(input.workspaceId, input.runId, input.stepKey)
+        const found = await this.store.byRunStep(input.workspaceId, input.runId, input.stepKey, manager)
         if (found === null) throw new RunStopsError({ code: RunStopsErrorCode.RecordUnreadable })
         const reopened = await this.patchIn(
             input.workspaceId,
@@ -109,6 +116,7 @@ export class RunStopRecordsService {
                 resolvedAt: null,
             }),
             WRITE_TRIES,
+            manager,
         )
         return reopened ?? found
     }
@@ -121,13 +129,19 @@ export class RunStopRecordsService {
         return this.patchIn(workspaceId, id, build, WRITE_TRIES)
     }
 
-    private async patchIn(workspaceId: string, id: string, build: StopBuild, left: number): Promise<OptionalRunStop> {
+    private async patchIn(
+        workspaceId: string,
+        id: string,
+        build: StopBuild,
+        left: number,
+        manager?: EntityManager,
+    ): Promise<OptionalRunStop> {
         if (left <= 0) throw new RunStopsError({ code: RunStopsErrorCode.Contended })
-        const stop = await this.store.byId(workspaceId, id)
+        const stop = await this.store.byId(workspaceId, id, manager)
         if (stop === null) throw new RunStopsError({ code: RunStopsErrorCode.NotFound })
         const values = build(stop)
         if (values === null) return null
-        const written = await this.store.update(workspaceId, id, stop.version, values)
-        return written ?? this.patchIn(workspaceId, id, build, left - 1)
+        const written = await this.store.update(workspaceId, id, stop.version, values, manager)
+        return written ?? this.patchIn(workspaceId, id, build, left - 1, manager)
     }
 }

@@ -29,15 +29,19 @@ export class NivoKnowledgeItemEntity extends UuidAbstractEntity {
     @Column({ name: "version", type: "integer", default: () => "1" })
     version!: number
 
-    /** The pgvector vector, or null; it is read only by the database, never selected. */
-    @Column({ name: "embedding", type: "vector", nullable: true, select: false })
-    embedding!: string | null
-
     /** The search vector the database generates from the title and the body. */
     @Column({ name: "fts", type: "tsvector", nullable: true, select: false, insert: false, update: false })
     fts!: string | null
 
-    /** The model that made the vector, or null. */
+    /** The embedding identity of the point the vector index accepted for the item, or null (no point yet). */
     @Column({ name: "embedding_model", type: "text", nullable: true })
     embeddingModel!: string | null
+
+    /** The hash of the text the accepted point was made from, or null (no point yet): a point of another hash is stale. */
+    @Column({ name: "text_hash", type: "text", nullable: true })
+    textHash!: string | null
+
+    /** When the vector index accepted the item's point; null = none yet (the item is found by words meanwhile). */
+    @Column({ name: "indexed_at", type: "timestamptz", nullable: true })
+    indexedAt!: Date | null
 }

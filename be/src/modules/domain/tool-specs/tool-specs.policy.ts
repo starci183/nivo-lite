@@ -1,7 +1,7 @@
 import { TOOL, crmIdOfOp, crmProviderKeyOf, type ToolNames } from "@nivo-lite/agent-sdk/names"
-import { INSTALLED } from "@modules/domain/installed-plugins"
 import {
     DOMAIN_TOOL_BUSINESS_REFUSALS,
+    INVOICE_TOOL_BUSINESS_REFUSALS,
     MEDIA_TOOL_BUSINESS_REFUSALS,
     PAYMENT_TOOL_BUSINESS_REFUSALS,
 } from "@modules/domain/provider-registry"
@@ -10,8 +10,6 @@ import type {
     OptionalToolSpec,
     RefusalsOf,
     ToolAccountMode,
-    ToolAdapterSlot,
-    ToolAvailability,
     ToolDataKind,
     ToolRefusals,
     ToolSpec,
@@ -20,14 +18,6 @@ import type {
 
 /** The pseudo-provider of NIVO's own tools (ruling B2): it owns every tool no provider owns, is always bound and never attachable. */
 export const NIVO_OWNER: string = "nivo"
-
-/**
- * The owner a platform purpose names when a CRM may serve it (`nivo.tool.invoice.create`): it stands for every CRM the installed packages
- * declare (`crm.<id>`, read from their provider templates, never an id of the engine), so a node that lists a CRM is judged on the purpose.
- * No CRM serves a purpose since 2026-11-13 (its spec's availability is `pinned-mark` and no pin marks one): readiness blocks such a node
- * (`tool_unavailable`) until a provider adapter serves it.
- */
-const CRM = "crm"
 
 /** The refusals the run's pin answers on the effect road for every effect (`effect-pin.policy.ts` `PinRefusal`). */
 export const PIN_REFUSALS = ["conversation_mismatch", "lead_mismatch", "conversation_unverified"] as const
@@ -110,6 +100,12 @@ export const SETTLE_RULE_REFUSALS = [
 /** The registrars that serve the generic domain purposes (`nivo.tool.domain.*`): providers are equal, the node's order picks. */
 const REGISTRARS: ReadonlyArray<string> = ["inet", "tino"]
 
+/**
+ * The e-invoice providers that serve `nivo.tool.invoice.create` (owner ruling R57: the invoice is issued AT the provider, through the
+ * account the step is bound to; NIVO and a CRM serve no invoice purpose): providers are equal, the node's order picks.
+ */
+const INVOICE_ISSUERS: ReadonlyArray<string> = ["misa_meinvoice"]
+
 /** The speech and dubbing service that serves `nivo.tool.speech.*` and `nivo.tool.dubbing.*`. */
 const SPEECH: ReadonlyArray<string> = ["elevenlabs"]
 
@@ -164,13 +160,15 @@ interface SpecParts<F extends ToolRefusals> {
     readonly account?: ToolAccountMode
     readonly dataKind?: ToolDataKind | null
     readonly onceBy?: ReadonlyArray<string>
-    readonly adapter?: ToolAdapterSlot
-    readonly availability?: ToolAvailability
     readonly approvalContent?: ReadonlyArray<string>
+    readonly repeatable?: boolean
     readonly refusals: F
 }
 
-/** A spec, engine-owned and on no account unless the parts say otherwise: `mutates` false for a read, true for a write. */
+/**
+ * A spec, engine-owned and on no account unless the parts say otherwise: `mutates` false for a read, true for a write; `repeatable` true
+ * for a read and false for a write unless the parts declare it (R74: the engine never guesses it).
+ */
 const specOf = <M extends boolean, F extends ToolRefusals>(mutates: M, parts: SpecParts<F>): SpecWith<F, M> => ({
     mutates,
     owners: parts.owners ?? [NIVO_OWNER],
@@ -178,8 +176,7 @@ const specOf = <M extends boolean, F extends ToolRefusals>(mutates: M, parts: Sp
     dataKind: parts.dataKind ?? null,
     onceBy: parts.onceBy ?? [],
     refusals: parts.refusals,
-    adapter: parts.adapter ?? null,
-    availability: parts.availability ?? "bound",
+    repeatable: parts.repeatable ?? !mutates,
     ...(parts.approvalContent === undefined ? {} : { approvalContent: parts.approvalContent }),
 })
 
@@ -199,10 +196,12 @@ const nativeRead = (dataKind: ToolDataKind | null, ...codes: ReadonlyArray<strin
  */
 export const TOOL_SPECS = {
     // Customer and conversation.
+    // Repeatable (R74): a send whose outcome is unknown is sent again under the same key; the worst case is a duplicate line.
     [TOOL.customerMessageSend]: writeSpec({
         owners: ["zalo_oa", "telegram", "meta"],
         account: "owner",
         approvalContent: ["text", "images"],
+        repeatable: true,
         refusals: closed(...SEND_REFUSALS, ...REPEAT_SEND_REFUSALS, ...PIN_REFUSALS),
     }),
     [TOOL.leadCareGet]: nativeRead(null, "other_lead"),
@@ -315,17 +314,13 @@ export const TOOL_SPECS = {
         dataKind: "documents",
         refusals: open(),
     }),
-    // A platform purpose with the OpenAPI adapter slot (TOOLS-LEAD §1c, coordinator 2026-11-12): a source's document serves it by its mark
-    // (the CRM, which mocks MISA). flipDecisions2026_11_13: it keeps the slot and is UNAVAILABLE while no source serves it: its owners are
-    // the source that may serve it (`crm`), its account `any`, and only an account whose PINNED document marks the purpose serves it
-    // (`pinned-mark`), so readiness hides a graph that needs it (`tool_unavailable`) while no attached document marks it (NIVO Web's CRM
-    // does not yet). A write: it runs in the mode its node declares.
+    // The e-invoice issue (owner ruling R57): a PROVIDER tool of the e-invoice providers, on ONE bound account of theirs (the seller), run
+    // by `invoice-tools` over `InvoiceIssuePort` (live or sandbox by the account). A write in the mode its node declares; NOT repeatable:
+    // an unknown outcome may have issued a legal document, so it stops for a person. Its business refusals are the leaf list of the port.
     [TOOL.invoiceCreate]: writeSpec({
-        owners: [CRM],
+        owners: INVOICE_ISSUERS,
         account: "any",
-        adapter: "openapi",
-        availability: "pinned-mark",
-        refusals: open(),
+        refusals: open(...INVOICE_TOOL_BUSINESS_REFUSALS),
     }),
     [TOOL.einvoiceList]: nativeRead("invoices"),
     [TOOL.einvoiceGet]: nativeRead("invoices"),
@@ -388,7 +383,15 @@ export const TOOL_SPECS = {
         dataKind: "domains",
         refusals: open(...DOMAIN_TOOL_BUSINESS_REFUSALS),
     }),
+    // Renews at the provider (owner ruling R57) and answers `renewed` / `pending`; NOT repeatable (it moves money at the provider).
     [TOOL.domainRenewalCreate]: writeSpec({
+        owners: REGISTRARS,
+        account: "owner",
+        dataKind: "domains",
+        refusals: open(...DOMAIN_TOOL_BUSINESS_REFUSALS),
+    }),
+    // Whether a renewal took effect (the held domain's expiry now against the one before it): a read, repeatable.
+    [TOOL.domainRenewalGet]: readSpec({
         owners: REGISTRARS,
         account: "owner",
         dataKind: "domains",
@@ -624,39 +627,21 @@ export const toolSpecOf = (tool: string): OptionalToolSpec => SPEC_BY_ID.get(too
 export const mutatesBySpec = (tool: string): boolean | null => toolSpecOf(tool)?.mutates ?? null
 
 /**
- * The core tools served only where an attached account's PINNED document marks them (`availability: "pinned-mark"`): what readiness
- * asks the agent's OpenAPI accounts about.
+ * Whether a core tool declares it may be sent again on an unknown outcome (`repeatable`), null for an id the registry does not hold (the
+ * caller then treats it as not repeatable: never guessed).
  */
-export const PINNED_MARK_TOOLS: ReadonlyArray<CoreToolId> = CORE_TOOL_IDS.filter(
-    (tool) => SPEC_BY_ID.get(tool)?.availability === "pinned-mark",
-)
+export const repeatableBySpec = (tool: string): boolean | null => toolSpecOf(tool)?.repeatable ?? null
 
 /** True for a core tool NIVO owns itself (the pseudo-provider `nivo`): it acts on no connected account. */
 export const isEngineOwned = (tool: string): boolean => toolSpecOf(tool)?.owners.includes(NIVO_OWNER) === true
 
-/** The provider keys of the CRMs the installed packages declare (`crm.<id>`). */
-const INSTALLED_CRM_KEYS: ReadonlyArray<string> = INSTALLED.providers()
-    .filter((template) => template.kind === "crm")
-    .map((template) => crmProviderKeyOf(template.id))
-
-/**
- * The sources that serve a platform purpose through the OpenAPI adapter slot: none since the owner's decision of 2026-11-13 (a CRM serves its
- * own generated operations only, never a platform purpose by a mark), so a purpose with the slot (`nivo.tool.invoice.create`) stays
- * unavailable until a provider adapter serves it.
- */
-export const openApiSourcesOfPurpose = (_tool: string): ReadonlyArray<string> => []
-
 /**
  * The owners of a tool: a core tool's spec, else for a CRM operation (`nivo.api.crm.<crmId>.…`) the CRM's provider key (`crm.<crmId>`),
- * else none (a plugin's tool no registry holds).
+ * else none (a plugin's tool no registry holds). A CRM owns its own generated operations only, never a platform purpose (R57).
  */
 export const ownersOfTool = (tool: string): ReadonlyArray<string> => {
     const held = toolSpecOf(tool)
-    if (held !== null) {
-        return held.owners.includes(CRM)
-            ? held.owners.flatMap((owner) => (owner === CRM ? INSTALLED_CRM_KEYS : [owner]))
-            : held.owners
-    }
+    if (held !== null) return held.owners
     const crmId = crmIdOfOp(tool)
     return crmId === null ? [] : [crmProviderKeyOf(crmId)]
 }

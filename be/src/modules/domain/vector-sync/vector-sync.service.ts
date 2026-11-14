@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import {
     InjectVectorIndex,
@@ -37,7 +37,7 @@ import {
 } from "./vector-sync.policy"
 
 /** Where the vector of a row that needs one came from. */
-type VectorOrigin = "given" | "copied" | "adopted" | "embedded"
+type VectorOrigin = "given" | "adopted" | "embedded"
 
 /** The vectors found for the rows that need one, and the rows left without. */
 interface VectorsFound {
@@ -62,14 +62,18 @@ interface VectorsFound {
  * (`planOf`: row id + text hash + model + flags) and writes only the difference. So a replayed job, a job that arrives after the
  * fast path, and the reconcile that walks every row all converge on the same points and write nothing twice.
  *
- * A row that needs a vector gets it, in this order: from the caller (the embedding it just paid for), from Postgres while the
- * pgvector column still exists (the transition), from the point of another row of the same text (adoption: one index read, no
- * embedding call, nothing booked), and only then from an embedding call, credit-checked and booked to the workspace. A row that stays
- * without (no credits, embeddings not configured) waits and is found by words meanwhile.
+ * THE RULE (engine words): a vector index is a required engine piece; a row kind declares that it is embedded (its `VectorRowSource`);
+ * the index holds the only vector of each such row; a search is an index query with the mandatory filters (the tenant, the row's
+ * kind, the reader's scope), then the rows from Postgres by id. There is no other store and no switch.
+ *
+ * A row that needs a vector gets it, in this order: from the caller (the embedding it just paid for), from the point of another row
+ * of the same text (adoption: one index read, no embedding call, nothing booked), and only then from an embedding call, credit-checked
+ * and booked to the workspace (the platform's own rows are not metered). A row that stays without (no credits, embeddings not
+ * configured) waits and is found by words meanwhile.
  */
 export class VectorSyncService {
     constructor(
-        @Optional() @InjectVectorIndex() private readonly index: VectorIndex | null,
+        @InjectVectorIndex() private readonly index: VectorIndex,
         @InjectVectorRowSources() private readonly sources: VectorRowSources,
         @InjectVectorEmbedder() private readonly embedder: VectorEmbedder,
         private readonly queue: VectorSyncQueue,
@@ -78,21 +82,15 @@ export class VectorSyncService {
         @InjectClock() private readonly clock: Clock,
     ) {}
 
-    /** True when the deployment has a vector index: vectors live there, not in Postgres. The one switch every writer and reader asks. */
-    bound(): boolean {
-        return this.index != null
-    }
-
     /**
      * The `vector.sync` job: brings the points of the rows a change named in step with the rows. A payload of another shape is logged
-     * and dropped; a deployment with no index does nothing. A failure of the index throws, so the queue tries the job again.
+     * and dropped. A failure of the index throws, so the queue tries the job again.
      */
     async sync(payload: unknown): Promise<VectorSyncDone> {
         if (!isVectorSyncPayload(payload)) {
             this.logger.warn(VectorSyncLogEvent.PayloadRefused, {})
             return NOTHING_SYNCED
         }
-        if (this.index == null) return NOTHING_SYNCED
         const done =
             payload.sourceId === undefined
                 ? await this.syncRows(this.index, payload.kind, payload.workspaceId, payload.ids ?? [], { embedCalls: SYNC_EMBED_CALLS })
@@ -104,11 +102,11 @@ export class VectorSyncService {
     /**
      * Rows of one workspace changed (a truth put in force, superseded, retired, expired, switched to another reach; passages whose
      * flags changed): their `vector.sync` job is written, in the caller's transaction when it hands one over (the job then exists
-     * exactly when the change does), else in one of its own right after the caller's commit. Nothing when the deployment has no index.
+     * exactly when the change does), else in one of its own right after the caller's commit.
      */
     async changed(kind: VectorKind, workspaceId: string, ids: ReadonlyArray<string>, tx?: EntityManager): Promise<void> {
         const unique = [...new Set(ids)]
-        if (this.index == null || unique.length === 0) return
+        if (unique.length === 0) return
         const at = this.clock.now().getTime()
         const write = async (manager: EntityManager): Promise<void> => {
             await eachInOrder(batchesOf(unique, VECTOR_SYNC_IDS_MAX), (batch) =>
@@ -121,10 +119,9 @@ export class VectorSyncService {
     /**
      * One document changed (indexed, read again, replaced, deleted, its readers or its release to customers changed): the job that
      * brings every passage of it, and every point the index still holds for it, in step. In the caller's transaction when it hands
-     * one over. Nothing when the deployment has no index.
+     * one over.
      */
     async changedSource(workspaceId: string, sourceId: string, tx?: EntityManager): Promise<void> {
-        if (this.index == null) return
         const payload = { kind: "passage" as const, workspaceId, sourceId, at: this.clock.now().getTime() }
         await (tx === undefined
             ? this.entityManager.transaction((manager) => this.queue.enqueueSync(payload, manager))
@@ -143,7 +140,7 @@ export class VectorSyncService {
         vectors: ReadonlyMap<string, ReadonlyArray<number>>,
     ): Promise<VectorSyncDone> {
         const ids = [...vectors.keys()]
-        if (this.index == null || ids.length === 0) return NOTHING_SYNCED
+        if (ids.length === 0) return NOTHING_SYNCED
         await this.changed(kind, workspaceId, ids)
         try {
             return await this.syncRows(this.index, kind, workspaceId, ids, { given: vectors, embedCalls: 0 })
@@ -154,12 +151,12 @@ export class VectorSyncService {
     }
 
     /**
-     * Gives the rows among these that have no current point the vector of another row's point of the same text (or the one Postgres
-     * still holds), with NO embedding call: answers the ids that now have a current point. The others still need an embedding.
+     * Gives the rows among these that have no current point the vector of another row's point of the same text, with NO embedding
+     * call: answers the ids that now have a current point. The others still need an embedding.
      * Never throws: when the index does not answer, nothing is adopted.
      */
     async adopt(kind: VectorKind, workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlySet<string>> {
-        if (this.index == null || ids.length === 0) return new Set()
+        if (ids.length === 0) return new Set()
         try {
             const index = this.index
             const rows = await this.sources[kind].byIds(workspaceId, ids)
@@ -267,7 +264,6 @@ export class VectorSyncService {
             done: {
                 unchanged: plan.settled.length + plan.unstamped.length,
                 given: count("given"),
-                copied: count("copied"),
                 adopted: count("adopted"),
                 embedded: count("embedded"),
                 marked: plan.marks.length,
@@ -281,9 +277,8 @@ export class VectorSyncService {
     }
 
     /**
-     * A vector for each row that needs one, cheapest first: the caller's, Postgres's own (the transition), another row's point of the
-     * same text, then an embedding call per `SYNC_EMBED_BATCH` rows of one workspace, inside the budget of calls. A vector of another size
-     * than the index holds is never written.
+     * A vector for each row that needs one, cheapest first: the caller's, another row's point of the same text, then an embedding call
+     * per `SYNC_EMBED_BATCH` rows of one tenant, inside the budget of calls.
      */
     private async vectorsOf(
         index: VectorIndex,
@@ -299,11 +294,7 @@ export class VectorSyncService {
             const vector = means.given?.get(row.id)
             if (vector !== undefined) vectors.set(row.id, { vector, origin: "given" })
         }
-        await eachInOrder(byWorkspace(needs.filter((row) => !vectors.has(row.id))), async ([workspaceId, group]) => {
-            const stored = await source.storedVectors(workspaceId, group.map((row) => row.id), model)
-            for (const [id, vector] of stored) vectors.set(id, { vector, origin: "copied" })
-            const rest = group.filter((row) => !vectors.has(row.id))
-            if (rest.length === 0) return
+        await eachInOrder(byWorkspace(needs.filter((row) => !vectors.has(row.id))), async ([workspaceId, rest]) => {
             const donors = await source.donors(
                 workspaceId,
                 [...new Set(rest.map((row) => row.textHash))],

@@ -17,15 +17,12 @@ import {
     OPENAPI_PROVIDER,
     accountBaseOf,
     accountFactsOf,
-    accountKeyOf,
     argumentsSchemaOf,
-    baseUrlProblemOf,
     installedDeclarationsOf,
     operationOfApiVerb,
     pinnedTextOf,
     plannedRequestOf,
     readDocument,
-    resolvedProblemOf,
     sourceApiPrefixOf,
     sourcePrefixOf,
     toolOutcomeOf,
@@ -43,7 +40,9 @@ import {
 import { DataSourcesError, DataSourcesErrorCode, type OpenApiClient, type PublicHostClient } from "@modules/integrations/data-sources"
 import type { Clock } from "@modules/platform/clock"
 import { isRecord } from "@modules/platform/primitives"
-import { withProof } from "@modules/domain/provider-registry"
+import { ProviderRegistryError, ProviderRegistryErrorCode, withProof } from "@modules/domain/provider-registry"
+import type { OpenApiReachAccount, OpenApiReachPort, OpenApiReachRegistryService } from "@modules/domain/openapi-provider"
+import { OpenApiLiveReach } from "./openapi-live-reach.service"
 import { nativeRefusalParamsOf, type NativeRefusalReason } from "./native-refusal.policy"
 import { OPENAPI_ARGUMENTS_SCHEMA } from "./openapi-native.schema"
 
@@ -120,20 +119,38 @@ export interface OpenApiConnectorPorts {
     readonly customerLinks?: OpenApiCustomerLinks | undefined
     /** The rights of agents on connected accounts; absent, every open account serves. */
     readonly abilities?: Pick<AgentAccountsService, "accountsOfAgent"> | undefined
+    /**
+     * How an account is reached (the OpenAPI provider's registry, THE ONE SWITCH, lane concept provider-sandbox): a live account its real
+     * host, a sandbox account the package's fixtures. Absent (an app or a spec that composes no registry), a live account is reached
+     * through this app's own client, key store and host check, and a sandbox account is refused `PROVIDER_SANDBOX_MISSING`, never live.
+     */
+    readonly reaches?: Pick<OpenApiReachRegistryService, "portFor"> | undefined
 }
 
 /** An account ready to serve a call. */
 interface Account {
     /** The connection. */
     readonly connectionId: string
+    /** The workspace that holds it. */
+    readonly workspaceId: string
+    /** Its creation-time sandbox flag (what the reach registry reads). */
+    readonly sandbox: boolean
     /** What it says about its tools. */
     readonly facts: ToolsAccountFacts
     /** Its public facts. */
     readonly meta: Readonly<Record<string, string>>
 }
 
+/** How one account is reached: its reach port and the account as the port reads it. */
+interface Reach {
+    readonly port: OpenApiReachPort
+    readonly account: OpenApiReachAccount
+}
+
 /** One call ready to send. */
 interface Sending {
+    /** How the account is reached, and the account as its reach reads it. */
+    readonly reach: Reach
     /** Where the account's API is. */
     readonly base: AccountBase
     /** The opened key. */
@@ -156,6 +173,8 @@ interface ServedOperation {
 interface Viewed {
     /** The account. */
     readonly account: Account
+    /** How it is reached. */
+    readonly reach: Reach
     /** Where its API is. */
     readonly base: AccountBase
     /** Its pinned document. */
@@ -303,7 +322,7 @@ export class OpenApiConnectorService {
             throw withProof(cause, "not_sent")
         })
         if (client === undefined) throw withProof(new ToolsError(refusedAs("not_served")), "not_sent")
-        return this.send(client, sending)
+        return this.send(sending)
     }
 
     /** Everything a call is checked and planned by before its request leaves: what `invoke` hands the client. */
@@ -316,8 +335,9 @@ export class OpenApiConnectorService {
         const account = await this.accountOf(workspaceId, caller, declaration.tool)
         const base = accountBaseOf(account.meta)
         if (base === null) throw new ToolsError(refusedAs("not_connected"))
-        await this.requireReachable(base)
-        const document = await this.pinnedOf(account, base, client)
+        const reach = this.reachOf(account)
+        await reach.port.reachable(reach.account, base)
+        const document = await this.pinnedOf(account, base, reach)
         const operation = this.operationOf(document, declaration)
         const bound = await this.boundArgumentsOf(workspaceId, caller, { operation, connectionId: account.connectionId }, args)
         if (!source.args.safeParse(bound).success) {
@@ -329,8 +349,8 @@ export class OpenApiConnectorService {
             stepKey: caller.opKey ?? null,
         })
         if (!planned.ok) throw new ToolsError({ code: ToolsErrorCode.InvalidArguments, params: { tool } })
-        const key = await this.keyOf(workspaceId, account, base, secrets)
-        return { base, key, operation, request: planned.request }
+        const key = await this.keyOf(reach, base)
+        return { reach, base, key, operation, request: planned.request }
     }
 
     /**
@@ -370,8 +390,9 @@ export class OpenApiConnectorService {
         const account = await this.accountOf(workspaceId, VIEWER, null)
         const base = accountBaseOf(account.meta)
         if (base === null) return null
-        await this.requireReachable(base)
-        return { account, base, document: await this.pinnedOf(account, base, client) }
+        const reach = this.reachOf(account)
+        await reach.port.reachable(reach.account, base)
+        return { account, reach, base, document: await this.pinnedOf(account, base, reach) }
     }
 
     /**
@@ -408,7 +429,7 @@ export class OpenApiConnectorService {
         if (client === undefined || secrets === undefined) throw new ToolsError(refusedAs("not_served"))
         const viewed = await this.viewedOf(workspaceId)
         if (viewed === null) throw new ToolsError(refusedAs("not_connected"))
-        const { account, base, document } = viewed
+        const { account, reach, base, document } = viewed
         const operation = operationOfApiVerb(document, name)
         if (operation?.method !== "GET" || operation.unsupported.length > 0) throw new ToolsError(refusedAs("not_selected"))
         const planned = plannedRequestOf(operation, account.facts, document.securityHeaders, args, {
@@ -417,8 +438,8 @@ export class OpenApiConnectorService {
             stepKey: null,
         })
         if (!planned.ok) throw new ToolsError({ code: ToolsErrorCode.InvalidArguments, params: { tool: name } })
-        const key = await this.keyOf(workspaceId, account, base, secrets)
-        return this.send(client, { base, key, operation, request: planned.request })
+        const key = await this.keyOf(reach, base)
+        return this.send({ reach, base, key, operation, request: planned.request })
     }
 
     /**
@@ -438,11 +459,16 @@ export class OpenApiConnectorService {
                 : await heldBy(abilities, workspaceId, caller, tool)
         const open = all.filter((entry) => entry.status !== "disconnected" && (held === null || held.includes(entry.id)))
         const records = await Promise.all(
-            open.map(async (entry) => ({ id: entry.id, meta: (await bindings.recordOf(workspaceId, entry.id))?.meta ?? {} })),
+            open.map(async (entry) => {
+                const record = await bindings.recordOf(workspaceId, entry.id)
+                return { id: entry.id, meta: record?.meta ?? {}, sandbox: record?.sandbox === true }
+            }),
         )
         const accounts = records.flatMap((record): Array<Account> => {
             const facts = accountFactsOf(record.meta)
-            return facts?.connector === this.connector ? [{ connectionId: record.id, facts, meta: record.meta }] : []
+            return facts?.connector === this.connector
+                ? [{ connectionId: record.id, workspaceId, sandbox: record.sandbox, facts, meta: record.meta }]
+                : []
         })
         const handed = caller.connectionId
         if (handed !== undefined) {
@@ -456,7 +482,7 @@ export class OpenApiConnectorService {
     }
 
     /** The pinned document of the account: the stored text must hash to the pin, and so must the live document when it can be read. */
-    private async pinnedOf(account: Account, base: AccountBase, client: Pick<OpenApiClient, "fetchSpec">): Promise<PinnedDocument> {
+    private async pinnedOf(account: Account, base: AccountBase, reach: Reach): Promise<PinnedDocument> {
         const text = pinnedTextOf(account.meta)
         if (text === null) throw new ToolsError(refusedAs("document_unpinned"))
         const cached = this.documents.get(account.connectionId)
@@ -465,22 +491,19 @@ export class OpenApiConnectorService {
         if (!reading.ok || reading.document.sha256 !== account.facts.documentSha256) {
             throw new ToolsError(refusedAs("document_changed"))
         }
-        const live = await this.liveShaOf(account, base, client)
+        const live = await this.liveShaOf(account, base, reach)
         if (live !== null && live !== account.facts.documentSha256) throw new ToolsError(refusedAs("document_changed"))
         return reading.document
     }
 
     /** The pin of the live document, looked at once per `LIVE_CHECK_MS`; null when the outside system did not hand a readable one. */
-    private async liveShaOf(account: Account, base: AccountBase, client: Pick<OpenApiClient, "fetchSpec">): Promise<string | null> {
+    private async liveShaOf(account: Account, base: AccountBase, reach: Reach): Promise<string | null> {
         const { connectionId, facts } = account
         const now = this.ports.clock.now().getTime()
         const known = this.lives.get(connectionId)
         if (known !== undefined && now - known.at < LIVE_CHECK_MS) return known.sha
-        const fetched = await client.fetchSpec(facts.swaggerUrl === "" ? `${base.baseUrl}${DOCUMENT_PATH}` : facts.swaggerUrl).then(
-            (text) => ({ text, cause: null }),
-            (cause: unknown) => ({ text: null, cause }),
-        )
-        const reading = fetched.text === null ? null : readDocument(fetched.text, facts.connector)
+        const text = await reach.port.liveDocument(reach.account, facts.swaggerUrl === "" ? `${base.baseUrl}${DOCUMENT_PATH}` : facts.swaggerUrl)
+        const reading = text === null ? null : readDocument(text, facts.connector)
         const sha = reading?.ok === true ? reading.document.sha256 : null
         this.lives.set(connectionId, { at: now, sha })
         return sha
@@ -495,49 +518,52 @@ export class OpenApiConnectorService {
         return operation
     }
 
-    /** Refuses a base URL the provider may not call: by how it is written, then by the address its host resolves to. */
-    private async requireReachable(base: AccountBase): Promise<void> {
-        const { host } = this.ports
-        const development = host?.allowsPrivate() === true
-        if (baseUrlProblemOf(base.baseUrl, development) !== null) throw new ToolsError(refusedAs("host_not_allowed"))
-        if (host === undefined) return
-        const resolved = await host.resolve(new URL(base.baseUrl).hostname).catch((cause: unknown) => {
-            throw new ToolsError(refusedAs("host_not_allowed", cause))
-        })
-        if (resolvedProblemOf(resolved.address, development) !== null) throw new ToolsError(refusedAs("host_not_allowed"))
+    /**
+     * How the account is reached: the registry's port of the account (THE ONE SWITCH: a live account its real host, a sandbox account
+     * the package's fixtures). With no registry composed, a live account is reached through this app's own client, key store and host
+     * check, and a sandbox account is refused `PROVIDER_SANDBOX_MISSING` (never reached live).
+     */
+    private reachOf(account: Account): Reach {
+        const reachAccount: OpenApiReachAccount = {
+            id: account.connectionId,
+            workspaceId: account.workspaceId,
+            provider: OPENAPI_PROVIDER,
+            sandbox: account.sandbox,
+            connector: account.facts.connector,
+        }
+        const { reaches, secrets, client, host } = this.ports
+        if (reaches !== undefined) {
+            const port = reaches.portFor(reachAccount)
+            if (port === undefined) throw new ToolsError(refusedAs("not_served"))
+            return { port, account: reachAccount }
+        }
+        if (account.sandbox) {
+            throw new ProviderRegistryError({ code: ProviderRegistryErrorCode.SandboxMissing, params: { provider: OPENAPI_PROVIDER } })
+        }
+        return { port: new OpenApiLiveReach(secrets, client, host), account: reachAccount }
     }
 
     /** The opened key of the account; a key that cannot be opened, or is another workspace's, is a refused connection. */
-    private async keyOf(
-        workspaceId: string,
-        account: Account,
-        base: AccountBase,
-        secrets: Pick<ConnectionSecretReadsService, "secretOf">,
-    ): Promise<AccountKey> {
-        const secret = await secrets.secretOf(account.connectionId, OPENAPI_PROVIDER)
-        const key =
-            secret.kind === "ok" && secret.value.workspaceId === workspaceId ? accountKeyOf(secret.value.credential, base) : null
+    private async keyOf(reach: Reach, base: AccountBase): Promise<AccountKey> {
+        const key = await reach.port.keyOf(reach.account, base)
         if (key === null) throw new ToolsError(refusedAs("connection_refused"))
         return key
     }
 
-    private async send(client: Pick<OpenApiClient, "call">, sending: Sending): Promise<ToolJson> {
-        const { operation, request } = sending
-        // From here the request is in the client's hands: whatever fails may have reached the outside system.
-        const answer = await client
-            .call({
-            baseUrl: sending.base.baseUrl,
-            op: {
-                id: operation.operationId,
+    private async send(sending: Sending): Promise<ToolJson> {
+        const { operation, request, reach } = sending
+        // From here the request is in the reach's hands: whatever fails may have reached the outside system.
+        const answer = await reach.port
+            .call(reach.account, {
+                baseUrl: sending.base.baseUrl,
+                operationId: operation.operationId,
                 method: operation.method,
                 path: operation.path,
-                summary: "",
                 params: request.params,
                 hasBody: request.input.body !== undefined,
-            },
-            auth: { type: sending.key.type, name: sending.key.name, value: sending.key.value, user: "", password: "" },
-            input: request.input,
-            maxBytes: ANSWER_MAX_BYTES,
+                input: request.input,
+                key: sending.key,
+                maxBytes: ANSWER_MAX_BYTES,
             })
             .catch((cause: unknown) => {
                 throw withProof(cause, "unknown")

@@ -10,7 +10,7 @@ interface RunOptions {
 
 @SubCommand({
     name: "run",
-    description: "Upsert every base knowledge file, embed what changed and remove what the folder no longer has",
+    description: "Upsert every base knowledge file, remove what the folder no longer has, and queue the vector sync of both",
 })
 /** `cli seed-knowledge run [--dir <folder>]`: publishes the base knowledge of NIVO and reports what it wrote. */
 export class RunSeedKnowledgeCli extends CommandRunner {

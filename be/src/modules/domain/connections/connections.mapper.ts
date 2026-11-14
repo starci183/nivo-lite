@@ -37,7 +37,8 @@ const STATUSES: Readonly<Record<ConnectionStatus, true>> = {
     disconnected: true,
 }
 
-const isProvider = (value: string): value is Provider => Object.hasOwn(PROVIDERS, value)
+/** Whether a text is a provider key a connection can hold. */
+export const isProvider = (value: string): value is Provider => Object.hasOwn(PROVIDERS, value)
 
 const isStatus = (value: string): value is ConnectionStatus => Object.hasOwn(STATUSES, value)
 
@@ -92,6 +93,7 @@ export const toConnectionRecord = (row: ConnectionProjection): ConnectionRecord 
         status,
         lastError: row.lastError,
         environment: asEnvironment(row.environment),
+        sandbox: row.sandbox === true,
         isDefault: Boolean(row.isDefault),
         lastEventAt: row.lastEventAt,
         firstEvent: asFirstEvent(row.firstEvent),

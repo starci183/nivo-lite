@@ -23,9 +23,13 @@ import type {
 } from "./agent-runs-rows.contracts"
 import type { StepJson } from "./agent-runs.contracts"
 import { AgentRunEntity, AgentRunStepEntity } from "./persistence/entities"
+import { WAIT_PARKED_STATUS } from "./policies/agent-runs.policy"
+
+/** The stored status of a run in flight; with a wait mark it is REPORTED `waiting` (`reportedStatusOf`). */
+const RUNNING_STATUS = "running"
 
 /** The step statuses that count as done on the run list. */
-const DONE_STEPS: ReadonlySet<string> = new Set(["done", "compensated"])
+const DONE_STEPS: ReadonlySet<string> = new Set(["done"])
 
 /** True when an insert wrote its row: Postgres answers the inserted rows, none when the conflict left it out. */
 const insertedOf = (raw: unknown): boolean => Array.isArray(raw) && raw.length > 0
@@ -92,7 +96,6 @@ export const storedStepOf = (row: AgentRunStepEntity): StoredStep => ({
     notBefore: isoOf(row.notBefore),
     waitItemId: row.waitItemId,
     workItemId: row.workItemId,
-    compAttempts: row.compAttempts,
     errorCode: row.errorCode,
     claimedUntil: isoOf(row.claimedUntil),
     startedAt: isoOf(row.startedAt),
@@ -150,6 +153,26 @@ const runOrderOf = (order: RunListFilter["order"]) => {
     return { resumeNotBefore: "ASC", id: "ASC" } as const
 }
 
+/**
+ * The where of a list narrowed by REPORTED status (`reportedStatusOf`), as alternatives each holding `base` (which names no status):
+ * `waiting` = stored `waiting` OR stored `running` with a wait mark; `running` = stored `running` with no wait mark; any other = that
+ * stored status. A list that also names `statuses` keeps only the stored statuses among them.
+ */
+const reportedWhereOf = (
+    base: FindOptionsWhere<AgentRunEntity>,
+    reported: ReadonlyArray<string>,
+    statuses: ReadonlyArray<string> | undefined,
+): Array<FindOptionsWhere<AgentRunEntity>> => {
+    const stored = (status: string): boolean => statuses === undefined || statuses.includes(status)
+    const plain = reported.filter((status) => status !== RUNNING_STATUS && stored(status))
+    const alternatives: Array<FindOptionsWhere<AgentRunEntity>> = []
+    if (plain.length > 0) alternatives.push({ ...base, status: In([...plain]) })
+    if (!stored(RUNNING_STATUS)) return alternatives
+    if (reported.includes(RUNNING_STATUS)) alternatives.push({ ...base, status: RUNNING_STATUS, waitMatch: IsNull() })
+    if (reported.includes(WAIT_PARKED_STATUS)) alternatives.push({ ...base, status: RUNNING_STATUS, waitMatch: Not(IsNull()) })
+    return alternatives
+}
+
 @Injectable()
 /**
  * The runs and steps on their two core tables, in the caller's transaction (`ScopedTx.manager`). No raw SQL statement: the one clause
@@ -184,8 +207,16 @@ export class TypeormAgentRunTableStore implements AgentRunTableStore {
             ...(filter.subject === undefined ? {} : { subjectKind: filter.subject.kind, subjectId: filter.subject.id }),
             ...(filter.waitMarked === true ? { waitMatch: Not(IsNull()) } : {}),
         }
+        const { status: _stored, ...unstated } = where
+        const alternatives = filter.reported === undefined ? [where] : reportedWhereOf(unstated, filter.reported, filter.statuses)
+        if (alternatives.length === 0) return []
         const order = runOrderOf(filter.order)
-        const rows = await tx.manager.find(AgentRunEntity, { where, order, take: limit, skip: filter.skip ?? 0 })
+        const rows = await tx.manager.find(AgentRunEntity, {
+            where: alternatives,
+            order,
+            take: limit,
+            skip: filter.skip ?? 0,
+        })
         return rows.map((item) => storedRunOf(item))
     }
 
@@ -198,6 +229,7 @@ export class TypeormAgentRunTableStore implements AgentRunTableStore {
             ...(filter.statuses === undefined ? {} : { status: In([...filter.statuses]) }),
             ...(filter.started === undefined ? {} : { startedAt: windowOf(filter.started) }),
             ...(filter.ended === undefined ? {} : { endedAt: windowOf(filter.ended) }),
+            ...(filter.waitMarked === true ? { waitMatch: Not(IsNull()) } : {}),
         }
         const groups: ReadonlyArray<{ readonly agentId: string; readonly status: string; readonly count: string }> =
             await tx.manager

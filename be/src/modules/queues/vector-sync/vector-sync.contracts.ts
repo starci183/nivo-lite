@@ -9,8 +9,11 @@ export enum VectorSyncJob {
     Reconcile = "vector.reconcile",
 }
 
-/** What a point is of, as the queue names it (the vector index's kinds). */
-export type VectorSyncKind = "passage" | "truth"
+/** What a point is of, as the queue names it (the vector index's kinds: every row kind that declares it is embedded). */
+export type VectorSyncKind = "passage" | "truth" | "base"
+
+/** The kinds a sync job may name. */
+const SYNC_KINDS: ReadonlyArray<unknown> = ["passage", "truth", "base"] satisfies ReadonlyArray<VectorSyncKind>
 
 /** The most row ids one sync job names; a writer with more writes several jobs or names the document. */
 export const VECTOR_SYNC_IDS_MAX = 256
@@ -25,7 +28,10 @@ export const VECTOR_SYNC_IDS_MAX = 256
 export interface VectorSyncPayload {
     /** What the rows are. */
     readonly kind: VectorSyncKind
-    /** The workspace that owns them: the workspace concurrency limit is keyed on it, and no point of another workspace is touched. */
+    /**
+     * The tenant that owns them (a workspace, or the platform tenant of the base knowledge): a workspace's jobs count against its
+     * concurrency limit, and no point of another tenant is touched.
+     */
     readonly workspaceId: string
     /** The rows, at most `VECTOR_SYNC_IDS_MAX`. */
     readonly ids?: ReadonlyArray<string>
@@ -51,7 +57,7 @@ const isIds = (value: unknown): value is ReadonlyArray<string> =>
 
 /** True when a job payload is the payload of a sync job: a kind, a workspace, a time, and exactly one of the ids and the document. */
 export const isVectorSyncPayload = (value: unknown): value is VectorSyncPayload => {
-    if (!isRecord(value) || (value.kind !== "passage" && value.kind !== "truth")) return false
+    if (!isRecord(value) || !SYNC_KINDS.includes(value.kind)) return false
     if (typeof value.workspaceId !== "string" || typeof value.at !== "number" || !Number.isFinite(value.at)) return false
     if (value.sourceId !== undefined) {
         return value.ids === undefined && value.kind === "passage" && typeof value.sourceId === "string" && value.sourceId !== ""

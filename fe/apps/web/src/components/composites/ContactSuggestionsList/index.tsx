@@ -1,4 +1,4 @@
-import { Section, type SectionRow } from "@starci/grammar/common"
+import { Section, SurfaceCard, type SectionRow } from "@starci/grammar/common"
 import type { ContactSuggestionView, ContactsPanesCopy } from "@/modules/types"
 
 /** What the suggestions list draws and does. */
@@ -50,17 +50,24 @@ const rowOf = (suggestion: ContactSuggestionView, props: ContactSuggestionsListP
 })
 
 /**
- * The people who may be the same as this one, each with the reason, as a bordered list inside the card of the person (a group named
- * by its sublabel, never a card of its own): a suggestion is never applied by itself, a person views it, merges it or dismisses it.
- * Nothing is drawn when there is no suggestion.
+ * The people who may be the same as this one, each with the reason: one white card on the well, labelled on the pink, holding the
+ * bordered list of rows (a list inside a surface, never a card inside a card). A suggestion is never applied by itself: a person
+ * views it, merges it or dismisses it. Nothing is drawn when there is no suggestion.
  */
 export const ContactSuggestionsList = (props: ContactSuggestionsListProps) =>
     props.suggestions.length === 0 ? null : (
-        <Section
-            kind="list"
-            sublabel={props.copy.suggestionsTitle}
+        <SurfaceCard
+            label={props.copy.suggestionsTitle}
+            headingLevel={2}
+            count={props.suggestions.length}
             isLoading={props.isLoading}
-            items={props.suggestions.map((suggestion) => rowOf(suggestion, props))}
-            empty={null}
-        />
+        >
+            <Section
+                kind="list"
+                ariaLabel={props.copy.suggestionsTitle}
+                isLoading={props.isLoading}
+                items={props.suggestions.map((suggestion) => rowOf(suggestion, props))}
+                empty={null}
+            />
+        </SurfaceCard>
     )

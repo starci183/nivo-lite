@@ -20,7 +20,6 @@ import { UpdateKnowledgeSourceHandler } from "./application/update-knowledge-sou
 import { DeleteKnowledgeSourceHandler } from "./application/delete-knowledge-source.handler"
 import { SetKnowledgeSuggestionStateHandler } from "./application/set-knowledge-suggestion-state.handler"
 import { CreateKnowledgeUploadHandler } from "./application/create-knowledge-upload.handler"
-import { ReembedKnowledgeHandler } from "./application/reembed-knowledge.handler"
 import { GetBrainHandler } from "./application/get-brain.handler"
 import { SaveBrainFactHandler } from "./application/save-brain-fact.handler"
 import { DecideBrainFactHandler } from "./application/decide-brain-fact.handler"
@@ -63,7 +62,6 @@ import { ConfigurableModuleClass } from "./knowledge.module-definition"
         DeleteKnowledgeSourceHandler,
         SetKnowledgeSuggestionStateHandler,
         CreateKnowledgeUploadHandler,
-        ReembedKnowledgeHandler,
         GetBrainHandler,
         SaveBrainFactHandler,
         DecideBrainFactHandler,

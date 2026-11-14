@@ -24,6 +24,8 @@ import { FILE_REFUSAL_CLASS } from "@modules/domain/native-tools/file-native.pol
 import { CALENDAR_REFUSAL_CLASS } from "@modules/domain/calendar-tools"
 import { SOCIAL_REFUSAL_CLASS } from "@modules/domain/social-tools"
 import { DOMAIN_REFUSAL_CLASS } from "@modules/domain/domain-tools"
+import { INVOICE_MANIFEST } from "@modules/domain/invoice-tools"
+import { INVOICE_REFUSAL_CLASS } from "@modules/domain/invoice-tools/invoice-refusal.policy"
 import { CALENDAR_MANIFEST } from "@modules/domain/calendar-tools"
 import { FACEBOOK_MANIFEST, INSTAGRAM_MANIFEST, TIKTOK_MANIFEST, YOUTUBE_MANIFEST } from "@modules/domain/social-tools"
 import { MEDIA_REFUSAL_CLASS } from "@modules/domain/media-tools"
@@ -46,15 +48,14 @@ import {
     FROZEN_RIGHT_REFUSALS,
     HELD_RIGHT_REFUSALS,
     NIVO_OWNER,
-    PINNED_MARK_TOOLS,
     PIN_REFUSALS,
     SEND_REFUSALS,
     TOOL_SPECS,
     isEngineOwned,
     mutatesBySpec,
-    openApiSourcesOfPurpose,
     ownersOfTool,
     ownsTool,
+    repeatableBySpec,
     toolSpecOf,
 } from "./tool-specs.policy"
 import { TestWorldError, TestWorldErrorCode } from "@tests/world/test-world.error"
@@ -120,6 +121,7 @@ const nativeManifests = (): ReadonlyArray<ToolManifest> => [
     MAIL_SEND_MANIFEST,
     CONTACT_TOOLS_MANIFEST,
     DOMAIN_MANIFEST,
+    INVOICE_MANIFEST,
     MEDIA_MANIFEST,
     RECORD_MANIFEST,
     FILE_MANIFEST,
@@ -160,6 +162,7 @@ const OWN_ACCOUNT: Readonly<Partial<Record<CoreToolId, string>>> = {
     [TOOL.domainList]: "any",
     [TOOL.domainRegistrationCreate]: "any",
     [TOOL.domainRenewalCreate]: "owner",
+    [TOOL.domainRenewalGet]: "owner",
     [TOOL.domainTransferCreate]: "any",
     [TOOL.domainDnsRecordList]: "owner",
     [TOOL.domainDnsRecordCreate]: "owner",
@@ -188,9 +191,6 @@ const OWN_ACCOUNT: Readonly<Partial<Record<CoreToolId, string>>> = {
     [TOOL.tiktokCreatorInfoGet]: "any",
 }
 
-/** The platform purposes that keep an adapter slot and that no provider serves: the slot's owner stays on their spec. */
-const UNSERVED_PURPOSES: ReadonlySet<CoreToolId> = new Set<CoreToolId>([TOOL.invoiceCreate])
-
 describe("the engine's tool specs: one total record, agreeing tool by tool with the tables it replaces", () => {
     it("holds one spec per core tool id and no other", () => {
         expect(Object.keys(TOOL_SPECS).sort()).toEqual([...new Set<string>(Object.values(TOOL))].sort())
@@ -207,7 +207,7 @@ describe("the engine's tool specs: one total record, agreeing tool by tool with 
         expect(mutatesBySpec("nivo.tool.nothing.here")).toBeNull()
     })
 
-    it.each(CORE_TOOL_IDS.filter((tool) => !UNSERVED_PURPOSES.has(tool)))(
+    it.each(CORE_TOOL_IDS)(
         "%s: its owners are the catalogue's holders, else NIVO alone",
         (tool) => {
             const holders = holdersOf(tool)
@@ -219,21 +219,7 @@ describe("the engine's tool specs: one total record, agreeing tool by tool with 
         },
     )
 
-    // A platform purpose that keeps its adapter slot but that no provider serves (owner decision 2026-11-13: a CRM serves its generated
-    // operations only): no ability of the catalogue holds it, and its spec keeps the slot's owner and one account until an adapter serves it.
-    it.each([...UNSERVED_PURPOSES])(
-        "%s: held by no ability of the catalogue, its spec keeps the slot's owner (crm) and one account (any)",
-        (tool) => {
-            expect(holdersOf(tool)).toEqual([])
-            expect(abilitiesOf(tool)).toEqual([])
-            expect(specOf(tool)).toMatchObject({ owners: ["crm"], account: "any" })
-            expect(isEngineOwned(tool)).toBe(false)
-            // The slot's owner stands for every CRM the installed packages declare, so a node listing that CRM is judged on the purpose.
-            expect(ownersOfTool(tool)).toEqual(["crm.nivoweb"])
-        },
-    )
-
-    it.each(CORE_TOOL_IDS.filter((tool) => !UNSERVED_PURPOSES.has(tool)))(
+    it.each(CORE_TOOL_IDS)(
         "%s: its account mode is what the catalogue's abilities say",
         (tool) => {
             const held = specOf(tool)
@@ -270,32 +256,27 @@ describe("the engine's tool specs: one total record, agreeing tool by tool with 
         expect(reads).not.toContain(TOOL.mailMessageSend)
     })
 
-    it("declares the OpenAPI adapter slot only on the invoice purpose: the CRM purposes are gone, a CRM serves its own generated operations", () => {
-        const slotted = CORE_TOOL_IDS.filter((tool) => specOf(tool).adapter === "openapi").sort()
-
-        expect(slotted).toEqual([TOOL.invoiceCreate])
-        expect(
-            CORE_TOOL_IDS.filter((tool) => specOf(tool).adapter !== "openapi" && specOf(tool).adapter !== null),
-        ).toEqual([])
+    it("serves the e-invoice issue as a PROVIDER tool of the e-invoice providers on one bound account, never a CRM's (owner ruling R57)", () => {
+        // Ledger: before R57 its owner was the CRM slot (`crm`, `pinned-mark`, unavailable while no pin marked it); the owner ruled that
+        // NIVO keeps no invoice tool of its own and the invoice is issued AT the provider. The id stays (the SDK's one id per purpose).
+        expect(specOf(TOOL.invoiceCreate)).toMatchObject({ mutates: true, owners: ["misa_meinvoice"], account: "any", repeatable: false })
+        expect(specOf(TOOL.invoiceCreate).refusals.codes).toEqual(["rejected", "not_found"])
+        expect(ownersOfTool(TOOL.invoiceCreate)).toEqual(["misa_meinvoice"])
+        expect(ownsTool("crm.nivoweb", TOOL.invoiceCreate)).toBe(false)
     })
 
-    it("keeps the invoice's slot UNAVAILABLE: no CRM serves a platform purpose any more (owner decision 2026-11-13), only a provider adapter will", () => {
-        // Ledger: the old spec had the invoice owned by `nivo` (always bound), so a graph needing it showed as ready and its step failed
-        // `unknown tool`. Its owners are the source that may serve it, its account `any`, and it is served only where an attached
-        // account's PINNED document marks the purpose: readiness hides a graph needing it otherwise (`tool_unavailable`).
-        expect(specOf(TOOL.invoiceCreate)).toMatchObject({
-            owners: ["crm"],
-            account: "any",
-            availability: "pinned-mark",
-        })
-        expect(openApiSourcesOfPurpose(TOOL.invoiceCreate)).toEqual([])
-        expect(CORE_TOOL_IDS.filter((tool) => specOf(tool).availability === "pinned-mark")).toEqual([
-            TOOL.invoiceCreate,
-        ])
-        expect(PINNED_MARK_TOOLS).toEqual([TOOL.invoiceCreate])
-        expect(CORE_TOOL_IDS.filter((tool) => !["bound", "pinned-mark"].includes(specOf(tool).availability))).toEqual(
-            [],
-        )
+    it("serves the renewal check as a read of the registrars on the account that holds the domain", () => {
+        expect(specOf(TOOL.domainRenewalGet)).toMatchObject({ mutates: false, owners: ["inet", "tino"], account: "owner", repeatable: true })
+    })
+
+    it("declares every tool's repeatability (R74): every read repeatable, of the writes only the customer send", () => {
+        expect(CORE_TOOL_IDS.filter((tool) => !specOf(tool).mutates && !specOf(tool).repeatable)).toEqual([])
+        expect(CORE_TOOL_IDS.filter((tool) => specOf(tool).mutates && specOf(tool).repeatable)).toEqual([TOOL.customerMessageSend])
+        expect(repeatableBySpec(TOOL.domainRenewalCreate)).toBe(false)
+        expect(repeatableBySpec(TOOL.invoiceCreate)).toBe(false)
+        expect(repeatableBySpec(TOOL.customerMessageSend)).toBe(true)
+        expect(repeatableBySpec(TOOL.domainGet)).toBe(true)
+        expect(repeatableBySpec("nivo.api.crm.nivoweb.get.prices")).toBeNull()
     })
 
     it("owns a CRM's generated operation by the CRM's provider key (`crm.<id>`), never by `openapi` or another CRM", () => {
@@ -360,6 +341,7 @@ describe("the refusals of each tool, per adapter family", () => {
         const natives = [
             NATIVE_REFUSAL_CLASS,
             DOMAIN_REFUSAL_CLASS,
+            INVOICE_REFUSAL_CLASS,
             MEDIA_REFUSAL_CLASS,
             RECORD_REFUSAL_CLASS,
             FILE_REFUSAL_CLASS,

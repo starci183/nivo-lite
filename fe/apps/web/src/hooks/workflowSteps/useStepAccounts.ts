@@ -35,13 +35,10 @@ export const useStepAccounts = (installationId: string): StepAccounts => {
         () => ({
             sectionTitle: t("panelSection"),
             sectionHint: copy.panel.subtitle,
-            modeTitle: t("panelModeTitle"),
-            modeHint: t("panelModeHint"),
             noProvider: t("panelNoProvider"),
             addLabel: copy.panel.addProvider,
             addHint: copy.panel.addHint,
             removeLabel: copy.panel.remove,
-            modeLabel: copy.common.modeLabel,
             modeAuto: t("modeAuto"),
             modeAsk: t("modeAsk"),
             modeMissing: t("modeMissing"),

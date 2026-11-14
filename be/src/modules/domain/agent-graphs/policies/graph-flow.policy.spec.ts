@@ -113,16 +113,15 @@ describe("graphNodeStepOf", () => {
     const node = { key: "record", kind: "output" as const, step: "sales.order-from-chat" }
     const input = { versionId: "v-1", nodeKey: "record", trigger: {} }
 
-    it("keys the step by its node and gives it the saga kind of its node", async () => {
+    it("keys the step by its node and gives it the step kind of its node", async () => {
         const policy = await build()
-        expect(policy.graphNodeStepOf(node, input, "compensable")).toEqual({
+        expect(policy.graphNodeStepOf(node, input, "write")).toEqual({
             stepKey: "record",
             nodeKey: "record",
             kind: "graph_node",
-            effect: { kind: "compensable", compensation: "graph_node" },
+            effect: { kind: "write" },
             input,
         })
-        expect(policy.graphNodeStepOf(node, input, "pivot").effect).toEqual({ kind: "pivot" })
         expect(policy.graphNodeStepOf(node, input, "read").effect).toEqual({ kind: "read" })
     })
 

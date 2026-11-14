@@ -17,12 +17,13 @@ export const TEAM_ANSWER_READS: ReadonlyArray<ToolId> = [
 
 /**
  * Every provider the Accounting agent works with, in the order the agent template attaches them (census §7 as amended): the CRM,
- * the bank feeds (SePay, then Casso), the sending mailbox. No customer channel: the Renewal and Sales agents talk to the
- * customer.
+ * the bank feeds (SePay, then Casso), the sending mailbox, the e-invoice service that issues the invoice (MISA meInvoice, R57). No
+ * customer channel: the Renewal and Sales agents talk to the customer.
  */
 export const WEBBOOKS_PROVIDERS: ReadonlyArray<ProviderKey> = [
     CRM_NIVOWEB_PROVIDER,
     PROVIDER.sepay,
     PROVIDER.casso,
     PROVIDER.smtp,
+    PROVIDER.misaMeinvoice,
 ]

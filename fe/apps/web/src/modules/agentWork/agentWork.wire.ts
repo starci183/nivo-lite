@@ -14,9 +14,6 @@ export const WORK_POLL_BUSY_MS = 5000
 /** How often the tab asks again otherwise, in milliseconds. */
 export const WORK_POLL_IDLE_MS = 30000
 
-/** The longest title of a goal, as the back end accepts it. */
-export const GOAL_TITLE_MAX = 200
-
 /** The time zone a new clock trigger is written in. */
 export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh"
 
@@ -33,16 +30,6 @@ export const TIME_OF_DAY: RegExp = /^([01]\d|2[0-3]):[0-5]\d$/
 export interface StateWire {
     readonly workEnabled: boolean
     readonly breakerUntil: unknown
-}
-
-/** One goal as the back end sends it. */
-export interface GoalWire {
-    readonly id: string
-    readonly title: string
-    readonly detail: string
-    readonly status: string
-    readonly source: string
-    readonly dueAt: unknown
 }
 
 /** One task as the back end sends it. */
@@ -64,7 +51,6 @@ export interface TriggerWire {
     readonly atTime: string | null | undefined
     readonly timeZone: string
     readonly eventName: string | null | undefined
-    readonly probeKey: string | null | undefined
     readonly enabled: boolean
     readonly seedKey: string | null | undefined
     readonly nextRunAt: unknown
@@ -88,7 +74,6 @@ export interface TurnWire {
 /** What the `agentWork` query answers. */
 export interface AgentWorkWire {
     readonly state: StateWire
-    readonly goals: ReadonlyArray<GoalWire>
     readonly tasks: ReadonlyArray<TaskWire>
     readonly triggers: ReadonlyArray<TriggerWire>
     readonly turns: ReadonlyArray<TurnWire>

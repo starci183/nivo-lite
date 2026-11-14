@@ -34,7 +34,6 @@ export interface AgentInstanceFrameBaseProps {
         readonly ariaLabel: string
         readonly earlyLabel: string
         readonly profileLabel: string
-        readonly packageLabel: string
         /** A short soft notice carried by a redirect to this tab (staff sent from Setup); empty when none. */
         readonly notice: string
         /** The notice of an agent whose setup is not applied (connected block); null when the page shows none. */
@@ -88,13 +87,12 @@ interface HeaderPartProps {
     readonly copy: FrameCopy
 }
 
-/** The entries of the heading's menu: the profile, the other agents (the open one checked) with the way to add one, and the packaging. */
+/** The entries of the heading's menu: the profile, the other agents (the open one checked) with the way to add one. */
 const menuEntriesOf = (copy: FrameCopy): DropdownMenuEntry[] => {
     const { view, switcher } = copy
     const hasSwitch = switcher.items.length > 1 || (switcher.items.length > 0 && switcher.add !== null)
     return [
         ...(view.profileHref === null ? [] : [{ id: "profile", label: copy.profileLabel, href: view.profileHref }]),
-        ...(view.packageHref === null ? [] : [{ id: "package", label: copy.packageLabel, href: view.packageHref }]),
         ...(hasSwitch
             ? [
                   {

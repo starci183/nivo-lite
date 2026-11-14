@@ -27,7 +27,6 @@ const DEADLINE_AT = new Date("2026-11-11T03:00:00.000Z")
 const task = (over: Partial<AgentTaskRecord>): AgentTaskRecord => ({
     id: "task-1",
     agentId: "agent-sales",
-    goalId: null,
     dedupeKey: "remind:order-1",
     title: "Remind order-1",
     detail: "",
@@ -59,7 +58,6 @@ const trigger = (over: Partial<AgentTriggerRecord>): AgentTriggerRecord => ({
     atTime: "21:00",
     timeZone: "Asia/Ho_Chi_Minh",
     eventName: null,
-    probeKey: "accounting_close",
     enabled: true,
     seedKey: null,
     nextRunAt: SLOT,
@@ -198,7 +196,7 @@ describe("ScheduledItemsService.list (the schedule list)", () => {
         expect(items.map((item) => [item.kind, item.what, item.subject, item.dueAt.toISOString(), item.agentName])).toEqual([
             ["deadline", "ai_report", { kind: "run", id: "run-1" }, DEADLINE_AT.toISOString(), "Accounting"],
             ["task", "Remind order-1", { kind: "task", id: "task-1" }, REMIND_AT.toISOString(), "Sales"],
-            ["schedule", "accounting_close", { kind: "trigger", id: "trigger-1" }, SLOT.toISOString(), "Accounting"],
+            ["schedule", "daily_at", { kind: "trigger", id: "trigger-1" }, SLOT.toISOString(), "Accounting"],
             ["task", "care due 2026-11-24T17:00:00.000Z", { kind: "task", id: "task-2" }, OCCASION_AT.toISOString(), "Sales"],
         ])
         const [deadline, reminder, slot, occasion] = items

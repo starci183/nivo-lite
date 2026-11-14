@@ -2,10 +2,12 @@ import { Module, type DynamicModule } from "@nestjs/common"
 import { CreatomateComposeService } from "./creatomate-compose.service"
 import { CreatomateConnectionFieldsService } from "./creatomate-connection-fields.service"
 import { CreatomateCredentialService } from "./creatomate-credential.service"
+import { CreatomateSandboxComposeService } from "./creatomate-sandbox-compose.service"
 import { CreatomateProviderRegistrationService } from "./creatomate-provider-registration.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./creatomate-provider.module-definition"
 
 const PROVIDERS = [CreatomateCredentialService, CreatomateComposeService, CreatomateConnectionFieldsService]
+const SANDBOX = [CreatomateSandboxComposeService]
 
 @Module({})
 /**
@@ -19,7 +21,7 @@ export class CreatomateProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ...PROVIDERS, CreatomateProviderRegistrationService],
+            providers: [...(base.providers ?? []), ...PROVIDERS, ...SANDBOX, CreatomateProviderRegistrationService],
             exports: PROVIDERS,
         }
     }

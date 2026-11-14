@@ -3,7 +3,7 @@ import { Column, Entity } from "typeorm"
 
 @Entity({ schema: "public", name: "provider_sandbox_entries" })
 /**
- * One row of public.provider_sandbox_entries: a fixture, a script or a logged call of ONE sandbox account (lane concept
+ * One row of public.provider_sandbox_entries: the STATE a call changed or a logged call of ONE sandbox account (lane concept
  * provider-sandbox). Read only through a join on a live sandbox connection, so a removed account's entries are hidden with it (R36).
  */
 export class ProviderSandboxEntryEntity extends UuidAbstractEntity {
@@ -15,23 +15,19 @@ export class ProviderSandboxEntryEntity extends UuidAbstractEntity {
     @Column({ name: "connection_id", type: "uuid" })
     connectionId!: string
 
-    /** `fixture`, `script` or `call`. */
+    /** `state` or `call`. */
     @Column({ name: "kind", type: "text" })
     kind!: string
 
-    /** The provider's word for the operation (`renew`, `issue`). */
+    /** The state's name, or the call's operation (`renew`, `issue`). */
     @Column({ name: "operation", type: "text" })
     operation!: string
 
-    /** The provider's key of the request; empty = any key of the operation. */
+    /** The key of the state or of the call's request. */
     @Column({ name: "key", type: "text", default: () => "''::text" })
     key!: string
 
-    /** The fixture value, the script or the call (request + outcome). */
+    /** The state's value, or the call (request + outcome). */
     @Column({ name: "body", type: "jsonb" })
     body!: unknown
-
-    /** A script's calls left; null = every call (and for every other kind). */
-    @Column({ name: "remaining", type: "integer", nullable: true })
-    remaining!: number | null
 }

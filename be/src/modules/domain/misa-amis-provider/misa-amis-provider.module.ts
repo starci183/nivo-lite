@@ -1,6 +1,7 @@
 import { Module, type DynamicModule } from "@nestjs/common"
 import { MisaAmisLedgerService } from "./misa-amis-ledger.service"
 import { MisaAmisProviderRegistrationService } from "./misa-amis-provider-registration.service"
+import { MisaAmisSandboxLedgerService } from "./misa-amis-sandbox-ledger.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./misa-amis-provider.module-definition"
 
 @Module({})
@@ -11,7 +12,7 @@ export class MisaAmisProviderModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), MisaAmisLedgerService, MisaAmisProviderRegistrationService],
+            providers: [...(base.providers ?? []), MisaAmisLedgerService, MisaAmisSandboxLedgerService, MisaAmisProviderRegistrationService],
             exports: [MisaAmisLedgerService],
         }
     }

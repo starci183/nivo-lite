@@ -41,6 +41,21 @@ export interface RefusedWake {
     readonly waitingFor: ReadonlyArray<string>
 }
 
+/**
+ * The plain facts of a wake the engine GAVE UP on (DEF-5): dead past its attempts, or a call ended because the run it would wait behind
+ * handed its event back. The subject (contact, route) comes from the wake itself.
+ */
+export interface LostWake {
+    /** Why it was given up (`attempts`, `call_handed_back`). */
+    readonly code: string
+    /** The workflow it was for (its key), or null when it names none. */
+    readonly workflow: string | null
+    /** The run it would have waited behind, or null. */
+    readonly heldBy: string | null
+    /** The id of the event it carried (the key its intake stored it under, else the event's id), or null. */
+    readonly event: string | null
+}
+
 /** The language a wake names; Vietnamese when it names none the product speaks. */
 const localeOfWake = (wake: AgentWakeView): "vi" | "en" => (Reflect.get(wake.context, "locale") === "en" ? "en" : "vi")
 
@@ -169,6 +184,36 @@ export class AgentGraphWakeNoticesService {
             title: this.catalog.get("agentGraphs.wake.failed.title", {}, locale),
             text: this.catalog.get("agentGraphs.wake.failed.sentence", {}, locale),
             facts: wakeFactsOf(wake, words, codeFactsOf(words, code)),
+        })
+    }
+
+    /**
+     * Tells the founder, once per wake and reason, that the engine GAVE UP on a wake before any step ran (DEF-5: never a silent death):
+     * one readable sentence (no workflow handled it: the team must), then the facts: why in words, the workflow it was for, the subject
+     * and the event's id, the run it would have waited behind and the code as technical facts, the channel and the route.
+     */
+    async lost(wake: AgentWakeView, facts: LostWake): Promise<void> {
+        const locale = localeOfWake(wake)
+        const words = factWordsOf({ catalog: this.catalog, locale, bankName: bankDisplayNameOf })
+        const contact = memberOf(wake, "contactId")
+        const middle: ReadonlyArray<MessageFact> = [
+            {
+                name: wordOr(words, "teamChat.fact.why", "why"),
+                value: this.catalog.get(`agentGraphs.wake.reason.${facts.code}`, {}, locale),
+                technical: false,
+            },
+            ...(facts.workflow === null
+                ? []
+                : [{ name: wordOr(words, "teamChat.fact.workflow", "workflow"), value: facts.workflow, technical: false }]),
+            ...(contact === null ? [] : [technicalOf(words, "customer", contact)]),
+            ...(facts.event === null ? [] : [technicalOf(words, "event", facts.event)]),
+            ...(facts.heldBy === null ? [] : [technicalOf(words, "run", facts.heldBy)]),
+            technicalOf(words, "code", facts.code),
+        ]
+        await this.tell(wake, `lost:${facts.code}`, {
+            title: this.catalog.get("agentGraphs.wake.lost.title", {}, locale),
+            text: this.catalog.get("agentGraphs.wake.lost.sentence", {}, locale),
+            facts: wakeFactsOf(wake, words, middle),
         })
     }
 

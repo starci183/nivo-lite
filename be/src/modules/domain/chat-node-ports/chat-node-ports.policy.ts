@@ -24,6 +24,8 @@ export interface ChannelSend {
 export interface CustomerMessageSend {
     /** The words. */
     readonly text: string
+    /** The route to speak on (the route a record came in on): its person, channel and account are the address; named alone. */
+    readonly routeId?: string | undefined
     /** The person. */
     readonly contactId?: string | undefined
     /** The channel, when the person is known on more than one. */

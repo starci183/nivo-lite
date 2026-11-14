@@ -8,7 +8,7 @@ import {
     type StoredDelivery,
 } from "./channel-delivery-store.port"
 import { CustomerRoutesError, CustomerRoutesErrorCode } from "./errors/customer-routes.error"
-import { heldVerdictOf, settledStateOf, type ClaimVerdict } from "./delivery.policy"
+import { heldVerdictOf, reclaimableOf, settledStateOf, type ClaimVerdict } from "./delivery.policy"
 
 /** The most rows one page of the ledger holds. */
 export const DELIVERIES_PAGE_MAX = 100
@@ -68,11 +68,11 @@ export class ChannelDeliveriesService {
      * Claims the send key before the provider is asked: an insert-or-nothing on the unique key, so one try owns the send. The key already
      * held answers by its state; a definitely refused one is taken back in one conditional statement (a lost race answers the winner's state).
      */
-    async claim(workspaceId: string, claim: DeliveryClaim): Promise<ClaimAnswer> {
+    async claim(workspaceId: string, claim: DeliveryClaim, again = false): Promise<ClaimAnswer> {
         if (await this.store.insertClaimed(workspaceId, claim)) return { verdict: "send", row: await this.kept(workspaceId, claim.sendKey) }
         const held = await this.kept(workspaceId, claim.sendKey)
-        if (heldVerdictOf(held.state) !== "send") return { verdict: heldVerdictOf(held.state), row: held }
-        if (!(await this.store.reclaim(workspaceId, claim.sendKey))) {
+        if (heldVerdictOf(held.state, again) !== "send") return { verdict: heldVerdictOf(held.state, again), row: held }
+        if (!(await this.store.reclaim(workspaceId, claim.sendKey, reclaimableOf(again)))) {
             const raced = await this.kept(workspaceId, claim.sendKey)
             return { verdict: heldVerdictOf(raced.state) === "send" ? "unknown" : heldVerdictOf(raced.state), row: raced }
         }

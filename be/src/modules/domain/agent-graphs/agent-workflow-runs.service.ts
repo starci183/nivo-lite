@@ -8,7 +8,6 @@ import { INSTALLED } from "@modules/domain/installed-plugins"
 import { accountsAsNodesName } from "@modules/domain/tools"
 import { AccountAttachmentsService } from "@modules/domain/tool-grants"
 import { OPENAPI_PROVIDER, OPENAPI_SOURCE_KEYS, installedDeclarationsOf, pinnedOpsOf } from "@modules/domain/openapi-tools"
-import { PINNED_MARK_TOOLS } from "@modules/domain/tool-specs"
 import { InjectTriggerSwitchReader, type TriggerSwitchReader, type TriggerSwitchRow } from "@modules/domain/trigger-specs"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder, isRecord, parseJsonText } from "@modules/platform/primitives"
@@ -640,9 +639,9 @@ export class AgentWorkflowRunsService {
 
     /**
      * What readiness reads of the workspace for one workflow: the agent's attachments AS NODES NAME THEM (an OpenAPI account by the source
-     * its pinned document serves, `crm`; one pinned to none is no provider of any node), the owner's pick of the account per kind (the
-     * workspace's default account), and for each tool served only by a pinned mark (`PINNED_MARK_TOOLS`) the
-     * accounts whose pinned document marks it (`servedOf`). Null in an app with no grant store, or when the store cannot be read
+     * its pinned document serves, `crm`; one pinned to none is no provider of any node; of several accounts of a provider the CALL picks,
+     * never readiness), and for each CRM operation the installed packages call the
+     * accounts whose pinned document holds it callable (`servedOf`). Null in an app with no grant store, or when the store cannot be read
      * (logged): the graph then shows, exactly as before readiness.
      */
     private async readinessInputOf(
@@ -658,8 +657,6 @@ export class AgentWorkflowRunsService {
             const served = await this.servedOf(workspaceId, attached)
             return {
                 attachments,
-                // No workspace default account exists: of several attached accounts of one provider, none is picked for the node.
-                picked: () => null,
                 served,
                 definedBlocking: (step: string) => this.blockingOf(step),
             }
@@ -670,10 +667,9 @@ export class AgentWorkflowRunsService {
     }
 
     /**
-     * The tools served only by some accounts, each with the agent's accounts that serve it: a platform purpose served only by a pinned mark
-     * (`PINNED_MARK_TOOLS`: no CRM marks one any more, so none serves it and a graph that needs it stays hidden), and EVERY CRM operation
-     * the installed packages call (owner chốt 2026-11-13, the compatibility check): served by the attached CRM connections whose pinned
-     * snapshot holds that operation callable (`pinnedOpsOf`), each pin read once. An operation no attached pin holds blocks its node
+     * The tools served only by some accounts, each with the agent's accounts that serve it: EVERY CRM operation the installed packages
+     * call (owner chốt 2026-11-13, the compatibility check): served by the attached CRM connections whose pinned snapshot holds that
+     * operation callable (`pinnedOpsOf`), each pin read once. An operation no attached pin holds blocks its node
      * (`tool_unavailable`, naming the operation). With no reader of connections no pin can be read: nothing serves these.
      */
     private async servedOf(
@@ -681,7 +677,7 @@ export class AgentWorkflowRunsService {
         attached: ReadonlyArray<{ readonly connectionId: string; readonly provider: string }>,
     ): Promise<ReadonlyMap<string, ReadonlySet<string>>> {
         const crmOps = OPENAPI_SOURCE_KEYS.flatMap((source) => installedDeclarationsOf(source).map((declared) => declared.tool))
-        const served = new Map<string, Set<string>>([...PINNED_MARK_TOOLS, ...crmOps].map((tool) => [tool, new Set<string>()]))
+        const served = new Map<string, Set<string>>(crmOps.map((tool) => [tool, new Set<string>()]))
         const reader = this.bindings
         if (served.size === 0 || reader === undefined) return served
         const pinned = [

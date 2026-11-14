@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { AgentGoalsService } from "./agent-goals.service"
 import { AgentTasksService } from "./agent-tasks.service"
 import { AgentTriggersService } from "./agent-triggers.service"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -8,14 +7,13 @@ import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type {
-    AgentGoalRecord,
     AgentTriggerRecord,
     AgentWorkSettingsRecord,
     AgentWorkState,
     AgentWorkView,
     WorkspaceAgentWorkView,
 } from "./agent-work.contracts"
-import type { AgentGoalDraft, AgentTriggerDraft } from "./agent-work-drafts.contracts"
+import type { AgentTriggerDraft } from "./agent-work-drafts.contracts"
 
 @Injectable()
 /**
@@ -29,7 +27,6 @@ export class AgentWorkDoorsService {
         private readonly installations: InstallationRecordsService,
         private readonly read: AgentWorkReadService,
         private readonly settings: AgentWorkSettingsService,
-        private readonly goals: AgentGoalsService,
         private readonly triggers: AgentTriggersService,
         private readonly tasks: AgentTasksService,
     ) {}
@@ -60,22 +57,6 @@ export class AgentWorkDoorsService {
     /** Switches work on or off for every agent of the workspace. Owner only. */
     setWorkspaceWork(userId: string, workspaceId: string, enabled: boolean): Promise<AgentWorkSettingsRecord> {
         return this.settings.setWorkspaceWork(userId, workspaceId, enabled)
-    }
-
-    /** Adds a goal to the agent of an instance, or changes one; the owner is its source. */
-    async saveGoal(userId: string, draft: AgentGoalDraft): Promise<AgentGoalRecord> {
-        const agentId = await this.managedAgentOf(userId, draft.workspaceId, draft.installationId)
-        return this.goals.save(userId, {
-            workspaceId: draft.workspaceId,
-            agentId,
-            goalId: draft.goalId,
-            title: draft.title,
-            detail: draft.detail,
-            status: draft.status,
-            source: "owner",
-            memberId: null,
-            dueAt: draft.dueAt,
-        })
     }
 
     /** Adds a trigger to the agent of an instance, or changes one. */

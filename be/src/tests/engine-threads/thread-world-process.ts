@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { latestTemplateVersion } from "@nivo-lite/agent-sdk/template"
+import type { AccountAttachmentsService } from "@modules/domain/tool-grants"
 import {
     AgentGraphAiCoreService,
     AgentGraphFlowRunsService,
@@ -195,6 +196,11 @@ export interface DbOptions {
     readonly uuidRuns?: boolean
     /** The module whose workflows each agent runs (agent id → module key), seeded from its templates; absent: the front desk's. */
     readonly modules?: Readonly<Record<string, string>>
+    /**
+     * The routing judges READINESS on the shop's attachments (`rights.attachments`, read live), as the app does: a graph whose blocking
+     * node has no attached account of its provider is hidden. Absent: readiness is not judged (every seeded graph shows).
+     */
+    readonly readiness?: boolean
 }
 
 /** The front desk as blocks-core ships it. */
@@ -224,7 +230,15 @@ export const threadDbOf = (options: DbOptions = {}): ThreadDb => {
     const clock = new TickingClock()
     const leadId = options.leadId === undefined ? LEAD : options.leadId
     const contactId = options.contactId === undefined ? CONTACT : options.contactId
-    const workflows = workflowWorldOf(options.modules ?? { [FRONT]: DESK_MODULE })
+    const rights = rightsOf()
+    const access =
+        options.readiness === true
+            ? mock<AccountAttachmentsService>({
+                  listOfAgent: (_workspaceId: string, agentId: string) =>
+                      Promise.resolve(rights.attachments.filter((one) => one.agentId === agentId)),
+              })
+            : undefined
+    const workflows = workflowWorldOf(options.modules ?? { [FRONT]: DESK_MODULE }, access)
     const versions = new Map(
         [...workflows.graphs.entries()].map(([id, flow]) => [id, { number: Number(id.split("@").at(-1)), flow }]),
     )
@@ -242,7 +256,7 @@ export const threadDbOf = (options: DbOptions = {}): ThreadDb => {
         lines: [],
         team: [],
         throwOn: new Map(),
-        rights: rightsOf(),
+        rights,
         chat,
         records: new MemoryRecords(clock),
         checkpoints: memoryCheckpointStore(),
@@ -367,7 +381,7 @@ export const runsViewOf = (records: MemoryRecords): AgentRunsViewService =>
  */
 export const subjectRunReadsOf = (
     db: ClockedDb & { readonly records: MemoryRecords; readonly workflows: { readonly pins: ReadonlyMap<string, { readonly workflowId: string; readonly workflowVersionId: string; readonly workflowVersion: number }> } },
-): Pick<AgentRunsService, "inFlightOf" | "parkedOfSubject" | "waitersOf" | "markWait" | "endParkedOfSubjects" | "runOf"> => {
+): Pick<AgentRunsService, "inFlightOf" | "inFlightOfSubject" | "parkedOfSubject" | "waitersOf" | "markWait" | "endParkedOfSubjects" | "runOf"> => {
     const table = memoryRunStore(db.records)
     const store = new AgentRunStoreService(db.clock as never, db.records.engine, new AgentRunRecordsService(table))
     // The run row carries its workflow as the flow pins it (`AgentRunTableStore.pinRun`, written with the pin): the in-flight read filters on it.
@@ -383,6 +397,11 @@ export const subjectRunReadsOf = (
         inFlightOf: async (ws: string, workflowId: string, subject: { kind: string; id: string }) => {
             await pinned()
             return store.inFlightOf(ws, workflowId, subject)
+        },
+        // The runs in flight of one subject whatever the workflow (the one holding rule, Q-1): the real store's read over the run rows.
+        inFlightOfSubject: async (ws: string, subject: { kind: string; id: string }) => {
+            await pinned()
+            return store.inFlightOfSubject(ws, subject)
         },
         parkedOfSubject: (ws: string, agentId: string, subject: { kind: string; id: string }) => store.parkedOfSubject(ws, agentId, subject),
         waitersOf: (ws: string, filter: Parameters<AgentRunsService["waitersOf"]>[1]) => store.waitersOf(ws, filter),

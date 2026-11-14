@@ -15,18 +15,16 @@ export const CLOCK_TICK = "clock.tick"
 /** The timer's trigger name. */
 export const TIMER_DUE = "timer.due"
 
-/** What one slot of a clock trigger fired: the trigger row, the slot (epoch milliseconds as text) and the row's probe, when it has one. */
+/** What one slot of a clock trigger fired: the trigger row and the slot (epoch milliseconds as text). */
 export type ClockSlot = {
     readonly triggerId: string
     readonly slot: string
-    readonly probeKey?: string | undefined
 }
 
-/** The data of a clock tick: the row that fired, the slot it fired for, the probe. */
+/** The data of a clock tick: the row that fired and the slot it fired for. */
 export type ClockTickData = {
     readonly triggerId: string
     readonly slotMs: number
-    readonly probeKey?: string | undefined
 }
 
 /** The translate of a clock slot: one event per (trigger row, slot), the once-key the slot's wake always had. */
@@ -35,7 +33,7 @@ export const translateClockSlot = (slot: ClockSlot): OptionalCanonicalEvent<Cloc
     if (slot.triggerId === "" || !Number.isSafeInteger(slotMs)) return null
     return {
         id: `${slot.triggerId}:${slot.slot}`,
-        data: { triggerId: slot.triggerId, slotMs, ...(slot.probeKey === undefined ? {} : { probeKey: slot.probeKey }) },
+        data: { triggerId: slot.triggerId, slotMs },
     }
 }
 
@@ -45,8 +43,8 @@ export const CLOCK_TICK_TRIGGER: TriggerDeclaration<ClockSlot, ClockTickData> = 
     name: CLOCK_TICK,
     verb: TRIGGER.clockTick,
     via: "clock",
-    raw: z.object({ triggerId: z.string(), slot: z.string(), probeKey: z.string().optional() }),
-    data: z.object({ triggerId: z.string().min(1), slotMs: z.number().int(), probeKey: z.string().optional() }),
+    raw: z.object({ triggerId: z.string(), slot: z.string() }),
+    data: z.object({ triggerId: z.string().min(1), slotMs: z.number().int() }),
     translate: translateClockSlot,
     key: { by: "none" },
     settle: null,

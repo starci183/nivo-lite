@@ -72,19 +72,8 @@
       "en": "Check a service"
     },
     "summary": {
-      "vi": "Xem tình trạng một dịch vụ tại nhà cung cấp và ngày hết hạn đã kiểm tra.",
-      "en": "Read a service's state at its provider and the checked expiry date."
-    }
-  },
-  "nivo.api.crm.nivoweb.post.services.code.renewals": {
-    "kind": "acts",
-    "title": {
-      "vi": "Gia hạn dịch vụ tại nhà cung cấp",
-      "en": "Renew a service at the provider"
-    },
-    "summary": {
-      "vi": "Gia hạn một dịch vụ đã được khách trả tiền; tốn tiền của công ty; chạy khi tiền của khách đã ghi nhận.",
-      "en": "Renew a service the customer has paid for; it spends the company's money; it runs once the customer's payment is recorded."
+      "vi": "Xem tình trạng một dịch vụ theo sổ sách: trạng thái, ngày hết hạn và nguồn của ngày đó (không hỏi nhà cung cấp).",
+      "en": "Read a service as the books hold it: its status, end date and where that date came from (asks no provider)."
     }
   },
   "nivo.api.crm.nivoweb.post.services.code.reminders": {
@@ -426,6 +415,28 @@
     "summary": {
       "vi": "Gắn một cuộc trò chuyện, địa chỉ thư hoặc số điện thoại vào khách hàng.",
       "en": "Links a chat conversation, a mail address or a phone number to a customer."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.renewals.id.outcome": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi kết quả gia hạn",
+      "en": "Record a renewal outcome"
+    },
+    "summary": {
+      "vi": "Ghi điều nhà cung cấp trả lời cho một yêu cầu gia hạn đã trả tiền: đã gia hạn (dời ngày hết hạn), thất bại hoặc chờ người làm.",
+      "en": "Record what the provider answered for a paid renewal: renewed (moves the end date), failed or pending for a person."
+    }
+  },
+  "nivo.api.crm.nivoweb.post.invoice-drafts.id.invoice": {
+    "kind": "acts",
+    "title": {
+      "vi": "Ghi hoá đơn đã xuất",
+      "en": "Record an issued invoice"
+    },
+    "summary": {
+      "vi": "Ghi vào bản nháp hoá đơn số hoá đơn, mã của bên hoá đơn điện tử và ngày xuất; không xuất hoá đơn.",
+      "en": "Record on an invoice draft the issued invoice number, the e-invoice service reference and the issue date; issues nothing."
     }
   }
 }

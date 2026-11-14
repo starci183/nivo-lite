@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useBrainTodoCount } from "@/hooks/knowledge"
-import { useQueryChatUnreadSwr } from "@/hooks/swr"
+import { useQueryChatUnreadSwr, useQueryProviderSandboxSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { pathInWorkspace, workspaceHref } from "@/modules/routes"
@@ -23,7 +23,10 @@ export const useConsoleNav = (role: "owner" | "manager" | "staff"): ReadonlyArra
     const activeKey = activeDestinationKey(pathInWorkspace(pathname))
     const brainCount = useBrainTodoCount()
     const chatUnread = useQueryChatUnreadSwr(workspaceId).data?.total ?? 0
-    return DESTINATIONS.filter((d) => !d.managerOnly || role !== "staff").map((d) => ({
+    const hasSandbox = useQueryProviderSandboxSwr(role !== "staff").data?.enabled === true
+    return DESTINATIONS.filter(
+        (d) => (!d.managerOnly || role !== "staff") && (d.sandboxOnly !== true || hasSandbox),
+    ).map((d) => ({
         id: d.key,
         label: t(d.label),
         href: workspaceHref(workspaceId, d.route),

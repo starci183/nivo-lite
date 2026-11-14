@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ContactMemoryEntryEntity } from "@modules/domain/contacts/persistence/entities"
-import { ContactFreezeEntity } from "@modules/domain/lead-freezes/persistence/entities"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { GraphSeedService } from "./graph-seed.service"
@@ -40,7 +39,7 @@ const SEEDED = " (the seed writes these again)"
  * Replaces the workflows of the Chatbot and Sales agents of a workspace with the seeded graphs, and clears what their old
  * runs left (core tables, a dev tool of plain SQL): their workflows and versions, their runs (with the workflow
  * version each pinned) and steps, the graph versions that froze an older
- * flow (so no old flow is adopted again as history), and the contacts' memory and the freezes of the workspace; then the run state of
+ * flow (so no old flow is adopted again as history), and the contacts' memory of the workspace; then the run state of
  * every run that is gone (`RESET_RUN_STATE`: stops, LangGraph checkpoints, open step/deadline jobs, thread wakes, open work items, care
  * timers of the reset agents, open lesson candidates), all in one transaction. A dry run prints the same counts and changes nothing.
  * Agents, installations, connections, products, orders, conversations, users and everything else are kept. Then the graph seed runs as
@@ -89,9 +88,7 @@ export class WorkflowResetService {
                 "SELECT count(*)::int AS count FROM public.agent_workflows WHERE workspace_id = $1 AND agent_id::text = ANY($2)",
                 [workspaceId, agents],
             ))
-        const leads =
-            (await manager.count(ContactMemoryEntryEntity, { where: { workspaceId } })) +
-            (await manager.count(ContactFreezeEntity, { where: { workspaceId } }))
+        const leads = await manager.count(ContactMemoryEntryEntity, { where: { workspaceId } })
         const flows = await this.count(
             manager,
             `SELECT count(*)::int AS count FROM public.agent_graph_versions WHERE workspace_id = $1 AND agent_id::text = ANY($2)
@@ -107,7 +104,7 @@ export class WorkflowResetService {
             { what: "runs", count: scope.runs.length },
             { what: `workflows and versions${SEEDED}`, count: workflows },
             { what: `graph versions that held a flow${SEEDED}`, count: flows },
-            { what: "lead memory and freezes", count: leads },
+            { what: "lead memory", count: leads },
             ...state,
         ]
     }
@@ -138,8 +135,7 @@ export class WorkflowResetService {
                 [workspaceId, agents],
             ))
         const memory = await tx.delete(ContactMemoryEntryEntity, { workspaceId })
-        const freezes = await tx.delete(ContactFreezeEntity, { workspaceId })
-        const leads = (memory.affected ?? 0) + (freezes.affected ?? 0)
+        const leads = memory.affected ?? 0
         // The graph goes back to its newest version with no flow (the one the installation made), or to none; then the versions that
         // froze a flow go, so the seed publishes the seeded flow as the one flow the primary workflow adopts: one version, no history.
         await tx.query(
@@ -168,7 +164,7 @@ export class WorkflowResetService {
             { what: "runs", count: runs },
             { what: "workflows and versions", count: workflows },
             { what: "graph versions that held a flow", count: flows },
-            { what: "lead memory and freezes", count: leads },
+            { what: "lead memory", count: leads },
             ...state,
         ]
     }

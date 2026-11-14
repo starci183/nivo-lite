@@ -10,7 +10,6 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BrainService } from "./brain.service"
 import { DocumentFactsService } from "./document-facts.service"
-import { FactVectorsSweepService } from "./fact-vectors-sweep.service"
 import { SERVICE_AT, SERVICE_WS, serviceFactOf, serviceLesson, serviceMemberOf } from "@tests/fixtures/builders/brain-service.builder"
 
 const WS = SERVICE_WS
@@ -27,10 +26,8 @@ const build = async () => {
     const gaps = mock<KnowledgeGapsService>()
     const sources = mock<KnowledgeSourcesService>()
     const documentFacts = mock<DocumentFactsService>()
-    const vectors = mock<FactVectorsSweepService>()
     const reads = mock<BrainFactsReadService>()
     members.require.mockResolvedValue(memberOf())
-    vectors.sweep.mockResolvedValue({ workspaces: 0, embedded: 0, copied: 0, more: 0 })
     facts.propose.mockResolvedValue({ fact: factOf(), outcome: "applied" })
     lessons.propose.mockResolvedValue(lesson)
     const moduleRef = await Test.createTestingModule({
@@ -44,7 +41,6 @@ const build = async () => {
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: DocumentFactsService, useValue: documentFacts },
-            { provide: FactVectorsSweepService, useValue: vectors },
             { provide: BrainFactsReadService, useValue: reads },
         ],
     }).compile()
@@ -57,7 +53,6 @@ const build = async () => {
         gaps,
         sources,
         documentFacts,
-        vectors,
         reads,
     }
 }

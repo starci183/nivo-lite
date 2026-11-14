@@ -216,15 +216,12 @@ type Script = Readonly<Record<string, unknown>>
 const STOP = Symbol("stop")
 
 /**
- * What the shipped `*-declined` checks (`core.if` on the step's `declined`) answer when the step before them did not decline: `no`. The
- * scripted steps never decline (their outputs carry no `declined: true`), so the checks answer as the real `core.if` would; a spec that
- * scripts a decline sets the check's output itself.
+ * The scripted outputs every walk starts from. R68 moved the design (G-SLIM, front desk v26): the shipped `*-declined` checks are gone
+ * (a declined reply / answer is the ENGINE's ending, `unsuccessful: { then: "end", outcome: "declined" }`), so no check is scripted.
  */
 const NOT_DECLINED: Script = {
     // The front desk's first step (v20): `chatbot.hear` keeps the line and routes on `route`; `go` is a line to answer.
     hear: { route: "go" },
-    "complaint-declined": { branch: "no" },
-    "answer-declined": { branch: "no" },
 }
 
 /** What a spec changes of the world. */
@@ -397,10 +394,10 @@ describe("ThreadRunsService", () => {
         it.each([
             ["buy", ["hear", "understand", "to-consult"]],
             ["paid", ["hear", "understand", "to-payment"]],
-            // The flip split the complaint step: reply to the customer, then tell the team, then the outcome; the reply and the answer
-            // pass their `*-declined` check (a declined send is a decision, the owner's rule of 2026-11-12).
-            ["complaint", ["hear", "understand", "complaint-reply", "complaint-declined", "complaint-notify", "to-owner"]],
-            ["question", ["hear", "understand", "answer", "answer-declined"]],
+            // The flip split the complaint step: reply to the customer, then tell the team, then the outcome. R68 (front desk v26): the
+            // `*-declined` checks are gone (a declined send is the engine's ending at `declined`), so a sent reply / answer goes straight on.
+            ["complaint", ["hear", "understand", "complaint-reply", "complaint-notify", "to-owner"]],
+            ["question", ["hear", "understand", "answer"]],
         ])("walks the front desk's %s route to its end and closes the run as done", async (branch, steps) => {
             const world = await build()
             world.script.outputs = { understand: { branch } }
@@ -455,14 +452,12 @@ describe("ThreadRunsService", () => {
                 "to-consult",
                 "to-booking",
                 "to-payment",
+                // R68 (front desk v26): the `*-declined` checks and their notices are gone; `declined` is the reply's and the answer's
+                // declared end outcome.
                 "complaint-reply",
-                "complaint-declined",
-                "complaint-declined-notice",
                 "complaint-notify",
                 "to-owner",
                 "answer",
-                "answer-declined",
-                "answer-declined-notice",
                 "declined",
                 FREEZE_NODE,
             ])
@@ -497,7 +492,8 @@ describe("ThreadRunsService", () => {
             expect(ending.status).toBe("done")
             expect(world.port.calls).toEqual(["start", "drive"])
             expect(world.port.leases[1]).toEqual({ fence: 4, signal: world.live })
-            expect(path(world.ran)).toEqual(["hear", "understand", "complaint-reply", "complaint-declined", "complaint-notify", "to-owner"])
+            // R68 (front desk v26): no `complaint-declined` check any more.
+            expect(path(world.ran)).toEqual(["hear", "understand", "complaint-reply", "complaint-notify", "to-owner"])
         })
     })
 
@@ -600,9 +596,8 @@ describe("ThreadRunsService", () => {
             expect(ending.status).toBe("done")
             expect(world.port.calls).toEqual(["start", "resume"])
             expect(world.port.leases[1]).toEqual({ fence: 5, signal: world.live })
-            // The answer step ran again with the words; its `answer-declined` check ran after it and ended the run.
-            expect(world.ran.at(-1)?.step).toBe("answer-declined")
-            expect(world.ran.at(-2)).toMatchObject({
+            // The answer step ran again with the words and ended the run (R68, front desk v26: no `answer-declined` check after it).
+            expect(world.ran.at(-1)).toMatchObject({
                 step: "answer",
                 answers: [{ text: "Quote 120k", at: DECISION_AT }],
                 at: { agentId: "agent-1", versionId: V1, namespace: FRONT_DESK, workflowId: "wf-1" },
@@ -617,8 +612,8 @@ describe("ThreadRunsService", () => {
 
             await world.service.woken(world.turnOfWake(5), world.live)
 
-            expect(world.ran.at(-1)?.step).toBe("answer-declined")
-            expect(world.ran.at(-2)).toMatchObject({ step: "answer", answers: [] })
+            // R68 (front desk v26): no `answer-declined` check after the answer; it is the last step that ran.
+            expect(world.ran.at(-1)).toMatchObject({ step: "answer", answers: [] })
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "ended" })
         })
 
@@ -732,7 +727,7 @@ describe("ThreadRunsService", () => {
             })
             await world.service.woken(world.turnOfWake(7), world.live)
             expect(world.port.calls).toEqual(["start", "drive"])
-            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer-declined"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer"])
 
             const { world: frozen } = await stopped()
             await frozen.service.redrive(REF, "sweep-1")
@@ -809,7 +804,7 @@ describe("ThreadRunsService", () => {
             await world.service.woken(world.turnOfWake(5), world.live)
 
             expect(resume.mock.calls[0]?.[1].version).toBe(V1)
-            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer", "answer-declined"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer"])
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "ended", version: V1 })
         })
 
@@ -823,7 +818,7 @@ describe("ThreadRunsService", () => {
             await world.service.started(world.opened({ versionId: V2, flow: renamed() }), world.live)
 
             expect(drive.mock.calls[0]?.[1].version).toBe(V1)
-            expect(path(world.ran)).toEqual(["hear", "understand", "answer", "answer-declined"])
+            expect(path(world.ran)).toEqual(["hear", "understand", "answer"])
         })
 
         it("reads a version it has not built by its id, and builds each version once", async () => {

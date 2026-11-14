@@ -12,8 +12,8 @@ import { VECTOR_KINDS } from "./qdrant.policy"
  * and its payload indexes are created when missing, which is safe to repeat. Two outcomes are told apart on purpose:
  * - a collection that exists with ANOTHER vector size or distance refuses the start (`QDRANT_MISMATCH`): the app would write vectors
  *   the collection cannot hold, or compare vectors of two sizes;
- * - a service that cannot be reached, or that refuses a call, does NOT stop the app: it is logged, the index reads as down, the
- *   meaning search answers by words, and the next run prepares the collections.
+ * - a service that cannot be reached, or that refuses a call, does NOT stop the app: it is logged, the index reads as down (readiness
+ *   refuses traffic with `vectors: down` until it answers), and the next run of the reconcile prepares the collections.
  */
 export class QdrantBootService implements OnApplicationBootstrap {
     /** True once every collection was prepared in this process. */

@@ -50,11 +50,19 @@
         {
             "key": "not-sale",
             "label": "not-sale",
+            "title": {
+                "vi": "Không phải mua hàng",
+                "en": "Not a sale"
+            },
             "outputs": []
         },
         {
             "key": "paid",
             "label": "paid",
+            "title": {
+                "vi": "Đã trả",
+                "en": "Paid"
+            },
             "outputs": [
                 {
                     "name": "contactId",
@@ -73,6 +81,10 @@
         {
             "key": "unpaid",
             "label": "unpaid",
+            "title": {
+                "vi": "Chưa trả",
+                "en": "Unpaid"
+            },
             "outputs": [
                 {
                     "name": "contactId",
@@ -91,11 +103,19 @@
         {
             "key": "declined",
             "label": "declined",
+            "title": {
+                "vi": "Bị từ chối",
+                "en": "Declined"
+            },
             "outputs": []
         },
         {
             "key": "quiet",
             "label": "quiet",
+            "title": {
+                "vi": "Khách im lặng",
+                "en": "Customer went quiet"
+            },
             "outputs": []
         }
     ],
@@ -151,14 +171,6 @@
                         },
                         {
                             "ref": {
-                                "$ref": "steps.consult.output.branch",
-                                "default": null
-                            },
-                            "op": "eq",
-                            "value": "declined"
-                        },
-                        {
-                            "ref": {
                                 "$ref": "steps.hear.output.trigger",
                                 "default": null
                             },
@@ -192,7 +204,21 @@
                 "body": "opening",
                 "exhausted": "quiet"
             },
-            "next": "settled"
+            "next": "keep-occasions",
+            "label": {
+                "vi": "Tư vấn",
+                "en": "Consult"
+            },
+            "exits": {
+                "until": {
+                    "vi": "Thoát khi khách chốt, hủy, im lặng hoặc không phải mua hàng",
+                    "en": "Leaves when the customer orders, cancels, goes quiet or is not buying"
+                },
+                "exhausted": {
+                    "vi": "Hết 30 vòng mà chưa chốt",
+                    "en": "30 rounds without an order"
+                }
+            }
         },
         {
             "key": "opening",
@@ -211,6 +237,10 @@
             "routes": {
                 "yes": "consult",
                 "no": "hear"
+            },
+            "label": {
+                "vi": "Vòng đầu?",
+                "en": "First round?"
             }
         },
         {
@@ -245,6 +275,10 @@
                 "telegram": "consult",
                 "facebook": "consult",
                 "instagram": "consult"
+            },
+            "label": {
+                "vi": "Chờ khách nhắn",
+                "en": "Wait for the customer's message"
             }
         },
         {
@@ -302,7 +336,12 @@
                     "provider": "meta",
                     "connectionId": null
                 }
-            ]
+            ],
+            "unsuccessful": {
+                "then": "end",
+                "outcome": "declined",
+                "facts": []
+            }
         },
         {
             "key": "off-round",
@@ -321,6 +360,10 @@
             "routes": {
                 "yes": "not-sale-notice",
                 "no": "give-back-talk"
+            },
+            "label": {
+                "vi": "Vòng đầu?",
+                "en": "First round?"
             }
         },
         {
@@ -346,24 +389,33 @@
             "step": "core.hand-back",
             "params": {
                 "wait": "hear"
+            },
+            "label": {
+                "vi": "Trả lại tin",
+                "en": "Hand the message back"
             }
         },
         {
-            "key": "settled",
-            "kind": "condition",
-            "step": "core.when",
+            "key": "keep-occasions",
+            "kind": "execute",
+            "step": "sales.occasion-keep",
             "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.talk.output.last.occasions",
-                        "default": null
-                    },
-                    "op": "present"
+                "contactId": {
+                    "$ref": "steps.talk.output.last.contactId",
+                    "default": null
+                },
+                "occasions": {
+                    "$ref": "steps.talk.output.last.occasions",
+                    "default": null
                 }
             },
-            "routes": {
-                "yes": "keep-occasions",
-                "no": "not-sale-said"
+            "blocking": false,
+            "next": "not-sale-said",
+            "mode": "auto",
+            "accounts": [],
+            "unsuccessful": {
+                "then": "continue",
+                "facts": []
             }
         },
         {
@@ -382,6 +434,10 @@
             "routes": {
                 "yes": "not-sale",
                 "no": "ready-said"
+            },
+            "label": {
+                "vi": "Không phải mua hàng?",
+                "en": "Not a sale?"
             }
         },
         {
@@ -391,58 +447,11 @@
             "params": {
                 "outcome": "not-sale",
                 "outputs": {}
+            },
+            "label": {
+                "vi": "Không phải mua hàng",
+                "en": "Not a sale"
             }
-        },
-        {
-            "key": "keep-occasions",
-            "kind": "execute",
-            "step": "sales.occasion-keep",
-            "params": {
-                "contactId": {
-                    "$ref": "steps.talk.output.last.contactId",
-                    "default": null
-                },
-                "occasions": {
-                    "$ref": "steps.talk.output.last.occasions",
-                    "default": null
-                }
-            },
-            "blocking": false,
-            "next": "keep-occasions-declined",
-            "mode": "auto",
-            "accounts": []
-        },
-        {
-            "key": "keep-occasions-declined",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.keep-occasions.output.declined",
-                        "default": null
-                    },
-                    "op": "eq",
-                    "value": true
-                }
-            },
-            "routes": {
-                "yes": "keep-occasions-declined-notice",
-                "no": "not-sale-said"
-            }
-        },
-        {
-            "key": "keep-occasions-declined-notice",
-            "kind": "execute",
-            "step": "team.declined-notice",
-            "params": {
-                "step": "Ghi nhớ ngày của khách",
-                "ref": null
-            },
-            "blocking": false,
-            "next": "not-sale-said",
-            "mode": "auto",
-            "accounts": []
         },
         {
             "key": "ready-said",
@@ -461,6 +470,10 @@
             "routes": {
                 "yes": "create-order",
                 "no": "cancel-said"
+            },
+            "label": {
+                "vi": "Khách chốt đơn?",
+                "en": "Ready to order?"
             }
         },
         {
@@ -493,42 +506,14 @@
                     "default": null
                 }
             },
-            "next": "create-declined",
+            "next": "request-qr",
             "mode": "auto",
-            "accounts": []
-        },
-        {
-            "key": "create-declined",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.create-order.output.declined",
-                        "default": null
-                    },
-                    "op": "eq",
-                    "value": true
-                }
-            },
-            "routes": {
-                "yes": "create-declined-notice",
-                "no": "request-qr"
+            "accounts": [],
+            "unsuccessful": {
+                "then": "end",
+                "outcome": "declined",
+                "facts": []
             }
-        },
-        {
-            "key": "create-declined-notice",
-            "kind": "execute",
-            "step": "team.declined-notice",
-            "params": {
-                "step": "Ghi đơn hàng",
-                "ref": null,
-                "locale": "vi"
-            },
-            "blocking": false,
-            "next": "declined",
-            "mode": "auto",
-            "accounts": []
         },
         {
             "key": "request-qr",
@@ -575,7 +560,7 @@
                 "locale": "vi"
             },
             "model": "claude-sonnet-5-5",
-            "next": "tell-declined",
+            "next": "pay",
             "mode": "auto",
             "accounts": [
                 {
@@ -593,42 +578,23 @@
                     "provider": "meta",
                     "connectionId": null
                 }
-            ]
-        },
-        {
-            "key": "tell-declined",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.tell-order.output.declined",
-                        "default": null
-                    },
-                    "op": "eq",
-                    "value": true
-                }
-            },
-            "routes": {
-                "yes": "tell-declined-notice",
-                "no": "pay"
+            ],
+            "unsuccessful": {
+                "then": "end",
+                "outcome": "declined",
+                "facts": [
+                    {
+                        "label": {
+                            "vi": "Mã đơn",
+                            "en": "Order"
+                        },
+                        "value": {
+                            "$ref": "steps.create-order.output.orderNo",
+                            "default": null
+                        }
+                    }
+                ]
             }
-        },
-        {
-            "key": "tell-declined-notice",
-            "kind": "execute",
-            "step": "team.declined-notice",
-            "params": {
-                "step": "Báo khách đơn hàng",
-                "ref": {
-                    "$ref": "steps.create-order.output.orderNo"
-                },
-                "locale": "vi"
-            },
-            "blocking": false,
-            "next": "declined",
-            "mode": "auto",
-            "accounts": []
         },
         {
             "key": "pay",
@@ -637,31 +603,57 @@
             "params": {
                 "mode": "until",
                 "until": {
-                    "or": [
-                        {
-                            "ref": {
-                                "$ref": "steps.paid-order.output.orderNo",
-                                "default": null
-                            },
-                            "op": "present"
-                        },
-                        {
-                            "ref": {
-                                "$ref": "steps.paid-order.output.declined",
-                                "default": false
-                            },
-                            "op": "eq",
-                            "value": true
-                        }
-                    ]
+                    "ref": {
+                        "$ref": "steps.paid-order.output.orderNo",
+                        "default": null
+                    },
+                    "op": "present"
                 },
                 "max": 6
             },
             "routes": {
                 "body": "await",
-                "exhausted": "unpaid-notice"
+                "exhausted": "unpaid"
             },
-            "next": "paid-declined"
+            "next": "to-after-sale",
+            "unsuccessful": {
+                "facts": [
+                    {
+                        "label": {
+                            "vi": "Mã đơn",
+                            "en": "Order"
+                        },
+                        "value": {
+                            "$ref": "steps.create-order.output.orderNo",
+                            "default": null
+                        }
+                    },
+                    {
+                        "label": {
+                            "vi": "Tổng tiền",
+                            "en": "Total"
+                        },
+                        "value": {
+                            "$ref": "steps.create-order.output.amountVnd",
+                            "default": null
+                        }
+                    }
+                ]
+            },
+            "label": {
+                "vi": "Thanh toán",
+                "en": "Payment"
+            },
+            "exits": {
+                "until": {
+                    "vi": "Thoát khi đơn đã trả",
+                    "en": "Leaves when the order is paid"
+                },
+                "exhausted": {
+                    "vi": "Hết 6 vòng mà chưa trả",
+                    "en": "6 rounds and still unpaid"
+                }
+            }
         },
         {
             "key": "await",
@@ -718,6 +710,10 @@
                 "facebook": "order-talk",
                 "instagram": "order-talk",
                 "timeout": "remind"
+            },
+            "label": {
+                "vi": "Chờ tiền về hoặc tin khách",
+                "en": "Wait for the money or a message"
             }
         },
         {
@@ -769,6 +765,10 @@
             "routes": {
                 "yes": "paid-order",
                 "no": "short"
+            },
+            "label": {
+                "vi": "Đủ tiền?",
+                "en": "Exact amount?"
             }
         },
         {
@@ -781,7 +781,23 @@
                 }
             },
             "mode": "auto",
-            "accounts": []
+            "accounts": [],
+            "unsuccessful": {
+                "then": "end",
+                "outcome": "declined",
+                "facts": [
+                    {
+                        "label": {
+                            "vi": "Mã đơn",
+                            "en": "Order"
+                        },
+                        "value": {
+                            "$ref": "steps.create-order.output.orderNo",
+                            "default": null
+                        }
+                    }
+                ]
+            }
         },
         {
             "key": "short",
@@ -868,7 +884,6 @@
             },
             "model": "claude-sonnet-5-5",
             "routes": {
-                "about": "order-talk-sent",
                 "off": "give-back"
             },
             "mode": "auto",
@@ -888,54 +903,22 @@
                     "provider": "meta",
                     "connectionId": null
                 }
-            ]
-        },
-        {
-            "key": "order-talk-sent",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "and": [
-                        {
-                            "ref": {
-                                "$ref": "steps.order-talk.output.refusal",
-                                "default": null
-                            },
-                            "op": "present"
+            ],
+            "unsuccessful": {
+                "then": "continue",
+                "facts": [
+                    {
+                        "label": {
+                            "vi": "Mã đơn",
+                            "en": "Order"
                         },
-                        {
-                            "ref": {
-                                "$ref": "steps.order-talk.output.refusal",
-                                "default": null
-                            },
-                            "op": "ne",
-                            "value": "route_held"
+                        "value": {
+                            "$ref": "steps.create-order.output.orderNo",
+                            "default": null
                         }
-                    ]
-                }
-            },
-            "routes": {
-                "yes": "order-talk-unsent-notice"
+                    }
+                ]
             }
-        },
-        {
-            "key": "order-talk-unsent-notice",
-            "kind": "execute",
-            "step": "team.unsent-notice",
-            "params": {
-                "step": "Trao đổi về đơn",
-                "ref": {
-                    "$ref": "steps.create-order.output.orderNo"
-                },
-                "refusal": {
-                    "$ref": "steps.order-talk.output.refusal"
-                },
-                "locale": "vi"
-            },
-            "blocking": false,
-            "mode": "auto",
-            "accounts": []
         },
         {
             "key": "give-back",
@@ -943,6 +926,10 @@
             "step": "core.hand-back",
             "params": {
                 "wait": "await"
+            },
+            "label": {
+                "vi": "Trả lại tin",
+                "en": "Hand the message back"
             }
         },
         {
@@ -963,7 +950,6 @@
                 "locale": "vi"
             },
             "model": "claude-sonnet-5-5",
-            "next": "remind-sent",
             "mode": "auto",
             "accounts": [
                 {
@@ -981,107 +967,22 @@
                     "provider": "meta",
                     "connectionId": null
                 }
-            ]
-        },
-        {
-            "key": "remind-sent",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "and": [
-                        {
-                            "ref": {
-                                "$ref": "steps.remind.output.refusal",
-                                "default": null
-                            },
-                            "op": "present"
+            ],
+            "unsuccessful": {
+                "then": "continue",
+                "facts": [
+                    {
+                        "label": {
+                            "vi": "Mã đơn",
+                            "en": "Order"
                         },
-                        {
-                            "ref": {
-                                "$ref": "steps.remind.output.refusal",
-                                "default": null
-                            },
-                            "op": "ne",
-                            "value": "route_held"
+                        "value": {
+                            "$ref": "steps.create-order.output.orderNo",
+                            "default": null
                         }
-                    ]
-                }
-            },
-            "routes": {
-                "yes": "remind-unsent-notice"
+                    }
+                ]
             }
-        },
-        {
-            "key": "remind-unsent-notice",
-            "kind": "execute",
-            "step": "team.unsent-notice",
-            "params": {
-                "step": "Nhắc khách chuyển khoản",
-                "ref": {
-                    "$ref": "steps.create-order.output.orderNo"
-                },
-                "refusal": {
-                    "$ref": "steps.remind.output.refusal"
-                },
-                "locale": "vi"
-            },
-            "blocking": false,
-            "mode": "auto",
-            "accounts": []
-        },
-        {
-            "key": "unpaid-notice",
-            "kind": "execute",
-            "step": "sales.unpaid-notice",
-            "params": {
-                "orderNo": {
-                    "$ref": "steps.create-order.output.orderNo"
-                },
-                "amountVnd": {
-                    "$ref": "steps.create-order.output.amountVnd"
-                },
-                "locale": "vi"
-            },
-            "blocking": false,
-            "next": "unpaid",
-            "mode": "auto",
-            "accounts": []
-        },
-        {
-            "key": "paid-declined",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.pay.output.last.declined",
-                        "default": false
-                    },
-                    "op": "eq",
-                    "value": true
-                }
-            },
-            "routes": {
-                "yes": "paid-declined-notice",
-                "no": "to-after-sale"
-            }
-        },
-        {
-            "key": "paid-declined-notice",
-            "kind": "execute",
-            "step": "team.declined-notice",
-            "params": {
-                "step": "Ghi đơn đã trả",
-                "ref": {
-                    "$ref": "steps.create-order.output.orderNo"
-                },
-                "locale": "vi"
-            },
-            "blocking": false,
-            "next": "declined",
-            "mode": "auto",
-            "accounts": []
         },
         {
             "key": "to-after-sale",
@@ -1094,6 +995,9 @@
                 "inputs": {
                     "orderId": {
                         "$ref": "steps.create-order.output.orderId"
+                    },
+                    "orderNo": {
+                        "$ref": "steps.create-order.output.orderNo"
                     },
                     "contactId": {
                         "$ref": "steps.talk.output.last.contactId",
@@ -1121,6 +1025,10 @@
                         "$ref": "steps.create-order.output.orderNo"
                     }
                 }
+            },
+            "label": {
+                "vi": "Đã trả",
+                "en": "Paid"
             }
         },
         {
@@ -1141,6 +1049,10 @@
                         "$ref": "steps.create-order.output.orderNo"
                     }
                 }
+            },
+            "label": {
+                "vi": "Chưa trả",
+                "en": "Unpaid"
             }
         },
         {
@@ -1159,41 +1071,12 @@
             },
             "routes": {
                 "yes": "cancel-read",
-                "no": "declined-said"
-            }
-        },
-        {
-            "key": "declined-said",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.talk.output.last.branch",
-                        "default": null
-                    },
-                    "op": "eq",
-                    "value": "declined"
-                }
-            },
-            "routes": {
-                "yes": "consult-declined-notice",
                 "no": "quiet"
-            }
-        },
-        {
-            "key": "consult-declined-notice",
-            "kind": "execute",
-            "step": "team.declined-notice",
-            "params": {
-                "step": "Tư vấn khách",
-                "ref": null,
-                "locale": "vi"
             },
-            "blocking": false,
-            "next": "declined",
-            "mode": "auto",
-            "accounts": []
+            "label": {
+                "vi": "Khách hủy đơn?",
+                "en": "Cancel the order?"
+            }
         },
         {
             "key": "cancel-read",
@@ -1226,6 +1109,10 @@
             "routes": {
                 "yes": "cancel-paid-notice",
                 "no": "cancel-order"
+            },
+            "label": {
+                "vi": "Đơn đã trả?",
+                "en": "Already paid?"
             }
         },
         {
@@ -1263,44 +1150,25 @@
                     "default": null
                 }
             },
-            "next": "cancel-declined",
+            "next": "tell-cancelled",
             "mode": "auto",
-            "accounts": []
-        },
-        {
-            "key": "cancel-declined",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.cancel-order.output.declined",
-                        "default": null
-                    },
-                    "op": "eq",
-                    "value": true
-                }
-            },
-            "routes": {
-                "yes": "cancel-declined-notice",
-                "no": "tell-cancelled"
+            "accounts": [],
+            "unsuccessful": {
+                "then": "end",
+                "outcome": "declined",
+                "facts": [
+                    {
+                        "label": {
+                            "vi": "Mã đơn",
+                            "en": "Order"
+                        },
+                        "value": {
+                            "$ref": "steps.cancel-read.output.orderNo",
+                            "default": null
+                        }
+                    }
+                ]
             }
-        },
-        {
-            "key": "cancel-declined-notice",
-            "kind": "execute",
-            "step": "team.declined-notice",
-            "params": {
-                "step": "Huỷ đơn",
-                "ref": {
-                    "$ref": "steps.cancel-order.output.orderId"
-                },
-                "locale": "vi"
-            },
-            "blocking": false,
-            "next": "declined",
-            "mode": "auto",
-            "accounts": []
         },
         {
             "key": "tell-cancelled",
@@ -1317,7 +1185,7 @@
                 "locale": "vi"
             },
             "model": "claude-sonnet-5-5",
-            "next": "tell-cancelled-declined",
+            "next": "quiet",
             "mode": "auto",
             "accounts": [
                 {
@@ -1335,43 +1203,23 @@
                     "provider": "meta",
                     "connectionId": null
                 }
-            ]
-        },
-        {
-            "key": "tell-cancelled-declined",
-            "kind": "condition",
-            "step": "core.when",
-            "params": {
-                "when": {
-                    "ref": {
-                        "$ref": "steps.tell-cancelled.output.declined",
-                        "default": null
-                    },
-                    "op": "eq",
-                    "value": true
-                }
-            },
-            "routes": {
-                "yes": "tell-cancelled-declined-notice",
-                "no": "quiet"
+            ],
+            "unsuccessful": {
+                "then": "end",
+                "outcome": "declined",
+                "facts": [
+                    {
+                        "label": {
+                            "vi": "Mã đơn",
+                            "en": "Order"
+                        },
+                        "value": {
+                            "$ref": "steps.cancel-order.output.orderNo",
+                            "default": null
+                        }
+                    }
+                ]
             }
-        },
-        {
-            "key": "tell-cancelled-declined-notice",
-            "kind": "execute",
-            "step": "team.declined-notice",
-            "params": {
-                "step": "Báo khách đã huỷ đơn",
-                "ref": {
-                    "$ref": "steps.cancel-order.output.orderNo",
-                    "default": null
-                },
-                "locale": "vi"
-            },
-            "blocking": false,
-            "next": "declined",
-            "mode": "auto",
-            "accounts": []
         },
         {
             "key": "declined",
@@ -1380,6 +1228,10 @@
             "params": {
                 "outcome": "declined",
                 "outputs": {}
+            },
+            "label": {
+                "vi": "Bị từ chối",
+                "en": "Declined"
             }
         },
         {
@@ -1389,6 +1241,10 @@
             "params": {
                 "outcome": "quiet",
                 "outputs": {}
+            },
+            "label": {
+                "vi": "Khách im lặng",
+                "en": "Customer went quiet"
             }
         }
     ]

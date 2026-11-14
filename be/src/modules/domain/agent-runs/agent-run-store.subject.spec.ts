@@ -116,6 +116,9 @@ describe("AgentRunStoreService.endParkedOfSubjects (coordinator ruling R37: the 
             expect.objectContaining({ status: "cancelled", error: { code: "subject_erased" }, waitWorkItemId: null, waitDeadlineAt: null }),
         )
         expect(records.markWait).toHaveBeenCalledWith(scoped, "run-3", null)
+        // Its open step rows close with it, same scope, same reason (E-FIX4: they stayed `running` and blocked `tools reseed`).
+        expect(records.closeOpenSteps).toHaveBeenCalledTimes(1)
+        expect(records.closeOpenSteps).toHaveBeenCalledWith(scoped, "run-3", "subject_erased", WHEN.toISOString())
     })
 
     it("ends a run parked at a `wait` (status `running` WITH a wait mark), the sale parked for the erased person (S5c finding)", async () => {
@@ -132,6 +135,8 @@ describe("AgentRunStoreService.endParkedOfSubjects (coordinator ruling R37: the 
         )
         expect(records.patchRun).toHaveBeenCalledTimes(1)
         expect(records.markWait).toHaveBeenCalledWith(scoped, "run-3", null)
+        // The dev shape: `talk` and `talk[r2].hear` were left `running`; the closing function closes them with the reason.
+        expect(records.closeOpenSteps).toHaveBeenCalledWith(scoped, "run-3", "subject_erased", WHEN.toISOString())
     })
 
     it("leaves a run running a step now (status `running`, no wait mark): it ends on its own", async () => {
@@ -141,6 +146,7 @@ describe("AgentRunStoreService.endParkedOfSubjects (coordinator ruling R37: the 
             store.endParkedOfSubjects(mockEntityManager(), "ws-1", [{ kind: "routeId", id: "route-3" }], "subject_erased"),
         ).resolves.toEqual([])
         expect(records.patchRun).not.toHaveBeenCalled()
+        expect(records.closeOpenSteps).not.toHaveBeenCalled()
     })
 
     it("ends nothing for a run that moved on before the write (no longer parked)", async () => {
@@ -151,5 +157,6 @@ describe("AgentRunStoreService.endParkedOfSubjects (coordinator ruling R37: the 
         await expect(ending).resolves.toEqual([])
         expect(records.patchRun).not.toHaveBeenCalled()
         expect(records.markWait).not.toHaveBeenCalled()
+        expect(records.closeOpenSteps).not.toHaveBeenCalled()
     })
 })

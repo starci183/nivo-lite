@@ -442,3 +442,66 @@ describe("AgentWorkflowsAdminService.agreeRights: the owner's picks of a stream'
         })
     })
 })
+
+// The owner's door for ONE node's `auto|ask` (nivo-frame `rights` rules 5 + 10; MX-CORE: no working way to set a node to `ask` existed:
+// `agreeAgentNodeRights` is the removed agreement and every sales/chatbot node declares `auto`, so no approval stop could be raised on dev).
+describe("AgentWorkflowsAdminService.setNodeMode: the owner sets one node of a workflow to auto or ask", () => {
+    const ASKING: GraphSpec = {
+        ...GRAPH,
+        nodes: [
+            { key: "reply", kind: "execute", step: "chatbot.answer", mode: "auto", next: "end" },
+            { key: "end", kind: "output", step: "stop" },
+        ],
+    }
+    const setting = { installationId: "inst-1", workflowId: "wf-1", nodeKey: "reply", mode: "ask", expectedLatest: 1 }
+
+    it("writes a NEW version of the running graph with only that node's mode replaced, through the publish road, as the owner", async () => {
+        const owner = await build("owner")
+        owner.workflows.detail.mockResolvedValue({ ...DETAIL, graph: ASKING })
+
+        await expect(owner.admin.setNodeMode(ACTOR, setting)).resolves.toMatchObject({ id: "wfv-2" })
+
+        expect(owner.workflows.publish).toHaveBeenCalledWith(
+            "ws-1",
+            "wf-1",
+            { ...ASKING, nodes: [{ ...ASKING.nodes[0], mode: "ask" }, ASKING.nodes[1]] },
+            { kind: "owner", memberId: "member-1", role: "owner" },
+            1,
+            "reply: ask",
+        )
+    })
+
+    it("writes nothing for a node already in that mode and answers the running version", async () => {
+        const owner = await build("owner")
+        owner.workflows.detail.mockResolvedValue({ ...DETAIL, graph: ASKING })
+
+        await expect(owner.admin.setNodeMode(ACTOR, { ...setting, mode: "auto" })).resolves.toMatchObject({ id: "wfv-2", number: 2 })
+        expect(owner.workflows.publish).not.toHaveBeenCalled()
+    })
+
+    it("is the owner's alone: a manager and staff are refused before anything is read or written", async () => {
+        for (const role of ["manager", "staff"] as const) {
+            const seat = await build(role)
+            await expect(seat.admin.setNodeMode(ACTOR, setting)).rejects.toMatchObject({ code: AgentGraphsErrorCode.Forbidden })
+            expect(seat.workflows.detail).not.toHaveBeenCalled()
+            expect(seat.workflows.publish).not.toHaveBeenCalled()
+        }
+    })
+
+    it("refuses, typed, a word that is no mode, a key no node has, and a workflow of another agent", async () => {
+        const owner = await build("owner")
+        owner.workflows.detail.mockResolvedValue({ ...DETAIL, graph: ASKING })
+
+        await expect(owner.admin.setNodeMode(ACTOR, { ...setting, mode: "never" })).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.WorkflowRefused,
+            params: { reason: "mode" },
+        })
+        await expect(owner.admin.setNodeMode(ACTOR, { ...setting, nodeKey: "gone" })).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.WorkflowRefused,
+            params: { reason: "node" },
+        })
+        owner.workflows.detail.mockResolvedValue({ ...DETAIL, workflow: { ...VIEW, agentId: "agent-2" } })
+        await expect(owner.admin.setNodeMode(ACTOR, setting)).rejects.toMatchObject({ code: AgentGraphsErrorCode.WorkflowNotFound })
+        expect(owner.workflows.publish).not.toHaveBeenCalled()
+    })
+})

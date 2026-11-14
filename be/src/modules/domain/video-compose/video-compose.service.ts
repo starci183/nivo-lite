@@ -136,7 +136,7 @@ export class VideoComposeNativeService implements NativeToolFamily {
     ): Promise<{ readonly connection: ConnectionRecord; readonly port: VideoComposePort }> {
         if (caller.connectionId === undefined) throw composeRefusal("not_connected")
         const connection = await this.connections.find(workspaceId, caller.connectionId)
-        const port = connection === null ? undefined : this.registry.of(connection.provider)
+        const port = connection === null ? undefined : this.registry.portFor(connection)
         if (connection === null || port === undefined) throw composeRefusal("not_connected")
         return { connection, port }
     }

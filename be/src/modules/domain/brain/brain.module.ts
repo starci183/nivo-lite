@@ -3,7 +3,6 @@ import { DocumentCriticService } from "@modules/domain/dossier-review"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import { BrainChangeMessagesService } from "./brain-change-messages.service"
-import { derivationsProvidersOf } from "./brain-composition.policy"
 import { BrainBulkService } from "./brain-bulk.service"
 import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
@@ -30,21 +29,20 @@ import { DocumentTruthStagesService } from "./document-truth-stages.service"
 import { TruthCeilingService } from "./truth-ceiling.service"
 import { DocumentRelationsService } from "./document-relations.service"
 import { FactEmbeddingsService } from "./fact-embeddings.service"
-import { FactVectorsSweepService } from "./fact-vectors-sweep.service"
 import { DocumentReviewService } from "./document-review.service"
 import { DocumentAreaService } from "./document-area.service"
 import { IndexedSourcesService } from "./indexed-sources.service"
 import { ModelJsonService } from "./model-json.service"
 
 /**
- * The derivations mode: the policy derivations, with the knowledge queue their requests are written to; with `vectors`, the vectors
- * listener of the facts too (it needs the global AI endpoint and usage meter of the app: the mcp registers both).
+ * The derivations mode: the policy derivations, with the knowledge queue their requests are written to. No vectors listener: a fact
+ * such an app changes gets its point from the vector reconcile of the api (tick `vector-reconcile`).
  */
-const derivationsOnlyOf = (base: DynamicModule, vectors: boolean): DynamicModule => ({
+const derivationsOnlyOf = (base: DynamicModule): DynamicModule => ({
     ...base,
     imports: [KnowledgeQueueModule.register({}), ...(base.imports ?? [])],
     exports: [BrainPolicyDerivationsService],
-    providers: [...derivationsProvidersOf(vectors), ...(base.providers ?? [])],
+    providers: [BrainPolicyDerivationsService, ...(base.providers ?? [])],
 })
 
 /** The correction source of a composition that names none: it reads no correction. */
@@ -53,13 +51,10 @@ const NO_CORRECTIONS: CorrectionSource = { recent: () => Promise.resolve([]) }
 @Module({})
 /** The second brain: one shared memory per workspace, its facts read out of documents, its lessons learnt from the owner's corrections. */
 export class BrainModule extends ConfigurableModuleClass {
-    /**
-     * Registers the capability once per app; the derivations mode (mcp, cli) registers the policy derivations with their queue, and the
-     * mcp adds the vectors listener (`vectors: true`).
-     */
+    /** Registers the capability once per app; the derivations mode (cli) registers the policy derivations with their queue. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        if (options.derivationsOnly === true) return derivationsOnlyOf(base, options.vectors === true)
+        if (options.derivationsOnly === true) return derivationsOnlyOf(base)
         // The truths in force read by words alone (the mcp app): nothing that writes, derives or embeds.
         if (options.graphOnly === true)
             return { ...base, providers: [...(base.providers ?? []), BrainGraphService], exports: [BrainGraphService] }
@@ -88,7 +83,6 @@ export class BrainModule extends ConfigurableModuleClass {
                 { provide: TRUTH_CRITIQUE_GATE, useExisting: DocumentCriticService },
                 DocumentRelationsService,
                 FactEmbeddingsService,
-                FactVectorsSweepService,
                 BrainGraphService,
                 DocumentReviewService,
                 DocumentAreaService,

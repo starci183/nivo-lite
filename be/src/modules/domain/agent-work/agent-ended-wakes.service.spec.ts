@@ -6,10 +6,13 @@ import type { Logger } from "@modules/platform/logging"
 import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
-import type { AgentWorkHandler } from "./agent-work.port"
+import type { AgentWorkFlow, AgentWorkHandler } from "./agent-work.port"
 
-const build = async (handler: AgentWorkHandler | undefined) => {
-    const handlers = mock<AgentWorkHandlersService>({ of: jest.fn().mockReturnValue(handler) })
+const build = async (handler: AgentWorkHandler | undefined, flow: AgentWorkFlow | undefined = undefined) => {
+    const handlers = mock<AgentWorkHandlersService>({
+        of: jest.fn().mockReturnValue(handler),
+        flowOf: jest.fn().mockReturnValue(flow),
+    })
     const logger = mock<Logger>()
     const container = await Test.createTestingModule({
         providers: [
@@ -78,5 +81,50 @@ describe("AgentEndedWakesService.tell", () => {
         await expect(service.tell([{ state: "held", wake: endedWake() }])).resolves.toBeUndefined()
 
         expect(logger.error).not.toHaveBeenCalled()
+    })
+
+    // DEF-5: a workflow call held behind the subject's own run burnt its tries while it waited and `begin` found it dead: the handler of
+    // its source (none for a pipeline wake) said nothing, the customer's line was lost and nobody was told.
+    it("a dead wake the flow takes as its own is reported by the flow (code attempts) and no handler speaks for it", async () => {
+        const handler = handlerOf()
+        const flow = mock<AgentWorkFlow>({ gaveUp: jest.fn().mockResolvedValue(true) })
+        const { service, logger } = await build(handler, flow)
+        const dead = endedWake({ wakeId: "wake-call" })
+
+        await service.tell([{ state: "dead", wake: dead }])
+
+        expect(flow.gaveUp).toHaveBeenCalledWith(dead, "attempts")
+        expect(handler.holdOver).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.WakeDead, { agentId: "agent-1", wakeId: "wake-call" })
+    })
+
+    it("a dead wake that is not the flow's goes to its handler; a held wake never asks the flow", async () => {
+        const handler = handlerOf()
+        const flow = mock<AgentWorkFlow>({ gaveUp: jest.fn().mockResolvedValue(false) })
+        const { service } = await build(handler, flow)
+        const dead = endedWake({ wakeId: "wake-a" })
+        const held = endedWake({ wakeId: "wake-b" })
+
+        await service.tell([
+            { state: "dead", wake: dead },
+            { state: "held", wake: held },
+        ])
+
+        expect(flow.gaveUp.mock.calls).toEqual([[dead, "attempts"]])
+        expect(handler.holdOver.mock.calls).toEqual([
+            [dead, "error"],
+            [held, "killed"],
+        ])
+    })
+
+    it("a report of the flow that throws is logged and the handler still tells the dead wake", async () => {
+        const handler = handlerOf()
+        const flow = mock<AgentWorkFlow>({ gaveUp: jest.fn().mockRejectedValue(new Error("team chat down")) })
+        const { service, logger } = await build(handler, flow)
+
+        await service.tell([{ state: "dead", wake: endedWake({ wakeId: "wake-a" }) }])
+
+        expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, expect.any(Error), { agentId: "agent-1", wakeId: "wake-a" })
+        expect(handler.holdOver).toHaveBeenCalledWith(endedWake({ wakeId: "wake-a" }), "error")
     })
 })

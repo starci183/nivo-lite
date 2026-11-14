@@ -123,6 +123,8 @@ const begun = async (process: ThreadProcess, wake: HeardWake, options: WriteOpti
     const ran = await woken(process, turnOf(process.db, wake, options.turn), options.signal)
     // Why the wake ended, as the table keeps it (`reason`): a hand-back re-offers the wakes a wait took.
     if (ran.ending?.reason !== null && ran.ending?.reason !== undefined) wake.reason = ran.ending.reason
+    // A `held` ending leaves the wake held in the table (behind a run, `waiting:<run>`: rule Q-1), to be released when that run is finished.
+    if (ran.ending?.status === "held") wake.state = "held"
     return ran
 }
 

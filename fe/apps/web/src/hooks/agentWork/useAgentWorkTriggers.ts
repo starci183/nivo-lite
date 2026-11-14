@@ -63,7 +63,6 @@ export const useAgentWorkTriggers = (
                         ...(trigger.preset === null ? {} : { preset: trigger.preset }),
                         ...(trigger.atTime === "" ? {} : { atTime: trigger.atTime }),
                         ...(trigger.eventName === "" ? {} : { eventName: trigger.eventName }),
-                        ...(trigger.probeKey === "" ? {} : { probeKey: trigger.probeKey }),
                     }),
                 { successMessage: t("saved") },
             )

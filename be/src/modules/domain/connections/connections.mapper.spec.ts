@@ -34,6 +34,7 @@ const row: ConnectionProjection = {
     status: "connected",
     lastError: null,
     environment: "test",
+    sandbox: true,
     isDefault: true,
     lastEventAt: "2026-10-12T01:00:00Z",
     firstEvent: { amount: 5, content: "hi", at: "2026-10-12T01:00:00Z" },
@@ -54,6 +55,7 @@ describe("toConnectionRecord", () => {
             status: "connected",
             lastError: null,
             environment: "test",
+            sandbox: true,
             isDefault: true,
             lastEventAt: "2026-10-12T01:00:00Z",
             firstEvent: { amount: 5, content: "hi", at: "2026-10-12T01:00:00Z" },
@@ -65,9 +67,9 @@ describe("toConnectionRecord", () => {
     it("falls back to empty meta, live and not default for odd stored values", async () => {
         const { subject } = await buildSubject()
 
-        const odd: ConnectionProjection = { ...row, publicMeta: [], environment: null, isDefault: null }
+        const odd: ConnectionProjection = { ...row, publicMeta: [], environment: null, isDefault: null, sandbox: null }
 
-        expect(subject.toConnectionRecord(odd)).toMatchObject({ meta: {}, environment: "live", isDefault: false })
+        expect(subject.toConnectionRecord(odd)).toMatchObject({ meta: {}, environment: "live", isDefault: false, sandbox: false })
         expect(subject.toConnectionRecord({ ...odd, publicMeta: null })).toMatchObject({ meta: {} })
     })
 

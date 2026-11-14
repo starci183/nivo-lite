@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
-import type { EffectInsert, EffectJson, NodeEffectStore, StoredEffect } from "./node-effect-store.port"
+import type { EffectInsert, EffectJson, EffectResettle, NodeEffectStore, StoredEffect } from "./node-effect-store.port"
 import { NodeEffectEntity } from "./persistence/entities"
 
 const jsonOf = (value: object | null): EffectJson | null => (value !== null && isRecord(value) ? value : null)
@@ -64,5 +64,19 @@ export class TypeormNodeEffectStore implements NodeEffectStore {
         // Postgres answers the inserted rows: none when another try wrote the key first.
         const returned: unknown = result.raw
         return Array.isArray(returned) && returned.length > 0
+    }
+
+    /** Settles again a row kept as outcome-unknown, in one conditional statement: true when this call moved it. */
+    async resettle(workspaceId: string, effectKey: string, unknownKind: string, subject: EffectResettle): Promise<boolean> {
+        const result = await this.entityManager.update(
+            NodeEffectEntity,
+            { workspaceId, effectKey, subjectEntity: unknownKind },
+            {
+                subjectEntity: subject.subjectEntity,
+                subjectId: subject.subjectId,
+                facts: subject.facts === null ? null : structuredClone({ ...subject.facts }),
+            },
+        )
+        return (result.affected ?? 0) > 0
     }
 }

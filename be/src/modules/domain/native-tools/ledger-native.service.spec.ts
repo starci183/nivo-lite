@@ -1,5 +1,6 @@
 import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { ConnectionBindingsReadService, isProvider, type ConnectionRecord, type ConnectionStatusFacts } from "@modules/domain/connections"
 import { GRAPH_EFFECT_ONCE } from "@modules/domain/graph-nodes"
 import type { EffectOnce } from "@modules/domain/graph-nodes"
 import { ToolsErrorCode } from "@modules/domain/tools"
@@ -12,12 +13,55 @@ import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-r
 import { DOOR_GRANTS } from "@modules/domain/entity-engine-door"
 import { domainNameIn } from "@modules/domain/tools"
 import type { WorkspaceToolFamily } from "@modules/domain/tools"
+import { connectionRecord } from "@tests/fixtures/builders/connection-records.builder"
 import { LEDGER_MANIFEST, LedgerNativeService } from "./ledger-native.service"
 import { NativeViewService } from "./native-view.service"
 import type { NativeView } from "./native-view.policy"
 
 // The engine's own caller (the declared job `accounting.ledger-append`): the caller that writes with no account handed. An agent's
 // write with none handed is refused (ARCH-REVIEW 2026-11-12 S7, "no silent pick" below).
+
+/** The account of a provider: ids are `<provider>-<n>` so the bindings double reads the provider off an id. */
+const accountOf = (id: string, sandbox = false): ConnectionRecord => {
+    const provider = id.split("-")[0] ?? ""
+    if (!isProvider(provider)) throw new Error(`The spec id ${id} names no provider.`)
+    return connectionRecord({ id, provider, workspaceId: "ws-1", sandbox })
+}
+
+/** The status facts of one account the bindings lister answers (only the id matters to the ledger). */
+const factsOf = (id: string, provider: string): ConnectionStatusFacts => ({
+    id,
+    provider,
+    name: id,
+    status: "connected",
+    createdAt: new Date(0),
+    botUsername: null,
+    accountMasked: null,
+    lastError: null,
+    oaId: null,
+    email: null,
+})
+
+/**
+ * The registry and bindings doubles serving these ports: each provider has one account `<provider>-1`, the registry hands the port of
+ * the account's provider (`portFor`), and `recordOf` answers any `<provider>-<n>` id as that provider's account.
+ */
+/** What the registry's port lookup reads of an account (its provider and its sandbox flag). */
+type PortAccountOf = Parameters<LedgerRegistryService["portFor"]>[0]
+
+const servedBy = (
+    registry: jest.Mocked<LedgerRegistryService>,
+    bindings: jest.Mocked<ConnectionBindingsReadService>,
+    ports: ReadonlyArray<LedgerPort>,
+): void => {
+    registry.providers.mockReturnValue(ports.map((port) => port.provider))
+    registry.portFor.mockImplementation((account: PortAccountOf) => ports.find((port) => port.provider === account.provider))
+    bindings.ofProvider.mockImplementation(async (_workspaceId: string, provider: string, _limit: number) =>
+        ports.some((port) => port.provider === provider) ? [factsOf(`${provider}-1`, provider)] : [],
+    )
+    bindings.recordOf.mockImplementation(async (_workspaceId: string, id: string) => accountOf(id))
+}
+
 const CALLER = { agentId: "agent-1", conversationId: null, engine: true as const }
 const ENTRY: BusinessLedgerEntry = {
     date: "2026-11-04",
@@ -52,43 +96,48 @@ const actOnce = (effects: jest.Mocked<EffectOnce>): void => {
 const arrange = (
     views: jest.Mocked<NativeViewService>,
     providers: jest.Mocked<LedgerRegistryService>,
+    bindings: jest.Mocked<ConnectionBindingsReadService>,
     port: LedgerPort | null,
 ): void => {
     views.internalOf.mockResolvedValue(mock<NativeView>())
-    providers.all.mockReturnValue(port === null ? [] : [port])
+    servedBy(providers, bindings, port === null ? [] : [port])
 }
 
 /** The ledger tools over the port, with the ledger of effects. */
 const build = async (port: LedgerPort | null = portOf(true)) => {
     const views = mock<NativeViewService>()
     const providers = mock<LedgerRegistryService>()
+    const bindings = mock<ConnectionBindingsReadService>()
     const effects = mock<EffectOnce>()
-    arrange(views, providers, port)
+    arrange(views, providers, bindings, port)
     actOnce(effects)
     const moduleRef = await Test.createTestingModule({
         providers: [
             LedgerNativeService,
             { provide: NativeViewService, useValue: views },
             { provide: LedgerRegistryService, useValue: providers },
+            { provide: ConnectionBindingsReadService, useValue: bindings },
             { provide: GRAPH_EFFECT_ONCE, useValue: effects },
         ],
     }).compile()
-    return { service: moduleRef.get(LedgerNativeService), views, effects, port }
+    return { service: moduleRef.get(LedgerNativeService), views, effects, port, providers, bindings }
 }
 
 /** The ledger tools over the port in an app that binds no ledger of effects (no graph host). */
 const buildBare = async (port: LedgerPort) => {
     const views = mock<NativeViewService>()
     const providers = mock<LedgerRegistryService>()
-    arrange(views, providers, port)
+    const bindings = mock<ConnectionBindingsReadService>()
+    arrange(views, providers, bindings, port)
     const moduleRef = await Test.createTestingModule({
         providers: [
             LedgerNativeService,
             { provide: NativeViewService, useValue: views },
             { provide: LedgerRegistryService, useValue: providers },
+            { provide: ConnectionBindingsReadService, useValue: bindings },
         ],
     }).compile()
-    return { service: moduleRef.get(LedgerNativeService), port }
+    return { service: moduleRef.get(LedgerNativeService), port, providers, bindings }
 }
 
 describe("LedgerNativeService > the manifest", () => {
@@ -142,7 +191,7 @@ describe("LedgerNativeService > append and void", () => {
         await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).resolves.toEqual({
             ref: "Sheet1!A2:G2",
         })
-        expect(port?.append).toHaveBeenCalledWith("ws-1", ENTRY)
+        expect(port?.append).toHaveBeenCalledWith(accountOf("google-1"), ENTRY)
     })
 
     it("writes on the account the tool runner handed the call, through that account's provider alone", async () => {
@@ -151,10 +200,10 @@ describe("LedgerNativeService > append and void", () => {
 
         await service.invoke("ws-1", "entry.append", { entry: ENTRY }, handed)
         await expect(
-            service.invoke("ws-1", "entry.append", { entry: ENTRY }, { ...handed, provider: "excel" }),
+            service.invoke("ws-1", "entry.append", { entry: ENTRY }, { ...handed, provider: "google_drive" }),
         ).rejects.toMatchObject({ params: { reason: "not_connected" } })
 
-        expect(port?.append).toHaveBeenCalledWith("ws-1", ENTRY, "google-2")
+        expect(port?.append).toHaveBeenCalledWith(accountOf("google-2"), ENTRY)
         expect(port?.append).toHaveBeenCalledTimes(1)
     })
 
@@ -177,7 +226,7 @@ describe("LedgerNativeService > append and void", () => {
         await service.invoke("ws-1", "entry.void", { transactionId: ENTRY.transactionId }, CALLER)
 
         expect(port?.void).toHaveBeenCalledTimes(1)
-        expect(port?.void).toHaveBeenCalledWith("ws-1", ENTRY.transactionId)
+        expect(port?.void).toHaveBeenCalledWith(accountOf("google-1"), ENTRY.transactionId)
         expect(effects.once).toHaveBeenCalledWith(
             "ws-1",
             "ledger.write",
@@ -295,6 +344,48 @@ describe("LedgerNativeService > refusals", () => {
     })
 })
 
+describe("LedgerNativeService > the account decides the port", () => {
+    it("asks the registry for the port of each ACCOUNT, so a sandbox account reaches its sandbox port and a live one the live port", async () => {
+        const live = portOf(true)
+        const sandbox = { ...portOf(true), append: jest.fn().mockResolvedValue("Sheet1!A2:H2") }
+        const { service, providers, bindings } = await build(live)
+        const sandboxAccount = accountOf("google-9", true)
+        bindings.recordOf.mockImplementation(async (_workspaceId: string, id: string) => (id === "google-9" ? sandboxAccount : accountOf(id)))
+        providers.portFor.mockImplementation((account: PortAccountOf): LedgerPort => (account.sandbox ? sandbox : live))
+
+        await expect(
+            service.invoke("ws-1", "entry.append", { entry: ENTRY }, { ...CALLER, provider: "google", connectionId: "google-9" }),
+        ).resolves.toEqual({ ref: "Sheet1!A2:H2" })
+
+        expect(providers.portFor).toHaveBeenCalledWith(sandboxAccount)
+        expect(sandbox.append).toHaveBeenCalledWith(sandboxAccount, ENTRY)
+        expect(live.append).not.toHaveBeenCalled()
+    })
+
+    it("takes the first ready account of a provider, never an unready or a disconnected one", async () => {
+        const port = portOf(true)
+        port.ready.mockImplementation(async (account: ConnectionRecord) => account.id === "google-3")
+        const { service, bindings } = await build(port)
+        bindings.ofProvider.mockResolvedValue([factsOf("google-2", "google"), factsOf("google-3", "google"), factsOf("google-4", "google")])
+        bindings.recordOf.mockImplementation(async (_workspaceId: string, id: string) =>
+            id === "google-4" ? { ...accountOf(id), status: "disconnected" } : accountOf(id),
+        )
+
+        await service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)
+
+        expect(port.append).toHaveBeenCalledWith(accountOf("google-3"), ENTRY)
+    })
+
+    it("refuses an account handed that belongs to another provider than the call names", async () => {
+        const { service, port } = await build()
+
+        await expect(
+            service.invoke("ws-1", "entry.append", { entry: ENTRY }, { ...CALLER, provider: "google", connectionId: "google_drive-1" }),
+        ).rejects.toMatchObject({ params: { reason: "not_connected" } })
+        expect(port?.append).not.toHaveBeenCalled()
+    })
+})
+
 // #10b (ARCH-REVIEW 2026-11-12 S7): no silent pick of the ledger. An agent's write the runner handed no account is refused
 // `not_connected` (the runner hands the node's books account; with none it never takes "the first ready provider"); the engine's own
 // caller (the declared job `accounting.ledger-append`) writes when exactly ONE provider is ready, is refused `not_selected` with
@@ -302,7 +393,7 @@ describe("LedgerNativeService > refusals", () => {
 describe("LedgerNativeService > no silent pick", () => {
     const AGENT = { agentId: "agent-1", conversationId: null }
     const ENGINE = { ...AGENT, engine: true as const }
-    const second = (): jest.Mocked<LedgerPort> => ({ ...portOf(true), provider: "excel" })
+    const second = (): jest.Mocked<LedgerPort> => ({ ...portOf(true), provider: "google_drive" })
 
     it("an agent's write with no account handed: refused not_connected, nothing written", async () => {
         const { service, port } = await build()
@@ -325,8 +416,7 @@ describe("LedgerNativeService > no silent pick", () => {
         const two = await build()
         const other = second()
         const google = two.port
-        const providers = two.service["providers"] as jest.Mocked<LedgerRegistryService>
-        providers.all.mockReturnValue(google === null ? [other] : [google, other])
+        servedBy(two.providers, two.bindings, google === null ? [other] : [google, other])
         await expect(two.service.invoke("ws-1", "entry.append", { entry: ENTRY }, ENGINE)).rejects.toMatchObject({
             params: { reason: "not_selected" },
         })

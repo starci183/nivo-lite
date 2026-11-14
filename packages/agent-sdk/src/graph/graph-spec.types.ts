@@ -1,5 +1,6 @@
 import type { NodeInputBindings, NodeProblemCode, NodeRole } from "../node"
-import type { JsonValue } from "../schema/schema.types"
+import type { JsonValue, SpecText } from "../schema/schema.types"
+import type { LoopExitLabels, LoopUnsuccessfulSpec, StepUnsuccessfulSpec } from "./graph-spec-v2.types"
 import type {
     ContractProblemCode,
     WorkflowContract,
@@ -96,6 +97,18 @@ export interface GraphSpecNode {
      * before node rights. An empty list acts through NIVO's own tools only.
      */
     readonly accounts?: ReadonlyArray<GraphNodeAccount> | undefined
+    /**
+     * What the ENGINE does when the step ends unsuccessfully (R68), carried from the @2 step as written: on a node step `then`, `outcome`
+     * and the notice facts; on an `until` loop the facts of the notice it posts when it runs out of rounds. Absent: today's road.
+     */
+    readonly unsuccessful?: StepUnsuccessfulSpec | LoopUnsuccessfulSpec | undefined
+    /**
+     * The words the map shows on an engine control step (a condition's question, a wait, a loop's name, a hand-back, an outcome), carried
+     * from the @2 step as written; absent: the generic word of its card.
+     */
+    readonly label?: SpecText | undefined
+    /** For an `until` loop: the words of its two ways out (the condition held, the rounds ran out), carried from the @2 step. */
+    readonly exits?: LoopExitLabels | undefined
 }
 
 /** What a waiting node waits for and how long, as durations like "2h" or "30m". */
@@ -156,7 +169,6 @@ export type GraphSpecProblemCode =
     | "GRAPH_GRANT_EXCESS"
     | "GRAPH_EFFECTS_MISMATCH"
     | "GRAPH_TOOLS_MISMATCH"
-    | "GRAPH_COMPENSABLE_AFTER_PIVOT"
     | NodeAccountProblemCode
     | ContractProblemCode
 

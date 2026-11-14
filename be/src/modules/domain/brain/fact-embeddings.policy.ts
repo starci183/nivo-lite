@@ -10,8 +10,8 @@ export const EMBED_BATCH = 32
 
 /**
  * The most changed facts one announcement embeds INLINE: one embedding call's worth (`EMBED_BATCH`), under `EMBED_TIMEOUT_MS`. The write
- * that announced waits for it, so it is bounded; the rest of a bigger announcement is left to the timed sweep
- * (`FactVectorsSweepService`, tick `brain-upkeep`), which finds every fact in force with no vector.
+ * that announced waits for it, so it is bounded; the rest of a bigger announcement is embedded by its `vector.sync` job (every changed
+ * fact gets one) and, failing that, by the vector reconcile (tick `vector-reconcile`), which walks every row against its point.
  */
 export const ANNOUNCE_INLINE_MAX = 32
 
@@ -110,7 +110,7 @@ export const sameTruthActOf = (
 }
 
 /** A refresh that did nothing (the AI is off, or it failed). */
-export const NOTHING_REFRESHED: EmbeddingsRefreshed = { embedded: 0, copied: 0, unchanged: 0 }
+export const NOTHING_REFRESHED: EmbeddingsRefreshed = { embedded: 0, adopted: 0, unchanged: 0 }
 
 /** The lines cut into batches of `EMBED_BATCH`, in order. */
 export const batchesOf = (lines: ReadonlyArray<LineBatchEntry>): ReadonlyArray<ReadonlyArray<LineBatchEntry>> =>

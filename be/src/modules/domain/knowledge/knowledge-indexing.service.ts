@@ -1,8 +1,7 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import {
     KnowledgeChunksService,
     reusePlanOf,
-    toVector,
     type ChunkDraft,
     type LocatedText,
     type MissingPassage,
@@ -45,10 +44,10 @@ const EMBED_TIMEOUT_MS = 20_000
 /** The most credit-blocked documents one upkeep tick looks at; the rest are looked at by the next tick. */
 const RESUME_MAX = 50
 
-/** One passage with its vector, or without one when the provider gave none, and the place it sits at in its document. */
+/** One passage, embedded or not (the provider gave no vector), and the place it sits at in its document. */
 const draftOf = (text: string, vector: ReadonlyArray<number> | undefined, place: PassagePlace | null): ChunkDraft => ({
     text,
-    vector: vector === undefined ? null : toVector(vector),
+    embedded: vector !== undefined,
     ...(place === null ? {} : { place }),
 })
 
@@ -77,7 +76,7 @@ export class KnowledgeIndexingService {
         private readonly usage: UsageMeterService,
         @InjectKnowledgeFullOptions() private readonly options: KnowledgeFullOptions,
         @InjectTimer() private readonly timer: Timer,
-        @Optional() private readonly vectorSync?: VectorSyncService,
+        private readonly vectorSync: VectorSyncService,
     ) {}
 
     /**
@@ -192,7 +191,7 @@ export class KnowledgeIndexingService {
         )
         if (!wordOnly) return this.finish(source, null, pieces.length)
         await this.sources.blockIndexing(workspaceId, id, StoredNote.NoCreditsForIndex, pieces.length)
-        await this.vectorSync?.changedSource(workspaceId, id)
+        await this.vectorSync.changedSource(workspaceId, id)
         return "blocked"
     }
 
@@ -205,15 +204,15 @@ export class KnowledgeIndexingService {
             progress: 80,
         })
         await this.sources.finishIndexing(source.workspaceId, source.id, note, count)
-        await this.vectorSync?.changedSource(source.workspaceId, source.id)
+        await this.vectorSync.changedSource(source.workspaceId, source.id)
         return "indexed"
     }
 
     /**
-     * Vectors in the vector index (`VectorSyncService.bound`): the vectors of a stored batch are handed over under the ids their
-     * passages were stored with. Postgres first: the rows are committed (word-searchable at once, no vector in the row), then the
-     * index takes the vectors and Postgres records `indexed_at`: the passage is found by meaning from then on. An index that does not
-     * answer never fails the document: the queued sync brings its passages in step.
+     * The vectors of a stored batch are handed to the vector index under the ids their passages were stored with. Postgres first: the
+     * rows are committed (word-searchable at once, no vector in the row), then the index takes the vectors and Postgres records
+     * `indexed_at`: the passage is found by meaning from then on. An index that does not answer never fails the document: the queued
+     * sync brings its passages in step.
      */
     private async handOver(
         source: SourceRecord,
@@ -221,7 +220,7 @@ export class KnowledgeIndexingService {
         vectors: ReadonlyArray<ReadonlyArray<number>> | null,
         stored: ReadonlyArray<StoredAt>,
     ): Promise<void> {
-        if (vectors === null || this.vectorSync?.bound() !== true) return
+        if (vectors === null) return
         const idAt = new Map(stored.map((one) => [one.order, one.id]))
         const handed = new Map<string, ReadonlyArray<number>>()
         batch.forEach((entry, offset) => {
@@ -338,7 +337,6 @@ export class KnowledgeIndexingService {
             visibility: source.visibility,
             installationId: source.installationId,
             model: this.embeddings.model(),
-            ...(this.vectorSync?.bound() === true ? { vectorsInIndex: true } : {}),
         }
     }
 }

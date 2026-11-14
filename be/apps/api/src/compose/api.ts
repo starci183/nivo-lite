@@ -23,10 +23,9 @@ import { BrainCriticGraphqlModule } from "@features/api/brain-critic"
 import { PublicDocumentsGraphqlModule } from "@features/api/public-documents"
 import { ContactsGraphqlModule } from "@features/api/contacts"
 import { WorkspaceThemeGraphqlModule } from "@features/api/workspace-theme"
-import { LeadFreezesGraphqlModule } from "@features/api/lead-freezes"
+import { ProviderSandboxGraphqlModule } from "@features/api/provider-sandbox"
 import { AgentGraphsGraphqlModule } from "@features/api/agent-graphs"
 import { AgentWorkflowsGraphqlModule } from "@features/api/agent-workflows"
-import { TemplateMarketplaceGraphqlModule } from "@features/api/template-marketplace"
 import { ToolsGraphqlModule } from "@features/api/tools"
 import { AuthHttpModule } from "@features/api/auth"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
@@ -62,13 +61,12 @@ export const apiModules = (): Array<DynamicModule> => [
     BrainPoliciesGraphqlModule.register({}),
     BrainCriticGraphqlModule.register({}),
     PublicDocumentsGraphqlModule.register({}),
-    LeadFreezesGraphqlModule.register({}),
+    ProviderSandboxGraphqlModule.register({}),
     ContactsGraphqlModule.register({}),
     WorkspaceThemeGraphqlModule.register({}),
     ToolsGraphqlModule.register({}),
     AgentGraphsGraphqlModule.register({}),
     AgentWorkflowsGraphqlModule.register({}),
-    TemplateMarketplaceGraphqlModule.register({}),
     AuthHttpModule.register({}),
     GoogleConnectionsHttpModule.register({}),
     MetaConnectionsHttpModule.register({}),

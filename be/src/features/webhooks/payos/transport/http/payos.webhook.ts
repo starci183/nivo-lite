@@ -1,4 +1,5 @@
-import { Controller, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req, type RawBodyRequest } from "@nestjs/common"
+import { SANDBOX_KEY_HEADER } from "@modules/domain/provider-sandbox"
 import type { Request } from "express"
 import { BankFeedReceiptsService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
@@ -22,13 +23,18 @@ export class PayosWebhook {
     @HttpCode(HttpStatus.OK)
     @Public({ reason: PublicReason.SignedWebhook })
     @RateLimit(RateTier.Strict)
-    async receive(@Req() request: RawBodyRequest<Request>, @Param("connectionId") connectionId: string): Promise<void> {
+    async receive(
+        @Req() request: RawBodyRequest<Request>,
+        @Param("connectionId") connectionId: string,
+        @Headers(SANDBOX_KEY_HEADER) sandboxKey?: string,
+    ): Promise<void> {
         await this.signature.verify({
             provider: "payos",
             scope: connectionId,
             rawBody: request.rawBody,
             signature: undefined,
             timestamp: undefined,
+            sandboxKey,
         })
         await this.feed.acceptPayosDelivery(request.rawBody, connectionId)
     }

@@ -1,4 +1,4 @@
-import type { ContactModuleBlocksQuery, ContactQuery, ContactsQuery } from "@/modules/api"
+import type { ContactModuleBlocksQuery, ContactQuery, ContactsQuery, ContactWorkQuery } from "@/modules/api"
 import type {
     ContactDetailView,
     ContactFactView,
@@ -57,7 +57,7 @@ export const logoOfBrand = (brand: string | null): string | null =>
     brand === null ? null : (BRAND_LOGOS[brand] ?? null)
 
 /** The brands a person is reached on, in the order their identities were learned, each once. */
-export const channelBrandsOf = (identities: ReadonlyArray<IdentityWire>): ReadonlyArray<string> => {
+const channelBrandsOf = (identities: ReadonlyArray<IdentityWire>): ReadonlyArray<string> => {
     const brands: Array<string> = []
     for (const identity of identities) {
         const brand = identity.kind === "channel" ? brandOf(identity.provider) : null
@@ -104,12 +104,16 @@ export const contactRowOf = (contact: ContactWire, words: ContactWords): Contact
     }
 }
 
-/** What an identity is called on its row: the channel for a channel id, else the kind of identity. */
+/** What an identity is called on its row: "Zalo · Flower shop" for a channel id, else the kind of identity. */
 const identityTitleOf = (identity: IdentityWire, words: ContactWords): string => {
     if (identity.kind === "phone") return words.kindPhone
     if (identity.kind === "email") return words.kindEmail
     const brand = brandOf(identity.provider)
-    if (identity.kind === "channel") return brand ?? words.kindChannel
+    if (identity.kind === "channel") {
+        const account = words.account(identity.account)
+        const channel = brand ?? words.kindChannel
+        return account === null ? channel : `${channel} · ${account}`
+    }
     return brand ?? words.kindExternal
 }
 
@@ -135,16 +139,39 @@ const reasonOf = (joinedBy: string | null, words: ContactWords): string | null =
     return null
 }
 
-/** One identity row: what it is, its value, how it is proven and the merge reason that brought it here. */
-export const identityOf = (identity: IdentityWire, words: ContactWords): ContactIdentityView => {
+/** The phone or the mail an identity holds; null for any other kind. */
+const wayValueOf = (identity: IdentityWire): string | null => {
+    if (identity.kind === "phone") return phoneTextOf(identity.value)
+    return identity.kind === "email" ? identity.value : null
+}
+
+/** The words that say a person on a channel account is held by the staff: "Held by An"; none when the agents speak on it. */
+const holdOf = (
+    identity: IdentityWire,
+    routes: ContactDetailWire["routes"],
+    words: ContactWords,
+): string | null => {
+    if (identity.kind !== "channel") return null
+    const holder = routes.find((route) => route.accountId === identity.account)?.holder
+    if (holder === undefined || holder === null) return null
+    const name = holder.name?.trim() ?? ""
+    return words.hold(name === "" ? null : name)
+}
+
+/** One identity row: what it is, the phone or mail it holds, why it is linked (the merge reason, else how it is proven) and, on a channel the staff hold, who holds it. */
+export const identityOf = (
+    identity: IdentityWire,
+    routes: ContactDetailWire["routes"],
+    words: ContactWords,
+): ContactIdentityView => {
     const brand = identity.kind === "phone" || identity.kind === "email" ? null : brandOf(identity.provider)
     return {
         id: identity.id,
         title: identityTitleOf(identity, words),
-        value: identity.kind === "phone" ? phoneTextOf(identity.value) : identity.value,
-        proof: proofOf(identity, words),
+        description: wayValueOf(identity),
         logo: logoOfBrand(brand),
-        reason: reasonOf(identity.joinedBy, words),
+        why: reasonOf(identity.joinedBy, words) ?? proofOf(identity, words),
+        hold: holdOf(identity, routes, words),
     }
 }
 
@@ -152,27 +179,35 @@ export const identityOf = (identity: IdentityWire, words: ContactWords): Contact
 export const contactFactsOf = (memory: ContactDetailWire["memory"]): ReadonlyArray<ContactFactView> =>
     memory.facts.map((fact) => ({ name: fact.name, value: fact.value }))
 
-/** What one step note says: its status, and what came of it when the step left something. */
-const noteTextOf = (note: ContactDetailWire["memory"]["notes"][number]): string => {
-    const output = note.output.trim()
-    /** A step's structured answer (JSON) is data for the engine, not a sentence for the person: only plain text is drawn. */
-    const isStructured = output.startsWith("{") || output.startsWith("[")
-    return output === "" || isStructured ? note.status : `${note.status} · ${output}`
+/** The work the agents did for a person, as the back end labels it. */
+export type ContactWorkWire = ContactWorkQuery["contactWork"]
+
+/** What a piece of work is called: "<workflow> · <step>", the workflow alone when the step has no label, the neutral word when neither has one. */
+const workTitleOf = (work: ContactWorkWire[number], words: ContactWords): string => {
+    const workflow = work.workflowLabel?.trim() ?? ""
+    const step = work.stepLabel?.trim() ?? ""
+    if (workflow === "") return step === "" ? words.noteUnknownWork : step
+    return step === "" ? workflow : `${workflow} · ${step}`
 }
 
-/** The step outcomes the agents remember, newest first: the step, what came of it and when. */
-export const contactNotesOf = (
-    memory: ContactDetailWire["memory"],
-    words: ContactWords,
-): ReadonlyArray<ContactNoteView> =>
-    [...memory.notes]
-        .sort((left, right) => right.at.localeCompare(left.at))
-        .map((note, index) => ({
-            id: `${note.workflow}:${note.step}:${index}`,
-            title: `${note.workflow} · ${note.step}`,
-            text: noteTextOf(note),
-            time: words.ago(note.at),
-        }))
+/**
+ * The work the agents did, newest first as the back end orders it: what it was (workflow and step labels), how it ended (done, failed
+ * or passed over) and when. The round of a repeated step ("round 2") is added only to rows that would otherwise read the same.
+ */
+export const contactNotesOf = (work: ContactWorkWire, words: ContactWords): ReadonlyArray<ContactNoteView> => {
+    const titles = work.map((one) => workTitleOf(one, words))
+    const sameTitle = (title: string): number => titles.filter((one) => one === title).length
+    return work.map((one, index) => {
+        const title = titles[index] ?? ""
+        const round = sameTitle(title) < 2 ? null : (one.round ?? null)
+        return {
+            id: one.id,
+            title: round === null ? title : `${title} · ${words.noteRound(round)}`,
+            status: words.noteStatus(one.status),
+            time: words.ago(one.at),
+        }
+    })
+}
 
 /** The reason a person may be someone already known, in words. */
 const suggestionWhyOf = (suggestion: ContactDetailWire["suggestions"][number], words: ContactWords): string => {
@@ -201,6 +236,8 @@ export const contactSuggestionsOf = (
 /** What the detail needs beyond the read: how a path becomes an address in the workspace, and whether the viewer may delete. */
 interface DetailOptions {
     readonly canDelete: boolean
+    /** The work the agents did for the person (its own read); none until read. */
+    readonly work: ContactWorkWire | undefined
 }
 
 /** Everything the detail of one person draws, worded. */
@@ -215,9 +252,9 @@ export const detailOf = (
     line: lineOf(detail.contact.identities),
     displayName: detail.contact.displayName ?? "",
     tags: detail.contact.tags,
-    identities: detail.contact.identities.map((identity) => identityOf(identity, words)),
+    identities: detail.contact.identities.map((identity) => identityOf(identity, detail.routes, words)),
     facts: contactFactsOf(detail.memory),
-    notes: contactNotesOf(detail.memory, words),
+    notes: contactNotesOf(options.work ?? [], words),
     suggestions: contactSuggestionsOf(detail.suggestions, words),
     canDelete: options.canDelete,
 })

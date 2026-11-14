@@ -1,5 +1,4 @@
 import type {
-    AgentGoalRecord,
     AgentTriggerRecord,
     AgentWorkSettingsRecord,
     AgentWorkState,
@@ -11,11 +10,9 @@ import type { ReadAgentWorkLogRequest } from "../../application/read-agent-work-
 import type { CloseAgentTaskRequest } from "../../application/close-agent-task.contracts"
 import type { ReadAgentWorkRequest } from "../../application/read-agent-work.contracts"
 import type { RemoveAgentTriggerRequest } from "../../application/remove-agent-trigger.contracts"
-import type { SaveAgentGoalRequest } from "../../application/save-agent-goal.contracts"
 import type { SaveAgentTriggerRequest } from "../../application/save-agent-trigger.contracts"
 import type { SetAgentWorkRequest } from "../../application/set-agent-work.contracts"
 import type { SetWorkspaceAgentWorkRequest } from "../../application/set-workspace-agent-work.contracts"
-import type { AgentGoalType } from "./dto/agent-goal.type"
 import type { AgentTriggerType } from "./dto/agent-trigger.type"
 import type { AgentWorkLogLineType } from "./dto/agent-work-log.type"
 import type { AgentWorkAckType } from "./dto/agent-work-ack.type"
@@ -24,7 +21,6 @@ import type { AgentWorkStateType } from "./dto/agent-work-state.type"
 import type { AgentWorkType } from "./dto/agent-work.type"
 import type { CloseAgentTaskInput } from "./dto/close-agent-task.input"
 import type { RemoveAgentTriggerInput } from "./dto/remove-agent-trigger.input"
-import type { SaveAgentGoalInput } from "./dto/save-agent-goal.input"
 import type { SaveAgentTriggerInput } from "./dto/save-agent-trigger.input"
 import type { SetAgentWorkInput } from "./dto/set-agent-work.input"
 import type { SetWorkspaceAgentWorkInput } from "./dto/set-workspace-agent-work.input"
@@ -49,17 +45,6 @@ export const toSetWorkspaceAgentWorkRequest = (
     input: SetWorkspaceAgentWorkInput,
 ): SetWorkspaceAgentWorkRequest => ({ workspaceId, enabled: input.enabled })
 
-/** Maps the goal of the GraphQL input, with the workspace it names, to the request. */
-export const toSaveAgentGoalRequest = (workspaceId: string, input: SaveAgentGoalInput): SaveAgentGoalRequest => ({
-    workspaceId,
-    installationId: input.installationId,
-    goalId: input.goalId,
-    title: input.title,
-    detail: input.detail,
-    status: input.status,
-    dueAt: input.dueAt,
-})
-
 /** Maps the trigger of the GraphQL input, with the workspace it names, to the request. */
 export const toSaveAgentTriggerRequest = (
     workspaceId: string,
@@ -73,7 +58,6 @@ export const toSaveAgentTriggerRequest = (
     atTime: input.atTime,
     timeZone: input.timeZone,
     eventName: input.eventName,
-    probeKey: input.probeKey,
     enabled: input.enabled,
 })
 
@@ -96,16 +80,12 @@ export const toAgentWorkAckType = (): AgentWorkAckType => ({ ok: true })
 /** Maps the switch of an agent to the GraphQL type. */
 export const toAgentWorkStateType = (state: AgentWorkState): AgentWorkStateType => ({ ...state })
 
-/** Maps a goal to the GraphQL type. */
-export const toAgentGoalType = (goal: AgentGoalRecord): AgentGoalType => ({ ...goal })
-
 /** Maps a trigger to the GraphQL type. */
 export const toAgentTriggerType = (trigger: AgentTriggerRecord): AgentTriggerType => ({ ...trigger })
 
 /** Maps the Work tab of an agent to the GraphQL type. A turn carries usage and ending only, never a prompt, a proposal or a customer's words. */
 export const toAgentWorkType = (view: AgentWorkView): AgentWorkType => ({
     state: { ...view.state },
-    goals: view.goals.map((goal) => ({ ...goal })),
     tasks: view.tasks.map((task) => ({ ...task })),
     triggers: view.triggers.map((trigger) => ({ ...trigger })),
     turns: view.turns.map((turn) => ({ ...turn })),

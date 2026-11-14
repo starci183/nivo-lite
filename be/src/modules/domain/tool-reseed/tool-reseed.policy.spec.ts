@@ -227,8 +227,9 @@ describe("the stores", () => {
         expect(HISTORY_STORES.some((store) => new Set<string>(RESEED_STORES).has(store))).toBe(false)
     })
 
-    // Ledger (ROAD Opus-1d, 2026-11-14): `holds` (public.conversation_holds) left the by-hand list with the table (ruling R35).
-    it("read every condition of block 0: two records through the engine, nine tables by hand", () => {
+    // Ledger (ROAD Opus-1d, 2026-11-14): `holds` (public.conversation_holds) left the by-hand list with the table (ruling R35); `freezes`
+    // (public.contact_freezes) left it with the table (rule Q-1: a run holds its subject, nothing is frozen apart from it).
+    it("read every condition of block 0: two records through the engine, eight tables by hand", () => {
         expect(ENGINE_DRAIN.map((condition) => condition.key)).toEqual(["runs", "steps"])
         expect(BY_HAND_DRAIN.map((line) => line.split(":")[0])).toEqual([
             "jobs",
@@ -239,7 +240,6 @@ describe("the stores", () => {
             "threads",
             "care_timers",
             "stops",
-            "freezes",
         ])
     })
 })

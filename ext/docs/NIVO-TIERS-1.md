@@ -11,7 +11,7 @@ Code `NIVO_TEMPLATE_TIER_HOME`, severity error. Engine: ESLint rule `ext/lint/te
 ## What it enforces
 
 - Under `packages/**`, `defineNode` (the engine's node tier) is imported or re-exported only by its home `packages/agent-sdk/**` and by the
-  engine control nodes `packages/blocks-core/src/nodes/core/**`; every other package node is a `defineTemplateNode`.
+  engine control nodes `packages/blocks-core/src/shared/nodes/core/**`; every other package node is a `defineTemplateNode`.
 - Under `be/src/**`, `defineTemplateNode` / `defineTemplateGraph` / `defineTemplateAgent` (the package tiers) are not imported, except by the
   engine's fixtures `be/src/tests/**` and specs `*.spec.ts`. A type-only import is no use of a tier.
 
@@ -26,7 +26,7 @@ a template of its own, mixes the two tiers.
 
 ## Examples
 
-Valid (`packages/blocks-core/src/nodes/sales/x.node.ts`): `import { defineTemplateNode } from "@nivo-lite/agent-sdk/template"`.
+Valid (`packages/blocks-core/src/agents/sales/nodes/x.node.ts`): `import { defineTemplateNode } from "@nivo-lite/agent-sdk/template"`.
 
-Invalid (`packages/blocks-core/src/nodes/sales/x.node.ts`): `import { defineNode } from "@nivo-lite/agent-sdk/node"`.
+Invalid (`packages/blocks-core/src/agents/sales/nodes/x.node.ts`): `import { defineNode } from "@nivo-lite/agent-sdk/node"`.
 Invalid (`be/src/modules/domain/x/x.service.ts`): `import { defineTemplateGraph } from "@nivo-lite/agent-sdk/template"`.

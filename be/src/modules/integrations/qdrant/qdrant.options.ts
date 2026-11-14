@@ -2,8 +2,8 @@ import type { Secret } from "@modules/platform/config"
 
 /** How the app reaches its Qdrant service, as the environment says it. */
 export interface QdrantConfig {
-    /** The base address of the service, without a trailing slash; null when the deployment has none (no client is registered). */
-    readonly url: string | null
+    /** The base address of the service, without a trailing slash. */
+    readonly url: string
     /** The API key of the service, sealed; null for a service that asks for none (a private dev network). */
     readonly apiKey: Secret | null
     /** How long one call may take, milliseconds. */
@@ -16,8 +16,5 @@ export interface QdrantOptions extends QdrantConfig {
     readonly dimensions: number
 }
 
-/** The options of a deployment that has the service. */
-export interface QdrantEndpoint extends QdrantOptions {
-    /** The base address. */
-    readonly url: string
-}
+/** The endpoint the client calls: the options the module was registered with. */
+export type QdrantEndpoint = QdrantOptions
