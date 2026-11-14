@@ -32,10 +32,18 @@ Vì sao: the provider's hardcoded cases (`sandboxCases(provider)`), one row each
 Luật: `surfacecard-zones-api` (inputs and the muted lines are a `custom` header zone, never loose lines), `red-budget-links-foreground` (every row button is neutral sm), `row-padding` (controls included), `type-scale-14-12`.
 Grammar: `SurfaceCard kind="list"` with `headers: [{ kind: "custom" }]`, `ListRowData action actionPlacement="end" badges`, `Input size="sm"`, `Text size="xs" tone="muted"`.
 
+## 2a'. "Ca thử áp dụng cho" (chỉ tài khoản mô hình AI; FE-WIRE-B, chưa xem bằng mắt)
+Vì sao: tài khoản sandbox của nhà cung cấp `model` (tên trên trang: "Mô hình AI", từ catalogue của app) phục vụ MỌI lần workspace gọi mô hình AI, nên ca thử chọn được ở hai độ rộng: cho mọi lần gọi, hoặc chỉ cho một mục đích (purpose) đã thấy trong sổ lời gọi. Danh sách chọn là thẻ `select` một lựa chọn: dòng đầu "Mọi lần gọi", rồi mỗi mục đích của sổ lời gọi một dòng (mới nhất trước), nhãn bằng lời ("Rút ý chính từ tài liệu", "Xem tài liệu có gì đáng nhớ", "Lõi AI xử lý bước bị dừng"); API chưa cho nhãn bước / node của agent nên một lượt của agent là "Một bước của agent" và mọi cái khác là "Một lần gọi mô hình AI", mã khoá (`chatbot.answer:agent`) chỉ nằm ở dòng phụ 12 muted, không bao giờ là chữ duy nhất. Nút "Chọn" của một ca gửi `setSandboxNextCase` với `scope` = mục đích đã chọn (không gửi `scope` khi chọn "Mọi lần gọi"); khi đang chọn một mục đích, không dòng ca nào mang huy hiệu "Kế tiếp" (API chỉ nói ca của lựa chọn mọi-lần-gọi). Thẻ này không vẽ cho nhà cung cấp khác.
+Luật: `surfacecard-select-subtitle` (mọi danh sách chọn là thẻ select), `type-scale-14-12`, `no-word-matching-code` (nhãn mục đích theo bảng khai báo, không đoán chữ).
+Grammar: `SurfaceCard kind="select" selectionMode="single"` (item `title` + `subtitle`).
+
 ## 2b. "Sổ lời gọi"
 Vì sao: the account's call log (`sandboxCalls`, at most 500, the back end answers oldest first and the page turns it newest first), ten at a time with "Xem thêm" (a `more` footer zone). A row: what was called or sent (the operation; a webhook sent through the page is "Gửi webhook vào"), and the muted 12 line: the case id (a send carries it in its request) or the call's key, the time, and, when the call threw, a plain Badge "Lỗi" and the reason. "Xoá sổ" (`resetSandboxAccount`) is a neutral `Button` sm in a custom footer zone and asks first in a Grammar `AlertDialog` (neutral tone: it clears the log and the account's state, the next case goes back to the default; the dialog's confirm button is the one red on screen only while it is open). The log is read again every 8 s so what the agents do meanwhile shows.
 Luật: `row-padding`, `red-budget-links-foreground`, `type-scale-14-12`.
 Grammar: `SurfaceCard kind="list"` with `footers: [{ kind: "more" }, { kind: "custom" }]`, `AlertDialog`.
+
+### Sổ lời gọi của tài khoản mô hình AI
+Dòng của một lời gọi ghi mục đích bằng lời (cùng bảng nhãn như danh sách "Áp dụng cho"; mã khoá chỉ đứng sau chữ chung) thay vì mã thô; tài khoản của nhà cung cấp khác giữ nguyên dòng (mã ca hoặc khoá, thời điểm, lỗi nếu có).
 
 ## 2c. "Khoá webhook"
 Vì sao: for tests that call the provider's webhook themselves the account's sandbox key (`sandboxKey`; the back end derives it, stores nothing) is needed. DECISION: the key is NEVER drawn until the owner presses "Hiện khoá": the row shows dots; "Hiện khoá" / "Ẩn khoá" toggles it, and the neutral "Sao chép" copies it without showing it. The key is read into the page's memory for the copy button only. The muted 12 line says where it goes (header `x-nivo-sandbox-key`). The provider's webhook PATH is not in the API (see the gap below), so the line names the header, not the path.

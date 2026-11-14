@@ -7,9 +7,9 @@ Màn này đang hiển thị quy trình "Đối soát tiền về" (`reconcile`,
 Đường dẫn `agents/<loại>/<id>/workflows/<khóa quy trình>` (nhận cả id). Dải tab, đầu trang và các phần đều dùng chung cho bốn phần.
 
 ## Đầu trang: tên, bản, trạng thái, lệnh
-Vì sao: tên quy trình, dòng "Bản N · số bước · ngày", Badge trạng thái ở đầu; lệnh của phần đang mở nằm cuối hàng (Sửa sơ đồ, hoặc một nút Thêm bước ở phần Sơ đồ).
+Vì sao: tên quy trình, dòng "Bản N · số bước · ngày", Badge trạng thái ở đầu; lệnh duy nhất ở cuối hàng là Tạm dừng / Bật lại. Không có lệnh sửa sơ đồ hay thêm bước: sơ đồ là của mẫu và chỉ đọc (2026-11-14).
 Luật: header-left-sublabel-xs.md (đầu trang flush trái, sublabel 12), signed-in owner mockup Workflow-Detail/Editor.
-Grammar: `PaneHead` (composite của app trên Grammar `PaneHeader`: title, description, status, actions), node_modules/@starci/grammar/dist/core/composite/PaneHeader/index.d.ts. Chỉ một Button ở actions, đúng luật PaneHeader; nút Thêm bước ở phần Sơ đồ mở ngăn chọn loại bước (StepAction add).
+Grammar: `PaneHead` (composite của app trên Grammar `PaneHeader`: title, description, status, actions), node_modules/@starci/grammar/dist/core/composite/PaneHeader/index.d.ts. Chỉ một Button ở actions, đúng luật PaneHeader.
 
 ## Dải tab Vào · Ra, Sơ đồ, Phiên bản, Lượt chạy
 Vì sao: bốn phần của một quy trình là tab tầng hai nên nằm ở dải đầu trang màu trắng, ngay dưới dải tab của agent, mỗi phần là một đường dẫn riêng (`/workflows/<khóa>`, `/map`, `/versions`, `/runs`).
@@ -36,3 +36,7 @@ Vì sao: bảng tham số bàn giao; giá trị động (= trigger.leadId) là c
 Luật: workflow-memory-contracts.md (động hay cố định), owner-colors-exact.md (hồng chính xác của chủ).
 Grammar: `Section` (title, fact) + `DataTable`, Badge tone accent/neutral qua WorkflowChips.
 
+## Mục "Nguồn gốc" (FE-READONLY, 2026-11-14, chưa xem bằng mắt)
+Vì sao: ở cuối Vào · Ra, một danh sách hàng nhãn / giá trị: Mẫu (tên), Gói (nhãn gói chứa mẫu), Phiên bản (Bản N), và dưới thẻ một câu: sơ đồ này là của gói mẫu, shop dùng nguyên, đổi cách làm thì gói ra bản mới. Quy trình không có mẫu thì không có mục này.
+Luật: templates.md (một đồ thị là của mẫu), type-scale-14-12 (câu cuối 12).
+Grammar: `Section kind="list"` với `caption`, `ListRowData.value`.

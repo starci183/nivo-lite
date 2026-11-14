@@ -40,10 +40,10 @@ Vì sao: a graph may have disconnected islands (a cron or event workflow nothing
 Luật: `workflow-memory-contracts.md` ("A graph may have disconnected islands").
 Grammar: node `isDimmed`; the steps layout places unconnected nodes apart (`branch/FlowGraph/steps.d.ts`). Islands wrap into rows (`FlowGraph islands="wrap"`, default since Grammar 0.37.8; at 1440 Sales shows 4 + 2, at 390 they stack one per row). Gap: there is no "Cụm rời" divider label.
 
-## Canvas surface, zoom controls and rearranging
-Vì sao: the canvas is a dotted surface (the graph pane is chrome, not a pink well); cards stay at reading size, so a graph larger than the pane is panned or zoomed, never shrunk; blocks can be dragged and "Sắp xếp lại" returns to the automatic layout. Verified on the real API: drag a block, reload, it stays where it was dropped (saved per agent after a 600 ms pause); the reset control restores the automatic position after reload.
+## Canvas surface and zoom controls
+Vì sao: the canvas is a dotted surface (the graph pane is chrome, not a pink well); cards stay at reading size, so a graph larger than the pane is panned or zoomed, never shrunk; blocks are NOT movable (a shop never edits a graph, so no drag and no saved layout; the layout is the computed one); panning, zooming, the zoom buttons, fit view and pressing a block stay.
 Luật: `pink-page-surface-rule.md` (chrome = surface), `flowgraph-card-style.md`, ui-laws "Graphs".
-Grammar: `FlowGraph background="dots" isEditable positions onPositionsChange resetLabel isInteractive showControls fit="readable"`, `branch/FlowGraph/index.d.ts`. Saved with `saveAgentGraphLayout`, read with `agentGraphLayout`.
+Grammar: `FlowGraph background="dots" isInteractive showControls fit="readable"`, no `isEditable` / `positions` / `onPositionsChange` (`branch/FlowGraph/index.d.ts`: `isEditable` is what turns node dragging on).
 
 ## Legend caption
 Vì sao: legends go OUTSIDE and under the content as a 12px muted caption, always visible (it is a pinned band under the scrolling canvas, never inside it); never a section description.

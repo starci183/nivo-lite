@@ -14,6 +14,11 @@ Grammar: `MessageCard` `title` `chip` `author` `meta` qua `AgentMessageCard` (bl
 Vì sao: một hai câu nói thẻ này xin gì và vì sao, từ mô tả của bước + tham số + ngữ cảnh; nếu AI lỗi thì là câu dự phòng của engine.
 Luật: `type-scale-14-12`. Grammar: `Text size="sm"` trong `Stack gap="row"`.
 
+## Dòng "Tiêu đề" của thư (FE-WIRE-B, chưa xem bằng mắt)
+Vì sao: một lần gửi cho khách qua thư (kênh email) mang thêm tiêu đề; người duyệt phải thấy nguyên tiêu đề cùng lời sẽ gửi (`approvalContent`: subject, text, images), nên khung "Tin gửi khách" có một dòng "Tiêu đề" (khoá trên, nội dung 14) TRƯỚC dòng tin nhắn khi cuộc gọi có tiêu đề; tin nhắn trò chuyện không có dòng này. Từ chối của engine `subject_required` ("Thư cần có tiêu đề") và `address_not_accepted` có lời trong catalogue (vi + en) của be (`teamChat.lineReason.*`, nơi duy nhất đang giữ lời của các lý do từ chối khi gửi).
+Luật: `type-scale-14-12`, `row-padding`.
+Grammar: `SurfaceCard kind="list" layout="keyValue"`.
+
 ## Danh sách có viền: Bước · Thao tác · số tiền và tham số
 Vì sao: người duyệt cần đọc SỰ THẬT của cuộc gọi (số tiền, người nhận) chứ không chỉ lời AI. Dòng "Bước" = tên bước · mô tả bước ("Hoàn tiền · hoàn cho khách khi đơn đã trả bị huỷ"). Dòng "Thao tác" đứng ngay sau "Bước", theo bản vẽ: tên thao tác bằng lời theo ngôn ngữ người xem (`call.label` do engine gửi, lấy từ tiêu đề công cụ trong manifest, vi / en) rồi " · " tài khoản ("Huỷ link thanh toán · payOS Tiệm hoa"); tài khoản nằm CHUNG dòng này, không lặp lại thành dòng riêng. Khi không có `call.label` (engine chưa gửi, hoặc nhãn sai dạng) thì KHÔNG có dòng "Thao tác" và tài khoản (nếu có) giữ dòng riêng "Tài khoản"; mã công cụ không bao giờ được vẽ thành nội dung, nó chỉ nằm ở nếp gấp kỹ thuật. Lưu ý: dòng chỉ bật khi schema payload của SDK có `call.label` (hiện zod bỏ phần thừa). Mỗi dòng tên + giá trị; số tiền đã được engine ghi bằng chữ kèm đơn vị; giá trị dài xuống dòng, không tràn ở 390.
 Luật: `stop-card-design` + `surfacecard-select-subtitle` (list trong thẻ có viền, không thẻ trong thẻ), `row-control-clearance` (p-4 mép thẻ, p-3 tới vạch).

@@ -5,7 +5,7 @@ area: agent-setup
 ---
 # Thiết lập › Hướng dẫn (Sales)
 
-Shots: `1440.png`, `1920.png`, `390.png`. Code: `features/pages/AgentSetupPage`, `components/blocks/AgentSetupPanes`, composites `AgentSetupUnderstanding`, `AgentSetupMap`, `AgentGraphMode`, `AgentSetupVersions`. Đường dẫn Grammar tính từ `node_modules/@starci/grammar/dist/`.
+Shots: `1440.png`, `1920.png`, `390.png`. Code: `features/pages/AgentSetupPage`, `components/blocks/AgentSetupPanes`, composites `AgentSetupUnderstanding`, `AgentSetupMap`, `AgentSetupVersions`. Đường dẫn Grammar tính từ `node_modules/@starci/grammar/dist/`.
 
 ## Dải đầu trang và tab lớp hai Hướng dẫn | Quy trình | Chung
 Vì sao: dải trắng không cuộn, chữ canh trái; hai tầng tab trong dải, lớp hai là ba phần của Thiết lập, gạch chân trên đường kẻ.
@@ -27,10 +27,8 @@ Vì sao: một caption 12 muted nói về dữ liệu của các thẻ (tiến �
 Luật: `surfacecard-select-subtitle` (caption chỉ cho chú thích dữ liệu), `type-scale-14-12`.
 Grammar: `Text size="xs" tone="muted"`, `core/leaf/Text/index.d.ts`.
 
-## Theo sơ đồ (công tắc)
-Vì sao: một cài đặt đơn là hàng phẳng trên giếng: tên và mô tả bên trái, công tắc ở mép phải; không nằm trong đầu thẻ.
-Luật: `surfacecard-select-subtitle` (Switch rows, flat fields), `surfacecard-zones-api`.
-Grammar: `Switch` có `label` + `description` (0.37.5 vẽ nhãn trái, công tắc phải), `core/leaf/Switch/index.d.ts`; file `AgentGraphMode`.
+## Theo sơ đồ (công tắc): ĐÃ BỎ (2026-11-14, FE-WIRE-A)
+Vì sao: công tắc "theo sơ đồ / chỉ ghi lại" gọi `setAgentGraphMode`, cửa đó đã bị engine xóa; cửa còn lại duy nhất để đặt một bước là `setAgentNodeSettings` (chế độ `auto | ask` và tài khoản của MỘT bước, trong ngăn bước). Shop không sửa đồ thị nên trang không còn công tắc, không "Xuất bản và chạy", không khối đề xuất / quy tắc chưa giữ. Ảnh cũ còn công tắc: CHƯA chụp lại.
 
 ## Sơ đồ làm việc (thẻ preview + "Mở sơ đồ")
 Vì sao: sơ đồ là nội dung của một thẻ riêng, đầu thẻ là tên "Sơ đồ làm việc" không mô tả; preview `FlowGraph layout="steps"` ở cỡ đọc được (không co nhỏ; sơ đồ rộng thì kéo ngang), bấm bước mở drawer; "Mở sơ đồ →" sm neutral mở toàn màn qua Dialog.
@@ -42,9 +40,9 @@ Vì sao: chú giải là ghi chú về dữ liệu của thẻ nên nằm dướ
 Luật: `surfacecard-select-subtitle` (Subtitle rule), `flowgraph-card-style`.
 Grammar: `FlowGraphLegend` làm `SurfaceCard note`, `core/branch/FlowGraph/index.d.ts`, `core/frame/SurfaceCard/index.d.ts`.
 
-## Phiên bản (danh sách bản)
-Vì sao: một thẻ danh sách, mới nhất trên cùng; chip "Đang dùng" là trạng thái; "Quay lại bản này" là nút sm neutral (tạo bản mới); phiên bản là chữ thường trong tiêu đề hàng.
-Luật: `surfacecard-select-subtitle` (Versions), `suggestion-button-sm`.
+## Phiên bản (danh sách bản, chỉ đọc)
+Vì sao: một thẻ danh sách, mới nhất trên cùng; chip "Đang dùng" là trạng thái; phiên bản là chữ thường trong tiêu đề hàng. KHÔNG còn nút "Quay lại bản này" (`restoreAgentGraphVersion` đã bị xóa) và không còn dòng "bản nháp": shop không sửa đồ thị, nên không có bản nháp để lưu thành bản mới. Ảnh cũ còn nút: CHƯA chụp lại.
+Luật: `surfacecard-select-subtitle` (Versions), `templates` (shop không sửa đồ thị).
 Grammar: `SurfaceCard kind="list"` (`AgentSetupVersions`), `core/surfaceCardData.d.ts`.
 
 ## Pane chat "Thiết lập cùng NIVO"

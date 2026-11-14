@@ -10,5 +10,5 @@ Grammar: `Alert tone="neutral"` với `action`.
 Grammar `Alert` chỉ có MỘT `action`, nên "Xem thay đổi" là một `Link` trong lời của thông báo (xem phần follow-up dưới đây); số bước khác và changelog nằm trong mô tả.
 
 ## Cập nhật (follow-up)
-Đầu trang chỉ giữ MỘT `Button` (luật của `PaneHeader`: "icon buttons and at most one Button"): lệnh trạng thái. "Sửa sơ đồ" / "Thêm bước" thành `IconButton` có nhãn và tooltip (bút / dấu cộng), nên ở 390 tiêu đề còn chỗ hơn. `page-header.md` Size: lệnh xuống dưới tiêu đề ở điện thoại là việc của Grammar, app không tự bọc.
+Đầu trang chỉ giữ MỘT `Button` (luật của `PaneHeader`): lệnh trạng thái. Hai icon "Sửa sơ đồ" / "Thêm bước" đã bỏ vì sơ đồ là của mẫu, không sửa. `page-header.md` Size: lệnh xuống dưới tiêu đề ở điện thoại là việc của Grammar, app không tự bọc.
 "Xem thay đổi" nay là một `Link` trong lời của thông báo (`Alert.description` nhận ReactNode; `button.choose.role` hàng "text-action": đích đến đọc như một phần câu), dẫn tới trang `…/versions/preview/<vN>`; "Cập nhật theo mẫu" vẫn là action duy nhất. Link màu chính (luật chủ: link = màu primary đúng).

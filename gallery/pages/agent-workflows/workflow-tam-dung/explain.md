@@ -7,4 +7,4 @@ Giống `workflow-bat`: `page-header.choose.slot` hàng "command" + `button.choo
 Grammar: `PaneHeader.actions`, `Button intent="neutral" size="sm"`.
 
 ## Cập nhật (follow-up)
-Đầu trang chỉ giữ MỘT `Button` (luật của `PaneHeader`: "icon buttons and at most one Button"): lệnh trạng thái. "Sửa sơ đồ" / "Thêm bước" thành `IconButton` có nhãn và tooltip (bút / dấu cộng), nên ở 390 tiêu đề còn chỗ hơn. `page-header.md` Size: lệnh xuống dưới tiêu đề ở điện thoại là việc của Grammar, app không tự bọc.
+Đầu trang chỉ giữ MỘT `Button` (luật của `PaneHeader`): lệnh trạng thái. Hai icon "Sửa sơ đồ" / "Thêm bước" đã bỏ vì sơ đồ là của mẫu, không sửa. `page-header.md` Size: lệnh xuống dưới tiêu đề ở điện thoại là việc của Grammar, app không tự bọc.
